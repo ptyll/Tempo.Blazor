@@ -134,11 +134,11 @@ public sealed class MarkupClassCoverageTests
         "tm-datetime-range-start",
         "tm-deadline__protocol-entry",
         "tm-decimal-input",
+        // Wireframe redesign plan ce19aa8c, phase 9: the dialog's drill-down live region is visually carried by the shared .tm-sr-only.
+        "tm-dod-announce",
         "tm-dod-col-author",
         "tm-dod-mode-copy",
         "tm-dod-mode-link",
-        "tm-dod-new-folder-confirm",
-        "tm-dod-rename-confirm",
         // DiagramEditor redesign phase 1 (755cd593): the disabled-dropdown rule
         // (.tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger in _dropdown.css) now
         // covers the trigger — the entry left the unstyled population, struck off.

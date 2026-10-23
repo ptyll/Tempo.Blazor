@@ -1,0 +1,100 @@
+using System.Net.Http.Json;
+using Tempo.Blazor.Abstractions.Wireframe.Export;
+
+namespace Tempo.Blazor.Components.Wireframe;
+
+// Export of the editor (JSON / SVG directly, PNG / PDF through the export dialog and the server endpoint) and the browser download.
+// Kept beside the editor to hold the main file under the source-file length ceiling.
+public partial class TmWireframeEditor
+{
+    // ── Toolbar: Export ───────────────────────────────────────────────────────
+
+    private async Task HandleExportSelect(string format)
+    {
+        switch (format)
+        {
+            case "json": await ExportJson(); break;
+            case "svg": await ExportSvg(); break;
+            case "png": ExportPng(); break;
+            case "pdf": ExportPdf(); break;
+        }
+    }
+
+    private async Task ExportJson()
+    {
+        if (_document is null) return;
+        var json     = WireframeSerializer.Serialize(_document);
+        var fileName = SanitizeFileName(_document.Title) + ".wireframe.json";
+        await DownloadFile(fileName, "application/json", System.Text.Encoding.UTF8.GetBytes(json));
+    }
+
+    private async Task ExportSvg()
+    {
+        if (_canvas is null) return;
+        var svg      = await _canvas.ExportSvg();
+        var fileName = SanitizeFileName(_document?.Title ?? Loc["TmWireframe_ExportFilename"]) + ".svg";
+        await DownloadFile(fileName, "image/svg+xml", System.Text.Encoding.UTF8.GetBytes(svg));
+    }
+
+    /// <summary>Returns the current canvas state as an SVG string for use by embedded callers.</summary>
+    public async Task<string> ExportSvgAsync()
+    {
+        if (_canvas is null) return string.Empty;
+        return await _canvas.ExportSvg();
+    }
+
+    private void ExportPng()
+    {
+        _exportDialogFormat = "png";
+        _exportDialogOpen = true;
+    }
+
+    private void ExportPdf()
+    {
+        _exportDialogFormat = "pdf";
+        _exportDialogOpen = true;
+    }
+
+    private void CloseExportDialog()
+    {
+        _exportDialogOpen = false;
+        _exportDialogFormat = null;
+    }
+
+    private async Task OnExportDialogExport(WireframeExportDialogResult result)
+    {
+        _exportDialogOpen = false;
+        if (_canvas is null) return;
+
+        var svg = await _canvas.ExportSvg();
+        if (string.IsNullOrWhiteSpace(svg)) return;
+
+        var request = new WireframeExportRequest
+        {
+            Svg = svg,
+            FileName = result.FileName,
+            Options = result.Options
+        };
+
+        var endpoint = result.Format == "pdf"
+            ? "api/wireframe/export/pdf"
+            : "api/wireframe/export/png";
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(endpoint, request);
+            response.EnsureSuccessStatusCode();
+
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            var contentType = result.Format == "pdf" ? "application/pdf" : "image/png";
+            var ext = result.Format == "pdf" ? ".pdf" : ".png";
+            var fileName = SanitizeFileName(result.FileName) + ext;
+
+            await DownloadFile(fileName, contentType, bytes);
+        }
+        catch (Exception ex)
+        {
+            _importError = string.Format(Loc["TmWireframe_ExportError"], ex.Message);
+        }
+    }
+}

@@ -2,7 +2,7 @@
   "itemName": "TmWireframeToolbox",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category with a search filter. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
+  "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category (a 3-column grid of tiles) with a search filter. A tile shows the component's TmIcon (WireframeComponentDef.Icon) and name; the mini stencil SVG preview is the fallback when the icon is missing or not drawable. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
@@ -11,13 +11,27 @@
       "name": "OnComponentActivated",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the user activates a component via keyboard (Enter/Space). Payload is the component type string (e.g. 'TmButton')."
+      "description": "Raised when the user activates a component by click, tap or keyboard (Enter/Space), exactly once per gesture - the non-drag alternative to HTML5 drag-and-drop. Payload is the component type string (e.g. 'TmButton'); the editor inserts it centred in the visible canvas area."
     },
     {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the toolbox wrapper."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Shows the palette inert: items are aria-disabled, muted (tm-wd-toolbox__item--disabled), not draggable and never raise OnComponentActivated. TmWireframeEditor passes its effective read-only state (host ReadOnly or the user Read-only toggle)."
+    },
+    {
+      "name": "SingleColumn",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Presents the palette as a single column of named rows (icon + name, a finger-sized target) instead of the 3-column tile grid. TmWireframeEditor sets it for its tablet overlay drawer; adds the tm-wd-toolbox--single-column modifier."
     },
     {
       "name": "ComponentScope",
@@ -30,6 +44,9 @@
     "tm-wd-toolbox",
     "tm-wd-toolbox__search",
     "tm-wd-toolbox__item",
+    "tm-wd-toolbox__item--disabled",
+    "tm-wd-toolbox--single-column",
+    "tm-wd-toolbox__item-preview-paper",
     "tm-wd-toolbox__category"
   ],
   "examples": [

@@ -8,6 +8,8 @@
          OnClose="OnClose"
          Title="@Loc["TmWireframeExportDialog_Title"]"
          ShowDefaultFooterButtons="false"
+         MobilePresentation="MobilePresentation"
+         FooterLayout="FooterLayout.Inline"
          Size="ModalSize.Medium"
          CloseOnOverlayClick="true"
          CloseOnEscape="true">
@@ -55,7 +57,7 @@
         </div>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="OnClose">
             @Loc["Tm_Cancel"]
         </TmButton>
         <TmButton Variant="ButtonVariant.Primary" OnClick="OnExportClick">
@@ -65,15 +67,36 @@
 </TmModal>
 
 @code {
+    /// <summary>Whether the dialog is visible. Every closed→open transition resets the form (file name, format, scale, background).</summary>
     [Parameter] public bool Show { get; set; }
+
+    /// <summary>Raised when the user cancels, presses Escape or clicks the overlay. The host should set <see cref="Show"/> to <c>false</c>.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised with the chosen file name, format and options when the user confirms the export.</summary>
     [Parameter] public EventCallback<WireframeExportDialogResult> OnExport { get; set; }
+
+    /// <summary>
+    /// How the dialog presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> (default) follows the core viewport scope: a bottom sheet
+    /// on a phone, the centred dialog otherwise. A forced value pins one presentation (used by tests and host layouts). The footer is always
+    /// inline (Cancel and Export side by side, sticky in the sheet).
+    /// </summary>
+    [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
+
+    /// <summary>File name proposed (and restored) every time the dialog opens. Falls back to an empty field when <c>null</c>.</summary>
     [Parameter] public string? DefaultFileName { get; set; }
+
+    /// <summary>
+    /// Format preselected every time the dialog opens: <c>"png"</c> (default) or <c>"pdf"</c> (case-insensitive).
+    /// Any other value falls back to PNG.
+    /// </summary>
+    [Parameter] public string? InitialFormat { get; set; }
 
     private string _fileName = "";
     private string _format = "png";
     private string _scale = "1";
     private bool _includeBackground = true;
+    private bool _wasShown;
 
     private readonly List<SelectOption<string>> _formatOptions = new()
     {
@@ -90,17 +113,20 @@
 
     protected override void OnParametersSet()
     {
-        if (!Show)
+        if (Show && !_wasShown)
         {
-            _format = "png";
+            // Closed → open: restore every field so a previous session's typing/selection never leaks in.
+            _fileName = DefaultFileName ?? "";
+            _format = NormalizeFormat(InitialFormat);
             _scale = "1";
             _includeBackground = true;
         }
-        else if (string.IsNullOrEmpty(_fileName) && !string.IsNullOrEmpty(DefaultFileName))
-        {
-            _fileName = DefaultFileName;
-        }
+
+        _wasShown = Show;
     }
+
+    private static string NormalizeFormat(string? format)
+        => string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "png";
 
     private async Task OnExportClick()
     {

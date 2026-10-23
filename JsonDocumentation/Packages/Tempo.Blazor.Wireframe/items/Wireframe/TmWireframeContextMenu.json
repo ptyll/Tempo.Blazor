@@ -17,6 +17,13 @@
       "isRequired": false
     },
     {
+      "name": "Presentation",
+      "type": "WireframeContextMenuPresentation",
+      "isRequired": false,
+      "defaultValue": "Anchored",
+      "description": "Anchored (default) renders the position:fixed menu at the pointer; Sheet renders the shared bottom action sheet of the core overlay panel (the mobile long-press menu: finger-sized rows and a Done button; align, distribute and grouping are tablet+ and not offered)."
+    },
+    {
       "name": "X",
       "type": "double",
       "isRequired": false

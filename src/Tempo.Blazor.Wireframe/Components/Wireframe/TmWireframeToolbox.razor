@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Components.Rendering
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-wd-toolbox @Class" @ref="_containerRef">
+<div class="tm-wd-toolbox @(SingleColumn ? "tm-wd-toolbox--single-column" : null) @Class" @ref="_containerRef">
 
     @* ── Search ──────────────────────────────────────────────────────────── *@
     <div class="tm-wd-toolbox__search">
@@ -17,7 +17,9 @@
         {
             <button class="tm-wd-toolbox__search-clear"
                     @onclick="ClearSearch"
-                    aria-label="@Loc["TmWireframeToolbox_ClearSearch"]">✕</button>
+                    aria-label="@Loc["TmWireframeToolbox_ClearSearch"]">
+                <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+            </button>
         }
     </div>
 
@@ -59,17 +61,30 @@
                     <div class="tm-wd-toolbox__category-items">
                         @foreach (var def in items)
                         {
-                            <div class="tm-wd-toolbox__item"
-                                 draggable="true"
+                            <div class="tm-wd-toolbox__item @(ReadOnly ? "tm-wd-toolbox__item--disabled" : "")"
+                                 draggable="@(ReadOnly ? "false" : "true")"
                                  data-component-type="@def.Type"
                                  title="@def.DisplayName (@def.DefaultWidth×@def.DefaultHeight)"
                                  aria-label="@Loc["TmWireframeToolbox_DragOntoCanvas", def.DisplayName]"
+                                 aria-disabled="@(ReadOnly ? "true" : null)"
                                  role="button"
                                  tabindex="0"
-                                 @onkeydown="@((e) => OnItemKeyDown(e, def.Type))">
+                                 @onclick="@(() => ActivateAsync(def.Type))"
+                                 @onkeydown="@((e) => OnItemKeyDown(e, def.Type))"
+                                 @onkeyup="@((e) => OnItemKeyUp(e, def.Type))">
 
-                                @* SVG preview *@
-                                <div class="tm-wd-toolbox__item-preview" aria-hidden="true">
+                                @if (HasResolvableIcon(def))
+                                {
+                                    @* Component icon (3-column grid tile) *@
+                                    <span class="tm-wd-toolbox__item-icon" aria-hidden="true">
+                                        <TmIcon Name="@def.Icon" Size="IconSize.Md" />
+                                    </span>
+                                }
+                                else
+                                {
+                                @* SVG preview fallback when the definition carries no icon *@
+                                <div class="tm-wd-toolbox__item-preview-paper" aria-hidden="true">
+                                <div class="tm-wd-toolbox__item-preview">
                                     <svg width="56" height="32"
                                          viewBox="0 0 @def.DefaultWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) @def.DefaultHeight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
                                          xmlns="http://www.w3.org/2000/svg"
@@ -84,6 +99,8 @@
                                             }, __b))
                                     </svg>
                                 </div>
+                                </div>
+                                }
 
                                 @* Label + badge *@
                                 <span class="tm-wd-toolbox__item-name">@def.DisplayName</span>

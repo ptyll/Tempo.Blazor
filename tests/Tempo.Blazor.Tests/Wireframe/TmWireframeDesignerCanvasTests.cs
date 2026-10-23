@@ -266,4 +266,87 @@ public class TmWireframeDesignerCanvasTests : LocalizationTestBase
         rects[0].GetAttribute("width").Should().Be("1440");
         rects[0].GetAttribute("height").Should().Be("900");
     }
+
+    // ── Tokenised paint (wireframe redesign plan ce19aa8c, phase 2) ───────────
+
+    [Fact]
+    public void GridAndCanvasBackground_UseCssVariables_NotHex()
+    {
+        Services.AddSingleton(BuildRegistry());
+
+        var doc = new WireframeDocument { Width = 800, Height = 600 };
+        var cut = Render<TmWireframeDesignerCanvas>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ShowGrid, true));
+
+        // Grid, page background and page border read the --tm-wd-* aliases, so dark mode, the indigo theme
+        // and consumer overrides reach the canvas without a stylesheet hack on `rect[fill="white"]`.
+        cut.Markup.Should().NotContain("#e5e7eb").And.NotContain("#d1d5db").And.NotContain("fill=\"white\"");
+
+        var page = cut.FindAll("rect").First(r => r.GetAttribute("width") == "800" && r.GetAttribute("fill") is null
+                                                  && (r.GetAttribute("style") ?? "").Contains("canvas-bg"));
+        page.GetAttribute("style").Should().Contain("fill: var(--tm-wd-canvas-bg)")
+            .And.Contain("stroke: var(--tm-wd-canvas-border)");
+
+        var gridPaths = cut.FindAll("pattern path");
+        gridPaths.Should().HaveCount(2);
+        gridPaths[0].GetAttribute("style").Should().Contain("stroke: var(--tm-wd-grid-minor)");
+        gridPaths[1].GetAttribute("style").Should().Contain("stroke: var(--tm-wd-grid-major)");
+
+        // Export reads the computed paint of these nodes, so each is flagged for the exporter.
+        cut.FindAll("[data-wd-paint]").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void ConnectorLabelAndWaypoints_CarryNoHexAttributes()
+    {
+        Services.AddSingleton(BuildRegistry("TmButton"));
+
+        var doc = DocWith(("TmButton", 0, 0), ("TmButton", 300, 0));
+        doc.Connectors.Add(new WireframeConnector
+        {
+            Id = "c1", FromId = doc.Elements[0].Id, ToId = doc.Elements[1].Id,
+            Label = "next", Waypoints = [new Tempo.Blazor.Components.Diagram.Models.DiagramPoint(150, 40)]
+        });
+
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(x => x.Document, doc));
+
+        cut.Find(".tm-wd-connector__label").GetAttribute("fill").Should().BeNull();
+        cut.Find(".tm-wd-connector__label").GetAttribute("style").Should().Contain("var(--tm-wd-paper-ink)");
+        cut.Markup.Should().NotContain("#374151").And.NotContain("#3b82f6");
+    }
+
+    // ── Element name = accessible name + tooltip (wireframe redesign phase 4) ──
+
+    [Fact]
+    public void NamedElement_RendersAriaLabelAndTitleTooltip()
+    {
+        Services.AddSingleton(BuildRegistry("TmButton"));
+        var doc = DocWith(("TmButton", 0, 0));
+        doc.Elements[0].Name = "Login button";
+
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(x => x.Document, doc));
+
+        var g = cut.Find("g[data-el-id]");
+        g.GetAttribute("aria-label").Should().Be("Login button");
+        g.FirstElementChild!.TagName.Should().BeEquivalentTo("title");
+        g.FirstElementChild.TextContent.Should().Be("Login button");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UnnamedElement_RendersNeitherAriaLabelNorTitle(string? name)
+    {
+        Services.AddSingleton(BuildRegistry("TmButton"));
+        var doc = DocWith(("TmButton", 0, 0));
+        doc.Elements[0].Name = name;
+
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(x => x.Document, doc));
+
+        var g = cut.Find("g[data-el-id]");
+        g.HasAttribute("aria-label").Should().BeFalse();
+        g.QuerySelector(":scope > title").Should().BeNull();
+    }
 }

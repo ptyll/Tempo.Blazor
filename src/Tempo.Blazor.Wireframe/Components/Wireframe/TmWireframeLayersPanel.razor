@@ -2,11 +2,16 @@
 @using Tempo.Blazor.Components.Wireframe.Commands
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-wd-layers @Class" data-collapsed="@_collapsed">
-    <button type="button" class="tm-wd-layers__toggle" @onclick="ToggleCollapse"
-            aria-label="@Loc["TmWireframe_LayersToggle"]" title="@Loc["TmWireframe_LayersToggle"]">
-        <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
-    </button>
+<div class="tm-wd-layers @(ShowCollapseToggle ? null : "tm-wd-layers--embedded") @Class"
+     data-collapsed="@(ShowCollapseToggle && _collapsed ? "True" : "False")">
+    @if (ShowCollapseToggle)
+    {
+        <button type="button" class="tm-wd-layers__toggle" @onclick="ToggleCollapse"
+                aria-expanded="@(_collapsed ? "false" : "true")"
+                aria-label="@Loc["TmWireframe_LayersToggle"]" title="@Loc["TmWireframe_LayersToggle"]">
+            <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
+        </button>
+    }
 
     <div class="tm-wd-layers__inner">
         <div class="tm-wd-layers__header">
@@ -15,50 +20,65 @@
                     aria-label="@Loc["TmWireframe_AddLayer"]"
                     title="@Loc["TmWireframe_AddLayer"]"
                     @onclick="OnAddLayer"
+                    @ref="_addButtonRef"
                     disabled="@ReadOnly">
                 <TmIcon Name="@IconNames.Plus" />
             </button>
         </div>
 
-        <div class="tm-wd-layers__list" role="list" aria-label="@Loc["TmWireframe_LayersTitle"]">
-            @foreach (var layer in SortedLayers)
+        @* The rows are the radios of ONE radiogroup (the active layer). A row carries other controls
+           (visibility, lock, menu) next to its radio, so the rows themselves are plain containers
+           and the radiogroup is the labelled list. *@
+        @{
+            var orderedLayers = SortedLayers.ToList();
+            var layerCount = orderedLayers.Count;
+            var tabStopId = RadioTabStopId(orderedLayers);
+        }
+        <div class="tm-wd-layers__list" @ref="_listRef"
+             role="radiogroup" aria-label="@Loc["TmWireframeLayers_ActiveGroup"]">
+            @for (var rowIndex = 0; rowIndex < layerCount; rowIndex++)
             {
-                var isActive = ActiveLayerId == layer.Id;
+                var layer = orderedLayers[rowIndex];
+                var index = rowIndex;
+                var isActive = EffectiveActiveLayerId == layer.Id;
                 var isEditing = _editingLayerId == layer.Id;
-                <div class="tm-wd-layers__item"
-                     role="listitem"
+                var isDropTarget = _dragOverLayerId == layer.Id;
+                <div @key="layer.Id"
+                     class="tm-wd-layers__item @(isActive ? "tm-wd-layers__item--active" : null) @(layer.IsVisible ? null : "tm-wd-layers__item--hidden") @(isDropTarget ? "tm-wd-layers__item--drag-over" : null) @(_draggedLayerId == layer.Id ? "tm-wd-layers__item--dragging" : null)"
                      data-layer-id="@layer.Id"
-                     draggable="true"
+                     data-drop-position="@(isDropTarget ? _dropPosition : null)"
+                     draggable="@(!ReadOnly && !isEditing ? "true" : "false")"
+                     @onkeydown="e => OnRowKeyDown(e, layer)"
                      @ondragstart="e => OnDragStart(e, layer.Id)"
+                     @ondragend="OnDragEnd"
                      @ondragover:preventDefault
                      @ondrop="e => OnDrop(e, layer.Id)"
                      @ondrop:preventDefault
                      @ondragenter="e => OnDragEnter(e, layer.Id)"
-                     @ondragleave="OnDragLeave">
-                    <div class="tm-wd-layers__drag-handle">
+                     @ondragleave="e => OnDragLeave(e, layer.Id)">
+                    <div class="tm-wd-layers__drag-handle" aria-hidden="true">
                         <TmIcon Name="@IconNames.GripVertical" />
                     </div>
 
                     <button type="button"
+                            role="radio"
                             class="tm-wd-layers__active"
-                            aria-label="@Loc["TmWireframe_SetActiveLayer"]"
-                            title="@Loc["TmWireframe_SetActiveLayer"]"
+                            aria-checked="@(isActive ? "true" : "false")"
+                            tabindex="@(layer.Id == tabStopId ? 0 : -1)"
+                            aria-label="@Loc["TmWireframeLayers_SetActiveWithName", layer.Name]"
+                            title="@Loc["TmWireframeLayers_SetActiveWithName", layer.Name]"
+                            @ref="_radioRefs[layer.Id]"
                             @onclick="() => OnSetActive(layer.Id)"
+                            @onkeydown="e => OnRadioKeyDown(e, index)"
                             disabled="@ReadOnly">
-                        @if (isActive)
-                        {
-                            <span class="tm-wd-layers__radio tm-wd-layers__radio--checked"></span>
-                        }
-                        else
-                        {
-                            <span class="tm-wd-layers__radio"></span>
-                        }
+                        <span class="tm-wd-layers__radio @(isActive ? "tm-wd-layers__radio--checked" : null)" aria-hidden="true"></span>
                     </button>
 
                     <button type="button"
                             class="tm-wd-layers__visibility"
-                            aria-label="@(layer.IsVisible ? Loc["TmWireframe_HideLayer"] : Loc["TmWireframe_ShowLayer"])"
-                            title="@(layer.IsVisible ? Loc["TmWireframe_HideLayer"] : Loc["TmWireframe_ShowLayer"])"
+                            aria-pressed="@(layer.IsVisible ? "true" : "false")"
+                            aria-label="@Loc["TmWireframeLayers_ShowWithName", layer.Name]"
+                            title="@Loc["TmWireframeLayers_ShowWithName", layer.Name]"
                             @onclick="() => OnToggleVisibility(layer)"
                             disabled="@ReadOnly">
                         <TmIcon Name="@(layer.IsVisible ? IconNames.Eye : IconNames.EyeOff)" />
@@ -66,8 +86,9 @@
 
                     <button type="button"
                             class="tm-wd-layers__lock"
-                            aria-label="@(layer.IsLocked ? Loc["TmWireframe_UnlockLayer"] : Loc["TmWireframe_LockLayer"])"
-                            title="@(layer.IsLocked ? Loc["TmWireframe_UnlockLayer"] : Loc["TmWireframe_LockLayer"])"
+                            aria-pressed="@(layer.IsLocked ? "true" : "false")"
+                            aria-label="@Loc["TmWireframeLayers_LockWithName", layer.Name]"
+                            title="@Loc["TmWireframeLayers_LockWithName", layer.Name]"
                             @onclick="() => OnToggleLock(layer)"
                             disabled="@ReadOnly">
                         <TmIcon Name="@(layer.IsLocked ? IconNames.Lock : IconNames.Unlock)" />
@@ -78,30 +99,79 @@
                         <input class="tm-wd-layers__name-input"
                                type="text"
                                value="@_editName"
+                               aria-label="@Loc["TmWireframeLayers_Rename"]"
                                @oninput="e => _editName = e.Value?.ToString() ?? _editName"
-                               @onkeydown="e => OnNameKeyDown(e, layer)"
+                               @onkeydown="e => OnInputKeyDown(e, layer)"
                                @onblur="() => OnNameBlur(layer)"
                                @ref="_nameInputRef" />
                     }
                     else
                     {
+                        @* A non-native focusable: Enter on keydown (no repeat), Space on keyup. F2 and Alt+Arrow
+                           are handled once on the row, so they also work from the radio, the toggles and the menu. *@
                         <span class="tm-wd-layers__name"
+                              tabindex="0"
+                              role="button"
+                              aria-label="@Loc["TmWireframeLayers_RenameWithName", layer.Name]"
+                              aria-description="@(layer.Id == DefaultLayerId ? Loc["TmWireframeLayers_DefaultLayer"] : null)"
+                              @ref="_nameRefs[layer.Id]"
                               @ondblclick="() => OnStartEdit(layer)"
-                              title="@Loc["TmWireframe_DoubleClickToEdit"]">
-                            @layer.Name
-                        </span>
+                              @onkeydown="e => OnNameKeyDown(e, layer)"
+                              @onkeyup="e => OnNameKeyUp(e, layer)"
+                              title="@Loc["TmWireframe_DoubleClickToEdit"]">@layer.Name</span>
                     }
 
-                    @if (Document?.Layers.Count > 1 && layer.Id != _defaultLayerId)
+                    @if (CanDelete(layer))
                     {
                         <button type="button"
                                 class="tm-wd-layers__delete"
-                                aria-label="@Loc["TmWireframe_DeleteLayer"]"
+                                aria-label="@Loc["TmWireframeLayers_DeleteWithName", layer.Name]"
                                 title="@Loc["TmWireframe_DeleteLayer"]"
                                 @onclick="() => OnRemoveLayer(layer)"
                                 disabled="@ReadOnly">
                             <TmIcon Name="@IconNames.Trash" />
                         </button>
+                    }
+
+                    @* The non-drag alternative to drag-and-drop reorder (WCAG 2.5.7): every row action is in the
+                       row menu, which the core TmContextMenu owns (Escape/outside dismissal, arrow roving, focus return). *@
+                    @if (!ReadOnly)
+                    {
+                        var rowMenuHolder = GetRowMenuHolder(layer.Id);
+                        <TmContextMenu @ref="rowMenuHolder.Menu" Class="tm-wd-layers__row-menu" SheetTitle="@layer.Name">
+                            <Trigger>
+                                <span class="tm-wd-layers__row-menu-trigger" title="@Loc["TmWireframeLayers_More"]">
+                                    <TmIcon Name="@IconNames.MoreHorizontal" />
+                                    <span class="tm-sr-only">@Loc["TmWireframeLayers_MoreWithName", layer.Name]</span>
+                                </span>
+                            </Trigger>
+                            <ChildContent>
+                                @* Fence: the menu popover is a DOM child of the row, so a key typed inside the open menu
+                                   (Alt+Arrow, F2) would bubble into OnRowKeyDown and move / rename the row on top of the
+                                   menu's own navigation. The trigger itself stays unfenced: F2 / Alt+Arrow work from it. *@
+                                <div class="tm-wd-layers__menu-fence" role="none" @onkeydown:stopPropagation="true">
+                                <TmContextMenuItem Class="tm-wd-layers__row-menu-item" data-action="rename"
+                                                   Icon="@IconNames.Edit" Label="@Loc["TmWireframeLayers_Rename"]"
+                                                   OnClick="() => OnStartEdit(layer)" />
+                                <TmContextMenuItem Class="tm-wd-layers__row-menu-item" data-action="up"
+                                                   Icon="@IconNames.ArrowUp" Label="@Loc["TmWireframeLayers_MoveUp"]"
+                                                   Disabled="@(index == 0)"
+                                                   OnClick="() => OnMoveLayer(layer, -1, false)" />
+                                <TmContextMenuItem Class="tm-wd-layers__row-menu-item" data-action="down"
+                                                   Icon="@IconNames.ArrowDown" Label="@Loc["TmWireframeLayers_MoveDown"]"
+                                                   Disabled="@(index == layerCount - 1)"
+                                                   OnClick="() => OnMoveLayer(layer, +1, false)" />
+                                @if (CanDelete(layer))
+                                {
+                                    <TmContextMenuItem IsDivider="true" />
+                                    <TmContextMenuItem Class="tm-wd-layers__row-menu-item" data-action="delete"
+                                                       Icon="@IconNames.Trash" IsDangerous="true"
+                                                       Label="@Loc["TmWireframeLayers_Delete"]"
+                                                       OnClick="() => OnRemoveLayer(layer)" />
+                                }
+                                </div>
+                            </ChildContent>
+                        </TmContextMenu>
                     }
                 </div>
             }
@@ -110,13 +180,17 @@
         @if (SelectedElementIds.Length > 0 && !ReadOnly)
         {
             <div class="tm-wd-layers__move-section">
-                <label class="tm-wd-layers__move-label">@Loc["TmWireframe_MoveToLayer"]</label>
+                <label class="tm-wd-layers__move-label" for="@_moveSelectId">@Loc["TmWireframe_MoveToLayer"]</label>
                 <TmSelect TValue="string"
+                          Id="@_moveSelectId"
                           Value="@_moveTargetLayerId"
                           ValueChanged="OnMoveElementsToLayer"
                           Options="MoveLayerOptions"
                           Placeholder="@Loc["TmWireframe_SelectLayer"]" />
             </div>
         }
+
+        @* Polite live region: move and delete results are announced here (the controls keep short labels). *@
+        <div class="tm-sr-only" role="status" aria-live="polite" aria-atomic="true">@_announcement</div>
     </div>
 </div>

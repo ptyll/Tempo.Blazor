@@ -11,6 +11,14 @@ public sealed class DocumentLibraryQuery
     /// <summary>
     /// Folder to list. Null or <c>"/"</c> lists the root. Ignored by flat stores.
     /// </summary>
+    /// <remarks>
+    /// <b>Null is ambiguous.</b> The contract says "null lists the root", yet a library-wide query (a search, or the open
+    /// dialog's virtual "Recent" node) also sends <c>null</c> because there is no explicit scope member. A provider
+    /// that wants those to span every folder must treat <c>null</c> as "everywhere" (and then the root is only reachable
+    /// as <c>"/"</c>); a provider following the letter of the contract returns the root documents only. The built-in demo
+    /// store follows the contract. An explicit scope (e.g. <c>IncludeSubfolders</c> / <c>DocumentLibraryScope</c>) is the planned way
+    /// to remove the ambiguity.
+    /// </remarks>
     public string? FolderPath { get; set; }
 
     /// <summary>

@@ -12,7 +12,7 @@
      aria-label="@(_isHorizontal ? Loc["TmWireframe_HorizontalRuler"] : Loc["TmWireframe_VerticalRuler"])">
 
     @* Background *@
-    <rect x="@_bgX" y="@_bgY" width="@_bgW" height="@_bgH" fill="var(--tm-wd-ruler-bg, #f3f4f6)" />
+    <rect x="@_bgX" y="@_bgY" width="@_bgW" height="@_bgH" fill="var(--tm-wd-ruler-bg)" />
 
     @* Tick marks and labels *@
     @foreach (var tick in _ticks)
@@ -20,19 +20,19 @@
         @if (_isHorizontal)
         {
             <line x1="@F(tick.Pos)" y1="0" x2="@F(tick.Pos)" y2="@F(tick.Len)"
-                  stroke="var(--tm-wd-ruler-tick, #9ca3af)" stroke-width="1" />
+                  stroke="var(--tm-wd-ruler-tick)" stroke-width="1" />
             @if (tick.ShowLabel)
             {
-                @((MarkupString)$"""<text x="{F(tick.Pos + 2)}" y="14" font-size="9" font-family="var(--tm-wd-font)" fill="var(--tm-wd-ruler-text, #6b7280)">{tick.Label}</text>""")
+                @((MarkupString)$"""<text x="{F(tick.Pos + 2)}" y="14" font-size="9" font-family="var(--tm-wd-font)" fill="var(--tm-wd-ruler-text)">{tick.Label}</text>""")
             }
         }
         else
         {
             <line x1="0" y1="@F(tick.Pos)" x2="@F(tick.Len)" y2="@F(tick.Pos)"
-                  stroke="var(--tm-wd-ruler-tick, #9ca3af)" stroke-width="1" />
+                  stroke="var(--tm-wd-ruler-tick)" stroke-width="1" />
             @if (tick.ShowLabel)
             {
-                @((MarkupString)$"""<text x="14" y="{F(tick.Pos - 2)}" font-size="9" font-family="var(--tm-wd-font)" fill="var(--tm-wd-ruler-text, #6b7280)" text-anchor="end" transform="rotate(-90, 14, {F(tick.Pos - 2)})">{tick.Label}</text>""")
+                @((MarkupString)$"""<text x="14" y="{F(tick.Pos - 2)}" font-size="9" font-family="var(--tm-wd-font)" fill="var(--tm-wd-ruler-text)" text-anchor="end" transform="rotate(-90, 14, {F(tick.Pos - 2)})">{tick.Label}</text>""")
             }
         }
     }
@@ -44,13 +44,13 @@
         {
             <line x1="@F(IndicatorPos.Value)" y1="0"
                   x2="@F(IndicatorPos.Value)" y2="@Size"
-                  stroke="var(--tm-wd-ruler-cursor, #3b82f6)" stroke-width="1.5" />
+                  stroke="var(--tm-wd-ruler-cursor)" stroke-width="1.5" />
         }
         else
         {
             <line x1="0" y1="@F(IndicatorPos.Value)"
                   x2="@Size" y2="@F(IndicatorPos.Value)"
-                  stroke="var(--tm-wd-ruler-cursor, #3b82f6)" stroke-width="1.5" />
+                  stroke="var(--tm-wd-ruler-cursor)" stroke-width="1.5" />
         }
     }
 </svg>

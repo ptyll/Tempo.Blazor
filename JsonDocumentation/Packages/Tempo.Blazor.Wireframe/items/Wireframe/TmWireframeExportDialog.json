@@ -2,7 +2,7 @@
   "itemName": "TmWireframeExportDialog",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options.",
+  "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options. The footer pairs a Secondary (outline) Cancel with the Primary Export button.",
   "packageId": "Tempo.Blazor.Wireframe",
   "namespace": "Tempo.Blazor.Components.Wireframe",
   "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeExportDialog.razor",
@@ -14,22 +14,39 @@
     {
       "name": "Show",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Whether the dialog is visible. Every closed-to-open transition resets the form (file name, format, scale, background)."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the user cancels, presses Escape or clicks the overlay. The host should set Show to false."
     },
     {
       "name": "OnExport",
       "type": "EventCallback<WireframeExportDialogResult>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the chosen file name, format and options when the user confirms the export."
     },
     {
       "name": "DefaultFileName",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "File name proposed (and restored) every time the dialog opens."
+    },
+    {
+      "name": "InitialFormat",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "MobilePresentation",
+      "isRequired": false,
+      "defaultValue": "Auto",
+      "description": "How the dialog presents on a narrow viewport. Auto follows the core viewport scope: a bottom sheet on a phone, the centred dialog otherwise; a forced value pins one presentation. The footer is always inline (Cancel and Export side by side, sticky in the sheet)."
     }
   ]
 }

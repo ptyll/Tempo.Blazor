@@ -15,7 +15,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// so that Undo/Redo works automatically. The stack is optional: when null (e.g. used
 /// standalone without <c>TmWireframeEditor</c>), mutations are applied directly.
 /// </summary>
-public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
+public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposable
 {
     // ── DI ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,22 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
 
     /// <summary>Additional CSS class applied to the canvas wrapper.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Mobile viewing + light edits (decision G2). While <c>true</c> the canvas keeps selecting, moving an element with a finger, the
+    /// long-press menu and pinch / pan, but drops the editing affordances that need a mouse or a tablet: no resize / rotate handles,
+    /// no rubber band (a one-finger drag on the empty canvas pans), no connector tool and no waypoint handles. It also enables the
+    /// parent-render gate described at <see cref="ContentVersion"/>. <c>TmWireframeEditor</c> sets it in its mobile layout (&lt; 768 px).
+    /// </summary>
+    [Parameter] public bool LightEditing { get; set; }
+
+    /// <summary>
+    /// An opaque token the host bumps whenever the document content may have changed behind the canvas' back (a command, an undo, a
+    /// page switch, an in-place edit by the host). While <see cref="LightEditing"/> is <c>true</c> a parent re-render whose parameters
+    /// and token are unchanged does NOT repaint the (large) SVG scene - opening or switching a bottom sheet above the canvas costs the
+    /// canvas nothing. Without <see cref="LightEditing"/> the canvas repaints on every parent render, as before.
+    /// </summary>
+    [Parameter] public int ContentVersion { get; set; }
 
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
@@ -113,12 +129,23 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     /// <summary>Raised when mouse moves over the canvas (SVG coordinates).</summary>
     [Parameter] public EventCallback<(double SvgX, double SvgY)> OnCanvasMouseMoved { get; set; }
 
+    /// <summary>
+    /// Raised with the new zoom factor (screen pixels per SVG unit, clamped to 0.15–5) after the user zooms the canvas
+    /// with the mouse wheel, a trackpad pinch or a two-finger pinch. The toolbar's zoom buttons set the zoom through
+    /// <see cref="SetZoom"/> instead and do not raise it.
+    /// </summary>
+    [Parameter] public EventCallback<double> OnZoomChangedEvent { get; set; }
+
     // ── Internal state ───────────────────────────────────────────────────────
 
     private ElementReference _svgRef;
     private ElementReference _wrapRef;
     private DotNetObjectReference<TmWireframeDesignerCanvas>? _dotNetRef;
     private bool _jsInitialized;
+    private bool _jsReadOnly;
+    private bool _jsLightEditing;
+    private double _jsCanvasW;
+    private double _jsCanvasH;
 
     // Stable IDs for SVG defs so multiple canvas instances on the same page don't collide
     private readonly string _svgId       = "tm-wd-" + Guid.NewGuid().ToString("N")[..8];
@@ -136,6 +163,10 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     private Dictionary<string, (double X, double Y)>? _dragStartPositions;
 
     // Current JS selection – kept in sync so we can re-apply handles after Blazor re-renders
+    // Text of the polite live region (gesture rollback announcements)
+    private string _statusMessage = "";
+    private bool _statusToggle;
+
     private string[] _currentSelectionIds = [];
 
     // Current connector selection IDs (drives .tm-wd-connector--selected CSS class)
@@ -161,6 +192,45 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>How many times the canvas has rendered (a test seam: a left-tab switch or opening the "More" menu must not move it).</summary>
+    internal int RenderCount { get; private set; }
+
+    // Parent-render gate (LightEditing only): a parameter pass that changes nothing the scene shows is skipped. Own renders
+    // (NotifyAndRender, the status line, a connector selection) never go through the gate: _parentPass is only true inside SetParametersAsync.
+    private bool _parentPass;
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version)? _renderedSnapshot;
+
+    // Every [Parameter] that changes what the scene draws MUST be part of this tuple: a parent pass whose snapshot is unchanged is
+    // skipped. Document identity does not see in-place edits - that is what ContentVersion is for (the host bumps it). The page's
+    // Width/Height are listed explicitly because ResizeCanvasCommand mutates them in place on the same document instance.
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version) Snapshot()
+        => (Document, Document?.ActivePageId, Document?.Width ?? 0, Document?.Height ?? 0, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion);
+
+    /// <inheritdoc />
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        _parentPass = true;
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <inheritdoc />
+    protected override bool ShouldRender()
+    {
+        var parentPass = _parentPass;
+        _parentPass = false;
+        if (!parentPass || !LightEditing || _renderedSnapshot is null) return true;
+        return !_renderedSnapshot.Value.Equals(Snapshot());
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        RenderCount++;
+        // ShouldRender is not consulted for the very first render, so the pass flag is also cleared here (a stale flag would make the
+        // next OWN render look like a parent pass and be skipped).
+        _parentPass = false;
+        _renderedSnapshot = Snapshot();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_jsInitialized)
@@ -171,6 +241,7 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             var options = new
             {
                 readOnly       = ReadOnly,
+                lightEditing   = LightEditing,
                 gridSize       = GridSize,
                 showGrid       = ShowGrid,
                 snapToObjects  = SnapToObjects,
@@ -178,9 +249,42 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
                 canvasHeight   = Document?.Height ?? 800,
             };
 
+            _jsReadOnly = ReadOnly;
+            _jsLightEditing = LightEditing;
+            _jsCanvasW = options.canvasWidth;
+            _jsCanvasH = options.canvasHeight;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
+
+            // The page is fitted into the viewport by the svg itself (preserveAspectRatio=meet), so a page wider than
+            // the viewport starts zoomed out: tell the host the real scale instead of letting it show 100 %.
+            var fitted = await JS.InvokeAsync<double>("tmWireframeDesigner.getScale", _svgRef);
+            if (fitted > 0) await OnZoomChangedEvent.InvokeAsync(fitted);
         }
-        else if (_jsInitialized && _currentSelectionIds.Length > 0)
+        else if (_jsInitialized && _jsReadOnly != ReadOnly)
+        {
+            // The editor's Read-only toggle (or a host change) flips ReadOnly after init: keep the JS
+            // pointer handling in sync so drag/resize is blocked client-side too, not only by the
+            // server-side guards.
+            _jsReadOnly = ReadOnly;
+            await JS.InvokeVoidAsync("tmWireframeDesigner.setReadOnly", _svgRef, ReadOnly);
+        }
+
+        if (_jsInitialized && _jsLightEditing != LightEditing)
+        {
+            // The editor flipped to / from its mobile layout: the script drops / restores the handles, rubber band and connector tool.
+            _jsLightEditing = LightEditing;
+            await JS.InvokeVoidAsync("tmWireframeDesigner.setLightEditing", _svgRef, LightEditing);
+        }
+
+        if (_jsInitialized && Document is not null
+            && (Math.Abs(_jsCanvasW - Document.Width) > 0.001 || Math.Abs(_jsCanvasH - Document.Height) > 0.001))
+        {
+            // The page size changed behind the canvas' back (Undo / Redo of a canvas resize, a page switch, a swapped
+            // document): the JS engine keeps its own copy for fit-to-view, so it is told here, once per change.
+            await UpdateCanvasSize(Document.Width, Document.Height);
+        }
+
+        if (!firstRender && _jsInitialized && _currentSelectionIds.Length > 0)
         {
             // After Blazor re-renders the SVG (e.g. element resized via Properties Panel),
             // the JS selection handles read data-w/data-h from the DOM. Re-apply the
@@ -216,6 +320,19 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             if (el is not null)
                 _dragStartPositions[id] = (el.X, el.Y);
         }
+    }
+
+    /// <summary>
+    /// A move / resize / rotate / waypoint gesture was rolled back by the user (Escape, pointercancel, a second finger):
+    /// the live region announces <c>TmWireframeCanvas_GestureCancelled</c> politely. A normal gesture end, a destroy and the
+    /// read-only flip never call this. The same text is announced again on a repeat (a trailing no-break space alternates).
+    /// </summary>
+    [JSInvokable("OnGestureCancelled")]
+    public async Task JsOnGestureCancelled()
+    {
+        _statusToggle = !_statusToggle;
+        _statusMessage = Loc["TmWireframeCanvas_GestureCancelled"] + (_statusToggle ? "\u00A0" : "");
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Single element moved by dragging.</summary>
@@ -602,9 +719,9 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         await NotifyAndRender();
     }
 
-    /// <summary>Zoom level changed by wheel.</summary>
+    /// <summary>Zoom level changed by the wheel, a trackpad pinch or a two-finger pinch.</summary>
     [JSInvokable]
-    public Task OnZoomChanged(double scale) => Task.CompletedTask;
+    public async Task OnZoomChanged(double scale) => await OnZoomChangedEvent.InvokeAsync(scale);
 
     /// <summary>ViewBox updated after pan.</summary>
     [JSInvokable]
@@ -629,6 +746,14 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     public async Task OnCanvasContextMenu(double svgX, double svgY, double screenX, double screenY)
         => await OnCanvasContextMenuRequested.InvokeAsync((svgX, svgY, screenX, screenY));
 
+    /// <summary>
+    /// The script saw a press outside the open context menu (or Escape): raise <see cref="OnCloseContextMenu"/>. The method name is
+    /// the one <c>wireframe-designer.js</c> has always called; until now nothing on the canvas answered it, so clicking or tapping
+    /// away from the menu threw a JS interop error and left the menu open.
+    /// </summary>
+    [JSInvokable("CloseContextMenu")]
+    public async Task JsCloseContextMenu() => await OnCloseContextMenu.InvokeAsync();
+
     // ── Public API ───────────────────────────────────────────────────────────
 
     /// <summary>Programmatically zoom to a specific scale level.</summary>
@@ -645,6 +770,20 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         return await JS.InvokeAsync<double>("tmWireframeDesigner.fitToView", _svgRef, 40);
     }
 
+    /// <summary>
+    /// Tells the canvas that its container changed size (a side panel opened or closed, the window resized) without
+    /// a Blazor re-render: the script re-measures the svg, re-fits a view the user has not moved yet or keeps the centre
+    /// and zoom of one they have, and reports the new view box and zoom through <see cref="OnViewBoxChangedEvent"/> and
+    /// <see cref="OnZoomChangedEvent"/>. A <c>ResizeObserver</c> in the script does the same on its own; this is the explicit,
+    /// deterministic trigger for hosts that change the layout themselves.
+    /// </summary>
+    public async Task NotifyViewportChangedAsync()
+    {
+        if (!_jsInitialized) return;
+        try { await JS.InvokeVoidAsync("tmWireframeDesigner.relayout", _svgRef); }
+        catch (JSDisconnectedException) { /* the circuit is gone */ }
+        catch (ObjectDisposedException) { /* disposed while the call was in flight */ }
+    }
     /// <summary>Add an element via command stack (undoable) and trigger a re-render.</summary>
     public async Task AddElement(WireframeElement el)
     {
@@ -699,6 +838,8 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     public async Task UpdateCanvasSize(double w, double h)
     {
         if (!_jsInitialized) return;
+        _jsCanvasW = w;
+        _jsCanvasH = h;
         await JS.InvokeVoidAsync("tmWireframeDesigner.updateCanvasSize", _svgRef, w, h);
     }
 
@@ -747,6 +888,9 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
 
     /// <summary>Returns the underlying SVG element reference (needed by TmWireframeEditor for JS calls).</summary>
     public ElementReference GetSvgRef() => _svgRef;
+
+    /// <summary>The focusable canvas wrapper (<c>.tm-wd-canvas-wrap</c>): where a host returns the focus after a side sheet closes.</summary>
+    public ElementReference WrapElement => _wrapRef;
 
     /// <summary>Export the canvas as a clean SVG string (selection handles stripped).</summary>
     public async Task<string> ExportSvg()

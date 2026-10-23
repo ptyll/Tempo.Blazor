@@ -6,64 +6,214 @@
    BEM-style prefix: tm-wd-*
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Shared design tokens (local fallbacks for standalone use) ── */
+/* ── Design tokens: --tm-wd-* are ALIASES of the core --tm-* tokens ────────────
+   The editor owns no palette. Dark mode (tokens-dark.css), the opt-in indigo theme and consumer
+   overrides of --tm-* all reach the editor through these aliases; to restyle the editor, override
+   the core token (or, for one editor, an individual --tm-wd-* alias on its root).
 
-:root {
-  --tm-wd-font:          ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --tm-wd-font-mono:     ui-monospace, "Cascadia Code", monospace;
-  --tm-wd-radius-sm:     3px;
-  --tm-wd-radius:        4px;
-  --tm-wd-radius-lg:     6px;
+   The aliases are declared on :root, on the theme boundaries ([data-theme], [class~="tm-dark"], [data-tm-theme]) and
+   on the portaled .tm-wd-export-dialog - NEVER on an in-editor selector (.tm-wd-editor, .tm-wd-toolbox, …).
+   A custom property substitutes its var() where it is declared, so a [data-theme="dark"] / .tm-dark region
+   nested below <html> needs the aliases re-declared at its boundary (otherwise it keeps the LIGHT values
+   computed on :root); and a consumer override such as `.my-editor .tm-wd-editor { --tm-wd-accent: … }` only
+   propagates to the toolbox, props, layers, minimap and rulers when none of those re-declares the alias. */
 
-  /* Wireframe palette – intentionally flat, no shadows */
-  --tm-wd-bg-surface:    #ffffff;
+:root,
+[data-theme],
+[class~="tm-dark"],
+[data-tm-theme],
+.tm-wd-export-dialog {
+  --tm-wd-font:          var(--tm-font-sans);
+  --tm-wd-font-mono:     var(--tm-font-mono);
+  --tm-wd-radius-sm:     var(--tm-radius-sm);
+  --tm-wd-radius:        var(--tm-radius-control);
+  --tm-wd-radius-lg:     var(--tm-radius-card);
+
+  /* Surfaces, borders, text */
+  --tm-wd-bg-surface:    var(--tm-bg-surface);
   --tm-wd-fill:          var(--tm-wd-bg-surface);
-  --tm-wd-bg-subtle:     #f9fafb;
-  --tm-wd-bg-muted:      #f3f4f6;
-  --tm-wd-border:        #d1d5db;
-  --tm-wd-border-focus:  #3b82f6;
-  --tm-wd-text:          #374151;
-  --tm-wd-text-muted:    #6b7280;
-  --tm-wd-text-light:    #9ca3af;
-  --tm-wd-accent:        #3b82f6;
-  --tm-wd-accent-subtle: #dbeafe;
-  --tm-wd-danger:        #ef4444;
-  --tm-wd-danger-subtle: #fee2e2;
-  --tm-wd-guide-color:   #3b82f6;
+  --tm-wd-bg-subtle:     var(--tm-bg-surface-secondary);
+  --tm-wd-bg-muted:      var(--tm-bg-muted);
+  --tm-wd-border:        var(--tm-border-color);
+  --tm-wd-border-focus:  var(--tm-border-color-focus);
+  --tm-wd-text:          var(--tm-text-primary);
+  --tm-wd-text-muted:    var(--tm-text-secondary);
+  --tm-wd-text-light:    var(--tm-text-tertiary);
 
-  /* Toolbar */
-  --tm-wd-toolbar-h:     42px;
-  --tm-wd-toolbar-bg:    #ffffff;
+  /* Accent and status */
+  --tm-wd-accent:        var(--tm-color-primary);
+  --tm-wd-accent-subtle: var(--tm-color-primary-subtle);
+  --tm-wd-danger:        var(--tm-color-danger);
+  --tm-wd-danger-subtle: var(--tm-color-danger-subtle);
+  --tm-wd-danger-text:   var(--tm-color-danger-text);
+  --tm-wd-danger-border: var(--tm-color-danger-soft-border);
+  --tm-wd-warning-subtle: var(--tm-color-warning-subtle);
+  --tm-wd-warning-text:  var(--tm-color-warning-text);
+  --tm-wd-guide-color:   var(--tm-color-primary);
 
-  /* Side panels */
-  --tm-wd-toolbox-w:     220px;
-  --tm-wd-props-w:       280px;
+  /* Canvas. The workspace follows the theme (--tm-bg-workspace: white by default, the indigo off-white / dark slate),
+     tinted 6 % toward the text colour so the white page always stands out from it, also in the default
+     light theme where the workspace itself is white;
+     the PAGE drawn on it is paper — theme-invariant by design (--tm-paper*), exactly like the
+     diagram editor's page: the wireframe components are drawn light-on-white, so a dark page would
+     turn their ink invisible, and the SVG/PNG/PDF export (always explicit colours) then matches what
+     the user saw. The minor grid step is the paper border at half opacity (stroke-opacity on the
+     path), so it stays faint on the paper without a colour-mix the exporter could not rasterise. */
+  --tm-wd-canvas-surface: color-mix(in srgb, var(--tm-bg-workspace), var(--tm-text-primary) 6%);
+  --tm-wd-canvas-bg:      var(--tm-paper);
+  --tm-wd-canvas-border:  var(--tm-paper-border);
+  --tm-wd-paper-ink:      var(--tm-paper-ink);
+  --tm-wd-grid-minor:     var(--tm-paper-border);
+  --tm-wd-grid-major:     var(--tm-paper-border);
+  --tm-wd-handle-fill:    var(--tm-paper);
+  --tm-wd-handle-hit:     var(--tm-space-6);
+  --tm-wd-page-shadow:    color-mix(in srgb, var(--tm-paper-ink) 28%, transparent);
+  --tm-wd-placeholder-fill:   var(--tm-paper-backdrop);
+  --tm-wd-placeholder-stroke: var(--tm-paper-border);
+  --tm-wd-placeholder-ink:    var(--tm-paper-ink-muted);
+
+  /* Minimap card: a thumbnail of the paper page, so it stays light-on-paper in every theme. */
+  --tm-wd-minimap-page:       var(--tm-paper);
+  --tm-wd-minimap-page-edge:  var(--tm-paper-border);
+  --tm-wd-minimap-box:        var(--tm-paper-backdrop);
+  --tm-wd-minimap-box-edge:   var(--tm-paper-ink-muted);
+
+  /* Rulers */
+  --tm-wd-ruler-bg:      var(--tm-bg-muted);
+  --tm-wd-ruler-tick:    var(--tm-text-tertiary);
+  --tm-wd-ruler-text:    var(--tm-text-secondary);
+  --tm-wd-ruler-cursor:  var(--tm-color-primary);
+
+  /* Toolbar and side panels (8 px rhythm: 3rem = 6 x 8 px, 14rem and 18rem = multiples of 8 px) */
+  --tm-wd-toolbar-h:     calc(var(--tm-space-8) + var(--tm-space-4));
+  --tm-wd-toolbar-bg:    var(--tm-bg-surface);
+  --tm-wd-btn-size:      var(--tm-space-8);
+  --tm-wd-sheet-w:       calc(var(--tm-space-16) * 5);
 }
-
 /* ════════════════════════════════════════════════════════════════
    1. EDITOR SHELL
    ════════════════════════════════════════════════════════════════ */
 
 .tm-wd-editor {
+  container-type: inline-size;
+  container-name: tm-wd-editor;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 500px;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
-  background: var(--tm-wd-bg-muted);
+  background: var(--tm-wd-canvas-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius-lg);
   overflow: hidden;
 }
 
-.tm-wd-editor__body {
-  display: flex;
-  flex: 1;
+/* The core TmEditorShell fills the editor box: header (opt-in), ONE command row, docked left panel, canvas region,
+   inspector. The shell paints generic padded surface bands; the editor owns its own chrome, so they go flat. */
+.tm-wd-editor .tm-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  background: var(--tm-wd-canvas-surface);
+}
+
+.tm-wd-editor .tm-editor-shell__main {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+}
+
+.tm-wd-editor .tm-editor-shell__header,
+.tm-wd-editor .tm-editor-shell__toolbar {
+  padding: 0;
+  background: var(--tm-wd-toolbar-bg);
+  border-block-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-editor .tm-editor-shell__canvas {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tm-wd-editor .tm-editor-shell__panel {
+  background: var(--tm-wd-bg-surface);
+  border-color: var(--tm-wd-border);
+  overflow: hidden;
+}
+
+.tm-wd-editor .tm-editor-shell__panel > .tm-wd-side,
+.tm-wd-editor .tm-editor-shell__panel > .tm-wd-props {
+  height: 100%;
+}
+
+/* The canvas region stacks the page tabs, the import banner and the rulers + canvas area. */
+.tm-wd-editor__canvas-region {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Left panel: Components / Pages / Layers behind one tab strip ── */
+
+.tm-wd-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tm-wd-side__tabs {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-side__panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tm-wd-side__panel[hidden] {
+  display: none;
+}
+
+.tm-wd-side__panel > .tm-wd-toolbox,
+.tm-wd-side__panel > .tm-wd-pages,
+.tm-wd-side__panel > .tm-wd-layers {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The header row (host slots + the title): flat, one line. */
+.tm-wd-editor__header-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-wd-editor__header-start,
+.tm-wd-editor__header-actions,
+.tm-wd-editor__header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-width: 0;
+}
+
+.tm-wd-editor__header-title {
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -73,23 +223,112 @@
 .tm-wd-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: var(--tm-wd-toolbar-h);
-  padding: 0 8px;
+  gap: var(--tm-space-2);
+  min-height: var(--tm-wd-toolbar-h);
+  padding: 0 var(--tm-space-2);
   background: var(--tm-wd-toolbar-bg);
-  border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
+/* The command row is a core TmToolbar (Overflow=Menu, Labels=Auto): it fills the rest of the row and the editor
+   only flattens its chrome. The groups are divided by a hairline; a group with nothing left on the bar is hidden. */
+.tm-wd-editor__commandbar.tm-toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
+  min-height: var(--tm-wd-toolbar-h);
+  /* The bar gap, the start container gap and the group gap are ONE value (--tm-space-2): tm-toolbar.js measures every
+     item with the bar gap, so a narrower bar gap than the real one under-reserves and the last controls clip. */
+  gap: var(--tm-space-2);
+}
+
+/* A group keeps its natural width: tm-toolbar.js measures the items, so a shrinking wrapper would overlap them. */
+.tm-wd-editor__group {
+  flex-shrink: 0;
+  padding-inline-end: var(--tm-space-2);
+  border-inline-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-editor__group[data-tm-group="file"] {
+  border-inline-end: none;
+  padding-inline-end: 0;
+}
+
+/* A group whose controls all left the bar keeps no box of its own, but it must NOT be display:none: its collapsed items stay
+   in the DOM so their widths remain measurable (a display:none ancestor measures 0 and the fit would oscillate). It only hides
+   its divider: tm-toolbar.js counts a group wrapper's padding and border as FIXED width, so dropping them when the group empties
+   would free 9 px, let one more item fit, re-expand the group and flip the fit forever (the More menu then never holds still:
+   Playwright 'element is not stable'). The geometry stays constant, the hairline turns transparent. */
+.tm-wd-editor__group:not(:has(> :is(.tm-toolbar-btn, .tm-toolbar-item):not(.tm-toolbar-item--collapsed))) {
+  border-inline-end-color: transparent;
+}
+
+/* The editor's command buttons keep the editor's 32px target (--tm-wd-btn-size), icon-only ones too. */
+.tm-wd-editor .tm-toolbar-btn {
+  min-height: var(--tm-wd-btn-size);
+}
+
+.tm-wd-editor .tm-toolbar-btn--icon-only {
+  min-width: var(--tm-wd-btn-size);
+  justify-content: center;
+}
+
+/* Export is the primary action of the command row: a filled button that never leaves the bar. */
+.tm-wd-editor__export .tm-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  min-height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-3);
+  border: 1px solid var(--tm-color-primary);
+  border-radius: var(--tm-wd-radius);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-on-primary);
+  font-family: var(--tm-wd-font);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tm-wd-editor__export .tm-dropdown-trigger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-editor__export .tm-dropdown-trigger:hover:not(:disabled) {
+  background: var(--tm-color-primary-hover);
+  border-color: var(--tm-color-primary-hover);
+}
+
+/* The "More" menu of a narrow bar can hold the Align / Distribute / Snap / Zoom entries on top of the format painter, view
+   and panel toggles: cap the popover to the viewport and let it scroll, so no entry is ever out of reach. */
+.tm-wd-editor .tm-toolbar-more__panel {
+  max-height: calc(100vh - var(--tm-space-8));
+  overflow-y: auto;
+}
+
+/* Import: a label around the hidden file input, styled like a quiet toolbar button. */
+.tm-wd-editor__import {
+  position: relative;
+  min-height: var(--tm-wd-btn-size);
+}
+
+.tm-wd-editor__import:focus-within {
+  box-shadow: var(--tm-focus-ring);
+}
+
 .tm-wd-editor__title {
-  height: 26px;
-  padding: 0 8px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text);
   min-width: 0;
   max-width: 220px;
@@ -113,9 +352,9 @@
 
 .tm-wd-editor__toolbar-sep {
   width: 1px;
-  height: 20px;
+  height: var(--tm-space-5);
   background: var(--tm-wd-border);
-  margin: 0 4px;
+  margin: 0 var(--tm-space-1);
   flex-shrink: 0;
 }
 
@@ -129,14 +368,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
-  min-width: 26px;
-  padding: 0 6px;
+  height: var(--tm-wd-btn-size);
+  min-width: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-1-5);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   cursor: pointer;
   white-space: nowrap;
@@ -150,7 +389,8 @@
 }
 
 .tm-wd-editor__btn:active:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--tm-wd-bg-muted);
+  border-color: var(--tm-wd-border);
 }
 
 .tm-wd-editor__btn:disabled {
@@ -165,22 +405,30 @@
 }
 
 .tm-wd-editor__btn--text {
-  padding: 0 8px;
+  padding: 0 var(--tm-space-2);
   min-width: auto;
 }
 
 .tm-wd-editor__btn--icon {
-  font-size: 15px;
   padding: 0;
+}
+
+/* TmIcon inside a toolbar button follows the button colour (currentColor) and never shrinks. */
+.tm-wd-editor__btn .tm-icon {
+  flex-shrink: 0;
+}
+
+.tm-wd-editor__btn-label {
+  margin-inline-start: var(--tm-space-1);
 }
 
 /* ── Zoom label ── */
 
 .tm-wd-editor__zoom-label {
   display: inline-block;
-  min-width: 40px;
+  min-width: var(--tm-space-10);
   text-align: center;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-variant-numeric: tabular-nums;
   color: var(--tm-wd-text-muted);
   user-select: none;
@@ -191,32 +439,33 @@
 .tm-wd-editor__btn--canvas-size {
   font-variant-numeric: tabular-nums;
   color: var(--tm-wd-text-muted);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
   letter-spacing: 0.02em;
 }
 
 .tm-wd-editor__canvas-size-input {
-  width: 52px;
-  padding: 2px 4px;
+  width: calc(var(--tm-space-12) + var(--tm-space-1));
+  height: var(--tm-wd-btn-size);
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border);
-  border-radius: 4px;
+  border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-fill);
   color: var(--tm-wd-text);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-variant-numeric: tabular-nums;
   text-align: center;
   outline: none;
 }
 
 .tm-wd-editor__canvas-size-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+  border-color: var(--tm-wd-border-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-wd-editor__canvas-size-sep {
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
-  padding: 0 2px;
+  padding: 0 var(--tm-space-0-5);
   user-select: none;
 }
 
@@ -228,25 +477,25 @@
 
 .tm-wd-editor__dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--tm-space-1));
   left: 0;
   z-index: 200;
-  min-width: 130px;
+  min-width: calc(var(--tm-space-16) * 2);
   background: var(--tm-wd-bg-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--tm-shadow-popover);
   overflow: hidden;
 }
 
 .tm-wd-editor__dropdown-item {
   display: block;
   width: 100%;
-  padding: 7px 12px;
+  padding: var(--tm-space-2) var(--tm-space-3);
   border: none;
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   text-align: left;
   cursor: pointer;
@@ -259,7 +508,7 @@
 
 .tm-wd-editor__dropdown-sep {
   height: 1px;
-  margin: 4px 8px;
+  margin: var(--tm-space-1) var(--tm-space-2);
   background: var(--tm-wd-border);
 }
 
@@ -280,12 +529,12 @@
 .tm-wd-editor__error-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
   background: var(--tm-wd-danger-subtle);
-  border-bottom: 1px solid #fca5a5;
-  font-size: 13px;
-  color: #991b1b;
+  border-bottom: 1px solid var(--tm-wd-danger-border);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-wd-danger-text);
   flex-shrink: 0;
 }
 
@@ -293,30 +542,20 @@
   margin-left: auto;
   border: none;
   background: transparent;
-  color: #991b1b;
+  color: var(--tm-wd-danger-text);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 4px;
+  font-size: var(--tm-font-size-sm);
+  padding: 0 var(--tm-space-1);
   border-radius: var(--tm-wd-radius-sm);
 }
 
 .tm-wd-editor__error-close:hover {
-  background: #fecaca;
+  background: var(--tm-wd-danger-border);
 }
 
 /* ════════════════════════════════════════════════════════════════
    3. TOOLBOX PANEL (left)
    ════════════════════════════════════════════════════════════════ */
-
-.tm-wd-editor__toolbox-wrap {
-  width: var(--tm-wd-toolbox-w);
-  flex-shrink: 0;
-  border-right: 1px solid var(--tm-wd-border);
-  background: var(--tm-wd-bg-surface);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 
 .tm-wd-toolbox {
   display: flex;
@@ -330,21 +569,21 @@
 .tm-wd-toolbox__search {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-2);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__search-input {
   flex: 1;
-  height: 26px;
-  padding: 0 8px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-muted);
   font-family: var(--tm-wd-font);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text);
   min-width: 0;
   transition: border-color 0.15s, background 0.15s;
@@ -357,13 +596,12 @@
 }
 
 .tm-wd-toolbox__search-clear {
-  width: 22px;
-  height: 22px;
+  width: var(--tm-space-6);
+  height: var(--tm-space-6);
   border: none;
   border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -380,20 +618,20 @@
 
 .tm-wd-toolbox__filters {
   display: flex;
-  gap: 2px;
-  padding: 6px 8px 4px;
+  gap: var(--tm-space-0-5);
+  padding: var(--tm-space-1-5) var(--tm-space-2) var(--tm-space-1);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__filter-btn {
-  height: 22px;
-  padding: 0 8px;
+  height: var(--tm-space-6);
+  padding: 0 var(--tm-space-2);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
@@ -416,7 +654,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 0;
+  padding: var(--tm-space-1) 0;
 }
 
 /* ── Category (native <details>) ── */
@@ -432,13 +670,13 @@
 .tm-wd-toolbox__category-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
   list-style: none;
   cursor: pointer;
   user-select: none;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--tm-wd-text-muted);
@@ -454,13 +692,14 @@
 
 .tm-wd-toolbox__category-header::before {
   content: "▶";
-  font-size: 8px;
+  font-size: var(--tm-font-size-xs);
+  transform: scale(0.65);
   transition: transform 0.15s;
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__category[open] > .tm-wd-toolbox__category-header::before {
-  transform: rotate(90deg);
+  transform: rotate(90deg) scale(0.65);
 }
 
 .tm-wd-toolbox__category-name {
@@ -468,16 +707,16 @@
 }
 
 .tm-wd-toolbox__category-count {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-light);
   font-weight: 400;
 }
 
 .tm-wd-toolbox__category-items {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 4px 6px 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-1-5) var(--tm-space-2);
 }
 
 /* ── Component item ── */
@@ -486,8 +725,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
+  min-width: 0;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-surface);
@@ -500,12 +740,12 @@
 .tm-wd-toolbox__item:hover {
   border-color: var(--tm-wd-accent);
   background: var(--tm-wd-bg-subtle);
-  box-shadow: 0 1px 4px rgba(59,130,246,0.1);
+  box-shadow: var(--tm-shadow-sm);
 }
 
 .tm-wd-toolbox__item:focus-visible {
-  outline: 2px solid var(--tm-wd-accent);
-  outline-offset: 1px;
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-wd-toolbox__item:active {
@@ -513,20 +753,57 @@
   background: var(--tm-wd-accent-subtle);
 }
 
+/* Read-only editor: the palette stays visible but muted and inert (aria-disabled on the item). */
+.tm-wd-toolbox__item--disabled,
+.tm-wd-toolbox__item--disabled:hover,
+.tm-wd-toolbox__item--disabled:active {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-color: var(--tm-wd-border);
+  background: var(--tm-wd-bg-surface);
+  box-shadow: none;
+}
+
 .tm-wd-toolbox__item-preview {
   display: block;
-  width: 56px;
-  height: 32px;
+  width: calc(var(--tm-space-8) * 1.75);
+  height: var(--tm-space-8);
   overflow: visible;
   pointer-events: none;
 }
 
+/* The mini stencil is drawn light-on-paper (like the canvas page), so its tile is paper in every
+   theme - a white-filled preview on a dark tile was baseline finding #5. */
+.tm-wd-toolbox__item-preview-paper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tm-space-0-5);
+  background: var(--tm-wd-canvas-bg);
+  border: 1px solid var(--tm-wd-canvas-border);
+  border-radius: var(--tm-radius-xs);
+}
+
+.tm-wd-toolbox__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-8);
+  height: var(--tm-space-8);
+  color: var(--tm-wd-text-muted);
+  pointer-events: none;
+}
+
+.tm-wd-toolbox__item:hover .tm-wd-toolbox__item-icon {
+  color: var(--tm-wd-accent);
+}
+
 .tm-wd-toolbox__item-name {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   text-align: center;
   line-height: 1.2;
-  max-width: 80px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -534,29 +811,29 @@
 
 .tm-wd-toolbox__item-badge {
   position: absolute;
-  top: 2px;
-  right: 3px;
-  font-size: 8px;
-  font-weight: 700;
+  top: var(--tm-space-0-5);
+  right: var(--tm-space-0-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-bold);
   line-height: 1;
-  padding: 1px 3px;
-  border-radius: 2px;
+  padding: var(--tm-space-0-5) var(--tm-space-1);
+  border-radius: var(--tm-radius-xs);
   background: var(--tm-wd-bg-muted);
   color: var(--tm-wd-text-light);
 }
 
 .tm-wd-toolbox__item-badge--custom {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--tm-wd-warning-subtle);
+  color: var(--tm-wd-warning-text);
 }
 
 /* ── Empty state ── */
 
 .tm-wd-toolbox__empty {
-  padding: 24px 16px;
+  padding: var(--tm-space-6) var(--tm-space-4);
   text-align: center;
   color: var(--tm-wd-text-light);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-style: italic;
 }
 
@@ -587,7 +864,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--tm-wd-bg-muted);
+  background: var(--tm-wd-canvas-surface);
 }
 
 .tm-wd-canvas-wrap {
@@ -598,11 +875,24 @@
   outline: none;
 }
 
+/* The page lifts off the workspace: in the default light theme the workspace is white too, so the 1px paper
+   border alone would leave the page edge almost invisible. The shadow is presentation only (the export
+   serializes explicit attributes and drops it with the stylesheet). */
+.tm-wd-canvas__page {
+  filter: drop-shadow(0 1px 3px var(--tm-wd-page-shadow));
+}
+
 .tm-wd-canvas__svg {
   display: block;
   width: 100%;
   height: 100%;
   cursor: default;
+  /* The canvas owns every touch on it: one finger selects / drags / rubber-bands, two fingers pinch and pan
+     (pointer-drag.js + pointer-gesture.js are attached with touchAction: null, so this rule is what stops the browser
+     scrolling the page or zooming it instead). The page around the editor still scrolls from outside the canvas. */
+  touch-action: none;
+  /* iOS would open its callout / magnifier on the long-press that opens the element menu */
+  -webkit-touch-callout: none;
   /* prevent text selection during rubber-band drag */
   user-select: none;
   -webkit-user-select: none;
@@ -618,6 +908,34 @@
 
 .tm-wd-handle {
   cursor: pointer;
+}
+
+/* Coarse pointer (a finger): the handles are painted 1.5x larger by wireframe-designer.js and get an invisible hit
+   rect of at least --tm-wd-handle-hit (24 px by default, the 44 px touch target on a coarse pointer) so a fingertip
+   lands on them; the connector waypoint gets its hit circle from the same token. */
+@media (pointer: coarse) {
+  :root,
+  [data-theme],
+  [class~="tm-dark"],
+  [data-tm-theme],
+  .tm-wd-export-dialog {
+    --tm-wd-handle-hit: var(--tm-touch-target);
+  }
+}
+
+.tm-wd-connector__waypoint-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .tm-wd-connector__waypoint-hit {
+    pointer-events: all;
+    /* The circle radius is a geometry property (CSS can size it): half the token, in svg units at zoom 1. */
+    r: calc(var(--tm-wd-handle-hit) / 2);
+    cursor: move;
+  }
 }
 
 /* ── JS-rendered rubber band ── */
@@ -659,7 +977,7 @@
 
 .tm-wd-connector--selected .tm-wd-connector__path {
   stroke: var(--tm-wd-accent);
-  filter: drop-shadow(0 0 2px rgba(59,130,246,0.4));
+  filter: drop-shadow(0 0 2px var(--tm-wd-accent));
 }
 
 .tm-wd-connector__waypoint {
@@ -669,16 +987,6 @@
 /* ════════════════════════════════════════════════════════════════
    5. PROPERTIES PANEL (right)
    ════════════════════════════════════════════════════════════════ */
-
-.tm-wd-editor__props-wrap {
-  width: var(--tm-wd-props-w);
-  flex-shrink: 0;
-  border-left: 1px solid var(--tm-wd-border);
-  background: var(--tm-wd-bg-surface);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 
 .tm-wd-props {
   display: flex;
@@ -695,42 +1003,41 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--tm-space-2);
   height: 100%;
   color: var(--tm-wd-text-light);
-  font-size: 13px;
-  padding: 24px;
+  font-size: var(--tm-font-size-sm);
+  padding: var(--tm-space-6);
   text-align: center;
 }
 
 .tm-wd-props__empty-icon {
-  font-size: 28px;
   opacity: 0.4;
 }
 
 /* ── Header ── */
 
 .tm-wd-props__header {
-  padding: 10px 12px 8px;
+  padding: var(--tm-space-2-5) var(--tm-space-3) var(--tm-space-2);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-props__type-badge {
   display: inline-block;
-  padding: 1px 7px;
-  border-radius: 10px;
+  padding: var(--tm-space-0-5) var(--tm-space-2);
+  border-radius: var(--tm-radius-full);
   background: var(--tm-wd-accent-subtle);
   color: var(--tm-wd-accent);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.02em;
-  margin-bottom: 3px;
+  margin-bottom: var(--tm-space-0-5);
 }
 
 .tm-wd-props__subtitle {
   display: block;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -750,12 +1057,12 @@
 .tm-wd-props__section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-2) var(--tm-space-2-5);
   list-style: none;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--tm-wd-text-muted);
@@ -771,26 +1078,27 @@
 
 .tm-wd-props__section-header::before {
   content: "▶";
-  font-size: 8px;
+  font-size: var(--tm-font-size-xs);
+  transform: scale(0.65);
   transition: transform 0.15s;
   flex-shrink: 0;
 }
 
 .tm-wd-props__section[open] > .tm-wd-props__section-header::before {
-  transform: rotate(90deg);
+  transform: rotate(90deg) scale(0.65);
 }
 
 .tm-wd-props__section-body {
-  padding: 6px 10px 10px;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5) var(--tm-space-2-5);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 .tm-wd-props__section-body--grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 /* ── Field ── */
@@ -798,7 +1106,7 @@
 .tm-wd-props__field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--tm-space-0-5);
 }
 
 .tm-wd-props__field--error .tm-wd-props__input,
@@ -809,17 +1117,17 @@
 .tm-wd-props__label {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 500;
+  gap: var(--tm-space-0-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text-muted);
   user-select: none;
 }
 
 .tm-wd-props__required {
   color: var(--tm-wd-danger);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: var(--tm-font-weight-bold);
+  font-size: var(--tm-font-size-xs);
   line-height: 1;
 }
 
@@ -828,13 +1136,13 @@
 .tm-wd-props__input,
 .tm-wd-props__select {
   width: 100%;
-  height: 26px;
-  padding: 0 7px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-muted);
   font-family: var(--tm-wd-font);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text);
   transition: border-color 0.15s, background 0.15s;
   box-sizing: border-box;
@@ -863,7 +1171,7 @@
 }
 
 .tm-wd-props__error-msg {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-danger);
   line-height: 1.3;
 }
@@ -873,7 +1181,7 @@
 .tm-wd-props__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
   cursor: pointer;
   user-select: none;
 }
@@ -888,9 +1196,9 @@
 
 .tm-wd-props__toggle-track {
   display: inline-block;
-  width: 32px;
-  height: 18px;
-  border-radius: 9px;
+  width: var(--tm-space-8);
+  height: var(--tm-space-5);
+  border-radius: var(--tm-radius-full);
   background: var(--tm-wd-border);
   position: relative;
   transition: background 0.2s;
@@ -900,13 +1208,13 @@
 .tm-wd-props__toggle-track::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  top: var(--tm-space-0-5);
+  left: var(--tm-space-0-5);
+  width: calc(var(--tm-space-5) - var(--tm-space-1));
+  height: calc(var(--tm-space-5) - var(--tm-space-1));
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-wd-handle-fill);
+  box-shadow: var(--tm-shadow-sm);
   transition: transform 0.2s;
 }
 
@@ -915,7 +1223,7 @@
 }
 
 .tm-wd-props__toggle input:checked ~ .tm-wd-props__toggle-track::after {
-  transform: translateX(14px);
+  transform: translateX(calc(var(--tm-space-5) - var(--tm-space-1)));
 }
 
 .tm-wd-props__toggle input:indeterminate ~ .tm-wd-props__toggle-track {
@@ -927,15 +1235,15 @@
 .tm-wd-props__color-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
 }
 
 .tm-wd-props__color-swatch {
-  width: 26px;
-  height: 26px;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  padding: 1px;
+  padding: var(--tm-space-0-5);
   cursor: pointer;
   flex-shrink: 0;
   background: none;
@@ -944,7 +1252,7 @@
 .tm-wd-props__color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .tm-wd-props__color-swatch::-webkit-color-swatch {
   border: none;
-  border-radius: 2px;
+  border-radius: var(--tm-radius-xs);
 }
 
 .tm-wd-props__color-row .tm-wd-props__input {
@@ -958,8 +1266,8 @@
 
 .tm-wd-editor__minimap-wrap {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: var(--tm-space-3);
+  right: var(--tm-space-3);
   z-index: 10;
 }
 
@@ -967,7 +1275,7 @@
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-surface);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--tm-shadow-card);
   overflow: hidden;
   opacity: 0.9;
   transition: opacity 0.15s;
@@ -981,13 +1289,25 @@
   display: block;
 }
 
+.tm-wd-minimap__box {
+  fill: var(--tm-wd-minimap-box);
+  stroke: var(--tm-wd-minimap-box-edge);
+}
+
+.tm-wd-minimap__box--selected {
+  fill: var(--tm-wd-accent-subtle);
+  stroke: var(--tm-wd-accent);
+}
+
 .tm-wd-minimap__viewport {
   /* Cursor is set inline in Razor; SVG pointer-events handled via JS */
+  fill: color-mix(in srgb, var(--tm-wd-accent) 10%, transparent);
+  stroke: var(--tm-wd-accent);
 }
 
 .tm-wd-minimap__empty {
-  padding: 8px 12px;
-  font-size: 11px;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-light);
   font-style: italic;
 }
@@ -1030,8 +1350,8 @@
   background: var(--tm-wd-bg-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  padding: 4px 0;
+  box-shadow: var(--tm-shadow-popover);
+  padding: var(--tm-space-1) 0;
   font-family: var(--tm-wd-font);
   pointer-events: auto;
 }
@@ -1039,11 +1359,11 @@
 .tm-wd-editor__context-item {
   display: block;
   width: 100%;
-  padding: 6px 14px;
+  padding: var(--tm-space-1-5) var(--tm-space-3-5);
   border: none;
   background: transparent;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   text-align: left;
   cursor: pointer;
@@ -1056,8 +1376,8 @@
 }
 
 .tm-wd-editor__context-item:focus-visible {
-  outline: 2px solid var(--tm-wd-border-focus);
-  outline-offset: -2px;
+  outline: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px var(--tm-wd-border-focus);
 }
 
 .tm-wd-editor__context-item:disabled {
@@ -1070,37 +1390,55 @@
 }
 
 .tm-wd-editor__context-item--danger {
-  color: var(--tm-wd-danger, #ef4444);
+  color: var(--tm-wd-danger);
 }
 
 .tm-wd-editor__context-item--danger:hover {
-  background: var(--tm-wd-danger-subtle, rgba(239,68,68,0.08));
+  background: var(--tm-wd-danger-subtle);
+}
+
+/* Coarse pointer: the menu a long-press opens is a finger menu - every entry reaches the 44 px touch target (the menu
+   already scrolls inside max-height: 80vh, so the taller list never leaves the viewport). */
+@media (pointer: coarse) {
+  .tm-wd-editor__context-item {
+    min-block-size: var(--tm-touch-target);
+    display: flex;
+    align-items: center;
+  }
+
+  /* 44 px entries make the element menu taller than the 80vh cap, which would push Lock and Delete (the commands a finger
+     reaches for most) below the fold of a 768 px tablet. The cap is lifted to the whole viewport minus a small margin; a
+     shorter viewport still scrolls inside the menu and never chains the scroll to the page. */
+  .tm-wd-editor__context-menu {
+    max-height: calc(100vh - var(--tm-space-4));
+    overscroll-behavior: contain;
+  }
 }
 
 .tm-wd-editor__context-sep {
   height: 1px;
-  margin: 4px 10px;
+  margin: var(--tm-space-1) var(--tm-space-2-5);
   background: var(--tm-wd-border);
 }
 
 .tm-wd-editor__context-heading {
   display: block;
-  padding: 4px 14px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: var(--tm-space-1) var(--tm-space-3-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   color: var(--tm-wd-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.04em;
   user-select: none;
 }
 
 .tm-wd-editor__context-submenu {
-  padding: 2px 0;
+  padding: var(--tm-space-0-5) 0;
 }
 
 .tm-wd-editor__context-submenu .tm-wd-editor__context-item {
-  padding-left: 24px;
-  font-size: 12px;
+  padding-left: var(--tm-space-6);
+  font-size: var(--tm-font-size-xs);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1110,8 +1448,8 @@
 .tm-wd-editor__page-tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 8px 0;
+  gap: var(--tm-space-0-5);
+  padding: var(--tm-space-1) var(--tm-space-2) 0;
   background: var(--tm-wd-toolbar-bg);
   border-bottom: 1px solid var(--tm-wd-border);
   overflow-x: auto;
@@ -1121,11 +1459,11 @@
 .tm-wd-editor__page-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 6px 6px 0 0;
-  font-size: 12px;
-  font-weight: 500;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-1-5) var(--tm-space-3);
+  border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text-muted);
   background: transparent;
   border: 1px solid transparent;
@@ -1156,12 +1494,12 @@
 }
 
 .tm-wd-editor__page-tab-input {
-  width: 100px;
-  padding: 2px 4px;
-  font-size: 12px;
+  width: calc(var(--tm-space-20) + var(--tm-space-5));
+  padding: var(--tm-space-0-5) var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
   font-family: inherit;
   border: 1px solid var(--tm-wd-border-focus);
-  border-radius: 3px;
+  border-radius: var(--tm-wd-radius-sm);
   background: var(--tm-wd-bg-surface);
   color: var(--tm-wd-text);
   outline: none;
@@ -1171,22 +1509,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: var(--tm-space-4);
+  height: var(--tm-space-4);
   padding: 0;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   line-height: 1;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
 .tm-wd-editor__page-tab-close:hover {
-  background: var(--tm-wd-danger-subtle, rgba(239,68,68,0.08));
-  color: var(--tm-wd-danger, #ef4444);
+  background: var(--tm-wd-danger-subtle);
+  color: var(--tm-wd-danger);
 }
 
 .tm-wd-editor__page-tab-add,
@@ -1194,13 +1532,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 10px;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--tm-wd-radius);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
   white-space: nowrap;
@@ -1214,6 +1552,8 @@
 
 /* ════════════════════════════════════════════════════════════════
    10. LAYERS PANEL
+   Row = grip · radio (active layer) · eye · lock · name · trash · ⋯ menu.
+   Rows are 36px, icon buttons 32px; on a coarse pointer the targets grow to --tm-touch-target.
    ════════════════════════════════════════════════════════════════ */
 
 .tm-wd-layers {
@@ -1225,8 +1565,16 @@
   overflow: hidden;
 }
 
+/* A host that owns the collapse / the surrounding panel (ShowCollapseToggle="false"): no height cap, no top rule. */
+.tm-wd-layers--embedded {
+  max-height: none;
+  border-top: none;
+  min-height: 0;
+  flex: 1;
+}
+
 .tm-wd-layers[data-collapsed="True"] {
-  max-height: 32px;
+  max-height: var(--tm-space-8);
 }
 
 .tm-wd-layers__toggle {
@@ -1234,12 +1582,12 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 28px;
+  height: var(--tm-space-7);
   background: transparent;
   border: none;
   color: var(--tm-wd-text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-wd-layers__toggle:hover {
@@ -1252,6 +1600,7 @@
   flex-direction: column;
   overflow: hidden;
   flex: 1;
+  min-height: 0;
 }
 
 .tm-wd-layers[data-collapsed="True"] .tm-wd-layers__inner {
@@ -1262,16 +1611,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--tm-wd-border);
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
 }
 
+/* Sentence case at body size, not an uppercase 11px caption. */
 .tm-wd-layers__title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--tm-wd-text-muted);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
   margin: 0;
 }
 
@@ -1279,18 +1626,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
   background: transparent;
   border: none;
-  color: var(--tm-wd-text-muted);
+  color: var(--tm-wd-accent);
   cursor: pointer;
   border-radius: var(--tm-wd-radius-sm);
 }
 
-.tm-wd-layers__add-btn:hover {
-  color: var(--tm-wd-accent);
+.tm-wd-layers__add-btn:hover:not(:disabled) {
   background: var(--tm-wd-accent-subtle);
+}
+
+.tm-wd-layers__add-btn:disabled {
+  color: var(--tm-wd-text-light);
+  cursor: not-allowed;
 }
 
 .tm-wd-layers__list {
@@ -1298,17 +1649,21 @@
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
-  padding: 4px;
-  gap: 2px;
+  min-height: 0;
+  padding: var(--tm-space-1);
+  gap: var(--tm-space-0-5);
+  container: tm-wd-layers-list / inline-size;
 }
 
 .tm-wd-layers__item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: var(--tm-space-0-5);
+  min-block-size: var(--tm-space-9);
+  padding: 0 var(--tm-space-1);
   border-radius: var(--tm-wd-radius-sm);
-  cursor: pointer;
+  cursor: default;
   user-select: none;
   transition: background 0.1s;
 }
@@ -1317,31 +1672,77 @@
   background: var(--tm-wd-bg-muted);
 }
 
+/* The active layer row. */
+.tm-wd-layers__item--active,
+.tm-wd-layers__item--active:hover {
+  background: var(--tm-wd-accent-subtle);
+}
+
+/* Hidden layer: the name is muted and italic - the row stays fully operable. */
+.tm-wd-layers__item--hidden .tm-wd-layers__name {
+  color: var(--tm-wd-text-light);
+  font-style: italic;
+}
+
+.tm-wd-layers__item--dragging {
+  opacity: var(--tm-opacity-disabled);
+}
+
+/* Drop indicator while a row is dragged over this one: a line where the row will land. */
+.tm-wd-layers__item--drag-over::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  block-size: var(--tm-space-0-5);
+  background: var(--tm-wd-accent);
+  border-radius: var(--tm-radius-full);
+  pointer-events: none;
+}
+
+.tm-wd-layers__item--drag-over[data-drop-position="before"]::before {
+  inset-block-start: calc(var(--tm-space-0-5) * -1);
+}
+
+.tm-wd-layers__item--drag-over[data-drop-position="after"]::before {
+  inset-block-end: calc(var(--tm-space-0-5) * -1);
+}
+
 .tm-wd-layers__drag-handle {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   color: var(--tm-wd-text-light);
   cursor: grab;
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-wd-layers__drag-handle:active {
+  cursor: grabbing;
 }
 
 .tm-wd-layers__active {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: var(--tm-space-6);
+  height: var(--tm-wd-btn-size);
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 0;
+  border-radius: var(--tm-wd-radius-sm);
+}
+
+.tm-wd-layers__active:disabled {
+  cursor: not-allowed;
 }
 
 .tm-wd-layers__radio {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid var(--tm-wd-border);
+  width: var(--tm-space-4);
+  height: var(--tm-space-4);
+  border-radius: var(--tm-radius-full);
+  border: calc(var(--tm-border-width) * 1.5) solid var(--tm-wd-text-light);
   background: var(--tm-wd-bg-surface);
   display: inline-block;
 }
@@ -1349,45 +1750,97 @@
 .tm-wd-layers__radio--checked {
   border-color: var(--tm-wd-accent);
   background: var(--tm-wd-accent);
-  box-shadow: inset 0 0 0 2px var(--tm-wd-bg-surface);
+  box-shadow: inset 0 0 0 calc(var(--tm-space-0-5) * 1.5) var(--tm-wd-bg-surface);
 }
 
 .tm-wd-layers__visibility,
 .tm-wd-layers__lock,
-.tm-wd-layers__delete {
+.tm-wd-layers__delete,
+.tm-wd-layers__row-menu .tm-context-menu__trigger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
   background: transparent;
   border: none;
   color: var(--tm-wd-text-muted);
   cursor: pointer;
   padding: 0;
   border-radius: var(--tm-wd-radius-sm);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
 }
 
-.tm-wd-layers__visibility:hover,
-.tm-wd-layers__lock:hover {
+.tm-wd-layers__visibility:hover:not(:disabled),
+.tm-wd-layers__lock:hover:not(:disabled),
+.tm-wd-layers__row-menu .tm-context-menu__trigger:hover,
+.tm-wd-layers__row-menu .tm-context-menu__trigger[aria-expanded="true"] {
   color: var(--tm-wd-text);
   background: var(--tm-wd-bg-muted);
 }
 
-.tm-wd-layers__delete:hover {
+.tm-wd-layers__visibility:disabled,
+.tm-wd-layers__lock:disabled,
+.tm-wd-layers__delete:disabled {
+  color: var(--tm-wd-text-light);
+  cursor: not-allowed;
+}
+
+/* A locked layer reads as locked at a glance; a hidden layer's eye is struck through by its icon. */
+.tm-wd-layers__lock[aria-pressed="true"] {
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-layers__delete:hover:not(:disabled) {
   color: var(--tm-wd-danger);
   background: var(--tm-wd-danger-subtle);
 }
 
+.tm-wd-layers__row-menu {
+  flex: 0 0 auto;
+}
+
+/* Layout-neutral wrapper that fences keydown inside the open row menu from the row's shortcuts. */
+.tm-wd-layers__menu-fence {
+  display: contents;
+}
+
+.tm-wd-layers__row-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Menu entries of the row menu (the popover lives in the top layer, so the class rides on the item itself). */
+.tm-wd-layers__row-menu-item {
+  font-size: var(--tm-font-size-sm);
+}
+
+/* The trash is a quiet affordance on a fine pointer: it shows on row hover, keyboard focus inside the row and the
+   active row - but keeps its space, so rows never reflow. Without hover (touch) it is always shown. */
+@media (hover: hover) {
+  .tm-wd-layers__delete {
+    opacity: 0;
+  }
+
+  .tm-wd-layers__item:hover .tm-wd-layers__delete,
+  .tm-wd-layers__item:focus-within .tm-wd-layers__delete,
+  .tm-wd-layers__item--active .tm-wd-layers__delete {
+    opacity: 1;
+  }
+}
+
 .tm-wd-layers__name {
-  flex: 1;
-  font-size: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 2px 4px;
+  cursor: text;
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border-radius: var(--tm-wd-radius-sm);
 }
 
@@ -1396,9 +1849,10 @@
 }
 
 .tm-wd-layers__name-input {
-  flex: 1;
-  font-size: 12px;
-  padding: 2px 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--tm-font-size-sm);
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border-focus);
   border-radius: var(--tm-wd-radius-sm);
   background: var(--tm-wd-bg-surface);
@@ -1407,18 +1861,62 @@
 }
 
 .tm-wd-layers__move-section {
-  padding: 8px 10px;
+  padding: var(--tm-space-3) var(--tm-space-2-5);
   border-top: 1px solid var(--tm-wd-border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--tm-space-1-5);
 }
 
 .tm-wd-layers__move-label {
-  font-size: 11px;
-  color: var(--tm-wd-text-muted);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
 }
 
+/* Coarse pointer: every target reaches --tm-touch-target (44px). HTML5 drag-and-drop does not run on touch, so the
+   grip is decorative there and the row menu / Alt+Arrow carry the reorder. In a narrow list the trash steps aside
+   (its action is the menu's Delete entry): five 44px targets plus the name do not fit 288px. */
+@media (pointer: coarse) {
+  .tm-wd-layers__item {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-layers__active,
+  .tm-wd-layers__visibility,
+  .tm-wd-layers__lock,
+  .tm-wd-layers__delete,
+  .tm-wd-layers__add-btn,
+  .tm-wd-layers__row-menu .tm-context-menu__trigger {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+
+  .tm-wd-layers__toggle {
+    height: var(--tm-touch-target);
+  }
+
+  .tm-wd-layers__row-menu-item {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  /* Drag-and-drop does not run on touch: the grip would only steal width from the name. */
+  .tm-wd-layers__drag-handle {
+    display: none;
+  }
+
+  @container tm-wd-layers-list (width <= 22rem) {
+    .tm-wd-layers__delete {
+      display: none;
+    }
+  }
+}
+
+@media (pointer: coarse) and (hover: none) {
+  .tm-wd-layers__delete {
+    opacity: 1;
+  }
+}
 /* ════════════════════════════════════════════════════════════════
    9.5 EXPORT DIALOG
    ════════════════════════════════════════════════════════════════ */
@@ -1426,65 +1924,276 @@
 .tm-wd-export-dialog {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 8px 0;
+  gap: var(--tm-space-4);
+  padding: var(--tm-space-2) 0;
 }
 
 .tm-wd-export-dialog__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
 }
 
 .tm-wd-export-dialog__field--inline {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 .tm-wd-export-dialog__label {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text);
 }
 
 /* ════════════════════════════════════════════════════════════════
-   10. DARK MODE
+   10b. PAGES PANEL (TmWireframePagesPanel)
+   Row = number · page name (select button) · ⋯ menu. Rows are 36px; on a coarse pointer the targets grow to
+   --tm-touch-target. Grip-less: the number is the visual anchor, drag-and-drop is a pointer-only extra.
    ════════════════════════════════════════════════════════════════ */
 
-[data-theme="dark"] .tm-wd-editor,
-.tm-dark .tm-wd-editor {
-  --tm-wd-bg-surface:    #1e293b;
-  --tm-wd-bg-subtle:     #1e293b;
-  --tm-wd-bg-muted:      #0f172a;
-  --tm-wd-border:        #334155;
-  --tm-wd-border-focus:  #60a5fa;
-  --tm-wd-text:          #e2e8f0;
-  --tm-wd-text-muted:    #94a3b8;
-  --tm-wd-text-light:    #64748b;
-  --tm-wd-accent:        #60a5fa;
-  --tm-wd-accent-subtle: rgba(59,130,246,0.15);
-  --tm-wd-toolbar-bg:    #1e293b;
-  --tm-wd-danger-subtle: rgba(239,68,68,0.15);
+.tm-wd-pages {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  background: var(--tm-wd-bg-surface);
+  overflow: hidden;
 }
 
-/* Invert wireframe SVG fills for dark mode */
-[data-theme="dark"] .tm-wd-canvas-wrap .tm-wd-canvas__svg rect[fill="white"],
-.tm-dark .tm-wd-canvas-wrap .tm-wd-canvas__svg rect[fill="white"] {
-  fill: #1e293b;
+.tm-wd-pages__header {
+  display: flex;
+  align-items: center;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
 }
 
+.tm-wd-pages__title {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
+  margin: 0;
+}
+
+.tm-wd-pages__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-0-5);
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--tm-space-1);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.tm-wd-pages__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  min-block-size: var(--tm-space-9);
+  padding: 0 var(--tm-space-1) 0 var(--tm-space-2);
+  border-radius: var(--tm-wd-radius-sm);
+  cursor: default;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.tm-wd-pages__item:hover {
+  background: var(--tm-wd-bg-muted);
+}
+
+/* The active page row. */
+.tm-wd-pages__item--active,
+.tm-wd-pages__item--active:hover {
+  background: var(--tm-wd-accent-subtle);
+}
+
+.tm-wd-pages__item--dragging {
+  opacity: var(--tm-opacity-disabled);
+}
+
+/* Drop indicator while a row is dragged over this one: a line where the row will land. */
+.tm-wd-pages__item--drag-over::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  block-size: var(--tm-space-0-5);
+  background: var(--tm-wd-accent);
+  border-radius: var(--tm-radius-full);
+  pointer-events: none;
+}
+
+.tm-wd-pages__item--drag-over[data-drop-position="before"]::before {
+  inset-block-start: calc(var(--tm-space-0-5) * -1);
+}
+
+.tm-wd-pages__item--drag-over[data-drop-position="after"]::before {
+  inset-block-end: calc(var(--tm-space-0-5) * -1);
+}
+
+.tm-wd-pages__index {
+  flex: 0 0 auto;
+  min-inline-size: var(--tm-space-4);
+  text-align: end;
+  font-size: var(--tm-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--tm-wd-text-light);
+}
+
+.tm-wd-pages__item--active .tm-wd-pages__index {
+  color: var(--tm-wd-accent);
+}
+
+.tm-wd-pages__select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-block-size: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-1);
+  border: none;
+  border-radius: var(--tm-wd-radius-sm);
+  background: transparent;
+  color: var(--tm-wd-text);
+  font-family: var(--tm-wd-font);
+  font-size: var(--tm-font-size-sm);
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.tm-wd-pages__select[aria-current="page"] {
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-wd-pages__name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--tm-font-size-sm);
+  padding: var(--tm-space-0-5) var(--tm-space-1);
+  border: 1px solid var(--tm-wd-border-focus);
+  border-radius: var(--tm-wd-radius-sm);
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  outline: none;
+}
+
+.tm-wd-pages__row-menu {
+  flex: 0 0 auto;
+}
+
+.tm-wd-pages__row-menu .tm-context-menu__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
+  border-radius: var(--tm-wd-radius-sm);
+  color: var(--tm-wd-text-muted);
+  cursor: pointer;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-wd-pages__row-menu .tm-context-menu__trigger:hover,
+.tm-wd-pages__row-menu .tm-context-menu__trigger[aria-expanded="true"] {
+  color: var(--tm-wd-text);
+  background: var(--tm-wd-bg-muted);
+}
+
+.tm-wd-pages__row-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Layout-neutral wrapper that fences keydown inside the open row menu from the row's shortcuts. */
+.tm-wd-pages__menu-fence {
+  display: contents;
+}
+
+/* Menu entries of the row menu (the popover lives in the top layer, so the class rides on the item itself). */
+.tm-wd-pages__row-menu-item {
+  font-size: var(--tm-font-size-sm);
+}
+
+/* Full-width "+ Add page" below the list. */
+.tm-wd-pages__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1-5);
+  margin: var(--tm-space-1) var(--tm-space-2) var(--tm-space-2);
+  min-block-size: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2-5);
+  border: 1px dashed var(--tm-wd-border);
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-accent);
+  font-family: var(--tm-wd-font);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+}
+
+.tm-wd-pages__add:hover {
+  background: var(--tm-wd-accent-subtle);
+  border-color: var(--tm-wd-accent);
+}
+
+/* Coarse pointer: every target reaches --tm-touch-target (44px). HTML5 drag-and-drop does not run on touch, so the
+   row menu / Alt+Arrow carry the reorder. */
+@media (pointer: coarse) {
+  .tm-wd-pages__item {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-pages__select,
+  .tm-wd-pages__add,
+  .tm-wd-pages__row-menu .tm-context-menu__trigger {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-pages__row-menu .tm-context-menu__trigger {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+}
 /* ════════════════════════════════════════════════════════════════
-   11. FOCUS-VISIBLE (keyboard accessibility)
+   10. FOCUS-VISIBLE (keyboard accessibility)
    ════════════════════════════════════════════════════════════════ */
 
+/* Core two-layer ring (surface gap + primary): visible on every surface in light, dark and indigo.
+   The transparent outline is what forced-colors mode paints in the system colour. */
 .tm-wd-editor__btn:focus-visible,
 .tm-wd-toolbox__filter-btn:focus-visible,
 .tm-wd-toolbox__search-input:focus-visible,
 .tm-wd-props__input:focus-visible,
-.tm-wd-props__select:focus-visible {
-  outline: 2px solid var(--tm-wd-border-focus);
+.tm-wd-props__select:focus-visible,
+/* Layers panel controls (all native buttons / inputs) */
+.tm-wd-layers__toggle:focus-visible,
+.tm-wd-layers__add-btn:focus-visible,
+.tm-wd-layers__active:focus-visible,
+.tm-wd-layers__visibility:focus-visible,
+.tm-wd-layers__lock:focus-visible,
+.tm-wd-layers__delete:focus-visible,
+.tm-wd-layers__name-input:focus-visible,
+.tm-wd-layers__name:focus-visible,
+.tm-wd-layers__row-menu .tm-context-menu__trigger:focus-visible,
+/* Pages panel controls */
+.tm-wd-pages__select:focus-visible,
+.tm-wd-pages__name-input:focus-visible,
+.tm-wd-pages__add:focus-visible,
+.tm-wd-pages__row-menu .tm-context-menu__trigger:focus-visible,
+/* Page tabs and their inline controls */
+.tm-wd-editor__page-tab:focus-visible,
+.tm-wd-editor__page-tab-add:focus-visible,
+.tm-wd-editor__page-tab-close:focus-visible,
+.tm-wd-editor__page-tab-dup:focus-visible,
+.tm-wd-editor__page-tab-input:focus-visible {
+  outline: 2px solid transparent;
   outline-offset: 1px;
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
@@ -1502,14 +2211,19 @@
   .tm-wd-editor__page-tab-close,
   .tm-wd-editor__page-tab-dup,
   .tm-wd-editor__title,
+  .tm-wd-editor__zoom-overlay,
   .tm-wd-layers__item,
   .tm-wd-minimap,
+  .tm-wd-pages__item,
+  .tm-wd-props__delete,
   .tm-wd-props__input,
   .tm-wd-props__section-header,
   .tm-wd-props__section-header::before,
   .tm-wd-props__select,
   .tm-wd-props__toggle-track,
   .tm-wd-props__toggle-track::after,
+  .tm-wd-quick-actions,
+  .tm-wd-sheet,
   .tm-wd-toolbox__category-header,
   .tm-wd-toolbox__category-header::before,
   .tm-wd-toolbox__filter-btn,
@@ -1520,4 +2234,618 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* Properties panel layout helpers (replace inline styles). */
+.tm-wd-props__row {
+  display: flex;
+  gap: var(--tm-space-1);
+}
+
+.tm-wd-props__row--wrap {
+  flex-wrap: wrap;
+}
+
+/* Fields sharing a row (canvas width / height) split the width evenly. */
+.tm-wd-props__row > .tm-wd-props__field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Inspector Delete element button: outline danger look, full width. */
+.tm-wd-props__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1-5);
+  width: 100%;
+  min-height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2-5);
+  border: 1px solid var(--tm-wd-danger-border);
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-danger-text);
+  font-family: var(--tm-wd-font);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.tm-wd-props__delete:hover:not(:disabled) {
+  background: var(--tm-wd-danger-subtle);
+  border-color: var(--tm-wd-danger);
+}
+
+.tm-wd-props__delete:disabled {
+  color: var(--tm-wd-text-light);
+  border-color: var(--tm-wd-border);
+  cursor: not-allowed;
+}
+
+.tm-wd-props__delete:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-props__input--grow {
+  flex: 1;
+}
+
+.tm-wd-props__toggle-label {
+  font-size: var(--tm-font-size-xs);
+}
+
+/* Apply (canvas size): an outlined full-width button under the width / height pair, like the reference. */
+.tm-wd-props .tm-wd-editor__btn--text[data-testid="wd-canvas-apply"] {
+  width: 100%;
+  justify-content: center;
+  border-color: var(--tm-wd-border);
+  background: var(--tm-wd-bg-surface);
+}
+
+.tm-wd-props .tm-wd-editor__btn--text[data-testid="wd-canvas-apply"]:hover:not(:disabled) {
+  border-color: var(--tm-wd-accent);
+  color: var(--tm-wd-accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 6 CARRY-FORWARD (appended; independent of the sections above)
+   Long-press cue: while the touch hold timer is pending the svg carries
+   .tm-wd-canvas__svg--holding and wireframe-designer.js draws a ring
+   (.tm-wd-hold-cue) at the finger. It fills over the 500 ms the hold takes
+   (LONG_PRESS_MS in wireframe-gestures.mjs) and is removed on release,
+   cancel, drift beyond the tolerance and when the menu opens.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tm-wd-hold-cue {
+  fill: color-mix(in srgb, var(--tm-wd-accent) 12%, transparent);
+  stroke: var(--tm-wd-accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+
+.tm-wd-canvas__svg--holding .tm-wd-hold-cue {
+  animation: tm-wd-hold-cue 500ms ease-out forwards;
+}
+
+@keyframes tm-wd-hold-cue {
+  from { opacity: 0.2; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No growing ring: a static, subtle ring appears at once and the hold still reads as "pressed". */
+  .tm-wd-canvas__svg--holding .tm-wd-hold-cue {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 6 - TABLET LAYOUT (editor container 768-1199 px)
+   The editor root is a size container (container-name: tm-wd-editor); the literal widths are the TmBreakpoints steps
+   (768 = Md, 1024 = Lg). The layout is also resolved in C# from the same container (768 / 1200, data-editor-layout="tablet"), which
+   swaps the docked panels for ONE non-modal side sheet at a time and drops the minimap, so the rules below only style
+   what that markup contains. There are no fixed panel widths any more: desktop panels are the shell's columns.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Two toolbars, one per row: editing commands on the first, view / zoom / file commands on the second. */
+.tm-wd-editor__toolbar--tablet {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.tm-wd-editor__toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-width: 0;
+  min-height: var(--tm-wd-toolbar-h);
+  padding: 0 var(--tm-space-2);
+}
+
+.tm-wd-editor__toolbar-row + .tm-wd-editor__toolbar-row {
+  border-block-start: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-editor__toolbar-row .tm-wd-editor__title {
+  flex: 0 1 auto;
+  max-width: calc(var(--tm-space-16) * 3);
+}
+
+/* The sheets live in the canvas region: it is their positioning box and clips them to the canvas column. */
+.tm-wd-editor__canvas-region {
+  position: relative;
+}
+
+/* An open inspector sheet takes its width from the canvas, so the page never ends up under it. The left drawer is an
+   overlay on purpose (a transient picker) and reserves nothing. */
+/* ... but not while a pointer gesture is running on the canvas (wireframe-designer.js marks the svg with data-wd-gesture): a press that
+   selects opens the sheet, and resizing the canvas under the finger would shift a drag that has just begun. It narrows on release. */
+.tm-wd-editor__canvas-region--sheet-right:not(:has([data-wd-gesture])) {
+  padding-inline-end: min(var(--tm-wd-sheet-w), 60%);
+}
+
+.tm-wd-sheet {
+  position: absolute;
+  inset-block: 0;
+  z-index: var(--tm-z-inline-sheet, 10);
+  display: flex;
+  flex-direction: column;
+  inline-size: min(var(--tm-wd-sheet-w), 60%);
+  min-height: 0;
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-wd-sheet--left {
+  inset-inline-start: 0;
+  border-inline-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet--right {
+  inset-inline-end: 0;
+  border-inline-start: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tm-space-2);
+  flex-shrink: 0;
+  padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-1) var(--tm-space-3);
+  border-block-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-text-muted);
+  cursor: pointer;
+}
+
+.tm-wd-sheet__close:hover {
+  background: var(--tm-wd-bg-muted);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-sheet__close:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tm-wd-sheet__body > .tm-wd-side,
+.tm-wd-sheet__body > .tm-wd-props {
+  height: 100%;
+}
+
+/* The toolbox in the drawer: a single column of named rows instead of the 3-column tile grid. */
+.tm-wd-toolbox--single-column .tm-wd-toolbox__category-items {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tm-space-1);
+}
+
+.tm-wd-toolbox--single-column .tm-wd-toolbox__item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--tm-space-3);
+  min-height: var(--tm-wd-btn-size);
+  padding: var(--tm-space-1-5) var(--tm-space-3);
+}
+
+.tm-wd-toolbox--single-column .tm-wd-toolbox__item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--tm-font-size-sm);
+  text-align: start;
+  color: var(--tm-wd-text);
+}
+
+/* A narrow tablet container: the row-2 document title shares the row with the pinned Export / Import, so it stays compact. */
+@container tm-wd-editor (width < 1024px) {
+  .tm-wd-editor__toolbar-row .tm-wd-editor__title {
+    max-width: calc(var(--tm-space-16) * 2);
+  }
+}
+
+/* Coarse pointer (a finger): every control of the editor chrome reaches --tm-touch-target (44 px). The layers and pages rows
+   have their own coarse rules above; this block covers the toolbar, the page tabs, the toolbox rows, the sheet close and the
+   document title. */
+@media (pointer: coarse) {
+  .tm-wd-editor .tm-toolbar-btn,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__export .tm-dropdown-trigger,
+  .tm-wd-editor__import,
+  .tm-wd-editor__title,
+  .tm-wd-toolbox__search-input,
+  .tm-wd-toolbox__filter-btn,
+  .tm-wd-toolbox__item,
+  .tm-wd-editor__page-tab,
+  .tm-wd-editor__page-tab-add,
+  .tm-wd-editor__page-tab-dup {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-toolbar-btn--icon-only,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__page-tab-add {
+    min-inline-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor__page-tab-close,
+  .tm-wd-sheet__close,
+  .tm-wd-toolbox__search-clear {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor__page-tab-close {
+    margin-inline-end: calc(var(--tm-space-2) * -1);
+  }
+
+  /* The inspector in the tablet sheet is a finger form: fields, selects, buttons and the toggle / checkbox rows reach the touch target. */
+  .tm-wd-sheet .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
+  .tm-wd-sheet .tm-wd-props select,
+  .tm-wd-sheet .tm-wd-props button,
+  .tm-wd-sheet .tm-wd-props .tm-wd-props__toggle,
+  .tm-wd-sheet .tm-wd-props .tm-wd-props__color-swatch {
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tm-wd-sheet {
+    animation: tm-wd-sheet-in 0.18s ease-out;
+  }
+}
+
+@keyframes tm-wd-sheet-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 7 - MOBILE LAYOUT (editor container < 768 px, decision G2: viewing + light edits)
+   The layout is resolved in C# from the same container (data-editor-layout="mobile"); the shell renders the canvas plus ONE non-modal
+   bottom sheet and the TmMobileActionBar. These rules only style what that markup contains. The literal width is TmBreakpoints.Md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Header stack: the document title row (title + host slots), then the select / pan / undo / redo / More tool row. */
+.tm-wd-editor__header-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tm-wd-editor__mobile-tools {
+  min-width: 0;
+  padding: 0 var(--tm-space-2);
+  border-block-start: 1px solid var(--tm-wd-border);
+}
+
+/* Floating zoom: + / % / - / fit over the canvas, outside the svg (the svg keeps every touch for the canvas gestures). */
+.tm-wd-editor__zoom-overlay {
+  position: absolute;
+  inset-block-start: var(--tm-space-2);
+  inset-inline-end: var(--tm-space-2);
+  z-index: var(--tm-z-inline-sheet, 10);
+  /* One ROW (- | % | + | fit): with the sheet peeked the canvas band above it is only ~150 px tall, a column of four finger-sized
+     targets would be clipped by the sheet (320 x 640 showed it). Four 44 px targets + the read-out fit a 288 px editor. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1);
+  /* Never wider than the canvas it floats on: one row, never wrapped. Nothing is clipped (a clipped button would be a focusable target
+     cut in half): at the narrowest container the % read-out steps aside instead, see the container query below. */
+  max-inline-size: calc(100% - 2 * var(--tm-space-2));
+  white-space: nowrap;
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  border: 1px solid var(--tm-wd-border);
+  border-radius: var(--tm-wd-radius-lg);
+  box-shadow: var(--tm-shadow-md);
+}
+
+.tm-wd-editor__zoom-overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-touch-target);
+  block-size: var(--tm-touch-target);
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-text);
+  cursor: pointer;
+}
+
+.tm-wd-editor__zoom-overlay-btn:hover {
+  background: var(--tm-wd-bg-muted);
+}
+
+.tm-wd-editor__zoom-overlay-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-editor__zoom-overlay-label {
+  display: block;
+  min-inline-size: calc(var(--tm-space-8) + var(--tm-space-4));
+  padding: 0 var(--tm-space-1);
+  text-align: center;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--tm-wd-text-muted);
+}
+
+.tm-wd-editor__zoom-overlay-btn--fit {
+  border-inline-start: 1px solid var(--tm-wd-border);
+  border-radius: 0 var(--tm-wd-radius) var(--tm-wd-radius) 0;
+}
+
+/* Narrowest container (an editor under ~270 px): four finger-sized buttons already fill the pill, so the % label is visually hidden (it stays in the
+   accessibility tree as the live zoom status) rather than letting the pill clip a focusable button. */
+@container tm-wd-editor (width < 17rem) {
+  .tm-wd-editor__zoom-overlay-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    min-inline-size: 0;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* The Properties sheet: the quick actions of the selection sit above the full inspector (the peek snap shows them). */
+.tm-wd-mobile-inspector {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tm-wd-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border-block-end: 1px solid var(--tm-wd-border);
+  background: var(--tm-wd-bg-surface);
+}
+
+.tm-wd-quick-actions__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-quick-actions__buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--tm-space-2);
+}
+
+/* Icon over the label (like the action bar tiles): three finger-sized buttons share a 288 px sheet without truncating "Duplicate". */
+.tm-wd-quick-actions__btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1);
+  min-inline-size: 0;
+  min-block-size: var(--tm-touch-target);
+  padding: var(--tm-space-1) var(--tm-space-1);
+  border: 1px solid var(--tm-wd-border);
+  border-radius: var(--tm-wd-radius);
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  font: inherit;
+  font-size: var(--tm-font-size-xs);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tm-wd-quick-actions__btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-wd-quick-actions__btn:hover:not(:disabled) {
+  background: var(--tm-wd-bg-muted);
+}
+
+.tm-wd-quick-actions__btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-quick-actions__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-wd-quick-actions__btn--danger {
+  color: var(--tm-wd-danger-text);
+  border-color: var(--tm-wd-danger);
+}
+
+.tm-wd-quick-actions__btn--danger:hover:not(:disabled) {
+  background: var(--tm-wd-danger-subtle);
+}
+
+@container tm-wd-editor (width < 768px) {
+  /* Nothing in the editor may be wider than its container: every flex / grid child of the shell can shrink. */
+  .tm-wd-editor,
+  .tm-wd-editor .tm-editor-shell,
+  .tm-wd-editor .tm-editor-shell__main,
+  .tm-wd-editor .tm-editor-shell__stage,
+  .tm-wd-editor .tm-editor-shell__canvas,
+  .tm-wd-editor__canvas-region,
+  .tm-wd-editor__canvas-area,
+  .tm-wd-editor__canvas-inner,
+  .tm-wd-editor__canvas-wrap {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The canvas takes the whole width (no rulers, no minimap, no side panels): the page fits the svg by itself. */
+  .tm-wd-editor__canvas-inner,
+  .tm-wd-editor__canvas-wrap {
+    inline-size: 100%;
+  }
+
+  .tm-wd-editor .tm-editor-shell__header {
+    padding: 0;
+  }
+
+  .tm-wd-editor__header-bar {
+    padding: var(--tm-space-2) var(--tm-space-3);
+  }
+
+  .tm-wd-editor__header-bar .tm-wd-editor__title {
+    flex: 1 1 0;
+    min-width: 0;
+    inline-size: 100%;
+  }
+
+  .tm-wd-editor__header-bar .tm-wd-editor__toolbar-spacer {
+    display: none;
+  }
+
+  .tm-wd-editor__header-start,
+  .tm-wd-editor__header-actions {
+    flex-shrink: 0;
+    max-inline-size: 50%;
+  }
+
+  /* The action bar and the tool row are finger-sized, and the bar never overflows a 320 px container. */
+  .tm-wd-editor .tm-mobile-action-bar__bar {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The inspector in the sheet is a finger form. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props select,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props button,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__toggle,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__color-swatch,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-toolbox__search-input,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-toolbox__item,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__select,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__row button {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet [data-region] {
+    min-inline-size: 0;
+    overflow: auto;
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__row {
+    flex-wrap: wrap;
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props__input,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props__select {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The Pages | Layers segment: the side panel's tab strip is the segment. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-side__tabs {
+    flex-shrink: 0;
+  }
+
+  /* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end
+     of its canvas region, and the editor's own flat "padding: 0" above must not cancel that. The page is re-fitted into the remaining
+     room by the script (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. Phone band only. */
+  .tm-wd-editor .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
+    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+  }
+}
+
+/* The export dialog is a bottom sheet on a phone (TmModal MobilePresentation=Sheet, footer inline and sticky). It is portaled out of the editor. */
+.tm-modal--sheet .tm-wd-export-dialog {
+  padding: 0;
+}
+
+.tm-modal--sheet .tm-wd-export-dialog__field .tm-input,
+.tm-modal--sheet .tm-wd-export-dialog__field select {
+  min-block-size: var(--tm-touch-target);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tm-wd-editor__zoom-overlay,
+  .tm-wd-quick-actions {
+    animation: tm-wd-sheet-in 0.18s ease-out;
+  }
 }

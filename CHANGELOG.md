@@ -1639,6 +1639,58 @@
 
 ### Fixed
 
+- **Wireframe redesign phase 10 clean-up (plan ce19aa8c).** The Blob URL of a wireframe download is revoked after 60 s instead of 1 s (iOS Safari opens the blob in a new tab asynchronously); `TmWireframeDesignerCanvas`' parent-render snapshot now includes the page width / height (a `ResizeCanvasCommand` mutates them in place) and documents that every render-affecting parameter belongs in it; deleting a selected connector closes the sheet that its selection opened on a phone (`MobileSelectionCleared`); `AddElementsCommand.Undo` removes only the elements its own `Execute` inserted; duplicating a grouped selection re-points the copied members to the copied container; the mobile Lock quick action drops `aria-pressed` (its label already flips Lock / Unlock); the phone sheet-open canvas padding lives inside the `< 768px` container query and the floating zoom pill never exceeds its canvas (`max-inline-size`, `nowrap`).
+- **Wireframe middle-button pan survived Escape and destroy.** Escape or tearing the editor down in the middle of a middle-button pan left the viewBox moved, the pointer captured and the move/up listeners attached; `_cancelMiddlePan` now rolls it back (the one gesture outside `pointer-drag.js`, documented in `docs/touch-interaction.md`).
+- **A cancelled wireframe drag called .NET after the editor was destroyed.** `_bodyCancel` skips (and swallows a rejected) `OnDragStarted([])` once the instance is destroyed.
+- **Keys typed in a wireframe side sheet reached the canvas.** The canvas shortcut guard ignores events from `.tm-wd-sheet` like it does for the layers and pages panels (arrow nudge, Delete and Escape no longer act on the selection).
+- **Test guard:** every `invokeMethodAsync` name in `wireframe-designer.js` must exist as a `[JSInvokable]` on `TmWireframeDesignerCanvas` (`WireframeJsInvokableContractTests`).
+
+- **Wireframe toolbox insertion could land outside the page.** The insert-at-centre origin was clamped only to
+  non-negative coordinates, so after panning away from the page a click inserted an element far outside it. The
+  origin is now clamped into the page (`0 ≤ x ≤ pageWidth − w`, `0 ≤ y ≤ pageHeight − h`) and snapped to the grid only
+  while snapping is on (`GridSize > 0`).
+
+- **Wireframe SVG/PNG/PDF export carried the editing chrome of a selected connector.** `exportSvg` stripped the
+  selection, rubber band and handles but not the connector waypoint circles (`.tm-wd-connector__waypoint`), the
+  alignment guides or the connector preview, so exporting while a connector was selected put blue handles into the
+  file. They are removed now, and every token-painted canvas node is baked to explicit colours (`data-wd-paint`).
+
+- **Space on a focused `TmDocumentOpenDialog` row or grid card scrolled the list.** The rows and cards are
+  `div[tabindex=0]` whose Space activation runs on keyup; the browser's default scroll on Space keydown is now
+  cancelled by a scoped listener (`TmDocumentOpenDialog.razor.js`) that fires only when the keydown target IS a row or
+  a card - never for an input/button inside the dialog and never for Tab (no blanket `preventDefault`,
+  `docs/keyboard-activation-convention.md`).
+- **Wireframe "Export PDF" opened the dialog with PNG selected.** `TmWireframeEditor` set its internal
+  `_exportDialogFormat` but never handed it to `TmWireframeExportDialog`. The dialog has a new
+  `InitialFormat` parameter (`"png"` default, `"pdf"`) that the editor now passes, so the *Export PDF* menu
+  item preselects PDF. Guarded by `TmWireframeEditorBehaviorTests` and the `ExportPdf_PreselectsPdf` E2E.
+
+- **`TmWireframeExportDialog` kept the previous file name after re-opening.** Only format, scale and
+  background were reset on close; the file name was filled once and then stuck. Every closed→open
+  transition now restores file name (from `DefaultFileName`), format (from `InitialFormat`), scale and
+  background.
+
+- **Wireframe toolbox items ignored a click or tap, and Enter/Space dropped every element at (100, 100).**
+  The item had no `@onclick`, so the only non-drag way in was the keyboard, and it always inserted at a fixed
+  point. Click, tap and Enter/Space (once per gesture - Enter on keydown without auto-repeat, Space on keyup,
+  per `docs/keyboard-activation-convention.md`) now raise `OnComponentActivated`, and `TmWireframeEditor`
+  inserts the element centred in the visible canvas area (snapped to the grid, undoable, selected). This is the
+  non-drag alternative to HTML5 drag-and-drop (WCAG 2.5.7).
+
+- **`TmWireframeLayersPanel` announced its default active layer fire-and-forget from `OnParametersSet`.**
+  The report is now awaited from `OnAfterRenderAsync` (once per default layer), so a failing parent handler
+  surfaces instead of being swallowed and the parent no longer re-renders in the middle of a parameter pass.
+  All `[Parameter]`s of the panel carry XML docs.
+
+- **Wireframe keyboard focus was invisible on the layers panel and the page tabs.** The focus-visible block
+  now also covers `.tm-wd-layers__*` controls and `.tm-wd-editor__page-tab*` (same focus colour as the rest of
+  the editor).
+
+- **`TmDocumentOpenDialog` accessibility (additive, no class or layout change).** Grid cards are now focusable
+  (`tabindex="0"`, `role="option"` inside a `role="listbox"`, `aria-selected`): Enter opens, Space selects; list
+  rows use the same Enter/Space contract (Space on keyup). Sortable column headers expose
+  `aria-sort` (`ascending` / `descending` / `none`) through a `columnheader` wrapper (`display: contents`, so the
+  grid layout is unchanged), and folder tree items carry `aria-level` and `aria-selected`.
 - **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
   template was "`{0:N0}` de millions d'enregistrements correspondants", but the `_Many` form is picked for
   whole millions and the number is formatted in full, so a count of 2 000 000 read "2 000 000 de millions
@@ -2292,6 +2344,122 @@
   links; the download link now paints the primary fill (`tm-pdf-viewer__link--primary`) and the
   open link keeps a bordered secondary look (`tm-pdf-viewer__link--secondary`). With
   `ShowHeader="true"` both move into the document header and the toolbar renders none.
+- **Wireframe editor + document-open dialog redesign: plan summary (ce19aa8c, phases 1-10).** `TmWireframeEditor` now renders through the core `TmEditorShell` and resolves desktop / tablet / mobile from its own container (`data-editor-layout`, 768 / 1200): a labelled `TmToolbar` with the frozen `data-tm-group` set, a left panel with Components / Pages / Layers tabs (`PageNavigation=Panel` is opt-in), device presets and a Name field in the inspector (`WireframeElement.Name`, additive in Abstractions, schema and MCP), Pointer Events on the shared `pointer-drag.js` / `pointer-gesture.js` helpers (finger, pen, pinch, long-press menu, gesture rollback), tablet sheets and a phone "viewing + light edits" mode (action bar, bottom sheets, action-sheet context menu, export sheet), `ReadOnly` / `ShowRulers` / `ShowGrid` never assigned by the component. The shared core `TmDocumentOpenDialog` became an XLarge modal with a WAI-ARIA tree, breadcrumb, radio-card Link / Copy choice, opt-in `ShowRecent` / `LayoutMode`, and a fullscreen drill-down panel below 640 px; its public API, `DocumentOpenResult` and `ITempoDocumentLibraryProvider` are unchanged. Every breaking change of the plan is listed under Breaking / Migration with a before / after; the contracts are in [docs/wireframe-editor.md](docs/wireframe-editor.md) ("Reference at a glance"), [docs/touch-interaction.md](docs/touch-interaction.md) and the AGENTS.md "Wireframe editor chrome" section.
+- **`TmDocumentOpenDialog` mobile layout: a fullscreen panel with drill-down folders (wireframe redesign plan ce19aa8c, phase 9, WF4).** In a dialog body narrower than
+  640 px - or with `LayoutMode="TmLayoutMode.Mobile"` - the dialog renders `TmModal` with `MobilePresentation=Fullscreen` and an inline footer that never leaves the screen:
+  a sticky head (search at full width; a back button, the breadcrumb and the list / grid switch; the inline new-folder, rename and delete-confirm bars, usable at 320 px),
+  ONE scrolling region and a sticky footer. There is **no tree**: the subfolders of the current folder (taken from the folder tree the dialog already holds - no provider
+  member is added) are `button.tm-dod-folder-row` rows with a chevron, a tap drills in, the back button steps one level up and a crumb jumps to that level (focus follows: to the
+  back button after a drill, to the folder row that was left after a step back). Documents are two-line rows (`.tm-dod-row-name`; `.tm-dod-row-meta` = `date · author`) with a
+  thumbnail rendered from `PreviewSvg` through the same path as the grid (the file icon when there is none; no new `MarkupString` source) and a per-row **more menu**
+  (`.tm-dod-row-menu`, a `TmDropdown` presenting as a bottom sheet titled "More actions for {name}") with Rename / Delete that reuse the desktop flow. The footer holds the Link / Copy
+  choice as compact radio cards (`.tm-dod-mode--compact`, the hint stays for assistive technology) above a `TmMobileActionBar` (New folder / Rename / Delete, gated by the provider's
+  capabilities) beside the primary **Open**; the header close button is the Cancel. With the on-screen keyboard open the footer stays inside the visible viewport (the overlay is padded by the
+  hidden gap, the Link / Copy cards step aside). `DocumentOpenResult`, `ITempoDocumentLibraryProvider` and every public parameter are unchanged; `LayoutMode=Mobile` is now a layout of its own.
+  New localization keys (en / cs / sk / fr): `TmDocumentOpenDialog_Back`, `_FolderRow`, `_FolderKind`, `_More`, `_ActionsLabel`. Demo `/document-open-dialog` gains a *Mobile* layout option and wraps its controls on a phone.
+- **`TmDocumentOpenDialog` redesign: opt-in "Recent" node and a testable `LayoutMode` (wireframe redesign plan ce19aa8c, phase 8, WF4).** Two new
+  opt-in parameters, no `ITempoDocumentLibraryProvider` / `DocumentOpenResult` change. `ShowRecent` (default `false`) adds a virtual **Recent** node above the
+  folder tree; selecting it issues `BrowseAsync` with `FolderPath = null`, `SortField = Modified`, `Descending = true`, `Take = PageSize` (the sort buttons are
+  disabled on that node, the previous sort returns when you leave it). **Which documents a `null` folder returns is the provider's decision** - the
+  `DocumentLibraryQuery.FolderPath` contract says "null or `/` lists the root", so a provider that wants a library-wide recent list must treat `null` as "everywhere"
+  (the demo `DocumentLibraryStore` follows the contract and returns the root documents only; it was left unchanged). `LayoutMode` (`TmLayoutMode`, default `Auto`)
+  measures the dialog body (a `TmLayoutObserver` with its own 640 / 768 thresholds) and, below 768 px of body width or when forced to `Tablet` / `Mobile`, renders
+  the narrow tree and the footer buttons on their own row; `Desktop` forces the wide layout. A forced mode never imports the observer script, so a test renders
+  either layout without a DOM. The tree, the list rows and the grid cards are now keyboard-operable as roving tab stops (see Breaking / Migration), the sorted column
+  header shows a direction indicator (`.tm-dod-sort-indicator`, `data-direction`), the breadcrumb moved into the right pane with a home icon and `›` separators, and
+  the grid listbox has its own label key `TmDocumentOpenDialog_DocumentsLabel` instead of reusing the dialog title. New localization keys (en / cs / sk / fr):
+  `_Recent`, `_Home`, `_Expand`, `_Collapse`, `_SortAscending`, `_SortDescending`, `_FoldersLabel`, `_DocumentsLabel`, `_ModeLabel`. The colocated module gained
+  `focusRoving` / `getGridColumns` (node tests in `tm-dod-space-guard.test.mjs`). Demo `/document-open-dialog` has "Show Recent" and layout switches.
+
+- **Wireframe editor mobile layout: viewing + light edits (redesign plan ce19aa8c, phase 7, decision G2).** In an editor container below 768 px
+  (`data-editor-layout="mobile"`) `TmWireframeEditor` renders the core `TmEditorShell` mobile presentation: a compact header (document title plus
+  `HeaderStart` / `HeaderActions`) with a **select / pan / undo / redo / More** tool row, a canvas that takes the whole width (the canvas measured 0 px
+  wide on a phone before), a **floating zoom** (`- | % | + | fit`, a row over the canvas, outside the svg), a **`TmMobileActionBar`** (**Add** | **Pages & layers**
+  | **Export** | **More**) and non-modal bottom sheets (peek / half / full) for the component palette, the **Properties** inspector and a **Pages | Layers**
+  segment (the shell's one `Extra` tab). Selecting an element peeks the Properties sheet with its type and the quick actions **Duplicate / Lock / Delete**
+  (Name and every property are one swipe up); tap-insert, undo / redo, layer visibility and lock, page switch, device presets (More), read-only and the grid
+  toggle, JSON / SVG export and the PNG / PDF export dialog stay. Resize / rotate handles, the rubber band, the connector tool, align / distribute,
+  grouping, rulers, the minimap and JSON import are **tablet and up** (the canvas runs with `LightEditing`; a one-finger drag on the empty canvas pans, a tap
+  on it deselects). The long-press menu is the shared action sheet (`TmWireframeContextMenu.Presentation=Sheet`), and `TmWireframeExportDialog` is a bottom
+  sheet with an inline, sticky footer (`MobilePresentation`, default `Auto`). New: `TmWireframeEditor.MobileActions` (host actions of the bar; there is no
+  built-in Save or Open), `TmWireframeDesignerCanvas.LightEditing` / `ContentVersion`, `WireframeContextMenuPresentation`, `AddElementsCommand`. Opening, switching
+  and closing a sheet does not re-render the canvas (a parent-render gate keyed on `ContentVersion`; `MutationObserver` E2E). Localised en / cs / sk / fr
+  (`TmWireframe_Mobile*`, `TmWireframe_QuickActionsAriaLabel`, `TmWireframe_ZoomControls`, `TmWireframe_ActionsSheetTitle`). See
+  [docs/wireframe-editor.md](docs/wireframe-editor.md#mobile-layout-phase-7).
+- **Wireframe export download through a Blob URL.** `tmWireframeDesigner.downloadFile` saves through `URL.createObjectURL` on the hidden anchor (a multi-MB base64
+  `data:` URL is dropped by iOS Safari and some Chromium builds); the base64 `data:` URL stays as the fallback. iOS Safari has no real download: the file opens in a
+  new tab and is saved from the share sheet (documented).
+
+- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).** In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
+  the command row is **two `TmToolbar`s** split by `data-tm-group` (row 1: tools, history, arrange, grouping, alignment, snapping and
+  the format painter; row 2: the Components / Properties toggles, zoom, Export and Import, plus the document title), the left panel
+  (Components / Pages / Layers) is an **overlay drawer** and the inspector a **non-modal side sheet with a close ×** - at most one of
+  them open. Selecting an element opens the inspector, inserting a component closes the drawer, and Escape closes the sheet that holds
+  the focus and returns it to the canvas (`TmFocusScope.RestoreFocusTarget`). The minimap is hidden on a tablet, the toolbox is a single
+  column of named rows (`TmWireframeToolbox.SingleColumn`, `tm-wd-toolbox--single-column`), and on `(pointer: coarse)` the toolbar
+  buttons, page tabs, toolbox rows, sheet close and title reach `--tm-touch-target` (44 px). Opening or closing a sheet re-measures the
+  canvas through `tmWireframeDesigner.relayout` without re-rendering it. New stable hooks: `data-testid` `wd-toggle-left`,
+  `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toolbar-row-1|2`. New keys
+  `TmWireframe_ToolbarViewAriaLabel`, `TmWireframe_SheetLeftTitle`, `TmWireframe_SheetInspectorTitle`, `TmWireframe_SheetClose` (en/cs/sk/fr).
+- **Wireframe context menu from the keyboard.** Shift+F10 / the ContextMenu key open the menu at the selected element (or the canvas menu when nothing is selected); the menu focuses its first enabled item, Arrow Up/Down/Home/End move between items, and Escape / choosing an item returns the focus to the canvas.
+- **Wireframe gesture-rollback announcement.** A move, resize, rotate or waypoint drag cancelled by Escape, `pointercancel` or a second finger is announced in a polite live region (`TmWireframeCanvas_GestureCancelled`, en/cs/sk/fr).
+- **Wireframe long-press cue.** A ring grows at the finger during the 500 ms touch hold that opens the context menu (static under `prefers-reduced-motion`).
+- **`TmWireframeDesignerCanvas.NotifyViewportChangedAsync()` and `WrapElement`**, plus the script's `relayout`: the canvas re-fits (pristine view) or keeps centre and zoom (moved view) when its container resizes, and follows size changes through a `ResizeObserver`.
+
+- **Wireframe canvas: touch and pen (redesign plan ce19aa8c, phase 5).** The canvas now works with a finger and a pen on a tablet (full
+  editing from the tablet up; the mobile layout stays viewing plus light edits). One finger or pen selects, drags (single, multi, groups),
+  resizes through the eight handles, rotates, rubber-bands, draws connectors with the connector tool and drags connector waypoints;
+  **two fingers pinch-zoom and pan** (zoom clamped to 0.15x-5x, the toolbar read-out follows); a **500 ms hold opens the context menu**
+  beside the finger; a **double-tap** is a double-click (adds a connector waypoint). On a coarse pointer the selection handles are painted
+  1.5x larger and every handle gets an invisible hit area of at least 24 screen px (`--tm-wd-handle-hit`, `--tm-touch-target` = 44px on a
+  coarse pointer), the connector waypoint gets a finger-sized hit circle, and `.tm-wd-canvas__svg` claims the touch (`touch-action: none`).
+  Every gesture runs on the shared core helpers - `pointer-drag.js` (`attach`, incl. the long-press) and `pointer-gesture.js`
+  (`attachPinch`) - loaded from `wireframe-designer.js`; the package only adds `wireframe-gestures.mjs` (pure maths: double-tap, coarse
+  handle sizes, pinch to viewBox, nudge step). A mouse is unchanged (HTML5 toolbox drag-and-drop, right-click menu, middle-button pan,
+  Space+drag, wheel); Escape, a `pointercancel`, a second finger, a read-only flip and disposal roll a gesture back and commit nothing.
+  Non-drag alternatives (WCAG 2.5.7): arrow keys nudge the selection (Shift = one grid cell; read-only and locked elements are skipped),
+  the inspector X/Y/W/H fields resize, the zoom buttons zoom, a toolbox tap / Enter / Space inserts. New: `TmWireframeDesignerCanvas.OnZoomChangedEvent`,
+  `TmWireframePagesPanel.ShowTitle`, `--tm-wd-handle-hit`, `npm run test:wireframe`.
+- **Wireframe phase 4 review fixes.** `RenameElementCommand` and `ResizeCanvasCommand` remember the page they were created on, so Undo / Redo
+  still reach it after a page switch; undoing a canvas resize now tells the canvas script the size changed back; the inspector explains a
+  rejected canvas size (`TmWireframeProps_CanvasSizeRange`, `role="alert"`, `aria-invalid`) instead of ignoring it; the Pages tab no longer
+  repeats the word "Pages" (`TmWireframePagesPanel.ShowTitle`, default `true`); an empty selection shows the hint without an empty
+  "Selection" collapsible; the toolbox grid
+  uses equal-width cells with an ellipsis label; the toolbar wrapper no longer repeats `role="group"` / `aria-label`; the initial zoom
+  read-out shows the real fitted scale of a page wider than the viewport.
+- **Wireframe editor restructured onto `TmEditorShell` (redesign plan ce19aa8c, phase 4; WF1, WF2, WF3).** The desktop editor follows the
+  reference hierarchy: an opt-in header (`ShowHeader`, `HeaderStart`, `HeaderActions`, `Title` — the host brings its own Open/Save), ONE
+  `TmToolbar` command row (named groups, per-button `Priority`, `Labels=Auto`, `Overflow=Menu`, Export as the pinned primary action), a left
+  panel with *Components* / *Pages* / *Layers* tabs (`TmWireframeSidePanel`, internal; tabs mount lazily so a tab switch never re-renders the
+  canvas or the toolbox), the canvas and an inspector that, with nothing selected, offers **Canvas** (device presets Desktop, Laptop, Tablet,
+  iPhone 14, Android, Custom over the undoable `ResizeCanvasCommand`), **Page** and **Grid**. New parameters: `PageNavigation`
+  (`Tabs` default | `Panel`), `LayoutMode`, `LayoutBreakpoints` (mobile < 640, desktop ≥ 860), `ShowHeader`, `HeaderStart`, `HeaderActions`,
+  `Title`, `ShowGridChanged`, `GridSizeChanged`. New public components/types: `TmWireframePagesPanel`, `WireframePageNavigation`,
+  `RenameElementCommand`. Mobile/tablet presentation of the shell is the next plan phase; the desktop layout is complete.
+- **Wireframe element names (WF3).** `WireframeElement.Name`, the undoable `RenameElementCommand`, the inspector's *Name* field and the canvas
+  `aria-label` / `<title>` tooltip; the MCP tools set and return `name`.
+- **Wireframe layers panel: row menu, non-drag reorder and real semantics (redesign plan ce19aa8c, phase 3).**
+  `TmWireframeLayersPanel` can now be driven entirely without a mouse and without dragging (WCAG 2.5.7):
+  every row has a "⋯" menu (core `TmContextMenu`: **Rename layer**, **Move up**, **Move down**, **Delete layer**;
+  the first row cannot move up, the last cannot move down, the default layer has no Delete), **F2** renames the row
+  from any of its controls, and **Alt+↑ / Alt+↓** reorder it. Reordering, rename, visibility, lock, delete and
+  *Move to layer* all go through the editor's undoable command stack (`ReorderLayersCommand`, `RenameLayerCommand`, …),
+  so undo/redo works for every path, and a polite live region announces moves and deletions. The drag-and-drop
+  drop now paints a drop indicator line (before/after the hovered row) and clears it on drop and `dragend`.
+  The active layer is a labelled `radiogroup` of `role="radio"` buttons (Arrow keys roam and activate, one tab
+  stop); the eye and the lock are toggle buttons with `aria-pressed`. New parameter
+  **`ShowCollapseToggle`** (`bool`, default `true` = today's standalone look): a host that owns the collapse or the
+  surrounding panel passes `false` and gets the panel without its own tab, never collapsed, filling its host.
+  Look: lighter, per the reference — sentence-case 14px title (no uppercase 11px caption), 36px rows, 32px icon
+  buttons (44px = `--tm-touch-target` on `(pointer: coarse)`), the active row tinted with
+  `--tm-color-primary-subtle`, the trash quiet on a fine pointer (shown on row hover, `:focus-within` and on the active row) and always shown
+  where there is no hover; in the editor's narrow column on a coarse pointer it steps aside for the row menu's Delete
+  (five 44px targets do not fit 288px), and the grip is hidden on touch (HTML5 drag does not run there).
+  Every key typed inside the panel stays in the panel (the canvas shortcuts - nudge, Delete, Escape - ignore it), keys inside
+  an open row menu do not reach the row shortcuts, the default layer (lowest-ordered, moves on reorder) is marked with
+  `aria-description`, and moves are announced with their new position.
+  New localization keys `TmWireframeLayers_*` (en/cs/sk/fr). Guarded by `TmWireframeLayersPanelTests` (bUnit) and
+  `WireframeLayersPanelE2ETests` / `Layers_KeyboardReorder` / `Layers_RowMenuRename` (E2E, incl. axe).
 - **`TmFilterBuilder.ResultCountKey`** (`object?`, default `null`). Changing this value re-runs the count; hosts
   pass a token covering inputs outside `ActiveFilters` — search text, column filters, new items or a reloaded
   data provider. `TmDataTable` and `TmMultiViewList` pass an internal version counter they bump on those changes,
@@ -3432,6 +3600,314 @@
   The per-component layout knobs stay component-local: `--tm-pdf-page-shadow` and
   `--tm-pdf-panel-width` are defined on each component root (viewer thumbnails `140px`,
   annotator panel `300px`, thread panel `280px`), never as global aliases.
+- **`TmDocumentOpenDialog` is a fullscreen, drill-down panel below 640 px (redesign plan ce19aa8c, phase 9) - it used to be the desktop dialog squeezed into the width.**
+  Impact: the public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, `ShowRecent`, `LayoutMode`, ...), `DocumentOpenResult` and `ITempoDocumentLibraryProvider`
+  are unchanged, and so are desktop and tablet (including a *forced* `Tablet` layout on a phone viewport: a layout you force always wins). What changes is the DOM of the **mobile** layout - a
+  dialog body below 640 px (a phone, or a narrow host container) or `LayoutMode="Mobile"`, which until now reused the tablet rules: (1) the modal root is `.tm-modal--fullscreen-presentation` (was a
+  `.tm-modal--sheet` bottom sheet on a phone viewport and an XLarge dialog in a narrow container) and the host wrapper `.tm-dod-host` (`display: contents`) exists; (2) **there is no
+  `.tm-dod-tree` / `[role=tree]` / `.tm-dod-tree-node`** - a test or a host that entered a folder by clicking a tree item must click `.tm-dod-folder-row[data-path$="/Designs"]` (a native `button`,
+  one tap drills in) and go back with `.tm-dod-back` or a crumb; (3) document rows are two lines (`.tm-dod-row-name` / `.tm-dod-row-meta` / `.tm-dod-row-preview`) - the list header
+  and the `.tm-dod-cell-*` cells are not rendered, and the grid is two columns; (4) **Rename, Delete and New folder are `TmMobileActionBar` tiles** in the footer
+  (`[data-action-id="rename"]` / `delete` / `new-folder`, inside `.tm-modal-footer`) instead of `.tm-dod-rename` / `.tm-dod-delete` / `.tm-dod-new-folder` toolbar buttons - the inline bars
+  (`.tm-dod-new-folder-bar`, `.tm-dod-rename-bar`, `.tm-dod-delete-confirm`) are unchanged but sit in the sticky head above the list and the first two gain a Cancel (`.tm-dod-inline-cancel`); (5) **there is
+  no `.tm-dod-cancel` button** in the mobile footer (the header close button cancels and raises `OnCancelled`); `.tm-dod-open` and the Link / Copy cards (`.tm-dod-mode-link` / `.tm-dod-mode-copy`,
+  now `.tm-dod-mode--compact`) stay; (6) a **double click / double tap on a row or card selects only** on mobile (a drill-down tap followed by a quick tap on the row that lands at the same spot would
+  have opened a document the user only meant to select) - Open is the button, or Enter on the focused row; desktop and tablet still open on a double click; (7) the Auto measurement uses a wider
+  mobile threshold (640 + 112 px) while the fullscreen panel is up, so one viewport width stays mobile in both presentations instead of flapping between the dialog and the panel; with an
+  app-level `TmLayoutObserver IsViewportScope` the first frame is already the mobile layout.
+  Before / after:
+  ```csharp
+  // before: a phone opened the desktop dialog squeezed into the width - the tree was the way into a folder
+  await page.Locator(".tm-dod-tree-node", new() { HasTextString = "Designs" }).ClickAsync();
+  await page.ClickAsync(".tm-dod-rename");                  // toolbar button, disabled until a row is selected
+  await page.ClickAsync(".tm-dod-cancel");
+
+  // after: layout-aware - a drill-down row and the footer action bar on mobile, the tree and the toolbar elsewhere
+  await page.Locator(".tm-dod-tree-node, .tm-dod-folder-row", new() { HasTextString = "Designs" }).First.ClickAsync();
+  await page.ClickAsync(".tm-dod-rename, [data-action-id=rename]");
+  await page.ClickAsync(".tm-modal-close");                 // the mobile Cancel (desktop / tablet keep .tm-dod-cancel too)
+  ```
+  ```razor
+  @* unchanged: the same markup renders the dialog on a desktop and the fullscreen panel on a phone; pin either with LayoutMode *@
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open" OnSelected="Picked" />
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open" LayoutMode="TmLayoutMode.Mobile" OnSelected="Picked" />
+  ```
+  The three Notion blocks (wireframe, diagram, spreadsheet) host the dialog with `ShowModeToggle=true` and need no change: the Link / Copy choice stays, as compact cards above the action bar.
+- **`TmDocumentOpenDialog` is a wider modal with a collapsible tree, always-visible actions and radio-card modes (redesign plan ce19aa8c, phase 8).**
+  Impact: the public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, ...), `DocumentOpenResult` and every `.tm-dod-*` selector the
+  Notion / Diagram / Spreadsheet blocks and the E2E suites use stay, but the DOM and look changed:
+  (1) the modal is `ModalSize.XLarge` (900 px, was `Large` 680 px); (2) **Rename and Delete are always rendered** (when the provider advertises the capability)
+  and are `disabled` until a document is selected - before they appeared only with a selection, so a host stylesheet or test that expected them to be *absent*
+  must now check `disabled`; (3) the **folder tree is collapsible**: rows are `div[role=treeitem]` (not `<button>`), carry `aria-expanded` on folders with children,
+  a mouse-only `.tm-dod-tree-toggle` chevron (a fenced, `aria-hidden` non-focusable `<span>`; a click returns focus to the row) and are ONE tab stop named by their label (`aria-labelledby`, plus `aria-setsize` / `aria-posinset`) with the WAI-ARIA arrow keys (Left/Right collapse / expand / parent / first child, Up/Down, Home/End,
+  Enter and Space navigate); the inline `padding-left` is now `padding-inline-start: calc(...)`; (4) list rows, grid cards and tree rows use a **roving
+  `tabindex`** (`0` on one, `-1` on the rest, the arrow keys move focus) instead of `tabindex="0"` on every row - a test that asserted `tabindex="0"` on a
+  specific row must assert "exactly one `0`" or focus the row; (5) the **link / copy choice is a `role="radiogroup"` of radio cards** (`.tm-dod-mode-card`,
+  title + its own hint) instead of two inline native radios sharing one hint - `.tm-dod-mode-link` / `.tm-dod-mode-copy` are still the native `input[type=radio]`
+  (so `.Change(true)` / `Check()` keep working) and the hint class `.tm-dod-mode-hint` now exists once per card; the radio `name` is per-instance; (6) the breadcrumb is
+  inside the new `.tm-dod-main` right pane, its first crumb is a home **icon** button (`aria-label` "Home", no longer the text "All documents") and the separator is
+  `›` (was `/`); the last crumb is `aria-current="page"` and not a button; (7) the list header is sentence case (no `text-transform: uppercase`), list rows carry `aria-selected` and `role="gridcell"` cells, and the footer
+  buttons live in `.tm-dod-footer-actions` (the `.tm-dod-footer-spacer` element is gone); (8) the dialog root has a new `.tm-dod` class and `data-layout`
+  (the footer carries it too), toolbar buttons render icon + label, and **until the mobile phase the `Mobile` layout (and a phone viewport, where `TmModal` becomes a
+  sheet) uses the same compact rules as `Tablet`**; the arrow keys / Home / End on a tree item, row or card no longer scroll the container (the colocated scroll guard
+  cancels them, Alt / Ctrl / Meta / Shift combinations excluded); New folder is disabled on the Recent node, a search replaces the Recent node, and the Open result carries the
+  document name after a rename.
+  Before / after:
+  ```csharp
+  // before: Rename / Delete absent until a row is selected, tabindex="0" on every row
+  cut.FindAll(".tm-dod-rename").Should().BeEmpty();
+  cut.FindAll(".tm-dod-row").Should().OnlyContain(r => r.GetAttribute("tabindex") == "0");
+
+  // after: always rendered but disabled, exactly one row in the tab order
+  cut.Find(".tm-dod-rename").HasAttribute("disabled").Should().BeTrue();
+  cut.FindAll(".tm-dod-row").Count(r => r.GetAttribute("tabindex") == "0").Should().Be(1);
+  ```
+  ```razor
+  @* new, opt-in: the Recent node and a pinned layout *@
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open"
+                        ShowRecent="true" LayoutMode="TmLayoutMode.Auto" OnSelected="Picked" />
+  ```
+
+- **The wireframe editor is a different, lighter editor below 768 px, and its export dialog is a bottom sheet there (redesign plan ce19aa8c, phase 7).**
+  Impact: in an editor container narrower than 768 px (a phone, or a narrow column) `TmWireframeEditor` no longer shows the desktop chrome squeezed into the width
+  (the fixed-width toolbox and properties columns left the canvas 0 px wide). It shows the mobile layout described above: the command row is replaced by the tool row and
+  the `TmMobileActionBar`, the toolbox / inspector / pages / layers are bottom sheets, the document title is always shown in the header, the page tabs and the rulers /
+  minimap / import file picker are not rendered, and the canvas drops resize / rotate handles, the rubber band and the connector tool (`LightEditing`). The
+  `.tm-wd-editor__toolbar`, `[data-testid="wd-toggle-left"]` / `wd-toggle-inspector` (tablet) and the `Export` / `Import` toolbar items do not exist in that layout; the
+  long-press menu is `.tm-overlay-panel-sheet` instead of `.tm-wd-editor__context-menu`; `TmWireframeExportDialog` renders `TmModal` with the `Sheet` presentation
+  (`.tm-modal--sheet`) on a mobile viewport. Tablet (768-1199) and desktop (>= 1200) are unchanged.
+  Before / after: a host that needs the old behaviour on a narrow container pins the layout (`LayoutMode="TmLayoutMode.Tablet"`), a host that embeds the editor in a
+  < 768 px column and wants a "Save" supplies it through the new slot, and a host that pinned the export dialog's presentation sets it explicitly:
+  ```razor
+  @* before: the editor was squeezed on a phone, a "Save" had to live outside it *@
+  <TmWireframeEditor @bind-Document="doc" />
+
+  @* after: a mobile action for the host, and the layout can still be pinned *@
+  <TmWireframeEditor @bind-Document="doc" LayoutMode="TmLayoutMode.Auto">
+      <HeaderActions><button @onclick="Open">Open…</button></HeaderActions>
+  </TmWireframeEditor>
+  <TmWireframeEditor @bind-Document="doc" MobileActions="@(new[] { new TmActionItem { Id = "save", Label = "Save", Overflow = ActionOverflow.Never, OnClick = save } })" />
+
+  @* the export dialog: Auto (default) = sheet on a phone, dialog elsewhere; force one *@
+  <TmWireframeExportDialog Show="open" MobilePresentation="MobilePresentation.Dialog" OnExport="Export" />
+  ```
+  The duplicate of the context menu / the mobile quick action is now ONE undoable step (`AddElementsCommand`); before, `Duplicate` added the copies behind the command stack.
+
+- **The wireframe editor chooses its panels by the width of its own CONTAINER, and the fixed panel widths are gone (redesign plan ce19aa8c, phase 6).**
+  Impact: `TmWireframeEditor` resolves `mobile < 768`, `tablet 768-1199`, `desktop >= 1200` from its own box (the pair `TmDiagramEditor` and `docs/editor-shell.md` use for editors; the plan's 1279 would make the demo, whose page is capped at `max-w-7xl`, tablet at every viewport) (it is a CSS size container,
+  `container-name: tm-wd-editor`), not from the viewport and no longer with the phase-4 pair 640 / 860. Between 768 and 1199 px the docked left
+  panel and inspector are replaced by an overlay drawer and a side sheet (one at a time), the command row becomes two toolbars, the minimap is
+  hidden and the toolbox is a single column; the `--tm-wd-toolbox-w` (14rem) and `--tm-wd-props-w` (18rem) custom properties are removed -
+  panel widths come from `TmEditorShell` (`LeftWidth` 260px / `RightWidth` 300px, resizable) and the tablet sheets from `--tm-wd-sheet-w`
+  (20rem, capped at 60% of the canvas). The editor needs about 1200 px of container to dock both panels: the demo at a 1440 viewport has its sidebar (about 1080 px editor), so it shows the tablet layout there unless the sidebar is hidden.
+  Before: `.my-editor .tm-wd-editor { --tm-wd-props-w: 22rem; }` and a layout that docked both panels from 860 px.
+  After: the width of a docked panel is the shell's (resizable by the user, 260 / 300 px by default) - there is no CSS variable to override;
+  to keep the phase-4 behaviour for a host layout pin it with `<TmWireframeEditor LayoutBreakpoints="new TmLayoutBreakpoints(640, 860)" />`
+  (or force `LayoutMode="TmLayoutMode.Desktop"`). Selectors: tests that clicked the docked toolbox tabs on a 768-1279 px editor must open the drawer first
+  (`[data-testid='wd-toggle-left']`, then `[data-testid='wd-left-drawer'] ...`); every `.tm-wd-editor__*` selector is unchanged.
+
+- **The wireframe canvas listens to Pointer Events instead of mouse events (redesign plan ce19aa8c, phase 5).**
+  Impact: `wireframe-designer.js` no longer registers `mousedown` / `mousemove` / `mouseup` on the canvas `<svg>` or the document; the
+  same gestures now arrive as `pointerdown` / `pointermove` / `pointerup` / `pointercancel` (a mouse, a finger and a pen all produce them),
+  the context-menu dismiss listens to `pointerdown` instead of `mousedown`, and the `<svg>` carries `touch-action: none`. The script
+  also loads three ES modules from next to it (`../../Tempo.Blazor/js/pointer-drag.js`, `pointer-gesture.js` and its own
+  `wireframe-gestures.mjs`), so the host must serve `_content/Tempo.Blazor/js/` and `_content/Tempo.Blazor.Wireframe/js/` (every
+  default static-web-asset host does) and a strict CSP that allows `wireframe-designer.js` must allow those modules too.
+  The `[JSInvokable]` surface of `TmWireframeDesignerCanvas` and every Blazor parameter are unchanged. A host that attached its own
+  `mousedown` listener to the canvas to observe clicks must switch to `pointerdown` (pointer events also fire for touch); a test that
+  drives the canvas with `dispatchEvent(new MouseEvent('mousedown', ...))` must dispatch `PointerEvent`s, or use Playwright's real
+  mouse / touch input, which produces both.
+  Before:
+
+  ```js
+  document.querySelector('.tm-wd-canvas__svg').addEventListener('mousedown', e => track(e.clientX, e.clientY));
+  ```
+
+  After:
+
+  ```js
+  document.querySelector('.tm-wd-canvas__svg').addEventListener('pointerdown', e => track(e.clientX, e.clientY));
+  ```
+
+  Also: a rotated element now keeps its rotation while it is dragged or nudged (the live preview used to drop it until Blazor
+  re-rendered), and the selection handles are drawn 1.5x larger with extra invisible hit rects on a coarse pointer
+  (`[data-handle-hit]`, `.tm-wd-connector__waypoint-hit`); a stylesheet or test that counted `[data-handle]` elements must expect the
+  extra hit rects there (they carry the same `data-handle` key).
+
+- **The `data-tm-group` set of the wireframe toolbar is frozen (phase 4 review).** Hosts and tests key off the attribute, never off the
+  position of a group: `tools`, `history`, `arrange`, `group`, `align`, `snap`, `format`, `view`, `zoom`, `file`. A group may
+  move between the bar and the "More" menu as the width changes; the name set only ever grows by an additive, documented entry.
+  Before: `.tm-wd-editor__toolbar > div:nth-child(3)` (a positional selector on the toolbar's internal DOM).
+  After: `.tm-wd-editor [data-tm-group='arrange']` (the group may sit in the bar or in the "More" menu - open it first when the width is narrow).
+- **`TmWireframeEditor` renders through the core `TmEditorShell`: new DOM, one `TmToolbar` command row, named groups and visible labels (redesign plan ce19aa8c, phase 4).**
+  Impact: a test, script or stylesheet that targeted the old structure must move. The editor was a flat column of
+  `.tm-wd-editor__toolbar` (≈35 hand-written `.tm-wd-editor__btn` buttons and four hand-rolled dropdowns), the page tabs, and a
+  `.tm-wd-editor__body` holding `__toolbox-wrap`, `__canvas-area` and `__props-wrap` (properties **and** layers stacked). It is
+  now a `TmEditorShell` (`data-region="header|toolbar|main|left|canvas|right"`) whose command row is ONE core `TmToolbar`
+  (`Overflow=Menu`, `Labels=Auto`) with named, labelled groups (`data-tm-group` = `tools`, `history`, `arrange`, `group`,
+  `align`, `snap`, `format`, `view`, `zoom`, `file`, each `role="group"` with an `aria-label`), a `Priority` on every button
+  (the lowest priority leaves the bar first, into the "More" menu), and a pinned **Export** primary button. The classes
+  `.tm-wd-editor`, `__title`, `__canvas-wrap`, `__canvas-area`, `__page-tab*`, `__zoom-label`, `__minimap-wrap`, `__error-banner`, the
+  whole `.tm-wd-toolbox__*`, `.tm-wd-props__*`, `.tm-wd-layers__*` families and `data-el-id` / `.tm-wd-canvas__svg` are unchanged.
+  Removed: `.tm-wd-editor__body`, `__toolbox-wrap`, `__props-wrap`, `__btn` / `__btn--icon` / `__btn--active` / `__btn--text` on the
+  **toolbar** (the buttons are `.tm-toolbar-btn`; the classes stay for the inspector's buttons), `__dropdown*`,
+  `__canvas-size-input`, `__btn--canvas-size`, `__toolbar-sep`. Before / after:
+  ```csharp
+  // before: ToolbarSelector = ".tm-wd-editor__toolbar button[aria-label='Undo']", Export = ".tm-wd-editor__dropdown-wrap:has-text('Export')"
+  page.Locator(".tm-wd-editor__btn[aria-label*='Lock' i]");            // every command was a bar button
+  page.Locator(".tm-wd-editor__dropdown-item", new() { HasText = "PNG" });
+  // after: toolbar buttons are core toolbar buttons, menus are TmDropdown items with data-testid
+  page.Locator(".tm-toolbar button.tm-toolbar-btn[aria-label^='Lock']");   // or the entry in the "More" menu when the bar is narrow
+  page.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger");    // Export (pinned primary button)
+  page.Locator("[data-testid='wd-export-png']");                           // Export ▸ PNG
+  ```
+  Migrate: use `data-testid`s (`wd-export`, `wd-export-json|svg|png|pdf`, `wd-align`, `wd-distribute`, `wd-import`, `wd-device-preset`,
+  `wd-canvas-width|height|apply`, `wd-page-name`, `wd-grid-show|size`, `wd-element-name`, `wd-delete-element`, `wd-page-add`) and the
+  `data-tm-group` groups instead of positional selectors; a command that is not on the bar is in the "More" menu
+  (`button.tm-toolbar-more`), where its entry carries the visible label.
+- **Wireframe editor: format painter, Read-only, rulers and the panel toggles moved into the toolbar's "More" menu; canvas size moved to the inspector.**
+  Impact: the Copy style / Paste style / Paste size buttons, the Read-only/Edit toggle, the rulers toggle and the toolbox /
+  properties toggles are no longer on the bar. They are checkable or plain entries of "More" (`role="menuitemcheckbox"` for Read-only,
+  Show rulers, Components panel, Properties panel — the host-pinned `ReadOnly="true"` still hides the Read-only entry).
+  The format painter also stays in the inspector's *Format painter* section. The `1280×800` canvas-size button with its inline
+  inputs is gone: with an empty selection the inspector's **Canvas** section has the device preset, width/height and **Apply**.
+  Before: `button[aria-label='Switch to read-only mode']`, `button[aria-label='Show rulers']`, `.tm-wd-editor__btn--canvas-size`.
+  After: open `button.tm-toolbar-more` and click the `Read-only` / `Show rulers` entry; use `[data-testid='wd-canvas-width']` etc.
+- **Wireframe editor: `ShowToolbox` / `ShowPropertiesPanel` now drive the shell panels (kept as parameters, now aliases).**
+  `ShowToolbox` = the *Components* tab, `ShowPropertiesPanel` = the right inspector **and** the *Layers* tab (the layers panel
+  moved from the bottom of the right column into the left panel, rendered with `ShowCollapseToggle="false"`). Both parameters keep
+  their names and defaults; collapsing a panel is now shell state (the strip toggles and the More-menu entries). With both off the
+  left panel is not rendered. `TmWireframeLayersPanel` stays public and unchanged outside the editor.
+  Before: `<TmWireframeEditor ShowPropertiesPanel="false" />` hid the inspector and the layers. After: the same markup hides both
+  (the Layers tab with it); `ShowToolbox="false"` alone keeps the Layers tab.
+- **Wireframe editor: the page tabs are one of two presentations (`PageNavigation`), the default is unchanged.**
+  `PageNavigation="Tabs"` (default) keeps the horizontal tabs and the *Components* / *Layers* left tabs. `PageNavigation="Panel"`
+  adds a *Pages* tab (the new public `TmWireframePagesPanel`: numbered list, "⋯" Rename / Duplicate / Move up / Move down / Delete,
+  Alt+↑/↓, drag, "+ Add page") and drops the horizontal tabs. Page operations stay non-undoable. The demo page switched to `Panel`
+  and moved its "Open…" button into the new `HeaderActions` slot. Migrate: nothing, unless you want the panel:
+  ```razor
+  <TmWireframeEditor @bind-Document="doc" PageNavigation="WireframePageNavigation.Panel">
+      <HeaderActions><button @onclick="OpenAsync">Open…</button></HeaderActions>
+  </TmWireframeEditor>
+  ```
+- **Wireframe editor: `ShowGrid` / `GridSize` are no longer assigned by the component and the grid is edited in the inspector.**
+  Same contract as `ReadOnly` / `ShowRulers`: the inspector's *Grid* section keeps an internal state and raises the new
+  `ShowGridChanged` / `GridSizeChanged` (`@bind-ShowGrid`, `@bind-GridSize`); a changed parameter is adopted again. The context menu's
+  *Hide/Show grid* goes through the same path (before it assigned the parameter). Hosts that only set the initial value are unaffected.
+  Before: `<TmWireframeEditor ShowGrid="true" />` and the user's grid toggle overwrote the host's parameter value (the host never saw it).
+  After: `<TmWireframeEditor @bind-ShowGrid="grid" @bind-GridSize="gridSize" />` to track the user's choice; without a binding the host value is only the initial state.
+- **Wireframe editor: the left toolbox is a 3-column grid of icon tiles.** `WireframeComponentDef.Icon` is rendered as a `TmIcon`
+  (`.tm-wd-toolbox__item-icon`); the mini stencil SVG (`.tm-wd-toolbox__item-preview-paper`) remains only as the fallback when the
+  icon is missing or not drawable. Search and filters are unchanged. A selector on `.tm-wd-toolbox__item-preview-paper` must accept
+  tiles without it.
+  Before: `page.Locator('.tm-wd-toolbox__item-preview-paper').First` (every row had a preview).
+  After: `page.Locator('.tm-wd-toolbox__item[data-component-type="TmButton"]')` (key off the item, not its preview; the icon is `.tm-wd-toolbox__item-icon`).
+- **Wireframe inspector with an empty selection shows Canvas / Page / Grid instead of a hint (additive).**
+  Device presets (Desktop 1440×900, Laptop 1280×800, Tablet 1024×768, iPhone 14 390×844, Android 360×800, Custom) push the undoable
+  `ResizeCanvasCommand`; the Page section renames the active page; with a selection, *Element* has a **Name** field and a **Delete element**
+  button. New `TmWireframePropertiesPanel` parameters: `ShowGrid` / `ShowGridChanged`, `GridSize` / `GridSizeChanged`, `OnCanvasResized`,
+  `OnDelete` (all optional; without `OnDelete` the panel pushes `RemoveElementsCommand` itself).
+- **New `WireframeElement.Name` (additive, `string?`).** An optional human-readable element name: serialised as `name` (omitted when
+  null, so existing documents are byte-identical), shown in the inspector, used as the canvas element's `aria-label` and tooltip, set and
+  returned by the MCP wireframe tools (`name` on `addElement` / `updateElement` / the author payload, in `wireframe_get_document`, the
+  implementation brief and the authoring guide) and described in `wireframe-document.schema.json`. A strict consumer of the
+  JSON schema that rejected unknown element properties must accept `name`.
+  Before: `{ "id": "a1", "type": "TmButton", "x": 10 }`. After: `{ "id": "a1", "type": "TmButton", "name": "Submit", "x": 10 }` (`name` is optional; existing documents need no migration).
+- **`TmWireframeLayersPanel` DOM: the active layer is a `role="radio"` button inside a `radiogroup`, and the
+  visibility/lock buttons are toggles.** Impact: a test, script or stylesheet that relied on the old structure
+  must move. The list was `role="list"` of `role="listitem"` rows whose "active" control was a plain `<button>`
+  with a decorative `<span>`; the eye and lock buttons flipped their `aria-label` ("Hide layer" / "Show layer")
+  and carried no pressed state. The `.tm-wd-layers`, `__item`, `__add-btn`, `__active`, `__radio`,
+  `__radio--checked`, `__visibility`, `__lock`, `__delete`, `__name` and `__move-section` classes are unchanged
+  (the E2E selectors keep working); the row is now also `--active` / `--hidden` / `--drag-over` / `--dragging`.
+  Before:
+  ```html
+  <div class="tm-wd-layers__list" role="list">
+    <div class="tm-wd-layers__item" role="listitem" data-layer-id="l1">
+      <button class="tm-wd-layers__active" aria-label="Set as active layer"><span class="tm-wd-layers__radio tm-wd-layers__radio--checked"></span></button>
+      <button class="tm-wd-layers__visibility" aria-label="Hide layer">…</button>
+  ```
+  After:
+  ```html
+  <div class="tm-wd-layers__list" role="radiogroup" aria-label="Active layer">
+    <div class="tm-wd-layers__item tm-wd-layers__item--active" data-layer-id="l1">
+      <button class="tm-wd-layers__active" role="radio" aria-checked="true" aria-label="Set layer Content as active"><span class="tm-wd-layers__radio tm-wd-layers__radio--checked" aria-hidden="true"></span></button>
+      <button class="tm-wd-layers__visibility" aria-pressed="true" aria-label="Show layer Content">…</button>
+  ```
+  Migrate: select the active layer with `[role="radio"][aria-checked="true"]` (or the unchanged
+  `.tm-wd-layers__radio--checked`), the visibility state with `aria-pressed` on `.tm-wd-layers__visibility`
+  (`true` = visible) and the lock with `aria-pressed` on `.tm-wd-layers__lock` (`true` = locked) instead of
+  comparing the label text. The layer title is now sentence case (`text-transform: none`, 14px); a stylesheet that
+  matched the uppercase caption should drop that assumption. `data-collapsed` is now always rendered as the string
+  `"True"` / `"False"`, which is what the stylesheet matches.
+- **Wireframe editor: `--tm-wd-*` are now aliases of the core `--tm-*` tokens; a consumer palette override moves to
+  `--tm-*`.** `_wireframe-editor.css` no longer ships a palette of its own (`--tm-wd-accent: #3b82f6`,
+  `--tm-wd-border: #d1d5db`, …). Every `--tm-wd-*` is `var(--tm-…)` (`--tm-wd-accent` = `--tm-color-primary`,
+  `--tm-wd-border` = `--tm-border-color`, `--tm-wd-bg-surface` = `--tm-bg-surface`, the workspace behind the page =
+  `--tm-bg-workspace`, radii = `--tm-radius-control` / `--tm-radius-card`, font = `--tm-font-sans`). Dark mode and the
+  opt-in indigo theme therefore reach the editor with no editor-specific CSS. The aliases are re-declared on every
+  editor surface root, so a `[data-theme="dark"]` / `.tm-dark` region nested below `<html>` resolves them too.
+  Impact: a host that re-coloured the editor by overriding `--tm-wd-*` on `:root` still works for the properties it
+  names (the aliases stay overridable), but the supported route is the core token, and a `--tm-wd-*` override placed
+  on `:root` no longer wins over the surface-root declaration for the editor's own subtree.
+  Before: `:root { --tm-wd-accent: #7c3aed; --tm-wd-border: #cbd5e1; }`
+  After: `:root { --tm-color-primary: #7c3aed; --tm-border-color: #cbd5e1; }` (or, for one editor only,
+  `.my-editor .tm-wd-editor { --tm-wd-accent: #7c3aed; }`).
+  The wireframe PAGE is paper: `--tm-wd-canvas-bg` aliases the theme-invariant `--tm-paper` (like the diagram
+  editor's page), because the stencil components are drawn light-on-paper; the SVG/PNG/PDF export therefore looks
+  the same in every theme (`exportSvg` bakes the computed paints into explicit colours).
+
+- **Wireframe editor: the dark-mode hack was removed.** `[data-theme="dark"] .tm-wd-editor { --tm-wd-…: #1e293b … }`
+  and `[data-theme="dark"] .tm-wd-canvas__svg rect[fill="white"] { fill: #1e293b }` are gone - the page is no longer
+  inverted (it is paper) and the chrome follows `tokens-dark.css`.
+  Before: a dark theme turned every `<rect fill="white">` of the canvas SVG slate.
+  After: the canvas SVG keeps explicit paper paints; override `--tm-wd-canvas-bg` (not an attribute selector) to
+  change the page colour, e.g. `.tm-dark .tm-wd-editor { --tm-wd-canvas-bg: var(--tm-bg-surface); }`.
+
+- **Wireframe editor toolbar: emoji and Unicode glyphs became `TmIcon`; icon buttons are 32 px.** The ↖ ✋ → ↩ ↪ ⬇ ⬆
+  🔒 📁 📂 ⇹ ⇔ 🧲 📏 🎨 🖌️ 📐 − + ✓ ✕ ◧ ◨ ▾ glyphs inside `.tm-wd-editor__btn` (and the properties panel's align / z-order
+  buttons, the toolbox search clear, the page-tab close/add) render an `svg.tm-icon` instead. Toolbar buttons are
+  `var(--tm-space-8)` (32 px, was 26 px). Class names, `aria-label`s and `title`s are unchanged; the six align buttons
+  of the properties panel gained an `aria-label`.
+  Impact: selectors or tests that matched the glyph text (`button:has-text("✕")`) must match the accessible name.
+  Before: `page.Locator("button:has-text('✓')")`
+  After: `page.GetByRole(AriaRole.Button, new() { Name = "Apply" })`
+
+- **`TmDocumentOpenDialog` no longer falls back to indigo `#4f46e5`; its colour comes from `--tm-color-primary`.**
+  The stylesheet used invented aliases with hex fallbacks (`var(--tm-primary, #4f46e5)`, `--tm-primary-soft`,
+  `--tm-hover-bg`, `--tm-text-color`, `--tm-danger`, `--tm-surface-2`); none of those tokens exist, so the fallbacks
+  always painted. They are replaced by `--tm-color-primary`, `--tm-color-primary-subtle`, `--tm-color-surface-hover`,
+  `--tm-text-primary`, `--tm-color-danger(-subtle)` and `--tm-bg-surface-secondary`.
+  Before: the selected folder, list toggle and breadcrumb were indigo in every theme (and dark mode kept light fills).
+  After: they use the library's primary colour - blue by default, indigo with `data-tm-theme="indigo"`, and the dark
+  variant in dark mode. Hosts that want the old indigo set `data-tm-theme="indigo"` on `<html>` (or override
+  `--tm-color-primary`). A selected row/card now carries a primary marker (inset bar / ring), not only a faint tint.
+
+- **`TmDocumentOpenDialog` column headers are the grid items themselves.** The `role="columnheader"` wrappers no
+  longer use `style="display:contents"` (a `display: contents` element can disappear from the accessibility tree);
+  `role="columnheader"` and `aria-sort` sit on `div.tm-dod-colhead`, a direct child of `.tm-dod-list-head`.
+  Impact: `.tm-dod-col-name` / `.tm-dod-col-modified` keep their classes and their parent still carries
+  `aria-sort`; only an inline-style assertion on the wrapper would notice.
+  Before: `<div role="columnheader" aria-sort="ascending" style="display:contents"><button class="tm-dod-col-name">`
+  After: `<div class="tm-dod-colhead" role="columnheader" aria-sort="ascending"><button class="tm-dod-col-name">`
+
+- **`TmWireframeEditor` read-only now also mutes the toolbox, and the toolbox label says "click or drag".**
+  `TmWireframeToolbox` has a new `ReadOnly` parameter (the editor passes its effective state): items become
+  `aria-disabled="true"`, `draggable="false"`, muted (`tm-wd-toolbox__item--disabled`) and never raise
+  `OnComponentActivated`. The `TmWireframeToolbox_DragOntoCanvas` text changed from "Drag {0} onto canvas" to
+  "Add {0} to canvas (or drag)" in all four resource files; hosts that override the key keep their text.
+- **`TmWireframeEditor` no longer assigns `ReadOnly` / `ShowRulers`, and its Read-only toggle cannot unlock a
+  host-pinned `ReadOnly="true"`.** The built-in Read-only/Edit button and the rulers button used to write
+  `ReadOnly = !ReadOnly` / `ShowRulers = !ShowRulers` into the component's own `[Parameter]`s, which the host
+  could neither observe nor keep - and a viewer rendered with `ReadOnly="true"` could be switched to edit mode
+  by any user. They now drive internal state (`IsReadOnly` = `ReadOnly || user toggle`) and raise the new
+  `ReadOnlyChanged` / `ShowRulersChanged` callbacks. With `ReadOnly="true"` and no `ReadOnlyChanged` bound the
+  toggle is not rendered. `IsReadOnly` is passed to the canvas, properties panel, layers panel and context menu.
+  Before: `<TmWireframeEditor @bind-Document="doc" ReadOnly="true" />` showed a toggle that unlocked editing.
+  After: that editor is a pinned viewer. To let the user toggle and to track the state, bind it:
+  `<TmWireframeEditor @bind-Document="doc" @bind-ReadOnly="readOnly" @bind-ShowRulers="showRulers" />`.
+  Hosts that read the parameter back from the component instance after a user toggle must switch to the
+  callbacks (or `editor.IsReadOnly`).
 - **`tm-menu-nav` roving now includes `aria-disabled="true"` items.** Arrow keys, Home/End and
   typeahead reach an item that is only `aria-disabled` (not natively `disabled`), so its
   explanation stays reachable for a screen reader. Only items with the native `disabled`

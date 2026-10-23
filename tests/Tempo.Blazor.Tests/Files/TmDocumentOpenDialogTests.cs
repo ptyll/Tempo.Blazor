@@ -423,12 +423,220 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
         cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
         cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
 
+        // Roving tabindex (phase 8): every row is focusable, exactly one is in the tab order (the first, with no selection).
         var row = cut.FindAll(".tm-dod-row").First(r => r.GetAttribute("data-name") == "Home page");
-        row.GetAttribute("tabindex").Should().Be("0");
+        row.HasAttribute("tabindex").Should().BeTrue();
+        cut.FindAll(".tm-dod-row").Count(r => r.GetAttribute("tabindex") == "0").Should().Be(1);
 
         row.KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         result.Should().NotBeNull();
         result!.Name.Should().Be("Home page");
+    }
+
+    // ── Phase 1 (wireframe redesign plan): keyboard + ARIA additions ──────────
+
+    private IRenderedComponent<TmDocumentOpenDialog> RenderGrid(
+        Action<ComponentParameterCollectionBuilder<TmDocumentOpenDialog>>? extra = null)
+    {
+        var cut = RenderOpen(Seeded(), extra);
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+        cut.Find(".tm-dod-view-grid").Click();
+        return cut;
+    }
+
+    [Fact]
+    public void GridCard_IsFocusable_EnterOpens_SpaceSelects()
+    {
+        DocumentOpenResult? result = null;
+        var cut = RenderGrid(p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => result = r));
+
+        AngleSharp.Dom.IElement Card() => cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Home page");
+        // Roving tabindex (phase 8): every card is focusable, exactly one is in the tab order.
+        Card().HasAttribute("tabindex").Should().BeTrue();
+        cut.FindAll(".tm-dod-card").Count(c => c.GetAttribute("tabindex") == "0").Should().Be(1);
+        Card().GetAttribute("role").Should().NotBeNullOrEmpty();
+
+        // Space selects (on keyup, like a native button) without opening.
+        Card().KeyDown(new KeyboardEventArgs { Key = " " });
+        Card().KeyUp(new KeyboardEventArgs { Key = " " });
+        result.Should().BeNull();
+        cut.FindAll(".tm-dod-card--selected").Should().ContainSingle();
+        cut.Find(".tm-dod-card--selected").GetAttribute("data-name").Should().Be("Home page");
+
+        // Enter opens.
+        Card().KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Home page");
+    }
+
+    [Fact]
+    public void GridCard_Enter_OpensExactlyOnce_EvenWhenHeld()
+    {
+        var results = new List<DocumentOpenResult>();
+        var cut = RenderGrid(p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => results.Add(r)));
+        cut.FindAll(".tm-dod-card").First().KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-dod-card").First().KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        results.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void GridCard_ExposesSelectedState()
+    {
+        var cut = RenderGrid();
+        var card = cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Checkout");
+        card.GetAttribute("aria-selected").Should().Be("false");
+
+        card.Click();
+
+        cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Checkout")
+            .GetAttribute("aria-selected").Should().Be("true");
+    }
+
+    [Fact]
+    public void ListRow_Space_SelectsExactlyOnce_AndDoesNotOpen()
+    {
+        DocumentOpenResult? result = null;
+        var cut = RenderOpen(Seeded(), p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => result = r));
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.FindAll(".tm-dod-row").First().KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-dod-row").First().KeyUp(new KeyboardEventArgs { Key = " " });
+
+        result.Should().BeNull();
+        cut.FindAll(".tm-dod-row--selected").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void SortHeader_HasAriaSort()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        // Default: sorted by name ascending; the other sortable column and the static one are not sorted.
+        SortOf(cut, ".tm-dod-col-name").Should().Be("ascending");
+        SortOf(cut, ".tm-dod-col-modified").Should().Be("none");
+
+        cut.Find(".tm-dod-col-name").Click();
+        cut.WaitForAssertion(() =>
+            SortOf(cut, ".tm-dod-col-name").Should().Be("descending"));
+
+        cut.Find(".tm-dod-col-modified").Click();
+        cut.WaitForAssertion(() =>
+        {
+            SortOf(cut, ".tm-dod-col-modified").Should().Be("ascending");
+            SortOf(cut, ".tm-dod-col-name").Should().Be("none");
+        });
+    }
+
+    private static string? SortOf(IRenderedComponent<TmDocumentOpenDialog> cut, string buttonSelector)
+        => cut.Find(buttonSelector).ParentElement!.GetAttribute("aria-sort");
+
+    [Fact]
+    public void SortHeader_IsAColumnHeader_SoAriaSortIsValid()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.Find(".tm-dod-col-name").ParentElement!.GetAttribute("role").Should().Be("columnheader");
+        cut.Find(".tm-dod-col-modified").ParentElement!.GetAttribute("role").Should().Be("columnheader");
+        cut.Find(".tm-dod-list-head").GetAttribute("role").Should().Be("row");
+    }
+
+    [Fact]
+    public void TreeItem_HasAriaLevelAndAriaSelected()
+    {
+        var cut = RenderOpen(Seeded());
+
+        var nodes = cut.FindAll(".tm-dod-tree-node");
+        var root = nodes.First(n => n.TextContent.Contains("All documents"));
+        var designs = nodes.First(n => n.TextContent.Contains("Designs"));
+        var mobile = nodes.First(n => n.TextContent.Contains("Mobile"));
+
+        root.GetAttribute("aria-level").Should().Be("1");
+        designs.GetAttribute("aria-level").Should().Be("2");
+        mobile.GetAttribute("aria-level").Should().Be("3");
+        root.GetAttribute("aria-selected").Should().Be("true");
+        designs.GetAttribute("aria-selected").Should().Be("false");
+
+        designs.Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        var after = cut.FindAll(".tm-dod-tree-node");
+        after.First(n => n.TextContent.Contains("Designs")).GetAttribute("aria-selected").Should().Be("true");
+        after.First(n => n.TextContent.Contains("All documents")).GetAttribute("aria-selected").Should().Be("false");
+    }
+
+    // ── Phase 2 carry-forward (phase-1 review): grid-item column headers + Space scroll guard ──
+
+    [Fact]
+    public void SortHeader_ColumnHeaderIsTheGridItem_NotADisplayContentsWrapper()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        foreach (var selector in new[] { ".tm-dod-col-name", ".tm-dod-col-modified" })
+        {
+            var header = cut.Find(selector).ParentElement!;
+            header.GetAttribute("role").Should().Be("columnheader");
+            header.GetAttribute("aria-sort").Should().NotBeNull();
+            (header.GetAttribute("style") ?? "").Should().NotContain("display:contents",
+                "display:contents drops the element from the accessibility tree in some engines — the header is the grid item itself");
+            header.ParentElement!.ClassList.Should().Contain("tm-dod-list-head", "the header is a direct grid child of the head row");
+        }
+    }
+
+    private const string SpaceGuardModule = "./_content/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor.js";
+
+    [Fact]
+    public void Open_AttachesTheSpaceScrollGuard_ToTheDialogRoot()
+    {
+        var guard = JSInterop.SetupModule(SpaceGuardModule);
+        guard.Mode = JSRuntimeMode.Loose;
+
+        var cut = RenderOpen(Seeded());
+
+        cut.WaitForAssertion(() => guard.Invocations["attachSpaceGuard"].Should().ContainSingle(),
+            TimeSpan.FromSeconds(5));
+        guard.Invocations["attachSpaceGuard"].Single().Arguments.Should().HaveCount(2,
+            "only the dialog root and the per-instance registration key travel — the module knows the .tm-dod-row / .tm-dod-card targets itself");
+    }
+
+    [Fact]
+    public void Closed_DoesNotImportTheSpaceScrollGuard()
+    {
+        var guard = JSInterop.SetupModule(SpaceGuardModule);
+        guard.Mode = JSRuntimeMode.Loose;
+
+        Render<TmDocumentOpenDialog>(p => p
+            .Add(c => c.Provider, Seeded())
+            .Add(c => c.Kind, TempoDocumentKind.Wireframe)
+            .Add(c => c.Open, false));
+
+        guard.Invocations["attachSpaceGuard"].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RowAndCardActivation_StillExactlyOnce_AfterTheGuard()
+    {
+        // The guard only suppresses the browser's default scroll on Space keydown; activation stays on keyup.
+        var selected = new List<DocumentOpenResult>();
+        var cut = RenderOpen(Seeded(), p => p.Add(c => c.OnSelected,
+            Microsoft.AspNetCore.Components.EventCallback.Factory.Create<DocumentOpenResult>(this, selected.Add)));
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.FindAll(".tm-dod-row").First().KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-dod-row--selected").Should().BeEmpty("Space selects on keyup, not on keydown");
+        cut.FindAll(".tm-dod-row").First().KeyUp(new KeyboardEventArgs { Key = " " });
+
+        cut.FindAll(".tm-dod-row--selected").Should().ContainSingle();
+        selected.Should().BeEmpty();
     }
 }

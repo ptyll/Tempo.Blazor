@@ -9,7 +9,7 @@ namespace Tempo.Blazor.Tests.Fixtures;
 /// </summary>
 public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvider
 {
-    private sealed record Doc(Guid Id, string Name, string FolderPath, DateTime CreatedAt, DateTime ModifiedAt, string? PreviewSvg);
+    private sealed record Doc(Guid Id, string Name, string FolderPath, DateTime CreatedAt, DateTime ModifiedAt, string? PreviewSvg, string? Author = null);
 
     private readonly Dictionary<TempoDocumentKind, HashSet<string>> _folders = new();
     private readonly Dictionary<TempoDocumentKind, List<Doc>> _docs = new();
@@ -33,11 +33,11 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
     public Guid AddDocument(
         TempoDocumentKind kind, string name, string folderPath,
         DateTime? createdAt = null, DateTime? modifiedAt = null, string? previewSvg = null,
-        Guid? id = null)
+        Guid? id = null, string? author = null)
     {
         var docId = id ?? Guid.NewGuid();
         _docs[kind].Add(new Doc(docId, name, folderPath,
-            createdAt ?? DateTime.UtcNow, modifiedAt ?? DateTime.UtcNow, previewSvg));
+            createdAt ?? DateTime.UtcNow, modifiedAt ?? DateTime.UtcNow, previewSvg, author));
         return docId;
     }
 
@@ -66,7 +66,8 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
             FolderPath = doc.FolderPath,
             CreatedAt = doc.CreatedAt,
             ModifiedAt = doc.ModifiedAt,
-            PreviewSvg = doc.PreviewSvg
+            PreviewSvg = doc.PreviewSvg,
+            Author = doc.Author
         });
     }
 
@@ -128,7 +129,9 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
                 Kind = query.Kind,
                 FolderPath = d.FolderPath,
                 CreatedAt = d.CreatedAt,
-                ModifiedAt = d.ModifiedAt
+                ModifiedAt = d.ModifiedAt,
+                PreviewSvg = d.PreviewSvg,
+                Author = d.Author
             })
             .ToList();
 

@@ -41,6 +41,9 @@ jobs:
       - name: PDF viewer
         run: npm run test:pdf-viewer
 
+      - name: Wireframe editor
+        run: npm run test:wireframe
+
       - name: Reporting modules
         run: npm run test:reporting-modules
 

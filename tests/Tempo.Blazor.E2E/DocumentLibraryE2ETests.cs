@@ -156,6 +156,41 @@ public class DocumentLibraryE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task DocLib1_GridCard_IsKeyboardOperable_AndSortHeadersExposeAriaSort()
+    {
+        var page = await OpenDialogPageAsync();
+        await OpenDialogAsync(page);
+        await NavigateFolderAsync(page, "Designs");
+        await page.WaitForSelectorAsync(".tm-dod-row");
+
+        // Sortable headers + tree items expose their state to assistive tech.
+        Assert.AreEqual("ascending", await page.Locator(".tm-dod-col-name").EvaluateAsync<string>("e => e.parentElement.getAttribute('aria-sort')"));
+        Assert.AreEqual("none", await page.Locator(".tm-dod-col-modified").EvaluateAsync<string>("e => e.parentElement.getAttribute('aria-sort')"));
+        Assert.AreEqual("true", await page.Locator(".tm-dod-tree-node--active").First.GetAttributeAsync("aria-selected"));
+        Assert.IsNotNull(await page.Locator(".tm-dod-tree-node").First.GetAttributeAsync("aria-level"));
+
+        await page.ClickAsync(".tm-dod-view-grid");
+        await page.WaitForSelectorAsync(".tm-dod-card");
+
+        // Tab reaches a card; Space selects it (once), Enter opens it.
+        var card = page.Locator(".tm-dod-card").First;
+        await card.FocusAsync();
+        Assert.AreEqual("0", await card.GetAttributeAsync("tabindex"));
+        await page.Keyboard.PressAsync("Space");
+        await page.WaitForSelectorAsync(".tm-dod-card--selected");
+        Assert.AreEqual(1, await page.Locator(".tm-dod-card--selected").CountAsync());
+        Assert.IsFalse(await page.Locator("[data-testid=open-result]").IsVisibleAsync(), "Space must only select");
+
+        // The focus ring is visible on the focused card (keyboard focus-visible rule).
+        var outline = await card.EvaluateAsync<string>("e => getComputedStyle(e).outlineStyle");
+        Assert.AreNotEqual("none", outline, "A focused grid card needs a visible focus ring");
+
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("[data-testid=open-result]");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(await page.InnerTextAsync("[data-testid=result-name]")));
+    }
+
+    [TestMethod]
     public async Task DocLibShot1_Screenshots()
     {
         var page = await OpenDialogPageAsync();

@@ -24,6 +24,13 @@ public sealed class WireframeElement
     /// </summary>
     public string? Role { get; set; }
 
+    /// <summary>
+    /// Optional human-readable name of the element (for example "Login button"). Purely descriptive and
+    /// additive: it is shown in the inspector, used as the element's accessible name and tooltip on the
+    /// canvas and returned by the MCP tools. <c>null</c> (omitted from JSON) means "unnamed".
+    /// </summary>
+    public string? Name { get; set; }
+
     /// <summary>X position of the element's top-left corner in pixels.</summary>
     public double X { get; set; }
 

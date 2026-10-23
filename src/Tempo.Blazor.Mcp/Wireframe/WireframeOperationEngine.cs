@@ -29,7 +29,7 @@ public static class WireframeOperationEngine
     private static readonly HashSet<string> LayoutParams = new(StringComparer.Ordinal)
     {
         "op", "pageId", "children", "ids", "gap", "padding", "columns",
-        "direction", "align", "wrap", "margin", "x", "y", "w", "h", "type", "role"
+        "direction", "align", "wrap", "margin", "x", "y", "w", "h", "type", "role", "name"
     };
 
     public static WireframeOperationResult Apply(
@@ -291,6 +291,7 @@ public static class WireframeOperationEngine
         if (el is null) return $"element '{id}' not found.";
 
         if (op["type"]?.GetValue<string>() is { Length: > 0 } type) el.Type = type;
+        if (op.ContainsKey("name")) el.Name = NormalizeOptional(TryString(op, "name"));
         if (TryDouble(op, "x", out var x)) el.X = x;
         if (TryDouble(op, "y", out var y)) el.Y = y;
         if (TryDouble(op, "w", out var w)) el.W = w;
@@ -626,7 +627,7 @@ public static class WireframeOperationEngine
             return $"{operationName} resolved an empty component type.";
         }
 
-        var el = new WireframeElement { Type = type, Role = role };
+        var el = new WireframeElement { Type = type, Role = role, Name = NormalizeOptional(TryString(op, "name")) };
         if (TryString(op, "id") is { Length: > 0 } id) el.Id = id;
         if (roleCandidates.Count > 1)
         {

@@ -63,7 +63,11 @@ public static class WireframeAuthoringGuideTools
                 operations = new[] { "stack", "row", "grid" },
                 sentinels = new[] { "auto", "fill" },
                 anchors = new[] { "below", "rightOf" },
-                commonParams = new[] { "pageId", "children", "ids", "gap", "padding", "columns", "wrap", "margin", "x", "y", "w", "h", "role" }
+                commonParams = new[] { "pageId", "children", "ids", "gap", "padding", "columns", "wrap", "margin", "x", "y", "w", "h", "role", "name" }
+            },
+            elementFields = new
+            {
+                name = "Optional human-readable element name, e.g. 'Login button'. Accepted by addElement, layout children and updateElement (null or empty clears it) and by whole-document payloads; shown in the inspector, used as the element's accessible name/tooltip and listed in the implementation brief."
             },
             archetypes = WireframeArchetypes.Names,
             totalCount = filtered.Count,

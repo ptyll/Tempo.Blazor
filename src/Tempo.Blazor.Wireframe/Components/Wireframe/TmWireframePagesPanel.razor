@@ -1,0 +1,121 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
+@namespace Tempo.Blazor.Components.Wireframe
+@using Tempo.Blazor.Components.Wireframe.Models
+
+<div class="tm-wd-pages @Class" data-testid="@TestId("wd-pages-panel")">
+    @if (ShowTitle)
+    {
+        <div class="tm-wd-pages__header">
+            <h3 class="tm-wd-pages__title">@Loc["TmWireframePages_Title"]</h3>
+        </div>
+    }
+
+    @{
+        var pages = Document?.Pages ?? [];
+        var pageCount = pages.Count;
+        var activeId = Document?.ActivePage?.Id;
+    }
+    <ol class="tm-wd-pages__list" aria-label="@Loc["TmWireframePages_ListLabel"]">
+        @for (var rowIndex = 0; rowIndex < pageCount; rowIndex++)
+        {
+            var pg = pages[rowIndex];
+            var index = rowIndex;
+            var isActive = pg.Id == activeId;
+            var isEditing = _editingId == pg.Id;
+            var isDropTarget = _dragOverId == pg.Id;
+            <li @key="pg.Id"
+                class="tm-wd-pages__item @(isActive ? "tm-wd-pages__item--active" : null) @(_draggedId == pg.Id ? "tm-wd-pages__item--dragging" : null) @(isDropTarget ? "tm-wd-pages__item--drag-over" : null)"
+                data-page-id="@pg.Id"
+                data-drop-position="@(isDropTarget ? _dropPosition : null)"
+                draggable="@(!ReadOnly && !isEditing ? "true" : "false")"
+                @onkeydown="e => OnRowKeyDown(e, pg)"
+                @ondragstart="() => OnDragStart(pg.Id)"
+                @ondragend="ClearDrag"
+                @ondragover:preventDefault
+                @ondrop="() => OnDrop(pg.Id)"
+                @ondrop:preventDefault
+                @ondragenter="() => OnDragEnter(pg.Id)"
+                @ondragleave="() => OnDragLeave(pg.Id)">
+                <span class="tm-wd-pages__index" aria-hidden="true">@(index + 1)</span>
+
+                @if (isEditing)
+                {
+                    <input class="tm-wd-pages__name-input"
+                           type="text"
+                           value="@_editName"
+                           aria-label="@Loc["TmWireframePages_Rename"]"
+                           @oninput="e => _editName = e.Value?.ToString() ?? string.Empty"
+                           @onkeydown="e => OnInputKeyDown(e, pg)"
+                           @onblur="() => CommitRenameAsync(pg)"
+                           @ref="_nameInputRef" />
+                }
+                else
+                {
+                    @* A native button: Enter / Space produce the click themselves, so no keyboard emulation here. *@
+                    <button type="button"
+                            class="tm-wd-pages__select"
+                            data-testid="@TestId($"wd-page-{pg.Id}")"
+                            aria-current="@(isActive ? "page" : null)"
+                            title="@pg.Name"
+                            @ref="_selectRefs[pg.Id]"
+                            @onclick="() => SwitchPageAsync(pg.Id)"
+                            @ondblclick="() => StartRename(pg)">@pg.Name</button>
+                }
+
+                @* The non-drag alternative to drag-and-drop reorder (WCAG 2.5.7): every row action is in the row menu. *@
+                @if (!ReadOnly)
+                {
+                    var rowMenuHolder = GetRowMenuHolder(pg.Id);
+                    <TmContextMenu @ref="rowMenuHolder.Menu" Class="tm-wd-pages__row-menu" SheetTitle="@pg.Name"
+                                   data-testid="@TestId("wd-page-menu-" + pg.Id)">
+                        <Trigger>
+                            <span class="tm-wd-pages__row-menu-trigger" title="@Loc["TmWireframePages_More"]">
+                                <TmIcon Name="@IconNames.MoreHorizontal" />
+                                <span class="tm-sr-only">@Loc["TmWireframePages_MoreWithName", pg.Name]</span>
+                            </span>
+                        </Trigger>
+                        <ChildContent>
+                            @* Fence: the menu popover is a DOM child of the row, so a key typed inside the open menu
+                               (Alt+Arrow, F2) would bubble into OnRowKeyDown on top of the menu's own navigation. *@
+                            <div class="tm-wd-pages__menu-fence" role="none" @onkeydown:stopPropagation="true">
+                                <TmContextMenuItem Class="tm-wd-pages__row-menu-item" data-action="rename"
+                                                   Icon="@IconNames.Edit" Label="@Loc["TmWireframePages_Rename"]"
+                                                   OnClick="() => StartRename(pg)" />
+                                <TmContextMenuItem Class="tm-wd-pages__row-menu-item" data-action="duplicate"
+                                                   Icon="@IconNames.Copy" Label="@Loc["TmWireframePages_Duplicate"]"
+                                                   OnClick="() => DuplicateAsync(pg)" />
+                                <TmContextMenuItem Class="tm-wd-pages__row-menu-item" data-action="up"
+                                                   Icon="@IconNames.ArrowUp" Label="@Loc["TmWireframePages_MoveUp"]"
+                                                   Disabled="@(index == 0)"
+                                                   OnClick="() => MoveAsync(pg, -1, false)" />
+                                <TmContextMenuItem Class="tm-wd-pages__row-menu-item" data-action="down"
+                                                   Icon="@IconNames.ArrowDown" Label="@Loc["TmWireframePages_MoveDown"]"
+                                                   Disabled="@(index == pageCount - 1)"
+                                                   OnClick="() => MoveAsync(pg, +1, false)" />
+                                @if (pageCount > 1)
+                                {
+                                    <TmContextMenuItem IsDivider="true" />
+                                    <TmContextMenuItem Class="tm-wd-pages__row-menu-item" data-action="delete"
+                                                       Icon="@IconNames.Trash" IsDangerous="true"
+                                                       Label="@Loc["TmWireframePages_Delete"]"
+                                                       OnClick="() => DeleteAsync(pg)" />
+                                }
+                            </div>
+                        </ChildContent>
+                    </TmContextMenu>
+                }
+            </li>
+        }
+    </ol>
+
+    @if (!ReadOnly)
+    {
+        <button type="button" class="tm-wd-pages__add" data-testid="@TestId("wd-page-add")" @onclick="AddPageAsync">
+            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+            <span>@Loc["TmWireframe_AddPage"]</span>
+        </button>
+    }
+
+    @* Polite live region: add / move / delete results are announced here (the controls keep short labels). *@
+    <div class="tm-sr-only" role="status" aria-live="polite" aria-atomic="true">@_announcement</div>
+</div>

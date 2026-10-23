@@ -57,6 +57,36 @@ public class WireframeSerializerTests
         json.Should().NotContain("\"label\"");
     }
 
+    [Fact]
+    public void Name_RoundTrips_AndIsOptional()
+    {
+        var doc = new WireframeDocument { Title = "T" };
+        var named = WireframeDocumentExtensions.NewElement("TmButton", 0, 0, 100, 30);
+        named.Name = "Login button";
+        var unnamed = WireframeDocumentExtensions.NewElement("TmButton", 0, 40, 100, 30);
+        doc.Elements.Add(named);
+        doc.Elements.Add(unnamed);
+
+        var json = WireframeSerializer.Serialize(doc);
+
+        using var parsed = JsonDocument.Parse(json);
+        var elements = parsed.RootElement.GetProperty("pages")[0].GetProperty("elements");
+        elements[0].TryGetProperty("name", out var nameProp).Should().BeTrue();
+        nameProp.GetString().Should().Be("Login button");
+        elements[1].TryGetProperty("name", out _).Should().BeFalse("unnamed elements omit the name key");
+
+        var restored = WireframeSerializer.Deserialize(json);
+        restored.Elements[0].Name.Should().Be("Login button");
+        restored.Elements[1].Name.Should().BeNull();
+
+        // Old JSON without "name" still deserializes.
+        const string legacy = """
+            { "version": "2.1", "title": "Old", "pages": [ { "id": "p1", "name": "Page 1", "width": 800, "height": 600,
+              "elements": [ { "id": "e1", "type": "TmButton", "x": 1, "y": 2, "w": 10, "h": 10 } ] } ] }
+            """;
+        WireframeSerializer.Deserialize(legacy).Elements[0].Name.Should().BeNull();
+    }
+
     // ── Deserialize ───────────────────────────────────────────────────────────
 
     [Fact]

@@ -1,3 +1,4 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
 @namespace Tempo.Blazor.Components.Wireframe
 @using System.Globalization
 @using System.Text.Json
@@ -8,8 +9,99 @@
     @* ── Nothing selected ─────────────────────────────────────────────────── *@
     @if (!_elements.Any() && !_connectors.Any())
     {
-        <div class="tm-wd-props__empty">
-            <span class="tm-wd-props__empty-icon">◻</span>
+        var page = Document?.ActivePage;
+        var canvasDisabled = ReadOnly || page is null;
+        var presetId = SelectedPresetId;
+
+        @* ── Canvas: device preset + width / height ───────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-canvas")">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionCanvas"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_presetId">@Loc["TmWireframeProps_DevicePreset"]</label>
+                    <select id="@_presetId" class="tm-wd-props__select" data-testid="@TestId("wd-device-preset")"
+                            aria-label="@Loc["TmWireframeProps_DevicePreset"]"
+                            disabled="@canvasDisabled"
+                            @onchange="OnDevicePresetChanged">
+                        @foreach (var preset in WireframeDevicePresets.All)
+                        {
+                            <option value="@preset.Id" selected="@(preset.Id == presetId)">@GetPresetLabel(preset)</option>
+                        }
+                    </select>
+                </div>
+                <div class="tm-wd-props__row">
+                    <div class="tm-wd-props__field">
+                        <label class="tm-wd-props__label" for="@_canvasWId">@Loc["TmWireframe_CanvasWidth"]</label>
+                        <input id="@_canvasWId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
+                               data-testid="@TestId("wd-canvas-width")"
+                               aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
+                               aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
+                               value="@_canvasWInput" disabled="@canvasDisabled"
+                               @oninput="e => OnCanvasSizeInput(e, true)" />
+                    </div>
+                    <div class="tm-wd-props__field">
+                        <label class="tm-wd-props__label" for="@_canvasHId">@Loc["TmWireframe_CanvasHeight"]</label>
+                        <input id="@_canvasHId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
+                               data-testid="@TestId("wd-canvas-height")"
+                               aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
+                               aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
+                               value="@_canvasHInput" disabled="@canvasDisabled"
+                               @oninput="e => OnCanvasSizeInput(e, false)" />
+                    </div>
+                </div>
+                @if (_canvasSizeInvalid)
+                {
+                    <span id="@_canvasErrorId" class="tm-wd-props__error-msg" role="alert" data-testid="@TestId("wd-canvas-error")">@Loc["TmWireframeProps_CanvasSizeRange", MinCanvasSize, MaxCanvasSize]</span>
+                }
+                <div class="tm-wd-props__row">
+                    <button type="button" class="tm-wd-editor__btn tm-wd-editor__btn--text"
+                            data-testid="@TestId("wd-canvas-apply")"
+                            disabled="@canvasDisabled"
+                            @onclick="OnApplyCanvasSize">@Loc["TmWireframe_Apply"]</button>
+                </div>
+            </div>
+        </details>
+
+        @* ── Page: name of the active page ────────────────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-page")">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionPage"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_pageNameId">@Loc["TmWireframeProps_PageName"]</label>
+                    <input id="@_pageNameId" class="tm-wd-props__input" type="text"
+                           data-testid="@TestId("wd-page-name")"
+                           value="@(page?.Name ?? "")" disabled="@canvasDisabled"
+                           @onchange="OnPageNameChanged" />
+                </div>
+            </div>
+        </details>
+
+        @* ── Grid: visibility + snapping size ─────────────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-grid")">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionGrid"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__toggle">
+                        <input type="checkbox" data-testid="@TestId("wd-grid-show")"
+                               checked="@_showGrid"
+                               @onchange="OnShowGridChanged" />
+                        <span class="tm-wd-props__toggle-track"></span>
+                        <span class="tm-wd-props__toggle-label">@Loc["TmWireframeProps_ShowGrid"]</span>
+                    </label>
+                </div>
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_gridSizeId">@Loc["TmWireframeProps_GridSize"]</label>
+                    <input id="@_gridSizeId" class="tm-wd-props__input" type="number" min="0" max="128" step="1"
+                           data-testid="@TestId("wd-grid-size")"
+                           value="@_gridSize.ToString(CultureInfo.InvariantCulture)"
+                           @onchange="OnGridSizeChanged" />
+                </div>
+            </div>
+        </details>
+
+        @* ── Selection hint (no empty collapsible: the hint is the whole content) ── *@
+        <div class="tm-wd-props__empty" data-testid="@TestId("wd-selection-hint")">
+            <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
             <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
         </div>
     }
@@ -109,26 +201,34 @@
             @if (!_isMulti)
             {
                 <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_elementNameId">@Loc["TmWireframeProps_ElementName"]</label>
+                    <input id="@_elementNameId" class="tm-wd-props__input" type="text"
+                           data-testid="@TestId("wd-element-name")"
+                           value="@(_elements[0].Name ?? "")"
+                           placeholder="@Loc["TmWireframeProps_ElementNamePlaceholder"]"
+                           disabled="@ReadOnly"
+                           @onchange="OnElementNameChanged" />
+                </div>
+                <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframeProps_Type"]</label>
                     <input class="tm-wd-props__input tm-wd-props__input--readonly"
                            value="@_elements[0].Type" readonly />
                 </div>
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframeProps_ZIndex"]</label>
-                    <div style="display:flex;gap:4px;">
-                        <input class="tm-wd-props__input"
+                    <div class="tm-wd-props__row">
+                        <input class="tm-wd-props__input tm-wd-props__input--grow"
                                type="number" step="1"
                                value="@_elements[0].ZIndex"
-                               @oninput="@(e => OnZIndexChanged(e))"
-                               style="flex:1;" />
+                               @oninput="@(e => OnZIndexChanged(e))" />
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon"
                                 title="@Loc["TmWireframeProps_SendToBack"]"
                                 aria-label="@Loc["TmWireframeProps_SendToBack"]"
-                                @onclick="OnSendToBack">⬇</button>
+                                @onclick="OnSendToBack"><TmIcon Name="@IconNames.SendToBack" /></button>
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon"
                                 title="@Loc["TmWireframeProps_BringToFront"]"
                                 aria-label="@Loc["TmWireframeProps_BringToFront"]"
-                                @onclick="OnBringToFront">⬆</button>
+                                @onclick="OnBringToFront"><TmIcon Name="@IconNames.BringToFront" /></button>
                     </div>
                 </div>
                 <div class="tm-wd-props__field">
@@ -144,7 +244,7 @@
                                checked="@_elements[0].IsLocked"
                                @onchange="@(e => OnLockChanged(e))" />
                         <span class="tm-wd-props__toggle-track"></span>
-                        <span style="font-size:12px;">@Loc["TmWireframeProps_Locked"]</span>
+                        <span class="tm-wd-props__toggle-label">@Loc["TmWireframeProps_Locked"]</span>
                     </label>
                 </div>
                 @if (!string.IsNullOrEmpty(_elements[0].GroupId))
@@ -177,6 +277,14 @@
                            readonly />
                 </div>
             }
+            <div class="tm-wd-props__field">
+                <button type="button" class="tm-wd-props__delete" data-testid="@TestId("wd-delete-element")"
+                        disabled="@ReadOnly"
+                        @onclick="OnDeleteClicked">
+                    <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
+                    <span>@Loc["TmWireframeProps_DeleteElement"]</span>
+                </button>
+            </div>
         </div>
     </details>
 
@@ -188,20 +296,20 @@
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframe_Align"]</label>
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignLeft"]" @onclick="() => OnAlign(WireframeAlignment.Left)">⬅</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterH"]" @onclick="() => OnAlign(WireframeAlignment.CenterH)">↔</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignRight"]" @onclick="() => OnAlign(WireframeAlignment.Right)">➡</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignTop"]" @onclick="() => OnAlign(WireframeAlignment.Top)">⬆</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterV"]" @onclick="() => OnAlign(WireframeAlignment.CenterV)">↕</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignBottom"]" @onclick="() => OnAlign(WireframeAlignment.Bottom)">⬇</button>
+                    <div class="tm-wd-props__row tm-wd-props__row--wrap">
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignLeft"]" aria-label="@Loc["TmWireframe_AlignLeft"]" @onclick="() => OnAlign(WireframeAlignment.Left)"><TmIcon Name="@IconNames.AlignLeft" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterH"]" aria-label="@Loc["TmWireframe_AlignCenterH"]" @onclick="() => OnAlign(WireframeAlignment.CenterH)"><TmIcon Name="@IconNames.AlignCenter" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignRight"]" aria-label="@Loc["TmWireframe_AlignRight"]" @onclick="() => OnAlign(WireframeAlignment.Right)"><TmIcon Name="@IconNames.AlignRight" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignTop"]" aria-label="@Loc["TmWireframe_AlignTop"]" @onclick="() => OnAlign(WireframeAlignment.Top)"><TmIcon Name="@IconNames.ArrowUpFromLine" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterV"]" aria-label="@Loc["TmWireframe_AlignCenterV"]" @onclick="() => OnAlign(WireframeAlignment.CenterV)"><TmIcon Name="@IconNames.AlignVerticalDistributeCenter" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignBottom"]" aria-label="@Loc["TmWireframe_AlignBottom"]" @onclick="() => OnAlign(WireframeAlignment.Bottom)"><TmIcon Name="@IconNames.ArrowDownToLine" /></button>
                     </div>
                 </div>
                 @if (_elements.Count >= 3)
                 {
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label">@Loc["TmWireframe_Distribute"]</label>
-                        <div style="display:flex;gap:4px;">
+                        <div class="tm-wd-props__row">
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeHorizontal"]" @onclick="() => OnDistribute(WireframeDistribution.Horizontal)">@Loc["TmWireframe_DistributeHorizontal"]</button>
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeVertical"]" @onclick="() => OnDistribute(WireframeDistribution.Vertical)">@Loc["TmWireframe_DistributeVertical"]</button>
                         </div>
@@ -218,7 +326,7 @@
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_FormatPainter"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <div class="tm-wd-props__row tm-wd-props__row--wrap">
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--text"
                                 title="@Loc["TmWireframe_CopyStyle"]"
                                 disabled="@(_elements.Count != 1 || ReadOnly)"

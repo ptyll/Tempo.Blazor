@@ -9,8 +9,23 @@
 
 <PageTitle>Wireframe Editor – Tempo.Blazor</PageTitle>
 
+@* Demo only: the wireframe editor resolves its layout from its own container width (desktop from 1200). With the 296px demo
+   sidebar a 1440 viewport leaves it ~1080px, so from 1400px up this page collapses the sidebar and gives the editor the full
+   width (a link back to the demo index stays in the header). The library breakpoints are untouched. *@
+<style>
+    @@media (min-width: 1400px) {
+        .demo-shell:has(.wd-demo-page) aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }
+        .demo-shell:has(.wd-demo-page) main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+    }
+    .wd-demo-page__index-link { display: none; }
+    @@media (min-width: 1400px) { .wd-demo-page__index-link { display: inline-block; } }
+</style>
+
+<div class="wd-demo-page">
+
 <!-- Page Header -->
 <div class="mb-8">
+    <a href="./" class="wd-demo-page__index-link text-sm text-primary-600 hover:underline mb-2" data-testid="wf-demo-index-link">← All demos</a>
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Wireframe Editor</h1>
     <p class="text-slate-600 dark:text-slate-400">
         SVG-based wireframe design tool for quickly sketching UI layouts with Tempo.Blazor components.
@@ -26,14 +41,12 @@
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Drag components from the left toolbox onto the canvas. Select to edit properties on the right.
                 Ctrl+Z / Ctrl+Y for undo/redo. Delete key removes selected elements.
+                On a tablet: tap to select, drag to move, two fingers to pinch-zoom and pan, hold for the context menu, tap a toolbox tile to add it.
+                On a phone (editor narrower than 768 px) the editor is for viewing and light edits: tap "Add" for the palette, select an element to peek its properties
+                (Duplicate / Lock / Delete), swipe the sheet up for every property, and use "Pages &amp; layers", "Export" and "More" in the bar below.
             </p>
         </div>
         <div class="flex gap-2">
-            <button class="px-3 py-1.5 text-sm rounded border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
-                    data-testid="wf-open-btn"
-                    @onclick="() => _openDialog = true">
-                Open…
-            </button>
             <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                     @onclick="LoadLoginSample">
                 Load Login page
@@ -50,11 +63,21 @@
     </div>
 
     <div style="height: 600px;">
+        @* The editor has no built-in Open/Save: the host supplies its own actions through the header slots (G9). *@
         <TmWireframeEditor Document="@_document"
                            DocumentChanged="@(doc => { _document = doc; _jsonPreview = WireframeSerializer.Serialize(doc); })"
                            ShowGrid="true"
                            GridSize="8"
-                           Class="h-full" />
+                           PageNavigation="WireframePageNavigation.Panel"
+                           Class="h-full">
+            <HeaderActions>
+                <button class="px-3 py-1.5 text-sm rounded border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
+                        data-testid="wf-open-btn"
+                        @onclick="() => _openDialog = true">
+                    Open…
+                </button>
+            </HeaderActions>
+        </TmWireframeEditor>
     </div>
 
     <div class="mt-3 flex gap-4 text-sm text-slate-500 dark:text-slate-400">
@@ -155,6 +178,35 @@
     </details>
 </section>
 
+<!-- ═══ Section 5: Narrow container ════════════════════════════════════════ -->
+<section class="demo-section mb-10" data-testid="wf-demo-narrow">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">Narrow Container</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        The editor picks its layout from the width of its <em>own container</em>, not from the viewport: in a 390 px box it is the
+        phone layout (viewing and light edits, action bar, bottom sheets) even on a desktop screen.
+    </p>
+    <div class="mb-3">
+        <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                data-testid="wf-demo-narrow-toggle"
+                aria-pressed="@(_showNarrow ? "true" : "false")"
+                @onclick="ToggleNarrow">
+            @(_showNarrow ? "Hide narrow editor" : "Show narrow editor")
+        </button>
+    </div>
+    @if (_showNarrow && _narrowDocument is not null)
+    {
+        @* Its own document (a clone of the main one when it was opened) and its own test id namespace: the main editor keeps the plain wd- ids. *@
+        <div style="width: 390px; max-width: 100%; height: 640px;" data-testid="wf-demo-narrow-host">
+            <TmWireframeEditor Document="@_narrowDocument"
+                               DocumentChanged="@(doc => _narrowDocument = doc)"
+                               TestIdPrefix="narrow"
+                               Class="h-full" />
+        </div>
+    }
+</section>
+
+</div>
+
 <TmDocumentOpenDialog Provider="LibraryProvider"
                       Kind="Tempo.Blazor.DocumentLibrary.TempoDocumentKind.Wireframe"
                       ShowModeToggle="false"
@@ -166,6 +218,8 @@
 
     private WireframeDocument _document = CreateDefault();
     private WireframeDocument _customDocument = CreateDefault();
+    private WireframeDocument? _narrowDocument;
+    private bool _showNarrow;
     private bool _openDialog;
 
     private string _jsonPreview  = "";
@@ -187,6 +241,14 @@
             _jsonPreview = WireframeSerializer.Serialize(doc);
             StateHasChanged();
         }
+    }
+
+    // The narrow demo editor is rendered on demand only, on its own copy of the main document (never shared state or test ids).
+    private void ToggleNarrow()
+    {
+        _showNarrow = !_showNarrow;
+        _narrowDocument = _showNarrow && WireframeSerializer.TryDeserialize(WireframeSerializer.Serialize(_document), out var clone) ? clone : null;
+        if (_narrowDocument is null) _showNarrow = false;
     }
 
     // ── Sample loading ─────────────────────────────────────────────────────────

@@ -1,0 +1,22 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Wireframe",
+  "description": "Where TmWireframeEditor presents the pages of the document.",
+  "packageId": "Tempo.Blazor.Wireframe",
+  "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframePageNavigation.cs",
+  "documentationStatus": "generated",
+  "itemName": "WireframePageNavigation",
+  "values": [
+    {
+      "name": "Tabs",
+      "value": "0",
+      "description": "Horizontal page tabs above the canvas (the layout before the shell restructure); the left panel has the Components and Layers tabs."
+    },
+    {
+      "name": "Panel",
+      "value": "1",
+      "description": "A numbered vertical list in the left panel (TmWireframePagesPanel), next to Components and Layers; the horizontal page tabs are not rendered."
+    }
+  ]
+}

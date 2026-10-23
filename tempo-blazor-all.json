@@ -12732,7 +12732,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document management, and a link-or-copy choice. Emits a DocumentOpenResult on confirm.",
+          "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: an XLarge modal with a collapsible WAI-ARIA folder tree (one roving tab stop, arrow keys), a right-pane breadcrumb (home icon, › separators), a searchable list/grid of documents with a sort indicator, always-visible actions (Rename/Delete disabled until a document is selected), an optional virtual \"Recent\" node (ShowRecent) and a link-or-copy choice presented as radio cards. Emits a DocumentOpenResult on confirm. The dialog measures its own body: below 768 px (or with LayoutMode=Tablet) the tree narrows and Cancel / Open take their own footer row; below 640 px (or with LayoutMode=Mobile) it is a fullscreen panel (TmModal MobilePresentation=Fullscreen) - no tree, the subfolders of the current folder as drill-down rows with a back button and the breadcrumb, two-line document rows with the PreviewSvg thumbnail and a per-row more menu (Rename / Delete), the Link / Copy radio cards as compact cards above a sticky TmMobileActionBar (New folder / Rename / Delete) beside the primary Open (the header close button is the Cancel), a footer that stays above the on-screen keyboard, and no double-tap open (Open is explicit). The returned DocumentOpenResult and the provider contract are identical in every layout. Colours come only from canonical core tokens (--tm-color-primary, --tm-color-primary-subtle, --tm-color-surface-hover, --tm-text-primary, --tm-color-danger(-subtle), --tm-bg-surface-secondary), so the accent follows the default blue, the opt-in indigo theme and dark mode; there is no hex fallback.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor",
           "documentationStatus": "merged",
@@ -12753,6 +12753,13 @@
               "isRequired": true,
               "description": "Which kind of documents to list.",
               "editorRequired": true
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto measures the dialog body: below 768 px it goes compact (narrow tree, footer buttons on their own row) and below 640 px it becomes the mobile layout - a fullscreen panel with drill-down folder rows, two-line document rows, a row menu and a sticky footer holding the action bar. Tablet forces the compact layout, Mobile the fullscreen mobile layout and Desktop the wide one, all without importing the observer script, so a test or a host renders a layout without a DOM. The returned DocumentOpenResult is the same in every layout."
             },
             {
               "name": "OnCancelled",
@@ -12805,7 +12812,85 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether to offer the link-or-copy choice. Defaults to true."
+            },
+            {
+              "name": "ShowRecent",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Adds a virtual \"Recent\" node above the folder tree. Selecting it browses with FolderPath = null, SortField = Modified, Descending = true and Take = PageSize through the existing ITempoDocumentLibraryProvider.BrowseAsync - no provider member is added. Which documents a null folder returns is the provider's decision (the query contract says null or / lists the root, so a provider that wants a library-wide recent list must treat null as everywhere; the demo store returns the root documents only). Opt-in.",
+              "default": "false"
             }
+          ],
+          "cssClasses": [
+            "tm-document-open-dialog",
+            "tm-dod",
+            "tm-dod-toolbar",
+            "tm-dod-search",
+            "tm-dod-actions",
+            "tm-dod-new-folder",
+            "tm-dod-rename",
+            "tm-dod-delete",
+            "tm-dod-body",
+            "tm-dod-tree",
+            "tm-dod-tree--narrow",
+            "tm-dod-tree-node",
+            "tm-dod-tree-node--active",
+            "tm-dod-tree-node--recent",
+            "tm-dod-tree-toggle",
+            "tm-dod-tree-spacer",
+            "tm-dod-main",
+            "tm-dod-breadcrumb",
+            "tm-dod-crumb",
+            "tm-dod-crumb--current",
+            "tm-dod-crumb-label",
+            "tm-dod-crumb-sep",
+            "tm-dod-list",
+            "tm-dod-list-head",
+            "tm-dod-colhead",
+            "tm-dod-col-name",
+            "tm-dod-col-modified",
+            "tm-dod-sort-indicator",
+            "tm-dod-row",
+            "tm-dod-row--selected",
+            "tm-dod-grid",
+            "tm-dod-card",
+            "tm-dod-card--selected",
+            "tm-dod-footer",
+            "tm-dod-footer--own-row",
+            "tm-dod-mode",
+            "tm-dod-mode-link",
+            "tm-dod-mode-copy",
+            "tm-dod-mode-card",
+            "tm-dod-mode-card--selected",
+            "tm-dod-mode-title",
+            "tm-dod-mode-hint",
+            "tm-dod-footer-actions",
+            "tm-dod--mobile",
+            "tm-dod-modal--mobile",
+            "tm-dod-host",
+            "tm-dod-mobile-head",
+            "tm-dod-nav",
+            "tm-dod-back",
+            "tm-dod-content--mobile",
+            "tm-dod-folders",
+            "tm-dod-folder-row",
+            "tm-dod-folder-row--recent",
+            "tm-dod-folder-icon",
+            "tm-dod-folder-text",
+            "tm-dod-folder-name",
+            "tm-dod-folder-kind",
+            "tm-dod-folder-chevron",
+            "tm-dod-row-main",
+            "tm-dod-row-preview",
+            "tm-dod-row-text",
+            "tm-dod-row-name",
+            "tm-dod-row-meta",
+            "tm-dod-row-menu",
+            "tm-dod-inline-cancel",
+            "tm-dod-footer--mobile",
+            "tm-dod-footer-mobile-row",
+            "tm-dod-mode--compact",
+            "tm-dod-keyboard"
           ]
         },
         {
@@ -27917,6 +28002,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-dod-space-guard.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-editor-shell.test.mjs",
           "kind": "JavaScript"
         },
@@ -36158,6 +36247,33 @@
           ]
         },
         {
+          "itemName": "AddElementsCommand",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe.Commands",
+          "description": "Adds several elements to the document as ONE undoable step (duplicate selection). AddElementCommand covers the single-element case.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/Commands/AddElementsCommand.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Execute",
+              "kind": "Method",
+              "type": "void"
+            },
+            {
+              "name": "Undo",
+              "kind": "Method",
+              "type": "void"
+            },
+            {
+              "name": "Name",
+              "kind": "Property",
+              "type": "string"
+            }
+          ]
+        },
+        {
           "itemName": "AddLayerCommand",
           "kind": "Class",
           "category": "Components",
@@ -36897,6 +37013,47 @@
             {
               "title": "Use RemoveLayerCommand",
               "code": "commandStack.Push(new RemoveLayerCommand(document, layerId));"
+            }
+          ]
+        },
+        {
+          "itemName": "RenameElementCommand",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe.Commands",
+          "description": "Renames a single wireframe element (sets WireframeElement.Name). Undoable - the old name is supplied explicitly so Undo() can restore it; a null or whitespace new name clears the name. Pushed by the properties panel's Name field.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/Commands/RenameElementCommand.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Execute",
+              "kind": "Method",
+              "type": "void",
+              "description": "Applies the change to the document."
+            },
+            {
+              "name": "Undo",
+              "kind": "Method",
+              "type": "void",
+              "description": "Restores the name captured before Execute() ran."
+            },
+            {
+              "name": "Name",
+              "kind": "Property",
+              "type": "string",
+              "description": "Human-readable label shown in undo/redo tooltips."
+            },
+            {
+              "name": "RenameElementCommand",
+              "type": "RenameElementCommand(WireframeDocument doc, string elementId, string? oldName, string? newName)",
+              "description": "Creates the command; oldName may be null when the element was unnamed."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Use RenameElementCommand",
+              "code": "commandStack.Push(new RenameElementCommand(document, element.Id, element.Name, \"Login button\"));"
             }
           ]
         },
@@ -38668,6 +38825,28 @@
           ]
         },
         {
+          "itemName": "WireframeContextMenuPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe",
+          "description": "How TmWireframeContextMenu presents itself.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeContextMenu.razor.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Anchored",
+              "value": "0",
+              "description": "A position:fixed menu at the pointer (desktop and tablet)."
+            },
+            {
+              "name": "Sheet",
+              "value": "1",
+              "description": "The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and grouping are tablet+ and are not offered."
+            }
+          ]
+        },
+        {
           "itemName": "WireframeContextMenuType",
           "kind": "Enum",
           "category": "Components",
@@ -38728,6 +38907,28 @@
               "kind": "Property",
               "type": "WireframeExportOptions",
               "description": "Export options (scale, background, etc.)."
+            }
+          ]
+        },
+        {
+          "itemName": "WireframePageNavigation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe",
+          "description": "Where TmWireframeEditor presents the pages of the document.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframePageNavigation.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Tabs",
+              "value": "0",
+              "description": "Horizontal page tabs above the canvas (the layout before the shell restructure); the left panel has the Components and Layers tabs."
+            },
+            {
+              "name": "Panel",
+              "value": "1",
+              "description": "A numbered vertical list in the left panel (TmWireframePagesPanel), next to Components and Layers; the horizontal page tabs are not rendered."
             }
           ]
         },
@@ -39135,6 +39336,14 @@
               "isRequired": false
             },
             {
+              "name": "Presentation",
+              "type": "WireframeContextMenuPresentation",
+              "isRequired": false,
+              "default": "WireframeContextMenuPresentation.Anchored",
+              "description": "Anchored (default) renders the position:fixed menu at the pointer; Sheet renders the shared bottom action sheet of the core overlay panel (the mobile long-press menu: finger-sized rows and a Done button; align, distribute and grouping are tablet+ and not offered).",
+              "defaultValue": "Anchored"
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false
@@ -39171,7 +39380,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for all mouse/touch interactions. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
+          "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for pan, zoom, drag, resize and selection; every gesture is a Pointer Event, so a mouse, a finger and a pen all work. One pointer selects, drags (single or multi, groups included), resizes through the 8 handles, rotates, rubber-bands, draws connectors (connector tool) and drags connector waypoints, all on the shared pointer-drag.js helper; a 500 ms touch hold opens the context menu beside the finger; two fingers pinch-zoom and pan (the shared pointer-gesture.js, zoom clamped to 0.15x-5x) and ctrl+wheel / trackpad pinch zooms around the cursor; a double-tap is a double-click (adds a connector waypoint). On a coarse pointer the selection handles are painted 1.5x larger with an invisible hit area of at least 24 screen px, and the svg claims the touch (touch-action: none). The non-drag alternatives are the arrow keys (Shift = one grid cell), the inspector X/Y/W/H fields, the zoom buttons and tap / Enter / Space insertion from the toolbox. A mouse keeps the middle-button pan, Space+drag and the right-click menu. Hosts that listened to mouse events on the canvas svg now get pointer events (see the CHANGELOG migration note); the HTML5 toolbox drag-and-drop is unchanged. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeDesignerCanvas.razor",
           "documentationStatus": "merged",
@@ -39192,6 +39401,13 @@
               "description": "Optional application scope used to resolve custom wireframe components."
             },
             {
+              "name": "ContentVersion",
+              "type": "int",
+              "isRequired": false,
+              "description": "Opaque token the host bumps whenever the document content may have changed behind the canvas' back. While LightEditing is true a parent re-render with unchanged parameters and token does not repaint the SVG scene, so opening or switching a sheet above the canvas costs it nothing.",
+              "defaultValue": "0"
+            },
+            {
               "name": "Document",
               "type": "WireframeDocument?",
               "isRequired": false,
@@ -39210,6 +39426,13 @@
               "default": "8",
               "description": "Snap-to-grid cell size in SVG units (pixels). 0 = disabled.",
               "defaultValue": "8"
+            },
+            {
+              "name": "LightEditing",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Mobile viewing + light edits (G2). While true the canvas keeps selecting, moving an element with a finger, the long-press menu and pinch / pan, but drops resize / rotate handles, the rubber band (a one-finger drag on the empty canvas pans), the connector tool and waypoint handles, and gates parent re-renders on ContentVersion. TmWireframeEditor sets it below 768 px.",
+              "defaultValue": "false"
             },
             {
               "name": "OnCanvasContextMenuRequested",
@@ -39326,10 +39549,16 @@
               "description": "Raised when the viewBox changes (pan/zoom)."
             },
             {
+              "name": "OnZoomChangedEvent",
+              "type": "EventCallback<double>",
+              "isRequired": false,
+              "description": "Raised with the new zoom factor (screen pixels per SVG unit, 0.15-5) after the user zooms with the mouse wheel, a trackpad pinch or a two-finger pinch, and once after the first render with the real fitted scale. The editor uses it for its zoom read-out; the toolbar zoom buttons set the zoom through SetZoom and do not raise it."
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
-              "description": "Disables all editing interactions (drag, resize, drop). Pan via middle-mouse or Space+drag still works.",
+              "description": "Disables all editing interactions (drag, resize, rotate, drop, nudge, long-press menu). Navigation stays: the pan tool, Space+drag, the middle mouse button, two-finger pinch/pan and the wheel.",
               "defaultValue": "false"
             },
             {
@@ -39371,7 +39600,8 @@
           ],
           "cssClasses": [
             "tm-wd-canvas-wrap",
-            "tm-wd-canvas__svg"
+            "tm-wd-canvas__svg",
+            "tm-wd-connector__waypoint-hit"
           ],
           "examples": [
             {
@@ -39385,7 +39615,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar.",
+          "description": "Top-level wireframe editor component. Renders through the core TmEditorShell: an optional header (host slots HeaderStart / HeaderActions / Title), ONE command row (a core TmToolbar with named groups - tools, history, arrange, group, align, snap, zoom, file -, per-button Priority, Labels=Auto and Overflow=Menu; Export is the primary, never-collapsing action; the format painter, Read-only, rulers and the panel toggles live in its \"More\" menu), a docked left panel (Components / Pages / Layers tabs, Pages only with PageNavigation=Panel), the canvas with rulers, context menu and minimap, and an inspector (Canvas with device presets, Page and Grid sections on an empty selection; Element with a Name field and Delete element on a selection). Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is edited in the inspector (Canvas section). There is no built-in Save or Open: the host supplies them through the header slots. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px; 44px on a coarse pointer). Responsive behaviour follows the editor's own container width (see LayoutMode): desktop docks the panels, a tablet uses a two-row toolbar and one side sheet at a time, and a phone (container below 768 px, decision G2: viewing + light edits) shows a compact header (title + host slots) with a select / pan / undo / redo / More tool row, a full-width canvas with a floating zoom pill, a TmMobileActionBar (Components, Pages & layers, Export, More; host actions through MobileActions) and non-modal bottom sheets (peek / half / full) for the palette, the Properties inspector (type + Duplicate / Lock / Delete on peek, Name and every property on half) and the Pages | Layers segment. Selecting, moving an element with a finger, undo / redo, tap-insert, layers, device presets, export and the long-press action sheet stay; resize / rotate handles, rubber band, edge drawing, align / distribute, grouping, rulers, minimap and JSON import are tablet and up. The export dialog is a bottom sheet on a phone.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeEditor.razor",
           "documentationStatus": "merged",
@@ -39422,23 +39652,88 @@
               "type": "int",
               "isRequired": false,
               "default": "8",
-              "description": "Snap-to-grid cell size in pixels. Set to 0 to disable snapping.",
+              "description": "Initial / host-driven snap-to-grid cell size in pixels; 0 disables snapping. Never assigned by the component - the inspector's Grid section changes an internal value and reports it through GridSizeChanged (@bind-GridSize).",
               "defaultValue": "8"
+            },
+            {
+              "name": "GridSizeChanged",
+              "type": "EventCallback<int>",
+              "isRequired": false,
+              "description": "Raised with the new cell size when the user edits the grid size in the inspector (use @bind-GridSize)."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content at the end of the header, after the title (G9 slot) - e.g. an Open... or Save button."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content at the start of the header, before the title (G9 slot). The editor has no built-in Save or Open."
+            },
+            {
+              "name": "LayoutBreakpoints",
+              "type": "TmLayoutBreakpoints?",
+              "isRequired": false,
+              "description": "Per-instance layout thresholds for the editor container. null uses the editor default: mobile below 768 (TmBreakpoints.Md), desktop from 1200, tablet in between."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the editor resolves its layout: Auto (default) measures the editor's own container (not the viewport) against LayoutBreakpoints and sets data-editor-layout on the root; a forced mode pins the presentation (tests, host layouts). Desktop (container >= 1200) docks the left panel and the inspector in the shell, with one toolbar and the minimap card. Tablet (768-1199) renders a two-row toolbar split by group (editing commands, then panel toggles / zoom / Export / Import), the left panel (Components / Pages / Layers) as an overlay drawer and the inspector as a non-modal side sheet with a close button - at most ONE sheet open, selecting an element opens the inspector, inserting a component closes the drawer, Escape closes the sheet and returns the focus to the canvas -, no minimap, a single-column toolbox and 44px targets on a coarse pointer. Mobile (< 768) uses the shell sheet presentation.",
+              "defaultValue": "TmLayoutMode.Auto"
+            },
+            {
+              "name": "MobileActions",
+              "type": "IReadOnlyList<TmActionItem>?",
+              "isRequired": false,
+              "description": "Host actions of the mobile action bar (editor container below 768 px, decision G2: viewing + light edits). The built-in tiles - Components, Pages & layers, Export - come first; a host action pinned ActionOverflow.Never (for example \"Save\") keeps a tile of its own, the others join the \"More\" menu by their rank. There is no built-in Save or Open: hosts supply them here and in HeaderStart / HeaderActions. Ignored on a tablet or desktop layout."
+            },
+            {
+              "name": "PageNavigation",
+              "type": "WireframePageNavigation",
+              "isRequired": false,
+              "default": "WireframePageNavigation.Tabs",
+              "description": "Where the pages are presented. Tabs (default) keeps the horizontal page tabs above the canvas (Components and Layers tabs in the left panel); Panel adds a Pages tab (TmWireframePagesPanel) to the left panel and drops the horizontal tabs.",
+              "defaultValue": "WireframePageNavigation.Tabs"
             },
             {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
-              "description": "Prevent all editing interactions (drag, resize, drop, prop changes).",
+              "description": "Host-pinned read-only mode: prevents all editing interactions (drag, resize, drop, prop changes, toolbox insertion). Never assigned by the component - the built-in Read-only/Edit toggle drives an internal user state (IsReadOnly = ReadOnly || user toggle) and reports it through ReadOnlyChanged. While ReadOnly=true is pinned and ReadOnlyChanged is not bound the toggle is not rendered, so the editor cannot be unlocked from the UI; use @bind-ReadOnly to follow and own the state.",
               "defaultValue": "false"
+            },
+            {
+              "name": "ReadOnlyChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new effective read-only state when the user flips the Read-only/Edit toggle. Binding it (@bind-ReadOnly) keeps the toggle available while the host value is true."
             },
             {
               "name": "ShowGrid",
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Show grid lines on the canvas.",
+              "description": "Initial / host-driven visibility of the grid lines. Never assigned by the component - the inspector's Grid section flips an internal state and reports it through ShowGridChanged (@bind-ShowGrid).",
               "defaultValue": "true"
+            },
+            {
+              "name": "ShowGridChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new value when the user toggles the grid in the inspector (use @bind-ShowGrid)."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Show the shell header row. false (default) keeps the pre-shell look: the title sits at the start of the toolbar row and no header renders - unless a host supplies HeaderStart, HeaderActions or Title, which opens the header on its own.",
+              "defaultValue": "false"
             },
             {
               "name": "ShowMinimap",
@@ -39453,28 +39748,34 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Always show page tabs even when there is only one page."
+              "description": "Show the page navigation (the horizontal page tabs, or the Pages tab of the left panel with PageNavigation=Panel), even when there is only one page."
             },
             {
               "name": "ShowPropertiesPanel",
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Show the properties panel on the right.",
+              "description": "Show the right-hand inspector. false also hides the Layers tab of the left panel (the two lived together in the right column before the shell restructure). Collapsing the inspector is shell state (the strip toggle or the Properties panel entry in the More menu).",
               "defaultValue": "true"
             },
             {
               "name": "ShowRulers",
               "type": "bool",
               "isRequired": false,
-              "description": "Show rulers around the canvas."
+              "description": "Initial / host-driven visibility of the rulers around the canvas. Never assigned by the component - the toolbar toggle flips an internal state and reports it through ShowRulersChanged; a later change of the parameter value is adopted again."
+            },
+            {
+              "name": "ShowRulersChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new value when the user toggles the rulers button (@bind-ShowRulers)."
             },
             {
               "name": "ShowToolbar",
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Show the top toolbar (title, tool mode, zoom, undo/redo, export/import, canvas size).",
+              "description": "Show the command row (the core TmToolbar: tools, history, arrange, grouping, alignment, snapping, zoom, export/import) and, unless a header is shown, the document title.",
               "defaultValue": "true"
             },
             {
@@ -39482,8 +39783,14 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Show the component toolbox panel on the left.",
+              "description": "Show the component toolbox: the Components tab of the left panel. When no tab is left (no toolbox, no Layers, no Pages) the left panel is not rendered. Collapsing the panel is shell state (the strip toggle or the Components panel entry in the More menu).",
               "defaultValue": "true"
+            },
+            {
+              "name": "Title",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content that replaces the built-in editable document title (G9 slot). Opens the header like HeaderStart."
             }
           ],
           "keyboardShortcuts": [
@@ -39535,9 +39842,73 @@
           "cssClasses": [
             "tm-wd-editor",
             "tm-wd-editor__toolbar",
+            "tm-wd-editor__shell",
+            "tm-wd-editor__header-bar",
+            "tm-wd-editor__commandbar",
+            "tm-wd-editor__group",
+            "tm-wd-editor__export",
+            "tm-wd-editor__import",
+            "tm-wd-editor__canvas-region",
             "tm-wd-editor__canvas-wrap",
-            "tm-wd-editor__toolbox-wrap",
-            "tm-wd-editor__props-wrap"
+            "tm-wd-side",
+            "tm-wd-editor__toolbar--tablet",
+            "tm-wd-editor__toolbar-row",
+            "tm-wd-editor__canvas-region--sheet-right",
+            "tm-wd-sheet",
+            "tm-wd-sheet--left",
+            "tm-wd-sheet--right",
+            "tm-wd-sheet__header",
+            "tm-wd-sheet__close"
+          ],
+          "cssVariables": [
+            {
+              "name": "--tm-wd-accent",
+              "description": "Accent (selection, active button, handles). Alias of --tm-color-primary; follows the default blue, the opt-in indigo theme (data-tm-theme=\"indigo\") and dark mode."
+            },
+            {
+              "name": "--tm-wd-bg-surface",
+              "description": "Toolbar, panel and dialog surface. Alias of --tm-bg-surface."
+            },
+            {
+              "name": "--tm-wd-bg-muted",
+              "description": "Hover/muted fill. Alias of --tm-bg-muted."
+            },
+            {
+              "name": "--tm-wd-border",
+              "description": "Hairlines and control borders. Alias of --tm-border-color."
+            },
+            {
+              "name": "--tm-wd-text",
+              "description": "Primary text. Alias of --tm-text-primary."
+            },
+            {
+              "name": "--tm-wd-text-muted",
+              "description": "Secondary text. Alias of --tm-text-secondary."
+            },
+            {
+              "name": "--tm-wd-canvas-surface",
+              "description": "Workspace behind the page. Alias of --tm-bg-workspace (indigo off-white / dark slate)."
+            },
+            {
+              "name": "--tm-wd-canvas-bg",
+              "description": "The wireframe PAGE. Alias of the theme-invariant --tm-paper: wireframe components are drawn light-on-paper, so the page stays paper in dark mode and the SVG/PNG/PDF export matches the screen."
+            },
+            {
+              "name": "--tm-wd-grid-minor",
+              "description": "Minor grid step (drawn at 55% opacity). Alias of --tm-paper-border."
+            },
+            {
+              "name": "--tm-wd-grid-major",
+              "description": "Major grid step. Alias of --tm-paper-border."
+            },
+            {
+              "name": "--tm-wd-btn-size",
+              "description": "Toolbar button edge (32px = --tm-space-8; 8px rhythm)."
+            },
+            {
+              "name": "--tm-wd-sheet-w",
+              "description": "Width of the tablet side sheets (the left drawer and the inspector): 20rem, capped at 60% of the canvas region. Replaces the former fixed --tm-wd-toolbox-w / --tm-wd-props-w."
+            }
           ],
           "examples": [
             {
@@ -39553,6 +39924,10 @@
               "code": "@code {\n    private WireframeDocument _document = new()\n    {\n        Width  = 1920,\n        Height = 1080,\n        Title  = \"Dashboard layout\"\n    };\n}\n\n<TmWireframeEditor @bind-Document=\"_document\"\n                   ShowGrid=\"false\"\n                   GridSize=\"0\" />"
             },
             {
+              "title": "Pages as a left-panel tab, host Open action in the header",
+              "code": "<TmWireframeEditor @bind-Document=\"_document\"\n                   PageNavigation=\"WireframePageNavigation.Panel\">\n    <HeaderActions>\n        <button @onclick=\"() => _open = true\">Open…</button>\n    </HeaderActions>\n</TmWireframeEditor>"
+            },
+            {
               "title": "Persist document to server on every change",
               "code": "<TmWireframeEditor @bind-Document=\"_document\"\n                   DocumentChanged=\"SaveAsync\" />\n\n@code {\n    private WireframeDocument _document = new();\n\n    private async Task SaveAsync(WireframeDocument doc)\n    {\n        var json = WireframeSerializer.Serialize(doc);\n        await Http.PutAsJsonAsync(\"api/wireframes/my-doc\", json);\n    }\n}"
             }
@@ -39563,7 +39938,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options.",
+          "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options. The footer pairs a Secondary (outline) Cancel with the Primary Export button.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeExportDialog.razor",
           "documentationStatus": "merged",
@@ -39574,22 +39949,40 @@
             {
               "name": "DefaultFileName",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "File name proposed (and restored) every time the dialog opens."
+            },
+            {
+              "name": "InitialFormat",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
+            },
+            {
+              "name": "MobilePresentation",
+              "type": "MobilePresentation",
+              "isRequired": false,
+              "default": "MobilePresentation.Auto",
+              "description": "How the dialog presents on a narrow viewport. Auto follows the core viewport scope: a bottom sheet on a phone, the centred dialog otherwise; a forced value pins one presentation. The footer is always inline (Cancel and Export side by side, sticky in the sheet).",
+              "defaultValue": "Auto"
             },
             {
               "name": "OnClose",
               "type": "EventCallback",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised when the user cancels, presses Escape or clicks the overlay. The host should set Show to false."
             },
             {
               "name": "OnExport",
               "type": "EventCallback<WireframeExportDialogResult>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the chosen file name, format and options when the user confirms the export."
             },
             {
               "name": "Show",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the dialog is visible. Every closed-to-open transition resets the form (file name, format, scale, background)."
             }
           ]
         },
@@ -39598,7 +39991,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Right-side layers panel for managing wireframe layers.",
+          "description": "Layers panel of the wireframe editor: active layer (radiogroup), visibility and lock toggles (aria-pressed), inline rename, per-row menu (rename, move up/down, delete), drag-and-drop reorder with a drop indicator, and a Move to layer selector. Every operation has a non-drag alternative: the row menu, F2 (rename) and Alt+Up/Down (reorder), all through undoable commands.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeLayersPanel.razor",
           "documentationStatus": "merged",
@@ -39609,40 +40002,83 @@
             {
               "name": "ActiveLayerId",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Id of the active layer (the one new elements are added to). When null/empty the panel shows the page's default layer as active and reports it once through ActiveLayerIdChanged after the first render."
             },
             {
               "name": "ActiveLayerIdChanged",
               "type": "EventCallback<string?>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the new active layer id when the user picks, adds or deletes a layer, and once for the default layer after render."
             },
             {
               "name": "Class",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Additional CSS class on the panel root."
             },
             {
               "name": "Document",
               "type": "WireframeDocument?",
               "isRequired": true,
+              "description": "Document whose active page's layers are listed. Mutated through undoable commands.",
               "editorRequired": true
             },
             {
               "name": "DocumentChanged",
               "type": "EventCallback<WireframeDocument>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the (mutated) document after every layer change."
             },
             {
               "name": "ReadOnly",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Disables every mutating control (add, delete, rename, visibility, lock, reorder, move to layer)."
             },
             {
               "name": "SelectedElementIds",
               "type": "string[]",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Ids of the currently selected elements; enables the \"Move to layer\" selector when non-empty."
+            },
+            {
+              "name": "ShowCollapseToggle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own collapse tab. Defaults to true (standalone use). Hosts that own the collapse or the surrounding panel pass false: the panel then renders without the tab, is never collapsed and fills the width of its host."
             }
+          ],
+          "cssClasses": [
+            "tm-wd-layers",
+            "tm-wd-layers--embedded",
+            "tm-wd-layers__toggle",
+            "tm-wd-layers__inner",
+            "tm-wd-layers__header",
+            "tm-wd-layers__title",
+            "tm-wd-layers__add-btn",
+            "tm-wd-layers__list",
+            "tm-wd-layers__item",
+            "tm-wd-layers__item--active",
+            "tm-wd-layers__item--hidden",
+            "tm-wd-layers__item--dragging",
+            "tm-wd-layers__item--drag-over",
+            "tm-wd-layers__drag-handle",
+            "tm-wd-layers__active",
+            "tm-wd-layers__radio",
+            "tm-wd-layers__radio--checked",
+            "tm-wd-layers__visibility",
+            "tm-wd-layers__lock",
+            "tm-wd-layers__name",
+            "tm-wd-layers__name-input",
+            "tm-wd-layers__delete",
+            "tm-wd-layers__row-menu",
+            "tm-wd-layers__row-menu-trigger",
+            "tm-wd-layers__row-menu-item",
+            "tm-wd-layers__move-section",
+            "tm-wd-layers__move-label"
           ]
         },
         {
@@ -39722,11 +40158,102 @@
           ]
         },
         {
+          "itemName": "TmWireframePagesPanel",
+          "kind": "Component",
+          "category": "Wireframe",
+          "namespace": "Tempo.Blazor.Components.Wireframe",
+          "description": "Vertical numbered list of a wireframe document's pages: the Pages tab of the TmWireframeEditor left panel (PageNavigation=Panel), also usable standalone. Click switches the active page; each row has a \"...\" menu (Rename, Duplicate, Move up, Move down, Delete) and an Add page button sits below the list. Every operation has a non-drag alternative (WCAG 2.5.7): the row menu, F2 to rename, Alt+Up / Alt+Down to reorder; HTML5 drag-and-drop is a pointer-only extra. The panel MUTATES Document (page operations are not undoable, like the page tabs) and reports through ActivePageChanged / DocumentChanged. The Delete key never deletes a page; the last page cannot be deleted. ReadOnly removes add, menu, drag, rename and the shortcuts; selecting a page still works.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframePagesPanel.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Wireframe"
+          ],
+          "parameters": [
+            {
+              "name": "ActivePageChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the id of the page that became active after a switch, add, duplicate or delete (not for plain reorder or rename), before DocumentChanged."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class on the panel root."
+            },
+            {
+              "name": "Document",
+              "type": "WireframeDocument?",
+              "isRequired": false,
+              "description": "Document whose pages are listed. Mutated in place: pages are added, renamed, reordered, duplicated and deleted, and ActivePageId is set when the user switches page."
+            },
+            {
+              "name": "DocumentChanged",
+              "type": "EventCallback<WireframeDocument>",
+              "isRequired": false,
+              "description": "Raised with the (mutated) document after every change: switch, add, rename, duplicate, delete, reorder."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the list is view-only: no add button, no row menu, no drag-and-drop and no rename or reorder shortcuts. Selecting a page still works.",
+              "defaultValue": "false"
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own \"Pages\" heading. Defaults to true for standalone use; a host whose tab or section already says \"Pages\" (the left panel of the editor) passes false so the word is not repeated.",
+              "defaultValue": "true"
+            }
+          ],
+          "keyboardShortcuts": [
+            {
+              "key": "F2",
+              "action": "Rename the focused page"
+            },
+            {
+              "key": "Alt+Up / Alt+Down",
+              "action": "Move the focused page up / down"
+            },
+            {
+              "key": "Enter / Escape (rename)",
+              "action": "Commit / cancel the inline rename"
+            }
+          ],
+          "cssClasses": [
+            "tm-wd-pages",
+            "tm-wd-pages__header",
+            "tm-wd-pages__title",
+            "tm-wd-pages__list",
+            "tm-wd-pages__item",
+            "tm-wd-pages__item--active",
+            "tm-wd-pages__item--dragging",
+            "tm-wd-pages__item--drag-over",
+            "tm-wd-pages__index",
+            "tm-wd-pages__select",
+            "tm-wd-pages__name-input",
+            "tm-wd-pages__row-menu",
+            "tm-wd-pages__row-menu-trigger",
+            "tm-wd-pages__row-menu-item",
+            "tm-wd-pages__add"
+          ],
+          "examples": [
+            {
+              "title": "Standalone pages list",
+              "code": "<TmWireframePagesPanel Document=\"_document\"\n                       DocumentChanged=\"OnDocumentChanged\"\n                       ActivePageChanged=\"id => _activePageId = id\" />"
+            }
+          ]
+        },
+        {
           "itemName": "TmWireframePropertiesPanel",
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Properties panel for the wireframe editor. Shows editable fields for the currently selected element(s). Supports single-select (all PropDef fields grouped by category, plus Layout X/Y/W/H and Element/ZIndex sections) and multi-select (intersection of common props, Mixed indicator when values differ). All mutations are routed through the cascaded WireframeCommandStack when available. Text and number inputs use per-field debounce (350 ms); dropdowns and checkboxes apply immediately. Changing a size prop with SizePresets defined automatically resizes the element.",
+          "description": "Properties panel for the wireframe editor. Shows editable fields for the currently selected element(s). Supports single-select (all PropDef fields grouped by category, plus Layout X/Y/W/H and Element/ZIndex sections) and multi-select (intersection of common props, Mixed indicator when values differ). All mutations are routed through the cascaded WireframeCommandStack when available. Text and number inputs use per-field debounce (350 ms); dropdowns and checkboxes apply immediately. Changing a size prop with SizePresets defined automatically resizes the element. With an EMPTY selection the panel shows the Canvas (device preset select - Desktop 1440x900, Laptop 1280x800, Tablet 1024x768, iPhone 14 390x844, Android 360x800, Custom - plus width/height and Apply, all through the undoable ResizeCanvasCommand), Page (rename of the active page) and Grid (show grid, grid size) sections. The Element section has a Name field (undoable RenameElementCommand; the name is the element's aria-label and tooltip on the canvas) and a Delete element button.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframePropertiesPanel.razor",
           "documentationStatus": "merged",
@@ -39759,10 +40286,36 @@
               "description": "Raised after every property change."
             },
             {
+              "name": "GridSize",
+              "type": "int",
+              "isRequired": false,
+              "default": "8",
+              "description": "Snap-to-grid cell size in pixels (the Grid section input, 0-128; 0 = snapping off). Never assigned by the component.",
+              "defaultValue": "8"
+            },
+            {
+              "name": "GridSizeChanged",
+              "type": "EventCallback<int>",
+              "isRequired": false,
+              "description": "Raised with the new cell size when the user edits the grid size."
+            },
+            {
+              "name": "OnCanvasResized",
+              "type": "EventCallback<(double Width, double Height)>",
+              "isRequired": false,
+              "description": "Raised AFTER a ResizeCanvasCommand was pushed (device preset or Apply), so the host can update its canvas."
+            },
+            {
               "name": "OnCopyStyle",
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the user requests copy style from the selected element."
+            },
+            {
+              "name": "OnDelete",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Delete element button. With a delegate the host performs the deletion; without one the panel pushes a RemoveElementsCommand itself and raises DocumentChanged."
             },
             {
               "name": "OnPasteSize",
@@ -39796,6 +40349,20 @@
               "default": "[]",
               "description": "IDs of the currently selected elements. Empty = no selection shown.",
               "defaultValue": "[]"
+            },
+            {
+              "name": "ShowGrid",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the grid is shown (the Grid section toggle). Never assigned by the component - it keeps local state, raises ShowGridChanged and re-adopts the host value when the parameter changes.",
+              "defaultValue": "true"
+            },
+            {
+              "name": "ShowGridChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new value when the user toggles Show grid."
             }
           ],
           "cssClasses": [
@@ -39892,7 +40459,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category with a search filter. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
+          "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category (a 3-column grid of tiles) with a search filter. A tile shows the component's TmIcon (WireframeComponentDef.Icon) and name; the mini stencil SVG preview is the fallback when the icon is missing or not drawable. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeToolbox.razor",
           "documentationStatus": "merged",
@@ -39916,13 +40483,30 @@
               "name": "OnComponentActivated",
               "type": "EventCallback<string>",
               "isRequired": false,
-              "description": "Raised when the user activates a component via keyboard (Enter/Space). Payload is the component type string (e.g. 'TmButton')."
+              "description": "Raised when the user activates a component by click, tap or keyboard (Enter/Space), exactly once per gesture - the non-drag alternative to HTML5 drag-and-drop. Payload is the component type string (e.g. 'TmButton'); the editor inserts it centred in the visible canvas area."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the palette inert: items are aria-disabled, muted (tm-wd-toolbox__item--disabled), not draggable and never raise OnComponentActivated. TmWireframeEditor passes its effective read-only state (host ReadOnly or the user Read-only toggle).",
+              "defaultValue": "false"
+            },
+            {
+              "name": "SingleColumn",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Presents the palette as a single column of named rows (icon + name, a finger-sized target) instead of the 3-column tile grid. TmWireframeEditor sets it for its tablet overlay drawer; adds the tm-wd-toolbox--single-column modifier.",
+              "defaultValue": "false"
             }
           ],
           "cssClasses": [
             "tm-wd-toolbox",
             "tm-wd-toolbox__search",
             "tm-wd-toolbox__item",
+            "tm-wd-toolbox__item--disabled",
+            "tm-wd-toolbox--single-column",
+            "tm-wd-toolbox__item-preview-paper",
             "tm-wd-toolbox__category"
           ],
           "examples": [
@@ -39948,6 +40532,22 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/wireframe-gestures.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-designer-export.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-designer-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-gestures.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.Wireframe/wwwroot/tempo-stencil.schema.json",
           "kind": "Json"
         },
@@ -39957,12 +40557,12 @@
         }
       ],
       "summary": {
-        "itemCount": 90,
-        "manualItemCount": 90,
-        "generatedItemCount": 78,
+        "itemCount": 95,
+        "manualItemCount": 95,
+        "generatedItemCount": 83,
         "generatedOnlyItemCount": 0,
-        "componentCount": 9,
-        "publicApiTypeCount": 69
+        "componentCount": 10,
+        "publicApiTypeCount": 73
       }
     },
     {
@@ -101357,6 +101957,12 @@
               "description": "Reserved for future collaborative editing – who has this element locked."
             },
             {
+              "name": "Name",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional human-readable name of the element (for example \"Login button\"). Purely descriptive and additive: it is shown in the inspector, used as the element's accessible name and tooltip on the canvas and returned by the MCP tools. null (omitted from JSON) means \"unnamed\"."
+            },
+            {
               "name": "Props",
               "kind": "Property",
               "type": "Dictionary<string, JsonElement>",
@@ -101421,6 +102027,11 @@
               "name": "Role",
               "type": "string?",
               "description": "Optional library-agnostic UI role requested during authoring, such as 'search-input' or 'otp-input'. Serialized as 'role' when present."
+            },
+            {
+              "name": "Name",
+              "type": "string?",
+              "description": "Optional human-readable element name (e.g. 'Login button'). Additive and descriptive: shown in the inspector, used as the element's aria-label and tooltip on the canvas and returned by the MCP tools. null (omitted from JSON) means unnamed."
             },
             {
               "name": "X",
@@ -119691,10 +120302,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3290,
-    "manualItemCount": 3290,
+    "itemCount": 3295,
+    "manualItemCount": 3295,
     "generatedOnlyItemCount": 0,
-    "componentCount": 483,
-    "publicApiTypeCount": 2754
+    "componentCount": 484,
+    "publicApiTypeCount": 2758
   }
 }

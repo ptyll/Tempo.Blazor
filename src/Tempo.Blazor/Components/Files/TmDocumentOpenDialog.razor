@@ -1,289 +1,616 @@
 @namespace Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.DocumentLibrary
 
+@* Presentation: an XLarge dialog on desktop and tablet, a FULLSCREEN panel in the mobile layout (the footer is the modal's
+   own Footer slot, a flex sibling after the scrolling body, so it never leaves the screen). The presentation is forced from
+   the dialog's own layout (not Auto): the dialog measures its BODY, not the viewport, so a forced Tablet / Desktop layout stays a
+   dialog even on a phone viewport. *@
+@* The host wrapper exists only so the scoped stylesheet can reach the modal's own parts (body, footer) in the mobile layout
+   through ::deep; it is display: contents, so it never takes part in the host's layout (and renders empty while closed). *@
+<div class="tm-dod-host">
 <TmModal Show="Open"
          Title="@Loc["TmDocumentOpenDialog_Title"]"
-         Size="ModalSize.Large"
+         Size="ModalSize.XLarge"
+         MobilePresentation="@(Mobile ? MobilePresentation.Fullscreen : MobilePresentation.Dialog)"
+         FooterLayout="FooterLayout.Inline"
          ShowFooter="true"
          ShowDefaultFooterButtons="false"
          OnClose="CancelAsync"
-         Class="tm-dod-modal">
+         Class="@(Mobile ? "tm-dod-modal tm-dod-modal--mobile" : "tm-dod-modal")">
     <ChildContent>
-        <div class="tm-document-open-dialog">
-
-            @* Toolbar *@
-            <div class="tm-dod-toolbar">
-                @if (CanSearch)
+        @* The observer is the measured container: it reports the width of the dialog BODY (not the viewport),
+           classified with the dialog's own thresholds. Forced LayoutMode never imports the script. *@
+        <TmLayoutObserver @ref="_observer"
+                          LayoutMode="LayoutMode"
+                          InitialMode="FirstFrameLayout"
+                          Breakpoints="@(Mobile ? FullscreenBreakpoints : ContainerBreakpoints)"
+                          ResolvedLayoutChanged="OnLayoutResolved">
+            <div class="tm-document-open-dialog tm-dod @(Mobile ? "tm-dod--mobile" : "")" @ref="_root" data-layout="@LayoutCss">
+                @if (Mobile)
                 {
-                    <input type="search"
-                           class="tm-dod-search"
-                           placeholder="@Loc["TmDocumentOpenDialog_Search"]"
-                           aria-label="@Loc["TmDocumentOpenDialog_Search"]"
-                           value="@_search"
-                           @oninput="OnSearchInputAsync" />
-                }
-
-                <div class="tm-dod-toolbar-spacer"></div>
-
-                @if (CanCreateFolder)
-                {
-                    <button type="button" class="tm-dod-new-folder"
-                            aria-label="@Loc["TmDocumentOpenDialog_NewFolder"]"
-                            @onclick="BeginNewFolder">
-                        <TmIcon Name="@IconNames.FolderPlus" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentOpenDialog_NewFolder"]</span>
-                    </button>
-                }
-                @if (CanRename && _selected is not null)
-                {
-                    <button type="button" class="tm-dod-rename"
-                            aria-label="@Loc["TmDocumentOpenDialog_Rename"]"
-                            @onclick="BeginRename">
-                        <TmIcon Name="@IconNames.Pencil" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentOpenDialog_Rename"]</span>
-                    </button>
-                }
-                @if (CanDelete && _selected is not null)
-                {
-                    <button type="button" class="tm-dod-delete"
-                            aria-label="@Loc["TmDocumentOpenDialog_Delete"]"
-                            @onclick="BeginDelete">
-                        <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
-                        <span>@Loc["TmDocumentOpenDialog_Delete"]</span>
-                    </button>
-                }
-
-                <div class="tm-dod-view-toggle">
-                    <button type="button"
-                            class="tm-dod-view-list @(_view == DialogView.List ? "tm-dod-view--active" : "")"
-                            aria-label="@Loc["TmDocumentOpenDialog_ListView"]"
-                            @onclick="() => SetView(DialogView.List)">
-                        <TmIcon Name="@IconNames.List" Size="IconSize.Sm" />
-                    </button>
-                    <button type="button"
-                            class="tm-dod-view-grid @(_view == DialogView.Grid ? "tm-dod-view--active" : "")"
-                            aria-label="@Loc["TmDocumentOpenDialog_GridView"]"
-                            @onclick="() => SetView(DialogView.Grid)">
-                        <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" />
-                    </button>
-                </div>
-            </div>
-
-            @* New folder inline editor *@
-            @if (_creatingFolder)
-            {
-                <div class="tm-dod-new-folder-bar">
-                    <input type="text" class="tm-dod-new-folder-input"
-                           placeholder="@Loc["TmDocumentOpenDialog_NewFolderName"]"
-                           value="@_newFolderName"
-                           @onchange="@(e => _newFolderName = e.Value?.ToString() ?? string.Empty)" />
-                    <button type="button" class="tm-dod-new-folder-confirm"
-                            @onclick="ConfirmNewFolderAsync">
-                        @Loc["TmDocumentOpenDialog_NewFolder"]
-                    </button>
-                </div>
-            }
-
-            @* Breadcrumb *@
-            <nav class="tm-dod-breadcrumb" aria-label="@Loc["TmDocumentOpenDialog_Breadcrumb"]">
-                @{
-                    var crumbs = Breadcrumb();
-                }
-                @for (var i = 0; i < crumbs.Count; i++)
-                {
-                    var crumb = crumbs[i];
-                    <button type="button" class="tm-dod-crumb" @onclick="@(() => NavigateToAsync(crumb.Path))">
-                        @crumb.Name
-                    </button>
-                    @if (i < crumbs.Count - 1)
-                    {
-                        <span class="tm-dod-crumb-sep">/</span>
-                    }
-                }
-            </nav>
-
-            @* Body: tree + content *@
-            <div class="tm-dod-body">
-                <div class="tm-dod-tree" role="tree">
-                    @if (_tree is not null)
-                    {
-                        @foreach (var (folder, depth) in Flatten(_tree))
+                    @* Mobile: no tree. A sticky head (search, back + breadcrumb + view toggle, the inline bars) above ONE scrolling
+                       region of drill-down folder rows and two-line document rows. Rename / Delete / New folder live in the footer's
+                       action bar; the ⋯ of a row renames or deletes THAT row. *@
+                    <div class="tm-dod-mobile-head">
+                        @* Drill-down announcement: the folder row that was tapped is replaced by the next level, so a screen reader would hear nothing.
+                           The polite status names the folder we arrived in (the shared sr-only utility hides it visually). *@
+                        <div class="tm-sr-only tm-dod-announce" role="status" aria-live="polite" aria-atomic="true">@CurrentPlaceName</div>
+                        @if (CanSearch)
                         {
-                            var path = folder.Path;
-                            <button type="button"
-                                    class="tm-dod-tree-node @(path == _currentFolder ? "tm-dod-tree-node--active" : "")"
-                                    role="treeitem"
-                                    style="padding-left:@(8 + depth * 16)px"
-                                    @onclick="@(() => NavigateToAsync(path))">
-                                <TmIcon Name="@IconNames.Folder" Size="IconSize.Sm" />
-                                <span>@(path == "/" ? Loc["TmDocumentOpenDialog_RootFolder"] : folder.Name)</span>
-                            </button>
+                            <input type="search"
+                                   class="tm-dod-search"
+                                   data-dod-control="search"
+                                   placeholder="@Loc["TmDocumentOpenDialog_Search"]"
+                                   aria-label="@Loc["TmDocumentOpenDialog_Search"]"
+                                   value="@_search"
+                                   @oninput="OnSearchInputAsync" />
                         }
-                    }
-                </div>
 
-                <div class="tm-dod-content">
-                    @if (_loading)
-                    {
-                        <div class="tm-dod-loading">
-                            <TmSpinner Size="SpinnerSize.Md" />
-                            <span>@Loc["TmDocumentOpenDialog_Loading"]</span>
-                        </div>
-                    }
-                    else if (_error)
-                    {
-                        <div class="tm-dod-error">
-                            <p>@Loc["TmDocumentOpenDialog_Error"]</p>
-                            <button type="button" class="tm-dod-retry" @onclick="RetryAsync">
-                                @Loc["TmDocumentOpenDialog_Retry"]
-                            </button>
-                        </div>
-                    }
-                    else if (_entries.Count == 0)
-                    {
-                        <div class="tm-dod-empty">@Loc["TmDocumentOpenDialog_Empty"]</div>
-                    }
-                    else if (_view == DialogView.List)
-                    {
-                        <div class="tm-dod-list" role="grid">
-                            <div class="tm-dod-list-head">
-                                <button type="button" class="tm-dod-col-name"
-                                        @onclick="@(() => SortByAsync(DocumentLibrarySortField.Name))">
-                                    @Loc["TmDocumentOpenDialog_ColumnName"]
-                                </button>
-                                <button type="button" class="tm-dod-col-modified"
-                                        @onclick="@(() => SortByAsync(DocumentLibrarySortField.Modified))">
-                                    @Loc["TmDocumentOpenDialog_ColumnModified"]
-                                </button>
-                                <span class="tm-dod-col-author">@Loc["TmDocumentOpenDialog_ColumnAuthor"]</span>
-                            </div>
-                            @foreach (var entry in _entries)
+                        <div class="tm-dod-nav">
+                            @if (CanGoBack)
                             {
-                                var e = entry;
-                                <div class="tm-dod-row @(e.Id == _selectedId ? "tm-dod-row--selected" : "")"
-                                     role="row"
-                                     tabindex="0"
-                                     data-id="@e.Id"
-                                     data-name="@e.Name"
-                                     @onclick="@(() => Select(e))"
-                                     @ondblclick="@(() => ConfirmAsync(e))"
-                                     @onkeydown="@(ev => OnRowKeyDownAsync(ev, e))">
-                                    <span class="tm-dod-cell-name">
-                                        <TmIcon Name="@IconNames.FileText" Size="IconSize.Sm" />
-                                        @e.Name
-                                    </span>
-                                    <span class="tm-dod-cell-modified">@e.ModifiedAt.ToString("yyyy-MM-dd")</span>
-                                    <span class="tm-dod-cell-author">@e.Author</span>
+                                <button type="button" class="tm-dod-back" data-dod-control="back"
+                                        aria-label="@Loc["TmDocumentOpenDialog_Back"]"
+                                        @onclick="GoBackAsync">
+                                    <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            @Crumbs
+                            @ViewToggle
+                        </div>
+
+                        @if (_creatingFolder)
+                        {
+                            @NewFolderBar
+                        }
+                        @if (_renaming)
+                        {
+                            @RenameBar
+                        }
+                        @if (_confirmingDelete && _selected is not null)
+                        {
+                            @DeleteConfirm
+                        }
+                    </div>
+
+                    <div class="tm-dod-content tm-dod-content--mobile">
+                        @if (!_error)
+                        {
+                            var folders = MobileFolderRows();
+                            if (folders.Count > 0)
+                            {
+                                <div class="tm-dod-folders" role="group" aria-label="@Loc["TmDocumentOpenDialog_FoldersLabel"]">
+                                    @foreach (var folder in folders)
+                                    {
+                                        var f = folder;
+                                        <button type="button"
+                                                class="tm-dod-folder-row @(f.IsRecent ? "tm-dod-folder-row--recent" : "")"
+                                                data-path="@f.Key"
+                                                aria-label="@Loc["TmDocumentOpenDialog_FolderRow", f.Label]"
+                                                @onclick="@(() => OpenFolderAsync(f.Key))">
+                                            <span class="tm-dod-folder-icon" aria-hidden="true">
+                                                <TmIcon Name="@f.Icon" Size="IconSize.Md" />
+                                            </span>
+                                            <span class="tm-dod-folder-text">
+                                                <span class="tm-dod-folder-name">@f.Label</span>
+                                                @if (!f.IsRecent)
+                                                {
+                                                    <span class="tm-dod-folder-kind">@Loc["TmDocumentOpenDialog_FolderKind"]</span>
+                                                }
+                                            </span>
+                                            <span class="tm-dod-folder-chevron" aria-hidden="true">
+                                                <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+                                            </span>
+                                        </button>
+                                    }
                                 </div>
                             }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="tm-dod-grid">
-                            @foreach (var entry in _entries)
+                        }
+                        @ContentBody
+                    </div>
+                }
+                else
+                {
+                    @* Toolbar *@
+                    <div class="tm-dod-toolbar">
+                        @if (CanSearch)
+                        {
+                            <input type="search"
+                                   class="tm-dod-search"
+                                   placeholder="@Loc["TmDocumentOpenDialog_Search"]"
+                                   aria-label="@Loc["TmDocumentOpenDialog_Search"]"
+                                   value="@_search"
+                                   @oninput="OnSearchInputAsync" />
+                        }
+
+                        <div class="tm-dod-toolbar-spacer"></div>
+
+                        <div class="tm-dod-actions">
+                            @if (CanCreateFolder)
                             {
-                                var e = entry;
-                                <div class="tm-dod-card @(e.Id == _selectedId ? "tm-dod-card--selected" : "")"
-                                     data-id="@e.Id"
-                                     data-name="@e.Name"
-                                     @onclick="@(() => Select(e))"
-                                     @ondblclick="@(() => ConfirmAsync(e))">
-                                    <div class="tm-dod-card-preview">
-                                        @if (!string.IsNullOrEmpty(e.PreviewSvg))
+                                <button type="button" class="tm-dod-new-folder"
+                                        aria-label="@Loc["TmDocumentOpenDialog_NewFolder"]"
+                                        disabled="@(_recent)"
+                                        @onclick="BeginNewFolder">
+                                    <TmIcon Name="@IconNames.FolderPlus" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDocumentOpenDialog_NewFolder"]</span>
+                                </button>
+                            }
+                            @if (CanRename)
+                            {
+                                <button type="button" class="tm-dod-rename"
+                                        aria-label="@Loc["TmDocumentOpenDialog_Rename"]"
+                                        disabled="@(_selected is null)"
+                                        @onclick="BeginRename">
+                                    <TmIcon Name="@IconNames.Pencil" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDocumentOpenDialog_Rename"]</span>
+                                </button>
+                            }
+                            @if (CanDelete)
+                            {
+                                <button type="button" class="tm-dod-delete"
+                                        aria-label="@Loc["TmDocumentOpenDialog_Delete"]"
+                                        disabled="@(_selected is null)"
+                                        @onclick="BeginDelete">
+                                    <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDocumentOpenDialog_Delete"]</span>
+                                </button>
+                            }
+                        </div>
+
+                        @ViewToggle
+                    </div>
+
+                    @* New folder inline editor *@
+                    @if (_creatingFolder)
+                    {
+                        @NewFolderBar
+                    }
+
+                    @* Body: tree + right pane (breadcrumb over the content) *@
+                    <div class="tm-dod-body">
+                        @* WAI-ARIA tree: flat treeitems (aria-level), ONE roving tab stop, arrows / Home / End. The row is a
+                           non-native focusable, so Enter (keydown, no auto-repeat) and Space (keyup) are emulated; the chevron
+                           is a non-focusable span (it never takes DOM focus while aria-hidden) inside the emulating row; its keys stay fenced
+                           (docs/keyboard-activation-convention.md). *@
+                        <div class="tm-dod-tree @(Compact ? "tm-dod-tree--narrow" : "")" role="tree"
+                             aria-label="@Loc["TmDocumentOpenDialog_FoldersLabel"]">
+                            @if (_tree is not null)
+                            {
+                                var treeItems = VisibleTree();
+                                var tabStop = TreeTabStop(treeItems);
+                                @foreach (var item in treeItems)
+                                {
+                                    var it = item;
+                                    var active = IsActiveTreeItem(it);
+                                    <div class="tm-dod-tree-node @(it.IsRecent ? "tm-dod-tree-node--recent" : "") @(active ? "tm-dod-tree-node--active" : "")"
+                                         role="treeitem"
+                                         tabindex="@(it.Key == tabStop ? "0" : "-1")"
+                                         aria-level="@it.Level"
+                                         aria-selected="@(active ? "true" : "false")"
+                                         aria-labelledby="@(_treeId + "-" + it.LabelId)"
+                                         aria-setsize="@it.SetSize"
+                                         aria-posinset="@it.PosInSet"
+                                         aria-expanded="@(it.HasChildren ? (it.Expanded ? "true" : "false") : null)"
+                                         data-path="@it.Key"
+                                         style="padding-inline-start: calc(var(--tm-space-2) + @(it.Depth) * var(--tm-space-4))"
+                                         @onclick="@(() => ActivateTreeItemAsync(it))"
+                                         @onkeydown="@(ev => OnTreeKeyDownAsync(ev, it.Key))"
+                                         @onkeyup="@(ev => OnTreeKeyUpAsync(ev, it))">
+                                        @if (it.Toggleable)
                                         {
-                                            @((MarkupString)e.PreviewSvg)
+                                            <span class="tm-dod-tree-toggle"
+                                                    aria-hidden="true"
+                                                    title="@(it.Expanded ? Loc["TmDocumentOpenDialog_Collapse"] : Loc["TmDocumentOpenDialog_Expand"])"
+                                                    @onclick="@(() => ToggleTreeItemByMouse(it))"
+                                                    @onclick:stopPropagation="true"
+                                                    @onkeydown:stopPropagation="true"
+                                                    @onkeyup:stopPropagation="true">
+                                                <TmIcon Name="@(it.Expanded ? IconNames.ChevronDown : IconNames.ChevronRight)" Size="IconSize.Xs" />
+                                            </span>
                                         }
                                         else
                                         {
-                                            <TmIcon Name="@IconNames.FileText" Size="IconSize.Lg" />
+                                            <span class="tm-dod-tree-spacer" aria-hidden="true"></span>
                                         }
+                                        <TmIcon Name="@it.Icon" Size="IconSize.Sm" />
+                                        <span class="tm-dod-tree-label" id="@(_treeId + "-" + it.LabelId)">@it.Label</span>
                                     </div>
-                                    <div class="tm-dod-card-name">@e.Name</div>
-                                </div>
+                                }
                             }
                         </div>
-                    }
 
-                    @if (!_loading && !_error && HasMore)
-                    {
-                        <button type="button" class="tm-dod-load-more" @onclick="LoadMoreAsync">
-                            @Loc["TmDocumentOpenDialog_LoadMore"]
-                        </button>
-                    }
+                        <div class="tm-dod-main">
+                            @Crumbs
 
-                    @* Rename inline editor *@
-                    @if (_renaming)
-                    {
-                        <div class="tm-dod-rename-bar">
-                            <input type="text" class="tm-dod-rename-input"
-                                   value="@_renameName"
-                                   @onchange="@(e => _renameName = e.Value?.ToString() ?? string.Empty)" />
-                            <button type="button" class="tm-dod-rename-confirm" @onclick="ConfirmRenameAsync">
-                                @Loc["TmDocumentOpenDialog_Rename"]
-                            </button>
-                            @if (_renameError)
-                            {
-                                <span class="tm-dod-rename-error">@Loc["TmDocumentOpenDialog_NameRequired"]</span>
-                            }
+                            <div class="tm-dod-content">
+                                @ContentBody
+
+                                @* Rename inline editor *@
+                                @if (_renaming)
+                                {
+                                    @RenameBar
+                                }
+
+                                @* Delete confirmation *@
+                                @if (_confirmingDelete && _selected is not null)
+                                {
+                                    @DeleteConfirm
+                                }
+                            </div>
                         </div>
-                    }
-
-                    @* Delete confirmation *@
-                    @if (_confirmingDelete && _selected is not null)
-                    {
-                        <div class="tm-dod-delete-confirm">
-                            <span>@Loc["TmDocumentOpenDialog_DeleteConfirm", _selected.Name]</span>
-                            <button type="button" class="tm-dod-delete-confirm-ok" @onclick="ConfirmDeleteAsync">
-                                @Loc["TmDocumentOpenDialog_Delete"]
-                            </button>
-                            <button type="button" class="tm-dod-delete-confirm-cancel"
-                                    @onclick="@(() => _confirmingDelete = false)">
-                                @Loc["TmDocumentOpenDialog_Cancel"]
-                            </button>
-                        </div>
-                    }
-                </div>
+                    </div>
+                }
             </div>
-        </div>
+        </TmLayoutObserver>
     </ChildContent>
     <Footer>
-        <div class="tm-dod-footer">
+        <div class="tm-dod-footer @(Mobile ? "tm-dod-footer--mobile" : Compact ? "tm-dod-footer--own-row" : "")" data-layout="@LayoutCss">
             @if (ShowModeToggle)
             {
-                <div class="tm-dod-mode">
-                    <label class="tm-dod-mode-option">
-                        <input type="radio" name="tm-dod-mode" class="tm-dod-mode-link"
+                @* Radio cards: each option is a card with a title and its own hint, the native radio stays inside so the
+                   group keeps its arrow-key / single-tab-stop behaviour. On mobile the cards are compact (title only, the hint
+                   stays for assistive technology) and sit ABOVE the action bar. *@
+                <div class="tm-dod-mode @(Mobile ? "tm-dod-mode--compact" : "")" role="radiogroup" aria-label="@Loc["TmDocumentOpenDialog_ModeLabel"]">
+                    <label class="tm-dod-mode-card @(_mode == DocumentOpenMode.Link ? "tm-dod-mode-card--selected" : "")">
+                        <input type="radio" name="@_modeGroup" class="tm-dod-mode-link"
                                checked="@(_mode == DocumentOpenMode.Link)"
                                @onchange="@(() => SetMode(DocumentOpenMode.Link))" />
-                        <span>@Loc["TmDocumentOpenDialog_LinkMode"]</span>
+                        <span class="tm-dod-mode-body">
+                            <span class="tm-dod-mode-title">
+                                <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
+                                @Loc["TmDocumentOpenDialog_LinkMode"]
+                            </span>
+                            <span class="tm-dod-mode-hint @(Mobile ? "tm-sr-only" : "")">@Loc["TmDocumentOpenDialog_LinkModeHint"]</span>
+                        </span>
                     </label>
-                    <label class="tm-dod-mode-option">
-                        <input type="radio" name="tm-dod-mode" class="tm-dod-mode-copy"
+                    <label class="tm-dod-mode-card @(_mode == DocumentOpenMode.Copy ? "tm-dod-mode-card--selected" : "")">
+                        <input type="radio" name="@_modeGroup" class="tm-dod-mode-copy"
                                checked="@(_mode == DocumentOpenMode.Copy)"
                                @onchange="@(() => SetMode(DocumentOpenMode.Copy))" />
-                        <span>@Loc["TmDocumentOpenDialog_CopyMode"]</span>
+                        <span class="tm-dod-mode-body">
+                            <span class="tm-dod-mode-title">
+                                <TmIcon Name="@IconNames.Copy" Size="IconSize.Sm" />
+                                @Loc["TmDocumentOpenDialog_CopyMode"]
+                            </span>
+                            <span class="tm-dod-mode-hint @(Mobile ? "tm-sr-only" : "")">@Loc["TmDocumentOpenDialog_CopyModeHint"]</span>
+                        </span>
                     </label>
-                    <span class="tm-dod-mode-hint">
-                        @(_mode == DocumentOpenMode.Link
-                            ? Loc["TmDocumentOpenDialog_LinkModeHint"]
-                            : Loc["TmDocumentOpenDialog_CopyModeHint"])
-                    </span>
                 </div>
             }
-            <div class="tm-dod-footer-spacer"></div>
-            <TmButton Variant="ButtonVariant.Secondary" Class="tm-dod-cancel"
-                      AriaLabel="@Loc["TmDocumentOpenDialog_Cancel"]" OnClick="CancelAsync">
-                @Loc["TmDocumentOpenDialog_Cancel"]
-            </TmButton>
-            <TmButton Variant="ButtonVariant.Primary" Class="tm-dod-open"
-                      AriaLabel="@Loc["TmDocumentOpenDialog_Open"]"
-                      Disabled="@(_selectedId is null)" OnClick="ConfirmSelectionAsync">
-                @Loc["TmDocumentOpenDialog_Open"]
-            </TmButton>
+            @if (Mobile)
+            {
+                @* The fullscreen panel's header close button is the Cancel; the footer carries the action bar and the primary Open. *@
+                <div class="tm-dod-footer-mobile-row">
+                    <TmMobileActionBar Items="MobileActionItems()"
+                                       Placement="ActionBarPlacement.Inline"
+                                       LayoutMode="TmLayoutMode.Mobile"
+                                       MaxVisible="3"
+                                       AriaLabel="@Loc["TmDocumentOpenDialog_ActionsLabel"]" />
+                    <TmButton Variant="ButtonVariant.Primary" Class="tm-dod-open"
+                              AriaLabel="@Loc["TmDocumentOpenDialog_Open"]"
+                              Disabled="@(_selectedId is null)" OnClick="ConfirmSelectionAsync">
+                        @Loc["TmDocumentOpenDialog_Open"]
+                    </TmButton>
+                </div>
+            }
+            else
+            {
+                <div class="tm-dod-footer-actions">
+                    <TmButton Variant="ButtonVariant.Secondary" Class="tm-dod-cancel"
+                              AriaLabel="@Loc["TmDocumentOpenDialog_Cancel"]" OnClick="CancelAsync">
+                        @Loc["TmDocumentOpenDialog_Cancel"]
+                    </TmButton>
+                    <TmButton Variant="ButtonVariant.Primary" Class="tm-dod-open"
+                              AriaLabel="@Loc["TmDocumentOpenDialog_Open"]"
+                              Disabled="@(_selectedId is null)" OnClick="ConfirmSelectionAsync">
+                        @Loc["TmDocumentOpenDialog_Open"]
+                    </TmButton>
+                </div>
+            }
         </div>
     </Footer>
 </TmModal>
+</div>
+
+@code {
+    // ── Fragments shared by the desktop / tablet and the mobile layout (one markup, one set of selectors) ─────────────
+
+    /// <summary>The list / grid switch.</summary>
+    private RenderFragment ViewToggle => @<div class="tm-dod-view-toggle">
+        <button type="button"
+                class="tm-dod-view-list @(_view == DialogView.List ? "tm-dod-view--active" : "")"
+                aria-label="@Loc["TmDocumentOpenDialog_ListView"]"
+                aria-pressed="@(_view == DialogView.List ? "true" : "false")"
+                @onclick="() => SetView(DialogView.List)">
+            <TmIcon Name="@IconNames.List" Size="IconSize.Sm" />
+        </button>
+        <button type="button"
+                class="tm-dod-view-grid @(_view == DialogView.Grid ? "tm-dod-view--active" : "")"
+                aria-label="@Loc["TmDocumentOpenDialog_GridView"]"
+                aria-pressed="@(_view == DialogView.Grid ? "true" : "false")"
+                @onclick="() => SetView(DialogView.Grid)">
+            <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" />
+        </button>
+    </div>;
+
+    /// <summary>Breadcrumb: home icon, then the path, "›" separated; the last crumb is the current place.</summary>
+    private RenderFragment Crumbs => @<nav class="tm-dod-breadcrumb" aria-label="@Loc["TmDocumentOpenDialog_Breadcrumb"]">
+        @{
+            var crumbs = Breadcrumb();
+        }
+        @for (var i = 0; i < crumbs.Count; i++)
+        {
+            var crumb = crumbs[i];
+            var last = i == crumbs.Count - 1;
+            @if (last)
+            {
+                <span class="tm-dod-crumb tm-dod-crumb--current" aria-current="page">
+                    @if (crumb.IsHome)
+                    {
+                        <TmIcon Name="@IconNames.Home" Size="IconSize.Sm" />
+                    }
+                    @if (!crumb.IsHome || crumbs.Count == 1)
+                    {
+                        <span class="tm-dod-crumb-label">@(crumb.IsHome ? Loc["TmDocumentOpenDialog_RootFolder"] : crumb.Name)</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <button type="button" class="tm-dod-crumb"
+                        aria-label="@(crumb.IsHome ? Loc["TmDocumentOpenDialog_Home"] : null)"
+                        @onclick="@(() => NavigateToAsync(crumb.Path))">
+                    @if (crumb.IsHome)
+                    {
+                        <TmIcon Name="@IconNames.Home" Size="IconSize.Sm" />
+                    }
+                    else
+                    {
+                        @crumb.Name
+                    }
+                </button>
+                <span class="tm-dod-crumb-sep" aria-hidden="true">›</span>
+            }
+        }
+    </nav>;
+
+    /// <summary>New folder inline editor. The mobile layout adds a Cancel (the bar's tile is a toggle-less action).</summary>
+    private RenderFragment NewFolderBar => @<div class="tm-dod-new-folder-bar">
+        <input type="text" class="tm-dod-new-folder-input" data-dod-control="new-folder-input"
+               placeholder="@Loc["TmDocumentOpenDialog_NewFolderName"]"
+               aria-label="@Loc["TmDocumentOpenDialog_NewFolderName"]"
+               value="@_newFolderName"
+               @onchange="@(e => _newFolderName = e.Value?.ToString() ?? string.Empty)" />
+        <button type="button" class="tm-dod-new-folder-confirm"
+                @onclick="ConfirmNewFolderAsync">
+            @Loc["TmDocumentOpenDialog_NewFolder"]
+        </button>
+        @if (Mobile)
+        {
+            <button type="button" class="tm-dod-inline-cancel" @onclick="CancelNewFolder">
+                @Loc["TmDocumentOpenDialog_Cancel"]
+            </button>
+        }
+    </div>;
+
+    /// <summary>Rename inline editor.</summary>
+    private RenderFragment RenameBar => @<div class="tm-dod-rename-bar">
+        <input type="text" class="tm-dod-rename-input" data-dod-control="rename-input"
+               aria-label="@Loc["TmDocumentOpenDialog_Rename"]"
+               value="@_renameName"
+               @onchange="@(e => _renameName = e.Value?.ToString() ?? string.Empty)" />
+        <button type="button" class="tm-dod-rename-confirm" @onclick="ConfirmRenameAsync">
+            @Loc["TmDocumentOpenDialog_Rename"]
+        </button>
+        @if (Mobile)
+        {
+            <button type="button" class="tm-dod-inline-cancel" @onclick="CancelRename">
+                @Loc["TmDocumentOpenDialog_Cancel"]
+            </button>
+        }
+        @if (_renameError)
+        {
+            <span class="tm-dod-rename-error">@Loc["TmDocumentOpenDialog_NameRequired"]</span>
+        }
+    </div>;
+
+    /// <summary>Delete confirmation.</summary>
+    private RenderFragment DeleteConfirm => @<div class="tm-dod-delete-confirm">
+        <span>@Loc["TmDocumentOpenDialog_DeleteConfirm", _selected!.Name]</span>
+        <button type="button" class="tm-dod-delete-confirm-ok" @onclick="ConfirmDeleteAsync">
+            @Loc["TmDocumentOpenDialog_Delete"]
+        </button>
+        <button type="button" class="tm-dod-delete-confirm-cancel" data-dod-control="delete-cancel"
+                @onclick="@(() => _confirmingDelete = false)">
+            @Loc["TmDocumentOpenDialog_Cancel"]
+        </button>
+    </div>;
+
+    /// <summary>Loading / error / empty state, the list or the grid of documents, and "Load more".</summary>
+    private RenderFragment ContentBody => @<text>
+        @if (_loading)
+        {
+            <div class="tm-dod-loading">
+                <TmSpinner Size="SpinnerSize.Md" />
+                <span>@Loc["TmDocumentOpenDialog_Loading"]</span>
+            </div>
+        }
+        else if (_error)
+        {
+            <div class="tm-dod-error">
+                <p>@Loc["TmDocumentOpenDialog_Error"]</p>
+                <button type="button" class="tm-dod-retry" @onclick="RetryAsync">
+                    @Loc["TmDocumentOpenDialog_Retry"]
+                </button>
+            </div>
+        }
+        else if (_entries.Count == 0)
+        {
+            @* On mobile the folder rows above are content too: a folder of only subfolders is not empty. *@
+            @if (!Mobile || MobileFolderRows().Count == 0)
+            {
+                <div class="tm-dod-empty">@Loc["TmDocumentOpenDialog_Empty"]</div>
+            }
+        }
+        else if (_view == DialogView.List)
+        {
+            var listStop = ItemTabStop();
+            <div class="tm-dod-list" role="grid" aria-label="@Loc["TmDocumentOpenDialog_DocumentsLabel"]">
+                @if (!Mobile)
+                {
+                    @* aria-sort is only valid on columnheader: the header element IS the grid item of
+                       .tm-dod-list-head (no display:contents wrapper), so the accessibility tree keeps it. *@
+                    <div class="tm-dod-list-head" role="row">
+                        <div class="tm-dod-colhead" role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Name)">
+                            <button type="button" class="tm-dod-col-name"
+                                    disabled="@_recent"
+                                    @onclick="@(() => SortByAsync(DocumentLibrarySortField.Name))">
+                                @Loc["TmDocumentOpenDialog_ColumnName"]
+                                @if (_sortField == DocumentLibrarySortField.Name)
+                                {
+                                    <span class="tm-dod-sort-indicator" aria-hidden="true" data-direction="@(_descending ? "descending" : "ascending")"
+                                          title="@(_descending ? Loc["TmDocumentOpenDialog_SortDescending"] : Loc["TmDocumentOpenDialog_SortAscending"])">
+                                        <TmIcon Name="@(_descending ? IconNames.ArrowDown : IconNames.ArrowUp)" Size="IconSize.Xs" />
+                                    </span>
+                                }
+                            </button>
+                        </div>
+                        <div class="tm-dod-colhead" role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Modified)">
+                            <button type="button" class="tm-dod-col-modified"
+                                    disabled="@_recent"
+                                    @onclick="@(() => SortByAsync(DocumentLibrarySortField.Modified))">
+                                @Loc["TmDocumentOpenDialog_ColumnModified"]
+                                @if (_sortField == DocumentLibrarySortField.Modified)
+                                {
+                                    <span class="tm-dod-sort-indicator" aria-hidden="true" data-direction="@(_descending ? "descending" : "ascending")"
+                                          title="@(_descending ? Loc["TmDocumentOpenDialog_SortDescending"] : Loc["TmDocumentOpenDialog_SortAscending"])">
+                                        <TmIcon Name="@(_descending ? IconNames.ArrowDown : IconNames.ArrowUp)" Size="IconSize.Xs" />
+                                    </span>
+                                }
+                            </button>
+                        </div>
+                        <span class="tm-dod-col-author" role="columnheader">@Loc["TmDocumentOpenDialog_ColumnAuthor"]</span>
+                    </div>
+                }
+                @foreach (var entry in _entries)
+                {
+                    var e = entry;
+                    <div class="tm-dod-row @(e.Id == _selectedId ? "tm-dod-row--selected" : "")"
+                         role="row"
+                         aria-selected="@(e.Id == _selectedId ? "true" : "false")"
+                         tabindex="@(e.Id == listStop ? "0" : "-1")"
+                         data-id="@e.Id"
+                         data-name="@e.Name"
+                         @onclick="@(() => Select(e))"
+                         @ondblclick="@(() => OnItemDoubleClickAsync(e))"
+                         @onkeydown="@(ev => OnItemKeyDownAsync(ev, e, grid: false))"
+                         @onkeyup="@(ev => OnItemKeyUp(ev, e))">
+                        @if (Mobile)
+                        {
+                            @* Two lines (name; date · author) with the document's preview, the same PreviewSvg the grid renders. *@
+                            <span class="tm-dod-row-main" role="gridcell">
+                                <span class="tm-dod-row-preview" aria-hidden="true">
+                                    @if (!string.IsNullOrEmpty(e.PreviewSvg))
+                                    {
+                                        @((MarkupString)e.PreviewSvg)
+                                    }
+                                    else
+                                    {
+                                        <TmIcon Name="@IconNames.FileText" Size="IconSize.Md" />
+                                    }
+                                </span>
+                                <span class="tm-dod-row-text">
+                                    <span class="tm-dod-row-name">@e.Name</span>
+                                    <span class="tm-dod-row-meta">@RowMeta(e)</span>
+                                </span>
+                            </span>
+                            @if (CanRename || CanDelete)
+                            {
+                                @* The ⋯ is a native button with its own click: its keys and clicks never reach the emulating row
+                                   (docs/keyboard-activation-convention.md - fence native children inside an emulating container). *@
+                                <span class="tm-dod-row-menu" role="gridcell"
+                                      @onclick:stopPropagation="true"
+                                      @ondblclick:stopPropagation="true"
+                                      @onkeydown:stopPropagation="true"
+                                      @onkeyup:stopPropagation="true">
+                                    <TmDropdown Text="@Loc["TmDocumentOpenDialog_More", e.Name]"
+                                                Icon="@IconNames.MoreVertical"
+                                                Align="OverlayAlign.End"
+                                                MobilePresentation="PanelPresentation.Sheet"
+                                                OnSelect="@(value => OnRowMenuSelectAsync(e, value))">
+                                        @if (CanRename)
+                                        {
+                                            <TmDropdownItem Value="rename" Icon="@IconNames.Pencil">@Loc["TmDocumentOpenDialog_Rename"]</TmDropdownItem>
+                                        }
+                                        @if (CanDelete)
+                                        {
+                                            <TmDropdownItem Value="delete" Icon="@IconNames.Trash" Class="tm-dropdown-item-danger">@Loc["TmDocumentOpenDialog_Delete"]</TmDropdownItem>
+                                        }
+                                    </TmDropdown>
+                                </span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="tm-dod-cell-name" role="gridcell">
+                                <TmIcon Name="@IconNames.FileText" Size="IconSize.Sm" />
+                                @e.Name
+                            </span>
+                            <span class="tm-dod-cell-modified" role="gridcell">@e.ModifiedAt.ToString("yyyy-MM-dd")</span>
+                            <span class="tm-dod-cell-author" role="gridcell">@e.Author</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            var gridStop = ItemTabStop();
+            <div class="tm-dod-grid" role="listbox" aria-label="@Loc["TmDocumentOpenDialog_DocumentsLabel"]">
+                @foreach (var entry in _entries)
+                {
+                    var e = entry;
+                    <div class="tm-dod-card @(e.Id == _selectedId ? "tm-dod-card--selected" : "")"
+                         role="option"
+                         tabindex="@(e.Id == gridStop ? "0" : "-1")"
+                         aria-selected="@(e.Id == _selectedId ? "true" : "false")"
+                         aria-label="@e.Name"
+                         data-id="@e.Id"
+                         data-name="@e.Name"
+                         @onclick="@(() => Select(e))"
+                         @ondblclick="@(() => OnItemDoubleClickAsync(e))"
+                         @onkeydown="@(ev => OnItemKeyDownAsync(ev, e, grid: true))"
+                         @onkeyup="@(ev => OnItemKeyUp(ev, e))">
+                        <div class="tm-dod-card-preview">
+                            @if (!string.IsNullOrEmpty(e.PreviewSvg))
+                            {
+                                @((MarkupString)e.PreviewSvg)
+                            }
+                            else
+                            {
+                                <TmIcon Name="@IconNames.FileText" Size="IconSize.Lg" />
+                            }
+                        </div>
+                        <div class="tm-dod-card-name">@e.Name</div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (!_loading && !_error && HasMore)
+        {
+            <button type="button" class="tm-dod-load-more" @onclick="LoadMoreAsync">
+                @Loc["TmDocumentOpenDialog_LoadMore"]
+            </button>
+        }
+    </text>;
+}

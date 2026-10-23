@@ -14,10 +14,11 @@ namespace Tempo.Blazor.Tests.Wireframe;
 public class TmWireframeToolboxTests : LocalizationTestBase
 {
     private static WireframeComponentDef MakeDef(string type, string category,
-        bool isBuiltIn = true, string? displayName = null)
+        bool isBuiltIn = true, string? displayName = null, string? icon = null)
         => new()
         {
             Type        = type,
+            Icon        = icon,
             DisplayName = displayName ?? type,
             Category    = category,
             DefaultWidth  = 120,
@@ -285,8 +286,9 @@ public class TmWireframeToolboxTests : LocalizationTestBase
         var cut = Render<TmWireframeToolbox>(p => p
             .Add(x => x.OnComponentActivated, t => activated = t));
 
-        cut.Find(".tm-wd-toolbox__item")
-           .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        var item = cut.Find(".tm-wd-toolbox__item");
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
 
         activated.Should().Be("TmButton");
     }
@@ -307,6 +309,79 @@ public class TmWireframeToolboxTests : LocalizationTestBase
         activated.Should().BeNull();
     }
 
+    // ── Phase 1: click / tap activation + keyboard-activation convention ──────
+
+    [Fact]
+    public void ItemClick_FiresOnComponentActivated()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+
+        cut.Find(".tm-wd-toolbox__item").Click();
+
+        activated.Should().Equal("TmButton");
+    }
+
+    [Fact]
+    public void EnterAndSpace_ActivateExactlyOnce()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        // The item is a div[role=button] (non-native): no browser click is synthesised, so the
+        // library emulates — Enter on keydown, Space on keyup, once per press.
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        activated.Should().HaveCount(1);
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void HeldEnter_AutoRepeat_DoesNotReactivate()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        activated.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void SpaceKeyDown_Alone_DoesNotActivate_UntilKeyUp()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().BeEmpty();
+
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().HaveCount(1);
+    }
     // ── Class parameter ────────────────────────────────────────────────────────
 
     [Fact]
@@ -331,5 +406,183 @@ public class TmWireframeToolboxTests : LocalizationTestBase
         var cut = Render<TmWireframeToolbox>();
 
         cut.Find(".tm-wd-toolbox__item-preview svg").Should().NotBeNull();
+    }
+
+    // ── Phase 2: label, read-only, icon ────────────────────────────────────────
+
+    [Fact]
+    public void Toolbox_ItemLabel_AdvertisesClickAndDrag()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons", displayName: "Button")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find(".tm-wd-toolbox__item").GetAttribute("aria-label").Should().Be("Add Button to canvas (or drag)");
+    }
+
+    [Fact]
+    public void Toolbox_ReadOnly_MarksItemsAriaDisabledAndStopsActivation()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var activated = new List<string>();
+
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.OnComponentActivated, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(this, (Action<string>)activated.Add)));
+
+        var item = cut.Find(".tm-wd-toolbox__item");
+        item.GetAttribute("aria-disabled").Should().Be("true");
+        item.GetAttribute("draggable").Should().Be("false");
+        item.ClassList.Should().Contain("tm-wd-toolbox__item--disabled");
+
+        item.Click();
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+
+        activated.Should().BeEmpty("a read-only toolbox never raises OnComponentActivated");
+    }
+
+    [Fact]
+    public void Toolbox_Editable_ItemsAreNotAriaDisabled()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find(".tm-wd-toolbox__item").HasAttribute("aria-disabled").Should().BeFalse();
+        cut.Find(".tm-wd-toolbox__item").ClassList.Should().NotContain("tm-wd-toolbox__item--disabled");
+    }
+
+    // ── Phase 4: 3-column grid, component icon, render gate ────────────────────
+
+    [Fact]
+    public void Grid_ThreeColumns_UsesComponentDefIcon()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons", icon: "plus")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        var item = cut.Find(".tm-wd-toolbox__item");
+        var icon = item.QuerySelector(".tm-wd-toolbox__item-icon");
+        icon.Should().NotBeNull();
+        icon!.GetAttribute("aria-hidden").Should().Be("true");
+        icon.QuerySelector("svg.tm-icon").Should().NotBeNull();
+        item.QuerySelector(".tm-wd-toolbox__item-preview-paper").Should().BeNull("the icon replaces the SVG preview");
+        item.GetAttribute("data-component-type").Should().Be("TmButton");
+        item.GetAttribute("role").Should().Be("button");
+
+        var cssPath = Path.Combine(FindRepoRoot(), "src", "Tempo.Blazor.Wireframe", "wwwroot", "css", "components", "_wireframe-editor.css");
+        File.ReadAllText(cssPath).Should().Contain("grid-template-columns: repeat(3");
+    }
+
+    [Fact]
+    public void FallsBackToSvgPreview_WhenIconMissing()
+    {
+        Services.AddSingleton(BuildRegistry(
+            MakeDef("TmButton", "Buttons", icon: null),
+            MakeDef("TmCard", "Buttons", icon: "")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.FindAll(".tm-wd-toolbox__item-icon").Should().BeEmpty();
+        cut.FindAll(".tm-wd-toolbox__item-preview-paper").Should().HaveCount(2);
+        cut.FindAll(".tm-wd-toolbox__item-preview svg").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void FallsBackToSvgPreview_WhenIconNameIsNotARegisteredIcon()
+    {
+        // An unknown icon name would paint an empty tile; the mini stencil is the better tile then.
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons", icon: "no-such-icon-xyz")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.FindAll(".tm-wd-toolbox__item-icon").Should().BeEmpty();
+        cut.FindAll(".tm-wd-toolbox__item-preview-paper").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void ParentRerender_WithIdenticalParameters_DoesNotRenderAgain()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var scope = WireframeComponentScope.ForApp(Guid.NewGuid().ToString("D"));
+        Microsoft.AspNetCore.Components.EventCallback<string> cb =
+            Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(this, _ => { });
+
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.ComponentScope, scope).Add(x => x.OnComponentActivated, cb).Add(x => x.Class, "c"));
+        var before = cut.Instance.RenderCount;
+
+        cut.Render(p => p
+            .Add(x => x.ComponentScope, scope).Add(x => x.OnComponentActivated, cb).Add(x => x.Class, "c"));
+
+        cut.Instance.RenderCount.Should().Be(before);
+    }
+
+    [Fact]
+    public void ParentRerender_WithChangedReadOnly_RendersAgain()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var cut = Render<TmWireframeToolbox>(p => p.Add(x => x.ReadOnly, false));
+        var before = cut.Instance.RenderCount;
+
+        cut.Render(p => p.Add(x => x.ReadOnly, true));
+
+        cut.Instance.RenderCount.Should().BeGreaterThan(before);
+        cut.Find(".tm-wd-toolbox__item").GetAttribute("aria-disabled").Should().Be("true");
+    }
+
+    [Fact]
+    public void OwnEvents_StillRender_WhenParentGateIsActive()
+    {
+        Services.AddSingleton(BuildRegistry(
+            MakeDef("TmButton", "Buttons", displayName: "Button"),
+            MakeDef("TmText", "Inputs", displayName: "Text")));
+        var cut = Render<TmWireframeToolbox>();
+        cut.Render(p => { });                         // identical re-render, gated
+        var before = cut.Instance.RenderCount;
+
+        cut.Find("input[type=\"search\"]").Input("Button");
+
+        cut.Instance.RenderCount.Should().BeGreaterThan(before);
+        cut.FindAll(".tm-wd-toolbox__item").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void RegistryChange_WithNewComponentScope_RefreshesItems()
+    {
+        var appA = Guid.NewGuid().ToString("D");
+        var appB = Guid.NewGuid().ToString("D");
+        var registry = new WireframeComponentRegistry();
+        registry.RegisterDefinition(MakeDef("InvoiceCard", "Custom", isBuiltIn: false, displayName: "A Invoice"), scopeAppId: appA);
+        registry.RegisterDefinition(MakeDef("InvoiceCard", "Custom", isBuiltIn: false, displayName: "B Invoice"), scopeAppId: appB);
+        Services.AddSingleton(registry);
+
+        var cut = Render<TmWireframeToolbox>(p => p.Add(x => x.ComponentScope, WireframeComponentScope.ForApp(appA)));
+        cut.Find(".tm-wd-toolbox__item-name").TextContent.Should().Be("A Invoice");
+
+        cut.Render(p => p.Add(x => x.ComponentScope, WireframeComponentScope.ForApp(appB)));
+
+        cut.Find(".tm-wd-toolbox__item-name").TextContent.Should().Be("B Invoice");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Repository root not found");
+    }
+
+    [Fact]
+    public void Toolbox_ClearSearch_RendersTmIcon()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find("input[type=\"search\"]").Input("but");
+
+        cut.Find(".tm-wd-toolbox__search-clear svg.tm-icon").Should().NotBeNull();
+        cut.Find(".tm-wd-toolbox__search-clear").TextContent.Should().NotContain("✕");
     }
 }

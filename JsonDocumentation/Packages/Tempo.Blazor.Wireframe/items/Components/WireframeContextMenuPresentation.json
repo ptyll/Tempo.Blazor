@@ -1,0 +1,22 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Wireframe",
+  "description": "How TmWireframeContextMenu presents itself.",
+  "packageId": "Tempo.Blazor.Wireframe",
+  "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeContextMenu.razor.cs",
+  "documentationStatus": "generated",
+  "itemName": "WireframeContextMenuPresentation",
+  "values": [
+    {
+      "name": "Anchored",
+      "value": "0",
+      "description": "A position:fixed menu at the pointer (desktop and tablet)."
+    },
+    {
+      "name": "Sheet",
+      "value": "1",
+      "description": "The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and grouping are tablet+ and are not offered."
+    }
+  ]
+}

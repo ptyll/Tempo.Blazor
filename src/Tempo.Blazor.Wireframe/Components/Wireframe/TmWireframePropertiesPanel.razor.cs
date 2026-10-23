@@ -21,7 +21,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// <para>All mutations are routed through the cascaded <see cref="WireframeCommandStack"/>
 /// when available.</para>
 /// </summary>
-public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
+public partial class TmWireframePropertiesPanel : TmComponentBase, IDisposable
 {
     // ── DI ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,39 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
 
+    /// <summary>
+    /// Whether the canvas grid is shown (the "Show grid" toggle of the Grid section shown on an empty selection).
+    /// The panel never assigns this parameter: it keeps a local copy, raises <see cref="ShowGridChanged"/> and
+    /// re-adopts the host value whenever the parameter changes. Defaults to <c>true</c>.
+    /// </summary>
+    [Parameter] public bool ShowGrid { get; set; } = true;
+
+    /// <summary>Raised with the new value when the user toggles "Show grid".</summary>
+    [Parameter] public EventCallback<bool> ShowGridChanged { get; set; }
+
+    /// <summary>
+    /// Grid cell size in pixels (0 = grid snapping off). The panel never assigns this parameter: it keeps a local
+    /// copy, raises <see cref="GridSizeChanged"/> and re-adopts the host value whenever the parameter changes.
+    /// Defaults to 8; the input accepts 0–128.
+    /// </summary>
+    [Parameter] public int GridSize { get; set; } = 8;
+
+    /// <summary>Raised with the new (clamped 0–128) grid size when the user edits "Grid size".</summary>
+    [Parameter] public EventCallback<int> GridSizeChanged { get; set; }
+
+    /// <summary>
+    /// Raised with the new (width, height) AFTER a <see cref="ResizeCanvasCommand"/> was pushed for the active page
+    /// (device preset or "Apply"), so the host can update its canvas runtime.
+    /// </summary>
+    [Parameter] public EventCallback<(double Width, double Height)> OnCanvasResized { get; set; }
+
+    /// <summary>
+    /// Raised when the user presses "Delete element". When it has a delegate the host performs the deletion (the
+    /// panel does nothing else); otherwise the panel removes the selected elements itself through
+    /// <see cref="RemoveElementsCommand"/> (undoable when a <see cref="WireframeCommandStack"/> is cascaded).
+    /// </summary>
+    [Parameter] public EventCallback OnDelete { get; set; }
+
     /// <summary>Whether the wireframe clipboard currently holds a copied style.</summary>
     public bool HasClipboardStyle => WireframeClipboard.HasStyle;
 
@@ -89,11 +122,49 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
 
     internal const string MixedMarker = "__mixed__";
 
+    // Canvas / page / grid sections (empty selection). Local state: the panel never assigns its [Parameter]s.
+    private readonly string _idPrefix = "wd-props-" + Guid.NewGuid().ToString("N")[..8];
+    private string _presetId => _idPrefix + "-preset";
+    private string _canvasWId => _idPrefix + "-cw";
+    private string _canvasHId => _idPrefix + "-ch";
+    private string _pageNameId => _idPrefix + "-page-name";
+    private string _gridSizeId => _idPrefix + "-grid-size";
+    private string _elementNameId => _idPrefix + "-el-name";
+
+    private string _canvasWInput = "";
+    private string _canvasHInput = "";
+    private bool _canvasSizeInvalid;
+    private string _canvasErrorId => _idPrefix + "-canvas-error";
+
+    /// <summary>Smallest accepted canvas edge in SVG units (the inputs' <c>min</c>).</summary>
+    internal const double MinCanvasSize = 100;
+
+    /// <summary>Largest accepted canvas edge in SVG units (the inputs' <c>max</c>).</summary>
+    internal const double MaxCanvasSize = 9999;
+
+    private void OnCanvasSizeInput(ChangeEventArgs e, bool isWidth)
+    {
+        var text = e.Value?.ToString() ?? string.Empty;
+        if (isWidth) _canvasWInput = text; else _canvasHInput = text;
+        _canvasSizeInvalid = false;   // typing again withdraws the message until the next Apply
+    }
+    private string? _seededPageId;
+    private double _seededW = double.NaN, _seededH = double.NaN;
+    private bool _customPresetChosen;
+
+    private bool _showGrid = true;
+    private int _gridSize = 8;
+    private bool? _lastShowGridParam;
+    private int? _lastGridSizeParam;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
     protected override void OnParametersSet()
     {
+        AdoptHostGrid();
+        SeedCanvasInputs();
+
         _validationErrors.Clear();
         _connectors = [];
         _elements = [];
@@ -156,6 +227,147 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
         _layoutY = MixedOrValue(_elements.Select(e => e.Y));
         _layoutW = MixedOrValue(_elements.Select(e => e.W));
         _layoutH = MixedOrValue(_elements.Select(e => e.H));
+    }
+
+    // ── Canvas / page / grid (empty selection) ────────────────────────────────
+
+    /// <summary>Re-adopts the host's grid values when (and only when) the parameters themselves changed.</summary>
+    private void AdoptHostGrid()
+    {
+        if (_lastShowGridParam != ShowGrid) { _lastShowGridParam = ShowGrid; _showGrid = ShowGrid; }
+        if (_lastGridSizeParam != GridSize) { _lastGridSizeParam = GridSize; _gridSize = GridSize; }
+    }
+
+    /// <summary>Seeds the width/height inputs from the active page, and again whenever the page or its size changes externally.</summary>
+    private void SeedCanvasInputs()
+    {
+        var page = Document?.ActivePage;
+        if (page is null) { _seededPageId = null; return; }
+        if (_seededPageId == page.Id && _seededW.Equals(page.Width) && _seededH.Equals(page.Height)) return;
+
+        _canvasSizeInvalid = false;
+        _seededPageId = page.Id;
+        _seededW = page.Width;
+        _seededH = page.Height;
+        _canvasWInput = FormatSize(page.Width);
+        _canvasHInput = FormatSize(page.Height);
+        _customPresetChosen = false;
+    }
+
+    private static string FormatSize(double v) => Math.Round(v).ToString("0", CultureInfo.InvariantCulture);
+
+    /// <summary>The option the preset select shows: the matching preset of the active page's size, else Custom.</summary>
+    private string SelectedPresetId
+    {
+        get
+        {
+            var page = Document?.ActivePage;
+            if (page is null || _customPresetChosen) return WireframeDevicePresets.CustomId;
+            return WireframeDevicePresets.Match(page.Width, page.Height)?.Id ?? WireframeDevicePresets.CustomId;
+        }
+    }
+
+    private string GetPresetLabel(WireframeDevicePreset preset) => preset.IsCustom
+        ? Loc[preset.NameKey]
+        : $"{Loc[preset.NameKey]} ({FormatSize(preset.Width!.Value)}×{FormatSize(preset.Height!.Value)})";
+
+    private async Task OnDevicePresetChanged(ChangeEventArgs e)
+    {
+        if (ReadOnly || Document?.ActivePage is null) return;
+        var preset = WireframeDevicePresets.Find(e.Value?.ToString());
+        if (preset is null) return;
+
+        if (preset.IsCustom)
+        {
+            _customPresetChosen = true;   // nothing changes; the width/height inputs are for typing
+            return;
+        }
+
+        _customPresetChosen = false;
+        _canvasSizeInvalid = false;
+        await ResizeCanvasAsync(preset.Width!.Value, preset.Height!.Value);
+    }
+
+    private async Task OnApplyCanvasSize()
+    {
+        if (ReadOnly || Document?.ActivePage is null) return;
+        if (!double.TryParse(_canvasWInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var w) || w < MinCanvasSize || w > MaxCanvasSize
+            || !double.TryParse(_canvasHInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var h) || h < MinCanvasSize || h > MaxCanvasSize)
+        {
+            _canvasSizeInvalid = true;   // announced (role=alert) instead of silently doing nothing
+            return;
+        }
+
+        _canvasSizeInvalid = false;
+        await ResizeCanvasAsync(w, h);
+    }
+
+    /// <summary>Pushes a <see cref="ResizeCanvasCommand"/> for the active page (skipped when unchanged), then notifies the host.</summary>
+    private async Task ResizeCanvasAsync(double w, double h)
+    {
+        var page = Document?.ActivePage;
+        if (Document is null || page is null) return;
+        if (Math.Abs(w - page.Width) < 0.5 && Math.Abs(h - page.Height) < 0.5) return;
+
+        var command = new ResizeCanvasCommand(Document, page.Width, page.Height, w, h);
+        if (CommandStack is not null) CommandStack.Push(command); else command.Execute();
+
+        SeedCanvasInputs();
+        await OnCanvasResized.InvokeAsync((w, h));
+        await NotifyChanged();
+    }
+
+    private async Task OnPageNameChanged(ChangeEventArgs e)
+    {
+        var page = Document?.ActivePage;
+        if (ReadOnly || Document is null || page is null) return;
+        var name = e.Value?.ToString()?.Trim();
+        if (string.IsNullOrEmpty(name) || name == page.Name) return;
+
+        page.Name = name;   // page operations are not undoable (same as the page tabs)
+        await NotifyChanged();
+    }
+
+    private async Task OnShowGridChanged(ChangeEventArgs e)
+    {
+        _showGrid = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var bv) && bv;
+        await ShowGridChanged.InvokeAsync(_showGrid);
+    }
+
+    private async Task OnGridSizeChanged(ChangeEventArgs e)
+    {
+        if (!double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var raw)) return;
+        _gridSize = (int)Math.Clamp(Math.Round(raw), 0, 128);
+        await GridSizeChanged.InvokeAsync(_gridSize);
+    }
+
+    // ── Element name / delete ─────────────────────────────────────────────────
+
+    private async Task OnElementNameChanged(ChangeEventArgs e)
+    {
+        if (ReadOnly || Document is null || _elements.Count != 1) return;
+        var el = _elements[0];
+        var raw = e.Value?.ToString()?.Trim();
+        var newName = string.IsNullOrEmpty(raw) ? null : raw;
+        if (string.Equals(newName ?? "", el.Name ?? "", StringComparison.Ordinal)) return;
+
+        var command = new RenameElementCommand(Document, el.Id, el.Name, newName);
+        if (CommandStack is not null) CommandStack.Push(command); else command.Execute();
+        await NotifyChanged();
+    }
+
+    private async Task OnDeleteClicked()
+    {
+        if (ReadOnly || Document is null || _elements.Count == 0) return;
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync();
+            return;
+        }
+
+        var command = new RemoveElementsCommand(Document, _elements.Select(e => e.Id).ToList());
+        if (CommandStack is not null) CommandStack.Push(command); else command.Execute();
+        await NotifyChanged();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
