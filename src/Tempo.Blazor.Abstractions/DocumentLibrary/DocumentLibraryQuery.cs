@@ -23,6 +23,7 @@ public sealed class DocumentLibraryQuery
     /// <see cref="DocumentLibraryScope.Subtree"/> and <see cref="DocumentLibraryScope.Library"/> to
     /// <see cref="DocumentLibraryScope.Folder"/>.
     /// </summary>
+    /// <remarks>Decision <c>DOCLIB-QUERY-SCOPE</c> (<c>docs/adr/0003-document-library-query-scope.md</c>).</remarks>
     public DocumentLibraryScope Scope { get; set; } = DocumentLibraryScope.Folder;
 
     /// <summary>
@@ -30,6 +31,11 @@ public sealed class DocumentLibraryQuery
     /// unfiltered. Only honoured when the provider advertises
     /// <see cref="DocumentLibraryCapabilities.Search"/>.
     /// </summary>
+    /// <remarks>
+    /// Legacy rule kept by the reference stores: a <see cref="DocumentLibraryScope.Folder"/>-scope query WITH a search may
+    /// span the whole library (the pre-<see cref="Scope"/> behaviour). Callers that want a library-wide search should
+    /// state <see cref="DocumentLibraryScope.Library"/> explicitly instead of relying on that.
+    /// </remarks>
     public string? Search { get; set; }
 
     /// <summary>Field to order results by. Defaults to <see cref="DocumentLibrarySortField.Name"/>.</summary>

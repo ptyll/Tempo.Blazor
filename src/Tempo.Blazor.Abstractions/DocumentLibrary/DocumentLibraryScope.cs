@@ -15,6 +15,11 @@ public enum DocumentLibraryScope
     /// Only the documents directly inside <see cref="DocumentLibraryQuery.FolderPath"/>
     /// (<c>null</c> or <c>"/"</c> is the root). This is the behaviour of every query written before the scope existed.
     /// </summary>
+    /// <remarks>
+    /// Legacy rule: a <see cref="Folder"/>-scope query that also carries <see cref="DocumentLibraryQuery.Search"/> may span the whole
+    /// library (stores written before the scope existed searched everywhere). Callers wanting a library-wide search should state
+    /// <see cref="Library"/>.
+    /// </remarks>
     Folder = 0,
 
     /// <summary>The documents of <see cref="DocumentLibraryQuery.FolderPath"/> and of all of its sub-folders.</summary>

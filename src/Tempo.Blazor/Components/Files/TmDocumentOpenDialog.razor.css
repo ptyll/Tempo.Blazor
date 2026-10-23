@@ -549,6 +549,8 @@
     accent-color: var(--tm-color-primary);
 }
 
+/* Display:contents keeps the radio, title and hint as direct grid items of the card; it is a pure layout wrapper, so it must not
+   carry a role or an accessible name (display:contents drops some elements from the a11y tree in older engines). Do not add a role. */
 .tm-dod-mode-body {
     display: contents;
 }
@@ -1035,6 +1037,7 @@
     min-inline-size: 0;
     overflow-wrap: anywhere;
 }
+
 .tm-dod-row-menu ::deep .tm-dropdown-trigger > svg:last-child {
     display: none;
 }

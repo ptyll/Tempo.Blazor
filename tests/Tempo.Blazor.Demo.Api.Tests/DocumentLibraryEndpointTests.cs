@@ -72,6 +72,30 @@ public class DocumentLibraryEndpointTests : IClassFixture<WebApplicationFactory<
         library!.Items.Should().ContainSingle(i => i.Name == "Scope child doc");
     }
 
+    [Theory]
+    [InlineData("99")]
+    [InlineData("-1")]
+    [InlineData("Everything")]
+    public async Task Browse_UndefinedScope_IsABadRequest(string scope)
+    {
+        var resp = await _client.GetAsync($"/api/document-library/wireframe/browse?scope={scope}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "numeric values outside DocumentLibraryScope would otherwise bind and silently behave like Folder");
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("2")]
+    [InlineData("subtree")]
+    public async Task Browse_DefinedScope_IsAccepted(string scope)
+    {
+        var resp = await _client.GetAsync($"/api/document-library/wireframe/browse?scope={scope}");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task Tree_IncludesCreatedFolder()
     {

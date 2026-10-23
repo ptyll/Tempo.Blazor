@@ -820,6 +820,30 @@ public sealed class TokenContrastTests
     }
 
     /// <summary>
+    /// The mode-card hint of the open dialog (<c>.tm-dod-mode-card--selected .tm-dod-mode-hint</c>) is secondary text on the
+    /// selected card's primary-subtle wash; <c>--tm-text-secondary</c> is measured on the wash COMPOSITED over its surface in
+    /// the default and indigo themes, light and dark. A failure here is fixed by setting the hint to
+    /// <c>--tm-text-primary</c> in the selected card.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SecondaryText_HoldsAa_OnThePrimarySubtleWash(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        var ratio = ThemeCss.Contrast(
+            ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens),
+            PaintedColour("var(--tm-color-primary-subtle)", tokens));
+
+        ratio.Should().BeGreaterThanOrEqualTo(4.5,
+            "--tm-text-secondary na --tm-color-primary-subtle (hint vybrané karty Link / Copy) ({0} {1}) — změřeno {2:0.00}:1",
+            indigo ? "indigo" : "default", dark ? "dark" : "light", ratio);
+    }
+
+    /// <summary>
     /// The rules of <c>TmDocumentOpenDialog.razor.css</c> that paint ink on the subtle wash (active tree node, active view
     /// toggle, the document thumbnail chip) read <c>--tm-color-primary-text</c>, the token made for text on that wash. The
     /// declarations are pinned (a revert to the fill token fails on the string) and the ink is measured in the default and

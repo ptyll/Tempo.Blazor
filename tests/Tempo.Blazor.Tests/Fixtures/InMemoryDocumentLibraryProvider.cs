@@ -90,6 +90,10 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
         return Task.FromResult(Build("/"));
     }
 
+    // Same normalisation as DocumentLibraryStore.NormalizeFolder: null/empty is the root, a trailing slash is not significant.
+    private static string NormalizeFolder(string? path)
+        => string.IsNullOrEmpty(path) ? "/" : path.Length > 1 ? path.TrimEnd('/') : path;
+
     public Task<DocumentLibraryPage> BrowseAsync(
         DocumentLibraryQuery query, CancellationToken cancellationToken = default)
     {
@@ -106,7 +110,7 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
             case DocumentLibraryScope.Library:
                 break;
             case DocumentLibraryScope.Subtree:
-                var root = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
+                var root = NormalizeFolder(query.FolderPath);
                 docs = root == "/"
                     ? docs
                     : docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/", StringComparison.Ordinal));
@@ -114,7 +118,7 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
             default:
                 if (!searching)
                 {
-                    var folder = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
+                    var folder = NormalizeFolder(query.FolderPath);
                     docs = docs.Where(d => d.FolderPath == folder);
                 }
 

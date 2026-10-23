@@ -24,22 +24,32 @@ public static class DocumentLibraryEndpoints
             DocumentLibraryStore store,
             string? folderPath,
             string? search,
-            DocumentLibraryScope? scope,
+            string? scope,
             DocumentLibrarySortField? sortField,
             bool? descending,
             int? skip,
             int? take) =>
-            Results.Ok(store.Browse(new DocumentLibraryQuery
+        {
+            // Decision DOCLIB-QUERY-SCOPE (docs/adr/0003-document-library-query-scope.md): ?scope= is parsed here so an
+            // undefined value (a numeric 99, a typo) is a 400 instead of silently behaving like Folder.
+            if (!TryParseScope(scope, out var parsedScope))
+            {
+                return Results.BadRequest(
+                    $"Unknown scope '{scope}'. Expected one of: {string.Join(", ", Enum.GetNames<DocumentLibraryScope>())}.");
+            }
+
+            return Results.Ok(store.Browse(new DocumentLibraryQuery
             {
                 Kind = ParseKind(kind),
                 FolderPath = folderPath,
                 Search = search,
-                Scope = scope ?? DocumentLibraryScope.Folder,
+                Scope = parsedScope,
                 SortField = sortField ?? DocumentLibrarySortField.Name,
                 Descending = descending ?? false,
                 Skip = skip ?? 0,
                 Take = take ?? 50
-            })));
+            }));
+        });
 
         // ── Folder management ───────────────────────────────────────────────────
         group.MapPost("/{kind}/folders", (
@@ -130,6 +140,16 @@ public static class DocumentLibraryEndpoints
         });
     }
 
+    private static bool TryParseScope(string? raw, out DocumentLibraryScope scope)
+    {
+        scope = DocumentLibraryScope.Folder;
+        if (string.IsNullOrEmpty(raw))
+        {
+            return true;
+        }
+
+        return Enum.TryParse(raw, ignoreCase: true, out scope) && Enum.IsDefined(scope);
+    }
     private static TempoDocumentKind ParseKind(string kind)
         => Enum.Parse<TempoDocumentKind>(kind, ignoreCase: true);
 

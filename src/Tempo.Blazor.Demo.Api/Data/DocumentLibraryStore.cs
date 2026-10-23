@@ -147,7 +147,8 @@ public sealed class DocumentLibraryStore
 
             // Scope.Library reaches every folder (FolderPath is ignored); Subtree is the folder plus its descendants;
             // Folder is the direct content. A Folder-scope query with a search keeps the pre-Scope behaviour: the
-            // search spans every folder (the dialog now says so with Library instead).
+            // search spans every folder (the dialog now says so with Library instead). Decision DOCLIB-QUERY-SCOPE,
+            // docs/adr/0003-document-library-query-scope.md.
             switch (query.Scope)
             {
                 case DocumentLibraryScope.Library:

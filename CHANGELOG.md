@@ -737,7 +737,7 @@
   `FolderPath` ignored). `ITempoDocumentLibraryProvider` and `DocumentOpenResult` are unchanged; a provider that
   cannot honour the wider scopes may degrade `Subtree` / `Library` to `Folder`. The demo `DocumentLibraryStore`,
   the Demo.Api `browse` endpoint (`?scope=Subtree|Library`) and the demo `ApiTempoDocumentLibraryProvider`
-  implement all three values.
+  implement all three values. An undefined `?scope=` value (`99`, a typo) is a `400 Bad Request`. Decision `DOCLIB-QUERY-SCOPE` (see [docs/adr/0003-document-library-query-scope.md](docs/adr/0003-document-library-query-scope.md)).
 
   ```csharp
   await provider.BrowseAsync(new DocumentLibraryQuery
@@ -748,6 +748,29 @@
       Descending = true
   });
   ```
+
+  The open dialog now asks for the whole library with `Scope = Library` (and `FolderPath = null`) for the Recent node
+  and for a search. This is additive, not breaking: a custom `ITempoDocumentLibraryProvider` that ignores `Scope`
+  still receives `FolderPath = null` and behaves exactly as before (a provider without support may degrade to
+  `Folder`), and a provider that treated `null` as "everywhere" keeps working. A provider that read `null` as "the root"
+  shows only root documents under Recent until it honours the scope. Migration — honour the new scope on a
+  folder-aware store:
+
+  ```csharp
+  // before: Recent returned the root documents only (null == root)
+  docs = docs.Where(d => d.FolderPath == (string.IsNullOrEmpty(q.FolderPath) ? "/" : q.FolderPath));
+
+  // after: Library reaches every folder, Subtree the folder and its descendants, Folder is unchanged
+  docs = q.Scope switch
+  {
+      DocumentLibraryScope.Library => docs,
+      DocumentLibraryScope.Subtree => docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/")),
+      _                            => docs.Where(d => d.FolderPath == folder)
+  };
+  ```
+
+  The reference stores keep the legacy rule that a `Folder`-scope query WITH a `Search` may span the whole library
+  (existing clients are unaffected); callers wanting a library-wide search should state `Library`.
 
 - **`TmDocumentOpenDialog` is a wireframe component.** The built-in stencil pack and `BuiltInComponentSchemas`
   list `TmDocumentOpenDialog` (category Files, roles `dialog` and `list-view`, prop `showRecent`), so the editor
@@ -1111,27 +1134,6 @@
   import passes the server” holds for JSON sent by a client.
 
 ### Breaking / Migration
-
-- **`TmDocumentOpenDialog` browses the whole library for Recent and search (`Scope = Library`).** The dialog used to send
-  `FolderPath = null` for the Recent node and for a search, and the demo store answered "the root only" for Recent. It now
-  sends `Scope = DocumentLibraryScope.Library` with `FolderPath = null`. Impact: a custom `ITempoDocumentLibraryProvider`
-  that ignores `Scope` still receives `FolderPath = null` and behaves exactly as before (the rule "a provider without support
-  may degrade to `Folder`"); a provider that treated `null` as "everywhere" keeps working. Migration — honour the new scope
-  to make Recent library-wide on a folder-aware store:
-  ```csharp
-  // before: Recent returned the root documents only (null == root)
-  docs = docs.Where(d => d.FolderPath == (string.IsNullOrEmpty(q.FolderPath) ? "/" : q.FolderPath));
-
-  // after: Library reaches every folder, Subtree the folder and its descendants, Folder is unchanged
-  docs = q.Scope switch
-  {
-      DocumentLibraryScope.Library => docs,
-      DocumentLibraryScope.Subtree => docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/")),
-      _                            => docs.Where(d => d.FolderPath == folder)
-  };
-  ```
-  Demo hosts: the Demo.Api store now treats a Folder-scope query WITH a search as before (search spans every folder), so
-  existing clients are unaffected; the XML remark about the ambiguous `null` on `FolderPath` is replaced by the `Scope` docs.
 
 - **`TmDocumentOpenDialog` footer cards are a grid and the accent ink moved to `--tm-color-primary-text`.** DOM / CSS impact only:
   `.tm-dod-mode-body` is `display: contents` and `.tm-dod-mode-card` is a two-column grid (the `.tm-dod-*` class names, the radio
