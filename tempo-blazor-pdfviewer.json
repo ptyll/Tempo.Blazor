@@ -435,6 +435,13 @@
           "description": "Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer."
         },
         {
+          "name": "AllowUndo",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the annotator records a per-session undo/redo history (FZE-15). When false the toolbar history group and the Ctrl/⌘+Z shortcuts are hidden and mutations bypass the stack."
+        },
+        {
           "name": "AnnotationColor",
           "type": "string?",
           "isRequired": false,
@@ -538,6 +545,12 @@
           "type": "EventCallback<PdfAnnotatorMode>",
           "isRequired": false,
           "description": "Callback invoked when the active tool changes."
+        },
+        {
+          "name": "OnHistoryChanged",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Callback invoked whenever the history state changes (a step was executed, undone, redone, skipped or the stack was cleared)."
         },
         {
           "name": "RoleColors",
@@ -690,6 +703,30 @@
           "type": "EventCallback<PdfZoomMode>",
           "isRequired": false,
           "description": "Callback when the zoom mode changes in the viewer."
+        }
+      ],
+      "methods": [
+        {
+          "name": "UndoAsync",
+          "signature": "Task UndoAsync()",
+          "description": "Undoes the newest annotation mutation of this session. A step whose thread was changed or deleted by another user is skipped with the localized conflict hint; a provider failure announces 'Undo failed' and leaves the stack unchanged."
+        },
+        {
+          "name": "RedoAsync",
+          "signature": "Task RedoAsync()",
+          "description": "Redoes the most recently undone annotation mutation. A provider failure announces 'Redo failed' and leaves the stack unchanged."
+        }
+      ],
+      "properties": [
+        {
+          "name": "CanUndo",
+          "type": "bool",
+          "description": "Whether there is a recorded step to undo. False when AllowUndo is off or a history operation is currently running (the buttons and the mobile More entries disable while it is)."
+        },
+        {
+          "name": "CanRedo",
+          "type": "bool",
+          "description": "Whether there is a recorded step to redo. False when AllowUndo is off or a history operation is currently running."
         }
       ]
     },
@@ -1859,6 +1896,10 @@
     },
     {
       "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf.worker.min.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-annotator-shortcuts.test.mjs",
       "kind": "JavaScript"
     },
     {

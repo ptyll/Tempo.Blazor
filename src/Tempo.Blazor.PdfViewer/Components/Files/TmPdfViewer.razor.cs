@@ -893,10 +893,21 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (page < 1 || page > _totalPages) return;
         if (_viewMode == PdfViewMode.Continuous)
         {
-            await SetPageAsync(page);
-            await ScrollToPageInContinuousAsync(page);
-            try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToAnchor", _rootRef, page, y); }
+            // The JS scroll is the precise path (the anchor lands mid-viewport, the page
+            // tracker records the anchor page) and reports whether it actually scrolled.
+            // The page-top navigation is the FALLBACK — running it first would scroll to
+            // the page top and the tracker would report from there, fighting the anchor
+            // scroll away (the F13/F14 continuous bug).
+            var scrolled = false;
+            try { scrolled = await JS.InvokeAsync<bool>("tmPdfViewer.scrollToAnchor", _rootRef, page, y); }
             catch { }
+
+            if (!scrolled)
+            {
+                await SetPageAsync(page);
+                await ScrollToPageInContinuousAsync(page);
+            }
+
             return;
         }
 

@@ -68,6 +68,39 @@
     </div>
 </section>
 
+<!-- Undo / Redo (FZE-15) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Undo &amp; Redo</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">FZE-15</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-annotator-undo-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Every annotation mutation of the session is undoable and redoable — with the toolbar
+            buttons, the Ctrl/⌘+Z and Ctrl/⌘+Shift+Z (or Ctrl+Y) shortcuts and on a phone through
+            the "More" menu. Undoing a delete re-creates the thread with its replies; a thread that
+            another user changed or deleted in the meantime is skipped with a hint. Drafts never
+            enter the history: in a Draw draft Ctrl+Z removes the last stroke, and the composer's
+            text keeps its native undo. Turn the toggle off to see <code>AllowUndo="false"</code>
+            hide the history group and shortcuts.
+        </p>
+        <div class="mb-4">
+            <TmToggle @bind-Value="_undoEnabled" Label="AllowUndo" data-testid="pdf-annotator-allow-undo" />
+        </div>
+        <TmPdfAnnotator Url="@_demoPdfUrl"
+                        DocumentId="demo-annotator-undo"
+                        AnnotationProvider="_undoProvider"
+                        CurrentUser="_alice"
+                        Users="_users"
+                        RoleColors="_roleColors"
+                        AllowUndo="_undoEnabled"
+                        ShowHeader="true"
+                        Title="Undo / redo — per-session history"
+                        Height="520px" />
+    </div>
+</section>
+
 <!-- Seeded showcase -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -203,6 +236,11 @@
     private TmPdfAnnotator? _bobAnnotator;
     private LocalStoragePdfAnnotationProvider? _sharedProvider;
     private InMemoryPdfAnnotationProvider? _seededProvider;
+
+    /// <summary>FZE-15: the undo/redo showcase section — an isolated in-memory provider and a
+    /// toggle for <c>AllowUndo</c> (the E2E lane flips it to verify the group hides).</summary>
+    private InMemoryPdfAnnotationProvider? _undoProvider;
+    private bool _undoEnabled = true;
 
     /// <summary>
     /// Isolated seed for the forced tablet/mobile reference sections (FZE-8): a separate document

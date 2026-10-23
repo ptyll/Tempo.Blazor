@@ -89,12 +89,27 @@ The toolbar is the core `TmToolbar` (`Overflow=Menu`, priority-based "More"). Th
 | `zoom` | Zoom out, `TmDropdown` presets (50/75/100/125/150/200 % + Fit width + Fit page), zoom in |
 | `rotate` | Rotate counter-clockwise + rotate clockwise (`AllowRotation`) |
 | `view` | The single/continuous segmented control (`ShowViewModeToggle`) |
+| `history` | The annotator's undo/redo pair (FZE-15, `AllowUndo` default true) — the frozen DiagramEditor group name; a SIBLING group rendered before `tools` at every surface (merged viewer toolbar via `ToolbarStart` and the tablet/compact fallback row), icon-only on a tablet layout (the tooltip and the `aria-label` keep the name), `aria-keyshortcuts="Control+Z"` / `"Control+Shift+Z Control+Y"`, the tooltip names the action ("Undo: Delete comment") or "Nothing to undo", the disabled state carries `aria-disabled` (also while a history operation is in flight), and an undo/redo raises a short `aria-live` announcement (`pdf-annotator-announcer`, `role="status" aria-atomic="true"`) plus — for a conflict or a failure — a dismissible visible status chip near the toolbar (`pdf-annotator-status`, auto-timeout ~5 s) |
 | `panels` | The "Pages" thumbnails toggle |
 | `search` | The search toggle (`ShowSearch`) |
 | `comments` | The comments toggle with the live open-thread count as its label ("1 comment" / "3 comments" — the `TmPdfViewer_CommentsCount` plural family; the toggle keeps its text even in the icon-only toolbar) |
 | `export` | The trailing file links (Download primary, Open secondary) + host `ToolbarEnd` |
 
-The annotator adds its `tools` group and its panel toggle into the same row. Where a group
+The annotator adds its `history` group (FZE-15) as a SIBLING before its `tools` group (never
+nested inside it), followed by the panel toggle in the same row; on a phone the undo/redo
+entries ride the shared "More" menu of the action bar (`data-action-id="undo"` / `"redo"`).
+Undo covers only the annotator's own session — one stack per instance, cleared when `Url` or
+`DocumentId` changes (a `Url` change counts even with a fixed `DocumentId`) and when
+`AllowUndo` turns off. Execute/undo/redo serialize on a one-slot gate: a double-click (or an
+execute landing mid-undo) never interleaves the stack walks, and the buttons disable while an
+operation runs. A step whose thread another user changed or deleted is skipped with a localized
+hint (live region + visible chip); a provider failure announces "Undo/Redo failed" and leaves
+the stack unchanged. Drafts (a Draw stroke or the composer text) never enter the stack: Ctrl+Z
+removes the draft's last stroke and the composer keeps its native text undo. The shortcuts run
+on ONE JS keydown listener per annotator root (`tmPdfAnnotator.attachHistoryShortcuts`, an
+AbortController per instance, unregistered on dispose) that filters Ctrl xor ⌘ / z|y /
+`!e.repeat` / no editable focus and invokes `[JSInvokable] OnHistoryShortcut(bool redo)` —
+Blazor is reached only for an actual shortcut press. Where a group
 renders (toolbar / "More" menu / mobile row / header) is a layout detail — hosts key off
 `data-tm-group` and the test ids (`pdf-page-count`, `pdf-search-count`, `pdf-viewer-toolbar`,
 …), never positional selectors. `ToolbarLabels` (`Icons` default, `Auto`, `IconsWithText`)

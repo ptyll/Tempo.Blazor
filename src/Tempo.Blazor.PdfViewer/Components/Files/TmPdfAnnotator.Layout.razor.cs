@@ -5,6 +5,7 @@ using System.Text.Json;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Toolbar;
 
@@ -81,6 +82,13 @@ public partial class TmPdfAnnotator
             : IsTabletLayout
                 ? ToolbarLabelPosition.Below
                 : ToolbarLabelPosition.Inline;
+
+    /// <summary>Where the history pair's labels sit (FZE-15 review). On a TABLET layout the
+    /// undo/redo pair is icon-only — the localized text stays the tooltip and the aria-label —
+    /// so the labelled Stamp/Draw pills keep their room in the ribbon; everywhere else the
+    /// tool rule above applies (ToolbarLabels.Icons keeps them icon-only everywhere).</summary>
+    private ToolbarLabelPosition HistoryLabelPosition
+        => IsTabletLayout ? ToolbarLabelPosition.Hidden : ToolLabelPosition;
 
     /// <summary>
     /// The annotator root height. The root OWNS the height contract (the shell's mobile stage
@@ -289,6 +297,31 @@ public partial class TmPdfAnnotator
                     Label = Loc["TmPdfViewer_Search"],
                     Icon = "search",
                     OnClick = EventCallback.Factory.Create(this, () => _viewer?.OpenSearchAsync() ?? Task.CompletedTask),
+                });
+            }
+
+            if (AllowUndo)
+            {
+                // FZE-15: undo/redo are light edits a phone MAY offer — but they ride the
+                // "More" menu (ActionOverflow.Always), never the three visible tiles, which
+                // stay reserved for navigation and export.
+                items.Add(new TmActionItem
+                {
+                    Id = "undo",
+                    Label = Loc["TmPdfAnnotator_Undo"],
+                    Icon = IconNames.Undo2,
+                    Disabled = !CanUndo,
+                    Overflow = ActionOverflow.Always,
+                    OnClick = EventCallback.Factory.Create(this, UndoAsync),
+                });
+                items.Add(new TmActionItem
+                {
+                    Id = "redo",
+                    Label = Loc["TmPdfAnnotator_Redo"],
+                    Icon = IconNames.Redo2,
+                    Disabled = !CanRedo,
+                    Overflow = ActionOverflow.Always,
+                    OnClick = EventCallback.Factory.Create(this, RedoAsync),
                 });
             }
 

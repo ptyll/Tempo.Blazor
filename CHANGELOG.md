@@ -74,6 +74,25 @@
   tool switches and is dropped when a new `Url` loads. Swatch colors render as inline
   `style` from the data palette (allow-list) — never CSS hard-coding.
 
+- **TmPdfAnnotator: per-session undo/redo for annotations (FZE-15).** Every mutation of the
+  annotator — create (comment, highlight, stamp, ink), reply, edit, resolve, reopen and delete —
+  now flows through a package-internal `PdfAnnotationHistory` command stack (100 steps, one per
+  annotator instance, cleared when `Url`/`DocumentId` changes; the redo tail is dropped by every
+  new action) and is undoable/redoable with the new public `UndoAsync()` / `RedoAsync()` /
+  `CanUndo` / `CanRedo`, the `AllowUndo` parameter (default `true`) and the `OnHistoryChanged`
+  callback — without any change to `IPdfAnnotationProvider`. Undoing a delete re-creates the
+  thread with the same anchor, kind, color, ink and stamp and replays its replies (new ids are
+  remapped across the stack); a step whose thread another user changed or deleted in the
+  meantime is SKIPPED with a localized hint (the command is dropped, the stack stays consistent),
+  and any other provider failure leaves the stack untouched. Undo/redo select the affected
+  thread and, in Continuous, scroll to its anchor. The toolbar gains a `history` group (the
+  frozen DiagramEditor group name) BEFORE the tools — undo-2/redo-2 icons, `aria-keyshortcuts`,
+  an action-naming tooltip ("Undo: Delete comment") and an `aria-live` announcement after each
+  step; on a phone the pair rides the shared "More" menu. Keyboard: Ctrl/⌘+Z and Ctrl/⌘+Shift+Z
+  (or Ctrl+Y) on the annotator root (`!e.Repeat`, inert while an editable inside the annotator
+  has the focus — the native text undo wins there). Drafts never enter the stack: in a Draw
+  draft Ctrl+Z removes the last stroke.
+
 ### Fixed
 
 - **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
@@ -449,6 +468,21 @@
   needs per docs/localization-plurals.md).
 
 ### Breaking / Migration
+
+- **TmPdfAnnotator: the toolbar gains a `history` group BEFORE the tools (FZE-15).** The merged
+  annotator toolbar now renders the undo/redo pair as a `data-tm-group="history"` group ahead of
+  the `tools` pills, so the tab order and every positional CSS/E2E selector that assumed the
+  tools were the group's first children shift by one group. Key hosts off `data-tm-group`
+  instead:
+
+```razor
+@* BEFORE (2.9.0) — the tools group is the first annotator group in the toolbar *@
+var first = toolbar.QuerySelector("[data-tm-group='tools']");
+
+@* AFTER (2.9.1) — history (undo/redo) rides before the tools; select by group name *@
+var history = toolbar.QuerySelector("[data-tm-group='history']");
+var tools = toolbar.QuerySelector("[data-tm-group='tools']");
+```
 
 - **TmPdfViewer: annotations are no longer single-page only (PD1 superseded, FZE-13).** The
   `pdf-annotations-single-page-hint` note (localized `TmPdfViewer_AnnotationsSinglePageOnly`) is

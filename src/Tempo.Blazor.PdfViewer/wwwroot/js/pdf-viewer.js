@@ -1720,10 +1720,14 @@ window.tmPdfViewer = (function () {
     /**
      * FZE-13: scrolls the continuous wrap so a thread anchor becomes visible — the
      * anchor point (normalized `ratio` within the page) lands on the viewport's
-     * middle line (clamped at the document top; the browser clamps the overflow at
-     * the end). Used by the viewer when a thread is selected in continuous mode: the
-     * mode stays Continuous and the lazy renderer paints the page when it scrolls in.
-     * Returns false when there is no live continuous wrap or the page is unknown.
+     * middle line (clamped at the document top AND at the anchor page's own top;
+     * the browser clamps the overflow at the end). Used by the viewer when a thread
+     * is selected in continuous mode: the mode stays Continuous and the lazy
+     * renderer paints the page when it scrolls in. The anchor page is recorded as
+     * the tracked current page (and reported to Blazor) BEFORE the scroll so the
+     * scroll tracker's next report cannot land on a stale page and fight the
+     * programmatic scroll away (the F13/F14 bug). Returns whether the scroll
+     * happened — TmPdfViewer falls back to its page-top navigation when it did not.
      */
     function scrollToAnchor(rootEl, page, ratio) {
         const state = _docs.get(rootEl);
@@ -1734,6 +1738,10 @@ window.tmPdfViewer = (function () {
         const top = _continuousModule.anchorScrollTop(
             _collectPageMetas(containerEl), pageNum, ratio, containerEl.clientHeight);
         if (top === null) return false;
+        if (state.currentPage !== pageNum) {
+            state.currentPage = pageNum;
+            state.dotNetRef?.invokeMethodAsync('OnVisiblePageChanged', pageNum).catch(() => { });
+        }
         containerEl.scrollTop = top;
         return true;
     }

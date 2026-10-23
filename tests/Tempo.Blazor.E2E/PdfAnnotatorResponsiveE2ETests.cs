@@ -221,6 +221,62 @@ el => {
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "tablet-tools-labeled");
     }
 
+    // ── FZE-15: undo/redo on the tablet row and in the mobile More menu ──────
+
+    /// <summary>FZE-15: the forced-tablet labelled row carries the history group BEFORE the
+    /// tools. Captures <c>history-tablet-row.png</c> (and refreshes the tablet baseline).</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Undo_TabletHistoryRow()
+    {
+        var page = await OpenAsync(1180, 820, touch: true);
+        var section = Section(page, TabletSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        var history = section.Locator("[data-tm-group='history']").First;
+        await history.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var undo = section.Locator("[data-testid='pdf-annotator-undo']").First;
+        StringAssert.Contains(await undo.GetAttributeAsync("aria-disabled") ?? "", "true",
+            "nothing recorded yet on a fresh session");
+        Assert.IsNotNull(await section.Locator("[data-testid='pdf-annotator-redo']").First.ElementHandleAsync(),
+            "redo rides the labelled tablet row too");
+
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "history-tablet-row");
+    }
+
+    /// <summary>FZE-15: on a phone the undo/redo entries ride the shared "More" menu of the
+    /// action bar (light edits are allowed on mobile). Captures
+    /// <c>history-mobile-more.png</c>.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Undo_MobileMoreMenu()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var section = Section(page, MobileSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        await section.EvaluateAsync("el => el.scrollIntoView({ block: 'start', behavior: 'instant' })");
+        await page.WaitForTimeoutAsync(400);
+
+        await section.Locator(".tm-mobile-action-bar__more").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        var undo = page.Locator(".tm-overlay-panel-sheet [data-action-id='undo']").First;
+        await undo.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.IsNotNull(await page.QuerySelectorAsync(".tm-overlay-panel-sheet [data-action-id='redo']"),
+            "redo rides the same More menu");
+        Assert.IsNotNull(await undo.GetAttributeAsync("disabled"),
+            "the More entry is disabled while the stack is empty");
+
+        var path = Path.Combine(ShotDir("pdf-annotator"), "history-mobile-more.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Timeout = 60_000 });
+        TestContext.AddResultFile(path);
+
+        // A disabled entry is inert; close the menu with Escape (the sheet owns the focus).
+        await page.Keyboard.PressAsync("Escape");
+    }
+
     // ── Mobile: the bottom sheet reply/resolve flow ──────────────────────────
 
     [TestMethod]

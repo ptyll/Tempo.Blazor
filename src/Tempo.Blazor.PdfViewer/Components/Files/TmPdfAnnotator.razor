@@ -39,9 +39,70 @@
     @* FZE-12: the shared color palette popover/sheet — anchored to whichever control opened
        it (the toolbar trigger or the mobile palette tile); renders nothing while closed. *@
     @ColorPickerPanel
+
+    @* FZE-15 review: the short VISIBLE status near the toolbar (conflict / failure hints —
+       the live region below is invisible to sighted users). A floating, dismissible chip that
+       auto-times-out after ~5 s; it overlays the canvas without shifting the layout. *@
+    @if (_statusMessage is not null)
+    {
+        <div class="tm-pdf-annotator__status" role="status" aria-live="polite"
+             data-testid="@TestId("pdf-annotator-status")">
+            <span class="tm-pdf-annotator__status-text">@_statusMessage</span>
+            <button type="button"
+                    class="tm-pdf-annotator__status-dismiss"
+                    aria-label="@Loc["TmPdfAnnotator_Dismiss"]"
+                    data-testid="@TestId("pdf-annotator-status-dismiss")"
+                    @onclick="DismissStatusAsync">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        </div>
+    }
+
+    @* FZE-15: the visually-hidden live region announcing undo/redo results and the
+       conflict hint ("another user has changed the thread") to assistive technology. *@
+    <div class="tm-pdf-annotator__announcer"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("pdf-annotator-announcer")">@_announcement</div>
 </div>
 
 @code {
+    /// <summary>
+    /// FZE-15: the undo/redo pair as its OWN sibling group — the frozen DiagramEditor
+    /// <c>data-tm-group="history"</c> contract, rendered BEFORE the tools at every call site
+    /// (merged viewer toolbar, tablet/compact row, fallback row). The buttons are core
+    /// <see cref="TmToolbarButton"/>s (Primary priorities), so a merged toolbar can move them
+    /// into its "More" menu when the row runs out of room. On a tablet layout the pair is
+    /// icon-only (<see cref="HistoryLabelPosition"/>) so the labelled Stamp/Draw pills fit.
+    /// </summary>
+    private RenderFragment HistoryGroup => @<div class="tm-pdf-annotator__history"
+                                                   role="group"
+                                                   aria-label="@Loc["TmPdfAnnotator_HistoryGroup"]"
+                                                   data-tm-group="history"
+                                                   data-testid="@TestId("pdf-annotator-history")">
+        <TmToolbarButton Icon="@IconNames.Undo2"
+                         Text="@Loc["TmPdfAnnotator_Undo"]"
+                         Tooltip="@UndoTooltip"
+                         Priority="ToolbarButtonPriority.Primary"
+                         LabelPosition="@HistoryLabelPosition"
+                         Disabled="@(!CanUndo)"
+                         aria-disabled="@(!CanUndo ? "true" : null)"
+                         aria-keyshortcuts="Control+Z"
+                         data-testid="@TestId("pdf-annotator-undo")"
+                         OnClick="UndoAsync" />
+        <TmToolbarButton Icon="@IconNames.Redo2"
+                         Text="@Loc["TmPdfAnnotator_Redo"]"
+                         Tooltip="@RedoTooltip"
+                         Priority="ToolbarButtonPriority.Primary"
+                         LabelPosition="@HistoryLabelPosition"
+                         Disabled="@(!CanRedo)"
+                         aria-disabled="@(!CanRedo ? "true" : null)"
+                         aria-keyshortcuts="Control+Shift+Z Control+Y"
+                         data-testid="@TestId("pdf-annotator-redo")"
+                         OnClick="RedoAsync" />
+    </div>;
+
     /// <summary>
     /// The annotator's tool group (mode pills, stamp picker, color picker trigger) shared by
     /// the merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
@@ -244,6 +305,10 @@
                  role="group"
                  aria-label="@Loc["TmPdfAnnotator_ToolbarLabel"]"
                  data-testid="@TestId("pdf-annotator-toolbar")">
+                @if (AllowUndo)
+                {
+                    @HistoryGroup
+                }
                 @ToolsGroup
                 <div class="tm-pdf-annotator__toolbar-end">
                     @if (AllowExport && !ShowHeader)
@@ -293,7 +358,16 @@
                      OnDocumentLoaded="HandleDocumentLoaded"
                      OnTextSelected="HandleTextSelectedAsync"
                      PageOverlayContent="@ContinuousPageOverlay">
-            <ToolbarStart>@(InjectToolbarGroups ? ToolsGroup : null)</ToolbarStart>
+            <ToolbarStart>
+                @if (InjectToolbarGroups)
+                {
+                    @if (AllowUndo)
+                    {
+                        @HistoryGroup
+                    }
+                    @ToolsGroup
+                }
+            </ToolbarStart>
             <ToolbarEnd>@(InjectToolbarGroups ? ToolbarEndFragment : null)</ToolbarEnd>
             @* Row 1 (rendered only when the viewer header is on): the viewer header hosts
                the title/subtitle plus the export group (secondary buttons) followed by the
@@ -318,6 +392,7 @@
                 <div @ref="_surfaceRef"
                      class="tm-pdf-annotator__surface @(SurfaceActive ? "tm-pdf-annotator__surface--active" : "") @(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")"
                      data-testid="@TestId("pdf-annotator-surface")"
+                     tabindex="-1"
                      @onclick="e => HandleSurfaceClickAsync(e)"
                      @onpointerdown="(PointerEventArgs e) => HandlePointerDownAsync(e)"
                      @onpointerdown:preventDefault="true"
@@ -408,6 +483,7 @@
         ["class"] = PageSurfaceClass,
         ["data-testid"] = TestId("pdf-annotator-surface"),
         ["data-page"] = page.PageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["tabindex"] = "-1",
         ["onclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, e => HandleSurfaceClickAsync(page, e)),
         ["onpointerdown"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerDownAsync(page, e)),
         ["onpointerdown:preventDefault"] = true,

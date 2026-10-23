@@ -8,6 +8,11 @@
  *  - focusDescendant:           focus the first element matching a selector inside a scope
  *  - scrollSelectedCardIntoView: scrollIntoView({block:'nearest'}) the selected thread card
  *  - focusFirstAction:          focus the first mobile action-bar tile
+ *  - isEditableFocused:        whether the focus sits in an editable inside the root
+ *  - attachHistoryShortcuts:   ONE root keydown listener for the undo/redo shortcuts (FZE-15);
+ *                              filters Ctrl xor ⌘ / z|y / !repeat / no editable focus, then
+ *                              invokes OnHistoryShortcut(redo) on the instance reference
+ *  - detachHistoryShortcuts:   unregisters the per-instance (AbortController) listener
  *  - exportPdf:                 embed annotations into the PDF (pdf-lib), optionally flattened
  *  - printWithAnnotations:      render pages + annotation overlays into a print frame
  *
@@ -76,6 +81,74 @@ window.tmPdfAnnotator = (function () {
             return true;
         }
         return focusFirstAction(root);
+    }
+
+    /**
+     * Focuses the first element matching `selector` inside `root` (the annotator root or a
+     * comment item). Missing scopes and missing elements are safe no-ops; used for the sheet
+     * composer focus and the edit save/cancel restore to the comment's "⋯" trigger.
+     */
+    /**
+     * FZE-15: reports whether the focus sits in an editable element (textarea, text-like
+     * input, select or contenteditable) inside the annotator root — the annotator's Ctrl+Z /
+     * Ctrl+Shift+Z / Ctrl+Y shortcuts must not fire there, the native text undo wins.
+     * Only called on an actual shortcut press.
+     */
+    function isEditableFocused(root) {
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        if (!active || !root || !root.contains(active)) return false;
+        if (active.isContentEditable) return true;
+        const tag = active.tagName;
+        if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (tag === 'INPUT') {
+            const type = (active.getAttribute('type') || '').toLowerCase();
+            return !['button', 'checkbox', 'radio', 'file', 'submit', 'reset', 'image'].includes(type);
+        }
+        return false;
+    }
+
+    // FZE-15 review: the undo/redo shortcut filter runs on ONE keydown listener per annotator
+    // root instead of a Blazor event handler — a keystroke storm (a held key) must not hit
+    // the render tree. The listener is keyed off the root element (per instance) through an
+    // AbortController, so a re-attach replaces it and dispose/destroy unregisters it.
+    const _shortcutControllers = new WeakMap();
+
+    /**
+     * Attaches the annotator's history shortcut listener to the root element. The listener
+     * filters locally (exactly one of Ctrl / ⌘, the z/y keys, no held-key repeat, no editable
+     * focus — the native text undo wins there), calls preventDefault and invokes
+     * `OnHistoryShortcut(redo)` on the instance's DotNetObjectReference; Blazor is reached
+     * only for an actual shortcut press. Returns true when attached.
+     */
+    function attachHistoryShortcuts(root, dotNetRef) {
+        if (!root || !dotNetRef || typeof root.addEventListener !== 'function') return false;
+        detachHistoryShortcuts(root); // per instance: a re-attach replaces the old listener
+        const controller = new AbortController();
+        _shortcutControllers.set(root, controller);
+        root.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (e.altKey || e.ctrlKey === e.metaKey) return; // exactly one of Ctrl / ⌘
+            const key = (e.key || '').toLowerCase();
+            if (key !== 'z' && key !== 'y') return;
+            if (isEditableFocused(root)) return;
+            e.preventDefault();
+            const redo = key === 'y' || e.shiftKey;
+            dotNetRef.invokeMethodAsync('OnHistoryShortcut', redo).catch(() => { });
+        }, { signal: controller.signal });
+        return true;
+    }
+
+    /**
+     * Unregisters the root's history shortcut listener (aborts its AbortController).
+     * Returns true when a listener was removed.
+     */
+    function detachHistoryShortcuts(root) {
+        if (!root) return false;
+        const controller = _shortcutControllers.get(root);
+        if (!controller) return false;
+        controller.abort();
+        _shortcutControllers.delete(root);
+        return true;
     }
 
     /**
@@ -565,6 +638,9 @@ window.tmPdfAnnotator = (function () {
         measure,
         rememberFocus,
         focusOpener,
+        isEditableFocused,
+        attachHistoryShortcuts,
+        detachHistoryShortcuts,
         focusDescendant,
         scrollSelectedCardIntoView,
         focusFirstAction,

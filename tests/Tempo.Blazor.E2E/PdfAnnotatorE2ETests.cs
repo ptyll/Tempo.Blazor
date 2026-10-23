@@ -12,7 +12,7 @@ namespace Tempo.Blazor.E2E;
 /// without drag in draw mode). Screenshots land in <c>__screenshots__/pdf-annotator/</c>.
 /// </summary>
 [TestClass]
-public class PdfAnnotatorE2ETests : WasmTestBase
+public partial class PdfAnnotatorE2ETests : WasmTestBase
 {
     private const string AnnotatorPage = "/pdf-annotator";
 

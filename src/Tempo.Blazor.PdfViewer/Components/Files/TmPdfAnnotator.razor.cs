@@ -261,6 +261,16 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
     private string? _loadedDocumentId;
+
+    /// <summary>The <see cref="Url"/> seen by the previous parameter pass. FZE-15 review: a Url
+    /// change clears the history even when <see cref="DocumentId"/> is fixed — the recorded
+    /// commands belong to the document presentation they were created against.</summary>
+    private string? _lastUrl;
+
+    /// <summary>The <see cref="AllowUndo"/> value seen by the previous parameter pass (the
+    /// true → false transition drops the recorded steps).</summary>
+    private bool _lastAllowUndoParam = true;
+
     private string? _selectedThreadId;
     private bool _showResolved;
     private bool _showResolvedInitialized;
@@ -411,6 +421,23 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
 
         SyncColorPickerData();
 
+        // FZE-15: the stack events are subscribed once (idempotent) — Changed raises the
+        // public OnHistoryChanged, the conflict event feeds the aria-live hint.
+        SubscribeHistory();
+
+        // FZE-15 review: turning AllowUndo off drops the recorded steps — the mutations now
+        // bypass the stack and the UI is gone, so stale steps must not survive a re-enable.
+        if (AllowUndo != _lastAllowUndoParam)
+        {
+            var wasOn = _lastAllowUndoParam;
+            _lastAllowUndoParam = AllowUndo;
+            if (wasOn && !AllowUndo)
+            {
+                _history.Clear();
+                _announcement = null;
+            }
+        }
+
         // Recomputed once per parameter set; ResolveThreadColor runs per thread per render.
         _knownUsers = Users is null
             ? (CurrentUser is null ? [] : [CurrentUser])
@@ -431,6 +458,11 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             await ApplyResolvedLayoutAsync(LayoutMode);
         }
 
+        // FZE-15 review: a Url change invalidates the recorded steps even when DocumentId is
+        // fixed — tracked separately from the document id (the threads stay keyed by it).
+        var urlChanged = !string.Equals(Url, _lastUrl, StringComparison.Ordinal);
+        _lastUrl = Url;
+
         var documentId = EffectiveDocumentId;
         if (!string.Equals(documentId, _loadedDocumentId, StringComparison.Ordinal))
         {
@@ -448,7 +480,18 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             // selection back to the parameter baseline (the per-author/role fallback).
             _annotationColor = AnnotationColor;
             _lastAnnotationColorParam = AnnotationColor;
+            // FZE-15: a new document invalidates every recorded step of the old one.
+            _history.Clear();
+            _announcement = null;
             await LoadThreadsAsync();
+        }
+        else if (urlChanged)
+        {
+            // FZE-15 review: the DocumentId stayed fixed but the Url changed — the recorded
+            // commands belong to the old document presentation, so the stack is dropped while
+            // the threads (still keyed by the DocumentId) survive.
+            _history.Clear();
+            _announcement = null;
         }
     }
 
@@ -483,6 +526,13 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         // gesture begins — the stroke is discarded (never committed). The reference exists
         // only after a render, so the subscription rides every render pass (idempotent).
         SubscribeToViewerPinch();
+
+        // FZE-15 review: the undo/redo shortcuts ride ONE JS keydown listener on the root
+        // (per-instance AbortController) — attached once, after the root element exists.
+        if (firstRender)
+        {
+            await AttachHistoryShortcutsAsync();
+        }
 
         if (_focusOpenerAfter)
         {
@@ -615,8 +665,20 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            var created = await EffectiveProvider.CreateThreadAsync(EffectiveDocumentId, request, ResolveAuthor());
-            _selectedThreadId = created.Id;
+            if (AllowUndo)
+            {
+                // FZE-15: the create is recorded so the undo deletes the created comment
+                // (removing the thread) and the redo re-creates it with a remapped id.
+                var result = await _history.ExecuteAsync(
+                    new PdfAnnotationCreateCommand(HistoryContext(), request, ResolveAuthor()));
+                _selectedThreadId = result.ThreadId ?? _selectedThreadId;
+            }
+            else
+            {
+                var created = await EffectiveProvider.CreateThreadAsync(EffectiveDocumentId, request, ResolveAuthor());
+                _selectedThreadId = created.Id;
+            }
+
             await LoadThreadsAsync();
         }
         catch { }
@@ -659,7 +721,16 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            await EffectiveProvider.ReplyAsync(EffectiveDocumentId, request, ResolveAuthor());
+            if (AllowUndo)
+            {
+                await _history.ExecuteAsync(
+                    new PdfAnnotationReplyCommand(HistoryContext(), request, ResolveAuthor()));
+            }
+            else
+            {
+                await EffectiveProvider.ReplyAsync(EffectiveDocumentId, request, ResolveAuthor());
+            }
+
             await LoadThreadsAsync();
         }
         catch { }
@@ -669,7 +740,16 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            await EffectiveProvider.ResolveAsync(EffectiveDocumentId, threadId, ResolveAuthor());
+            if (AllowUndo)
+            {
+                await _history.ExecuteAsync(
+                    new PdfAnnotationStatusCommand(HistoryContext(), threadId, toResolved: true, ResolveAuthor()));
+            }
+            else
+            {
+                await EffectiveProvider.ResolveAsync(EffectiveDocumentId, threadId, ResolveAuthor());
+            }
+
             await LoadThreadsAsync();
         }
         catch { }
@@ -679,7 +759,16 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            await EffectiveProvider.ReopenAsync(EffectiveDocumentId, threadId, ResolveAuthor());
+            if (AllowUndo)
+            {
+                await _history.ExecuteAsync(
+                    new PdfAnnotationStatusCommand(HistoryContext(), threadId, toResolved: false, ResolveAuthor()));
+            }
+            else
+            {
+                await EffectiveProvider.ReopenAsync(EffectiveDocumentId, threadId, ResolveAuthor());
+            }
+
             await LoadThreadsAsync();
         }
         catch { }
@@ -692,7 +781,17 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             var target = _threads.FirstOrDefault(thread => string.Equals(thread.Id, request.ThreadId, StringComparison.Ordinal));
             var threadWillBeRemoved = target is null || target.Comments.Count <= 1;
 
-            await EffectiveProvider.DeleteAsync(EffectiveDocumentId, request);
+            if (AllowUndo && target is not null)
+            {
+                // FZE-15: the pre-delete snapshot lets the undo re-create the thread (same
+                // anchor, kind, color, ink and stamp, replies replayed) with a remapped id.
+                await _history.ExecuteAsync(
+                    new PdfAnnotationDeleteCommand(HistoryContext(), target, request));
+            }
+            else
+            {
+                await EffectiveProvider.DeleteAsync(EffectiveDocumentId, request);
+            }
 
             if (threadWillBeRemoved && string.Equals(_selectedThreadId, request.ThreadId, StringComparison.Ordinal))
             {
@@ -708,7 +807,19 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            await EffectiveProvider.EditAsync(EffectiveDocumentId, request);
+            if (AllowUndo)
+            {
+                var previousBody = _threads.FirstOrDefault(thread => string.Equals(thread.Id, request.ThreadId, StringComparison.Ordinal))
+                    ?.Comments.FirstOrDefault(comment => string.Equals(comment.Id, request.CommentId, StringComparison.Ordinal))
+                    ?.Body ?? string.Empty;
+                await _history.ExecuteAsync(
+                    new PdfAnnotationEditCommand(HistoryContext(), request, previousBody));
+            }
+            else
+            {
+                await EffectiveProvider.EditAsync(EffectiveDocumentId, request);
+            }
+
             await LoadThreadsAsync();
         }
         catch { }
@@ -773,22 +884,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         // Continuous the shared FZE-13 viewer path scrolls the wrap to the page and centers
         // the anchor's Y — the mode stays Continuous.
         var thread = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal));
-        var page = thread?.Anchor.PageNumber ?? 0;
-        if (page >= 1)
-        {
-            if (_viewMode == PdfViewMode.Continuous)
-            {
-                if (_viewer is not null)
-                {
-                    await _viewer.ScrollToAnchorAsync(page, thread!.Anchor.Y);
-                }
-            }
-            else if (page != _currentPage)
-            {
-                _currentPage = page;
-                ResetPageState();
-            }
-        }
+        await NavigateToThreadAnchorAsync(thread);
 
         // G2: on a phone the panel is the bottom sheet — a tapped thread marker opens it on
         // that thread (the HALF snap, the selected card scrolled into view and the reply
@@ -808,6 +904,34 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Navigates to a thread's anchor: in SinglePage the current page is handed to the
+    /// embedded viewer through its Page parameter; in Continuous the shared FZE-13 viewer
+    /// path scrolls the wrap to the page and centers the anchor's Y — the mode stays
+    /// Continuous. Shared by thread selection (FZE-13) and undo/redo (FZE-15).
+    /// </summary>
+    private async Task NavigateToThreadAnchorAsync(DocumentCommentThread? thread)
+    {
+        var page = thread?.Anchor.PageNumber ?? 0;
+        if (page < 1)
+        {
+            return;
+        }
+
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            if (_viewer is not null)
+            {
+                await _viewer.ScrollToAnchorAsync(page, thread!.Anchor.Y);
+            }
+        }
+        else if (page != _currentPage)
+        {
+            _currentPage = page;
+            ResetPageState();
+        }
     }
 
     private async Task SetShowResolvedAsync(bool value)
@@ -1060,6 +1184,8 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         UnsubscribeFromViewerPinch();
         // Phase 12: a pending mobile-sheet close debounce must not fire into a dead component.
         CancelMobileSheetClose();
-        await ValueTask.CompletedTask;
+        // FZE-15 review: the JS keydown listener dies with the instance (its AbortController).
+        CancelStatusTimeout();
+        await DetachHistoryShortcutsAsync();
     }
 }

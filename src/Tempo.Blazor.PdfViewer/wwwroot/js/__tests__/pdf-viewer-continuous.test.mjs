@@ -310,9 +310,11 @@ test('selectionAcrossTwoPages_ClampsToAnchorPage', () => {    // A selection spa
 
 test('scrollToAnchor_CentersAnchorYWithinPage', () => {
     const pages = stackedPages(10, 800);
-    // Thread anchor at 30% of page 5 (content 3200..4000 → anchorY 3440):
-    // the viewport centers the anchor point.
-    assert.equal(anchorScrollTop(pages, 5, 0.3, 800), 3440 - 400);
+    // Thread anchor at 30% of page 5 (content 3200..4000 → anchorY 3440): the anchor
+    // sits only 240px into the page — less than half the viewport — so the centering
+    // target (3040) is above the page top and clamps to it (F13/F14: the tracker would
+    // otherwise report the previous page and cancel the anchor scroll).
+    assert.equal(anchorScrollTop(pages, 5, 0.3, 800), 3200);
     assert.equal(anchorScrollTop(pages, 1, 0, 800), 0,
         'clamped at the document top');
     assert.equal(anchorScrollTop(pages, 10, 1, 800), 8000 - 400,
@@ -321,4 +323,26 @@ test('scrollToAnchor_CentersAnchorYWithinPage', () => {
     assert.equal(anchorScrollTop([], 1, 0.5, 800), null);
     assert.equal(anchorScrollTop(pages, 5, 1.7, 800), 4000 - 400,
         'an out-of-range ratio clamps into the page box');
+});
+
+test('anchorScrollTop_NeverAboveThePageTop', () => {
+    const pages = stackedPages(10, 800);
+    // An anchor near the page's top would center to a target ABOVE the page (when
+    // ratio*height < viewportHeight/2): the previous page would then occupy the
+    // viewport, the scroll tracker would report THAT page and the anchor scroll would
+    // be fought away (the F13/F14 bug). The clamp keeps the scroll at the anchor
+    // page's own top — never above it.
+    assert.equal(anchorScrollTop(pages, 2, 0, 800), 800,
+        'the page-top anchor scrolls exactly to the page top, never above it');
+    assert.equal(anchorScrollTop(pages, 2, 0.1, 800), 800,
+        '880 - 400 = 480 < meta.top → clamped to the page top');
+    assert.equal(anchorScrollTop(pages, 2, 0.49, 800), 800,
+        'still inside the clamp band: 800 + 392 - 400 = 792 < 800');
+    assert.equal(anchorScrollTop(pages, 2, 0.5, 800), 800,
+        'the band boundary lands exactly on the page top');
+    assert.equal(anchorScrollTop(pages, 2, 0.9, 800), 800 + 720 - 400,
+        'a mid-page anchor still centers the anchor point');
+    // Page 1 keeps the document-top clamp (its meta.top is 0 anyway).
+    assert.equal(anchorScrollTop(pages, 1, 0, 800), 0);
+    assert.equal(anchorScrollTop(pages, 1, 0.1, 800), 0);
 });

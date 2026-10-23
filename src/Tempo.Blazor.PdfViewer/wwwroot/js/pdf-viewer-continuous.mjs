@@ -356,5 +356,9 @@ export function anchorScrollTop(pages, page, anchorRatio, viewportHeight) {
     if (!meta) return null;
     const ratio = Math.min(Math.max(Number.isFinite(anchorRatio) ? anchorRatio : 0, 0), 1);
     const anchorY = meta.top + ratio * meta.height;
-    return Math.max(0, anchorY - (viewportHeight || 0) / 2);
+    // Clamped at the document top AND at the anchor page's own top: a target above
+    // meta.top would leave the PREVIOUS page occupying the viewport, the scroll
+    // tracker would report that page and the anchor scroll would be fought away
+    // (the F13/F14 continuous bug).
+    return Math.max(0, meta.top, anchorY - (viewportHeight || 0) / 2);
 }
