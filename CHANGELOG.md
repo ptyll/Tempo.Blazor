@@ -612,6 +612,24 @@ var tools = toolbar.QuerySelector("[data-tm-group='tools']");
   the old key for custom wording must add the two new keys (all four languages ship them);
   the `rotate-cw` button no longer reads `TmPdfViewer_Rotate`.
 
+- **TmPdfViewer: the header subtitle appends the file size by default (FZE-11).** With
+  `ShowHeader` and no explicit `Subtitle` the subtitle is no longer the neutral "Pages: N" —
+  once the document length is known it reads "Pages: N · 1.4 MB". Hosts asserting the exact
+  subtitle text (unit tests, E2E snapshots) either turn the append off or assert the extended
+  form; an explicit `Subtitle` is never augmented and a stream without a known length keeps
+  the pages-only form.
+
+```razor
+@* BEFORE (2.9.0) — the subtitle stayed "Pages: N" forever *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" />
+
+@* AFTER (2.9.1) — "Pages: N · 1.4 MB" once the size is known *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" />
+
+@* AFTER — restore the pages-only subtitle *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" ShowFileSize="false" />
+```
+
 - **TmPdfViewer + TmPdfAnnotator: the annotation-card time stamps and counted texts changed
   format (FZE-9).** `TmPdfThread_ReplyCount` is no longer the neutral `"Replies: {0}"`
   (cs `"Odpovědi: {0}"`) but a `Loc.Plural` family — English `"{0} reply"`/`"{0} replies"`,

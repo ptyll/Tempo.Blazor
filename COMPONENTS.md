@@ -4674,7 +4674,7 @@ PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). P
 
 #### Skupiny toolbaru (`data-tm-group`)
 
-`navigation` · `zoom` · `rotate` · `view` · `panels` · `search` · `comments` · `export` — hosté se klíčí na `data-tm-group`, ne na poziční selektory. Složitější skladba přes sloty `ToolbarStart` / `ToolbarEnd`.
+`navigation` · `zoom` · `rotate` (oba směry, F11) · `view` · `panels` · `search` · `comments` · `export` — anotátor navíc vkládá vlastní skupinu `history` (undo/redo, F15) před pilulky nástrojů. Hosté se klíčí na `data-tm-group`, ne na poziční selektory. Složitější skladba přes sloty `ToolbarStart` / `ToolbarEnd`.
 
 #### Parametry
 
@@ -4693,15 +4693,18 @@ PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). P
 | `ShowTextLayer` | `bool` | `false` | Zobrazit textovou vrstvu |
 | `ShowViewModeToggle` | `bool` | `false` | Zobrazit přepínač režimu |
 | `ShowMobileActionBar` | `bool` | `true` | Mobilní akční lišta (Stránky \| Hledat \| Komentáře) |
-| `AllowRotation` | `bool` | `false` | Povolit rotaci |
+| `AllowRotation` | `bool` | `false` | Povolit rotaci (oba směry; `RotateCounterClockwiseAsync()` přibyl ve F11) |
 | `AllowDownload` | `bool` | `true` | Stahování (primární akce) |
 | `ShowOpenLink` | `bool` | `true` | Odkaz „Otevřít v nové kartě“ |
+| `SearchPresentation` | `PdfSearchPresentation` | `Floating` | Prezentace hledání na desktopu/tabletu: `Floating` (karta ukotvená nad tělem, Escape vrací fokus) nebo `Inline` (proudová lišta); mobil vždy in-flow lišta (F11) |
+| `ShowFileSize` | `bool` | `true` | Připojit formátovanou velikost souboru k titulku hlavičky (s `ShowHeader`) (F11) |
+| `FileSize` | `long?` | `null` | Velikost souboru od hostitele; přebíjí PDF.js report (`getDownloadInfo`) (F11) |
 | `ShowHeader` | `bool` | `false` | Hlavička dokumentu nad toolbarem (přesune tam Otevřít/Stáhnout) |
 | `Title` / `Subtitle` | `string?` | `null` | Text hlavičky; titulek defaultně „Stránky: N“ |
 | `ThumbnailsCollapsed` / `…Changed` | `bool` / `EventCallback<bool>` | `false` | Sbalené miniatury (two-way) |
 | `Height` | `string?` | `"600px"` | Výška prohlížeče |
 | `Class` | `string?` | `null` | Další CSS třídy |
-| `EnableAnnotations` | `bool` | `false` | Anotační vrstva a panel komentářů (jen SinglePage, PD1) |
+| `EnableAnnotations` | `bool` | `false` | Anotační vrstva a panel komentářů (markery per stránka v obou režimech; FZE-13) |
 | `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Perzistence anotací (default in-memory) |
 | `DocumentId` | `string?` | `null` | ID dokumentu pro providera (fallback `Url`) |
 | `CurrentUser` | `DocumentCommentUser?` | `null` | Autor anotací |
@@ -4709,7 +4712,8 @@ PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). P
 | `Annotations` / `AnnotationsChanged` | `IReadOnlyList<DocumentCommentThread>?` | `null` | Seed vlákna bez providera |
 | `OnTextSelected` | `EventCallback<PdfTextSelection>` | — | Výběr textu (s `EnableTextSelectionEvents`) |
 | `EnableTextSelectionEvents` | `bool` | `false` | Události výběru bez anotační vrstvy |
-| `OverlayContent` | `RenderFragment?` | `null` | Overlay zarovnaný s canvasem (jen SinglePage, PD1) |
+| `OverlayContent` | `RenderFragment?` | `null` | Overlay zarovnaný s canvasem (jen SinglePage) |
+| `PageOverlayContent` | `RenderFragment<PdfPageOverlayContext>?` | `null` | Templated overlay per stránku (kontext: `PageNumber`, `IsCurrentPage`, `Width`, `Height`, `Rotation`); každá připojená stránka v Continuous, aktuální v SinglePage (FZE-13) |
 | `OnDocumentLoaded` | `EventCallback<int>` | — | Počet stránek po načtení |
 | `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Sloty pro hostské skupiny v toolbaru |
 | `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty hlavičky |
@@ -4742,7 +4746,7 @@ PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). P
 
 ### TmPdfAnnotator
 
-Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky nástrojů (Browse / Highlight / Comment / Stamp / Draw) se barva a přepínač panelu slučují do toolbaru vloženého prohlížeče přes `ToolbarStart`/`ToolbarEnd`; skupina exportu žije v hlavičce. Pass-through parametry prohází do prohlížeče; prohlížeč je trvale pinnutý na SinglePage (PD1). Runtime výběr barvy (FZE-12): `AllowColorPicker` mění barevný štítek ve spouštěč `TmColorPalette` popoveru (na mobilu bottom sheet), `ColorPalette` přepíná nabízené barvy a `ColorNames` pojmenovávají vzorníky; zobrazovaná barva je vybraná barva nebo per-author/role fallback (klik na už zaškrtnutý fallback nic nevyvolá, reset je na barvu autora disabled). `AnnotationColor` je two-way: výběr vyvolá barvu, reset vyvolá `null`. Na mobilu G2: prohlížení + lehké úpravy (pouze Browse a Přidat komentář, panel jako bottom sheet). Detail: [docs/pdf-viewer.md](docs/pdf-viewer.md).
+Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky nástrojů (Browse / Highlight / Comment / Stamp / Draw) se barva a přepínač panelu slučují do toolbaru vloženého prohlížeče přes `ToolbarStart`/`ToolbarEnd`; skupina exportu žije v hlavičce. Pass-through parametry prohází do prohlížeče — od F14 včetně `ViewMode`/`ViewModeChanged` a `ShowViewModeToggle` (v Continuous se vrstva i interakce renderují per stránku přes sloty `PageOverlayContent`; `TmRedactionLayer` si viewer pinuje na SinglePage explicitně sám). Runtime výběr barvy (FZE-12): `AllowColorPicker` mění barevný štítek ve spouštěč `TmColorPalette` popoveru (na mobilu bottom sheet), `ColorPalette` přepíná nabízené barvy a `ColorNames` pojmenovávají vzorníky; zobrazovaná barva je vybraná barva nebo per-author/role fallback (klik na už zaškrtnutý fallback nic nevyvolá, reset je na barvu autora disabled). `AnnotationColor` je two-way: výběr vyvolá barvu, reset vyvolá `null`. Undo/redo (FZE-15): `AllowUndo` (default `true`) vede command stack (`PdfAnnotationHistory`), pair se kreslí jako vlastní skupina `data-tm-group="history"` před pilulky na každé ploše, zkratky `Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y` běží na jednom JS keydown listeneru, `UndoAsync()`/`RedoAsync()` + `CanUndo`/`CanRedo` jsou veřejné, `OnHistoryChanged` ohlašuje každý přechod a skrytá live region ohlašuje výsledek („Undo: {akce}“) i konflikt. Na mobilu G2: prohlížení + lehké úpravy (pouze Browse a Přidat komentář, panel jako bottom sheet). Detail: [docs/pdf-viewer.md](docs/pdf-viewer.md).
 
 #### Parametry
 
@@ -4768,9 +4772,14 @@ Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky 
 | `ShowOpenLink` | `bool` | `true` | Odkaz „Otevřít“ |
 | `ShowThumbnails` | `bool` | `false` | Pass-through: miniatury |
 | `ShowSearch` | `bool` | `false` | Pass-through: hledání |
+| `SearchPresentation` | `PdfSearchPresentation` | `Floating` | Pass-through: prezentace hledání (F11) |
 | `AllowRotation` | `bool` | `false` | Pass-through: rotace |
 | `ThumbnailsCollapsed` / `…Changed` | `bool` / `EventCallback<bool>` | `false` | Pass-through: sbalené miniatury (two-way) |
 | `ZoomMode` / `ZoomModeChanged` | `PdfZoomMode` | `Auto` | Pass-through: zoom režim (two-way) |
+| `ViewMode` / `ViewModeChanged` | `PdfViewMode` / `EventCallback<PdfViewMode>` | `SinglePage` | Pass-through: režim zobrazení (two-way; F14 zrušil pin na SinglePage) |
+| `ShowViewModeToggle` | `bool` | `false` | Pass-through: přepínač režimu v merged toolbaru (F14) |
+| `AllowUndo` | `bool` | `true` | Undo/redo anotací nad command stackem; `false` skryje skupinu history i zkratky a mutace obchází stack (F15) |
+| `OnHistoryChanged` | `EventCallback` | — | Ohlášeno po každém přechodu stacku (exekuce/undo/redo/přeskočení/vyprázdnění) (F15) |
 | `ShowHeader` | `bool` | `false` | Hlavička s exportní skupinou |
 | `Title` / `Subtitle` | `string?` | `null` | Text hlavičky |
 | `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty hlavičky |

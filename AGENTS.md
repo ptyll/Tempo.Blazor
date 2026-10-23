@@ -491,7 +491,9 @@ Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
   `.tm-pdf-viewer__toolbar`, test id `pdf-viewer-toolbar`. Groups carry the stable
   `data-tm-group` values `navigation`, `zoom`, `rotate`, `view`, `panels`, `search`,
   `comments`, `export` (see [docs/toolbar.md](docs/toolbar.md)); hosts key off these, never
-  positional selectors. The page is an editable `<input type="number">` (Enter/blur navigates,
+  positional selectors. The annotator injects an additional `history` group (its undo/redo
+  pair) through `ToolbarStart`, rendered before the tool pills. The page is an editable
+  `<input type="number">` (Enter/blur navigates,
   out-of-range reverts), the zoom label is a `TmDropdown` with presets 50/75/100/125/150/200 %
   plus Fit width / Fit page, and the comments toggle shows the open-thread count.
 - **Layout modes** — resolved from the viewer's own container (`container-type: inline-size`):
@@ -513,8 +515,8 @@ Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
   (a 100+ page document never blocks the UI), canvases released outside the ±50 % viewport band
   (limit 12 painted), `OnVisiblePageChanged` updating `Page`/`PageChanged` + the active
   thumbnail, per-page text layer and search, and the scroll position preserved across zoom /
-  rotation / view-mode switches. **Annotations in Continuous (FZE-13, PD1 superseded by
-  PDF-VIEWER-CONTINUOUS-ANNOTATIONS)**: pages inside the ±50 % viewport band get a Blazor-owned
+  rotation / view-mode switches. **Annotations in Continuous (FZE-13; decision
+  `PDF-VIEWER-CONTINUOUS-ANNOTATIONS`)**: pages inside the ±50 % viewport band get a Blazor-owned
   overlay slot next to the JS-owned pages DOM (geometry reported via `OnContinuousPageGeometry`,
   so the lazy render and the 12-painted-page limit keep holding), markers render per mounted
   page, text selection resolves the anchor page and clamps cross-page selections, and selecting
@@ -557,7 +559,15 @@ entries and the thread panel is a non-modal bottom sheet (peek/half/full) that s
 at load. `ShowPanel`/`ShowPanelChanged` two-way; the panel renders with `ShowChrome=false`
 inside the sheet. Touch: one finger or pen draws, two fingers pinch/pan (the in-progress stroke
 is cancelled on the second finger; `pen` has priority), and a tablet-only sticky "Highlight"
-CTA surfaces a touch-selection draft.
+CTA surfaces a touch-selection draft. **Undo/redo (FZE-15)**: `AllowUndo` (default `true`)
+records every annotation mutation on a command stack (`PdfAnnotationHistory`) and renders an
+undo/redo pair as its own `data-tm-group="history"` group before the tool pills at every call
+site (merged toolbar, tablet/compact row, mobile "More" entries); the buttons disable while a
+step is in flight and carry `Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y` via `aria-keyshortcuts`.
+`UndoAsync()`/`RedoAsync()` with `CanUndo`/`CanRedo` are public, `OnHistoryChanged` fires on
+every stack transition, and a visually-hidden live region announces the localized result
+("Undo: {action}") plus the conflict hint. Undoing a delete re-creates the thread from its
+snapshot with a fresh id remapped through the stack, so later steps keep targeting it.
 
 ### Architecture
 

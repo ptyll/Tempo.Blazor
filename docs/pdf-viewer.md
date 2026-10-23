@@ -45,7 +45,7 @@ to an `<embed>` fallback without `pdf-viewer.js`):
 | `TmPdfThreadCard` | Card header: color badge, kind, preview, author · time, page ref, reply count, Resolved chip, chevron |
 | `TmPdfCommentItem` | Comment body: `TmAvatar`, "(Edited)" marker, ⋯ menu (Edit / Delete), relative time |
 | `TmPdfComposer` | Textarea + 32px-minimum action row; sticky at the expanded thread's bottom; Ctrl+Enter submits |
-| `TmPdfAnnotationLayer` / `TmPdfAnnotatorLayer` | Page-overlay marker layers (per page in both view modes since FZE-13; the annotator layer stays on the pinned SinglePage viewer) |
+| `TmPdfAnnotationLayer` / `TmPdfAnnotatorLayer` | Page-overlay marker layers (per page in both view modes since FZE-13; the annotator's layer follows the annotator's pass-through `ViewMode` — FZE-14 lifted the pin) |
 | `TmRedactionLayer` | Redaction stage on its own viewer; pinned to `SinglePage` |
 
 ## TmPdfViewer
@@ -163,7 +163,7 @@ A fit scale MAY fall outside the 50–200 % presets (the exact container ratio w
 clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **demotes the mode to
 `Custom`** — user intent beats the fit contract. `SetScaleAsync(double)` is the programmatic path.
 
-### View modes and annotations (PD1 superseded by PDF-VIEWER-CONTINUOUS-ANNOTATIONS)
+### View modes and annotations (continuous annotations — decision `PDF-VIEWER-CONTINUOUS-ANNOTATIONS`)
 
 - **SinglePage** (default): one `<canvas>` plus the text layer, the search layer, the annotation
   overlay, `OverlayContent` and (since FZE-13) the templated `PageOverlayContent` for the current
@@ -294,8 +294,8 @@ color resolves per author/role via `AuthorColors` / `RoleColors`. Existing threa
 recolored, the selection survives tool switches, and a new `Url` drops it. The export group
 ("Export PDF | Export flattened | Print", `data-tm-group="export"`) lives in the header row when
 `ShowHeader` is true (`Title`, `Subtitle`, `HeaderStart`, `HeaderActions`); `AllowExport` /
-`ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The PD1 pin is lifted
-(FZE-14): `ViewMode` (default `PdfViewMode.SinglePage`, additive — unbound hosts keep the
+`ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The single-page pin is
+lifted (FZE-14): `ViewMode` (default `PdfViewMode.SinglePage`, additive — unbound hosts keep the
 pre-FZE-14 presentation) and `ViewModeChanged` pass through two-way, `ShowViewModeToggle`
 (default false) offers the viewer's segmented control in the merged toolbar, and Continuous
 renders the layer + surface per page slot (see the viewer's
@@ -340,12 +340,15 @@ when the panel is closed or out of reach.
 ## Wireframe stencils
 
 The `TmPdfViewer` stencil (role `pdf-viewer`) mirrors the redesigned chrome with the props
-`showThumbnails`, `viewMode` (`single` | `continuous`), `showHeader`, `title` and `zoomMode`
-(`auto` default | `custom` | `fit-width` | `fit-page`); the `TmPdfAnnotator` stencil (role
-`pdf-annotator`) carries `showThumbnails`, `showSearch`, `showHeader`, `viewMode`
-(`single` default | `continuous` — the continuous variant draws a scroll column of per-page
-annotator surfaces, FZE-14) and `title` on top of
-`mode` / `showPanel` / `allowExport`. The static stencils keep the roles; hosts key off the
+`viewMode` (`single` | `continuous` — the continuous variant draws the lazy page column, FZE-13),
+`showHeader` (draws the `title` + `fileSize` strip, FZE-11), `zoomMode` (`auto` default |
+`custom` | `fit-width` | `fit-page`) and `showSearch` (the floating card, FZE-11) on top of the
+sketch's `fileName` / `currentPage` / `pageCount`; the `TmPdfAnnotator` stencil (role
+`pdf-annotator`) draws its per-page surface branch through `viewMode` (`single` default |
+`continuous` — the continuous variant draws a scroll column of per-page annotator surfaces,
+FZE-14) and carries the FZE-12 `allowColorPicker` and FZE-15 `allowUndo` toggles on top of
+`fileName` / `annotationCount` (the catalog adds `mode` / `showPanel` / `allowExport`). The
+static stencils keep the roles; hosts key off the
 props, not the stencil internals.
 
 ## Localization keys
@@ -361,7 +364,15 @@ families, "All ({0})"/"Unresolved ({0})" — English ships `_One`/`_Other`, cs/s
 `TmPdfAnnotator_ColorName_*` (the default palette's localized swatch names),
 `TmPdfAnnotator_ChooseColor` / `TmPdfAnnotator_ResetColor`, `TmPdfAnnotator_TogglePanel`,
 `TmPdfAnnotator_EditOnLargerScreen`, `TmPdfViewer_SelectionPrompt` / `TmPdfViewer_DismissSelection`,
-`TmPdfAnnotator_HighlightSelection`. Counted texts must provide the plural forms each language's
+`TmPdfAnnotator_HighlightSelection`. The FZE-15 history family rides the same table:
+`TmPdfAnnotator_HistoryGroup` (the group's aria-label), `TmPdfAnnotator_Undo` /
+`TmPdfAnnotator_Redo` (button text), `TmPdfAnnotator_UndoAction` / `TmPdfAnnotator_RedoAction`
+(the "Undo: {0}" / "Redo: {0}" templates), `TmPdfAnnotator_NothingToUndo` /
+`TmPdfAnnotator_NothingToRedo`, the per-action names (`TmPdfAnnotator_ActionCreate`, `_Reply`,
+`_Edit`, `_Resolve`, `_Reopen`, `_Delete`, `_Highlight`, `_Stamp`, `_Ink`), the announcements
+(`TmPdfAnnotator_UndoneAnnouncement` / `TmPdfAnnotator_RedoneAnnouncement`) and the status chips
+(`TmPdfAnnotator_UndoConflict`, `TmPdfAnnotator_UndoFailed` / `TmPdfAnnotator_RedoFailed`).
+Counted texts must provide the plural forms each language's
 grammar needs — [localization-plurals.md](localization-plurals.md). Timestamps render RELATIVE
 through the shared `ITmRelativeTimeFormatter` with the absolute instant in `<time datetime>` and
 `title`. The 2.9.0 `TmPdfViewer_ShowResolved` / `TmPdfAnnotator_ShowResolved` keys were removed
@@ -458,8 +469,10 @@ summary:
 The redesign references live in `output/imagegen/tempo-reimagined/Tempo.Blazor.PdfViewer/`;
 each is reviewed against the E2E screenshots under
 `tests/Tempo.Blazor.E2E/__screenshots__/`. Statuses: **matched** (the reference presentation is
-implemented and screenshotted), **intentional** (a documented deviation from the reference) and
-**backlog** (reference content deliberately not built).
+implemented and screenshotted) and **intentional** (a documented deviation from the reference).
+The original third status, **backlog** (reference content deliberately not built), was retired
+with phase 16: every item it listed has since shipped (see the last cross-cutting bullet) or is
+covered by an intentional deviation.
 
 | Reference | E2E screenshot(s) | Status |
 |-----------|-------------------|--------|
@@ -491,9 +504,12 @@ Cross-cutting deviations that apply to several references:
   than the mockup's cards (relative timestamps, smaller paddings) so both panels fit narrow
   containers; the mockup's per-layout card variants were unified into one. *(intentional)*
 - **Invented features (not built)** — per the analysis `[E]` lists: the "Tempo" app shell,
-  "Open in app" wording ("Open" kept), file-size metadata in the header, the global search
-  field in the annotator header, hand/pan + text-annotation + undo/redo tools, the unbound
-  bottom composer, "All/Unresolved" tabs (the "Show resolved" toggle ships instead),
-  comment popovers tethered to markers, document-structure references ("Article 1"), photo
-  avatars (initials only) and a second (counter-clockwise) rotation. *(backlog — none are
-  planned; hosts may add their own via the slots)*
+  "Open in app" wording ("Open" kept), the global search field in the annotator header,
+  hand/pan + text-annotation tools, the unbound bottom composer, comment popovers tethered to
+  markers, document-structure references ("Article 1") and photo avatars (initials only).
+  *(intentional — hosts may add their own via the slots)*
+- **Backlog delivered since phase 10** — reference content originally marked backlog shipped
+  with phases 11–15 and is now **matched**: the file-size metadata in the header
+  (`ShowFileSize`/`FileSize`, F11), the floating search card (`SearchPresentation=Floating`,
+  F11), the second (counter-clockwise) rotation (F11), the "All/Unresolved" tabs (the shared
+  `TmPdfThreadFilter`, F12) and the undo/redo tools (the annotator's `history` group, F15).
