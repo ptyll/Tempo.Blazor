@@ -133,6 +133,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmModelingEditor"] = ["diagram-editor"],
             ["TmFileManager"] = ["attachment-manager", "file-drop"],
             ["TmDocumentManager"] = ["attachment-manager", "list-view"],
+            ["TmDocumentOpenDialog"] = ["dialog", "list-view"],
             ["TmDivider"] = ["section"],
             ["TmText"] = ["text"],
             ["TmCard"] = ["card"],
@@ -2666,6 +2667,16 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("path",        "Current Path",  PropType.String, "/Documents", cat: "Content"),
                 P("viewMode",    "View Mode",     PropType.Enum,   "grid",       cat: "Appearance",
                     opts: ["grid","list"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmDocumentOpenDialog", Category = "Files", DisplayName = "Document Open Dialog",
+            DefaultWidth = 520, DefaultHeight = 340,
+            Props =
+            [
+                P("showRecent", "Show Recent", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 

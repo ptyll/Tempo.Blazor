@@ -112,6 +112,16 @@ public class DocumentLibraryModelTests
         query.Descending.Should().BeFalse();
         query.Skip.Should().Be(0);
         query.Take.Should().Be(50);
+        query.Scope.Should().Be(DocumentLibraryScope.Folder, "the default keeps the pre-Scope meaning of FolderPath");
+    }
+
+    [Fact]
+    public void Scope_HasStableNumericValues()
+    {
+        ((int)DocumentLibraryScope.Folder).Should().Be(0);
+        ((int)DocumentLibraryScope.Subtree).Should().Be(1);
+        ((int)DocumentLibraryScope.Library).Should().Be(2);
+        Enum.GetValues<DocumentLibraryScope>().Should().HaveCount(3);
     }
 
     // ── DocumentLibraryPage ───────────────────────────────────────────────────

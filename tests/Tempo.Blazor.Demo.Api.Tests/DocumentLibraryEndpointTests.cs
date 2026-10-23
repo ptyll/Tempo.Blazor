@@ -49,6 +49,30 @@ public class DocumentLibraryEndpointTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
+    public async Task Browse_ScopeParameter_WidensTheQuery_AndDefaultsToFolder()
+    {
+        var parent = "/EpScope-" + Guid.NewGuid().ToString("N")[..8];
+        await _client.PostAsJsonAsync("/api/document-library/wireframe/folders",
+            new DocumentLibraryCreateFolderRequest { ParentPath = "/", Name = parent.TrimStart('/') });
+        await _client.PostAsJsonAsync("/api/document-library/wireframe/folders",
+            new DocumentLibraryCreateFolderRequest { ParentPath = parent, Name = "Sub" });
+        await CreateAsync("Scope parent doc", parent);
+        await CreateAsync("Scope child doc", parent + "/Sub");
+        var escaped = Uri.EscapeDataString(parent);
+
+        var folder = await _client.GetFromJsonAsync<DocumentLibraryPage>(
+            $"/api/document-library/wireframe/browse?folderPath={escaped}");
+        var subtree = await _client.GetFromJsonAsync<DocumentLibraryPage>(
+            $"/api/document-library/wireframe/browse?folderPath={escaped}&scope=Subtree");
+        var library = await _client.GetFromJsonAsync<DocumentLibraryPage>(
+            "/api/document-library/wireframe/browse?scope=Library&search=Scope%20child");
+
+        folder!.Items.Select(i => i.Name).Should().Equal("Scope parent doc");
+        subtree!.Items.Select(i => i.Name).Should().BeEquivalentTo(["Scope parent doc", "Scope child doc"]);
+        library!.Items.Should().ContainSingle(i => i.Name == "Scope child doc");
+    }
+
+    [Fact]
     public async Task Tree_IncludesCreatedFolder()
     {
         var name = "EpTree-" + Guid.NewGuid().ToString("N")[..8];

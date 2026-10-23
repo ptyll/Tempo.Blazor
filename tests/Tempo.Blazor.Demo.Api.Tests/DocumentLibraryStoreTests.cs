@@ -119,6 +119,87 @@ public sealed class DocumentLibraryStoreTests
         page.Items.Select(i => i.Name).Should().Equal("Root new", "Root old");
         page.TotalCount.Should().Be(2, "a document in a sub-folder is not part of a null-folder browse");
     }
+    private static DocumentLibraryStore SeededForScope()
+    {
+        var store = NewStore(out _);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Root doc", "/", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Designs doc", "/Designs", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Mobile doc", "/Designs/Mobile", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Designs2 doc", "/Designs2", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Archive doc", "/Archive", "{}", null);
+        return store;
+    }
+
+    private static string[] Names(DocumentLibraryStore store, DocumentLibraryQuery query)
+        => store.Browse(query).Items.Select(i => i.Name).Order().ToArray();
+
+    [Fact]
+    public void Browse_FolderScope_IsTheDefault_AndListsOnlyTheDirectContent()
+    {
+        var store = SeededForScope();
+
+        Names(store, new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, FolderPath = "/Designs" })
+            .Should().Equal("Designs doc");
+        Names(store, new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, FolderPath = "/Designs", Scope = DocumentLibraryScope.Folder })
+            .Should().Equal("Designs doc");
+    }
+
+    [Fact]
+    public void Browse_SubtreeScope_ListsTheFolderAndItsDescendants_NotASiblingWithTheSamePrefix()
+    {
+        var store = SeededForScope();
+
+        Names(store, new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, FolderPath = "/Designs", Scope = DocumentLibraryScope.Subtree })
+            .Should().Equal("Designs doc", "Mobile doc");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("/")]
+    public void Browse_SubtreeScope_OfTheRoot_ListsTheWholeLibrary(string? root)
+    {
+        var store = SeededForScope();
+
+        store.Browse(new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, FolderPath = root, Scope = DocumentLibraryScope.Subtree })
+            .TotalCount.Should().Be(5);
+    }
+
+    [Fact]
+    public void Browse_LibraryScope_IgnoresFolderPath_AndSortsByModifiedNewestFirst()
+    {
+        var store = SeededForScope();
+
+        var page = store.Browse(new DocumentLibraryQuery
+        {
+            Kind = TempoDocumentKind.Wireframe,
+            FolderPath = "/Archive",
+            Scope = DocumentLibraryScope.Library,
+            SortField = DocumentLibrarySortField.Modified,
+            Descending = true
+        });
+
+        page.TotalCount.Should().Be(5);
+        page.Items.Select(i => i.Name).First().Should().Be("Archive doc", "it was created last");
+    }
+
+    [Fact]
+    public void Browse_LibraryScope_WithSearch_FiltersTheWholeLibrary()
+    {
+        var store = SeededForScope();
+
+        Names(store, new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, Scope = DocumentLibraryScope.Library, Search = "mobile" })
+            .Should().Equal("Mobile doc");
+    }
+
+    [Fact]
+    public void Browse_SubtreeScope_WithSearch_StaysInsideTheSubtree()
+    {
+        var store = SeededForScope();
+
+        Names(store, new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, FolderPath = "/Designs", Scope = DocumentLibraryScope.Subtree, Search = "doc" })
+            .Should().Equal("Designs doc", "Mobile doc");
+    }
+
     [Fact]
     public void Browse_Search_MatchesAcrossFolders()
     {

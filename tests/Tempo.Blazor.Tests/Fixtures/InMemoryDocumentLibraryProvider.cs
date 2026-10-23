@@ -95,14 +95,30 @@ public sealed class InMemoryDocumentLibraryProvider : ITempoDocumentLibraryProvi
     {
         IEnumerable<Doc> docs = _docs[query.Kind];
 
-        if (!string.IsNullOrWhiteSpace(query.Search))
+        var searching = !string.IsNullOrWhiteSpace(query.Search);
+        if (searching)
         {
-            docs = docs.Where(d => d.Name.Contains(query.Search, StringComparison.OrdinalIgnoreCase));
+            docs = docs.Where(d => d.Name.Contains(query.Search!, StringComparison.OrdinalIgnoreCase));
         }
-        else
+
+        switch (query.Scope)
         {
-            var folder = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
-            docs = docs.Where(d => d.FolderPath == folder);
+            case DocumentLibraryScope.Library:
+                break;
+            case DocumentLibraryScope.Subtree:
+                var root = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
+                docs = root == "/"
+                    ? docs
+                    : docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/", StringComparison.Ordinal));
+                break;
+            default:
+                if (!searching)
+                {
+                    var folder = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
+                    docs = docs.Where(d => d.FolderPath == folder);
+                }
+
+                break;
         }
 
         var matched = docs.ToList();

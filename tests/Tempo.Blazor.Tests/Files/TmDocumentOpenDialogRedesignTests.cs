@@ -561,8 +561,9 @@ public class TmDocumentOpenDialogRedesignTests : LocalizationTestBase
 
         recent.Click();
 
-        cut.WaitForState(() => provider.Calls.Any(c => c.FolderPath is null && c.Search is null));
-        var call = provider.Calls.Last(c => c.FolderPath is null && c.Search is null);
+        cut.WaitForState(() => provider.Calls.Any(c => c.Scope == DocumentLibraryScope.Library && c.Search is null));
+        var call = provider.Calls.Last(c => c.Scope == DocumentLibraryScope.Library && c.Search is null);
+        call.FolderPath.Should().BeNull("a library-wide query carries no folder");
         call.SortField.Should().Be(DocumentLibrarySortField.Modified);
         call.Descending.Should().BeTrue();
         call.Skip.Should().Be(0);
@@ -570,6 +571,7 @@ public class TmDocumentOpenDialogRedesignTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => cut.FindAll(".tm-dod-row").Select(r => r.GetAttribute("data-name"))
             .Should().ContainInOrder("Newer root doc", "Older root doc"));
+        cut.FindAll(".tm-dod-row").Should().HaveCount(5, "Recent now spans every folder");
         cut.Find(".tm-dod-tree-node--recent").GetAttribute("aria-selected").Should().Be("true");
         cut.Find(".tm-dod-tree-node--active").TextContent.Should().Contain("Recent");
     }
@@ -586,12 +588,12 @@ public class TmDocumentOpenDialogRedesignTests : LocalizationTestBase
     [Fact]
     public void Recent_SortIsFixed_SoTheHeaderButtonsAreDisabled_AndReflectTheRecentOrder()
     {
-        // Seeded has no root documents: the empty state replaces the header, so seed one.
+        // Recent is library-wide (Scope = Library): the three seeded documents of the sub-folders are listed too.
         var inner = Seeded();
         inner.AddDocument(TempoDocumentKind.Wireframe, "Root doc", "/");
         var cut = RenderOpen(inner, p => p.Add(c => c.ShowRecent, true));
         cut.Find(".tm-dod-tree-node--recent").Click();
-        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 1);
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 4);
 
         cut.Find(".tm-dod-col-name").HasAttribute("disabled").Should().BeTrue();
         cut.Find(".tm-dod-col-modified").HasAttribute("disabled").Should().BeTrue();
@@ -604,7 +606,7 @@ public class TmDocumentOpenDialogRedesignTests : LocalizationTestBase
         var provider = new RecordingLibraryProvider(Seeded());
         var cut = RenderOpen(provider, p => p.Add(c => c.ShowRecent, true));
         cut.Find(".tm-dod-tree-node--recent").Click();
-        cut.WaitForState(() => provider.Calls.Any(c => c.FolderPath is null));
+        cut.WaitForState(() => provider.Calls.Any(c => c.Scope == DocumentLibraryScope.Library));
 
         Node(cut, "Designs").Click();
 

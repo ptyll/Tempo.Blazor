@@ -65,12 +65,11 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
 
     /// <summary>
     /// Adds a virtual "Recent" node above the folder tree. Selecting it browses with
-    /// <c>FolderPath = null</c>, <c>SortField = Modified</c>, <c>Descending = true</c> and <c>Take = <see cref="PageSize"/></c>
-    /// through the existing <see cref="ITempoDocumentLibraryProvider.BrowseAsync"/> — no provider member is added.
-    /// Which documents a <c>null</c> folder returns is the provider's decision: the
-    /// <see cref="DocumentLibraryQuery.FolderPath"/> contract says "null or <c>/</c> lists the root", so a provider that
-    /// wants a library-wide "recent" list must treat <c>null</c> as "everywhere" (the demo store follows the contract
-    /// and returns the root documents only). Defaults to <c>false</c>.
+    /// <c>Scope = <see cref="DocumentLibraryScope.Library"/></c>, <c>SortField = Modified</c>, <c>Descending = true</c> and
+    /// <c>Take = <see cref="PageSize"/></c> through the existing <see cref="ITempoDocumentLibraryProvider.BrowseAsync"/> — no
+    /// provider member is added. The query is explicitly library-wide; a provider that does not support
+    /// <see cref="DocumentLibraryScope.Library"/> may degrade it to the root folder (see
+    /// <see cref="DocumentLibraryQuery.Scope"/>). Defaults to <c>false</c>.
     /// </summary>
     [Parameter] public bool ShowRecent { get; set; }
 
@@ -390,9 +389,10 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
         var page = await Provider.BrowseAsync(new DocumentLibraryQuery
         {
             Kind = Kind,
-            // Recent and search both browse without a folder. Which documents FolderPath = null yields is the
-            // provider's decision (ShowRecent documents it).
-            FolderPath = string.IsNullOrEmpty(_search) && !_recent ? _currentFolder : null,
+            // Recent and a search are library-wide queries: they state Scope = Library instead of leaning on a null
+            // FolderPath (DOCLIB-QUERY-SCOPE). A provider without Library support degrades to the folder scope.
+            FolderPath = LibraryWide ? null : _currentFolder,
+            Scope = LibraryWide ? DocumentLibraryScope.Library : DocumentLibraryScope.Folder,
             Search = string.IsNullOrEmpty(_search) ? null : _search,
             SortField = _sortField,
             Descending = _descending,
@@ -423,6 +423,9 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
             }
         }
     }
+
+    // The Recent node and an active search look at the whole library; everything else is the current folder.
+    private bool LibraryWide => _recent || !string.IsNullOrEmpty(_search);
 
     private bool HasMore => _entries.Count < _totalCount;
 

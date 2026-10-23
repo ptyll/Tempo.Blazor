@@ -17,13 +17,19 @@
       "name": "FolderPath",
       "kind": "Property",
       "type": "string?",
-      "description": "Folder to list. Null or \"/\" lists the root. Ignored by flat stores."
+      "description": "Folder to list. Null or \"/\" is the root. Ignored by flat stores and when Scope is Library."
     },
     {
       "name": "Kind",
       "kind": "Property",
       "type": "required TempoDocumentKind",
       "description": "Which kind of documents to list."
+    },
+    {
+      "name": "Scope",
+      "kind": "Property",
+      "type": "DocumentLibraryScope",
+      "description": "How far the query reaches: Folder (default, the direct content of FolderPath), Subtree (the folder and all of its sub-folders) or Library (the whole library; FolderPath is ignored). A provider without support for the wider scopes may degrade Subtree and Library to Folder."
     },
     {
       "name": "Search",

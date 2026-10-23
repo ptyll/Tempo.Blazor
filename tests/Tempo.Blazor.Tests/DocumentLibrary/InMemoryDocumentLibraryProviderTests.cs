@@ -78,6 +78,48 @@ public class InMemoryDocumentLibraryProviderTests
     }
 
     [Fact]
+    public async Task Browse_SubtreeScope_IncludesDescendantFolders()
+    {
+        var provider = BuildSeeded();
+
+        var page = await provider.BrowseAsync(new DocumentLibraryQuery
+        {
+            Kind = TempoDocumentKind.Wireframe,
+            FolderPath = "/Designs",
+            Scope = DocumentLibraryScope.Subtree
+        });
+
+        page.Items.Select(i => i.Name).Should().BeEquivalentTo(["Home page", "Checkout", "Login screen"]);
+        page.TotalCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Browse_LibraryScope_IgnoresFolderPath_AndReachesEveryFolder()
+    {
+        var provider = BuildSeeded();
+
+        var page = await provider.BrowseAsync(new DocumentLibraryQuery
+        {
+            Kind = TempoDocumentKind.Wireframe,
+            FolderPath = "/Archive",
+            Scope = DocumentLibraryScope.Library
+        });
+
+        page.TotalCount.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task Browse_FolderScope_NullFolder_ListsOnlyTheRoot()
+    {
+        var provider = BuildSeeded();
+        provider.AddDocument(TempoDocumentKind.Wireframe, "Root doc", "/");
+
+        var page = await provider.BrowseAsync(new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe });
+
+        page.Items.Should().ContainSingle().Which.Name.Should().Be("Root doc");
+    }
+
+    [Fact]
     public async Task Browse_SortsByNameAscending_ByDefault()
     {
         var provider = BuildSeeded();

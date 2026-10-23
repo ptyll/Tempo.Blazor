@@ -67,6 +67,27 @@ public class ApiTempoDocumentLibraryProviderTests
         url.Should().Contain("take=10");
     }
 
+    [Theory]
+    [InlineData(DocumentLibraryScope.Folder, false)]
+    [InlineData(DocumentLibraryScope.Subtree, true)]
+    [InlineData(DocumentLibraryScope.Library, true)]
+    public async Task BrowseAsync_SendsTheScope_OnlyWhenItIsWiderThanFolder(DocumentLibraryScope scope, bool expected)
+    {
+        var (provider, handler) = Build(_ => Json("{\"items\":[],\"totalCount\":0}"));
+
+        await provider.BrowseAsync(new DocumentLibraryQuery { Kind = TempoDocumentKind.Wireframe, Scope = scope });
+
+        var url = handler.LastRequest!.RequestUri!.ToString();
+        if (expected)
+        {
+            url.Should().Contain($"scope={scope}");
+        }
+        else
+        {
+            url.Should().NotContain("scope=");
+        }
+    }
+
     [Fact]
     public async Task GetFolderTreeAsync_HitsTreeEndpoint()
     {

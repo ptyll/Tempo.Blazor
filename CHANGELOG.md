@@ -728,6 +728,30 @@
 
 ### Added
 
+- **Explicit query scope for the document library (`DocumentLibraryScope`, `DocumentLibraryQuery.Scope`).**
+  `DocumentLibraryQuery.FolderPath = null` was ambiguous: the contract says "the root", yet the open
+  dialog's Recent node and its search also sent `null` to mean "the whole library". The new
+  `DocumentLibraryScope { Folder = 0, Subtree = 1, Library = 2 }` (namespace `Tempo.Blazor.DocumentLibrary`,
+  Abstractions) states the reach explicitly: `Folder` (default — the direct content of `FolderPath`, exactly
+  today's behaviour), `Subtree` (the folder and all of its sub-folders) or `Library` (the whole library,
+  `FolderPath` ignored). `ITempoDocumentLibraryProvider` and `DocumentOpenResult` are unchanged; a provider that
+  cannot honour the wider scopes may degrade `Subtree` / `Library` to `Folder`. The demo `DocumentLibraryStore`,
+  the Demo.Api `browse` endpoint (`?scope=Subtree|Library`) and the demo `ApiTempoDocumentLibraryProvider`
+  implement all three values.
+
+  ```csharp
+  await provider.BrowseAsync(new DocumentLibraryQuery
+  {
+      Kind = TempoDocumentKind.Wireframe,
+      Scope = DocumentLibraryScope.Library,      // every folder; FolderPath is ignored
+      SortField = DocumentLibrarySortField.Modified,
+      Descending = true
+  });
+  ```
+
+- **`TmDocumentOpenDialog` is a wireframe component.** The built-in stencil pack and `BuiltInComponentSchemas`
+  list `TmDocumentOpenDialog` (category Files, roles `dialog` and `list-view`, prop `showRecent`), so the editor
+  palette and the MCP catalogue (`wireframe_list_components`) can place it.
 - **TmPdfAnnotator: annotation tools on every page of Continuous mode (FZE-14).** The PD1 pin is
   lifted: `ViewMode` (two-way, default `PdfViewMode.SinglePage` — additive) and
   `ShowViewModeToggle` (default `false`) now pass through to the embedded viewer, so hosts can
@@ -819,6 +843,21 @@
 
 ### Fixed
 
+- **`TmDocumentOpenDialog` review debt (Recent / search scope, collapsed tree, contrast, footer, keyboard).**
+  * Recent and the search without a folder send `Scope = Library` instead of `FolderPath = null`; the demo store
+    therefore lists documents of NESTED folders in Recent (it used to list the root only).
+  * Collapsing a folder hands `aria-selected` to the nearest VISIBLE ancestor of the active folder (pinned by
+    bUnit and E2E: exactly one selected row, and it is the tree's tab stop).
+  * Ink on the primary-subtle wash (active tree node, active view toggle, the document thumbnail chip) reads
+    `--tm-color-primary-text`; `--tm-color-primary` measured 4.19:1 in the indigo dark theme. `TokenContrastTests`
+    now holds both pairs to AA in default / indigo, light / dark.
+  * At 1440 px the footer hint and "New folder" no longer wrap: the Link / Copy cards are a grid (radio + title on
+    the first row, the hint on the full card width below), so "Insert a copy" and its hint stay on their own lines.
+  * The on-screen keyboard lift ignores a pinch-zoomed page (the visual viewport shrinks without any keyboard) and
+    only hides the Link / Copy cards for a hidden gap of keyboard size (>= 120 px), not for a sliding browser toolbar.
+  * The row-menu sheet title ("More actions for {name}") wraps a long document name instead of pushing Done off the
+    screen, and `FullscreenChromePx` (112 px hysteresis) is derived from `_modal.css` in a test so a spacing change in
+    the modal cannot reintroduce the presentation flap.
 - **Phase 2 test-suite stabilisation: culture fallback, security-patched packages and test-only fixes.**
   * **Unknown culture names fall back on every platform (`LocalEmailPreviewRenderer`, `EmailTemplateRenderer`).**
     `CultureInfo.GetCultureInfo(name)` on Windows NLS synthesizes a *custom* culture for any well-formed
@@ -1073,6 +1112,36 @@
 
 ### Breaking / Migration
 
+- **`TmDocumentOpenDialog` browses the whole library for Recent and search (`Scope = Library`).** The dialog used to send
+  `FolderPath = null` for the Recent node and for a search, and the demo store answered "the root only" for Recent. It now
+  sends `Scope = DocumentLibraryScope.Library` with `FolderPath = null`. Impact: a custom `ITempoDocumentLibraryProvider`
+  that ignores `Scope` still receives `FolderPath = null` and behaves exactly as before (the rule "a provider without support
+  may degrade to `Folder`"); a provider that treated `null` as "everywhere" keeps working. Migration — honour the new scope
+  to make Recent library-wide on a folder-aware store:
+  ```csharp
+  // before: Recent returned the root documents only (null == root)
+  docs = docs.Where(d => d.FolderPath == (string.IsNullOrEmpty(q.FolderPath) ? "/" : q.FolderPath));
+
+  // after: Library reaches every folder, Subtree the folder and its descendants, Folder is unchanged
+  docs = q.Scope switch
+  {
+      DocumentLibraryScope.Library => docs,
+      DocumentLibraryScope.Subtree => docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/")),
+      _                            => docs.Where(d => d.FolderPath == folder)
+  };
+  ```
+  Demo hosts: the Demo.Api store now treats a Folder-scope query WITH a search as before (search spans every folder), so
+  existing clients are unaffected; the XML remark about the ambiguous `null` on `FolderPath` is replaced by the `Scope` docs.
+
+- **`TmDocumentOpenDialog` footer cards are a grid and the accent ink moved to `--tm-color-primary-text`.** DOM / CSS impact only:
+  `.tm-dod-mode-body` is `display: contents` and `.tm-dod-mode-card` is a two-column grid (the `.tm-dod-*` class names, the radio
+  group and the `data-testid`s are unchanged). A host stylesheet that targeted `.tm-dod-mode-body` as a flex column, or that read
+  `color: var(--tm-color-primary)` from `.tm-dod-tree-node--active` / `.tm-dod-view--active`, should style the card itself and read
+  `--tm-color-primary-text`:
+  ```css
+  /* before */ .my-host .tm-dod-mode-body { display: flex; flex-direction: column; }
+  /* after  */ .my-host .tm-dod-mode-card { row-gap: var(--tm-space-1); }
+  ```
 - **No implicit Google Fonts import in rendered HTML.** `MjmlNetCompiler` turns off
   Mjml.Net's built-in font table, so a render no longer emits `<link>`/`@import` for Ubuntu (or any other
   font the document did not declare), and the markup guard drops every `@import` that is not the `href` of a

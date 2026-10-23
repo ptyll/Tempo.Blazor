@@ -125,7 +125,7 @@
 
 .tm-dod-view--active {
     background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
+    color: var(--tm-color-primary-text);
 }
 
 .tm-dod-new-folder-bar,
@@ -203,7 +203,7 @@
 .tm-dod-tree-node--active,
 .tm-dod-tree-node--active:hover {
     background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
+    color: var(--tm-color-primary-text);
     font-weight: var(--tm-font-weight-semibold);
 }
 
@@ -508,13 +508,19 @@
     gap: var(--tm-space-3);
 }
 
+/* A grid, not a flex row: the radio and the title share the first row and the hint takes the FULL card width on the second, so the
+   hint is not indented by the radio column (at 1440 the indent alone pushed "Insert a copy" onto a second line and the two cards stopped
+   being the same height). The body wrapper is display: contents so its title and hint are the grid items. */
 .tm-dod-mode-card {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--tm-space-2-5);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: center;
+    align-items: center;
+    column-gap: var(--tm-space-2);
+    row-gap: var(--tm-space-0-5);
     flex: 1 1 0;
     min-width: 0;
-    padding: var(--tm-space-2-5) var(--tm-space-3);
+    padding: var(--tm-space-2-5) var(--tm-space-2-5);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-card);
@@ -539,16 +545,12 @@
 
 /* The native radio is the control (arrow keys, single tab stop); it takes the theme primary. */
 .tm-dod-mode-card input[type="radio"] {
-    flex: 0 0 auto;
-    margin: var(--tm-space-0-5) 0 0;
+    margin: 0;
     accent-color: var(--tm-color-primary);
 }
 
 .tm-dod-mode-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-0-5);
-    min-width: 0;
+    display: contents;
 }
 
 .tm-dod-mode-title {
@@ -561,6 +563,7 @@
 }
 
 .tm-dod-mode-hint {
+    grid-column: 1 / -1;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
     line-height: var(--tm-line-height-tight);
@@ -891,7 +894,7 @@
     block-size: var(--tm-space-10);
     background: var(--tm-color-primary-subtle);
     border-radius: var(--tm-radius-control);
-    color: var(--tm-color-primary);
+    color: var(--tm-color-primary-text);
 }
 
 .tm-dod-folder-text {
@@ -1026,6 +1029,12 @@
     border: 0;
 }
 
+/* The row menu's sheet is titled "More actions for {name}": a document name with no break opportunity (a file name) would push the
+   Done action out of the header, so the title wraps anywhere. The sheet lives in the host's DOM (top layer), hence ::deep from the host. */
+.tm-dod-host ::deep .tm-overlay-panel-sheet__title {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
 .tm-dod-row-menu ::deep .tm-dropdown-trigger > svg:last-child {
     display: none;
 }

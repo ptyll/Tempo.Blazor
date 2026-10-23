@@ -109,7 +109,8 @@ public sealed class RecordingLibraryProvider(ITempoDocumentLibraryProvider inner
 {
     /// <summary>A snapshot of one browse query (the dialog reuses nothing, but a snapshot is immune to later mutation).</summary>
     public sealed record BrowseCall(
-        string? FolderPath, string? Search, DocumentLibrarySortField SortField, bool Descending, int Skip, int Take);
+        string? FolderPath, string? Search, DocumentLibrarySortField SortField, bool Descending, int Skip, int Take,
+        DocumentLibraryScope Scope = DocumentLibraryScope.Folder);
 
     /// <summary>Every browse call in order.</summary>
     public List<BrowseCall> Calls { get; } = [];
@@ -123,7 +124,7 @@ public sealed class RecordingLibraryProvider(ITempoDocumentLibraryProvider inner
     public Task<DocumentLibraryPage> BrowseAsync(
         DocumentLibraryQuery query, CancellationToken cancellationToken = default)
     {
-        Calls.Add(new BrowseCall(query.FolderPath, query.Search, query.SortField, query.Descending, query.Skip, query.Take));
+        Calls.Add(new BrowseCall(query.FolderPath, query.Search, query.SortField, query.Descending, query.Skip, query.Take, query.Scope));
         return inner.BrowseAsync(query, cancellationToken);
     }
 

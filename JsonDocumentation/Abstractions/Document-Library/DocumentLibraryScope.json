@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Document Library",
+  "namespace": "Tempo.Blazor.DocumentLibrary",
+  "description": "How far a DocumentLibraryQuery reaches into the library: Folder (the direct content of FolderPath, the default), Subtree (the folder and all of its sub-folders) or Library (the whole library, FolderPath ignored). A provider without support may degrade Subtree and Library to Folder.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentLibrary/DocumentLibraryScope.cs",
+  "documentationStatus": "generated",
+  "itemName": "DocumentLibraryScope"
+}

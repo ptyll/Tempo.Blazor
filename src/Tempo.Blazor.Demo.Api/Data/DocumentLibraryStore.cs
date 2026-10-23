@@ -139,14 +139,33 @@ public sealed class DocumentLibraryStore
         {
             IEnumerable<StoredDocument> docs = _docs[query.Kind];
 
-            if (!string.IsNullOrWhiteSpace(query.Search))
+            var searching = !string.IsNullOrWhiteSpace(query.Search);
+            if (searching)
             {
-                docs = docs.Where(d => d.Name.Contains(query.Search, StringComparison.OrdinalIgnoreCase));
+                docs = docs.Where(d => d.Name.Contains(query.Search!, StringComparison.OrdinalIgnoreCase));
             }
-            else
+
+            // Scope.Library reaches every folder (FolderPath is ignored); Subtree is the folder plus its descendants;
+            // Folder is the direct content. A Folder-scope query with a search keeps the pre-Scope behaviour: the
+            // search spans every folder (the dialog now says so with Library instead).
+            switch (query.Scope)
             {
-                var folder = string.IsNullOrEmpty(query.FolderPath) ? "/" : query.FolderPath;
-                docs = docs.Where(d => d.FolderPath == folder);
+                case DocumentLibraryScope.Library:
+                    break;
+                case DocumentLibraryScope.Subtree:
+                    var root = NormalizeFolder(query.FolderPath);
+                    docs = root == "/"
+                        ? docs
+                        : docs.Where(d => d.FolderPath == root || d.FolderPath.StartsWith(root + "/", StringComparison.Ordinal));
+                    break;
+                default:
+                    if (!searching)
+                    {
+                        var folder = NormalizeFolder(query.FolderPath);
+                        docs = docs.Where(d => d.FolderPath == folder);
+                    }
+
+                    break;
             }
 
             var matched = docs.ToList();
@@ -261,6 +280,9 @@ public sealed class DocumentLibraryStore
         Author = d.Author,
         PreviewSvg = d.PreviewSvg
     };
+
+    private static string NormalizeFolder(string? path)
+        => string.IsNullOrEmpty(path) ? "/" : path.Length > 1 ? path.TrimEnd('/') : path;
 
     private static string ParentOf(string path)
     {

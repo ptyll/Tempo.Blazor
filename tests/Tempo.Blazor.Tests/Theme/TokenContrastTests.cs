@@ -795,6 +795,62 @@ public sealed class TokenContrastTests
                 "primary-text na subtle wash ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
     }
 
+    /// <summary>
+    /// The pair <c>--tm-color-primary</c> on <c>--tm-color-primary-subtle</c> (the active tree node and the view toggle of
+    /// the open dialog, other accent-on-wash chrome) is measured against the wash COMPOSITED over its surface — never the
+    /// bare translucent token. The default theme holds AA in light and dark. The indigo dark theme does NOT (4.19:1: its
+    /// primary is the filled-button step, -400), which is why text-size ink on the wash reads
+    /// <c>--tm-color-primary-text</c> instead — see <see cref="DialogInkOnTheSubtleWash_ReadsThePrimaryTextToken_AndHoldsAaEverywhere"/>.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void PrimaryInk_HoldsAa_OnThePrimarySubtleWash(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        var ratio = ThemeCss.Contrast(
+            ThemeCss.ResolveColour("var(--tm-color-primary)", tokens),
+            PaintedColour("var(--tm-color-primary-subtle)", tokens));
+
+        ratio.Should().BeGreaterThanOrEqualTo(4.5,
+            "--tm-color-primary na --tm-color-primary-subtle (aktivní uzel stromu / view toggle) ({0} {1}) musí držet 4.5:1 — změřeno {2:0.00}:1",
+            indigo ? "indigo" : "default", dark ? "dark" : "light", ratio);
+    }
+
+    /// <summary>
+    /// The rules of <c>TmDocumentOpenDialog.razor.css</c> that paint ink on the subtle wash (active tree node, active view
+    /// toggle, the document thumbnail chip) read <c>--tm-color-primary-text</c>, the token made for text on that wash. The
+    /// declarations are pinned (a revert to the fill token fails on the string) and the ink is measured in the default and
+    /// indigo themes, light and dark.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DialogInkOnTheSubtleWash_ReadsThePrimaryTextToken_AndHoldsAaEverywhere(bool indigo, bool dark)
+    {
+        var css = ThemeCss.StripComments(File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName, "src", "Tempo.Blazor", "Components", "Files", "TmDocumentOpenDialog.razor.css")));
+
+        foreach (var selector in new[] { ".tm-dod-tree-node--active,", ".tm-dod-view--active {" })
+        {
+            var start = css.IndexOf(selector, StringComparison.Ordinal);
+            start.Should().BeGreaterThanOrEqualTo(0, "{0} must exist", selector);
+            var block = css[start..css.IndexOf('}', start)];
+            block.Should().Contain("background: var(--tm-color-primary-subtle)");
+            block.Should().Contain("color: var(--tm-color-primary-text)", "{0} paints text ink on the subtle wash", selector);
+        }
+
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+        var ratio = ThemeCss.Contrast(
+            ThemeCss.ResolveColour("var(--tm-color-primary-text)", tokens),
+            PaintedColour("var(--tm-color-primary-subtle)", tokens));
+        ratio.Should().BeGreaterThanOrEqualTo(4.5, "{0} {1}: measured {2:0.00}:1", indigo ? "indigo" : "default", dark ? "dark" : "light", ratio);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

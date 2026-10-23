@@ -165,6 +165,26 @@ test('keyboardLift pads by the hidden gap only while the keyboard is up', () => 
     assert.deepEqual(keyboardLift(844, null), { padding: '', open: false });
 });
 
+test('keyboardLift pads a small gap but only calls a gap of keyboard size open (a collapsing browser toolbar is not a keyboard)', () => {
+    // A browser toolbar that slides in and out shifts the visual viewport by tens of pixels: the footer still follows it (padding),
+    // but the Link / Copy cards stay - they step aside for a REAL on-screen keyboard only (>= 120 px hidden).
+    assert.deepEqual(keyboardLift(844, { height: 800, offsetTop: 0 }), { padding: '44px', open: false });
+    assert.deepEqual(keyboardLift(844, { height: 725, offsetTop: 0 }), { padding: '119px', open: false });
+    assert.deepEqual(keyboardLift(844, { height: 724, offsetTop: 0 }), { padding: '120px', open: true });
+    assert.deepEqual(keyboardLift(844, { height: 430, offsetTop: 0 }), { padding: '414px', open: true });
+});
+
+test('keyboardLift does not read a pinch-zoom as an open keyboard (phase-9 review)', () => {
+    // A pinch-zoomed page shrinks visualViewport.height (390 / 2.0 of layout) without any keyboard: padding the overlay by that gap
+    // would push the footer off the screen and hide the Link / Copy cards for no reason.
+    assert.deepEqual(keyboardLift(844, { height: 422, offsetTop: 0, scale: 2 }), { padding: '', open: false });
+    assert.deepEqual(keyboardLift(844, { height: 600, offsetTop: 120, scale: 1.5 }), { padding: '', open: false });
+    // At the resting scale (and within the rounding the browsers report) the keyboard is still detected.
+    assert.deepEqual(keyboardLift(844, { height: 430, offsetTop: 0, scale: 1 }), { padding: '414px', open: true });
+    assert.deepEqual(keyboardLift(844, { height: 430, offsetTop: 0, scale: 1.005 }), { padding: '414px', open: true });
+    assert.deepEqual(keyboardLift(844, { height: 430, offsetTop: 0 }), { padding: '414px', open: true }, 'a viewport without scale is the resting scale');
+});
+
 test('attachKeyboardLift pads the overlay, flags it, and detach restores it (idempotent attach)', () => {
     const listeners = { vv: [], win: [] };
     const classes = new Set();

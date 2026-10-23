@@ -48,6 +48,10 @@ public sealed class ApiTempoDocumentLibraryProvider : ITempoDocumentLibraryProvi
         {
             url += $"&search={Uri.EscapeDataString(query.Search)}";
         }
+        if (query.Scope != DocumentLibraryScope.Folder)
+        {
+            url += $"&scope={query.Scope}";
+        }
 
         return (await _http.GetFromJsonAsync<DocumentLibraryPage>(url, Json, cancellationToken))
             ?? new DocumentLibraryPage();

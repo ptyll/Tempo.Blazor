@@ -68,7 +68,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Adds a virtual \"Recent\" node above the folder tree. Selecting it browses with FolderPath = null, SortField = Modified, Descending = true and Take = PageSize through the existing ITempoDocumentLibraryProvider.BrowseAsync - no provider member is added. Which documents a null folder returns is the provider's decision (the query contract says null or / lists the root, so a provider that wants a library-wide recent list must treat null as everywhere; the demo store returns the root documents only). Opt-in."
+      "description": "Adds a virtual \"Recent\" node above the folder tree. Selecting it browses with Scope = DocumentLibraryScope.Library, SortField = Modified, Descending = true and Take = PageSize through the existing ITempoDocumentLibraryProvider.BrowseAsync - no provider member is added. The query is explicitly library-wide (a search without a folder sends Scope = Library too); a provider without support for the wider scopes may degrade it to the root folder. Opt-in."
     },
     {
       "name": "LayoutMode",

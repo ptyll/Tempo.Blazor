@@ -136,18 +136,27 @@ export function getGridColumns(root) {
 const lifts = new Map();
 const liftRetries = new Map();
 const LIFT_RETRY_FRAMES = 10;
+// A hidden visual-viewport gap at least this tall is an on-screen keyboard (the smallest landscape phone keyboards are well above it).
+const KEYBOARD_MIN_PX = 120;
 
 /**
  * The inline bottom padding and the keyboard flag for a viewport state.
  * @param {number} layoutHeight window.innerHeight
- * @param {{ height: number, offsetTop: number }|null|undefined} viewport window.visualViewport
+ * @param {{ height: number, offsetTop: number, scale?: number }|null|undefined} viewport window.visualViewport
  * @returns {{ padding: string, open: boolean }}
  */
 export function keyboardLift(layoutHeight, viewport) {
     if (!viewport) return { padding: '', open: false };
+    // A pinch-zoomed page also shrinks the visual viewport (height = layout / scale) without any keyboard. Reading that gap as a keyboard
+    // would pad the footer off the screen and hide the Link / Copy cards, so a zoomed viewport (beyond the rounding browsers report)
+    // never lifts.
+    if ((viewport.scale ?? 1) > 1.01) return { padding: '', open: false };
     // The part of the layout viewport the visual viewport no longer covers (the same measure tm-sheet.js keyboardOffset takes).
     const hidden = Math.max(0, layoutHeight - viewport.height - viewport.offsetTop);
-    return hidden > 0 ? { padding: `${hidden}px`, open: true } : { padding: '', open: false };
+    if (hidden <= 0) return { padding: '', open: false };
+    // The footer follows any hidden gap, but only a gap of keyboard size flags the keyboard (and so hides the Link / Copy cards): a browser
+    // toolbar that slides in and out moves the visual viewport by tens of pixels and is not a keyboard.
+    return { padding: `${hidden}px`, open: hidden >= KEYBOARD_MIN_PX };
 }
 
 function tryAttachLift(root, id) {
