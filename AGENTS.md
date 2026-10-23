@@ -107,6 +107,7 @@ npm run test:reporting-modules
 npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
+npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 ```
 
 ### Package Creation
@@ -426,36 +427,139 @@ Use in components:
 
 ## TmPdfViewer Features
 
-The `TmPdfViewer` component is a standalone PDF viewer powered by **PDF.js v5** (ES modules). It supports both single-page and continuous scroll viewing modes with a rich toolbar and advanced productivity features.
+`Tempo.Blazor.PdfViewer` is a split package (static-asset base `_content/Tempo.Blazor.PdfViewer/`)
+shipping a PDF.js v5 powered viewer, an annotator and the shared comment-thread cards. Full
+contract — fit modes, header/slots, toolbar DOM, responsive behavior, touch and the migration
+notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are `/pdf-viewer`,
+`/pdf-annotator` and `/redaction`.
 
-### Parameters
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `TmPdfViewer` | The viewer: PDF.js rendering, toolbar, thumbnails, search, text layer, rotation, continuous scroll, optional annotations panel |
+| `TmPdfAnnotator` | The annotator: `TmPdfViewer` + annotation tools on one merged toolbar (`TmEditorShell` layout) |
+| `TmPdfAnnotationThreadPanel` | The viewer's comments panel (docked panel / side sheet / bottom sheet) |
+| `TmPdfAnnotatorPanel` | The annotator's thread panel (same cards, annotator chrome) |
+| `TmPdfThreadList` / `TmPdfThreadCard` / `TmPdfCommentItem` / `TmPdfComposer` | Shared thread cards used by both panels (PD4) |
+| `TmPdfAnnotationLayer` / `TmPdfAnnotatorLayer` | Page-overlay marker layers |
+| `TmRedactionLayer` | Redaction stage; keeps its viewer pinned to `SinglePage` |
+
+### TmPdfViewer Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `Url` | `string?` | `null` | PDF document URL (required) |
-| `Page` / `PageChanged` | `int` / `EventCallback<int>` | `1` | Two-way bound current page |
+| `Page` / `PageChanged` | `int` / `EventCallback<int>` | `1` | Two-way bound current page (1-based; scroll-tracked in Continuous) |
 | `Scale` / `ScaleChanged` | `double` / `EventCallback<double>` | `1.0` | Two-way bound zoom scale |
-| `ViewMode` / `ViewModeChanged` | `PdfViewMode` / `EventCallback<PdfViewMode>` | `SinglePage` | SinglePage or Continuous |
-| `ShowToolbar` | `bool` | `true` | Show navigation toolbar |
-| `ShowThumbnails` | `bool` | `false` | Show thumbnails sidebar |
-| `ShowSearch` | `bool` | `false` | Show search toggle in toolbar |
-| `ShowTextLayer` | `bool` | `false` | Render selectable text over canvas |
-| `ShowViewModeToggle` | `bool` | `false` | Show single/continuous view mode buttons |
-| `AllowRotation` | `bool` | `false` | Show rotation button |
-| `AllowDownload` | `bool` | `true` | Show download link |
-| `Height` | `string?` | `"600px"` | Viewer height CSS value |
+| `ViewMode` / `ViewModeChanged` | `PdfViewMode` / `EventCallback<PdfViewMode>` | `SinglePage` | `SinglePage` or `Continuous` |
+| `ZoomMode` / `ZoomModeChanged` | `PdfZoomMode` / `EventCallback<PdfZoomMode>` | `Auto` | `Auto` (fit-width on mobile, bound scale elsewhere), `Custom`, `FitWidth`, `FitPage`; any zoom button/preset/pinch demotes to `Custom` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Responsive layout; a forced value (or a forced cascading `TmLayoutContext` ancestor) pins Desktop/Tablet/Mobile |
+| `ToolbarLabels` | `ToolbarLabels` | `Icons` | `Icons` (icon-only), `IconsWithText`, or `Auto` (labels except on a narrow toolbar; labels render below icons on tablet) |
+| `ShowToolbar` | `bool` | `true` | Show the toolbar row |
+| `ShowThumbnails` | `bool` | `false` | Show the thumbnails sidebar |
+| `ShowSearch` | `bool` | `false` | Show the search group / search bar |
+| `ShowTextLayer` | `bool` | `false` | Render a selectable text layer over the canvas |
+| `ShowViewModeToggle` | `bool` | `false` | Show the single/continuous segmented control |
+| `ShowMobileActionBar` | `bool` | `true` | Render the mobile `TmMobileActionBar` (Pages \| Search \| Comments); hosts folding these entries into their own bar pass `false` and use `OpenThumbnailsSheetAsync()` / `OpenSearchAsync()` |
+| `AllowRotation` | `bool` | `false` | Show the rotation button |
+| `AllowDownload` | `bool` | `true` | Show the Download action (primary; moves into the header with `ShowHeader`) |
+| `ShowOpenLink` | `bool` | `true` | Show the "Open in new tab" link |
+| `ShowHeader` | `bool` | `false` | Show the document header above the toolbar |
+| `Title` / `Subtitle` | `string?` | `null` | Header text; the subtitle defaults to a neutral page count ("Pages: N") |
+| `ThumbnailsCollapsed` / `ThumbnailsCollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way collapsed thumbnails (toolbar "Pages" toggle + sidebar button drive it) |
+| `Height` | `string?` | `"600px"` | Viewer height (CSS value; `100%`/`100dvh` resolve through the flex chain) |
 | `Class` | `string?` | `null` | Additional CSS classes |
+| `EnableAnnotations` | `bool` | `false` | Enable the annotation layer and comments panel (single-page only, PD1) |
+| `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Persistence; in-memory provider when omitted |
+| `DocumentId` | `string?` | `null` | Provider document id (falls back to `Url`) |
+| `CurrentUser` | `DocumentCommentUser?` | `null` | Author of annotations created in this viewer |
+| `ShowResolvedAnnotations` | `bool` | `false` | Show resolved threads by default |
+| `Annotations` / `AnnotationsChanged` | `IReadOnlyList<DocumentCommentThread>?` / `EventCallback<...>` | `null` | Seed threads when no provider is supplied |
+| `OnTextSelected` | `EventCallback<PdfTextSelection>` | — | Text selection in the text layer (`EnableTextSelectionEvents` without annotations) |
+| `EnableTextSelectionEvents` | `bool` | `false` | Raise `OnTextSelected` without enabling the annotation layer |
+| `OverlayContent` | `RenderFragment?` | `null` | Overlay aligned with the current page canvas (single-page only, PD1) |
+| `OnDocumentLoaded` | `EventCallback<int>` | — | Total page count once loaded |
+| `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Host groups composed into the toolbar (the annotator injects its tools) |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Header slots (used only with `ShowHeader`) |
+| `SelectionCtaContent` | `RenderFragment?` | `null` | Content of the sticky in-flow selection CTA row (outside the scroll area) |
+
+Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
+`NextMatchAsync()` / `PreviousMatchAsync()`, `OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
+
+### Toolbar, layout and zoom
+
+- **Toolbar** — the core `TmToolbar` (`Overflow=Menu` with priority-based "More"), root class
+  `.tm-pdf-viewer__toolbar`, test id `pdf-viewer-toolbar`. Groups carry the stable
+  `data-tm-group` values `navigation`, `zoom`, `rotate`, `view`, `panels`, `search`,
+  `comments`, `export` (see [docs/toolbar.md](docs/toolbar.md)); hosts key off these, never
+  positional selectors. The page is an editable `<input type="number">` (Enter/blur navigates,
+  out-of-range reverts), the zoom label is a `TmDropdown` with presets 50/75/100/125/150/200 %
+  plus Fit width / Fit page, and the comments toggle shows the open-thread count.
+- **Layout modes** — resolved from the viewer's own container (`container-type: inline-size`):
+  **desktop** keeps the docked chrome; **tablet** (640–1023 px) starts with the thumbnails
+  collapsed, shows labels below icons and the comments panel as a `TmSidePanel` side sheet
+  (closed by default); **mobile** (<640 px) gets a compact single-row toolbar with a "More"
+  menu, an in-flow `TmMobileActionBar` (Pages | Search | Comments), bottom sheets for the
+  thumbnails/comments/zoom/search and `ZoomMode=Auto` → fit-width. `LayoutMode` (or a forced
+  cascading `TmLayoutContext` ancestor) pins a mode for tests and hosts; panel defaults apply
+  per layout until the user touches the panels themselves.
+- **Zoom modes** — `PdfZoomMode`: `Auto` (default; fit-width on a mobile layout, the bound
+  `Scale` everywhere else), `Custom` (user/binding-driven — the pre-Auto behavior), `FitWidth`
+  and `FitPage` (JavaScript computes the scale from the container and keeps recomputing it on
+  resize via a ResizeObserver). A fit scale may fall outside the 50–200 % presets — the exact
+  container ratio wins — and is clamped to 0.1–5 in `pdf-viewer.js`. Pinch-zoom commits into
+  `Custom` too.
+- **View modes** — `SinglePage` renders one canvas; `Continuous` renders a lazy scroll column:
+  per-page placeholders with the real aspect ratio, IntersectionObserver + serial render queue
+  (a 100+ page document never blocks the UI), canvases released outside the ±50 % viewport band
+  (limit 12 painted), `OnVisiblePageChanged` updating `Page`/`PageChanged` + the active
+  thumbnail, per-page text layer and search, and the scroll position preserved across zoom /
+  rotation / view-mode switches. **PD1: annotations, `OverlayContent` and selection-driven
+  annotation creation are single-page only** — the thread panel stays readable in Continuous
+  (localized hint) and selecting a thread switches back to `SinglePage` on its page.
+
+### TmPdfAnnotator
+
+Built on `TmPdfViewer` + `TmEditorShell`. **One toolbar**: the tool pills (Browse / Highlight /
+Comment / Stamp / Draw — `PdfAnnotatorMode`, two-way `Mode`), the color label
+(`AnnotationColor`, per-author/role colors via `AuthorColors`/`RoleColors`) and the panel toggle
+merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; the export group
+("Export PDF | Export flattened | Print" — `AllowExport`, `ExportFileName`, `ExportAsync(flatten)`,
+`PrintAsync()`) lives in the header row when `ShowHeader` is true. Pass-through parameters:
+`ShowThumbnails`, `ShowSearch`, `AllowRotation`, `ThumbnailsCollapsed` (two-way),
+`ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
+`SinglePage` (PD1) and never offers the continuous toggle. `ShowViewerToolbar` (default `true`)
+is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
+compact tools row of its own. Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the
+merged toolbar and the docked thread panel; **tablet** renders the tools as a full-width labelled
+row and the panel as a docked aside; **mobile is G2 — viewing + light edits only**: the tool
+palette offers exactly Browse and Add comment (highlight/stamp/draw are hidden, an active edit
+mode falls back to Browse with a localized hint), the F5 `TmMobileActionBar` carries the export
+entries and the thread panel is a non-modal bottom sheet (peek/half/full) that starts CLOSED
+at load. `ShowPanel`/`ShowPanelChanged` two-way; the panel renders with `ShowChrome=false`
+inside the sheet. Touch: one finger or pen draws, two fingers pinch/pan (the in-progress stroke
+is cancelled on the second finger; `pen` has priority), and a tablet-only sticky "Highlight"
+CTA surfaces a touch-selection draft.
 
 ### Architecture
 
-- **JS wrapper** (`pdf-viewer.js`): Standalone `window.tmPdfViewer` module that dynamically imports PDF.js v5, manages the PDF document lifecycle, and exposes methods for rendering, zooming, rotating, searching, thumbnails, and continuous scroll.
-- **Composition pattern**: `TmNotionPdfBlock` delegates all PDF rendering to `TmPdfViewer` via child component parameters. The Notion block only owns caption editing, upload dialog, resize handle, and focus handling.
-- **Dispatcher safety**: All `[JSInvokable]` methods wrap `StateHasChanged()` in `InvokeAsync(() => StateHasChanged())` to avoid Blazor dispatcher errors during JS interop callbacks.
-
-### View Modes
-
-- **SinglePage** (default): Renders one page at a time on a `<canvas>` with prev/next navigation.
-- **Continuous**: Renders all pages in a scrollable container via `renderAllPages()`.
+- **JS wrapper** (`pdf-viewer.js`): `window.tmPdfViewer` ES module that dynamically imports
+  PDF.js v5, keys document state PER ROOT ELEMENT (never per canvas), renders HiDPI with a DPR
+  cap of 2, and splits fit/download/continuous/render logic into node-tested modules
+  (`pdf-viewer-fit.mjs`, `pdf-viewer-download.mjs`, `pdf-viewer-continuous.mjs`,
+  `pdf-viewer-size.mjs`, `pdf-viewer-render.mjs` — `npm run test:pdf-viewer`). Pinch-zoom comes
+  from the core sibling `pointer-gesture.js` imported across the static-asset boundary — never a
+  package-local copy (see [docs/touch-interaction.md](docs/touch-interaction.md)).
+- **Composition pattern**: `TmNotionPdfBlock` delegates all PDF rendering to `TmPdfViewer` via
+  child component parameters; the Notion block only owns caption editing, upload dialog, resize
+  handle, and focus handling.
+- **Dispatcher safety**: All `[JSInvokable]` methods wrap `StateHasChanged()` in
+  `InvokeAsync(() => StateHasChanged())` to avoid Blazor dispatcher errors during JS interop.
+- **Token contract**: the package reads canonical core tokens (`--tm-color-primary`,
+  `--tm-border-color`, `--tm-radius-card`, `--tm-bg-workspace`, …) — never the removed undefined
+  aliases. Component-local knobs live on each root: `--tm-pdf-page-shadow` and
+  `--tm-pdf-panel-width` (viewer thumbnails 140px, annotator panel 300px, thread panel 280px).
 
 ### Usage
 
@@ -463,15 +567,24 @@ The `TmPdfViewer` component is a standalone PDF viewer powered by **PDF.js v5** 
 <!-- Basic viewer -->
 <TmPdfViewer Url="https://example.com/doc.pdf" />
 
-<!-- Full-featured -->
+<!-- Full-featured, responsive (demo defaults) -->
 <TmPdfViewer Url="@pdfUrl"
+             ToolbarLabels="ToolbarLabels.Auto"
              ShowThumbnails="true"
              ShowSearch="true"
              ShowTextLayer="true"
              ShowViewModeToggle="true"
              AllowRotation="true"
              AllowDownload="true"
+             ShowHeader="true"
+             Title="Contract draft"
              Height="600px" />
+
+<!-- Fit-width at every width (opt out of the Auto default) -->
+<TmPdfViewer Url="@pdfUrl" ZoomMode="PdfZoomMode.FitWidth" />
+
+<!-- Annotator with a header and export -->
+<TmPdfAnnotator Url="@pdfUrl" ShowHeader="true" Title="@title" AllowExport="true" />
 ```
 
 ---
@@ -679,8 +792,9 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
 
-`.github/workflows/js-node-tests.yml` runs the five Node lanes on every push/PR (document-editor,
-reporting-modules, overlay, diagram-editor, email-templates).
+`.github/workflows/js-node-tests.yml` runs the six Node lanes on every push/PR (overlay,
+diagram-editor, pdf-viewer, reporting-modules, email-templates, document-editor) plus the
+`check:document-editor-bundle` freshness check.
 
 ## Useful Commands Reference
 

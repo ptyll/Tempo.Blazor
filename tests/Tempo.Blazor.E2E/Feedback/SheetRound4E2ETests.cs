@@ -309,7 +309,10 @@ public sealed class SheetRound4E2ETests : WasmTestBase
         var toggle = toggles.Nth(instance);
         await toggle.ScrollIntoViewIfNeededAsync();
         await toggle.ClickAsync();
-        await page.Locator(".tm-view-manager-panel .tm-btn-primary").Last.ClickAsync();
+        // The table's toolbar view manager presents as a bottom sheet on a mobile layout
+        // (TmDataTable passes PanelPresentation.Auto), so the create button lives in the sheet
+        // content there; the anchored popover keeps .tm-view-manager-panel at every other width.
+        await page.Locator(".tm-view-manager-panel .tm-btn-primary, .tm-overlay-panel-sheet__content .tm-btn-primary").Last.ClickAsync();
         await page.Locator(".tm-modal").WaitForAsync();
         await page.WaitForTimeoutAsync(700);
 

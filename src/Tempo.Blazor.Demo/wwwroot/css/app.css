@@ -285,6 +285,26 @@ a:hover {
     transition: all 0.2s;
 }
 
+/* Full-bleed evidence section (the pdf pages' forced tablet/mobile references): escapes the
+   page's horizontal padding so the forced-layout demo measures the full content column of
+   main — the tablet reference presents in a container ≥768px wide at a tablet viewport
+   (the fixed 296px sidebar of the lg layout is main's own offset and stays respected). */
+.demo-full-bleed {
+    margin-inline: -1rem;
+}
+
+@media (width >= 640px) {
+    .demo-full-bleed {
+        margin-inline: -1.5rem;
+    }
+}
+
+@media (width >= 1024px) {
+    .demo-full-bleed {
+        margin-inline: -2rem;
+    }
+}
+
 .showcase-card:hover {
     border-color: #cbd5e1;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);

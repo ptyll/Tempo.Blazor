@@ -1658,6 +1658,640 @@
 
 ### Added
 
+- **PdfViewer & Annotator redesign — plan summary (phases 1–10).** `Tempo.Blazor.PdfViewer`
+  (`TmPdfViewer`, `TmPdfAnnotator`, the two thread panels and the annotation layers) was rebuilt
+  against the reference mockups: wave-0 bug/a11y fixes independent of the redesign (phase 1 —
+  JS document state keyed per root element instead of per canvas, visible loading/error states,
+  HiDPI with a DPR cap of 2, per-instance listeners, thumbnail reuse of the open document, aria
+  wiring), tokenization from the removed undefined aliases to the canonical core tokens so the
+  palette, the indigo theme and dark mode propagate (phase 2), the grouped toolbar with an
+  editable page input, zoom presets with Fit width/Fit page, the optional document header and
+  collapsible thumbnails (phase 3), the shared thread cards for both panels with comment editing
+  and a panel close (phase 4, PD3/PD4), the annotator on ONE toolbar with pass-through viewer
+  parameters (phase 5), the full continuous mode — lazy render queue, canvas release outside the
+  viewport band, scroll-tracked page, per-page text layer and search (phase 6; PD1 keeps
+  annotations and `OverlayContent` single-page only), the labelled and responsive viewer for
+  tablet and mobile on container queries + `TmLayoutMode` + the core sheets (phase 7), the
+  annotator's tablet/mobile G2 presentation (phase 8) and touch — pinch zoom, touch text
+  selection, pen priority, relative time and plural keys (phase 9) on the shared core gesture
+  helpers. The full contract — fit modes, header/slots, toolbar `data-tm-group` vocabulary,
+  responsive behavior, touch and the migration notes — is documented in
+  [docs/pdf-viewer.md](docs/pdf-viewer.md); every breaking DOM/CSS change is listed under
+  Breaking / Migration below.
+
+- **TmPdfAnnotator: the annotator and its panel on tablet and mobile (FZE-8).** The annotator now
+  resolves its layout from its own container through the embedded `TmEditorShell` (new
+  `LayoutMode` parameter, `TmLayoutMode`, default `Auto` — a forced value pins the layout so
+  tests and hosts can render a mode without a DOM) and adapts like the tablet/mobile references:
+  **desktop** keeps the merged toolbar and the docked thread panel; **tablet** renders the tool
+  labels under the icons (new `ToolbarLabels` parameter, `ToolbarLabels`, default `Icons` — the
+  demo pages use `Auto`; the value is passed through to the embedded viewer's toolbar), meets the
+  44px touch target on a coarse pointer for every annotator control (including the export/print
+  buttons and the toolbar pills), keeps the thumbnails collapsible (they start collapsed, as the
+  viewer does) and hosts the thread panel as the shell's docked side region; **mobile** is the
+  G2 presentation — a horizontally scrollable tool-palette tile row with exactly *Browse* and
+  *Add comment* (highlight, stamp and draw are hidden and an active edit mode falls back to
+  *Browse*, with a localized hint that the editing tools need a larger screen), the F5
+  `TmMobileActionBar` ("Export PDF | Export flattened | Print" with the threads entry in the
+  shared "More" menu) and the thread panel as a non-modal bottom sheet (peek/half/full) opened
+  from a thread marker, from "Comments" or from a comment draft, with the draft composer and the
+  reply/resolve buttons sticky at the sheet bottom in one shared row (phase 8 review 12). Paging
+  and zoom on a phone come
+  from the compact viewer toolbar (F7). `TmPdfAnnotatorPanel` gains `ShowChrome` (default `true`);
+  the sheet presentation passes `false` so the sheet header owns the title and the close button.
+  New localization keys: `TmPdfAnnotator_OpenThreads`, `TmPdfAnnotator_EditOnLargerScreen`
+  (en/cs/sk/fr + mock).
+
+  Phase 8 review round: the mobile sheet starts CLOSED at load (and on every switch from
+  desktop/tablet to mobile, unless the host explicitly supplies `ShowPanel`); after a sheet
+  close focus returns to the element that opened it (marker / Comments tile / draft) through
+  `tmPdfAnnotator.rememberFocus`/`focusOpener`, falling back to the first action-bar tile;
+  a sheet opened from a marker or a draft lands on the HALF snap (0.7) with the composer
+  pinned to the sheet bottom (review 12: the reply input and its Resolve secondary must sit
+  fully inside the sheet's visible band — the peek's band was too short and pushed the
+  reply/resolve row below the fold), the selected card `scrollIntoView({block:'end'})`-ed (the
+  sticky
+  reply composer rides at the card's bottom, so the bottom alignment lands it on the sheet's
+  visible band) and the draft textarea / reply input focused; the sheet header is not sticky
+  (the drawer body owns the scrolling) and the composer actions share one row instead of the
+  stacked full-width column; the shell collapse chevron is
+  wired two-way
+  (`CollapsedPanels` — a collapse of the right panel closes it, the reopen toggle restores);
+  `TmPdfViewer` gains `ShowMobileActionBar` (default `true`) plus public
+  `OpenThumbnailsSheetAsync`/`OpenSearchAsync`, and the annotator folds the viewer's Pages and
+  Search entries into its own bar (exactly one bar on a phone); the annotator tools render as
+  their own full-width labelled row above the canvas on tablet (never inside the narrow viewer
+  toolbar overflow, the color chip never wraps as a stray dot; review 12: the labelled pill
+  track wraps within the row and the color label stays visible in it at narrow panes);
+  `ToolbarLabels` follows the
+  viewer's rule (labels under the icons on tablet, inline on desktop); the thumbnails reuse the
+  viewer's guarded tablet default (collapsed unless the host binds them); the panel header ✕,
+  the "Show resolved" target, the card toggles and the palette tiles meet the 44px target on a
+  coarse pointer (both palette tiles stay fully visible at 320px); and editing a comment focuses
+  `pdf-annotator-edit-input`, returning focus to the comment's ⋯ trigger on save/cancel.
+
+- **TmPdfViewer: full continuous mode — lazy rendering, scroll tracking and per-page text/search.**
+  `renderAllPages` now builds one placeholder wrap per page (correct aspect ratio, resolved from
+  the real page boxes), paints pages lazily through an IntersectionObserver and a serial render
+  queue (`pdf-viewer-continuous.mjs`, node-tested) so a 100+ page document never blocks the UI,
+  and releases canvases scrolled far outside the viewport (limit 12 painted pages). Scrolling
+  reports the visible page through the new `[JSInvokable] OnVisiblePageChanged` — updating the
+  two-way `Page` binding, the toolbar input and the active thumbnail — while prev/next, the page
+  input, thumbnails and search matches call `scrollToPage` instead of rendering into an invisible
+  single-page canvas. The text layer and search highlights render per page inside each page wrap,
+  the active match scrolls its page into view, and zoom/rotation/view-mode switches preserve the
+  scroll position through a page-relative anchor. The demo loads a local 120-page fixture
+  (`_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf`, shipped by the
+  shared demo UI package) instead of an external URL.
+  New localization keys: `TmPdfViewer_AnnotationsSinglePageOnly`, `TmPdfViewer_PageOfTotal`
+  (en/cs/sk/fr + mock).
+
+- **TmPdfViewer: continuous mode review pass — switches, release band, scale updates and A11y.**
+  A Continuous → SinglePage switch (toolbar toggle or thread select) now renders and re-arms the
+  selection/overlay setup only after the fresh single-page DOM exists (`_singlePagePending`) —
+  previously the JS ran against the torn-down continuous DOM. Canvas release honors the same
+  margin-extended band as the IntersectionObserver (`±50 %` viewport) and a scroll tick re-queues
+  unpainted visible pages; leaving the band drops a page from the render queue. Released pages
+  also clear their text/search layers, and the active search match scrolls with `nearest` (and
+  not at all when already visible) so the page indicator no longer regresses to N−1. A scale-only
+  change in Continuous mode updates the placeholders in place (placeholders resized, painted
+  canvases dropped and re-queued, scroll anchor re-applied, pageSizes cached per document +
+  rotation) instead of rebuilding the DOM; the fit recompute is debounced ~100 ms in Continuous.
+  A11y: each continuous page wrap is a `role="group"` labelled from the localized
+  `TmPdfViewer_PageOfTotal` template with `aria-current="page"` tracking the visible page, the
+  canvas is `role="img"` (or `aria-hidden` under a text layer), and the wrap itself is a
+  keyboard-reachable `role="region"`. The demo pages use a tinted workspace
+  (`--tm-bg-muted`) with `--tm-bg-surface` page surfaces and a reduced-motion-aware skeleton
+  shimmer for unpainted pages.
+
+- **TmPdfViewer: annotations and `OverlayContent` are single-page only (PD1).** In continuous mode
+  the annotation overlay and `OverlayContent` are not rendered; the thread panel stays readable
+  and shows a localized hint (`TmPdfViewer_AnnotationsSinglePageOnly`), and selecting a thread
+  switches the viewer back to `SinglePage` on the thread's page (`ViewModeChanged` +
+  navigation). `TmRedactionLayer` keeps its viewer pinned to SinglePage (default `ViewMode`) and
+  is unaffected. `TmPdfAnnotator` already pins SinglePage.
+
+- **TmPdfViewer: `PdfZoomMode` (`Custom` | `FitWidth` | `FitPage`) with `ZoomMode`/`ZoomModeChanged`
+  (two-way, default `Custom`).** A fit mode lets JavaScript compute the scale from the container
+  size (`tmPdfViewer.fitScale`) and a ResizeObserver keeps recomputing it on resize — fit-width
+  keeps working after a panel or window resize. A fit scale MAY fall outside the zoom steps
+  (50–200 %) — the exact container ratio beats the steps — it is clamped to the absolute 0.1–5
+  bounds in `pdf-viewer.js` and re-guarded in `OnFitScaleComputed`. The zoom ± buttons and every
+  preset switch the mode back to `Custom`; the `Auto` value arrives with a later phase.
+
+- **TmPdfViewer: zoom presets dropdown.** The zoom label is now a `TmDropdown` with the presets
+  50/75/100/125/150/200 % plus "Fit width" and "Fit page"; the trigger shows the active fit mode
+  or the current percentage and carries `TmPdfViewer_ZoomPresets` as its accessible name.
+
+- **TmPdfViewer: document header (`ShowHeader`, `Title`, `Subtitle`, slots `HeaderStart` and
+  `HeaderActions`, default off).** With the header on, the title renders above a subtitle that
+  defaults to a neutral page count ("Pages: N") once the document is loaded, and the Open and
+  Download links move from the toolbar into the header (host actions slot in after them).
+
+- **TmPdfViewer: `ShowOpenLink` (default `true`).** Hides the "Open in new tab" link without
+  touching `AllowDownload`.
+
+- **TmPdfViewer: collapsible thumbnails.** The sidebar has a "Thumbnails" header with a collapse
+  button; `ThumbnailsCollapsed`/`ThumbnailsCollapsedChanged` is two-way, the toolbar gains a
+  "Pages" toggle, and a collapsed rail keeps one expand affordance. The toolbar also carries
+  `ToolbarStart`/`ToolbarEnd` slots so hosts (the annotator, phase 5) can compose their own
+  groups, and the comments toggle shows the open-thread count ("Comments (N)").
+
+- **TmDropdown: `AriaLabel` parameter.** Names the trigger button for assistive tech when the
+  visible label is only the current value (a zoom level); when null the visible text stays the
+  accessible name.
+
+- **TmPdfViewer: `PdfZoomMode` schema props in the wireframe stencil.** The `TmPdfViewer`
+  stencil schema gains `showThumbnails`, `viewMode` (`single` | `continuous`), `showHeader`,
+  `title` and `zoomMode` (`custom` | `fit-width` | `fit-page`); the `pdf-viewer` role is
+  unchanged.
+
+- **TmPdfViewer/TmPdfAnnotator: shared thread cards for both annotation panels.** The
+  `TmPdfAnnotationThreadPanel` and `TmPdfAnnotatorPanel` now compose three new components —
+  `TmPdfThreadCard` (card header with colored badge, plain-case kind label, preview,
+  "author · time", "Str. N" page reference, neutral reply count, success-subtle "Resolved" chip
+  and chevron over the expandable detail), `TmPdfCommentItem` (TmAvatar with initials or the
+  author's image, body with an "(Edited)" marker, and a "⋯" `TmDropdown` menu with Edit and
+  Delete in place of the inline link) and `TmPdfComposer` (the textarea + 32px-minimum actions
+  row; the reply composer is sticky at the bottom of the expanded thread and supports
+  Ctrl+Enter). Both panels keep their public parameters and `data-testid` contract; the cards
+  are white surfaces on the muted panel background with `--tm-radius-card`.
+
+- **TmPdfViewer/TmPdfAnnotator: comment editing and panel close.** Both panels gain
+  `OnEditRequested` (`EventCallback<DocumentCommentEditRequest>`); the viewer and the annotator
+  persist the edit through `IPdfAnnotationProvider.EditAsync` and refresh the threads. The
+  panels gain `OnCloseRequested` — a ✕ in the panel header; the viewer then hides the
+  annotations panel and the annotator raises `ShowPanelChanged` (two-way `ShowPanel`). The
+  panel width keeps flowing through the `--tm-pdf-panel-width` token (280px viewer /
+  300px annotator).
+
+- **TmPdfViewer/TmPdfAnnotator: the thread cards moved into one shared `TmPdfThreadList`.**
+  Both panels now delegate their card loop to a public `TmPdfThreadList` (XML-documented, JSON
+  overlay + bundle) that owns the `TmPdfThreadCard` rendering — `@key="thread.Id"` per card,
+  `@key="comment.Id"` per comment — plus the quoted text and the sticky reply composer. The
+  panels keep only their header (title, resolved filter, ✕) and their own new-thread/draft
+  prompt; they pass the localized reply labels and decide the kind-caption policy through
+  `HideCommentKind` (the viewer passes `true`, so plain comment threads render no kind label;
+  the annotator keeps captions for every kind). The shared text helpers (`Truncate`,
+  `Preview`, `ThreadNumber`) and the single `FormatTime` live in one internal helper used by
+  the card and the comment item alike, and the card/comment test ids keep flowing from
+  `TestIdBase` (the panels now pass `TestId("pdf-annotation")` / `TestId("pdf-annotator")`,
+  so a host `TestIdPrefix` is respected).
+
+- **TmPdfAnnotator: the ✕ keeps working without a `ShowPanel` binding, and a toolbar toggle
+  reopens the panel.** The annotator now tracks the panel visibility internally (synced from
+  `ShowPanel` only when the parameter value changes), so an unbound host can still close the
+  panel via the ✕; `pdf-annotator-panel-toggle` in the toolbar flips it back and mirrors the
+  state through `aria-pressed` (localized label `TmPdfAnnotator_PanelToggle`).
+
+- **TmDropdown: `ShowChevron` (default `true`).** Compact icon-only triggers can drop the
+  trailing chevron; the PDF comment "⋯" menu uses it to stay a compact square
+  (`min-width`/`min-height: var(--tm-space-8)`) that never stretches the comment card.
+
+- **TmPdfViewer/TmPdfAnnotator: comment head and card chrome polish.** The comment head splits
+  into two rows — author + ⋯ menu on row 1 (the author shrinks with `flex: 0 1 auto` but never
+  below `min-width: 4ch`), time + "(Edited)" on row 2; a changed `Comment.Id` closes a stale
+  inline edit. A selected thread card is marked by `border-color: var(--tm-color-primary)` and
+  a `var(--tm-color-primary-subtle)` header background — the focus ring stays reserved for
+  `:focus-visible`; the reply count moved top-right of the card header (the meta row keeps
+  "author · time · page ref", so the page ref and the reply count are no longer glued
+  together); and the composer textarea carries its localized placeholder as `aria-label`.
+
+- **TmPdfAnnotator: pass-through parameters for the viewer chrome.** The annotator gains
+  `ShowThumbnails`, `ShowSearch`, `AllowRotation`, `ThumbnailsCollapsed`/`ThumbnailsCollapsedChanged`
+  (two-way, unbound-host safe), `ZoomMode`/`ZoomModeChanged` (two-way) and `ShowOpenLink`
+  (default `true`) — all forwarded to the embedded viewer — plus an optional header row via
+  `ShowHeader`, `Title`, `Subtitle` and the `HeaderStart`/`HeaderActions` slots (the export
+  group renders as secondary header buttons; host actions slot in after it). The annotator
+  always pins the viewer to single-page mode (PD1) and never offers the continuous toggle.
+  New localization keys: `TmPdfAnnotator_ColorLabel`, `TmPdfAnnotator_TogglePanel`,
+  `TmPdfAnnotator_ExportGroup`, `TmPdfAnnotator_ToolsGroup` (en/cs/sk/fr + mock). The wireframe
+  `TmPdfAnnotator` stencil schema gains `showThumbnails`, `showSearch`, `showHeader` and `title`.
+
+- **TmPdfViewer: responsive viewer for tablet and mobile (FZE-7).** The viewer now resolves its
+  layout from its own container (new `LayoutMode` parameter, `TmLayoutMode`, default `Auto` —
+  a forced value pins the layout so tests and hosts can render a mode without a DOM) and adapts
+  like the tablet/mobile references: **desktop** keeps the docked chrome; **tablet** (640-1023)
+  starts with the thumbnails collapsed (the "Pages" toggle reopens them), renders the comments
+  panel as the one `TmSidePanel` side sheet (closed by default, restoring focus to the toolbar
+  toggle) and drops the toolbar labels below the icons; **mobile** (<640) gets a compact
+  single-row toolbar + "More" (Rotate, Open, Download and the continuous toggle live only
+  there, as `OverflowOnly` priorities), an in-flow `TmMobileActionBar`
+  ("Pages | Hledat | Komentare (N)"), the thumbnails and comments as bottom sheets, the zoom
+  presets as a sheet (`MobilePresentation=Auto` of the core dropdown) and a full-width search
+  row. The default comments-panel visibility follows the layout (desktop open, tablet and
+  mobile closed). New `ToolbarLabels` parameter (`Auto` | `Icons` | `IconsWithText`, default
+  `Icons` = the previous icon-only toolbar; the demo pages use `Auto`); on a tablet layout the
+  labels render below the icons. `.tm-pdf-viewer` is now a named query container
+  (`container-type: inline-size`) and its presentation (page count, dividers, wrapping, search
+  row) adapts to the viewer's own width; every viewer-owned control meets the
+  `--tm-touch-target` (44 px) minimum on a `pointer: coarse` device. `Height="100%"` and
+  `100dvh` now resolve through the flex chain (`min-height: 0`) of the wrapping layout host.
+  New localization keys: `TmPdfViewer_OpenPages`, `TmPdfViewer_OpenComments` (en/cs/sk/fr +
+  mock); the "More" trigger keeps the core `Tm_More`. `TmPdfAnnotationThreadPanel` gains
+  `ShowChrome` (default `true`); the sheet presentations pass `false` so the sheet header owns
+  the title and the close button. The wireframe `TmPdfViewer` stencil gains the `auto` zoom
+  mode (now the default).
+
+- **TmPdfViewer review fixes (FZE-7 follow-up).**
+
+  - **Panel defaults now apply under `LayoutMode=Auto`.** A measured layout flip re-applies
+    the panel defaults — thumbnails re-collapse on tablet, the comments panel closes off
+    desktop — until the user has touched the panels themselves (an internal flag, reset per
+    document load); a user's own choice is never overwritten, and reopening the thumbnails
+    resets the JS thumbnail render cache. Covered by bUnit tests that drive the wrapping
+    observer's `OnLayoutModeChanged("tablet")`.
+  - **A forced cascaded ancestor now decides the layout.** `TmPdfViewer` takes a
+    `[CascadingParameter] TmLayoutContext? Parent` and resolves its layout with the shared
+    `TmLayout.Resolve(LayoutMode, Parent, measured, Desktop)` (the same pattern as
+    `TmEditorShell`): an explicit `LayoutMode` wins, then a forced ancestor, then the viewer's
+    own measurement. A viewer nested in a forced-`Mobile` observer renders the mobile chrome.
+  - **The comments toggle id is a per-instance GUID** (it was a shared constant), used for the
+    side sheet's `RestoreFocusTargetId` — two viewers on one page no longer share a DOM id.
+  - **`downloadUrl` is hardened.** The decision logic moved into a pure
+    `pdf-viewer-download.mjs` (node-tested via `npm run test:pdf-viewer`): the URL is resolved
+    against `document.baseURI`, only `http:`/`https:`/`blob:` are allowed, same-origin and
+    `blob:` URLs take the anchor + `download` path, and any other origin opens a new tab
+    (`noopener,noreferrer`) instead of downloading — a cross-origin `download` attribute is
+    ignored by browsers and must never turn into a navigation.
+  - **Stable `data-tm-group` groups.** The "Pages" toggle (`panels`), the view-mode segment
+    (`view`) and the trailing file links + host `ToolbarEnd` (`export`) are `TmToolbarGroup`s
+    now; the full frozen group vocabulary is documented in [docs/toolbar.md](docs/toolbar.md)
+    (the PDF viewer adds `navigation`, `rotate`, `comments` to the DiagramEditor set).
+  - **TmPdfAnnotator.** `ZoomMode` defaults to `Auto` (consistent with the viewer); the
+    `ToolbarStart` tools and the panel toggle are core `TmToolbarButton`s with priorities
+    (Primary mode pills, Pinned panel toggle), so they overflow into the merged toolbar's
+    "More" menu. All test ids survive. The annotator groups carry `data-tm-group`
+    (`tools`, `export`).
+  - **Mobile presentation.** The compact row keeps the prev chevron + page input + next chevron
+    on one line (`flex-wrap: nowrap`), shows the compact `1/120` count, shortens the zoom
+    trigger to the bare `%` and fits a 320 px viewport in a single row; the mobile search bar
+    no longer wraps (input `flex: 1; min-width: 0`) and always offers a localized ✕ close; the
+    mobile action bar renders a tile only for an enabled feature (Pages/Search/Comments) and
+    disappears entirely when none is enabled. Under `pointer: coarse` the page input, the
+    search input, the file links, the composer actions, the comment ⋯ menu and the panel close
+    meet the `--tm-touch-target` minimum; the sheet-presented comments panel is `width: 100%`
+    with no left border and its title shows the live comment count. The redaction stage claims
+    the full width of the column below 900 px (`align-items: stretch` + `width: 100%`).
+  - **Evidence.** The demo page gains a forced-tablet section (`LayoutMode="TmLayoutMode.Tablet"`)
+    and the E2E lane screenshots the tablet toolbar, the open comments side sheet and the mobile
+    "More" menu (`pdf-viewer/mobile-more-menu.png`); the 44 px touch-target test also covers
+    `input`, `[role=button]` and `a`.
+
+  New localization keys: `TmPdfViewer_CloseSearch` (en/cs/sk/fr + mock).
+
+- **TmPdfViewer + TmPdfAnnotator: touch interaction (FZE-9).** The viewer now supports touch
+  end to end through the shared core gesture helpers (never a package-local copy):
+  - **Pinch-zoom & two-finger pan.** `pdf-viewer.js` attaches the core sibling
+    `pointer-gesture.js` (`attachPinch`, imported relatively across the split-package static
+    asset boundary) to the active scroll wrap. The live gesture is a CSS transform around the
+    fingers' start centre; on release the transform is cleared, the two-finger pan becomes
+    scroll and the committed absolute scale (clamped to 0.1–5.0) arrives at the new
+    `[JSInvokable] OnPinchZoomEnded`, which hands the zoom mode to the user
+    (`ZoomMode=Custom`, detaching any active fit observer) and re-renders once. The zoom
+    dropdown and the ± buttons remain the WCAG 2.5.7 non-drag alternative, and ctrl+wheel
+    (trackpad pinch) zooms around the cursor through the same commit path. The wraps claim
+    `touch-action: pan-x pan-y` so one finger still scrolls while the JS pinch owns the zoom.
+  - **Touch text selection.** The selection reports on `selectionchange` + `pointerup`
+    (previously `mouseup`, which never fires for a touch drag) and the text layer paints its
+    text with `color: transparent` instead of an element opacity, so the native selection
+    highlight and its touch handles render at full strength (the highlight color is the
+    scoped `::selection` rule). New sticky CTA on tablet and mobile:
+    a pending selection pins an in-flow bar ("Comment on selected text" + a dismiss) that
+    opens the comments sheet, where the docked desktop panel's prompt would be unreachable —
+    `TmPdfViewer_DismissSelection` is new (en/cs/sk/fr + mock).
+  - **The shared pinch helper grew one opt-out.** `attachPinch` gains
+    `captureSinglePointer` (default `true`, the previous behaviour): a host whose gesture
+    surface is a DESCENDANT listener inside the pinch element (the annotator's ink surface)
+    passes `false`, so a lone finger keeps reaching the surface's own pointer events and the
+    capture happens once the pinch actually starts (a document-level capture listener prunes a
+    finger that ended elsewhere). See docs/touch-interaction.md.
+  - **Drawing vs. gestures.** In the annotator's Draw mode one finger or the pen draws and
+    two fingers hand over to the pinch (the in-progress stroke is cancelled on the second
+    finger — the same event the pinch's `onStart` fires on — and only the stroke's own
+    pointer may extend or commit it); a `pen` landing replaces a live finger stroke (the pen
+    has priority). **Review fix:** `touch-action: none` moved from the active annotator
+    surface to the Draw modifier only — an active Comment/Stamp surface used to block
+    one-finger scrolling and the pinch on a phone. The tablet-only sticky "Highlight" CTA
+    (`TmPdfAnnotator_HighlightSelection`, new) surfaces a touch selection's highlight draft
+    when the panel is closed or out of reach.
+
+- **TmPdfViewer + TmPdfAnnotator: relative time and natural plurals (FZE-9).** The annotation
+  cards' timestamps are now relative ("5 min ago", "yesterday at 16:20"…) through the shared
+  `ITmRelativeTimeFormatter` (`TmRelativeTime.Resolve`) — the absolute time rides in the
+  `<time datetime>` machine-readable instant and the `title` tooltip. The counted texts became
+  `Loc.Plural` families: `TmPdfThread_ReplyCount` ("2 replies" / cs "2 odpovědi" / …),
+  `TmPdfViewer_CommentsCount` (the toolbar toggle's live count) and
+  `TmPdfAnnotator_DraftStrokes` (en/cs/sk/fr + mock, with the forms each language's grammar
+  needs per docs/localization-plurals.md).
+
+### Breaking / Migration
+
+- **TmPdfViewer + TmPdfAnnotator: the annotation-card time stamps and counted texts changed
+  format (FZE-9).** `TmPdfThread_ReplyCount` is no longer the neutral `"Replies: {0}"`
+  (cs `"Odpovědi: {0}"`) but a `Loc.Plural` family — English `"{0} reply"`/`"{0} replies"`,
+  Czech `"{0} odpověď"`/`"{0} odpovědi"`/`"{0} odpovědí"` — and the same happened to
+  `TmPdfViewer_CommentsCount` and `TmPdfAnnotator_DraftStrokes`. The card/comment time stamps
+  render RELATIVE text ("5 min ago") with the absolute time in the `<time datetime>`
+  attribute and the `title` tooltip (previously an absolute "g" string in the text, no
+  tooltip). Hosts that override these keys must provide the plural forms their language needs
+  (see docs/localization-plurals.md) and that expect the absolute text in the element body
+  should read `title` (or their own formatter) instead.
+
+```razor
+@* BEFORE — absolute text, neutral count *@
+<span class="tm-pdf-comment-item__time">@PdfAnnotationTextHelper.FormatTime(Comment.CreatedAt)</span>
+<span class="tm-pdf-thread-card__replies">@Loc["TmPdfThread_ReplyCount", ReplyCount]</span>
+
+@* AFTER — relative stamp + absolute tooltip, natural plural *@
+<time class="tm-pdf-comment-item__time" datetime="@stamp" title="@absolute">@relative</time>
+<span class="tm-pdf-thread-card__replies">@Loc.Plural("TmPdfThread_ReplyCount", ReplyCount)</span>
+```
+
+- **TmPdfAnnotator: the interaction surface no longer claims `touch-action: none` outside Draw
+  mode (FZE-9 review fix).** `.tm-pdf-annotator__surface--active` (Comment/Stamp) keeps only
+  `pointer-events: auto` + the crosshair cursor, so one-finger scrolling and the pinch work
+  over the page on a phone; the `touch-action: none` claim moved to
+  `.tm-pdf-annotator__surface--draw`, where the pointer events own the gesture. A host that
+  styled the active modifier expecting the old behavior should target the `--draw` modifier.
+
+- **TmPdfViewer: the scroll wraps now claim `touch-action: pan-x pan-y` (FZE-9).** One finger
+  still scrolls the pages, but the browser's native page pinch over the canvas is blocked so
+  the shared JS pinch owns the zoom. A host overlaying its own gesture surface on the canvas
+  wrap should mirror that value (or go tighter, like the annotator's Draw mode).
+
+- **TmPdfAnnotator: the DOM and layout moved onto `TmEditorShell`, and a mobile layout offers
+  light edits only (G2).** The annotator root is still `.tm-pdf-annotator` with the
+  `pdf-annotator` test id and keeps every `pdf-annotator-*` test id, but the two-column
+  `.tm-pdf-annotator__body` wrapper is gone: the viewer now lives in the shell's
+  `data-region="canvas"` region and the thread panel in `data-region="right"` (a docked aside
+  with a resize separator on desktop/tablet, a non-modal bottom sheet on mobile — where the
+  panel renders with `ShowChrome=false`). The annotator root owns the height contract
+  (`Height`, default "600px") and the embedded viewer flexes inside it; a host that relied on
+  the annotator growing past `Height` for the compact fallback row now gets the row inside the
+  same height. On a mobile layout the highlight/stamp/draw tools are not rendered (an active
+  edit mode falls back to Browse), the tool palette is the G2 tile row, the export/print
+  commands live in the F5 action bar and the merged toolbar gets nothing injected. Migration:
+  hosts styling `.tm-pdf-annotator__body` or positioning against it should target
+  `[data-region='canvas']` / `[data-region='right']` instead; a host that needs the full tool
+  set on a phone pins `LayoutMode="TmLayoutMode.Desktop"`; the mobile sheet starts CLOSED at
+  load and on every desktop/tablet→mobile switch, so a host that wants the sheet open on a
+  phone explicitly supplies `ShowPanel="true"` (the desktop default keeps the docked panel
+  open) — and on a tablet the annotator renders its tools as a full-width labelled row instead
+  of merging them into the viewer toolbar.
+
+- **TmPdfViewer: the toolbar DOM is now a core `TmToolbar`, and `ZoomMode` defaults to `Auto`
+  (fit-width on mobile).** Two behavior changes in one migration:
+
+  1. **Toolbar DOM.** The hand-rolled `role="toolbar"` row was replaced by the core
+     `TmToolbar` (Overflow=Menu with priority-based "More"). The toolbar root keeps the
+     `.tm-pdf-viewer__toolbar` class, `role="toolbar"`, the `PDF controls` aria-label and the
+     `pdf-viewer-toolbar` test id; the buttons keep `.tm-pdf-viewer__btn` plus their
+     `aria-label`s, the page input/count and the search bar keep their classes and test ids,
+     and the groups keep `role="group"` + their localized labels. What changed: buttons now
+     render as `.tm-toolbar-btn` (with the compact 28 px chrome layered on top), group
+     wrappers carry `data-tm-group` (`navigation`, `zoom`, `rotate`, `search`, `comments`),
+     the trailing file links live in the toolbar's actions section instead of a
+     `.tm-pdf-viewer__toolbar-trailing` wrapper, and the separators are core
+     `.tm-toolbar-divider` elements. Hosts styling the removed internals must move:
+     `.tm-pdf-viewer__group` → `.tm-toolbar-group`, `.tm-pdf-viewer__toolbar-trailing` →
+     `.tm-pdf-viewer__toolbar ::deep .tm-toolbar-actions`, `.tm-pdf-viewer__separator` →
+     `.tm-toolbar-divider`.
+
+  ```razor
+  @* BEFORE — hand-rolled row, always-icon buttons, Scale-driven zoom *@
+  <TmPdfViewer Url="@url" ZoomMode="PdfZoomMode.Custom" />
+
+  @* AFTER — same look as before: icon-only toolbar, scale kept at every width *@
+  <TmPdfViewer Url="@url" ZoomMode="PdfZoomMode.Custom" ToolbarLabels="ToolbarLabels.Icons" />
+  ```
+
+  2. **`ZoomMode` default is `Auto`.** On a mobile layout the viewer now computes the scale so
+     the page fills the container width (and keeps recomputing on resize); on desktop and
+     tablet the bound `Scale` is kept unchanged. Zoom buttons/presets still hand control back
+     to the user (Auto demotes to `Custom`). **To restore the previous behavior at every
+     width, set `ZoomMode="PdfZoomMode.Custom"`.**
+
+  - **Panels move off the bar on tablet/mobile.** On a tablet layout the comments panel is a
+    `TmSidePanel` side sheet closed by default and the thumbnails start collapsed; on mobile
+    the thumbnails and the comments panel are bottom sheets and the "Pages | Hledat |
+    Komentáře (N)" `TmMobileActionBar` drives them. Hosts that relied on the comments panel
+    being open at load on a narrow container should open it themselves
+    (`LayoutMode="TmLayoutMode.Desktop"` pins the docked chrome).
+
+- **TmPdfViewer: annotation overlays in Continuous mode are gone (PD1).** Previously a host that
+  enabled annotations and switched the viewer to `Continuous` rendered the annotation overlay and
+  `OverlayContent` over the (never painted) continuous DOM — markers and custom overlays were
+  misaligned and unusable. Now the overlay and `OverlayContent` render in `SinglePage` only: the
+  comment thread panel stays readable in Continuous (with a localized hint), and selecting a
+  thread returns the viewer to `SinglePage` on the thread's page. **Text-selection annotation
+  creation is disabled in Continuous mode too** — the selection handler reads the single-page
+  canvas and the annotation overlay does not exist there, so there is nothing to attach a draft
+  to; the panel, replies, resolve/delete and the thread list all keep working. Hosts that need
+  overlay- or selection-driven annotation creation should keep `ViewMode="SinglePage"` (as
+  `TmPdfAnnotator` and `TmRedactionLayer` do) or react to `ViewModeChanged`:
+
+  ```razor
+  @* BEFORE — the overlay/selection silently broke in Continuous *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ShowViewModeToggle="true"
+               ViewMode="@mode" />
+
+  @* AFTER — keep the annotating viewer pinned to SinglePage … *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ViewMode="PdfViewMode.SinglePage" />
+
+  @* AFTER — … or switch back on demand (e.g. a "Review" toggle) *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ShowViewModeToggle="true"
+               ViewMode="@_reviewMode"
+               ViewModeChanged="@(m => _reviewMode = m)" />
+  @* The viewer itself already returns to SinglePage when a comment thread is selected. *@
+  ```
+
+- **TmPdfAnnotator: the annotator has ONE toolbar now — its groups are merged into the embedded
+  viewer's toolbar, and the export group moved into an optional header row.** Previously the
+  annotator rendered its own disconnected bar (mode pills, color chip, export buttons, panel
+  toggle) above the viewer's toolbar; now `TmPdfAnnotator` composes its tool group into the
+  viewer toolbar through the `ToolbarStart` slot (before the navigation/zoom groups) and its
+  export group + panel toggle through `ToolbarEnd` (right-aligned after them), so navigation,
+  zoom, rotation, thumbnails and search all live in the same row. The annotator's own
+  `.tm-pdf-annotator__toolbar` row renders only in the compatibility case
+  (`ShowViewerToolbar="false"`, documented below, or no document yet). The export group is a
+  labelled `role="group"` of secondary buttons: it sits at the toolbar end by default and moves
+  into the header row when `ShowHeader="true"` (after the Open link, before the host's
+  `HeaderActions`). The active tool is now a tonal pill (`--tm-color-primary-subtle` +
+  primary content) instead of the filled primary button, the color indicator carries a visible
+  localized label (`TmPdfAnnotator_ColorLabel`), the tool group and the toggle use the new
+  `TmPdfAnnotator_ToolsGroup` / `_TogglePanel` labels, and the mode buttons shrank to the
+  viewer's 28 px chrome. **Every `data-testid` `pdf-annotator-*` is unchanged** (mode pills,
+  stamp select, export, export-flat, print, panel-toggle, surface), so E2E selectors keep
+  working; `pdf-annotator-toolbar` now names only the compact fallback row, and the new
+  `pdf-annotator-tools` / `pdf-annotator-export-group` / `pdf-annotator-color-label` ids are
+  available for hosts. Hosts styling the old internals must move:
+
+  | Old class | New class |
+  |---|---|
+  | `.tm-pdf-annotator__toolbar` (annotator bar) | the viewer's `.tm-pdf-viewer__toolbar` (the annotator row is the fallback only) |
+  | `.tm-pdf-annotator__modes` (group label) | `.tm-pdf-annotator__tools` (labelled group wrapping modes + stamp picker + color) |
+  | `.tm-pdf-annotator__mode--active` (filled primary) | same class, tonal pill (`--tm-color-primary-subtle`) |
+  | `.tm-pdf-annotator__color-chip` (chip only) | `.tm-pdf-annotator__color` wrapper: chip + `.tm-pdf-annotator__color-label` |
+  | `.tm-pdf-annotator__spacer` | gone — right alignment comes from `.tm-pdf-annotator__toolbar-end` (`margin-inline-start: auto`) |
+
+  ```html
+  <!-- BEFORE (two disconnected bars) -->
+  <div class="tm-pdf-annotator__toolbar" role="group">
+      <div class="tm-pdf-annotator__modes">…mode pills…</div>
+      <span class="tm-pdf-annotator__color-chip"></span>
+      <div class="tm-pdf-annotator__spacer"></div>
+      <button class="tm-pdf-annotator__action">Export PDF</button> …
+      <button class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle">…</button>
+  </div>
+  <div class="tm-pdf-viewer__toolbar">…pagination + zoom…</div>
+
+  <!-- AFTER (one toolbar; annotator groups merged via viewer slots) -->
+  <div class="tm-pdf-viewer__toolbar" role="toolbar">
+      <div class="tm-pdf-annotator__tools" role="group" aria-label="Annotation tools">
+          …mode pills (tonal active)…
+          <div class="tm-pdf-annotator__color"><span class="tm-pdf-annotator__color-chip"></span>
+              <span class="tm-pdf-annotator__color-label">Your annotation color</span></div>
+      </div>
+      …viewer navigation / zoom / rotation groups…
+      <div class="tm-pdf-annotator__toolbar-end">
+          <div class="tm-pdf-annotator__export-group" role="group" aria-label="Export">
+              <button class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary">…</button> …
+          </div>
+          <button class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle" aria-pressed="true">…</button>
+      </div>
+  </div>
+  ```
+
+  **Migration:** `ShowViewerToolbar` keeps its name but now means "merge into the viewer's
+  single toolbar" (default `true`); with `false` the viewer chrome is hidden and the annotator
+  renders its compact fallback row — exactly one toolbar in both cases, never two.
+
+- **TmPdfAnnotator: localization keys renamed — `TmPdfAnnotator_PanelToggle` →
+  `TmPdfAnnotator_TogglePanel` and `TmPdfAnnotator_YourColor` → `TmPdfAnnotator_ColorLabel`.**
+  The old keys were leftovers that no component used (the annotator's panel toggle speaks
+  `TmPdfAnnotator_TogglePanel`, the color indicator's visible label is
+  `TmPdfAnnotator_ColorLabel`); the dead entries are removed from all four resource tables
+  (en/cs/sk/fr) and from `MockTmLocalizer`. Hosts that supply custom localizer tables must drop
+  the old keys. The color chip itself is now `aria-hidden="true"` (no `role`/`aria-label`) —
+  the visible `.tm-pdf-annotator__color-label` span is the indicator's accessible name.
+
+- **TmPdfAnnotationThreadPanel / TmPdfAnnotatorPanel internal DOM replaced by the shared cards
+  (TmPdfThreadCard + TmPdfCommentItem + TmPdfComposer).** The panels' own item/thread classes
+  are gone; hosts styling the internals must move to the new shared classes:
+
+  | Old class | New class |
+  |---|---|
+  | `.tm-pdf-annotation-panel__item` / `.tm-pdf-annotator-panel__item` | `li.tm-pdf-thread-card` |
+  | `…__item--selected` | `.tm-pdf-thread-card--selected` |
+  | `…__item--resolved` | `.tm-pdf-thread-card--resolved` |
+  | `…__thread-head` | `.tm-pdf-thread-card__header` |
+  | `…__badge` | `.tm-pdf-thread-card__badge` |
+  | `…__kind` (annotator) | `.tm-pdf-thread-card__kind` (normal casing) |
+  | `…__preview` | `.tm-pdf-thread-card__preview` |
+  | `…__status` (plain uppercase text) | `.tm-pdf-thread-card__chip.tm-pdf-thread-card__chip--success` |
+  | `…__detail` | `.tm-pdf-thread-card__detail` |
+  | `…__list` / `…__empty` | `ul.tm-pdf-thread-list` / `.tm-pdf-thread-list__empty` (the shared `TmPdfThreadList`) |
+  | `…__quote` (inside a thread) | `.tm-pdf-thread-list__quote` (panel prompts keep `…panel__quote`) |
+  | `…__comment` | `.tm-pdf-comment-item` |
+  | `…__comment-head` / `__author` / `__time` | `.tm-pdf-comment-item__head` / `__author` / `__time` |
+  | `…__comment-body` | `.tm-pdf-comment-item__body` |
+  | `…__link` (inline delete link) | `.tm-pdf-comment-item__menu .tm-dropdown-item` (⋯ menu: Edit + Delete) |
+  | `…__input` | `.tm-pdf-composer__input` |
+  | `…__actions` | `.tm-pdf-composer__actions` |
+  | `…__btn` / `__btn--primary` / `__btn--ghost` | `.tm-pdf-composer__btn` / `__btn--primary` / `__btn--ghost` |
+  | — (new) | `.tm-pdf-thread-card__top`, `__spacer`, `__chevron`, `__meta`, `__author`, `__sep`, `__time`, `__page`, `__replies`; `.tm-pdf-comment-item__edited`, `__edit-input`, `__edit-actions`, `__meta`, `__menu`; `.tm-pdf-composer--sticky`; panels: `…__close`; annotator: `…__panel-toggle` |
+
+  ```html
+  <!-- BEFORE (annotation panel, simplified) -->
+  <li class="tm-pdf-annotation-panel__item tm-pdf-annotation-panel__item--selected">
+      <button class="tm-pdf-annotation-panel__thread-head">
+          <span class="tm-pdf-annotation-panel__badge">1</span>
+          <span class="tm-pdf-annotation-panel__preview">Body preview…</span>
+          <span class="tm-pdf-annotation-panel__status">RESOLVED</span>
+      </button>
+      <div class="tm-pdf-annotation-panel__detail">
+          <div class="tm-pdf-annotation-panel__comment">
+              <div class="tm-pdf-annotation-panel__comment-head">…</div>
+              <button class="tm-pdf-annotation-panel__link">Delete</button>
+          </div>
+      </div>
+  </li>
+
+  <!-- AFTER -->
+  <li class="tm-pdf-thread-card tm-pdf-thread-card--selected">
+      <button class="tm-pdf-thread-card__header" aria-expanded="true" aria-controls="…">
+          <span class="tm-pdf-thread-card__top">
+              <span class="tm-pdf-thread-card__badge" style="background:#2563eb">1</span>
+              <span class="tm-pdf-thread-card__kind">Comment</span>
+              <span class="tm-pdf-thread-card__spacer"></span>
+              <span class="tm-pdf-thread-card__chip tm-pdf-thread-card__chip--success">Resolved</span>
+              <span class="tm-pdf-thread-card__chevron">…</span>
+          </span>
+          <span class="tm-pdf-thread-card__preview">Body preview…</span>
+          <span class="tm-pdf-thread-card__meta">
+              <span class="tm-pdf-thread-card__author">Alena</span>
+              <span class="tm-pdf-thread-card__sep">·</span>
+              <span class="tm-pdf-thread-card__time">6.6.2025 9:00</span>
+              <span class="tm-pdf-thread-card__page">Str. 3</span>
+              <span class="tm-pdf-thread-card__replies">Odpovědi: 2</span>
+          </span>
+      </button>
+      <div class="tm-pdf-thread-card__detail">
+          <div class="tm-pdf-comment-item">…<div class="tm-pdf-comment-item__menu">⋯ Edit/Delete</div></div>
+          <div class="tm-pdf-composer tm-pdf-composer--sticky">…</div>
+      </div>
+  </li>
+  ```
+
+  The panel-level classes (`tm-pdf-annotation-panel__header/-title/-filter/-new/-prompt/-quote/-empty/-list`,
+  `tm-pdf-annotator-panel__*` equivalents, plus the new `__close`) are unchanged; the panel width
+  still resolves through `--tm-pdf-panel-width`. Delete moved from an inline link into the comment's
+  "⋯" menu, so automation must open the menu (`[data-testid='…-comment'] .tm-dropdown-trigger`)
+  before clicking `[data-testid='…-delete']`; the resolved chip text is no longer uppercased.
+
+- **TmPdfViewer toolbar DOM restructured (desktop reference).** The toolbar root is now
+  `role="toolbar"` with labelled `role="group"` sections (Navigation | Zoom | Rotate | Mode ||
+  Search | Comments) instead of one flat `role="group"` bar:
+
+  ```html
+  <!-- BEFORE -->
+  <div class="tm-pdf-viewer__toolbar" role="group" aria-label="PDF controls">
+      <div class="tm-pdf-viewer__pagination">…<span class="tm-pdf-viewer__page-label">Page 1 of 10</span>…</div>
+      <div class="tm-pdf-viewer__zoom">…<span class="tm-pdf-viewer__zoom-label">100%</span>…</div>
+      <div class="tm-pdf-viewer__view-mode"><button aria-pressed="true">…</button>…</div>
+  </div>
+
+  <!-- AFTER -->
+  <div class="tm-pdf-viewer__toolbar" role="toolbar" aria-label="PDF controls">
+      <div class="tm-pdf-viewer__group" role="group" aria-label="Navigation">
+          …<input class="tm-pdf-viewer__page-input" type="number" min="1" max="10" value="1" />
+            <span class="tm-pdf-viewer__page-count">/ 10</span>…
+      </div>
+      <div class="tm-pdf-viewer__group" role="group" aria-label="Zoom">
+          …<div class="tm-pdf-viewer__zoom"><button class="tm-dropdown-trigger">100%</button>…</div>…
+      </div>
+      <div class="tm-pdf-viewer__view-mode" role="radiogroup" aria-label="View mode">
+          <input type="radio" checked />…  <!-- native radios: arrows are the browser's -->
+      </div>
+  </div>
+  ```
+
+  Style against `.tm-pdf-viewer__page-input`, `.tm-pdf-viewer__page-count`, the
+  `.tm-pdf-viewer__zoom .tm-dropdown-trigger` and the view-mode radiogroup — `.tm-pdf-viewer__page-label`
+  and `.tm-pdf-viewer__zoom-label` are gone. The thumbnails sidebar now renders its own header and
+  list (`__thumbnails-header` / `__thumbnails-list`).
+
+- **TmPdfViewer: "Download" is the primary action, "Open" the secondary one.** Both were equal
+  links; the download link now paints the primary fill (`tm-pdf-viewer__link--primary`) and the
+  open link keeps a bordered secondary look (`tm-pdf-viewer__link--secondary`). With
+  `ShowHeader="true"` both move into the document header and the toolbar renders none.
 - **`TmFilterBuilder.ResultCountKey`** (`object?`, default `null`). Changing this value re-runs the count; hosts
   pass a token covering inputs outside `ActiveFilters` — search text, column filters, new items or a reloaded
   data provider. `TmDataTable` and `TmMultiViewList` pass an internal version counter they bump on those changes,
@@ -2769,6 +3403,35 @@
 
 ### Breaking / Migration
 
+- **PDF components no longer read the undefined `--tm-primary`/`--tm-border`/`--tm-*-dark`
+  aliases — they read the core tokens.** `TmPdfViewer`, `TmPdfAnnotator`, `TmPdfAnnotatorPanel`,
+  `TmPdfAnnotationThreadPanel`, `TmPdfAnnotationLayer`, `TmPdfAnnotatorLayer` and
+  `TmRedactionLayer` now paint with the canonical tokens (`--tm-color-primary`,
+  `--tm-border-color`, `--tm-color-surface-elevated`, `--tm-color-surface-hover`,
+  `--tm-text-primary/-secondary`, `--tm-color-on-primary`, `--tm-radius-card/-control`,
+  `--tm-color-warning`, `--tm-bg-workspace`, `--tm-shadow-card`, `--tm-focus-ring`), so the
+  palette, the indigo theme and dark mode propagate into them — the manual
+  `[data-theme="dark"]`/`.tm-dark` blocks and the JS inline colors/shadows/radii of thumbnails
+  and continuous pages are gone (thumbnails/labels/pages now carry the
+  `tm-pdf-thumbnail`/`tm-pdf-thumbnail--active`/`tm-pdf-thumbnail__label`/`tm-pdf-viewer__page`
+  classes styled under `::deep`). Hosts that re-skinned the PDF components by overriding the old
+  undefined aliases must override the canonical tokens instead (see docs/css-token-aliases.md —
+  an override of a `var()`-valued token has to target `:root`, `[data-theme="dark"]` AND
+  `.tm-dark` together):
+  ```css
+  /* before: an alias that was never defined — the components rendered their own hex fallbacks
+     and every theme change was invisible */
+  :root { --tm-primary: #7c3aed; --tm-hover: #ede9fe; }
+  /* after: the tokens the PDF components actually read, overridden for all three theme
+     selectors so a dark region sees it too */
+  :root, [data-theme="dark"], .tm-dark {
+      --tm-color-primary: #7c3aed;
+      --tm-color-surface-hover: #ede9fe;
+  }
+  ```
+  The per-component layout knobs stay component-local: `--tm-pdf-page-shadow` and
+  `--tm-pdf-panel-width` are defined on each component root (viewer thumbnails `140px`,
+  annotator panel `300px`, thread panel `280px`), never as global aliases.
 - **`tm-menu-nav` roving now includes `aria-disabled="true"` items.** Arrow keys, Home/End and
   typeahead reach an item that is only `aria-disabled` (not natively `disabled`), so its
   explanation stays reachable for a screen reader. Only items with the native `disabled`
@@ -4954,6 +5617,23 @@
   legacy classes loses the styles.
 
 ### Fixed
+
+- **TmPdfViewer: starting directly in `ViewMode=Continuous` no longer renders an empty area.** The
+  PDF.js document state in `pdf-viewer.js` was keyed by the single-page canvas `WeakMap` entry —
+  an element that is never rendered in continuous mode — so `init` bailed out before the document
+  loaded and `OnPdfLoaded` never fired. All interop functions are now keyed by the viewer's root
+  element, and the loading (`role="status"`, `TmPdfViewer_Loading`) and load-error (`TmAlert`
+  above the `<embed>` fallback) states that were computed but never rendered are visible. Page
+  canvases (single page, continuous pages and thumbnails) render at the device pixel ratio
+  (backing store × DPR, capped at 2; CSS size stays the viewport size) — overlays, search
+  highlights and annotations work in normalized 0..1 coordinates and stay aligned. Thumbnails
+  reuse the already-open PDF.js document instead of a second `getDocument(url)`, the text
+  selection `mouseup` listener is per instance and unregistered in `destroy` (no more leaks with
+  multiple viewers on one page), icon buttons carry `title` tooltips, view-mode buttons expose
+  `aria-pressed`, the thumbnails sidebar is a labelled region, thread headers in both comment
+  panels expose `aria-expanded` + `aria-controls` with a stable detail id, the annotator color
+  indicator is announced instead of `aria-hidden`, and selecting a thread anchored on another
+  page navigates the viewer (and the annotator) to that page.
 
 - **`TmOverlayPanel` dismissal focus restore no longer runs through `eval`.** The restore rides the
   overlay.js module export `focusById(id, { preventScroll: true })` — the id travels as a typed JS

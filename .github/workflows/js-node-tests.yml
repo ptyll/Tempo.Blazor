@@ -38,6 +38,9 @@ jobs:
       - name: Diagram editor
         run: npm run test:diagram-editor
 
+      - name: PDF viewer
+        run: npm run test:pdf-viewer
+
       - name: Reporting modules
         run: npm run test:reporting-modules
 

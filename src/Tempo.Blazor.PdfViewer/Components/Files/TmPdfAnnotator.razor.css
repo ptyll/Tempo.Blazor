@@ -1,118 +1,455 @@
 /* TmPdfAnnotator scoped styles */
 
+/* Component-local token: the single font size shared by the annotator controls and the
+   viewer chrome that lives in the same merged toolbar (see the ::deep rules below). */
 .tm-pdf-annotator {
+    --tm-pdf-annotator-font-size: var(--tm-font-size-xs);
+
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--tm-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
-    background: var(--tm-surface, #ffffff);
-    color: var(--tm-text, #111827);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     overflow: hidden;
 }
 
-/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+/* ── Compact fallback row / tablet tools row ───────────────────────────────
+   Rendered when the annotator does not merge into the viewer's single toolbar
+   (ShowViewerToolbar=false, or no document yet) on a desktop layout — and on a
+   TABLET layout always: the phase 8 review moved the tablet tools out of the
+   narrow viewer toolbar's "More" overflow into their own full-width labelled
+   row above the canvas. */
 
 .tm-pdf-annotator__toolbar {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
-    background: var(--tm-surface-elevated, #f9fafb);
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-color-surface-elevated);
+}
+
+/* The tablet ribbon: the tools + export group are the row's whole width, the
+   pills keep their labels under the icons and nothing overflows into a menu.
+   When the pane is too narrow for every label the row SCROLLS horizontally
+   (like the mobile tile row) instead of wrapping or dropping labels — the
+   colour label stays visible and the trailing panel toggle remains in the row
+   (the end group is sticky right, so the toggle keeps its place while the
+   tools scroll; phase 10 review). */
+.tm-pdf-annotator__toolbar--tablet {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+/* The color indicator never wraps its chip away from its label: the chip alone
+   on a wrapped line reads as a stray dot (phase 8 review 7). */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+}
+
+/* The labelled pill track never wraps inside the scrollable ribbon either: the
+   row scrolls as ONE line at every container width — the tools keep their
+   labels instead of collapsing to icons (phase 10 review). */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__tools {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+}
+
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__modes {
+    flex-wrap: nowrap;
+}
+
+/* The trailing group rides the scroll as the row's end anchor: sticky right
+   keeps the panel toggle on screen while the tool pills scroll beneath it. */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__toolbar-end {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    padding-inline-start: var(--tm-space-2);
+}
+
+/* A finger cannot hit the row's pills either — the tablet row sits outside a
+   TmToolbar, so it does not inherit the core coarse-pointer rule. ::deep reaches
+   the core TmToolbarButton roots (the same convention as the viewer's toolbar). */
+@media (pointer: coarse) {
+    .tm-pdf-annotator__toolbar--tablet ::deep .tm-toolbar-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Tool group (merged into the viewer toolbar or the fallback row) ─────── */
+
+/* A group never shrinks below its content: on a narrow pane the viewer
+   toolbar wraps whole groups to the next line instead of squeezing them.
+   `flex: 1 1 auto` + `min-width: 0` let the group's children wrap when the
+   pane runs out of space (the group itself never clips). */
+.tm-pdf-annotator__tools {
+    display: inline-flex;
+    align-items: center;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    min-width: 0;
 }
 
 .tm-pdf-annotator__modes {
     display: inline-flex;
-    gap: var(--tm-space-1, 4px);
+    gap: var(--tm-space-1);
 }
 
 .tm-pdf-annotator__mode {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border: 1px solid transparent;
-    border-radius: var(--tm-radius, 6px);
+    border-radius: var(--tm-radius-control);
     background: transparent;
-    color: var(--tm-text, #111827);
+    color: var(--tm-text-primary);
     cursor: pointer;
     transition: background 0.15s ease;
 }
 
 .tm-pdf-annotator__mode:hover {
-    background: var(--tm-hover, #e5e7eb);
+    background: var(--tm-color-surface-hover);
 }
 
+/* Active tool: a tonal pill (subtle primary surface + primary content) —
+   never the filled `--tm-color-primary` button. */
 .tm-pdf-annotator__mode--active {
-    background: var(--tm-primary, #3b82f6);
-    color: var(--tm-on-primary, #ffffff);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 .tm-pdf-annotator__mode--active:hover {
-    background: var(--tm-primary-700, #1d4ed8);
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-pdf-annotator__stamp-picker {
     display: inline-flex;
     align-items: center;
-    gap: var(--tm-space-1, 4px);
-    font-size: 12px;
-    color: var(--tm-text-muted, #6b7280);
+    gap: var(--tm-space-1);
+    font-size: var(--tm-pdf-annotator-font-size);
+    color: var(--tm-text-secondary);
 }
 
 .tm-pdf-annotator__stamp-select {
     font: inherit;
-    font-size: 12px;
+    font-size: var(--tm-pdf-annotator-font-size);
     padding: 2px 6px;
-    border: 1px solid var(--tm-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
-    background: var(--tm-surface, #ffffff);
-    color: var(--tm-text, #111827);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-annotator__color {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
 }
 
 .tm-pdf-annotator__color-chip {
     width: 14px;
     height: 14px;
-    border-radius: var(--tm-radius-full, 999px);
+    border-radius: var(--tm-radius-full);
     flex-shrink: 0;
 }
 
-.tm-pdf-annotator__spacer {
-    flex: 1;
+/* The visible span is the color indicator's accessible name (the chip itself is
+   aria-hidden): it truncates instead of pushing the toolbar wider. */
+.tm-pdf-annotator__color-label {
+    font-size: var(--tm-pdf-annotator-font-size);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* ── Toolbar end (export group + panel toggle) ───────────────────────────── */
+
+.tm-pdf-annotator__toolbar-end {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+/* The compact fallback row has no viewer trailing wrapper, so this is the row's
+   single end anchor. In the merged toolbar the viewer's trailing section (the
+   core `.tm-toolbar-actions` box, hosting the `export` data-tm-group) owns the
+   one auto margin via the start section's flex: 1. */
+.tm-pdf-annotator__toolbar > .tm-pdf-annotator__toolbar-end {
+    margin-inline-start: auto;
+}
+
+.tm-pdf-annotator__export-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    /* Never a clipping fixed width: the group wraps whole buttons to the next
+       line when the header row runs out of space. */
+    min-width: 0;
 }
 
 .tm-pdf-annotator__action {
     display: inline-flex;
     align-items: center;
-    gap: var(--tm-space-1, 4px);
-    padding: 4px 10px;
-    border: 1px solid var(--tm-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
-    background: var(--tm-surface, #ffffff);
-    color: var(--tm-text, #111827);
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
     font: inherit;
-    font-size: 12px;
+    font-size: var(--tm-pdf-annotator-font-size);
+    white-space: nowrap;
     cursor: pointer;
     transition: background 0.15s ease;
 }
 
-.tm-pdf-annotator__action:hover {
-    background: var(--tm-hover, #e5e7eb);
+/* Secondary chrome: bordered surface — the export/print group never uses the
+   filled primary style. */
+.tm-pdf-annotator__action--secondary {
+    border: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
 }
 
-/* ── Body ────────────────────────────────────────────────────────────────── */
+.tm-pdf-annotator__action--secondary:hover {
+    background: var(--tm-color-surface-hover);
+}
 
-.tm-pdf-annotator__body {
+/* Panel toggle: icon-only chrome; the pressed state mirrors the panel
+   visibility (aria-pressed) with the same tonal pill as the active tool. */
+.tm-pdf-annotator__panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-annotator__panel-toggle[aria-pressed="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* ── Font consistency in the merged toolbar ────────────────────────────────
+   The viewer chrome that shares the single toolbar with the annotator groups —
+   the Open link (slot-hosted) and the zoom trigger — follows the same font size
+   token as the annotator controls (::deep reaches the viewer's own elements). */
+::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__link,
+::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+    font-size: var(--tm-pdf-annotator-font-size);
+}
+
+/* ── Narrow panes (container query) ────────────────────────────────────────
+   When the viewer column (the named query container) drops below ~520px the
+   merged toolbar AND the header keep at most two rows: the color label is
+   visually hidden (sr-only — still announced for assistive tech, the chip
+   stays a visual aid), the export/print buttons become 28px icon buttons
+   (title/aria-label carry the names), and the stamp picker wraps instead of
+   clipping. The rules live inside TmPdfAnnotator.razor.css scope, so they hit
+   the annotator fragments hosted in the viewer toolbar and header too. */
+@container tm-pdf-annotator-viewer (max-width: 519.98px) {
+    .tm-pdf-annotator__color-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* The tablet ribbon is exempt: its scrollable row makes room for the label at
+       every container width (phase 10 review — the label never hides on tablet). */
+    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+    }
+
+    .tm-pdf-annotator__action-text {
+        display: none;
+    }
+
+    .tm-pdf-annotator__action {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .tm-pdf-annotator__stamp-picker {
+        flex-wrap: wrap;
+    }
+
+    /* Keep the merged toolbar at two rows (~40px each): the "/ N" page count and
+       the section divider give way, the row padding tightens, and the navigation
+       + zoom groups share the second row with the panel toggle. The extra
+       .tm-pdf-annotator class beats the viewer sheet's own (0,2,0) rules. */
+    .tm-pdf-annotator ::deep .tm-pdf-viewer__toolbar {
+        padding: var(--tm-space-1);
+    }
+
+    ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__page-count,
+    ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__separator,
+    ::deep .tm-pdf-viewer__toolbar .tm-toolbar-divider {
+        display: none;
+    }
+}
+
+/* UX4 (FZE-9 review → phase 10 review): a narrow container (the docked tablet panel
+   squeezing the canvas region) no longer collapses the labelled tablet tools to icons —
+   the ribbon scrolls horizontally as one line instead (see the --tablet rules above), so
+   the labels AND the colour label stay visible at every container width. */
+
+/* ── Body: the shell owns the layout (FZE-8) ─────────────────────────────── */
+
+/* The shell's canvas region hosts the viewer column; the thread panel is the docked Right
+   aside (or the mobile bottom sheet). The annotator removes the shell's workspace padding so
+   the viewer stays flush with the component border (the pre-shell look); the mobile sheet
+   reserve (padding-block-end) is the shell's own rule and stays untouched. */
+.tm-pdf-annotator ::deep .tm-editor-shell__canvas {
+    padding-block-start: 0;
+    padding-inline: 0;
     display: flex;
-    align-items: stretch;
-    min-height: 0;
+    flex-direction: column;
 }
 
+.tm-pdf-annotator ::deep .tm-editor-shell {
+    background: var(--tm-bg-surface);
+}
+
+/* The thread panel fills the shell's resizable dock (the aside owns the width), so the
+   panel's own fixed width and left border give way inside it. */
+.tm-pdf-annotator ::deep .tm-editor-shell__panel .tm-pdf-annotator-panel {
+    width: 100%;
+    border-left: none;
+}
+
+/* The query container is the viewer COLUMN (palette + fallback row + canvas) — not the root,
+   which also contains the thread panel and would never see the pane's real width. A column
+   flex box so the viewer shrinks under the palette on a phone instead of overflowing. */
 .tm-pdf-annotator__viewer {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    container-type: inline-size;
+    container-name: tm-pdf-annotator-viewer;
+}
+
+/* The embedded viewer fills the column under the palette/fallback row and shrinks with it
+   (its inline height is the preferred height; the flex basis takes over). */
+.tm-pdf-annotator__viewer ::deep .tm-pdf-viewer-host {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ── G2 mobile tool palette ──────────────────────────────────────────────── */
+
+.tm-pdf-annotator__palette {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-color-surface-elevated);
+}
+
+/* The tile track takes exactly its content width and never clips the tiles: both
+   light-edit tiles stay fully visible at every phone width (phase 8 review 10) —
+   the localized hint at the end absorbs the rest (it shrinks first, ellipsized). */
+.tm-pdf-annotator__palette-track {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.tm-pdf-annotator__tile {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    /* flex: 0 0 auto — a tile is never squeezed or pushed out of view. */
+    flex: 0 0 auto;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.tm-pdf-annotator__tile:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* Active tool: the same tonal pill as the desktop mode pills. */
+.tm-pdf-annotator__tile--active {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-pdf-annotator__tile--active:hover {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-pdf-annotator__tile-text {
+    font-size: var(--tm-pdf-annotator-font-size);
+    line-height: 1.2;
+    max-width: 6rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* The hint rides at the end of the palette and yields ALL leftover room to the tiles: it
+   shrinks to zero width (ellipsis) instead of pushing a tile out of the viewport — the two
+   tiles stay fully visible at every phone width (phase 8 review 10). */
+.tm-pdf-annotator__palette-hint {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-pdf-annotator-font-size);
+    color: var(--tm-text-secondary);
+    text-align: end;
 }
 
 /* ── Interaction surface ─────────────────────────────────────────────────── */
@@ -123,67 +460,67 @@
     pointer-events: none;
 }
 
+/* FZE-9 (review fix): touch-action NONE belongs to Draw mode only. An active comment or
+   stamp surface used to claim the whole gesture space, which blocked one-finger scrolling
+   and the pinch on a phone — a tap is not a drag, so Comment/Stamp keep the native
+   pan/pinch behaviour of the viewer wrap beneath them. */
 .tm-pdf-annotator__surface--active {
     pointer-events: auto;
+    cursor: crosshair;
+}
+
+/* Draw owns the gesture: one finger (or the pen) draws through the pointer events, two
+   fingers hand over to the viewer's core pinch, and the browser must not pan mid-stroke. */
+.tm-pdf-annotator__surface--draw {
     cursor: crosshair;
     touch-action: none;
 }
 
-.tm-pdf-annotator__surface--draw {
-    cursor: crosshair;
+/* ── Sticky highlight CTA (FZE-9, tablet only) ───────────────────────────── */
+
+/* M4: rides the viewer's in-flow SelectionCtaContent row (outside the scroll wrap) —
+   a plain flex item there, never absolutely positioned over the canvas: a zoom or a
+   scroll would carry an overlay CTA away, and the row owns the touch stacking. */
+.tm-pdf-annotator__selection-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-card);
+    font-size: var(--tm-pdf-annotator-font-size);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
 }
 
-/* ── Dark mode ───────────────────────────────────────────────────────────── */
-
-[data-theme="dark"] .tm-pdf-annotator,
-.tm-dark .tm-pdf-annotator {
-    background: var(--tm-surface-dark, #1f2937);
-    border-color: var(--tm-border-dark, #374151);
-    color: var(--tm-text-dark, #f9fafb);
+/* UX2 (FZE-9 review): the full label stays visible on a narrow tablet — the span wraps
+   to a second line instead of being cut by an ellipsis. */
+.tm-pdf-annotator__selection-cta span {
+    min-width: 0;
+    overflow-wrap: break-word;
+    text-align: center;
+    white-space: normal;
 }
 
-[data-theme="dark"] .tm-pdf-annotator__toolbar,
-.tm-dark .tm-pdf-annotator__toolbar {
-    background: var(--tm-surface-elevated-dark, #111827);
-    border-bottom-color: var(--tm-border-dark, #374151);
+.tm-pdf-annotator__selection-cta:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
-[data-theme="dark"] .tm-pdf-annotator__mode,
-.tm-dark .tm-pdf-annotator__mode {
-    color: var(--tm-text-dark, #f9fafb);
-}
-
-[data-theme="dark"] .tm-pdf-annotator__mode:hover,
-.tm-dark .tm-pdf-annotator__mode:hover {
-    background: var(--tm-hover-dark, #374151);
-}
-
-[data-theme="dark"] .tm-pdf-annotator__mode--active,
-.tm-dark .tm-pdf-annotator__mode--active {
-    background: var(--tm-primary, #3b82f6);
-    color: var(--tm-on-primary, #ffffff);
-}
-
-[data-theme="dark"] .tm-pdf-annotator__action,
-[data-theme="dark"] .tm-pdf-annotator__stamp-select,
-.tm-dark .tm-pdf-annotator__action,
-.tm-dark .tm-pdf-annotator__stamp-select {
-    background: var(--tm-surface-dark, #1f2937);
-    border-color: var(--tm-border-dark, #374151);
-    color: var(--tm-text-dark, #f9fafb);
-}
-
-[data-theme="dark"] .tm-pdf-annotator__action:hover,
-.tm-dark .tm-pdf-annotator__action:hover {
-    background: var(--tm-hover-dark, #374151);
-}
-
-/* ── Reduced motion ──────────────────────────────────────────────────────── */
-
-@media (prefers-reduced-motion: reduce) {
-    .tm-pdf-annotator__mode,
+/* A finger cannot hit a 28px export/print button: the annotator's secondary actions meet the
+   shared touch target on a coarse pointer (the merged toolbar and the header row alike). The
+   min-* constraints win over the narrow container-query width above. */
+@media (pointer: coarse) {
     .tm-pdf-annotator__action {
-        transition: none;
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
     }
 }
 
@@ -194,7 +531,8 @@
    (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
 @media (prefers-reduced-motion: reduce) {
   .tm-pdf-annotator__action,
-  .tm-pdf-annotator__mode {
+  .tm-pdf-annotator__mode,
+  .tm-pdf-annotator__tile {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

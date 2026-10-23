@@ -1,0 +1,124 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.AspNetCore.Components.Web
+
+@* Shared composer (PdfViewer redesign phase 4): the textarea + actions row used by both
+   annotation panels. The sticky variant pins the reply composer to the bottom of the expanded
+   thread card; the plain variant backs the new-thread/new-annotation prompt. The optional
+   ghost secondary button carries Cancel (new prompt) or Resolve/Reopen (reply composer), and
+   every button keeps a 32px minimum touch height. *@
+
+<div class="tm-pdf-composer @(Sticky ? "tm-pdf-composer--sticky" : "")">
+    @* The textarea has no visible label; the localized placeholder doubles as its accessible name. *@
+    <textarea class="tm-pdf-composer__input"
+              placeholder="@Placeholder"
+              aria-label="@Placeholder"
+              data-testid="@InputTestId"
+              disabled="@Disabled"
+              @bind="_body"
+              @bind:event="oninput"
+              @onkeydown="KeyDownAsync"></textarea>
+    <div class="tm-pdf-composer__actions">
+        <button type="button"
+                class="tm-pdf-composer__btn tm-pdf-composer__btn--primary"
+                disabled="@(!CanSubmitNow)"
+                data-testid="@SubmitTestId"
+                @onclick="SubmitAsync">
+            @SubmitLabel
+        </button>
+        @if (!string.IsNullOrWhiteSpace(SecondaryLabel))
+        {
+            <button type="button"
+                    class="tm-pdf-composer__btn tm-pdf-composer__btn--ghost"
+                    data-testid="@SecondaryTestId"
+                    @onclick="() => OnSecondary.InvokeAsync()">
+                @SecondaryLabel
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private string? _body;
+    private string? _lastResetKey;
+
+    /// <summary>Placeholder shown for an empty body.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Label of the primary submit button.</summary>
+    [Parameter] public string SubmitLabel { get; set; } = string.Empty;
+
+    /// <summary>Whether the composer is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Explicit submit gate overriding the empty-body rules below. When null the body must not
+    /// be blank unless <see cref="AllowEmptySubmit"/> is set.
+    /// </summary>
+    [Parameter] public bool? CanSubmit { get; set; }
+
+    /// <summary>
+    /// Allows submitting an empty body (the annotator's note is optional for highlights and
+    /// drawings). Ignored when <see cref="CanSubmit"/> is explicit.
+    /// </summary>
+    [Parameter] public bool AllowEmptySubmit { get; set; }
+
+    /// <summary>Callback invoked with the body when the composer is submitted.</summary>
+    [Parameter] public EventCallback<string> OnSubmit { get; set; }
+
+    /// <summary>Label of the optional ghost secondary button (Cancel / Resolve / Reopen).</summary>
+    [Parameter] public string? SecondaryLabel { get; set; }
+
+    /// <summary>Callback invoked when the secondary button is clicked.</summary>
+    [Parameter] public EventCallback OnSecondary { get; set; }
+
+    /// <summary>Test id of the secondary button (panel contract, e.g. <c>pdf-annotation-resolve</c>).</summary>
+    [Parameter] public string? SecondaryTestId { get; set; }
+
+    /// <summary>Test id of the textarea (panel contract, e.g. <c>pdf-annotation-reply-input</c>).</summary>
+    [Parameter] public string? InputTestId { get; set; }
+
+    /// <summary>Test id of the primary button (panel contract, e.g. <c>pdf-annotation-reply-submit</c>).</summary>
+    [Parameter] public string? SubmitTestId { get; set; }
+
+    /// <summary>Whether the composer sticks to the bottom of the expanded thread.</summary>
+    [Parameter] public bool Sticky { get; set; }
+
+    /// <summary>
+    /// When this key changes (e.g. another thread is selected) the body is cleared, so a stale
+    /// draft never leaks into the next thread's composer.
+    /// </summary>
+    [Parameter] public string? ResetKey { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_lastResetKey, ResetKey, StringComparison.Ordinal))
+        {
+            _lastResetKey = ResetKey;
+            _body = null;
+        }
+    }
+
+    private bool CanSubmitNow
+        => !Disabled && (CanSubmit ?? (AllowEmptySubmit || !string.IsNullOrWhiteSpace(_body)));
+
+    private async Task SubmitAsync()
+    {
+        if (!CanSubmitNow)
+        {
+            return;
+        }
+
+        var body = _body ?? string.Empty;
+        _body = null;
+        await OnSubmit.InvokeAsync(body);
+    }
+
+    private async Task KeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.CtrlKey)
+        {
+            await SubmitAsync();
+        }
+    }
+}

@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Files",
   "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools, a comment thread panel with resolve/reopen, per-author or per-role annotation colors, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
   "packageId": "Tempo.Blazor.PdfViewer",
   "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
   "documentationStatus": "generated",
@@ -27,7 +27,7 @@
       "name": "Height",
       "type": "string?",
       "isRequired": false,
-      "description": "Height of the annotator (CSS value). Default is \"600px\"."
+      "description": "Height of the annotator (CSS value). Default is \"600px\". The root owns the height contract; the embedded viewer fills it and shrinks inside it on a mobile layout."
     },
     {
       "name": "Class",
@@ -110,11 +110,97 @@
       "description": "Whether the thread panel is rendered. Default is true."
     },
     {
+      "name": "ShowPanelChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the panel's close button requests to hide the panel (two-way ShowPanel binding)."
+    },
+    {
       "name": "ShowViewerToolbar",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the underlying viewer toolbar (pagination, zoom) is shown. Default is true."
+      "description": "Kept for backward compatibility. When true (default) the annotator has no toolbar of its own: its tool groups merge into the embedded viewer's single toolbar through the viewer's ToolbarStart/ToolbarEnd slots, and the export group lives in the header row when ShowHeader is true. When false the viewer's chrome (navigation, zoom, rotation) is hidden and the annotator renders a compact tools row of its own instead."
+    },
+    {
+      "name": "ShowOpenLink",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the \"Open in new tab\" link is rendered (in the merged toolbar, or in the header row when ShowHeader is true). Default is true."
+    },
+    {
+      "name": "ShowThumbnails",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the viewer's thumbnails sidebar is offered. Default is false; passed through to the embedded viewer."
+    },
+    {
+      "name": "ShowSearch",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the viewer's search is offered. Default is false; passed through to the embedded viewer."
+    },
+    {
+      "name": "AllowRotation",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer."
+    },
+    {
+      "name": "ThumbnailsCollapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the thumbnails sidebar is collapsed. Supports two-way binding; the annotator tracks the state so an unbound host keeps the user's choice. Default is false."
+    },
+    {
+      "name": "ThumbnailsCollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the thumbnails collapse state changes in the viewer."
+    },
+    {
+      "name": "ZoomMode",
+      "type": "PdfZoomMode",
+      "isRequired": false,
+      "default": "PdfZoomMode.Custom",
+      "description": "How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is Custom."
+    },
+    {
+      "name": "ZoomModeChanged",
+      "type": "EventCallback<PdfZoomMode>",
+      "isRequired": false,
+      "description": "Callback when the zoom mode changes in the viewer."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether a header row (title, subtitle, export group and host actions) is rendered above the merged toolbar. Default is false."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Document title rendered in the header row. Used only when ShowHeader is true."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Document subtitle rendered in the header row. Used only when ShowHeader is true; when omitted the viewer shows a neutral page count."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the start of the header row. Used only when ShowHeader is true."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Extra host actions rendered at the end of the header row, after the export group. Used only when ShowHeader is true."
     },
     {
       "name": "AllowExport",
@@ -134,6 +220,18 @@
       "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
       "isRequired": false,
       "description": "Callback invoked when the loaded annotation set changes."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "How the annotator decides its responsive layout. Auto measures the annotator's own container through the embedded TmEditorShell; a forced value renders that layout without measuring, so a test — or a host — can pin a mode. Default Auto. The mobile layout is the G2 presentation: viewing plus light edits only."
+    },
+    {
+      "name": "ToolbarLabels",
+      "type": "ToolbarLabels",
+      "isRequired": false,
+      "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only tools of the earlier phases); Auto and IconsWithText show the labels — on a tablet layout under the icons (the ribbon style of the tablet reference). The value is passed through to the embedded viewer's toolbar as well."
     }
   ]
 }

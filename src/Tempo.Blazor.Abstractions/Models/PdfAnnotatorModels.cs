@@ -81,6 +81,14 @@ public static class PdfAnnotationColorHelper
         "#475569"  // slate 600
     ];
 
+    /// <summary>
+    /// The library's default annotation color: the first entry of <see cref="DefaultPalette"/>
+    /// (blue 600). Components resolve their draft color through this instead of carrying a hex
+    /// literal, so the palette stays owned by the helper alone. Declared AFTER the palette —
+    /// static initializers run in declaration order.
+    /// </summary>
+    public static readonly string DefaultColor = DefaultPalette[0];
+
     /// <summary>Resolves the color for an annotation thread.</summary>
     /// <param name="thread">Annotation thread.</param>
     /// <param name="authorColors">Optional per-author colors keyed by user id.</param>

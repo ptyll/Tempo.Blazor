@@ -1,0 +1,149 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+
+@* Shared thread card (PdfViewer redesign phase 4, PD4): one card implementation used by the
+   shared TmPdfThreadList of both annotation panels. The header is the expand/collapse toggle
+   (colored badge, plain-case kind label, preview, "author · time · page reference"; the reply
+   count sits top-right next to the resolved chip and chevron); the detail region hosts the
+   list's comments and composer when the thread is selected. A selected card is marked by its
+   border + subtle primary header background — the focus ring stays reserved for
+   :focus-visible. Since FZE-9 the time is the shared relative formatter's stamp (absolute in
+   the <time> instant + title) and the reply count is a Loc.Plural family. *@
+
+<li class="@CardClass">
+    <button type="button"
+            class="tm-pdf-thread-card__header"
+            data-thread-id="@ThreadId"
+            data-testid="@HeaderTestId"
+            aria-expanded="@(Selected ? "true" : "false")"
+            aria-controls="@(Selected ? DetailId : null)"
+            @onclick="() => OnToggle.InvokeAsync()">
+        <span class="tm-pdf-thread-card__top">
+            <span class="tm-pdf-thread-card__badge" style="@BadgeStyle" aria-hidden="true">@Number</span>
+            @if (!string.IsNullOrWhiteSpace(KindLabel))
+            {
+                <span class="tm-pdf-thread-card__kind">@KindLabel</span>
+            }
+            <span class="tm-pdf-thread-card__spacer" aria-hidden="true"></span>
+            @if (Resolved)
+            {
+                <span class="tm-pdf-thread-card__chip tm-pdf-thread-card__chip--success">@Loc["TmPdfThread_Resolved"]</span>
+            }
+            <span class="tm-pdf-thread-card__replies">@Loc.Plural("TmPdfThread_ReplyCount", ReplyCount)</span>
+            <span class="tm-pdf-thread-card__chevron" aria-hidden="true">
+                <TmIcon Name="@(Selected ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Sm" />
+            </span>
+        </span>
+        <span class="tm-pdf-thread-card__preview">@Preview</span>
+        <span class="tm-pdf-thread-card__meta">
+            @if (!string.IsNullOrWhiteSpace(AuthorName))
+            {
+                <span class="tm-pdf-thread-card__author">@AuthorName</span>
+                <span class="tm-pdf-thread-card__sep" aria-hidden="true">·</span>
+            }
+            @* FZE-9: the stamp is relative through the shared ITmRelativeTimeFormatter; the
+               absolute time rides in the <time datetime> instant and the title tooltip. *@
+            <time class="tm-pdf-thread-card__time"
+                  datetime="@DateTimeStamp(CreatedAt)"
+                  title="@AbsoluteTime(CreatedAt)">@RelativeTime(CreatedAt)</time>
+            <span class="tm-pdf-thread-card__sep" aria-hidden="true">·</span>
+            <span class="tm-pdf-thread-card__page">@Loc["TmPdfThread_PageRef", PageNumber]</span>
+        </span>
+    </button>
+
+    @if (Selected)
+    {
+        <div class="tm-pdf-thread-card__detail" id="@DetailId" data-testid="@DetailTestId">
+            @ChildContent
+        </div>
+    }
+</li>
+
+@code {
+    /// <summary>The service provider, for the shared relative-time formatter's fallback resolution.</summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>FZE-9: the relative stamp comes from the one shared formatter (never a private copy).</summary>
+    private string RelativeTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(value);
+
+    /// <summary>The absolute time for the stamp's title tooltip.</summary>
+    private string AbsoluteTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(value);
+
+    /// <summary>The machine-readable instant of the <c>&lt;time&gt;</c> element.</summary>
+    private static string DateTimeStamp(DateTimeOffset value)
+        => value.ToString("yyyy-MM-dd'T'HH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Stable thread identifier, exposed as <c>data-thread-id</c>.</summary>
+    [Parameter] public string ThreadId { get; set; } = string.Empty;
+
+    /// <summary>Ordinal number rendered in the colored badge.</summary>
+    [Parameter] public int Number { get; set; } = 1;
+
+    /// <summary>CSS color for the badge background. When null the primary token is used.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>Localized annotation kind label rendered in normal casing, when present.</summary>
+    [Parameter] public string? KindLabel { get; set; }
+
+    /// <summary>First-comment preview text.</summary>
+    [Parameter] public string? Preview { get; set; }
+
+    /// <summary>Author display name of the initial comment, when known.</summary>
+    [Parameter] public string? AuthorName { get; set; }
+
+    /// <summary>Creation timestamp of the initial comment (absolute until phase 9).</summary>
+    [Parameter] public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Page number the thread is anchored to.</summary>
+    [Parameter] public int PageNumber { get; set; } = 1;
+
+    /// <summary>Number of replies (comments after the first) in the thread.</summary>
+    [Parameter] public int ReplyCount { get; set; }
+
+    /// <summary>Whether the thread is resolved; renders the success-subtle chip.</summary>
+    [Parameter] public bool Resolved { get; set; }
+
+    /// <summary>Whether the thread is selected (expanded detail, chevron up).</summary>
+    [Parameter] public bool Selected { get; set; }
+
+    /// <summary>Callback invoked when the header is clicked to toggle selection.</summary>
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    /// <summary>DOM id of the expandable detail region, referenced by the header's aria-controls.</summary>
+    [Parameter] public string? DetailId { get; set; }
+
+    /// <summary>Test id of the header button (panel contract, e.g. <c>pdf-annotation-thread</c>).</summary>
+    [Parameter] public string? HeaderTestId { get; set; }
+
+    /// <summary>Test id of the detail region (panel contract, e.g. <c>pdf-annotation-detail</c>).</summary>
+    [Parameter] public string? DetailTestId { get; set; }
+
+    /// <summary>Detail content rendered while the thread is selected.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string CardClass
+    {
+        get
+        {
+            var classes = new List<string> { "tm-pdf-thread-card" };
+            if (Selected)
+            {
+                classes.Add("tm-pdf-thread-card--selected");
+            }
+
+            if (Resolved)
+            {
+                classes.Add("tm-pdf-thread-card--resolved");
+            }
+
+            return string.Join(" ", classes);
+        }
+    }
+
+    private string? BadgeStyle => string.IsNullOrWhiteSpace(Color) ? null : $"background:{Color};";
+}

@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Files;
 using Tempo.Blazor.Tests.Localization;
@@ -166,6 +167,74 @@ public class TmPdfAnnotationTests : LocalizationTestBase
         resolvedId.Should().Be("t1");
     }
 
+    // ── Wave 0 — a11y ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ThreadHeader_HasAriaExpandedAndControls()
+    {
+        var thread = TextRangeThread("t1");
+        var cut = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { thread })
+            .Add(x => x.SelectedThreadId, "t1"));
+
+        var header = cut.Find("[data-testid='pdf-annotation-thread']");
+        header.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = header.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty("an expanded thread header must reference its detail via aria-controls");
+        cut.Find($"#{controls}").Should().NotBeNull();
+
+        var collapsed = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { thread })
+            .Add(x => x.SelectedThreadId, (string?)null));
+        collapsed.Find("[data-testid='pdf-annotation-thread']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        // aria-controls only makes sense while the region is expanded.
+        collapsed.Find("[data-testid='pdf-annotation-thread']")
+            .GetAttribute("aria-controls").Should().BeNull("a collapsed thread header must not reference a detail region");
+    }
+
+    // ── Review fix 9: per-instance detail ids ─────────────────────────────────
+
+    [Fact]
+    public void ThreadPanels_TwoInstancesOnOnePage_GetDistinctDetailIds()
+    {
+        var cut = Render<TwoThreadPanelsHost>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") }));
+
+        var headers = cut.FindAll("[data-testid='pdf-annotation-thread']");
+        headers.Should().HaveCount(2);
+        var details = cut.FindAll("[data-testid='pdf-annotation-detail']");
+        details.Should().HaveCount(2);
+
+        var ids = details.Select(d => d.Id).ToList();
+        ids[0].Should().NotBeNullOrWhiteSpace();
+        ids[1].Should().NotBeNullOrWhiteSpace();
+        ids[0].Should().NotBe(ids[1], "two panels on one page must not share detail ids");
+
+        for (var i = 0; i < headers.Count; i++)
+        {
+            headers[i].GetAttribute("aria-controls").Should().Be(ids[i],
+                "each expanded header's aria-controls points at its own detail region");
+        }
+    }
+
+    /// <summary>Host rendering two thread panels side by side (two viewers on one page).</summary>
+    private sealed class TwoThreadPanelsHost : ComponentBase
+    {
+        [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            for (var i = 0; i < 2; i++)
+            {
+                builder.OpenComponent<TmPdfAnnotationThreadPanel>(i * 10);
+                builder.AddAttribute(i * 10 + 1, nameof(TmPdfAnnotationThreadPanel.Threads), Threads);
+                builder.AddAttribute(i * 10 + 2, nameof(TmPdfAnnotationThreadPanel.SelectedThreadId), "t1");
+                builder.CloseComponent();
+            }
+        }
+    }
+
     // ── Viewer integration ────────────────────────────────────────────────────
 
     [Fact]
@@ -274,8 +343,12 @@ public class TmPdfAnnotationTests : LocalizationTestBase
         cut.Render();
         cut.Find("[data-testid='pdf-annotation-detail']").Should().NotBeNull();
 
-        // Delete the first (non-last) comment; the thread survives and stays selected.
+        // Delete the first (non-last) comment via its ⋯ action menu; the thread survives
+        // and stays selected.
+        cut.Find(".tm-pdf-annotation-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
         cut.FindAll("[data-testid='pdf-annotation-delete']").First().Click();
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='pdf-annotation-comment']").Should().ContainSingle());
         cut.Render();
 
         cut.Find("[data-testid='pdf-annotation-detail']").Should().NotBeNull();
@@ -336,5 +409,67 @@ public class TmPdfAnnotationTests : LocalizationTestBase
 
         cut.Find("[data-testid='pdf-search-count']").TextContent.Should().Contain("2");
         capturedPage.Should().Be(3);
+    }
+
+    // ── Phase 4 — shared cards: close button and comment edit ────────────────
+
+    [Fact]
+    public void Panel_CloseButton_RaisesCloseRequested_AndViewerHidesPanel()
+    {
+        // Part 1 — the panel itself raises OnCloseRequested when the header ✕ is clicked.
+        var closed = false;
+        var panel = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") })
+            .Add(x => x.OnCloseRequested, EventCallback.Factory.Create(this, () => closed = true)));
+        panel.Find("[data-testid='pdf-annotation-close']").Click();
+        closed.Should().BeTrue("the panel's close button raises OnCloseRequested");
+
+        // Part 2 — the viewer hides the annotations panel entirely after the close request.
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.EnableAnnotations, true));
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(3));
+        cut.Render();
+
+        cut.Find("[data-testid='pdf-annotation-panel']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotation-close']").Click();
+        cut.Render();
+        cut.FindAll("[data-testid='pdf-annotation-panel']").Should().BeEmpty(
+            "the viewer hides the panel after its close request");
+    }
+
+    [Fact]
+    public async Task Viewer_EditComment_CallsProviderEditAsync_AndRaisesAnnotationsChanged()
+    {
+        var thread = TextRangeThread("t1");
+        thread.Comments[0].CanEdit = true;
+        var provider = new InMemoryPdfAnnotationProvider(new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
+        {
+            ["doc-1"] = [thread]
+        });
+        var changes = 0;
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.EnableAnnotations, true)
+            .Add(x => x.AnnotationProvider, provider)
+            .Add(x => x.DocumentId, "doc-1")
+            .Add(x => x.AnnotationsChanged, EventCallback.Factory.Create<IReadOnlyList<DocumentCommentThread>>(this, _ => changes++)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(1));
+        cut.Render();
+        var changesAfterLoad = changes;
+
+        cut.Find("[data-testid='pdf-annotation-thread']").Click();
+        cut.Render();
+        cut.Find(".tm-pdf-annotation-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
+        cut.WaitForElement("[data-testid='pdf-annotation-edit']").Click();
+        cut.WaitForElement("[data-testid='pdf-annotation-edit-input']").Input("edited body");
+        cut.Find("[data-testid='pdf-annotation-edit-save']").Click();
+
+        var threads = await provider.GetThreadsAsync("doc-1");
+        threads[0].Comments[0].Body.Should().Be("edited body");
+        threads[0].Comments[0].EditedAt.Should().NotBeNull();
+        changes.Should().BeGreaterThan(changesAfterLoad,
+            "the viewer re-raises AnnotationsChanged after persisting the edit");
     }
 }

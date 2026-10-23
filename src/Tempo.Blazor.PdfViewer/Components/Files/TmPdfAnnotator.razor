@@ -1,60 +1,102 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Toolbar
 
-<div class="tm-pdf-annotator @Class" data-testid="@TestId("pdf-annotator")">
+@* FZE-8: the responsive annotator. The annotator is laid out on the core TmEditorShell (F6):
+   the viewer — with its own thumbnails — is the shell's Canvas, the thread panel is the docked
+   Right (a non-modal bottom sheet on a mobile layout) and the F5 action bar carries the export,
+   flatten and print commands on a phone. ShowPanel/ShowPanelChanged map onto the shell's
+   RightOpen. The wrapper div keeps the component's root contract (the pdf-annotator test id and
+   the data-editor-layout mirror the diagram editor uses). *@
 
-    <div class="tm-pdf-annotator__toolbar"
-         role="group"
-         aria-label="@Loc["TmPdfAnnotator_ToolbarLabel"]"
-         data-testid="@TestId("pdf-annotator-toolbar")">
+<div class="tm-pdf-annotator @Class"
+     style="@RootStyle"
+     data-editor-layout="@LayoutName"
+     data-testid="@TestId("pdf-annotator")"
+     @ref="_annotatorRef">
 
-        <div class="tm-pdf-annotator__modes" role="group" aria-label="@Loc["TmPdfAnnotator_ToolbarLabel"]">
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Browse)"
-                    title="@Loc["TmPdfAnnotator_ModeBrowse"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeBrowse"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Browse ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-browse")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Browse)">
-                <TmIcon Name="mouse-pointer" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Highlight)"
-                    title="@Loc["TmPdfAnnotator_ModeHighlight"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeHighlight"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Highlight ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-highlight")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Highlight)">
-                <TmIcon Name="highlighter" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Comment)"
-                    title="@Loc["TmPdfAnnotator_ModeComment"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeComment"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Comment ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-comment")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Comment)">
-                <TmIcon Name="message-square" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Stamp)"
-                    title="@Loc["TmPdfAnnotator_ModeStamp"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeStamp"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Stamp ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-stamp")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Stamp)">
-                <TmIcon Name="stamp" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Draw)"
-                    title="@Loc["TmPdfAnnotator_ModeDraw"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeDraw"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Draw ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-draw")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Draw)">
-                <TmIcon Name="pencil" Size="IconSize.Sm" />
-            </button>
+    <TmEditorShell Class="tm-pdf-annotator__shell"
+                   LayoutMode="@LayoutMode"
+                   ResolvedLayoutChanged="OnShellResolvedLayoutChanged"
+                   Canvas="@ViewerSlot"
+                   Right="@PanelSlot"
+                   RightOpen="_panelVisible"
+                   RightOpenChanged="HandleRightOpenChangedAsync"
+                   CollapsedPanels="_collapsedPanels"
+                   CollapsedPanelsChanged="HandleCollapsedPanelsChangedAsync"
+                   RightTitle="@Loc["TmPdfAnnotator_PanelLabel"]"
+                   MobileActions="@MobileBarItems"
+                   ShowMobilePanelsToggle="false"
+                   MobileSheetSnapIndex="_mobileSnapIndex"
+                   MobileSheetSnapIndexChanged="SilentSnapChangedAsync"
+                   MobileSheetSnapPoints="MobileSheetSnapPoints" />
+</div>
+
+@code {
+    /// <summary>
+    /// The annotator's tool group (mode pills, stamp picker, color indicator) shared by the
+    /// merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
+    /// The tools are core <see cref="TmToolbarButton"/>s (Primary priorities), so the merged
+    /// toolbar can move them into its "More" menu when the row runs out of room; the group
+    /// carries the stable <c>data-tm-group</c> contract value. On a tablet layout with labels
+    /// shown the pills render their text under the icon.
+    /// </summary>
+    private RenderFragment ToolsGroup => @<div class="tm-pdf-annotator__tools"
+                                                    role="group"
+                                                    aria-label="@Loc["TmPdfAnnotator_ToolsGroup"]"
+                                                    data-tm-group="tools"
+                                                    data-testid="@TestId("pdf-annotator-tools")">
+        <div class="tm-pdf-annotator__modes">
+            <TmToolbarButton Icon="mouse-pointer"
+                             Text="@Loc["TmPdfAnnotator_ModeBrowse"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeBrowse"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="@ToolLabelPosition"
+                             Pressed="@(_mode == PdfAnnotatorMode.Browse)"
+                             Class="@ModeClass(PdfAnnotatorMode.Browse)"
+                             data-testid="@TestId("pdf-annotator-mode-browse")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Browse)" />
+            <TmToolbarButton Icon="highlighter"
+                             Text="@Loc["TmPdfAnnotator_ModeHighlight"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeHighlight"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="@ToolLabelPosition"
+                             Pressed="@(_mode == PdfAnnotatorMode.Highlight)"
+                             Class="@ModeClass(PdfAnnotatorMode.Highlight)"
+                             data-testid="@TestId("pdf-annotator-mode-highlight")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Highlight)" />
+            <TmToolbarButton Icon="message-square"
+                             Text="@Loc["TmPdfAnnotator_ModeComment"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeComment"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="@ToolLabelPosition"
+                             Pressed="@(_mode == PdfAnnotatorMode.Comment)"
+                             Class="@ModeClass(PdfAnnotatorMode.Comment)"
+                             data-testid="@TestId("pdf-annotator-mode-comment")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Comment)" />
+            <TmToolbarButton Icon="stamp"
+                             Text="@Loc["TmPdfAnnotator_ModeStamp"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeStamp"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="@ToolLabelPosition"
+                             Pressed="@(_mode == PdfAnnotatorMode.Stamp)"
+                             Class="@ModeClass(PdfAnnotatorMode.Stamp)"
+                             data-testid="@TestId("pdf-annotator-mode-stamp")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Stamp)" />
+            <TmToolbarButton Icon="pencil"
+                             Text="@Loc["TmPdfAnnotator_ModeDraw"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeDraw"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="@ToolLabelPosition"
+                             Pressed="@(_mode == PdfAnnotatorMode.Draw)"
+                             Class="@ModeClass(PdfAnnotatorMode.Draw)"
+                             data-testid="@TestId("pdf-annotator-mode-draw")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Draw)" />
         </div>
 
         @if (_mode == PdfAnnotatorMode.Stamp)
@@ -75,97 +117,259 @@
             </label>
         }
 
-        <span class="tm-pdf-annotator__color-chip"
-              style="background:@CurrentAuthorColor"
-              title="@Loc["TmPdfAnnotator_YourColor"]"
-              aria-hidden="true"></span>
-
-        <div class="tm-pdf-annotator__spacer"></div>
-
-        @if (AllowExport)
-        {
-            <button type="button"
-                    class="tm-pdf-annotator__action"
-                    title="@Loc["TmPdfAnnotator_Export"]"
-                    aria-label="@Loc["TmPdfAnnotator_Export"]"
-                    data-testid="@TestId("pdf-annotator-export")"
-                    @onclick="() => ExportAsync(false)">
-                <TmIcon Name="file-down" Size="IconSize.Sm" />
-                <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_Export"]</span>
-            </button>
-            <button type="button"
-                    class="tm-pdf-annotator__action"
-                    title="@Loc["TmPdfAnnotator_ExportFlattened"]"
-                    aria-label="@Loc["TmPdfAnnotator_ExportFlattened"]"
-                    data-testid="@TestId("pdf-annotator-export-flat")"
-                    @onclick="() => ExportAsync(true)">
-                <TmIcon Name="layers" Size="IconSize.Sm" />
-                <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_ExportFlattened"]</span>
-            </button>
-            <button type="button"
-                    class="tm-pdf-annotator__action"
-                    title="@Loc["TmPdfAnnotator_Print"]"
-                    aria-label="@Loc["TmPdfAnnotator_Print"]"
-                    data-testid="@TestId("pdf-annotator-print")"
-                    @onclick="PrintAsync">
-                <TmIcon Name="printer" Size="IconSize.Sm" />
-                <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_Print"]</span>
-            </button>
-        }
-    </div>
-
-    <div class="tm-pdf-annotator__body">
-        <div class="tm-pdf-annotator__viewer">
-            <TmPdfViewer Url="@Url"
-                         DocumentId="@DocumentId"
-                         Height="@(string.IsNullOrEmpty(Height) ? "600px" : Height)"
-                         ShowToolbar="ShowViewerToolbar"
-                         ShowTextLayer="true"
-                         EnableTextSelectionEvents="true"
-                         AllowDownload="false"
-                         Page="_currentPage"
-                         PageChanged="HandlePageChangedAsync"
-                         OnDocumentLoaded="HandleDocumentLoaded"
-                         OnTextSelected="HandleTextSelectedAsync">
-                <OverlayContent>
-                    <TmPdfAnnotatorLayer Threads="_threads"
-                                         PageNumber="_currentPage"
-                                         SelectedThreadId="@_selectedThreadId"
-                                         ShowResolved="_showResolved"
-                                         ColorResolver="_colorResolver"
-                                         Draft="_draft"
-                                         ActiveStroke="_activeStroke"
-                                         DraftColor="@CurrentAuthorColor"
-                                         OnThreadSelected="SelectThreadAsync" />
-                    <div @ref="_surfaceRef"
-                         class="tm-pdf-annotator__surface @(SurfaceActive ? "tm-pdf-annotator__surface--active" : "") @(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")"
-                         data-testid="@TestId("pdf-annotator-surface")"
-                         @onclick="HandleSurfaceClickAsync"
-                         @onpointerdown="HandlePointerDownAsync"
-                         @onpointerdown:preventDefault="true"
-                         @onpointermove="HandlePointerMoveAsync"
-                         @onpointerup="HandlePointerUpAsync"
-                         @onpointerleave="HandlePointerLeaveAsync"></div>
-                </OverlayContent>
-            </TmPdfViewer>
+        <div class="tm-pdf-annotator__color">
+            @* The chip is decorative: the visible label span next to it is the
+               color indicator's accessible name, so the chip is aria-hidden. *@
+            <span class="tm-pdf-annotator__color-chip"
+                  style="background:@CurrentAuthorColor"
+                  aria-hidden="true"></span>
+            <span class="tm-pdf-annotator__color-label"
+                  data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
         </div>
+    </div>;
 
-        @if (ShowPanel)
+    /// <summary>
+    /// The export group (Export / flattened export / Print) as secondary buttons, shared by
+    /// the toolbar end and the header row. Carries the stable <c>data-tm-group</c> contract value.
+    /// A mobile layout offers the same commands through the action bar instead.
+    /// </summary>
+    private RenderFragment ExportGroup => @<div class="tm-pdf-annotator__export-group"
+                                                role="group"
+                                                aria-label="@Loc["TmPdfAnnotator_ExportGroup"]"
+                                                data-tm-group="export"
+                                                data-testid="@TestId("pdf-annotator-export-group")">
+        <button type="button"
+                class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary"
+                title="@Loc["TmPdfAnnotator_Export"]"
+                aria-label="@Loc["TmPdfAnnotator_Export"]"
+                data-testid="@TestId("pdf-annotator-export")"
+                @onclick="() => ExportAsync(false)">
+            <TmIcon Name="file-down" Size="IconSize.Sm" />
+            <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_Export"]</span>
+        </button>
+        <button type="button"
+                class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary"
+                title="@Loc["TmPdfAnnotator_ExportFlattened"]"
+                aria-label="@Loc["TmPdfAnnotator_ExportFlattened"]"
+                data-testid="@TestId("pdf-annotator-export-flat")"
+                @onclick="() => ExportAsync(true)">
+            <TmIcon Name="layers" Size="IconSize.Sm" />
+            <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_ExportFlattened"]</span>
+        </button>
+        <button type="button"
+                class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary"
+                title="@Loc["TmPdfAnnotator_Print"]"
+                aria-label="@Loc["TmPdfAnnotator_Print"]"
+                data-testid="@TestId("pdf-annotator-print")"
+                @onclick="PrintAsync">
+            <TmIcon Name="printer" Size="IconSize.Sm" />
+            <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_Print"]</span>
+        </button>
+    </div>;
+
+    /// <summary>
+    /// The panel toggle: keeps the panel reachable when <see cref="ShowPanel"/> is unbound —
+    /// the ✕ inside the panel only flips the internal state, this button flips it back
+    /// (aria-pressed reflects the current visibility). A core <see cref="TmToolbarButton"/>
+    /// (Pinned — the trailing reopen affordance stays on the bar at every width, exactly like
+    /// the primary Save call to action). A mobile layout reaches the panel through the action
+    /// bar and the thread markers instead.
+    /// </summary>
+    private RenderFragment PanelToggleButton => @<TmToolbarButton Icon="@IconNames.PanelRight"
+                 Text="@Loc["TmPdfAnnotator_TogglePanel"]"
+                 Tooltip="@Loc["TmPdfAnnotator_TogglePanel"]"
+                 Priority="ToolbarButtonPriority.Pinned"
+                 LabelPosition="ToolbarLabelPosition.Hidden"
+                 Pressed="@_panelVisible"
+                 Class="tm-pdf-annotator__panel-toggle"
+                 data-testid="@TestId("pdf-annotator-panel-toggle")"
+                 OnClick="TogglePanelAsync" />;
+
+    /// <summary>
+    /// The shell's canvas region: the compact fallback row (when the annotator does not merge
+    /// into the viewer toolbar and the layout offers the full tool set) and the viewer itself.
+    /// The thumbnails stay inside the viewer — they are its own sidebar and mobile sheet.
+    /// </summary>
+    private RenderFragment ViewerSlot => @<div class="tm-pdf-annotator__viewer">
+
+        @* G2 mobile tool palette: a horizontally scrollable tile row with exactly the two
+           light-edit tools (browse and add comment); the editing tools stay tablet+. *@
+        @if (IsMobileLayout)
         {
-            <TmPdfAnnotatorPanel Threads="_threads"
+            @MobilePalette
+        }
+
+        @* Compact fallback row: rendered when the annotator does NOT merge into the viewer
+           toolbar (ShowViewerToolbar=false, or no document yet) on a desktop layout, and — per
+           the phase 8 review — on a TABLET layout always: the tablet ribbon renders the tools
+           and the export group as their own full-width labelled row above the canvas instead of
+           squeezing them into the narrow viewer toolbar's "More" overflow (where the color chip
+           would wrap as a stray dot). With the default settings the desktop annotator has no
+           toolbar of its own — its groups are composed into the single viewer toolbar through
+           the ToolbarStart/ToolbarEnd slots (phase 3). *@
+        @if ((!UseMergedToolbar || IsTabletLayout) && !IsMobileLayout)
+        {
+            <div class="tm-pdf-annotator__toolbar @(IsTabletLayout ? "tm-pdf-annotator__toolbar--tablet" : null)"
+                 role="group"
+                 aria-label="@Loc["TmPdfAnnotator_ToolbarLabel"]"
+                 data-testid="@TestId("pdf-annotator-toolbar")">
+                @ToolsGroup
+                <div class="tm-pdf-annotator__toolbar-end">
+                    @if (AllowExport && !ShowHeader)
+                    {
+                        @ExportGroup
+                    }
+                    @PanelToggleButton
+                </div>
+            </div>
+        }
+
+        @* PD1: the annotator always renders single pages and never offers the continuous
+           toggle, so ViewMode is pinned and ShowViewModeToggle is not passed. On a mobile
+           layout the annotator injects nothing into the viewer's compact row: paging and zoom
+           are the viewer's own F7 chrome and the annotator's commands live in the palette and
+           the action bar. *@
+        <TmPdfViewer @ref="_viewer"
+                     Url="@Url"
+                     DocumentId="@DocumentId"
+                     Height="@ViewerHeight"
+                     ShowToolbar="UseMergedToolbar"
+                     ShowHeader="ShowHeader"
+                     Title="@Title"
+                     Subtitle="@Subtitle"
+                     ShowOpenLink="ShowOpenLink"
+                     HeaderStart="@HeaderStart"
+                     ToolbarLabels="ToolbarLabels"
+                     ShowThumbnails="ShowThumbnails"
+                     ThumbnailsCollapsed="_thumbnailsCollapsed"
+                     ThumbnailsCollapsedChanged="HandleThumbnailsCollapsedChangedAsync"
+                     ShowSearch="ShowSearch"
+                     ShowMobileActionBar="false"
+                     AllowRotation="AllowRotation"
+                     ZoomMode="_zoomMode"
+                     ZoomModeChanged="HandleZoomModeChangedAsync"
+                     ViewMode="PdfViewMode.SinglePage"
+                     ShowTextLayer="true"
+                     EnableTextSelectionEvents="true"
+                     AllowDownload="false"
+                     Page="_currentPage"
+                     PageChanged="HandlePageChangedAsync"
+                     OnDocumentLoaded="HandleDocumentLoaded"
+                     OnTextSelected="HandleTextSelectedAsync">
+            <ToolbarStart>@(InjectToolbarGroups ? ToolsGroup : null)</ToolbarStart>
+            <ToolbarEnd>@(InjectToolbarGroups ? ToolbarEndFragment : null)</ToolbarEnd>
+            @* Row 1 (rendered only when the viewer header is on): the viewer header hosts
+               the title/subtitle plus the export group (secondary buttons) followed by the
+               host's own actions. *@
+            <HeaderActions>
+                @if (AllowExport && !IsMobileLayout)
+                {
+                    @ExportGroup
+                }
+                @HeaderActions
+            </HeaderActions>
+            <OverlayContent>
+                <TmPdfAnnotatorLayer Threads="_threads"
+                                     PageNumber="_currentPage"
+                                     SelectedThreadId="@_selectedThreadId"
+                                     ShowResolved="_showResolved"
+                                     ColorResolver="_colorResolver"
+                                     Draft="_draft"
+                                     ActiveStroke="_activeStroke"
+                                     DraftColor="@CurrentAuthorColor"
+                                     OnThreadSelected="SelectThreadAsync" />
+                <div @ref="_surfaceRef"
+                     class="tm-pdf-annotator__surface @(SurfaceActive ? "tm-pdf-annotator__surface--active" : "") @(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")"
+                     data-testid="@TestId("pdf-annotator-surface")"
+                     @onclick="HandleSurfaceClickAsync"
+                     @onpointerdown="HandlePointerDownAsync"
+                     @onpointerdown:preventDefault="true"
+                     @onpointermove="HandlePointerMoveAsync"
+                     @onpointerup="HandlePointerUpAsync"
+                     @onpointercancel="HandlePointerCancel"
+                     @onpointerleave="HandlePointerLeaveAsync"></div>
+            </OverlayContent>
+            @* FZE-9 review (M4/UX3): the sticky Highlight CTA (tablet only — G2 keeps the edit
+               tools off a phone) rides the viewer's in-flow SelectionCtaContent row, OUTSIDE
+               the scroll area, so a zoom or a scroll never carries it away. The touch
+               selection creates the draft; the CTA is the finger-sized path to its composer
+               when the panel is closed or out of reach. *@
+            <SelectionCtaContent>
+                @if (IsTabletLayout && _mode == PdfAnnotatorMode.Highlight && _draft?.Kind == DocumentAnnotationKind.Highlight)
+                {
+                    <button type="button"
+                            class="tm-pdf-annotator__selection-cta"
+                            data-testid="@TestId("pdf-annotator-highlight-cta")"
+                            @onclick="OpenDraftComposerAsync">
+                        <TmIcon Name="highlighter" Size="IconSize.Sm" />
+                        <span>@Loc["TmPdfAnnotator_HighlightSelection"]</span>
+                    </button>
+                }
+            </SelectionCtaContent>
+        </TmPdfViewer>
+    </div>;
+
+    /// <summary>The toolbar end (the export group and the panel toggle) injected into the merged
+    /// viewer toolbar on desktop and tablet.</summary>
+    private RenderFragment ToolbarEndFragment => @<div class="tm-pdf-annotator__toolbar-end">
+        @if (AllowExport && !ShowHeader)
+        {
+            @ExportGroup
+        }
+        @PanelToggleButton
+    </div>;
+
+    /// <summary>
+    /// The annotator's thread panel: the shell's docked Right region on desktop and tablet, the
+    /// shell's non-modal bottom sheet on mobile (where the sheet header owns the title and the
+    /// close button, so the panel drops its own chrome).
+    /// </summary>
+    private RenderFragment PanelSlot => @<TmPdfAnnotatorPanel Threads="_threads"
                                  SelectedThreadId="@_selectedThreadId"
                                  SelectedThreadIdChanged="SelectThreadAsync"
+                                 CurrentUserId="@(CurrentUser?.UserId)"
                                  ShowResolved="_showResolved"
                                  ShowResolvedChanged="SetShowResolvedAsync"
                                  ColorResolver="_colorResolver"
                                  Draft="_draft"
                                  DraftColor="@CurrentAuthorColor"
+                                 ShowChrome="@(!IsMobileLayout)"
                                  OnCreateRequested="CreateFromDraftAsync"
                                  OnDraftDismissed="DismissDraftAsync"
                                  OnReplyRequested="ReplyToThreadAsync"
+                                 OnEditRequested="EditCommentAsync"
                                  OnResolveRequested="ResolveThreadAsync"
                                  OnReopenRequested="ReopenThreadAsync"
-                                 OnDeleteRequested="DeleteCommentAsync" />
-        }
-    </div>
-</div>
+                                 OnDeleteRequested="DeleteCommentAsync"
+                                 OnCloseRequested="ClosePanelAsync" />;
+
+    /// <summary>
+    /// The G2 mobile tool palette: a horizontally scrollable track of 44px tiles (the two
+    /// light-edit tools) followed by the localized hint that the editing tools need a larger
+    /// screen. The hint rides at the end of the palette so it never pushes the tiles away.
+    /// </summary>
+    private RenderFragment MobilePalette => @<div class="tm-pdf-annotator__palette"
+                                                  role="group"
+                                                  aria-label="@Loc["TmPdfAnnotator_ToolsGroup"]"
+                                                  data-testid="@TestId("pdf-annotator-palette")">
+        <div class="tm-pdf-annotator__palette-track">
+            <button type="button"
+                    class="@PaletteTileClass(PdfAnnotatorMode.Browse)"
+                    aria-pressed="@(_mode == PdfAnnotatorMode.Browse ? "true" : "false")"
+                    data-testid="@TestId("pdf-annotator-mode-browse")"
+                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Browse)">
+                <TmIcon Name="mouse-pointer" Size="IconSize.Sm" />
+                <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ModeBrowse"]</span>
+            </button>
+            <button type="button"
+                    class="@PaletteTileClass(PdfAnnotatorMode.Comment)"
+                    aria-pressed="@(_mode == PdfAnnotatorMode.Comment ? "true" : "false")"
+                    data-testid="@TestId("pdf-annotator-mode-comment")"
+                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Comment)">
+                <TmIcon Name="message-square" Size="IconSize.Sm" />
+                <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ModeComment"]</span>
+            </button>
+        </div>
+        <span class="tm-pdf-annotator__palette-hint">@Loc["TmPdfAnnotator_EditOnLargerScreen"]</span>
+    </div>;
+}

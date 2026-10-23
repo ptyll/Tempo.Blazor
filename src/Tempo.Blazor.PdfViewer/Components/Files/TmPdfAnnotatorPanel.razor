@@ -1,22 +1,54 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
-@using System.Globalization
-@using Microsoft.AspNetCore.Components.Web
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Icons
 
-<aside class="tm-pdf-annotator-panel" data-testid="@TestId("pdf-annotator-panel")" aria-label="@Loc["TmPdfAnnotator_PanelLabel"]">
+@* Thread panel of TmPdfAnnotator (PdfViewer redesign phase 4): keeps only its own header
+   (resolved filter, ✕ close button — OnCloseRequested, surfaced as two-way ShowPanel on the
+   annotator) and the draft prompt; the thread cards themselves render through the shared
+   TmPdfThreadList (PD4), which composes TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer.
+   Comment edits flow through OnEditRequested to the provider. ShowChrome=false drops the
+   panel's own title and close button for the mobile bottom-sheet presentation (the shell's
+   sheet header owns them there, FZE-8); the resolved filter stays in both presentations and
+   the draft composer pins to the sheet bottom with full-width buttons. *@
 
-    <header class="tm-pdf-annotator-panel__header">
-        <span class="tm-pdf-annotator-panel__title">@Loc["TmPdfAnnotator_Annotations"]</span>
-        <label class="tm-pdf-annotator-panel__filter">
-            <input type="checkbox"
-                   checked="@ShowResolved"
-                   disabled="@Disabled"
-                   data-testid="@TestId("pdf-annotator-show-resolved")"
-                   @onchange="ToggleResolvedAsync" />
-            @Loc["TmPdfAnnotator_ShowResolved"]
-        </label>
-    </header>
+<aside class="@PanelClass" data-testid="@TestId("pdf-annotator-panel")" aria-label="@Loc["TmPdfAnnotator_PanelLabel"]">
+
+    @if (ShowChrome)
+    {
+        <header class="tm-pdf-annotator-panel__header">
+            <span class="tm-pdf-annotator-panel__title">@Loc["TmPdfAnnotator_Annotations"]</span>
+            <label class="tm-pdf-annotator-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotator-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfAnnotator_ShowResolved"]
+            </label>
+            <button type="button"
+                    class="tm-pdf-annotator-panel__close"
+                    data-testid="@TestId("pdf-annotator-close")"
+                    aria-label="@Loc["TmPdfThread_ClosePanel"]"
+                    title="@Loc["TmPdfThread_ClosePanel"]"
+                    @onclick="() => OnCloseRequested.InvokeAsync()">
+                <TmIcon Name="@IconNames.X" />
+            </button>
+        </header>
+    }
+    else
+    {
+        <div class="tm-pdf-annotator-panel__header tm-pdf-annotator-panel__header--sheet">
+            <label class="tm-pdf-annotator-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotator-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfAnnotator_ShowResolved"]
+            </label>
+        </div>
+    }
 
     @if (Draft is not null && !Disabled)
     {
@@ -27,139 +59,46 @@
             </div>
             @if (!string.IsNullOrWhiteSpace(Draft.Anchor?.HighlightedText))
             {
-                <div class="tm-pdf-annotator-panel__quote">@Truncate(Draft.Anchor!.HighlightedText!)</div>
+                <div class="tm-pdf-annotator-panel__quote">@PdfAnnotationTextHelper.Truncate(Draft.Anchor!.HighlightedText!)</div>
             }
             @if (Draft.Kind == DocumentAnnotationKind.Drawing)
             {
-                <div class="tm-pdf-annotator-panel__meta">@(string.Format(Loc["TmPdfAnnotator_DraftStrokes"], Draft.Strokes.Count))</div>
+                <div class="tm-pdf-annotator-panel__meta">@Loc.Plural("TmPdfAnnotator_DraftStrokes", Draft.Strokes.Count)</div>
             }
-            <textarea class="tm-pdf-annotator-panel__input"
-                      placeholder="@Loc["TmPdfAnnotator_NotePlaceholder"]"
-                      data-testid="@TestId("pdf-annotator-new-input")"
-                      @bind="_newBody"
-                      @bind:event="oninput"></textarea>
-            <div class="tm-pdf-annotator-panel__actions">
-                <button type="button"
-                        class="tm-pdf-annotator-panel__btn tm-pdf-annotator-panel__btn--primary"
-                        disabled="@(!CanSubmitDraft)"
-                        data-testid="@TestId("pdf-annotator-new-submit")"
-                        @onclick="CreateAsync">
-                    @Loc["TmPdfAnnotator_Add"]
-                </button>
-                <button type="button"
-                        class="tm-pdf-annotator-panel__btn tm-pdf-annotator-panel__btn--ghost"
-                        data-testid="@TestId("pdf-annotator-new-cancel")"
-                        @onclick="CancelDraftAsync">
-                    @Loc["TmPdfAnnotator_Cancel"]
-                </button>
-            </div>
+            <TmPdfComposer Placeholder="@Loc["TmPdfAnnotator_NotePlaceholder"]"
+                           SubmitLabel="@Loc["TmPdfAnnotator_Add"]"
+                           AllowEmptySubmit="@(Draft.Kind != DocumentAnnotationKind.Comment)"
+                           Sticky="@(!ShowChrome)"
+                           InputTestId="@TestId("pdf-annotator-new-input")"
+                           SubmitTestId="@TestId("pdf-annotator-new-submit")"
+                           SecondaryLabel="@Loc["TmPdfAnnotator_Cancel"]"
+                           SecondaryTestId="@TestId("pdf-annotator-new-cancel")"
+                           OnSecondary="CancelDraftAsync"
+                           OnSubmit="CreateAsync" />
         </div>
     }
 
-    @if (!VisibleThreads.Any())
-    {
-        <div class="tm-pdf-annotator-panel__empty" data-testid="@TestId("pdf-annotator-empty")">
-            @Loc["TmPdfAnnotator_NoAnnotations"]
-        </div>
-    }
-    else
-    {
-        <ul class="tm-pdf-annotator-panel__list">
-            @foreach (var thread in VisibleThreads)
-            {
-                <li class="@ThreadItemClass(thread)">
-                    <button type="button"
-                            class="tm-pdf-annotator-panel__thread-head"
-                            data-thread-id="@thread.Id"
-                            data-testid="@TestId("pdf-annotator-thread")"
-                            @onclick="() => SelectAsync(thread.Id)">
-                        <span class="tm-pdf-annotator-panel__badge" style="background:@Color(thread)">@ThreadNumber(thread)</span>
-                        <span class="tm-pdf-annotator-panel__kind">@KindLabel(thread)</span>
-                        <span class="tm-pdf-annotator-panel__preview">@Preview(thread)</span>
-                        @if (thread.Status == DocumentCommentThreadStatus.Resolved)
-                        {
-                            <span class="tm-pdf-annotator-panel__status">@Loc["TmPdfAnnotator_Resolved"]</span>
-                        }
-                    </button>
-
-                    @if (string.Equals(thread.Id, SelectedThreadId, StringComparison.Ordinal))
-                    {
-                        <div class="tm-pdf-annotator-panel__detail" data-testid="@TestId("pdf-annotator-detail")">
-                            @if (!string.IsNullOrWhiteSpace(thread.Anchor.HighlightedText))
-                            {
-                                <div class="tm-pdf-annotator-panel__quote">@Truncate(thread.Anchor.HighlightedText!)</div>
-                            }
-
-                            @foreach (var comment in thread.Comments)
-                            {
-                                <div class="tm-pdf-annotator-panel__comment" data-testid="@TestId("pdf-annotator-comment")">
-                                    <div class="tm-pdf-annotator-panel__comment-head">
-                                        <span class="tm-pdf-annotator-panel__author">@comment.AuthorName</span>
-                                        <span class="tm-pdf-annotator-panel__time">@FormatTime(comment.CreatedAt)</span>
-                                    </div>
-                                    @if (!string.IsNullOrWhiteSpace(comment.Body))
-                                    {
-                                        <div class="tm-pdf-annotator-panel__comment-body">@comment.Body</div>
-                                    }
-                                    @if (comment.CanDelete && !Disabled)
-                                    {
-                                        <button type="button"
-                                                class="tm-pdf-annotator-panel__link"
-                                                data-testid="@TestId("pdf-annotator-delete")"
-                                                @onclick="() => DeleteAsync(thread.Id, comment.Id)">
-                                            @Loc["TmPdfAnnotator_Delete"]
-                                        </button>
-                                    }
-                                </div>
-                            }
-
-                            @if (!Disabled)
-                            {
-                                <textarea class="tm-pdf-annotator-panel__input"
-                                          placeholder="@Loc["TmPdfAnnotator_ReplyPlaceholder"]"
-                                          data-testid="@TestId("pdf-annotator-reply-input")"
-                                          @bind="_replyBody"
-                                          @bind:event="oninput"></textarea>
-                                <div class="tm-pdf-annotator-panel__actions">
-                                    <button type="button"
-                                            class="tm-pdf-annotator-panel__btn tm-pdf-annotator-panel__btn--primary"
-                                            disabled="@(string.IsNullOrWhiteSpace(_replyBody))"
-                                            data-testid="@TestId("pdf-annotator-reply-submit")"
-                                            @onclick="() => ReplyAsync(thread.Id)">
-                                        @Loc["TmPdfAnnotator_Reply"]
-                                    </button>
-                                    @if (thread.Status == DocumentCommentThreadStatus.Open)
-                                    {
-                                        <button type="button"
-                                                class="tm-pdf-annotator-panel__btn tm-pdf-annotator-panel__btn--ghost"
-                                                data-testid="@TestId("pdf-annotator-resolve")"
-                                                @onclick="() => ResolveAsync(thread.Id)">
-                                            @Loc["TmPdfAnnotator_Resolve"]
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button"
-                                                class="tm-pdf-annotator-panel__btn tm-pdf-annotator-panel__btn--ghost"
-                                                data-testid="@TestId("pdf-annotator-reopen")"
-                                                @onclick="() => ReopenAsync(thread.Id)">
-                                            @Loc["TmPdfAnnotator_Reopen"]
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    }
-                </li>
-            }
-        </ul>
-    }
+    <TmPdfThreadList Threads="@Threads"
+                     SelectedThreadId="@SelectedThreadId"
+                     SelectedThreadIdChanged="SelectedThreadIdChanged"
+                     CurrentUserId="@CurrentUserId"
+                     ShowResolved="ShowResolved"
+                     Disabled="Disabled"
+                     TestIdBase="@TestId("pdf-annotator")"
+                     ColorResolver="@ColorResolver"
+                     EmptyText="@Loc["TmPdfAnnotator_NoAnnotations"]"
+                     ReplyPlaceholder="@Loc["TmPdfAnnotator_ReplyPlaceholder"]"
+                     ReplySubmitLabel="@Loc["TmPdfAnnotator_Reply"]"
+                     ResolveLabel="@Loc["TmPdfAnnotator_Resolve"]"
+                     ReopenLabel="@Loc["TmPdfAnnotator_Reopen"]"
+                     OnReplyRequested="OnReplyRequested"
+                     OnEditRequested="OnEditRequested"
+                     OnResolveRequested="OnResolveRequested"
+                     OnReopenRequested="OnReopenRequested"
+                     OnDeleteRequested="OnDeleteRequested" />
 </aside>
 
 @code {
-    private string? _newBody;
-    private string? _replyBody;
-
     /// <summary>Annotation threads to render.</summary>
     [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
 
@@ -168,6 +107,9 @@
 
     /// <summary>Callback invoked when the selected thread id changes.</summary>
     [Parameter] public EventCallback<string?> SelectedThreadIdChanged { get; set; }
+
+    /// <summary>Current user id, used for comment permission checks.</summary>
+    [Parameter] public string? CurrentUserId { get; set; }
 
     /// <summary>Whether resolved threads are shown.</summary>
     [Parameter] public bool ShowResolved { get; set; }
@@ -178,11 +120,21 @@
     /// <summary>Resolves the display color of a thread.</summary>
     [Parameter] public Func<DocumentCommentThread, string>? ColorResolver { get; set; }
 
+    /// <summary>
+    /// Whether the panel renders its own header (title + ✕ close). Default true — the docked
+    /// desktop/tablet presentation. When the panel is hosted inside the annotator's mobile
+    /// bottom sheet (FZE-8), the sheet header owns the title and the close button, so the host
+    /// passes false and the panel renders only the resolved filter and its body, with the draft
+    /// composer pinned to the sheet bottom and its buttons split across one row (phase 8
+    /// review 12).
+    /// </summary>
+    [Parameter] public bool ShowChrome { get; set; } = true;
+
     /// <summary>Pending annotation draft awaiting a note, when present.</summary>
     [Parameter] public PdfAnnotatorDraft? Draft { get; set; }
 
-    /// <summary>Color used for the draft indicator.</summary>
-    [Parameter] public string DraftColor { get; set; } = "#2563eb";
+    /// <summary>Color used for the draft indicator. Defaults to <see cref="PdfAnnotationColorHelper.DefaultColor"/>.</summary>
+    [Parameter] public string DraftColor { get; set; } = PdfAnnotationColorHelper.DefaultColor;
 
     /// <summary>Whether panel interaction is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
@@ -196,6 +148,9 @@
     /// <summary>Callback invoked when a reply is requested.</summary>
     [Parameter] public EventCallback<DocumentCommentReplyRequest> OnReplyRequested { get; set; }
 
+    /// <summary>Callback invoked when an existing comment body is edited.</summary>
+    [Parameter] public EventCallback<DocumentCommentEditRequest> OnEditRequested { get; set; }
+
     /// <summary>Callback invoked when resolving a thread is requested.</summary>
     [Parameter] public EventCallback<string> OnResolveRequested { get; set; }
 
@@ -205,67 +160,27 @@
     /// <summary>Callback invoked when deleting a comment is requested.</summary>
     [Parameter] public EventCallback<DocumentCommentDeleteRequest> OnDeleteRequested { get; set; }
 
-    private IEnumerable<DocumentCommentThread> VisibleThreads => Threads
-        .Where(thread => ShowResolved || thread.Status == DocumentCommentThreadStatus.Open);
+    /// <summary>Callback invoked when the panel's close button is pressed.</summary>
+    [Parameter] public EventCallback OnCloseRequested { get; set; }
 
-    // A plain comment needs text; highlights and drawings carry their own visual content.
-    private bool CanSubmitDraft
-        => Draft is not null
-           && (!string.IsNullOrWhiteSpace(_newBody) || Draft.Kind != DocumentAnnotationKind.Comment);
+    /// <summary>
+    /// The panel's class: the base plus the <c>--sheet</c> modifier when the panel renders
+    /// inside the mobile bottom sheet (<see cref="ShowChrome"/> false) — the sheet owns the
+    /// width there, so the docked 300px column and its left border give way.
+    /// </summary>
+    private string PanelClass => ShowChrome
+        ? "tm-pdf-annotator-panel"
+        : "tm-pdf-annotator-panel tm-pdf-annotator-panel--sheet";
 
-    private async Task CreateAsync()
-    {
-        if (!CanSubmitDraft)
-        {
-            return;
-        }
+    private Task CreateAsync(string body) => OnCreateRequested.InvokeAsync(body);
 
-        var body = _newBody ?? string.Empty;
-        _newBody = null;
-        await OnCreateRequested.InvokeAsync(body);
-    }
-
-    private Task CancelDraftAsync()
-    {
-        _newBody = null;
-        return OnDraftDismissed.InvokeAsync();
-    }
-
-    private async Task ReplyAsync(string threadId)
-    {
-        if (string.IsNullOrWhiteSpace(_replyBody))
-        {
-            return;
-        }
-
-        var request = new DocumentCommentReplyRequest { ThreadId = threadId, Body = _replyBody };
-        _replyBody = null;
-        await OnReplyRequested.InvokeAsync(request);
-    }
-
-    private Task ResolveAsync(string threadId) => OnResolveRequested.InvokeAsync(threadId);
-
-    private Task ReopenAsync(string threadId) => OnReopenRequested.InvokeAsync(threadId);
-
-    private Task DeleteAsync(string threadId, string commentId)
-        => OnDeleteRequested.InvokeAsync(new DocumentCommentDeleteRequest { ThreadId = threadId, CommentId = commentId });
-
-    private async Task SelectAsync(string threadId)
-    {
-        _replyBody = null;
-        var next = string.Equals(threadId, SelectedThreadId, StringComparison.Ordinal) ? null : threadId;
-        await SelectedThreadIdChanged.InvokeAsync(next);
-    }
+    private Task CancelDraftAsync() => OnDraftDismissed.InvokeAsync();
 
     private Task ToggleResolvedAsync(ChangeEventArgs e)
     {
         var value = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
         return ShowResolvedChanged.InvokeAsync(value);
     }
-
-    private string Color(DocumentCommentThread thread)
-        => ColorResolver?.Invoke(thread)
-           ?? PdfAnnotationColorHelper.ResolveColor(thread, null, null, null);
 
     private string DraftPrompt()
         => Draft?.Kind switch
@@ -274,62 +189,4 @@
             DocumentAnnotationKind.Drawing => Loc["TmPdfAnnotator_DraftDrawing"],
             _ => Loc["TmPdfAnnotator_DraftComment"]
         };
-
-    private string KindLabel(DocumentCommentThread thread)
-        => thread.Kind switch
-        {
-            DocumentAnnotationKind.Highlight => Loc["TmPdfAnnotator_KindHighlight"],
-            DocumentAnnotationKind.Stamp => Loc["TmPdfAnnotator_KindStamp"],
-            DocumentAnnotationKind.Drawing => Loc["TmPdfAnnotator_KindDrawing"],
-            _ => Loc["TmPdfAnnotator_KindComment"]
-        };
-
-    private int ThreadNumber(DocumentCommentThread thread)
-    {
-        for (var i = 0; i < Threads.Count; i++)
-        {
-            if (ReferenceEquals(Threads[i], thread) || string.Equals(Threads[i].Id, thread.Id, StringComparison.Ordinal))
-            {
-                return i + 1;
-            }
-        }
-
-        return 1;
-    }
-
-    private string ThreadItemClass(DocumentCommentThread thread)
-    {
-        var classes = new List<string> { "tm-pdf-annotator-panel__item" };
-        if (string.Equals(thread.Id, SelectedThreadId, StringComparison.Ordinal))
-        {
-            classes.Add("tm-pdf-annotator-panel__item--selected");
-        }
-
-        if (thread.Status == DocumentCommentThreadStatus.Resolved)
-        {
-            classes.Add("tm-pdf-annotator-panel__item--resolved");
-        }
-
-        return string.Join(" ", classes);
-    }
-
-    private string Preview(DocumentCommentThread thread)
-    {
-        var first = thread.Comments.FirstOrDefault()?.Body;
-        if (string.IsNullOrWhiteSpace(first))
-        {
-            first = thread.Anchor.HighlightedText ?? thread.StampText ?? string.Empty;
-        }
-
-        return Truncate(first ?? string.Empty, 60);
-    }
-
-    private static string Truncate(string text, int max = 120)
-    {
-        text = text.Trim();
-        return text.Length <= max ? text : text[..max] + "…";
-    }
-
-    private static string FormatTime(DateTimeOffset value)
-        => value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 }

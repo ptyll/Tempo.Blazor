@@ -1,0 +1,165 @@
+/* TmPdfThreadCard scoped styles — shared thread card for both PDF annotation panels.
+   Cards are white surfaces on the panel background with the card radius (PD4). */
+
+.tm-pdf-thread-card {
+    list-style: none;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+}
+
+/* A selected card is marked by the border + subtle primary header background — never by the
+   focus ring, which is reserved for :focus-visible (keyboard focus only). */
+.tm-pdf-thread-card--selected {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-pdf-thread-card--selected .tm-pdf-thread-card__header,
+.tm-pdf-thread-card--selected .tm-pdf-thread-card__header:hover {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-pdf-thread-card--resolved .tm-pdf-thread-card__preview {
+    text-decoration: line-through;
+    color: var(--tm-text-secondary);
+}
+
+.tm-pdf-thread-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    width: 100%;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: none;
+    border-radius: var(--tm-radius-card);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tm-pdf-thread-card__header:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-pdf-thread-card__header:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-pdf-thread-card__top {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-pdf-thread-card__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-5);
+    height: var(--tm-space-5);
+    flex-shrink: 0;
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+}
+
+.tm-pdf-thread-card__kind {
+    /* The kind label stays in normal casing — the reference design has no uppercase captions. */
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 500;
+}
+
+.tm-pdf-thread-card__spacer {
+    flex: 1;
+}
+
+.tm-pdf-thread-card__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Success-subtle resolved chip. */
+.tm-pdf-thread-card__chip--success {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success-text);
+}
+
+.tm-pdf-thread-card__chevron {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-text-secondary);
+}
+
+.tm-pdf-thread-card__preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-thread-card__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-pdf-thread-card__author {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-pdf-thread-card__sep {
+    user-select: none;
+}
+
+/* The reply count sits top-right of the header (next to the resolved chip and chevron),
+   so the meta row keeps "author · time · page ref" — never glued to the page ref. */
+.tm-pdf-thread-card__page {
+    white-space: nowrap;
+}
+
+.tm-pdf-thread-card__replies {
+    white-space: nowrap;
+    flex-shrink: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-pdf-thread-card__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: 0 var(--tm-space-3) var(--tm-space-3);
+}
+
+/* A finger cannot hit the card's expand/collapse toggle: the whole header (the chevron's
+   real target) meets the shared touch target on a coarse pointer (phase 8 review 9). */
+@media (pointer: coarse) {
+    .tm-pdf-thread-card__header {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-thread-card__header {
+        transition: none;
+    }
+}

@@ -2,9 +2,14 @@
  * Tempo Blazor — PDF Annotator JS Interop
  *
  * Companion to pdf-viewer.js used by TmPdfAnnotator:
- *  - measure:              size of the annotation surface for pointer normalization
- *  - exportPdf:            embed annotations into the PDF (pdf-lib), optionally flattened
- *  - printWithAnnotations: render pages + annotation overlays into a print frame
+ *  - measure:                   size of the annotation surface for pointer normalization
+ *  - rememberFocus:             capture document.activeElement as the mobile-sheet opener
+ *  - focusOpener:               restore focus to the opener (fallback: first action-bar tile)
+ *  - focusDescendant:           focus the first element matching a selector inside a scope
+ *  - scrollSelectedCardIntoView: scrollIntoView({block:'nearest'}) the selected thread card
+ *  - focusFirstAction:          focus the first mobile action-bar tile
+ *  - exportPdf:                 embed annotations into the PDF (pdf-lib), optionally flattened
+ *  - printWithAnnotations:      render pages + annotation overlays into a print frame
  *
  * Requires pdf.min.mjs (PDF.js v5) and pdf-lib.min.js in the same directory.
  */
@@ -26,6 +31,79 @@ window.tmPdfAnnotator = (function () {
     function measure(el) {
         if (!el) return [0, 0];
         return [el.clientWidth, el.clientHeight];
+    }
+
+    /**
+     * Focuses the first tile of the annotator's mobile action bar (the one reopen path after
+     * the bottom sheet unmounted). Same contract as the diagram editor's helper; a missing bar
+     * (tests, a host without export) is a safe no-op.
+     */
+    function focusFirstAction(root) {
+        if (!root) return false;
+        const el = root.querySelector('.tm-mobile-action-bar__action');
+        if (!el) return false;
+        el.focus({ preventScroll: true });
+        return true;
+    }
+
+    // The element that opened the mobile sheet (thread marker, Comments tile or the palette
+    // tile arming a draft) — captured on open, restored on close (phase 8 review 1).
+    let _sheetOpener = null;
+
+    /**
+     * Captures document.activeElement inside the annotator root as the sheet opener. A body
+     * focus (a tapped non-focusable marker) records nothing, so the close restore falls back
+     * to the first action-bar tile.
+     */
+    function rememberFocus(root) {
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        _sheetOpener = active && active !== document.body && root && root.contains(active)
+            ? active
+            : null;
+        return _sheetOpener !== null;
+    }
+
+    /**
+     * Returns focus to the remembered sheet opener; only when it is gone (detached, or nothing
+     * was recorded) does focus fall back to the first action-bar tile — the one reopen path on
+     * a phone.
+     */
+    function focusOpener(root) {
+        const opener = _sheetOpener;
+        _sheetOpener = null;
+        if (opener && opener.isConnected) {
+            opener.focus({ preventScroll: true });
+            return true;
+        }
+        return focusFirstAction(root);
+    }
+
+    /**
+     * Focuses the first element matching `selector` inside `root` (the annotator root or a
+     * comment item). Missing scopes and missing elements are safe no-ops; used for the sheet
+     * composer focus and the edit save/cancel restore to the comment's "⋯" trigger.
+     */
+    function focusDescendant(root, selector) {
+        if (!root || !selector) return false;
+        const el = root.querySelector(selector);
+        if (!el) return false;
+        el.focus({ preventScroll: true });
+        return true;
+    }
+
+    /**
+     * Scrolls the selected thread card into view — used when the mobile sheet opens on a tapped
+     * thread, so the peek snap still shows the target card. The card is aligned by its BOTTOM
+     * edge: the sticky reply composer rides at the card's bottom, so an `end` alignment lands
+     * the composer on the sheet's visible band (the pinned position) instead of leaving it
+     * below the band the way a top-aligned oversized card would.
+     */
+    function scrollSelectedCardIntoView(root) {
+        if (!root) return false;
+        const card = root.querySelector('.tm-pdf-thread-card--selected');
+        if (!card) return false;
+        card.scrollIntoView({ block: 'end' });
+        return true;
     }
 
     async function _ensurePdfJs() {
@@ -485,6 +563,11 @@ window.tmPdfAnnotator = (function () {
     return {
         isAvailable,
         measure,
+        rememberFocus,
+        focusOpener,
+        focusDescendant,
+        scrollSelectedCardIntoView,
+        focusFirstAction,
         exportPdf,
         printWithAnnotations
     };

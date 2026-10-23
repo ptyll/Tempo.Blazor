@@ -85,6 +85,11 @@ const INERT = Object.freeze({
  * @param {number} [options.maxScale=Infinity] clamp of the cumulative scale reported
  * @param {string|null} [options.touchAction='none'] explicit touch-action for the element;
  *   null = do not touch; the previous value is restored on detach
+ * @param {boolean} [options.captureSinglePointer=true] capture a LONE finger too, so the pinch
+ *   can track it if it slides off the element before the second finger lands. false leaves the
+ *   lone finger to the host's own listeners on a descendant surface (an annotator drawing with
+ *   Blazor pointer events inside the pinch element) — the capture then happens once the pinch
+ *   starts, and a document-level capture listener prunes a finger that ended elsewhere.
  * @param {function} [options.onStart] ({ centerX, centerY, distance, reducedMotion }) — the host
  *   cancels its pointer-drag here: drag.cancel('pinch')
  * @param {function} [options.onChange] ({ scale, centerX, centerY, dx, dy, event, reducedMotion })
@@ -115,6 +120,39 @@ export function attachPinch(element, options = {}) {
         touchActionBefore = element.style.touchAction;
         element.style.touchAction = wantedTouchAction;
         touchActionChanged = true;
+    }
+
+    // Capture policy (FZE-9): by default even a LONE finger is captured, so the pinch can
+    // track it if it slides off the element before the second finger lands. A host whose
+    // gesture surface is a DESCENDANT listener (the PdfViewer annotator draws its ink stroke
+    // with Blazor pointer events on a surface inside the pinch element) opts out with
+    // captureSinglePointer: false — the capture would retarget every later pointer event to
+    // this element and the surface would never see the move/up. The capture then happens once
+    // the pinch actually starts (beginPinch re-asserts both fingers), and a document-level
+    // capture listener prunes a lone finger that ended (or was cancelled) elsewhere, so a
+    // finger sliding off the element cannot linger as a stale anchor for the next pinch.
+    const captureSingle = options.captureSinglePointer !== false;
+    let docEndBound = false;
+    function bindDocEnd() {
+        if (docEndBound || captureSingle || typeof document === 'undefined') return;
+        document.addEventListener?.('pointerup', onDocPointerEnd, true);
+        document.addEventListener?.('pointercancel', onDocPointerEnd, true);
+        docEndBound = true;
+    }
+    function unbindDocEnd() {
+        if (!docEndBound) return;
+        document.removeEventListener?.('pointerup', onDocPointerEnd, true);
+        document.removeEventListener?.('pointercancel', onDocPointerEnd, true);
+        docEndBound = false;
+    }
+    function onDocPointerEnd(event) {
+        if (session) return;             // an active pinch owns both fingers' captures
+        if (!pointers.has(event.pointerId)) return;
+        pointers.delete(event.pointerId);
+        if (pointers.size === 0) {
+            unbindDocEnd();
+            unbindEscape();
+        }
     }
 
     const pointers = new Map();   // pointerId → { x, y } — the first two accepted fingers only
@@ -242,7 +280,13 @@ export function attachPinch(element, options = {}) {
         if (pointers.size >= 2) return;               // a third finger joins nothing
         bindEscape();
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-        capture(event.pointerId);
+        if (captureSingle) {
+            capture(event.pointerId);
+        } else {
+            // A lone finger stays with the host's own listeners; remember to prune it when it
+            // ends somewhere the element cannot see (its surface is a descendant of ours).
+            bindDocEnd();
+        }
         if (pointers.size === 2) beginPinch();
     }
 
@@ -359,6 +403,7 @@ export function attachPinch(element, options = {}) {
             releaseAllCaptures();
             pointers.clear();
             unbindEscape();
+            unbindDocEnd();
             // A pending burst was already applied live through onChange: commit it once so the
             // last zoom tick is never silently lost on dispose.
             finishWheel();

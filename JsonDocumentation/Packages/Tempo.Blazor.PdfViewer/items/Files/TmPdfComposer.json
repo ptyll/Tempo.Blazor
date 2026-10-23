@@ -1,0 +1,93 @@
+{
+  "itemName": "TmPdfComposer",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Shared PDF annotation composer used by both panels: a textarea plus a 32px-minimum actions row. The sticky variant pins the reply composer to the bottom of the expanded thread; the optional ghost secondary button carries Cancel, Resolve or Reopen. Ctrl+Enter submits.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfComposer.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder shown for an empty body."
+    },
+    {
+      "name": "SubmitLabel",
+      "type": "string",
+      "isRequired": false,
+      "description": "Label of the primary submit button."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the composer is disabled."
+    },
+    {
+      "name": "CanSubmit",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Explicit submit gate overriding the empty-body rules below. When null the body must not be blank unless AllowEmptySubmit is set."
+    },
+    {
+      "name": "AllowEmptySubmit",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Allows submitting an empty body (the annotator's note is optional for highlights and drawings). Ignored when CanSubmit is explicit."
+    },
+    {
+      "name": "OnSubmit",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked with the body when the composer is submitted."
+    },
+    {
+      "name": "SecondaryLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label of the optional ghost secondary button (Cancel / Resolve / Reopen)."
+    },
+    {
+      "name": "OnSecondary",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the secondary button is clicked."
+    },
+    {
+      "name": "SecondaryTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Test id of the secondary button (panel contract, e.g. pdf-annotation-resolve)."
+    },
+    {
+      "name": "InputTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Test id of the textarea (panel contract, e.g. pdf-annotation-reply-input)."
+    },
+    {
+      "name": "SubmitTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Test id of the primary button (panel contract, e.g. pdf-annotation-reply-submit)."
+    },
+    {
+      "name": "Sticky",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the composer sticks to the bottom of the expanded thread."
+    },
+    {
+      "name": "ResetKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "When this key changes (e.g. another thread is selected) the body is cleared, so a stale draft never leaks into the next thread's composer."
+    }
+  ]
+}

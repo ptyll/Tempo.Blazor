@@ -118,12 +118,15 @@ public sealed class MarkupClassCoverageTests
         // Fáze 1 review: the switcher's create-new entry became a native styled button —
         // .tm-dashboard-menu-item--action gained its rule in _dashboard.css and left the
         // population.
+        // Emitted by TmDataTable's live filter-summary announcer (aria-live region): the filter
+        // summary's live region is visually carried by the shared .tm-sr-only (same precedent as
+        // tm-dashboard-live-region), so the class exists to be a stable aria-live hook and stays
+        // rule-free — recorded to keep the inventory honest. ONE entry: both branches recorded it
+        // when they merged, the merge kept both.
+        "tm-data-table-filter-summary-live",
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
-        // The filter summary's live region is visually carried by the shared .tm-sr-only (same precedent as
-        // tm-dashboard-live-region): the class exists to be a stable aria-live hook and stays rule-free.
-        "tm-data-table-filter-summary-live",
         // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
         // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",

@@ -1,0 +1,28 @@
+/* TmPdfThreadList scoped styles — the shared thread list of both PDF annotation panels.
+   White cards on the muted panel background; the empty state replaces the list entirely. */
+
+.tm-pdf-thread-list {
+    list-style: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-3);
+}
+
+.tm-pdf-thread-list__empty {
+    padding: var(--tm-space-6) var(--tm-space-3);
+    text-align: center;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* Quoted document text inside the expanded thread. */
+.tm-pdf-thread-list__quote {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-left: 3px solid var(--tm-color-primary);
+    background: var(--tm-bg-surface);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+    font-style: italic;
+}

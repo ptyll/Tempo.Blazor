@@ -1,6 +1,8 @@
 @page "/pdf-annotator"
 @using Microsoft.JSInterop
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Components.Toolbar
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Demo.SharedUI.Services
 @inject IJSRuntime JS
@@ -33,7 +35,7 @@
             pane immediately and survive a page reload. Try: pick the comment tool, click into the page, write a note —
             then resolve it from the other pane.
         </p>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 min-[1700px]:grid-cols-2 gap-4">
             <div data-testid="pdf-annotator-pane-alice">
                 <div class="text-sm font-semibold mb-2 text-amber-700 dark:text-amber-300">Alena — reviewer</div>
                 <TmPdfAnnotator @ref="_aliceAnnotator"
@@ -43,6 +45,8 @@
                                 CurrentUser="_alice"
                                 Users="_users"
                                 RoleColors="_roleColors"
+                                ShowHeader="true"
+                                Title="Alena — reviewer"
                                 Height="520px" />
             </div>
             <div data-testid="pdf-annotator-pane-bob">
@@ -54,6 +58,8 @@
                                 CurrentUser="_bob"
                                 Users="_users"
                                 RoleColors="_roleColors"
+                                ShowHeader="true"
+                                Title="Bedřich — author"
                                 Height="520px" />
             </div>
         </div>
@@ -82,8 +88,74 @@
                             Users="_users"
                             AuthorColors="_authorColors"
                             ExportFileName="tempo-annotated.pdf"
+                            ShowHeader="true"
+                            Title="Annotation showcase — seeded document"
                             Height="560px" />
         </div>
+    </div>
+</section>
+
+<!-- Tablet Layout (FZE-8) -->
+@* demo-full-bleed: the forced-tablet reference is the UX evidence — it renders in the full
+   content column so its container reaches a real tablet width (≥768px) instead of the
+   squeezed demo column. *@
+<section class="demo-section demo-full-bleed">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tablet Layout</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Responsive</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-annotator-tablet-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The forced <code>LayoutMode="TmLayoutMode.Tablet"</code> reference: the tools render
+            their labels under the icons (<code>ToolbarLabels.Auto</code>), every control meets the
+            44px touch target under a coarse pointer, the thread panel is the shell's docked side
+            region and the thumbnails start collapsed (the "Pages" toggle reopens them). Full
+            editing stays available.
+        </p>
+        <TmPdfAnnotator Url="@_demoPdfUrl"
+                        DocumentId="demo-annotator-responsive"
+                        AnnotationProvider="_responsiveProvider"
+                        CurrentUser="_alice"
+                        Users="_users"
+                        RoleColors="_roleColors"
+                        LayoutMode="TmLayoutMode.Tablet"
+                        ToolbarLabels="ToolbarLabels.Auto"
+                        ShowThumbnails="true"
+                        ShowSearch="true"
+                        AllowRotation="true"
+                        ShowHeader="true"
+                        Title="Tablet layout — full editing"
+                        Height="600px" />
+    </div>
+</section>
+
+<!-- Mobile Layout (G2) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Mobile Layout (G2)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Responsive</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-annotator-mobile-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The forced <code>LayoutMode="TmLayoutMode.Mobile"</code> reference: viewing plus light
+            edits only. The tool palette is a horizontally scrollable tile row with just Browse and
+            Add comment (highlight, stamp and draw stay tablet+ — the palette says so), the F5
+            action bar carries Export PDF | Export flattened | Print with everything else in
+            "More", and the thread panel is a bottom sheet opened from a thread marker or from
+            "Comments" in the More menu. Paging and zoom come from the compact viewer toolbar.
+        </p>
+        <TmPdfAnnotator Url="@_demoPdfUrl"
+                        DocumentId="demo-annotator-responsive"
+                        AnnotationProvider="_responsiveProvider"
+                        CurrentUser="_alice"
+                        Users="_users"
+                        RoleColors="_roleColors"
+                        LayoutMode="TmLayoutMode.Mobile"
+                        ShowHeader="true"
+                        Title="Mobile layout — light edits"
+                        Height="600px" />
     </div>
 </section>
 
@@ -94,6 +166,13 @@
     private TmPdfAnnotator? _bobAnnotator;
     private LocalStoragePdfAnnotationProvider? _sharedProvider;
     private InMemoryPdfAnnotationProvider? _seededProvider;
+
+    /// <summary>
+    /// Isolated seed for the forced tablet/mobile reference sections (FZE-8): a separate document
+    /// id keeps the E2E lane's create/reply/resolve mutations away from the showcase seed above
+    /// (which asserts an exact thread count).
+    /// </summary>
+    private InMemoryPdfAnnotationProvider? _responsiveProvider;
 
     private readonly DocumentCommentUser _alice = new()
     {
@@ -206,6 +285,48 @@
                                 AuthorId = "bob",
                                 AuthorName = "Bedřich",
                                 Body = "This paragraph needs a rewrite."
+                            }
+                        ]
+                    }
+                ]
+            });
+
+        _responsiveProvider = new InMemoryPdfAnnotationProvider(
+            new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
+            {
+                ["demo-annotator-responsive"] =
+                [
+                    new DocumentCommentThread
+                    {
+                        Id = "responsive-highlight",
+                        Kind = DocumentAnnotationKind.Highlight,
+                        Anchor = DocumentCommentAnchor.TextRange(1,
+                            [DocumentCommentRect.Create(0.18, 0.30, 0.30, 0.018)],
+                            "trace-based just-in-time"),
+                        Comments =
+                        [
+                            new DocumentComment
+                            {
+                                Id = "responsive-highlight-c",
+                                AuthorId = "alice",
+                                AuthorName = "Alena",
+                                Body = "Seeded for the responsive reference sections."
+                            }
+                        ]
+                    },
+                    new DocumentCommentThread
+                    {
+                        Id = "responsive-comment",
+                        Kind = DocumentAnnotationKind.Comment,
+                        Anchor = DocumentCommentAnchor.Point(1, 0.7, 0.2),
+                        Comments =
+                        [
+                            new DocumentComment
+                            {
+                                Id = "responsive-comment-c",
+                                AuthorId = "bob",
+                                AuthorName = "Bedřich",
+                                Body = "Tap this marker on a phone — the panel opens as a bottom sheet."
                             }
                         ]
                     }

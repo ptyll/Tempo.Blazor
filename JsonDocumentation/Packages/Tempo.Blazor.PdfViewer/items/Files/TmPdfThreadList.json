@@ -1,0 +1,130 @@
+{
+  "itemName": "TmPdfThreadList",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Shared thread list of the PDF annotation panels (TmPdfViewer and TmPdfAnnotator): renders each thread as an expandable TmPdfThreadCard whose detail hosts the quoted text, the comments (TmPdfCommentItem) and the sticky reply composer (TmPdfComposer). The owning panel keeps only its header and its new-thread/draft prompt. The kind caption of plain comment threads is controlled by HideCommentKind.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadList.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads to render (the resolved filter applies on top)."
+    },
+    {
+      "name": "SelectedThreadId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected thread id."
+    },
+    {
+      "name": "SelectedThreadIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback invoked when the selected thread id changes."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id, used for comment permission checks."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved threads are shown."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether interaction (reply composer, comment menu) is disabled."
+    },
+    {
+      "name": "TestIdBase",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Base of the panel's testid contract (e.g. pdf-annotation or pdf-annotator); the card and composer test ids derive as {base}-thread, {base}-detail, {base}-reply-*, {base}-resolve, {base}-reopen and {base}-empty."
+    },
+    {
+      "name": "ColorResolver",
+      "type": "Func<DocumentCommentThread, string>?",
+      "isRequired": false,
+      "description": "Resolves the display color of a thread. When null the helper default is used."
+    },
+    {
+      "name": "HideCommentKind",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Hides the kind caption of plain comment threads so only Highlight/Stamp/Drawing carry a label. The viewer's panel passes true; the annotator keeps captions for every kind."
+    },
+    {
+      "name": "EmptyText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Localized empty-state text rendered when no visible thread remains."
+    },
+    {
+      "name": "ReplyPlaceholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder of the sticky reply composer."
+    },
+    {
+      "name": "ReplySubmitLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Submit label of the sticky reply composer."
+    },
+    {
+      "name": "ResolveLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label of the resolve action on an open thread."
+    },
+    {
+      "name": "ReopenLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label of the reopen action on a resolved thread."
+    },
+    {
+      "name": "OnReplyRequested",
+      "type": "EventCallback<DocumentCommentReplyRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when a reply is requested."
+    },
+    {
+      "name": "OnEditRequested",
+      "type": "EventCallback<DocumentCommentEditRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when an existing comment body is edited."
+    },
+    {
+      "name": "OnResolveRequested",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when resolving a thread is requested."
+    },
+    {
+      "name": "OnReopenRequested",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when reopening a thread is requested."
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback<DocumentCommentDeleteRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when deleting a comment is requested."
+    }
+  ]
+}
