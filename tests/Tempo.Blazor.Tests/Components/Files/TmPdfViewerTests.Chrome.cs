@@ -221,6 +221,12 @@ public partial class TmPdfViewerTests
             extra?.Invoke(p);
         });
         await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        // FZE-11: the floating card starts closed — open it through the toolbar toggle
+        // (Inline and mobile keep the in-flow bar, which is already open at load).
+        if (cut.FindAll("[data-testid='pdf-search-input']").Count == 0)
+        {
+            await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-toggle']").Click());
+        }
         // The search input binds through oninput (plus the key handlers), so it feeds via .Input.
         cut.Find("[data-testid='pdf-search-input']").Input("doc");
         await cut.InvokeAsync(() => cut.Instance.OnSearchResults(5, [1, 2, 3, 4, 5]));
@@ -252,6 +258,47 @@ public partial class TmPdfViewerTests
         var bodyIndex = childClasses.FindIndex(c => c.Contains("tm-pdf-viewer__body"));
         (toolbarIndex, bodyIndex).Should().Match<(int, int)>(t => t.Item1 >= 0 && t.Item2 > t.Item1,
             "the toolbar renders before the body hosting the floating card");
+    }
+
+    // ── FZE-11 review: the floating card starts closed at load ────────────────
+
+    [Fact]
+    public async Task SearchCard_Floating_StartsClosed_AndOpensViaToggle()
+    {
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(c => c.Url, DemoUrl)
+            .Add(c => c.ShowSearch, true));
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        cut.FindAll("[data-testid='pdf-search-card']").Should().BeEmpty(
+            "ShowSearch alone does not open the floating card — it starts closed at load");
+        cut.Find("[data-testid='pdf-search-toggle']").GetAttribute("aria-pressed")
+            .Should().Be("false", "the search toggle reflects the closed card");
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-toggle']").Click());
+        cut.Render();
+
+        cut.Find("[data-testid='pdf-search-card']").Should().NotBeNull("the toggle opens the card");
+        cut.Find("[data-testid='pdf-search-toggle']").GetAttribute("aria-pressed")
+            .Should().Be("true");
+    }
+
+    [Fact]
+    public async Task SearchCard_Inline_AndMobile_StartOpen_AtLoad()
+    {
+        // Inline keeps the pre-2.9.1 behavior: the in-flow bar is visible with the viewer.
+        var inline = Render<TmPdfViewer>(p => p
+            .Add(c => c.Url, DemoUrl)
+            .Add(c => c.ShowSearch, true)
+            .Add(c => c.SearchPresentation, PdfSearchPresentation.Inline));
+        await inline.InvokeAsync(() => inline.Instance.OnPdfLoaded(5));
+        inline.Render();
+        inline.Find(".tm-pdf-viewer__search-bar").Should().NotBeNull("Inline starts open at load");
+
+        // A mobile layout always keeps the in-flow bar, so it starts open too.
+        var mobile = RenderInLayout(TmLayoutMode.Mobile, p => p.Add(c => c.ShowSearch, true));
+        mobile.Find(".tm-pdf-viewer__search-bar").Should().NotBeNull("mobile starts open at load");
     }
 
     // ── FZE-11: Escape closes the card and restores focus to the search toggle ──
@@ -425,10 +472,11 @@ public partial class TmPdfViewerTests
         await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();
 
-        // ShowSearch starts the card open — close it, then reopen via the toolbar toggle:
-        // the pending-focus pass runs in OnAfterRenderAsync after the fresh card renders.
-        await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-close']").Click());
-        cut.FindAll("[data-testid='pdf-search-card']").Should().BeEmpty();
+        // FZE-11: ShowSearch alone does NOT open the floating card — it starts closed and
+        // the toolbar toggle opens it (the pending-focus pass runs in OnAfterRenderAsync
+        // after the fresh card renders).
+        cut.FindAll("[data-testid='pdf-search-card']").Should().BeEmpty(
+            "the floating search card starts closed at load");
 
         await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-toggle']").Click());
 

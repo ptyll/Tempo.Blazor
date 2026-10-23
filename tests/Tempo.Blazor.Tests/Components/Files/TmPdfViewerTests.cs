@@ -511,7 +511,7 @@ public partial class TmPdfViewerTests : LocalizationTestBase
         cut.Instance.Rotation.Should().Be(0);
     }
 
-    // ── PDF-53: search input existuje v search baru ─────────────────────────
+    // ── PDF-53: search input existuje v search baru (FZE-11: starts closed) ──
 
     [Fact]
     public void Render_WithShowSearchTrue_HasSearchInput()
@@ -520,6 +520,9 @@ public partial class TmPdfViewerTests : LocalizationTestBase
             parameters.Add(p => p.Url, "https://example.com/test.pdf")
                       .Add(p => p.ShowSearch, true));
 
+        // FZE-11: the floating card starts closed — the toolbar toggle opens it.
+        cut.FindAll(".tm-pdf-viewer__search-input").Should().BeEmpty();
+        cut.Find("[data-testid='pdf-search-toggle']").Click();
         cut.Find(".tm-pdf-viewer__search-input").Should().NotBeNull();
     }
 

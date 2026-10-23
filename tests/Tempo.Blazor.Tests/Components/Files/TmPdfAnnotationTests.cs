@@ -414,6 +414,8 @@ public class TmPdfAnnotationTests : LocalizationTestBase
             .Add(x => x.ShowSearch, true));
 
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        // FZE-11: the floating card starts closed — open it via the toolbar toggle.
+        cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-toggle']").Click());
         cut.InvokeAsync(() => cut.Instance.OnSearchResults(3, [1, 2]));
         cut.Render();
 
@@ -434,6 +436,8 @@ public class TmPdfAnnotationTests : LocalizationTestBase
             .Add(x => x.PageChanged, EventCallback.Factory.Create<int>(this, n => capturedPage = n)));
 
         await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        // FZE-11: the floating card starts closed — open it via the toolbar toggle.
+        await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-search-toggle']").Click());
         await cut.InvokeAsync(() => cut.Instance.OnSearchResults(3, [1, 2]));
         await cut.InvokeAsync(() => cut.Instance.OnSearchActiveChanged(2, 3));
         cut.Render();

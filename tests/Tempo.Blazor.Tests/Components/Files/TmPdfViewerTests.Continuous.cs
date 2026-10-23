@@ -228,6 +228,8 @@ public partial class TmPdfViewerTests
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
         cut.Render();
 
+        // FZE-11: the floating card starts closed — open it via the toolbar toggle.
+        cut.Find("[data-testid='pdf-search-toggle']").Click();
         var input = cut.Find("[data-testid='pdf-search-input']");
         input.Input("needle");
         input.KeyUp("Enter");

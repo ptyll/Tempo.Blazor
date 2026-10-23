@@ -212,8 +212,8 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
 
-        var input = section.Locator("[data-testid='pdf-search-input']").First;
-        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        // FZE-11: the card starts closed — open it through the toolbar toggle.
+        var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("the");
         await input.PressAsync("Enter");
 
@@ -266,8 +266,8 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
 
-        var input = section.Locator("[data-testid='pdf-search-input']").First;
-        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        // FZE-11: the card starts closed — open it through the toolbar toggle.
+        var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("zzzqqqxxx");
         await input.PressAsync("Enter");
 
@@ -314,13 +314,8 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
         Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-hidden"),
             "precondition: the search toggle overflows into More at this width.");
 
-        // ShowSearch starts the card open — close it, then reopen through the More menu
-        // (the only surface the collapsed toggle lives on at this width).
-        await section.Locator("[data-testid='pdf-search-close']").First
-            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
-        await Assertions.Expect(section.Locator("[data-testid='pdf-search-card']"))
-            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
-
+        // FZE-11: the card starts closed — open it through the More menu (the only
+        // surface the collapsed toggle lives on at this width).
         await section.Locator(".tm-toolbar-more").First.ClickAsync(new LocatorClickOptions { Timeout = 15000 });
         await section.Locator(".tm-toolbar-more__item").Filter(new() { HasTextString = "Search" }).First
             .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
@@ -353,8 +348,8 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
 
-        var input = section.Locator("[data-testid='pdf-search-input']").First;
-        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        // FZE-11: the card starts closed — open it through the toolbar toggle.
+        var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("the");
         await input.PressAsync("Enter");
 

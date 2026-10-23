@@ -100,7 +100,8 @@ public class PdfViewerContinuousE2ETests : WasmTestBase
         var page = await OpenContinuousAsync();
 
         var section = page.Locator(SectionSelector);
-        var input = section.Locator("[data-testid='pdf-search-input']").First;
+        // FZE-11: the card starts closed — open it through the toolbar toggle.
+        var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("needle-in-the-middle");
         await input.PressAsync("Enter");
 

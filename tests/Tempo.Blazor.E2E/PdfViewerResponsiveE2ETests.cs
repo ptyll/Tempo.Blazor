@@ -143,8 +143,8 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
         await section.ScrollIntoViewIfNeededAsync();
         await WaitForLoadedViewerAsync(section);
 
-        var input = section.Locator("[data-testid='pdf-search-input']").First;
-        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        // FZE-11: the card starts closed — open it through the toolbar toggle.
+        var input = await page.OpenSearchCardAsync(section);
         await input.FillAsync("the");
         await input.PressAsync("Enter");
 

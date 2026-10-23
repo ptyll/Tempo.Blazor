@@ -139,7 +139,10 @@ stable `pdf-search-*` test id; Enter walks forward, Shift+Enter backward, and Es
 input, the prev/next/clear buttons or ✕) closes it and returns focus to the toolbar's search
 toggle — or, when the toggle has overflowed into the "More" menu, to the More trigger, else to
 the viewer root. Opening the card (`ToggleSearchAsync` / `OpenSearchAsync`) moves the caret
-into `pdf-search-input` after the render. A zero-match search renders the localized
+into `pdf-search-input` after the render. The card starts CLOSED: `ShowSearch="true"` alone
+does not open it at load (hosts open it through the toolbar toggle or `OpenSearchAsync()`),
+while the `Inline` bar and a mobile layout keep opening with the viewer. A zero-match search
+renders the localized
 `TmPdfViewer_SearchNoMatches` verdict inside `pdf-search-count`, flags the input
 `aria-invalid`, and both live in an always-present `role="status"` live region. While the card
 is open the scroll wraps keep natively aligned content (block:'start' page navigation and the
@@ -302,13 +305,24 @@ renders the layer + surface per page slot (see the viewer's
 "Annotator tools per page" above); `ShowViewerToolbar=false`
 (compatibility) hides the viewer chrome and renders a compact tools row instead.
 
-Pass-through parameters: `ShowThumbnails`, `ShowSearch`, `AllowRotation`,
-`ThumbnailsCollapsed` (two-way, unbound-host safe), `ZoomMode` (two-way), `ShowOpenLink`,
-`ToolbarLabels`, `ViewMode`/`ViewModeChanged` (two-way, FZE-14) and `ShowViewModeToggle`
-(FZE-14). `ShowPanel` / `ShowPanelChanged` two-way drive the thread panel
+Pass-through parameters: `ShowThumbnails`, `ShowSearch`, `SearchPresentation`,
+`AllowRotation`, `ThumbnailsCollapsed` (two-way, unbound-host safe), `ZoomMode` (two-way),
+`ShowOpenLink`, `ToolbarLabels`, `ViewMode`/`ViewModeChanged` (two-way, FZE-14) and
+`ShowViewModeToggle` (FZE-14). `ShowPanel` / `ShowPanelChanged` two-way drive the thread panel
 (`TmPdfAnnotatorPanel`): the ✕ raises `ShowPanelChanged` even without a binding, and the toolbar
 toggle reopens it. `Height` (default "600px") is owned by the annotator root; the viewer flexes
 inside it.
+
+**Undo/redo (FZE-15)**: `AllowUndo` (default `true`) records every annotation mutation on a
+`PdfAnnotationHistory` command stack. `UndoAsync()` / `RedoAsync()` and the `CanUndo` /
+`CanRedo` flags are public, and `OnHistoryChanged` fires on every stack transition (the
+undo/redo pair renders as its own `data-tm-group="history"` group before the tool pills at
+every call site, with `Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y` declared via `aria-keyshortcuts`).
+A visually-hidden live region announces the localized result ("Undo: {action}") plus the
+conflict hint. Provider failures are caught, announced (`UndoFailed` / `RedoFailed`) and the
+threads reload from the provider without the stack changing, so the failed step stays
+retryable. Undoing a delete re-creates the thread from its snapshot with a fresh id remapped
+through the stack, so later steps keep targeting it.
 
 Responsive (`LayoutMode`, default `Auto`):
 
@@ -444,6 +458,18 @@ summary:
     removed), and the annotator's color chip is the `pdf-annotator-color-trigger` button opening
     the palette (mobile: the `pdf-annotator-color-tile` sheet). `AllowColorPicker="false"`
     restores the static chip + label pair.
+13. **Annotator tools per page (FZE-14)** — with `ViewMode="PdfViewMode.Continuous"` the
+    annotator renders a layer + surface pair per mounted page slot instead of one
+    viewport-aligned pair: each `pdf-annotator-surface` gains a `data-page` attribute and rides
+    the viewer's page overlay slot inside a new `.tm-pdf-annotator__page-surface-host` wrapper.
+    Hosts that located THE annotator surface as `.tm-pdf-annotator__surface` in Continuous must
+    scope the lookup to the page slot
+    (`.tm-pdf-viewer__page-overlay-slot[data-page='4'] [data-testid='pdf-annotator-surface']`);
+    single-page hosts are untouched — the default `ViewMode` is additive.
+14. **Toolbar history group (FZE-15)** — the annotator toolbar renders an undo/redo pair as its
+    own `data-tm-group="history"` group BEFORE the `tools` pills (merged toolbar, tablet/compact
+    row and the mobile "More" entries alike), so positional selectors that assumed the tools were
+    the first group shift by one group; key hosts off `data-tm-group` instead.
 
 ## Testing
 

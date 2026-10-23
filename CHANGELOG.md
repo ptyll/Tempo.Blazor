@@ -135,7 +135,9 @@
   anchored top-right over the page body — outside the scroll area, never covering the toolbar,
   painted above the docked panels. The card carries the input, the "N of M" counter, prev/next,
   clear and close; Enter walks forward, Shift+Enter backward, and Escape (or ✕) closes the card
-  and returns focus to the toolbar's search toggle. The `pdf-search-input/-count/-prev/-next/
+  and returns focus to the toolbar's search toggle. The card STARTS CLOSED — `ShowSearch="true"`
+  alone does not open it at load (the `Inline` bar and a mobile layout keep opening at load).
+  The `pdf-search-input/-count/-prev/-next/
   -clear/-close` test ids are unchanged and `pdf-search-card` is new. `Inline` renders the
   pre-2.9.1 bar unchanged, and a mobile layout keeps the sheet-style bar in both presentations
   (see Breaking / Migration for the default change).
@@ -475,11 +477,11 @@
   tools were the group's first children shift by one group. Key hosts off `data-tm-group`
   instead:
 
-```razor
-@* BEFORE (2.9.0) — the tools group is the first annotator group in the toolbar *@
+```csharp
+// BEFORE (2.9.0) — the tools group is the first annotator group in the toolbar
 var first = toolbar.QuerySelector("[data-tm-group='tools']");
 
-@* AFTER (2.9.1) — history (undo/redo) rides before the tools; select by group name *@
+// AFTER (2.9.1) — history (undo/redo) rides before the tools; select by group name
 var history = toolbar.QuerySelector("[data-tm-group='history']");
 var tools = toolbar.QuerySelector("[data-tm-group='tools']");
 ```
@@ -499,7 +501,7 @@ var tools = toolbar.QuerySelector("[data-tm-group='tools']");
 ```razor
 @* BEFORE (2.9.0) — annotations forced the viewer back to SinglePage *@
 <TmPdfViewer Url="@url" EnableAnnotations="true" ViewMode="PdfViewMode.Continuous"
-             OnViewModeChanged="mode => wasSwitched = mode == PdfViewMode.SinglePage" />
+             ViewModeChanged="mode => wasSwitched = mode == PdfViewMode.SinglePage" />
 
 @* AFTER (2.9.1) — the thread select scrolls and stays Continuous; per-page host overlays
    go through the templated slot (context: PageNumber, IsCurrentPage, Width, Height, Rotation) *@
@@ -588,20 +590,25 @@ var tools = toolbar.QuerySelector("[data-tm-group='tools']");
   `SearchPresentation` parameter defaults to `PdfSearchPresentation.Floating`: on desktop and
   tablet the search UI renders as a card anchored top-right over the page body
   (`data-testid="pdf-search-card"`, `role="search"`) instead of the full-width
-  `.tm-pdf-viewer__search-bar` row under the toolbar. A host that keyed off the bar's markup
+  `.tm-pdf-viewer__search-bar` row under the toolbar. The card STARTS CLOSED — `ShowSearch="true"`
+  alone no longer opens it at load; hosts open it via the toolbar's search toggle (or
+  `OpenSearchAsync()`), and E2E/bUnit flows that typed into `pdf-search-input` right after load
+  must click `pdf-search-toggle` first. `SearchPresentation="Inline"` (the pre-2.9.1 in-flow
+  bar) and a mobile layout keep the bar open at load. A host that keyed off the bar's markup
   (or its `.tm-pdf-viewer__search-input` row layout) should either opt back with
   `SearchPresentation="PdfSearchPresentation.Inline"` — which renders the pre-2.9.1 markup
   unchanged — or restyle against the card (`.tm-pdf-viewer__search-card`). Mobile layouts are
   unaffected: the sheet-style bar stays in both presentations.
 
 ```razor
-@* BEFORE (2.9.0) — the search UI was a full-width bar under the toolbar *@
+@* BEFORE (2.9.0) — the search UI was a full-width bar under the toolbar, open at load *@
 <TmPdfViewer Url="@url" ShowSearch="true" />
 
-@* AFTER (2.9.1) — default Floating card over the page body *@
+@* AFTER (2.9.1) — default Floating card over the page body; starts CLOSED, the
+   toolbar toggle (or OpenSearchAsync) opens it *@
 <TmPdfViewer Url="@url" ShowSearch="true" />
 
-@* AFTER — opt back into the pre-2.9.1 in-flow bar *@
+@* AFTER — opt back into the pre-2.9.1 in-flow bar (open at load) *@
 <TmPdfViewer Url="@url" ShowSearch="true" SearchPresentation="PdfSearchPresentation.Inline" />
 ```
 

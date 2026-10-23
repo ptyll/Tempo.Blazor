@@ -119,7 +119,10 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Whether to show a thumbnails sidebar. Default is false.</summary>
     [Parameter] public bool ShowThumbnails { get; set; }
 
-    /// <summary>Whether to show a search input. Default is false.</summary>
+    /// <summary>Whether to show a search input. Default is false. With the default
+    /// <see cref="PdfSearchPresentation.Floating"/> the card starts closed (open it via the
+    /// toolbar toggle or <see cref="OpenSearchAsync"/>); the <see cref="PdfSearchPresentation.Inline"/>
+    /// bar and a mobile layout open at load.</summary>
     [Parameter] public bool ShowSearch { get; set; }
 
     /// <summary>
@@ -537,7 +540,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _lastContinuousRender = null;
             _lastThumbnailUrl = null;
             _customOverlaySynced = false;
-            _searchVisible = ShowSearch;
+            // FZE-11: the floating search card starts closed — only the Inline
+            // presentation (and the mobile in-flow bar) opens with the viewer.
+            _searchVisible = ShowSearch && (SearchPresentation == PdfSearchPresentation.Inline || IsMobileLayout);
             _searchQuery = null;
             _lastSearchedQuery = null;
             _searchTotalMatches = 0;
