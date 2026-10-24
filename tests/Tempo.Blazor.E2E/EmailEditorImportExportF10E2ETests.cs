@@ -489,6 +489,57 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
         findingColour.Should().NotBe(surface, "the finding text keeps a contrast against the panel surface");
     }
 
+    /// <summary>
+    /// Plan 643bba06 phase 9 (closes the F10 dark-screenshot gap): the import and validation dialogs in the DARK theme on a phone (390, the
+    /// core sheet) and on a tablet (1024). Besides the committed screenshots the test asserts what a screenshot cannot: the dialog surface is
+    /// dark, the primary action stays inside the viewport and nothing scrolls horizontally.
+    /// </summary>
+    [TestMethod]
+    [DataRow(390, 780, true, "Mobile", "390")]
+    [DataRow(1024, 768, true, "Tablet", "1024")]
+    public async Task F10_14_Dark_Dialogs_AtPhoneAndTablet_StayReadableAndInView(int width, int height, bool touch, string layout, string suffix)
+    {
+        var page = await OpenEditorAsync(width, height, touch: touch, layout: layout);
+
+        var clicked = await page.EvaluateAsync<bool>(
+            "() => { const b = document.querySelector(`[data-testid='theme-toggle']`); if (!b) return false; b.click(); return true; }");
+        clicked.Should().BeTrue("the demo host renders the theme toggle");
+        await page.WaitForSelectorAsync("[data-theme='dark']", new() { Timeout = 15000 });
+        await WaitForNoRunningTransitionsAsync(page);
+
+        await ClickCommandAsync(page, "[data-tm-import-btn]");
+        await PasteImportAsync(page, FindingsMjml);
+        await page.WaitForSelectorAsync("[data-tm-import-summary]", new() { Timeout = 15000 });
+        await WaitForNoRunningTransitionsAsync(page);
+        var dialogBackground = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('.tm-modal, .tm-dialog')).backgroundColor");
+        dialogBackground.Should().NotBe("rgb(255, 255, 255)", "the import dialog follows the dark theme");
+        (await HorizontalOverflowAsync(page, "[data-tm-import-dialog]")).Should().Be(0, "no horizontal scrollbar in the dark import dialog");
+        await AssertInViewportAsync(page, "[data-tm-import-confirm]", "the primary import action is reachable without scrolling");
+        await SaveNamedViewportScreenshotAsync(page, $"f10-import-dark-{suffix}.png");
+
+        await page.ClickAsync("[data-tm-import-confirm]");
+        await page.WaitForSelectorAsync("[data-tm-import]", new() { State = WaitForSelectorState.Detached, Timeout = 15000 });
+
+        await ClickCommandAsync(page, "[data-tm-validate-btn]");
+        await page.WaitForSelectorAsync("[data-tm-validation-summary]", new() { Timeout = 15000 });
+        await WaitForNoRunningTransitionsAsync(page);
+        await AssertInViewportAsync(page, "[data-tm-validation-close]", "the validation Close action is reachable without scrolling");
+        (await HorizontalOverflowAsync(page, "[data-tm-validation-dialog]")).Should().Be(0, "no horizontal scrollbar in the dark validation dialog");
+        var findingColour = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('[data-tm-validation-message] [data-tm-validation-title]')).color");
+        var surface = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('[data-tm-validation]')).backgroundColor");
+        findingColour.Should().NotBe(surface, "the finding text keeps a contrast against the panel surface");
+        await SaveNamedViewportScreenshotAsync(page, $"f10-validation-dark-{suffix}.png");
+    }
+
+    /// <summary>Waits until no CSS transition is running (a theme switch or a sheet slide), instead of sleeping.</summary>
+    private static Task WaitForNoRunningTransitionsAsync(IPage page)
+        => page.WaitForFunctionAsync(
+            "() => document.getAnimations().filter(a => a.playState === 'running').length === 0",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
+
     [TestMethod]
     public async Task F10_10_Mobile390_ValidationSheet_ShowsTheFindingsAndTheCollapsedCounts()
     {
