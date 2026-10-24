@@ -651,7 +651,7 @@
         builder.AddComponentParameter(161, nameof(TmPopover.Title), Loc["EmailEditor_Variables_Title"]);
         // Controlled open state: the picker inside is rendered only while open (an eagerly mounted catalogue
         // would put a focus target in every closed popover), which needs the owner to know the state.
-        builder.AddComponentParameter(165, nameof(TmPopover.IsOpen), _openVariablesField == field.Name);
+        builder.AddComponentParameter(165, nameof(TmPopover.IsOpen), InspectorState.OpenVariablesField == field.Name);
         builder.AddComponentParameter(162, nameof(TmPopover.TriggerContent), (RenderFragment)(trigger =>
         {
             trigger.OpenElement(0, "span");
@@ -677,13 +677,17 @@
             // An OPEN picker is the only state that needs the catalogue: rendering it eagerly would mount a
             // dozen search/focus targets per block, and the focus-into-search contract below would fire for a
             // panel nobody can see.
-            if (_openVariablesField != field.Name) return;
+            if (InspectorState.OpenVariablesField != field.Name) return;
 
             body.OpenComponent<TmEmailVariablePicker>(0);
             body.AddComponentParameter(1, nameof(TmEmailVariablePicker.Variables), Variables);
             body.AddComponentParameter(2, nameof(TmEmailVariablePicker.ReadOnly), ReadOnly);
             body.AddComponentParameter(3, nameof(TmEmailVariablePicker.OnInsert),
                 EventCallback.Factory.Create<string>(this, token => InsertFallbackAsync(field, token)));
+            // @bind-Filter against the inspector state: the text survives the remount a layout flip causes.
+            body.AddComponentParameter(4, nameof(TmEmailVariablePicker.Filter), InspectorState.VariableFilter);
+            body.AddComponentParameter(5, nameof(TmEmailVariablePicker.FilterChanged),
+                EventCallback.Factory.Create<string>(this, text => InspectorState.VariableFilter = text ?? string.Empty));
             body.CloseComponent();
         }));
         builder.CloseComponent();
@@ -691,17 +695,11 @@
         builder.CloseElement();
     }
 
-    private string? _openVariablesField;
-
     private void OnVariablesOpenChanged(string field, bool open)
     {
-        if (open)
-        {
-            _openVariablesField = field;
-        }
-        else if (_openVariablesField == field)
-        {
-            _openVariablesField = null;
-        }
+        // Open/close lives on the shared inspector state (it outlives this component across a layout flip);
+        // closing is the one event that resets the filter.
+        if (open) InspectorState.OpenVariables(field);
+        else InspectorState.CloseVariables(field);
     }
 }

@@ -69,6 +69,12 @@
       "editorRequired": true
     },
     {
+      "name": "State",
+      "type": "EmailInspectorState?",
+      "isRequired": false,
+      "description": "Inspector state owned by the host (the editor): collapsed groups, the open variable picker and its filter. Because it outlives the panel it survives a desktop/tablet layout flip; a standalone panel keeps its own."
+    },
+    {
       "name": "Variables",
       "type": "IReadOnlyList<TemplateVariableInfo>",
       "isRequired": false,

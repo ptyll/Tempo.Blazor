@@ -111560,10 +111560,28 @@
               "description": "The group id of the collapsible \"Spacing\" section."
             },
             {
+              "name": "RichContentPicker",
+              "kind": "Field",
+              "type": "string",
+              "description": "The key of the text block's rich-editor picker in OpenVariablesField."
+            },
+            {
               "name": "ClearFocus",
               "kind": "Method",
               "type": "void",
               "description": "Forgets the remembered field (e.g. when the inspected target changes)."
+            },
+            {
+              "name": "CloseVariables",
+              "kind": "Method",
+              "type": "void",
+              "description": "Closes the picker of field and forgets its filter; another field's picker is left alone.",
+              "parameters": [
+                {
+                  "name": "field",
+                  "type": "string"
+                }
+              ]
             },
             {
               "name": "IsGroupCollapsed",
@@ -111577,6 +111595,18 @@
                 },
                 {
                   "name": "group",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "OpenVariables",
+              "kind": "Method",
+              "type": "void",
+              "description": "Opens the picker of field (and closes any other).",
+              "parameters": [
+                {
+                  "name": "field",
                   "type": "string"
                 }
               ]
@@ -111618,10 +111648,28 @@
               ]
             },
             {
+              "name": "InspectedId",
+              "kind": "Property",
+              "type": "Guid?",
+              "description": "The inspected node the picker state belongs to; another node discards the picker state."
+            },
+            {
               "name": "LastFocusedField",
               "kind": "Property",
               "type": "PropertyField?",
               "description": "Gets or sets the field the user last put the caret into. A variable inserted while the caret-aware JS interop is unavailable lands behind this field's content, matching what the JS path would do."
+            },
+            {
+              "name": "OpenVariablesField",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The field whose variable picker is open (a property name, or RichContentPicker for the text block's rich editor), or null. It lives here - on the editor's inspector state - and not in the inspector components, because a desktop ↔ tablet layout flip re-creates those components while the user is still choosing a variable."
+            },
+            {
+              "name": "VariableFilter",
+              "kind": "Property",
+              "type": "string",
+              "description": "The text typed into the open picker's search field. Survives a layout flip with the picker, and is reset when the picker closes (decision EMAIL-VARIABLE-PICKER-FILTER)."
             }
           ]
         },
@@ -112457,6 +112505,12 @@
               "editorRequired": true
             },
             {
+              "name": "State",
+              "type": "EmailInspectorState?",
+              "isRequired": false,
+              "description": "Inspector state owned by the host (the editor): collapsed groups, the open variable picker and its filter. Because it outlives the panel it survives a desktop/tablet layout flip; a standalone panel keeps its own."
+            },
+            {
               "name": "Variables",
               "type": "IReadOnlyList<TemplateVariableInfo>",
               "isRequired": false,
@@ -113004,6 +113058,18 @@
             "@using Tempo.Blazor.EmailTemplates.Components"
           ],
           "parameters": [
+            {
+              "name": "Filter",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The text in the search field, two-way bindable (@bind-Filter). Lets a host keep the filter across a remount such as a desktop/tablet layout flip; null is the empty filter. Without a binding the picker keeps the text itself."
+            },
+            {
+              "name": "FilterChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the new text whenever the user edits the search field."
+            },
             {
               "name": "OnInsert",
               "type": "EventCallback<string>",

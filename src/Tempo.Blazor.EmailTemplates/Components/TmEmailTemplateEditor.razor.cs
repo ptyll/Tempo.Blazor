@@ -252,6 +252,10 @@ public partial class TmEmailTemplateEditor
     private EmailTemplateDocument? _emittedDocument;
 
     private Guid? _selectedId;
+    // The inspector's remembered state (collapsed groups, open variable picker + its filter). It lives on the
+    // editor - not on the inspector components - because a layout flip re-creates those (decision
+    // EMAIL-VARIABLE-PICKER-FILTER: the editor gets NO new parameter, the contract stays as it was).
+    private readonly EmailInspectorState _inspectorState = new();
     private bool? _toolboxCollapsedInternal;
     // The shell's OWN state, mirrored only so the parameters keep their two-way contract (the shell
     // raises a callback and a host is free to ignore it).
@@ -375,6 +379,7 @@ public partial class TmEmailTemplateEditor
         _history = new EditorHistoryService(TimeProvider);
         _history.Initialize(_document);
         _baselineJson = ContentSignature(_document);
+        _inspectorState.CloseVariables();
         _revision++;
         _lastSaveOutcome = null;
         _saveErrorMessage = null;

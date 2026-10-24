@@ -75,7 +75,22 @@
 
     private const string ModulePath = "./_content/Tempo.Blazor.EmailTemplates/tm-email-variable-insert.js";
 
+    /// <summary>
+    /// The text in the picker's search field - two-way bindable (<c>@bind-Filter</c>, decision
+    /// EMAIL-VARIABLE-PICKER-FILTER). A host that keeps the value outside the picker (the editor's inspector
+    /// state) gets the filter back after the picker is remounted, e.g. by a desktop ↔ tablet layout flip.
+    /// <see langword="null"/> is the empty filter. Without a binding the picker keeps the text itself,
+    /// exactly as before.
+    /// </summary>
+    [Parameter] public string? Filter { get; set; }
+
+    /// <summary>Raised with the new text whenever the user edits the search field.</summary>
+    [Parameter] public EventCallback<string> FilterChanged { get; set; }
+
     private string _search = string.Empty;
+    // The Filter parameter value this component last adopted: a re-render that hands the same value back
+    // (the echo of our own FilterChanged, or a host that never binds it) must not overwrite what was typed.
+    private string? _filterSeen;
     private IJSObjectReference? _module;
     private TmSearchInput? _searchField;
     private readonly Dictionary<string, ElementReference> _rowRefs = new(StringComparer.Ordinal);
@@ -121,6 +136,20 @@
     }
 
     /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(Filter, _filterSeen, StringComparison.Ordinal)) return;
+
+        _filterSeen = Filter;
+        var next = Filter ?? string.Empty;
+        if (!string.Equals(next, _search, StringComparison.Ordinal))
+        {
+            _search = next;
+            _focusIndex = 0;
+        }
+    }
+
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _searchField is not null)
@@ -138,10 +167,11 @@
         }
     }
 
-    private void OnSearchChanged(string value)
+    private Task OnSearchChanged(string value)
     {
         _search = value ?? string.Empty;
         _focusIndex = 0;
+        return FilterChanged.InvokeAsync(_search);
     }
 
     private Task OnSearchKeyDown(KeyboardEventArgs args)

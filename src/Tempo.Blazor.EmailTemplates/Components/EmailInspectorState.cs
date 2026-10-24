@@ -21,6 +21,49 @@ public sealed class EmailInspectorState
     /// </summary>
     public PropertyField? LastFocusedField { get; set; }
 
+    /// <summary>
+    /// The field whose variable picker is open (a property name, or <see cref="RichContentPicker"/> for the
+    /// text block's rich editor), or <see langword="null"/>. It lives here - on the editor's inspector state -
+    /// and not in the inspector components, because a desktop ↔ tablet layout flip re-creates those
+    /// components while the user is still choosing a variable.
+    /// </summary>
+    public string? OpenVariablesField { get; private set; }
+
+    /// <summary>The key of the text block's rich-editor picker in <see cref="OpenVariablesField"/>.</summary>
+    public const string RichContentPicker = "(rich-content)";
+
+    /// <summary>
+    /// The text typed into the open picker's search field. Survives a layout flip with the picker, and is
+    /// reset when the picker closes (decision EMAIL-VARIABLE-PICKER-FILTER).
+    /// </summary>
+    public string VariableFilter { get; set; } = string.Empty;
+
+    /// <summary>The inspected node the picker state belongs to; another node discards the picker state.</summary>
+    public Guid? InspectedId { get; set; }
+
+    /// <summary>Opens the picker of <paramref name="field"/> (and closes any other).</summary>
+    /// <param name="field">The property name, or <see cref="RichContentPicker"/>.</param>
+    public void OpenVariables(string field)
+    {
+        if (!string.Equals(OpenVariablesField, field, StringComparison.Ordinal)) VariableFilter = string.Empty;
+        OpenVariablesField = field;
+    }
+
+    /// <summary>Closes the picker of <paramref name="field"/> and forgets its filter; another field's picker is left alone.</summary>
+    /// <param name="field">The property name, or <see cref="RichContentPicker"/>.</param>
+    public void CloseVariables(string field)
+    {
+        if (!string.Equals(OpenVariablesField, field, StringComparison.Ordinal)) return;
+        CloseVariables();
+    }
+
+    /// <summary>Closes whichever picker is open and forgets its filter.</summary>
+    public void CloseVariables()
+    {
+        OpenVariablesField = null;
+        VariableFilter = string.Empty;
+    }
+
     /// <summary>Whether the group is collapsed for the given owner (block type); groups start expanded.</summary>
     /// <param name="owner">The label owner token (e.g. <c>Text</c>, <c>Section</c>).</param>
     /// <param name="group">The group id — <see cref="PaddingGroup"/> or <see cref="AdvancedGroup"/>.</param>

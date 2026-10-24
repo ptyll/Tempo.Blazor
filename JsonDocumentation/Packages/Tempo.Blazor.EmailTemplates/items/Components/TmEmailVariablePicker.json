@@ -30,6 +30,18 @@
       "isRequired": false,
       "default": "false",
       "description": "Renders the picker read-only: inserting a variable edits the document, so the list is disabled and OnInsert is never called."
+    },
+    {
+      "name": "Filter",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The text in the search field, two-way bindable (@bind-Filter). Lets a host keep the filter across a remount such as a desktop/tablet layout flip; null is the empty filter. Without a binding the picker keeps the text itself."
+    },
+    {
+      "name": "FilterChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the new text whenever the user edits the search field."
     }
   ]
 }
