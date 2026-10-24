@@ -219,4 +219,39 @@ public class EditorDirtyStateTests : EmailEditorTestBase
             builder.CloseComponent();
         }
     }
+
+    [Fact]
+    public void TypingTheSavedValueBack_ByHand_MakesTheDocumentCleanAgain()
+    {
+        // Not an undo: the user edits the subject and then types the original text back. The dirty flag is
+        // about CONTENT (it was before the history carried versions, and it must stay so): the document equals
+        // what the host last confirmed, so there is nothing to save and no reason to warn on leave.
+        var document = new EmailTemplateDocument { Subject = "Hello" };
+        var changes = new List<bool>();
+        var cut = Render<TmEmailTemplateEditor>(p => p
+            .Add(c => c.Document, document)
+            .Add(c => c.IsDirtyChanged, (bool value) => changes.Add(value))
+            .Add(c => c.OnSave, (EmailSaveRequest _) => Task.FromResult(EmailSaveResult.Saved())));
+
+        cut.Find("[data-tm-prop='Subject'] input").Change("Hello!");
+        cut.Instance.IsDirty.Should().BeTrue();
+
+        cut.Find("[data-tm-prop='Subject'] input").Change("Hello");
+
+        cut.Instance.IsDirty.Should().BeFalse("the content is the confirmed content again");
+        changes.Should().Equal(true, false);
+    }
+
+    [Fact]
+    public void AnEditThatChangesOnlyTheTimestamp_IsNotADirtyDocument()
+    {
+        // The commit stamps UpdatedAt; a timestamp is not content (the old signature cleared it too).
+        var cut = RenderEditor(DocWithTextBlock(out _), EmailSaveResult.Saved());
+        cut.Find("[data-tm-save]").Click();
+        cut.Instance.IsDirty.Should().BeFalse();
+
+        cut.Find("[data-tm-prop='Subject'] input").Change("Hello");   // same text as the document already has
+
+        cut.Instance.IsDirty.Should().BeFalse();
+    }
 }

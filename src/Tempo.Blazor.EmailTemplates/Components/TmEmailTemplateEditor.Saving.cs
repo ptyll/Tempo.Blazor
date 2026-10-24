@@ -84,7 +84,7 @@ public partial class TmEmailTemplateEditor
     /// </summary>
     private async Task<EmailSaveResult> RejectSaveAsync(string message, EmailSaveTrigger trigger)
     {
-        var result = Record(EmailSaveResult.Failed(message), null, trigger, _documentEpoch);
+        var result = Record(EmailSaveResult.Failed(message), null, null, trigger, _documentEpoch);
         await InvokeAsync(StateHasChanged);
         return result;
     }
@@ -107,7 +107,7 @@ public partial class TmEmailTemplateEditor
             catch (Exception ex)
             {
                 LogError(ex, "The email template save pipeline failed unexpectedly.");
-                result = Record(EmailSaveResult.Failed(null), null, job.Trigger, _documentEpoch);
+                result = Record(EmailSaveResult.Failed(null), null, null, job.Trigger, _documentEpoch);
             }
 
             job.Complete(result);
@@ -146,7 +146,7 @@ public partial class TmEmailTemplateEditor
             var refusal = RefusalKey();
             if (refusal is not null)
             {
-                var refused = Record(EmailSaveResult.Failed(Loc[refusal]), null, next.Trigger, _documentEpoch);
+                var refused = Record(EmailSaveResult.Failed(Loc[refusal]), null, null, next.Trigger, _documentEpoch);
                 lock (_saveSync) { _saveInProgress = false; }
                 next.Complete(refused);
                 return;
@@ -171,6 +171,7 @@ public partial class TmEmailTemplateEditor
         // The history version of exactly the state the host is about to receive: the baseline becomes THIS
         // version on success, so an edit made while the request is in flight (a newer version) stays dirty.
         var snapshotVersion = _history.Version;
+        var snapshotContent = _history.Content;
 
         IsSaving = true;
         _saveErrorMessage = null;
@@ -203,7 +204,7 @@ public partial class TmEmailTemplateEditor
             IsSaving = false;
         }
 
-        result = Record(result, snapshotVersion, trigger, epoch);
+        result = Record(result, snapshotVersion, snapshotContent, trigger, epoch);
         await InvokeAsync(StateHasChanged);
         return result;
     }
@@ -212,7 +213,7 @@ public partial class TmEmailTemplateEditor
     /// Stores the outcome (dirty baseline, badge state, conflict pause, announcement) and returns it
     /// unchanged. An outcome that belongs to a document the host has since replaced only answers its caller.
     /// </summary>
-    private EmailSaveResult Record(EmailSaveResult result, long? savedVersion, EmailSaveTrigger trigger, long epoch)
+    private EmailSaveResult Record(EmailSaveResult result, long? savedVersion, string? savedContent, EmailSaveTrigger trigger, long epoch)
     {
         if (epoch != _documentEpoch) return result;
 
@@ -224,6 +225,7 @@ public partial class TmEmailTemplateEditor
                 // The baseline is the VERSION the host confirmed, not the live document: an edit made
                 // while the save was in flight stays dirty after success.
                 _baselineVersion = savedVersion.Value;
+                _baselineContent = savedContent ?? _baselineContent;
                 _lastSavedAt = TimeProvider.GetUtcNow();
                 _saveErrorMessage = null;
                 _conflictMessage = null;
@@ -265,12 +267,14 @@ public partial class TmEmailTemplateEditor
     // ── Dirty state ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Recomputes <see cref="IsDirty"/> from the history version: O(1), no serialization (phase 7). The
-    /// document is dirty exactly when it is not the state the host last confirmed - undo/redo landing on that
-    /// state reads clean again because the history restores the version of the state it lands on.
+    /// Recomputes <see cref="IsDirty"/> without serializing the document (phase 7): the history already took
+    /// the one serialization of this commit. Same version = the confirmed state itself (undo/redo landing on it
+    /// restores its version); a different version is still clean when the CONTENT is the confirmed content (the
+    /// user typed the saved text back, or an edit changed nothing but the timestamp) - a string comparison.
     /// </summary>
     private void RecomputeDirty()
-        => SetDirty(_history.Version != _baselineVersion);
+        => SetDirty(_history.Version != _baselineVersion
+                    && !string.Equals(_history.Content, _baselineContent, StringComparison.Ordinal));
     private void SetDirty(bool dirty)
     {
         if (IsDirty == dirty) return;

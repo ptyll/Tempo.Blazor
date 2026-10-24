@@ -228,6 +228,9 @@ public partial class TmEmailTemplateEditor
     // version differs from this one" - an integer comparison instead of serializing the whole document on
     // every edit (phase 7, commit cost). Undoing onto the saved state restores the saved version.
     private long _baselineVersion;
+    // The content signature of that same confirmed state: when the versions differ, equal content still means
+    // "nothing to save" (the user typed the saved text back). A string comparison, never a serialization.
+    private string _baselineContent = string.Empty;
     private long _revision;
 
     /// <summary>
@@ -349,6 +352,7 @@ public partial class TmEmailTemplateEditor
             _history = new EditorHistoryService(TimeProvider);
             _history.Initialize(_document);
             _baselineVersion = _history.Version;
+            _baselineContent = _history.Content;
             return;
         }
 
@@ -382,6 +386,7 @@ public partial class TmEmailTemplateEditor
         _history = new EditorHistoryService(TimeProvider);
         _history.Initialize(_document);
         _baselineVersion = _history.Version;
+        _baselineContent = _history.Content;
         _inspectorState.CloseVariables();
         _revision++;
         _lastSaveOutcome = null;

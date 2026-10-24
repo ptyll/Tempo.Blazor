@@ -1738,8 +1738,12 @@ serializaci kvůli `RecomputeDirty()`; undo/redo vracely `DeepClone()`. Teď:
 * `EditorHistoryService` drží snímek jako **neměnný JSON řetězec** + **`Version`** (monotónní id stavu, nikdy
   se nepoužije dvakrát; undo/redo vrací verzi stavu, na který dopadly). Snímek = jedna serializace; deserializace
   se platí jen při skutečném undo/redo.
-* `IsDirty` = `_history.Version != _baselineVersion` (O(1)). Baseline je verze snímku, který hostitel potvrdil
-  (úprava během letícího ukládání zůstává dirty; undo na uložený stav je zase čisté).
+* `IsDirty` = verze se liší od potvrzené **a zároveň** se liší obsah (`_history.Version != _baselineVersion &&
+  _history.Content != _baselineContent`). Verze je rychlá cesta (undo/redo na uložený stav vrací jeho verzi),
+  obsah (JSON bez časového razítka, které už stejně vznikl při snímku) pokrývá „uživatel napsal uloženou hodnotu
+  zpátky ručně“ — to dřívější `ContentSignature` zvládal a regres by tiše vrátil „neuložené změny“ u dokumentu,
+  který je stejný jako uložený. Porovnání je řetězcové, ne další serializace. Baseline je verze + obsah snímku,
+  který hostitel potvrdil (úprava během letícího ukládání zůstává dirty).
 * Koalescence zůstala (500 ms, stejný klíč): koalescovaný push je **nová verze**, takže úprava po uložení nikdy
   nevypadá jako čistá.
 * Náhled (`TmEmailTemplatePreview.DocumentRevision`, volitelné, aditivní): „změnil se dokument?“ je porovnání
@@ -1754,6 +1758,9 @@ dokumentu s textovými bloky ≈ 70 znaků; bez vykreslení):
 | 3 | 0,147 ms | 0,054 ms | 2,7× |
 | 52 | 0,954 ms | 0,310 ms | 3,1× |
 | 200 | 3,892 ms | 1,110 ms | 3,5× |
+
+Po doplnění porovnání obsahu (viz výše) druhé měření: 3 bloky 0,190 → 0,034 ms, 52 bloků 1,574 → 0,778 ms,
+200 bloků 3,249 → 1,240 ms — stejný řád, zisk ≈ 2–5×; kolísání mezi běhy je šum Debug sestavení.
 
 Celý klik „přidat blok“ včetně bUnit vykreslení (měřeno před změnou, `AddBlock` → `CommitAsync` →
 `StateHasChanged`): 3 bloky ≈ 18 ms, 52 ≈ 36 ms, 200 ≈ 304 ms. U 200 bloků tedy dominuje vykreslení plátna

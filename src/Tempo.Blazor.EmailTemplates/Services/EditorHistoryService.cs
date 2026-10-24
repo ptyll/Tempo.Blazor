@@ -28,12 +28,14 @@ public sealed class EditorHistoryService
     private readonly LinkedList<Snapshot> _undo = new();
     private readonly Stack<Snapshot> _redo = new();
 
-    private Snapshot _current = new(string.Empty, 0);
+    private Snapshot _current = new(string.Empty, 0, null);
     private long _nextVersion;
     private string? _lastCoalesceKey;
     private DateTimeOffset _lastPushedAt;
 
-    private readonly record struct Snapshot(string Json, long Version);
+    // Json is the CONTENT signature: the document serialized with its timestamp cleared (a timestamp is not
+    // content). The timestamp is kept beside it, so an undo/redo still restores the document exactly.
+    private readonly record struct Snapshot(string Json, long Version, DateTime? UpdatedAt);
 
     /// <summary>Initializes the service with an optional clock and history depth limit.</summary>
     public EditorHistoryService(TimeProvider? timeProvider = null, int maxDepth = 50)
@@ -54,6 +56,13 @@ public sealed class EditorHistoryService
     /// the id of the state landed on - so undoing back onto a saved state reads as that saved version again.
     /// </summary>
     public long Version => _current.Version;
+
+    /// <summary>
+    /// The content signature of the current state: the canonical JSON with the timestamp left out. Two states
+    /// with equal signatures are the same document as far as saving is concerned, so the editor compares this
+    /// string (a memory comparison, no serialization) to decide that typing the saved text back is clean again.
+    /// </summary>
+    public string Content => _current.Json;
 
     /// <summary>Resets the history to a single baseline state.</summary>
     public void Initialize(EmailTemplateDocument document)
@@ -95,7 +104,7 @@ public sealed class EditorHistoryService
         _current = _undo.Last!.Value;
         _undo.RemoveLast();
         _lastCoalesceKey = null;
-        return EmailTemplateSerializer.Deserialize(_current.Json);
+        return Restore(_current);
     }
 
     /// <summary>Moves one step forward and returns an independent copy of that state, or <see langword="null"/>.</summary>
@@ -105,9 +114,31 @@ public sealed class EditorHistoryService
         _undo.AddLast(_current);
         _current = _redo.Pop();
         _lastCoalesceKey = null;
-        return EmailTemplateSerializer.Deserialize(_current.Json);
+        return Restore(_current);
     }
 
+    private static EmailTemplateDocument Restore(Snapshot snapshot)
+    {
+        var document = EmailTemplateSerializer.Deserialize(snapshot.Json);
+        document.UpdatedAt = snapshot.UpdatedAt;
+        return document;
+    }
+
+    /// <summary>
+    /// One serialization. The timestamp is cleared and restored around it instead of serializing a copy (every
+    /// caller runs on the renderer's dispatcher, so nothing observes the temporarily null value).
+    /// </summary>
     private Snapshot Capture(EmailTemplateDocument document)
-        => new(EmailTemplateSerializer.Serialize(document), ++_nextVersion);
+    {
+        var updatedAt = document.UpdatedAt;
+        document.UpdatedAt = null;
+        try
+        {
+            return new Snapshot(EmailTemplateSerializer.Serialize(document), ++_nextVersion, updatedAt);
+        }
+        finally
+        {
+            document.UpdatedAt = updatedAt;
+        }
+    }
 }
