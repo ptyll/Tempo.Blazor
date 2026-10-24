@@ -83,6 +83,13 @@ contract is three pieces:
    narrow widths — a host that needs a specific command always visible gives it `Priority`
    through the editor's toolbar configuration, and E2E helpers click the More menu as fallback.
 
+**The `import` group is deliberately NOT a `TmToolbarFileButton`** (decision
+`DIAGRAM-IMPORT-DROPDOWN-STAYS`, plan 643bba06). It is one Pinned `TmDropdown`
+(`[data-tm-group='import'] .tm-dropdown-trigger`) holding Import JSON (a `<label>` around a hidden
+`InputFile`, which opens the chooser natively), Import SQL and Import CSV. `TmToolbarFileButton`
+exists for a file chooser that must open from a collapsible bar button *and* its "More" entry; the
+group never collapses, and moving JSON out of the menu would split the frozen group contract.
+
 Host action buttons (save/share per G9) go through the `HeaderStart` / `HeaderActions`
 `RenderFragment` slots, which render at the start / end of the header bar.
 
