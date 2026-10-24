@@ -596,8 +596,8 @@
   tracked, each directory names its producing test in a `README.md`. They are rewritten only with `TM_E2E_UPDATE_BASELINE=1`
   (see `docs/e2e-test-lanes.md`, "Updating committed baselines"). No product behaviour changed.
 - **E-mail import dialog: the structure preview is a flat virtualized list (phase 8; changed during the 2.10 cycle, so not a breaking change against a released version).** Impact: (1) the nested `<ul>` per section / column is gone — every
-  section, column and block is now one `<li class="tm-email-import__tree-row">` (`data-tm-import-section|column|block` unchanged) inside
-  `[data-tm-import-tree]`; (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
+  section, column and block is now one `<div class="tm-email-import__tree-row" role="listitem">` (`data-tm-import-section|column|block` unchanged) inside
+  `<div role="list" data-tm-import-tree>` (no `<ul>`/`<li>` any more; the structure section is named through `aria-labelledby`, not a hard-coded label); (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
   were removed, and a host that overrides `ITmEmailLocalizer` can drop that key; (3) only a window of rows is in the DOM, so a spec that counted every
   `[data-tm-import-block]` must read the complete count from `[data-tm-import-tree][data-tm-import-rows]` (or the state card's `data-tm-import-blocks`).
   Before: `cut.FindAll("[data-tm-import-block]").Count == blocks` (capped at 100). After: `tree.GetAttribute("data-tm-import-rows") == blocks + sections + columns`, and
@@ -961,7 +961,7 @@
   A merge (`bb606ca8`) had reverted `TmPdfViewer.razor.css` to an older copy, so the FZE-11 search card (`.tm-pdf-viewer__search-card`, its docked-panel
   offset and the wraps' `scroll-padding-top`), the FZE-13 `position: relative` of `.tm-pdf-viewer__continuous-wrap` (the annotation slots drifted by the
   wrap's offset), the continuous text-layer span rules and the `--tm-pdf-comments-panel-width` knob were missing: the search card rendered as an unstyled
-  full-height block and 11 `PdfViewer_Continuous_*` / `PdfAnnotator_Continuous_*` E2E specs were red. Restored from `48af2368`; no API change.
+  full-height block and 11 `PdfViewer_Continuous_*` / `PdfAnnotator_Continuous_*` E2E specs were red. The same stale copy also lacked the view-mode segment rules (`.tm-pdf-viewer ::deep .tm-pdf-viewer__view-mode` and its `.tm-radio-group-options` / `.tm-radio-segment` rules, written with `::deep` because the segmented control is a child component) and `.tm-pdf-viewer__search-count--empty`, and still carried the unused `.tm-pdf-viewer__annotations-hint` rule, which is removed. Restored from `48af2368`; no API change. `TmPdfViewerCssTests` now guards the search card, its docked-panel offset, `--tm-pdf-comments-panel-width`, the `position: relative` of the continuous wrap and the continuous text-layer span rule.
 - **E-mail editor: `DocumentTree` traversals are iterative and visit every node once.** The recursive walkers (`CollectBlockLists`, `ReassignIds` and the
   other tree walks) overflowed the stack on a deeply nested document; they now use an explicit stack, are cycle-safe (visit-once) and are covered by
   deep-tree tests. The public `DocumentTree` methods document this behaviour in their `<remarks>`.
