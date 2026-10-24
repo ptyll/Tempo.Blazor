@@ -72,7 +72,7 @@ nightly — today no scheduled workflow exists, so it runs manually via
 
 `scripts/run-e2e-perf.ps1` runs `TestCategory=Performance` serially in ONE process: the Modeling M26 budgets
 (LCP, large model load/generate, tree filter, scroll jank, notation switch - `ModelingPerformanceM26E2ETests`), the
-Spreadsheet budget specs (`BenchmarkPage_Phase11ReadinessMetricsPass` and the other `BenchmarkPage_*` budget specs) and the Email editor's 50+ block keystroke bound
+Spreadsheet budget specs (`BenchmarkPage_Phase11ReadinessMetricsPass` - only its wall-clock budgets - and the other `BenchmarkPage_*` budget specs; its deterministic counter contract is `BenchmarkPage_Phase11StructuralCountersHold`, which runs in the normal lanes) and the Email editor's 50+ block keystroke bound
 (`EmailEditorCanvasWysiwygF9AE2ETests.Typing_in_the_inspector_repaints_only_the_edited_block`).
 
 These are wall-clock budgets (Web Vitals, frame time, per-keystroke latency) and they only hold on an **idle machine** -
@@ -221,6 +221,23 @@ What the three test-side ones raced, for anyone writing a similar test:
   click review actions only once the rail lists the engine's pending revisions
   and has stopped moving.
 
+### "Execution context was destroyed" without a navigation (recorded 2026-10-24)
+
+`DiagramTabletTouchE2ETests.Tablet_ReadOnly_TapEdge_SelectsForInspection` failed on the first attempt in most isolated runs
+(5/6 and 8/8 in two probe series; `--expose-gc` was ruled out as the trigger) with "Execution context was destroyed, most likely
+because of a navigation", and carried a retry wrapper for it. **No navigation ever happened**: CDP `Page.frameRequestedNavigation`,
+`frameStartedNavigating`, `frameNavigated`, `Runtime.executionContextsCleared`, `Target.targetInfoChanged`, lifecycle events,
+`beforeunload`/`pagehide`, `location.*` hooks and the History/Navigation API all stayed silent, the tab kept its
+`performance.timeOrigin`, and the page-side code (including the 40 ms timer) ran to the end. The `pw:protocol` log shows the real
+answer: `Runtime.callFunctionOn` returned `{"code":-32000,"message":"Promise was collected"}`. The helper used one `async`
+`EvaluateAsync` that awaited a page timer between `pointerdown` and `pointerup`; Chromium answers "Promise was collected" for the awaited
+promise while the WASM demo host is busy, and Playwright 1.51 rewrites **every** non-JS protocol error of an evaluate into
+"Execution context was destroyed, most likely because of a navigation" (`crExecutionContext.js`).
+
+Rule: **do not await a page-side timer/promise inside one `EvaluateAsync`.** Dispatch the events from separate synchronous
+evaluates (the round trip is the press duration) or poll with `WaitForFunctionAsync` and a synchronous predicate. When this
+message shows up, run with `DEBUG=pw:protocol` before suspecting the app or adding a retry. The other specs that catch this
+message and retry (`DocumentEditorCanvas*E2ETests` helpers) match the same shape and are candidates for the same fix.
 ## Boot readiness and cold-boot recovery
 
 `PlaywrightTestBase.WaitForAppReadyAsync` waits on **states** (`DOMContentLoaded`, the app shell, then the

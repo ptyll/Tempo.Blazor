@@ -340,24 +340,6 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
     [Description("Read-only tablet (review D): a tap on an edge selects it for inspection; no edge handles render")]
     public async Task Tablet_ReadOnly_TapEdge_SelectsForInspection()
     {
-        // The self-hosted WASM demo occasionally performs a same-URL full reload mid-test
-        // ("Execution context was destroyed, most likely because of a navigation") under host
-        // startup load — observed ~50 % of isolated runs, independent of the tested code. Retry
-        // the whole flow ONLY for that failure (a generic catch would hide real regressions),
-        // and log the first failure so the flake stays visible in the test output.
-        try
-        {
-            await Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync();
-        }
-        catch (Exception ex) when (ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal))
-        {
-            TestContext.WriteLine($"[e2e] first attempt hit a mid-test navigation, retrying: {ex.GetType().Name}: {ex.Message}");
-            await Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync();
-        }
-    }
-
-    private async Task Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync()
-    {
         var page = await OpenEditorAsync(1024, 768, touch: true);
         await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
 
@@ -566,26 +548,32 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
 
     /// <summary>Dispatches a synthetic touch-pointer TAP on an edge hit path (no movement — a
     /// tap, never a drag; the read-only touch layer selects the edge for inspection).</summary>
+    /// <remarks>
+    /// Two SYNCHRONOUS evaluates (down, then up) instead of one <c>async</c> evaluate that awaits a page timer between
+    /// the events. Awaiting a page-side promise makes Chromium's CDP answer <c>Promise was collected</c>
+    /// (<c>Runtime.callFunctionOn</c>, code -32000) while the WASM demo host is busy; Playwright 1.51 reports every such non-JS protocol error as "Execution context was
+    /// destroyed, most likely because of a navigation", although the page never navigated. A synchronous evaluate returns
+    /// its value directly and has no promise to lose, and the round trip between the two calls is the press duration.
+    /// </remarks>
     private static async Task TapEdgeAsync(IPage page, string edgeId)
     {
-        await page.EvaluateAsync(
+        const string DispatchScript =
             """
-            async ([id]) => {
+            ([id, type, buttons]) => {
                 const hit = document.querySelector(`.tm-diagram-edge-hit-path[data-edge-id='${id}']`);
                 if (!hit) throw new Error('edge hit path not found');
                 const r = hit.getBoundingClientRect();
                 const x = r.left + r.width / 2, y = r.top + Math.max(r.height / 2, 4);
-                const opts = (bx) => ({
+                hit.dispatchEvent(new PointerEvent(type, {
                     bubbles: true, cancelable: true, composed: true,
                     pointerId: 7, pointerType: 'touch', isPrimary: true,
-                    button: 0, buttons: bx, clientX: x, clientY: y,
-                });
-                hit.dispatchEvent(new PointerEvent('pointerdown', opts(1)));
-                await new Promise(res => setTimeout(res, 40));
-                hit.dispatchEvent(new PointerEvent('pointerup', opts(0)));
+                    button: 0, buttons, clientX: x, clientY: y,
+                }));
             }
-            """,
-            new object[] { edgeId });
+            """;
+
+        await page.EvaluateAsync(DispatchScript, new object[] { edgeId, "pointerdown", 1 });
+        await page.EvaluateAsync(DispatchScript, new object[] { edgeId, "pointerup", 0 });
         await page.WaitForTimeoutAsync(300);
     }
 

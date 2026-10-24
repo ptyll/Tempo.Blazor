@@ -5103,19 +5103,16 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(canvasJsEnginePasteMs > 0, $"Expected canvas JS engine benchmark to expose paste latency. Current: {canvasJsEnginePasteMs:N1} ms.");
     }
 
+    // The former BenchmarkPage_Phase11ReadinessMetricsPass mixed two kinds of assertion. The wall-clock ones (the phase-10
+    // keyboard edge baseline, canvas <= DOM * 1.25) stay here in the serial Performance lane; the deterministic COUNTER
+    // contract (logical scroll used, no per-key scrollTo, wheel/drag callbacks coalesced) lives in
+    // BenchmarkPage_Phase11StructuralCountersHold below, which belongs to the normal lanes because a loaded host
+    // cannot make a counter wrong.
     [TestMethod]
     [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase11ReadinessMetricsPass()
     {
-        var page = await CreatePageAsync();
-        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
-        await WaitForAppReadyAsync(page);
-
-        await page.GetByTestId("spreadsheet-benchmark-run-both").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "document.querySelectorAll('[data-testid=\"spreadsheet-benchmark-result-row\"]').length >= 2",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 60000 });
+        var page = await OpenBenchmarkRunBothAsync();
 
         var canvas = page.Locator("[data-testid=\"spreadsheet-benchmark-result-row\"][data-renderer=\"Canvas\"]").First;
         var dom = page.Locator("[data-testid=\"spreadsheet-benchmark-result-row\"][data-renderer=\"Dom\"]").First;
@@ -5125,6 +5122,24 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         var canvasDown = await GetBenchmarkMetricAsync(canvas, "data-keyboard-scroll-down-ms");
         var canvasUp = await GetBenchmarkMetricAsync(canvas, "data-keyboard-scroll-up-ms");
         var canvasRight = await GetBenchmarkMetricAsync(canvas, "data-keyboard-scroll-right-ms");
+        var domDown = await GetBenchmarkMetricAsync(dom, "data-keyboard-scroll-down-ms");
+
+        const double phase10KeyboardEdgeBaselineMs = 612.2;
+
+        Assert.IsTrue(canvasDown < phase10KeyboardEdgeBaselineMs, $"Expected ArrowDown edge navigation to stay below phase 10 baseline. Current: {canvasDown:N1} ms.");
+        Assert.IsTrue(canvasUp < phase10KeyboardEdgeBaselineMs, $"Expected ArrowUp edge navigation to stay below phase 10 baseline. Current: {canvasUp:N1} ms.");
+        Assert.IsTrue(canvasRight < phase10KeyboardEdgeBaselineMs, $"Expected ArrowRight edge navigation to stay below phase 10 baseline. Current: {canvasRight:N1} ms.");
+        Assert.IsTrue(canvasDown <= domDown * 1.25, $"Expected canvas ArrowDown edge navigation to be comparable to DOM on 1,000 x 50. Canvas: {canvasDown:N1} ms, DOM: {domDown:N1} ms.");
+    }
+
+    [TestMethod]
+    public async Task BenchmarkPage_Phase11StructuralCountersHold()
+    {
+        var page = await OpenBenchmarkRunBothAsync();
+
+        var canvas = page.Locator("[data-testid=\"spreadsheet-benchmark-result-row\"][data-renderer=\"Canvas\"]").First;
+        await canvas.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
         var canvasLogicalKeyboard = await GetBenchmarkMetricAsync(canvas, "data-keyboard-logical-scroll-count");
         var canvasKeyboardScrollTo = await GetBenchmarkMetricAsync(canvas, "data-keyboard-scroll-to-count");
         var canvasWheelEvents = await GetBenchmarkMetricAsync(canvas, "data-wheel-events");
@@ -5139,14 +5154,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         var canvasDragViewportCallbacks = await GetBenchmarkMetricAsync(canvas, "data-drag-viewport-callback-count");
         var canvasDragSelectionCallbacks = await GetBenchmarkMetricAsync(canvas, "data-drag-selection-callback-count");
         var canvasDragScrollTo = await GetBenchmarkMetricAsync(canvas, "data-drag-scroll-to-count");
-        var domDown = await GetBenchmarkMetricAsync(dom, "data-keyboard-scroll-down-ms");
 
-        const double phase10KeyboardEdgeBaselineMs = 612.2;
-
-        Assert.IsTrue(canvasDown < phase10KeyboardEdgeBaselineMs, $"Expected ArrowDown edge navigation to stay below phase 10 baseline. Current: {canvasDown:N1} ms.");
-        Assert.IsTrue(canvasUp < phase10KeyboardEdgeBaselineMs, $"Expected ArrowUp edge navigation to stay below phase 10 baseline. Current: {canvasUp:N1} ms.");
-        Assert.IsTrue(canvasRight < phase10KeyboardEdgeBaselineMs, $"Expected ArrowRight edge navigation to stay below phase 10 baseline. Current: {canvasRight:N1} ms.");
-        Assert.IsTrue(canvasDown <= domDown * 1.25, $"Expected canvas ArrowDown edge navigation to be comparable to DOM on 1,000 x 50. Canvas: {canvasDown:N1} ms, DOM: {domDown:N1} ms.");
         Assert.IsTrue(canvasLogicalKeyboard > 0, $"Expected keyboard edge navigation to use logical scroll. Count: {canvasLogicalKeyboard:N0}.");
         Assert.AreEqual(0d, canvasKeyboardScrollTo, $"Keyboard hot path should not call root.scrollTo per key. Count: {canvasKeyboardScrollTo:N0}.");
         Assert.IsTrue(canvasWheelEvents > 0, "Expected benchmark to exercise wheel events.");
@@ -5166,6 +5174,19 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(canvasDragScrollTo <= 3, $"Expected drag autoscroll native sync to stay coalesced. scrollTo count: {canvasDragScrollTo:N0}.");
     }
 
+    private async Task<IPage> OpenBenchmarkRunBothAsync()
+    {
+        var page = await CreatePageAsync();
+        await page.GotoAsync($"{BaseUrl}/spreadsheet-benchmark");
+        await WaitForAppReadyAsync(page);
+
+        await page.GetByTestId("spreadsheet-benchmark-run-both").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "document.querySelectorAll('[data-testid=\"spreadsheet-benchmark-result-row\"]').length >= 2",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 60000 });
+        return page;
+    }
     [TestMethod]
     [TestCategory("Performance")]
     public async Task BenchmarkPage_CanvasKeyboardUsableOnLargeDataset()
