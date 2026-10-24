@@ -361,7 +361,21 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
 
         // Review item 9: the sheet's default snap shows REAL TILES — the first block is hit-testable at its
         // centre and sits above the action bar's top edge (it used to be just under the fold).
-        var tile = page.Locator(".tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]").First;
+        // The sheet animates to its snap: measure the tile only once it stopped moving (a frame taken mid-slide is not the default snap).
+        await page.WaitForFunctionAsync(
+            @"sel => new Promise(resolve => {
+                const el = document.querySelector(sel);
+                if (!el) return resolve(false);
+                let last = el.getBoundingClientRect().top, stable = 0;
+                const tick = () => {
+                    const now = el.getBoundingClientRect().top;
+                    stable = Math.abs(now - last) < 0.5 ? stable + 1 : 0;
+                    last = now;
+                    if (stable >= 8) resolve(true); else requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            })",
+            ".tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]", new PageWaitForFunctionOptions { Timeout = 15000 });        var tile = page.Locator(".tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]").First;
         (await tile.CountAsync()).Should().BeGreaterThan(0, "the palette is what the sheet opens on");
         var tileReachable = await page.EvaluateAsync<bool>(
             @"() => {
