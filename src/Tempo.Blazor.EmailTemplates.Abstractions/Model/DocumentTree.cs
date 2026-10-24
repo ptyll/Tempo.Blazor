@@ -11,26 +11,100 @@ public static class DocumentTree
     /// <summary>Enumerates every section, including those nested inside wrapper blocks.</summary>
     public static IEnumerable<EmailSection> AllSections(EmailTemplateDocument document)
     {
-        foreach (var section in document.Sections)
-            foreach (var s in SectionAndDescendants(section))
-                yield return s;
+        // Iterative pre-order walk (explicit stack): a hostile or broken document may nest thousands of
+        // levels and recursion — also through nested iterators — would overflow the stack. A node reached
+        // twice (an object-graph cycle built by hand) is visited once, so the walk always terminates.
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<EmailSection>();
+        PushReversed(stack, document.Sections);
+        while (stack.Count > 0)
+        {
+            var section = stack.Pop();
+            if (!visited.Add(section)) continue;
+            yield return section;
+
+            // Same shape as before: only wrappers sitting directly in a column of the section are followed.
+            var nested = new List<EmailSection>();
+            foreach (var column in section.Columns)
+                foreach (var block in column.Blocks)
+                    if (block is EmailWrapperBlock wrapper)
+                        nested.AddRange(wrapper.Sections);
+            PushReversed(stack, nested);
+        }
     }
 
     /// <summary>Enumerates every column anywhere in the document, recursing into all containers.</summary>
     public static IEnumerable<EmailColumn> AllColumns(EmailTemplateDocument document)
     {
-        foreach (var section in document.Sections)
-            foreach (var c in ColumnsInSection(section))
-                yield return c;
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<object>();
+        for (var i = document.Sections.Count - 1; i >= 0; i--) stack.Push(document.Sections[i]);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            switch (node)
+            {
+                case EmailSection section:
+                    PushReversed(stack, section.Columns);
+                    break;
+                case EmailColumn column:
+                    yield return column;
+                    PushReversed(stack, column.Blocks);
+                    break;
+                case EmailGroupBlock group:
+                    PushReversed(stack, group.Columns);
+                    break;
+                case EmailWrapperBlock wrapper:
+                    PushReversed(stack, wrapper.Sections);
+                    break;
+                case EmailHeroBlock hero:
+                    PushReversed(stack, hero.Blocks);
+                    break;
+            }
+        }
     }
 
     /// <summary>Enumerates every block list (a column's or a hero's <c>Blocks</c>) in the document.</summary>
     public static IEnumerable<IList<EmailBlockBase>> AllBlockLists(EmailTemplateDocument document)
     {
         var acc = new List<IList<EmailBlockBase>>();
-        foreach (var section in document.Sections)
-            foreach (var column in section.Columns)
-                CollectBlockLists(column.Blocks, acc);
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<IList<EmailBlockBase>>();
+        for (var s = document.Sections.Count - 1; s >= 0; s--)
+        {
+            var columns = document.Sections[s].Columns;
+            for (var c = columns.Count - 1; c >= 0; c--) stack.Push(columns[c].Blocks);
+        }
+
+        var children = new List<IList<EmailBlockBase>>();
+        while (stack.Count > 0)
+        {
+            var list = stack.Pop();
+            if (!visited.Add(list)) continue;
+            acc.Add(list);
+
+            children.Clear();
+            foreach (var block in list)
+            {
+                switch (block)
+                {
+                    case EmailHeroBlock hero:
+                        children.Add(hero.Blocks);
+                        break;
+                    case EmailGroupBlock group:
+                        foreach (var column in group.Columns) children.Add(column.Blocks);
+                        break;
+                    case EmailWrapperBlock wrapper:
+                        foreach (var section in wrapper.Sections)
+                            foreach (var column in section.Columns) children.Add(column.Blocks);
+                        break;
+                }
+            }
+
+            for (var i = children.Count - 1; i >= 0; i--) stack.Push(children[i]);
+        }
+
         return acc;
     }
 
@@ -39,100 +113,60 @@ public static class DocumentTree
         => AllBlockLists(document).SelectMany(list => list);
 
     /// <summary>Assigns a fresh identifier to a block and to every node nested beneath it.</summary>
-    public static void ReassignIds(EmailBlockBase block)
-    {
-        block.Id = Guid.NewGuid();
-        switch (block)
-        {
-            case EmailHeroBlock hero:
-                foreach (var b in hero.Blocks) ReassignIds(b);
-                break;
-            case EmailGroupBlock group:
-                foreach (var column in group.Columns) ReassignIds(column);
-                break;
-            case EmailWrapperBlock wrapper:
-                foreach (var section in wrapper.Sections) ReassignIds(section);
-                break;
-        }
-    }
+    public static void ReassignIds(EmailBlockBase block) => ReassignIdsIterative(block);
 
     /// <summary>Assigns a fresh identifier to a section and everything beneath it.</summary>
-    public static void ReassignIds(EmailSection section)
-    {
-        section.Id = Guid.NewGuid();
-        foreach (var column in section.Columns) ReassignIds(column);
-    }
+    public static void ReassignIds(EmailSection section) => ReassignIdsIterative(section);
 
     /// <summary>Assigns a fresh identifier to a column and every block beneath it.</summary>
-    public static void ReassignIds(EmailColumn column)
-    {
-        column.Id = Guid.NewGuid();
-        foreach (var block in column.Blocks) ReassignIds(block);
-    }
+    public static void ReassignIds(EmailColumn column) => ReassignIdsIterative(column);
 
-    private static IEnumerable<EmailSection> SectionAndDescendants(EmailSection section)
+    private static void ReassignIdsIterative(object root)
     {
-        yield return section;
-        foreach (var column in section.Columns)
-            foreach (var block in column.Blocks)
-                if (block is EmailWrapperBlock wrapper)
-                    foreach (var nested in wrapper.Sections)
-                        foreach (var s in SectionAndDescendants(nested))
-                            yield return s;
-    }
-
-    private static IEnumerable<EmailColumn> ColumnsInSection(EmailSection section)
-    {
-        foreach (var column in section.Columns)
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<object>();
+        stack.Push(root);
+        while (stack.Count > 0)
         {
-            yield return column;
-            foreach (var c in ColumnsInBlocks(column.Blocks))
-                yield return c;
-        }
-    }
-
-    private static IEnumerable<EmailColumn> ColumnsInBlocks(IEnumerable<EmailBlockBase> blocks)
-    {
-        foreach (var block in blocks)
-        {
-            switch (block)
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            switch (node)
             {
-                case EmailGroupBlock group:
-                    foreach (var column in group.Columns)
+                case EmailSection section:
+                    section.Id = Guid.NewGuid();
+                    PushReversed(stack, section.Columns);
+                    break;
+                case EmailColumn column:
+                    column.Id = Guid.NewGuid();
+                    PushReversed(stack, column.Blocks);
+                    break;
+                case EmailBlockBase block:
+                    block.Id = Guid.NewGuid();
+                    switch (block)
                     {
-                        yield return column;
-                        foreach (var c in ColumnsInBlocks(column.Blocks)) yield return c;
+                        case EmailHeroBlock hero:
+                            PushReversed(stack, hero.Blocks);
+                            break;
+                        case EmailGroupBlock group:
+                            PushReversed(stack, group.Columns);
+                            break;
+                        case EmailWrapperBlock wrapper:
+                            PushReversed(stack, wrapper.Sections);
+                            break;
                     }
-                    break;
-                case EmailWrapperBlock wrapper:
-                    foreach (var section in wrapper.Sections)
-                        foreach (var c in ColumnsInSection(section)) yield return c;
-                    break;
-                case EmailHeroBlock hero:
-                    foreach (var c in ColumnsInBlocks(hero.Blocks)) yield return c;
+
                     break;
             }
         }
     }
 
-    private static void CollectBlockLists(IList<EmailBlockBase> list, IList<IList<EmailBlockBase>> acc)
+    private static void PushReversed<TItem>(Stack<TItem> stack, IList<TItem> items)
     {
-        acc.Add(list);
-        foreach (var block in list)
-        {
-            switch (block)
-            {
-                case EmailHeroBlock hero:
-                    CollectBlockLists(hero.Blocks, acc);
-                    break;
-                case EmailGroupBlock group:
-                    foreach (var column in group.Columns) CollectBlockLists(column.Blocks, acc);
-                    break;
-                case EmailWrapperBlock wrapper:
-                    foreach (var section in wrapper.Sections)
-                        foreach (var column in section.Columns) CollectBlockLists(column.Blocks, acc);
-                    break;
-            }
-        }
+        for (var i = items.Count - 1; i >= 0; i--) stack.Push(items[i]);
+    }
+
+    private static void PushReversed<TItem>(Stack<object> stack, IList<TItem> items) where TItem : class
+    {
+        for (var i = items.Count - 1; i >= 0; i--) stack.Push(items[i]);
     }
 }
