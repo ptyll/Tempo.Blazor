@@ -147,18 +147,30 @@ test('release of an unknown input is a no-op', () => {
     assert.doesNotThrow(() => release('never-acquired'));
 });
 
-test('acquire prunes registrations whose input left the DOM, so the listener cannot outlive the buttons', () => {
+test('release prunes registrations whose input left the DOM, so the listener cannot outlive the buttons', () => {
     const { byId, listeners } = dom();
     byId.set('a', input('a'));
+    byId.set('b', input('b'));
     acquire('a', 'ea');
+    acquire('b', 'eb');
     assert.equal(listeners.length, 1);
 
-    byId.delete('a');             // the circuit died: release never arrived
-    acquire('b', 'eb');           // the next registration prunes 'a'
+    byId.delete('a');             // the circuit died: release('a') never arrived
+    release('b');                 // the release that did arrive sweeps the ghost, so the last LIVE button removes the listener
     assert.equal(resolveInput(trigger({ 'data-action-id': 'ea', class: 'tm-toolbar-more__item' }), () => input('a')), null,
         'the pruned entry id no longer resolves');
-    assert.equal(listeners.length, 1, 'b keeps the single listener');
+    assert.equal(listeners.length, 0, 'no ghost keeps the document listener alive');
+});
 
-    release('b');
-    assert.equal(listeners.length, 0);
+test('acquire does not scan the DOM: a registration whose input is not (yet) in the DOM survives it', () => {
+    const { byId, listeners } = dom();
+    let lookups = 0;
+    const real = globalThis.document.getElementById;
+    globalThis.document.getElementById = id => { lookups++; return real(id); };
+    acquire('a', 'ea');           // registered before its input rendered: must not be pruned by the next acquire
+    acquire('b', 'eb');
+    assert.equal(lookups, 0, 'acquire never calls getElementById');
+    byId.set('a', input('a'));
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'ea', class: 'tm-toolbar-more__item' }), id => byId.get(id) ?? null)?.id, 'a');
+    assert.equal(listeners.length, 1);
 });

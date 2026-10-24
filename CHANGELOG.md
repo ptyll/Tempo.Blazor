@@ -729,7 +729,7 @@
 ### Added
 
 - **`TmEditorShell.TabletPanelPresentation` (`Docked` | `Overlay`): one shared tablet overlay for the editors.**
-  `TabletPanelPresentation` (`Tempo.Blazor.Abstractions.Layout`, `Docked = 0`, `Overlay = 1`; decision
+  `TabletPanelPresentation` (`Tempo.Blazor.Components.Layout`, next to `MobilePanelPresentation`; `Docked = 0`, `Overlay = 1`; decision
   `EDITOR-SHELL-TABLET-PRESENTATION`) is a new shell parameter, one value for both sides, **default `Docked` = today's
   behaviour** (nothing changes for `TmDiagramEditor`, Modeling or the e-mail editor). With `Overlay`, on a tablet layout only,
   the Left panel is an overlay drawer and the Right panel a non-modal side sheet over a full-width canvas; at most one is open
@@ -737,7 +737,7 @@
   two-way `LeftOpen` / `RightOpen`, have no rail and no resize separator, close with a localized × (`TmEditorShell_ClosePanel`,
   en/cs/sk/fr) or Escape and return the focus to the opener, the × is 44 px on `(pointer: coarse)` and the entrance fade is
   `prefers-reduced-motion: no-preference` only. Width is the `--tm-editor-shell-overlay-width` token (default `20rem`, at most
-  60 % of the editor); `LeftOverlayTestId`, `RightOverlayTestId` and `OverlayCloseTestId` name the test ids. Documented in
+  60 % of the editor); `LeftOverlayTestId`, `RightOverlayTestId` and `OverlayCloseTestId` name the test ids (rendered verbatim). `LeftPanelId` / `RightPanelId` are public so a host toggle can set `aria-controls` next to `aria-expanded`; the overlay title is a level-2 heading. Documented in
   [docs/editor-shell.md](docs/editor-shell.md#tablet-overlay-tabletpanelpresentationoverlay).
 
   ```razor
@@ -1182,7 +1182,7 @@
   child of the shell's `main` region (a sibling of the canvas) instead of the canvas region, so a descendant selector such as
   `.tm-wd-editor__canvas-region .tm-wd-sheet` must be rewritten; (3) the focus returns to the control that OPENED the sheet (the
   toolbar toggle, or the canvas when a selection opened the inspector) after Escape / ×, no longer always to the canvas wrapper;
-  (4) the keyframes `tm-wd-sheet-in` stay (the mobile zoom overlay and quick actions use them). The `data-testid`s
+  (4) the keyframes `tm-wd-sheet-in` are renamed `tm-wd-fade-in` (the mobile zoom overlay and quick actions still use them; nothing sheet-specific is left in the name). The `data-testid`s
   `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toggle-left` and `wd-toggle-inspector`, the 44 px coarse-pointer
   targets, `--tm-wd-sheet-w` and the one-sheet-at-a-time behaviour are unchanged.
   ```css

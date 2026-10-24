@@ -30,7 +30,7 @@ usable (the inline drawer root is click-through).
 
 ### Tablet overlay (`TabletPanelPresentation.Overlay`)
 
-`TabletPanelPresentation` (`Tempo.Blazor.Abstractions.Layout`, `Docked = 0` default, `Overlay = 1`; decision `EDITOR-SHELL-TABLET-PRESENTATION`) is ONE value for both sides and applies to the **tablet layout only** — desktop and mobile never change.
+`TabletPanelPresentation` (`Tempo.Blazor.Components.Layout`, next to `MobilePanelPresentation`; `Docked = 0` default, `Overlay = 1`; decision `EDITOR-SHELL-TABLET-PRESENTATION`, ADR [0005](adr/0005-editor-shell-tablet-presentation.md)) is ONE value for both sides and applies to the **tablet layout only** — desktop and mobile never change.
 
 | | `Overlay` on a tablet |
 |---|---|
@@ -41,14 +41,22 @@ usable (the inline drawer root is click-through).
 | Chrome | **no rails, no strip toggles, no resize separators**: the host renders the toggles (a toolbar button bound to `LeftOpen` / `RightOpen`); `CollapsedPanels` is ignored and `CollapsedPanelsChanged` is never raised |
 | Close | the × button (`OverlayCloseTestId`, localized `TmEditorShell_ClosePanel`) and **Escape** raise `LeftOpenChanged(false)` / `RightOpenChanged(false)`; closing is the host's state change |
 | Focus | a panel opened from a toolbar control moves the focus to its × (so Escape works from the keyboard) and Escape / × returns it to the opener; a focus that sits on the canvas (a selection opened the panel) is never taken away; nothing moves at load |
-| Semantics | `TmFocusScope` with `Modal=false` (`aria-modal="false"`, nothing inert, no top layer, no `TmDrawer`), named by `aria-labelledby` its non-heading title |
+| Semantics | `TmFocusScope` with `Modal=false` (`aria-modal="false"`, nothing inert, no top layer, no `TmDrawer`), named by `aria-labelledby` its title, which is a level-2 heading (`role="heading" aria-level="2"`, a `div` so no host `h2` rule restyles it) |
+| DOM order | the left overlay renders **before** the canvas and the right one **after** it (the Tab order follows what the user sees); both sit at fixed positions in the markup, so the canvas is never remounted by a side switch |
+| Toggle wiring | `LeftPanelId` / `RightPanelId` are public: the id of the element that holds the panel content (the overlay body, the docked `aside`, the mobile region). A host toggle renders `aria-expanded` (`true` while the side is open) and `aria-controls` **only while it is open** — a closed overlay is not in the DOM, so there is nothing to control |
 | Touch / motion | the × is `--tm-touch-target` (44 px) on `(pointer: coarse)`; the entrance fade runs only under `prefers-reduced-motion: no-preference` |
 
+**Test ids and classes are a contract.** An explicit `LeftOverlayTestId` / `RightOverlayTestId` / `OverlayCloseTestId` is rendered **verbatim** — `TestIdPrefix` namespaces only the defaults, so the host namespaces its own value (the wireframe editor passes `TestId("wd-left-drawer")`). The classes `.tm-editor-shell__overlay`, `.tm-editor-shell__overlay--left` and `.tm-editor-shell__overlay--right` are stable selectors host stylesheets and E2E may rely on; the inner `…__overlay-header` / `__overlay-title` / `__overlay-close` / `__overlay-body` follow them.
+
 ```razor
-<TmEditorShell TabletPanelPresentation="TabletPanelPresentation.Overlay"
+<TmEditorShell @ref="_shell" TabletPanelPresentation="TabletPanelPresentation.Overlay"
                @bind-LeftOpen="_toolboxOpen" @bind-RightOpen="_inspectorOpen"
                LeftTitle="Components" RightTitle="Properties">
-    <Toolbar><button @onclick="() => _toolboxOpen = !_toolboxOpen">Components</button></Toolbar>
+    <Toolbar>
+        <button aria-expanded="@(_toolboxOpen ? "true" : "false")"
+                aria-controls="@(_toolboxOpen ? _shell?.LeftPanelId : null)"
+                @onclick="() => _toolboxOpen = !_toolboxOpen">Components</button>
+    </Toolbar>
     <Left>…</Left><Canvas>…</Canvas><Right>…</Right>
 </TmEditorShell>
 ```

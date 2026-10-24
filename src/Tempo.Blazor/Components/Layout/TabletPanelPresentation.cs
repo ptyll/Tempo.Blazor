@@ -1,7 +1,7 @@
-namespace Tempo.Blazor.Abstractions.Layout;
+namespace Tempo.Blazor.Components.Layout;
 
 /// <summary>
-/// How an editor shell presents its Left and Right panels on a <see cref="TmLayoutMode.Tablet"/> layout.
+/// How an editor shell presents its Left and Right panels on a <see cref="Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Tablet"/> layout.
 /// Desktop and mobile layouts are not affected by this choice.
 /// </summary>
 public enum TabletPanelPresentation

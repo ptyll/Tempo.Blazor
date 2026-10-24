@@ -3,6 +3,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Feedback;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Wireframe;
 using Tempo.Blazor.Components.Wireframe.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -209,6 +210,31 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
 
         ToggleLeft(cut).GetAttribute("aria-pressed").Should().Be("true");
         ToggleInspector(cut).GetAttribute("aria-pressed").Should().Be("false");
+    }
+
+    [Fact]
+    public void Tablet_ToggleButtons_CarryAriaExpandedAndAriaControls_OnlyWhileTheirSheetIsInTheDom()
+    {
+        var cut = RenderEditor();
+        var shell = cut.FindComponent<TmEditorShell>().Instance;
+        ToggleLeft(cut).GetAttribute("aria-expanded").Should().Be("false");
+        ToggleLeft(cut).HasAttribute("aria-controls").Should().BeFalse("a closed sheet is not in the DOM: nothing to control");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
+
+        ToggleLeft(cut).Click();
+
+        ToggleLeft(cut).GetAttribute("aria-expanded").Should().Be("true");
+        var controls = ToggleLeft(cut).GetAttribute("aria-controls");
+        controls.Should().Be(shell.LeftPanelId);
+        cut.FindAll("#" + controls).Should().HaveCount(1, "aria-controls resolves to the sheet's content element");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
+        ToggleInspector(cut).HasAttribute("aria-controls").Should().BeFalse();
+
+        ToggleInspector(cut).Click();
+
+        ToggleInspector(cut).GetAttribute("aria-controls").Should().Be(shell.RightPanelId);
+        cut.FindAll("#" + shell.RightPanelId).Should().HaveCount(1);
+        ToggleLeft(cut).GetAttribute("aria-expanded").Should().Be("false");
     }
 
     // ── Close ×, Escape and focus ──────────────────────────────────────────────

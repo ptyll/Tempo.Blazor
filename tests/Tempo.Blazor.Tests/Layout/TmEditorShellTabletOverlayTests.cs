@@ -115,7 +115,8 @@ public class TmEditorShellTabletOverlayTests : LocalizationTestBase
         titleId.Should().NotBeNullOrWhiteSpace();
         var title = cut.Find("#" + titleId);
         title.TextContent.Trim().Should().Be("Blocks");
-        title.TagName.Should().NotBe("H2", "a host page outline must not gain a heading from the editor");
+        title.GetAttribute("role").Should().Be("heading");
+        title.GetAttribute("aria-level").Should().Be("2", "the panel title is a level-2 heading (role, not an <h2>, so no host stylesheet restyles it)");
         cut.FindComponent<TmFocusScope>().Instance.Modal.Should().BeFalse();
     }
 
@@ -349,6 +350,91 @@ public class TmEditorShellTabletOverlayTests : LocalizationTestBase
         right.Find(".tm-editor-shell__overlay--right").GetAttribute("data-testid").Should().Be("ed1-editor-shell-right-overlay");
         right.Find(".tm-editor-shell__overlay-close").GetAttribute("data-testid").Should().Be("ed1-editor-shell-right-overlay-close");
     }
+    // ── Side switch: DOM order, no canvas remount, focus, ids ─────────────────
+
+    private sealed class CanvasProbe : ComponentBase, IDisposable
+    {
+        public static int Mounts;
+        public static int Disposals;
+        protected override void OnInitialized() => Mounts++;
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder) => builder.AddContent(0, "Probe canvas");
+        public void Dispose() => Disposals++;
+    }
+
+    [Fact]
+    public void Overlay_LeftIsRenderedBeforeTheCanvas_AndRightAfterIt_SoTheTabOrderFollowsTheVisualOrder()
+    {
+        var left = RenderShell(TmLayoutMode.Tablet, new Host { Left = true });
+        var leftMain = left.Find("[data-region='main']").Children.Select(c => c.ClassList.Contains("tm-editor-shell__overlay--left") ? "left"
+            : c.ClassList.Contains("tm-editor-shell__canvas") ? "canvas" : "other").ToArray();
+        leftMain.Should().Equal("left", "canvas");
+
+        var right = RenderShell(TmLayoutMode.Tablet, new Host { Right = true });
+        var rightMain = right.Find("[data-region='main']").Children.Select(c => c.ClassList.Contains("tm-editor-shell__overlay--right") ? "right"
+            : c.ClassList.Contains("tm-editor-shell__canvas") ? "canvas" : "other").ToArray();
+        rightMain.Should().Equal("canvas", "right");
+    }
+
+    [Fact]
+    public void Overlay_SwitchingSides_DoesNotRemountTheCanvas()
+    {
+        CanvasProbe.Mounts = 0;
+        CanvasProbe.Disposals = 0;
+        var host = new Host { Left = true };
+        var cut = RenderShell(TmLayoutMode.Tablet, host, extra: p => p.Add(x => x.Canvas, b => { b.OpenComponent<CanvasProbe>(0); b.CloseComponent(); }));
+        CanvasProbe.Mounts.Should().Be(1);
+
+        host.Left = false; host.Right = true; Sync(cut, host);
+        cut.FindAll(".tm-editor-shell__overlay--right").Should().HaveCount(1);
+        host.Right = false; host.Left = true; Sync(cut, host);
+        cut.FindAll(".tm-editor-shell__overlay--left").Should().HaveCount(1);
+
+        CanvasProbe.Mounts.Should().Be(1, "the canvas keeps its place in the tree across a left <-> right switch");
+        CanvasProbe.Disposals.Should().Be(0);
+    }
+
+    [Fact]
+    public void Overlay_SwitchingFromLeftToRight_PutsFocusOnTheNewSheetsClose_AndTheOutgoingScopeDoesNotTakeItBack()
+    {
+        var host = new Host { Left = true };
+        var cut = RenderShell(TmLayoutMode.Tablet, host);
+        cut.FindAll(".tm-editor-shell__overlay--left").Should().HaveCount(1);
+        var before = JSInterop.Invocations.Count;
+
+        host.Left = false; host.Right = true; Sync(cut, host);
+
+        var close = cut.Find(".tm-editor-shell__overlay--right .tm-editor-shell__overlay-close");
+        cut.WaitForAssertion(() =>
+        {
+            var focus = JSInterop.Invocations.Skip(before).Where(i => i.Identifier == "Blazor._internal.domWrapper.focus").ToList();
+            focus.Should().NotBeEmpty("the new sheet takes the focus");
+            focus[^1].Arguments[0].ShouldBeElementReferenceTo(close);
+        });
+        cut.FindAll(".tm-editor-shell__overlay").Should().HaveCount(1, "the outgoing scope is gone, not stacked");
+    }
+
+    [Fact]
+    public void Overlay_PanelIds_ArePublic_AndNameTheElementThatHoldsThePanelContent()
+    {
+        var cut = RenderShell(TmLayoutMode.Tablet, new Host { Left = true });
+        var shell = cut.Instance;
+
+        shell.LeftPanelId.Should().NotBeNullOrWhiteSpace().And.NotBe(shell.RightPanelId);
+        cut.Find("#" + shell.LeftPanelId).GetAttribute("data-region").Should().Be("left");
+
+        cut.Render(p => { p.Add(x => x.LeftOpen, false); p.Add(x => x.RightOpen, true); });
+        cut.Find("#" + shell.RightPanelId).GetAttribute("data-region").Should().Be("right");
+    }
+
+    [Fact]
+    public void Docked_PanelIds_NameTheAside()
+    {
+        var cut = RenderShell(TmLayoutMode.Desktop, new Host { Left = true, Right = true });
+
+        cut.Find("#" + cut.Instance.LeftPanelId).TagName.Should().Be("ASIDE");
+        cut.Find("#" + cut.Instance.RightPanelId).TagName.Should().Be("ASIDE");
+    }
+
     // ── Flip back to desktop ──────────────────────────────────────────────────
 
     [Fact]

@@ -40,14 +40,18 @@
             var overlay = IsOverlay(layout.Resolved);
             @* The canvas keeps its position in the tree across the docked <-> overlay switch, so its content is never remounted. *@
             <div class="@(overlay ? "tm-editor-shell__main tm-editor-shell__main--overlay" : "tm-editor-shell__main")" data-region="main" @ref="_main">
-                @if (!overlay)
+                @if (overlay)
+                {
+                    @RenderOverlay(EditorShellPanel.Left)
+                }
+                else
                 {
                     @RenderDockedSide(EditorShellPanel.Left, collapsed)
                 }
                 <div class="tm-editor-shell__canvas" data-region="canvas" @ref="_canvasRegion">@Canvas</div>
                 @if (overlay)
                 {
-                    @RenderOverlay()
+                    @RenderOverlay(EditorShellPanel.Right)
                 }
                 else
                 {
@@ -234,6 +238,16 @@
     private readonly string _mobileToggleId = $"tm-editor-shell-mobile-toggle-{Guid.NewGuid():N}";
     private readonly string _leftPanelId = $"tm-editor-shell-left-panel-{Guid.NewGuid():N}";
     private readonly string _rightPanelId = $"tm-editor-shell-right-panel-{Guid.NewGuid():N}";
+
+    /// <summary>
+    /// The DOM id of the element that holds the Left panel content whenever the panel is rendered (docked <c>aside</c>, the
+    /// overlay body or the mobile tab panel / sheet region). Stable for the lifetime of the instance, so a host toggle can set
+    /// <c>aria-controls</c> (only while the panel is open: a closed panel is not in the DOM) next to <c>aria-expanded</c>.
+    /// </summary>
+    public string LeftPanelId => _leftPanelId;
+
+    /// <summary>The DOM id of the element that holds the Right panel content whenever it is rendered. See <see cref="LeftPanelId"/>.</summary>
+    public string RightPanelId => _rightPanelId;
     private readonly string _canvasPanelId = $"tm-editor-shell-canvas-panel-{Guid.NewGuid():N}";
     private readonly string _sheetHeadingId = $"tm-editor-shell-sheet-heading-{Guid.NewGuid():N}";
 

@@ -18,7 +18,8 @@
 
 <div class="tm-wd-editor @Class" data-editor-layout="@_resolvedLayout.ToString().ToLowerInvariant()" @onkeydown="OnKeyDown" tabindex="0" @ref="_editorRoot">
 
-    <TmEditorShell Class="tm-wd-editor__shell"
+    <TmEditorShell @ref="_shell"
+                   Class="tm-wd-editor__shell"
                    Header="@HeaderSlot"
                    Toolbar="@ToolbarSlot"
                    Left="@ShellLeftSlot"
@@ -275,13 +276,15 @@
             {
                 <TmToolbarButton Icon="@IconNames.PanelLeft" Text="@Loc["TmWireframe_SheetLeftTitle"]" Tooltip="@Loc["TmWireframe_ToggleToolbox"]"
                                  LabelPosition="ToolbarLabelPosition.Below" Pressed="@LeftSheetOpen"
-                                 OnClick="ToggleLeftSheet" data-testid="@TestId("wd-toggle-left")" />
+                                 OnClick="ToggleLeftSheet" data-testid="@TestId("wd-toggle-left")"
+                                 aria-expanded="@(LeftSheetOpen ? "true" : "false")" aria-controls="@(LeftSheetOpen ? _shell?.LeftPanelId : null)" />
             }
             @if (ShowPropertiesPanel)
             {
                 <TmToolbarButton Icon="@IconNames.PanelRight" Text="@Loc["TmWireframe_SheetInspectorTitle"]" Tooltip="@Loc["TmWireframe_ToggleProperties"]"
                                  LabelPosition="ToolbarLabelPosition.Below" Pressed="@InspectorSheetOpen"
-                                 OnClick="ToggleInspectorSheet" data-testid="@TestId("wd-toggle-inspector")" />
+                                 OnClick="ToggleInspectorSheet" data-testid="@TestId("wd-toggle-inspector")"
+                                 aria-expanded="@(InspectorSheetOpen ? "true" : "false")" aria-controls="@(InspectorSheetOpen ? _shell?.RightPanelId : null)" />
             }
         }
         @if (ShowReadOnlyToggle)

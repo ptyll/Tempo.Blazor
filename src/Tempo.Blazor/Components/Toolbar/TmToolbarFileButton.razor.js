@@ -56,7 +56,9 @@ function uninstallWhenIdle() {
 
 /**
  * Drops registrations whose input is no longer in the DOM (a release that never arrived, e.g. a lost circuit), so the
- * maps and the document listener cannot outlive the buttons. Skipped without a document (node tests, SSR).
+ * maps and the document listener cannot outlive the buttons. Runs only when a button is RELEASED (cheap there: releases are
+ * rare), never on acquire - an acquire happens per button and per entry-id change, and one getElementById per live
+ * registration on each of them would be pure overhead. Skipped without a document (node tests, SSR).
  */
 function pruneDetached() {
     const doc = globalThis.document;
@@ -75,7 +77,6 @@ function pruneDetached() {
  */
 export function acquire(inputId, entryId) {
     if (!inputId) return;
-    pruneDetached();
     const previous = byInput.get(inputId);
     if (previous !== undefined) byEntry.delete(previous);
     byInput.set(inputId, entryId);
@@ -91,6 +92,9 @@ export function release(inputId) {
     const entryId = byInput.get(inputId);
     if (entryId !== undefined) byEntry.delete(entryId);
     byInput.delete(inputId);
+    // A release that did arrive also sweeps the registrations of buttons whose release never did (a lost circuit), so the
+    // listener is removed with the last LIVE button rather than lingering for a ghost.
+    pruneDetached();
     uninstallWhenIdle();
 }
 

@@ -1,10 +1,10 @@
 {
   "kind": "Enum",
-  "category": "Layout",
-  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
   "description": "How an editor shell presents its Left and Right panels on a Tablet layout. Docked keeps the docked columns (rails, at most one expanded); Overlay turns the Left panel into an overlay drawer and the Right panel into a non-modal side sheet over a full-width canvas, at most one open. Desktop and mobile are not affected.",
-  "packageId": "Tempo.Blazor.Abstractions",
-  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TabletPanelPresentation.cs",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/TabletPanelPresentation.cs",
   "documentationStatus": "authored",
   "itemName": "TabletPanelPresentation",
   "members": [

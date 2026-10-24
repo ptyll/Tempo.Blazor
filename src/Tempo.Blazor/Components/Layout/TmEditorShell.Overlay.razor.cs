@@ -113,10 +113,14 @@ public partial class TmEditorShell
         catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* the control is gone */ }
     }
 
-    private RenderFragment RenderOverlay()
+    /// <summary>
+    /// The overlay of ONE side: nothing unless that side is the open one. The left overlay renders before the canvas and the
+    /// right one after it (DOM order = visual order, so the Tab order follows what the user sees), at fixed positions in the
+    /// markup so the canvas keeps its place in the tree and is never remounted by a side switch.
+    /// </summary>
+    private RenderFragment RenderOverlay(EditorShellPanel side)
     {
-        var side = _overlayOpen;
-        if (side == EditorShellPanel.None) return static _ => { };
+        if (side != _overlayOpen) return static _ => { };
 
         var isLeft = side == EditorShellPanel.Left;
         var lower = isLeft ? "left" : "right";
@@ -127,7 +131,6 @@ public partial class TmEditorShell
         return builder =>
         {
             builder.OpenComponent<TmFocusScope>(0);
-            builder.SetKey(side);
             builder.AddComponentParameter(1, nameof(TmFocusScope.Active), true);
             builder.AddComponentParameter(2, nameof(TmFocusScope.Modal), false);
             builder.AddComponentParameter(3, nameof(TmFocusScope.CloseOnEscape), true);
@@ -140,32 +143,35 @@ public partial class TmEditorShell
             {
                 inner.OpenElement(0, "div");
                 inner.AddAttribute(1, "class", "tm-editor-shell__overlay-header");
-                inner.OpenElement(2, "span");
-                inner.AddAttribute(3, "class", "tm-editor-shell__overlay-title");
-                inner.AddAttribute(4, "id", _overlayTitleId);
-                inner.AddContent(5, PanelTitle(side));
+                // A level-2 heading: the panel is a named region of the editor and a screen-reader user can reach it by heading.
+                inner.OpenElement(2, "div");
+                inner.AddAttribute(3, "role", "heading");
+                inner.AddAttribute(4, "aria-level", "2");
+                inner.AddAttribute(5, "class", "tm-editor-shell__overlay-title");
+                inner.AddAttribute(6, "id", _overlayTitleId);
+                inner.AddContent(7, PanelTitle(side));
                 inner.CloseElement();
-                inner.OpenElement(6, "button");
-                inner.AddAttribute(7, "type", "button");
-                inner.AddAttribute(8, "class", "tm-editor-shell__overlay-close");
-                inner.AddAttribute(9, "aria-label", closeLabel);
-                inner.AddAttribute(10, "title", closeLabel);
-                inner.AddAttribute(11, "data-testid", OverlayCloseId(side));
-                inner.AddAttribute(12, "onclick", EventCallback.Factory.Create(this, CloseOverlayAsync));
-                inner.AddElementReferenceCapture(13, e => _overlayClose = e);
-                inner.OpenComponent<TmIcon>(14);
-                inner.AddComponentParameter(15, nameof(TmIcon.Name), "x");
-                inner.AddComponentParameter(16, nameof(TmIcon.Size), IconSize.Sm);
+                inner.OpenElement(8, "button");
+                inner.AddAttribute(9, "type", "button");
+                inner.AddAttribute(10, "class", "tm-editor-shell__overlay-close");
+                inner.AddAttribute(11, "aria-label", closeLabel);
+                inner.AddAttribute(12, "title", closeLabel);
+                inner.AddAttribute(13, "data-testid", OverlayCloseId(side));
+                inner.AddAttribute(14, "onclick", EventCallback.Factory.Create(this, CloseOverlayAsync));
+                inner.AddElementReferenceCapture(15, e => _overlayClose = e);
+                inner.OpenComponent<TmIcon>(16);
+                inner.AddComponentParameter(17, nameof(TmIcon.Name), "x");
+                inner.AddComponentParameter(18, nameof(TmIcon.Size), IconSize.Sm);
                 inner.CloseComponent();
                 inner.CloseElement();
                 inner.CloseElement();
 
-                inner.OpenElement(17, "div");
-                inner.AddAttribute(18, "class", "tm-editor-shell__overlay-body");
                 inner.OpenElement(19, "div");
-                inner.AddAttribute(20, "id", panelId);
-                inner.AddAttribute(21, "data-region", lower);
-                inner.AddContent(22, content);
+                inner.AddAttribute(20, "class", "tm-editor-shell__overlay-body");
+                inner.OpenElement(21, "div");
+                inner.AddAttribute(22, "id", panelId);
+                inner.AddAttribute(23, "data-region", lower);
+                inner.AddContent(24, content);
                 inner.CloseElement();
                 inner.CloseElement();
             }));

@@ -89,6 +89,11 @@ public sealed class EditorShellTabletOverlayE2ETests : WasmTestBase
         Assert.AreEqual(1, await page.Locator($"{Host} .tm-editor-shell__overlay").CountAsync(), "exactly one overlay");
         Assert.AreEqual("true", await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-pressed"));
         Assert.AreEqual("false", await page.Locator("[data-testid='es-overlay-toggle-left']").GetAttributeAsync("aria-pressed"));
+        Assert.AreEqual("true", await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await page.Locator("[data-testid='es-overlay-toggle-left']").GetAttributeAsync("aria-expanded"));
+        var controls = await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-controls");
+        Assert.IsFalse(string.IsNullOrEmpty(controls), "an open panel's toggle names it through aria-controls");
+        Assert.AreEqual(1, await page.Locator($"[id='{controls}']").CountAsync(), "aria-controls resolves to the open panel content");
         await ShotAsync(page, $"tablet-{width}--sheet");
 
         await Overlay(page, "right").Locator(".tm-editor-shell__overlay-close").TapAsync();

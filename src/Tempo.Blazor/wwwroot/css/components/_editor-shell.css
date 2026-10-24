@@ -163,7 +163,7 @@
 .tm-editor-shell__status {
     flex-shrink: 0;
     padding: var(--tm-space-1) var(--tm-space-4);
-    font-size: var(--tm-text-xs, 0.75rem);
+    font-size: var(--tm-text-xs);
     color: var(--tm-color-text-muted);
     background: var(--tm-bg-surface);
     border-block-start: 1px solid var(--tm-color-border-subtle);
@@ -227,8 +227,8 @@
     padding-inline: var(--tm-space-3);
     border: none;
     border-block-start: 1px solid var(--tm-color-border-subtle);
-    font-size: var(--tm-text-sm, 0.875rem);
-    font-weight: var(--tm-font-weight-medium, 500);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-medium);
     color: var(--tm-color-text);
 }
 
@@ -279,8 +279,8 @@
 
 .tm-editor-shell__panel-heading {
     margin: 0 0 var(--tm-space-2);
-    font-size: var(--tm-text-sm, 0.875rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text);
 }
 
@@ -300,8 +300,8 @@
     flex: 1;
     min-inline-size: 0;
     padding: var(--tm-space-2) var(--tm-space-1);
-    font-size: var(--tm-text-sm, 0.875rem);
-    font-weight: var(--tm-font-weight-medium, 500);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-medium);
     color: var(--tm-color-text-muted);
     background: transparent;
     border: none;
@@ -408,8 +408,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: var(--tm-text-sm, 0.875rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text);
 }
 

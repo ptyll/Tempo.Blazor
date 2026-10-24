@@ -86,7 +86,8 @@
         <h2>@Loc["TmEditorShellDemo_OverlayTitle"]</h2>
         <p>@Loc["TmEditorShellDemo_OverlayIntro"]</p>
         <div class="es-shell-host es-shell-host--short" data-testid="editor-shell-overlay-host">
-            <TmEditorShell Breakpoints="_emailBreakpoints"
+            <TmEditorShell @ref="_overlayShell"
+                           Breakpoints="_emailBreakpoints"
                            TabletPanelPresentation="TabletPanelPresentation.Overlay"
                            @bind-LeftOpen="_overlayLeftOpen"
                            @bind-RightOpen="_overlayRightOpen"
@@ -98,8 +99,8 @@
                 </Header>
                 <Toolbar>
                     <div class="es-editor-toolbar" role="group" aria-label="@Loc["TmEditorShellDemo_ToolbarLabel"]">
-                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayLeft" aria-pressed="@(_overlayLeftOpen ? "true" : "false")" data-testid="es-overlay-toggle-left">@Loc["TmEditorShellDemo_Blocks"]</TmButton>
-                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayRight" aria-pressed="@(_overlayRightOpen ? "true" : "false")" data-testid="es-overlay-toggle-right">@Loc["TmEditorShellDemo_Properties"]</TmButton>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayLeft" aria-pressed="@(_overlayLeftOpen ? "true" : "false")" aria-expanded="@(_overlayLeftOpen ? "true" : "false")" aria-controls="@(_overlayLeftOpen ? _overlayShell?.LeftPanelId : null)" data-testid="es-overlay-toggle-left">@Loc["TmEditorShellDemo_Blocks"]</TmButton>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayRight" aria-pressed="@(_overlayRightOpen ? "true" : "false")" aria-expanded="@(_overlayRightOpen ? "true" : "false")" aria-controls="@(_overlayRightOpen ? _overlayShell?.RightPanelId : null)" data-testid="es-overlay-toggle-right">@Loc["TmEditorShellDemo_Properties"]</TmButton>
                     </div>
                 </Toolbar>
                 <Left>@Toolbox("-overlay")</Left>
@@ -107,7 +108,8 @@
                 <Right>@Properties("-overlay")</Right>
             </TmEditorShell>
         </div>
-    </section>    <section class="es-side-panel-section" data-testid="side-panel-section">
+    </section>
+    <section class="es-side-panel-section" data-testid="side-panel-section">
         <h2>@Loc["TmSidePanelDemo_Title"]</h2>
         <p>@Loc["TmSidePanelDemo_Intro"]</p>
         <div class="es-side-panel-host @(_inspectorSide == SidePanelSide.Right ? "es-side-panel-host--right" : null)">
@@ -142,6 +144,7 @@
 
 @code {
     private TmEditorShell? _shell;
+    private TmEditorShell? _overlayShell;
     private ElementReference _title;
 
     /// <summary>The app-level viewport scope (MainLayout) — gates the forced-tablet preview off

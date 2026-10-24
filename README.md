@@ -314,7 +314,7 @@ v MSSQL.
 - End-to-end tutoriál (report → nahrání přes Api → PDF → API klíč → plán e-mailem → smtp4dev):
   [docs/report-server-tutorial.md](docs/report-server-tutorial.md)
 - Nasazení a konfigurace: [docs/report-server-deployment.md](docs/report-server-deployment.md)
-- Rozhodnutí: [ADR-0001 MSSQL](docs/adr/0001-databaze-mssql.md), [ADR-0002 OIDC/Keycloak](docs/adr/0002-oidc-keycloak.md)
+- Rozhodnutí: [ADR-0001 MSSQL](docs/adr/0001-databaze-mssql.md), [ADR-0002 OIDC/Keycloak](docs/adr/0002-oidc-keycloak.md), [ADR-0003 rozsah dotazu knihovny dokumentů](docs/adr/0003-document-library-query-scope.md), [ADR-0004 tlačítko pro výběr souboru](docs/adr/0004-toolbar-file-button.md), [ADR-0005 prezentace panelů shellu na tabletu](docs/adr/0005-editor-shell-tablet-presentation.md)
 - Živé E2E důkazy: [docs/report-server-e2e-results.md](docs/report-server-e2e-results.md)
 
 ### Toast Notifications

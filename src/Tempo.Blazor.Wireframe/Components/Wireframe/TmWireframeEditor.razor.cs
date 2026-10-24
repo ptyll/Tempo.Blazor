@@ -178,6 +178,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     // ── Child component refs ──────────────────────────────────────────────────
 
     private TmWireframeDesignerCanvas? _canvas;
+    private TmEditorShell? _shell;
     private TmWireframeMinimap?        _minimap;
     private ElementReference           _downloadAnchor;
 
