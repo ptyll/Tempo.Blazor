@@ -289,9 +289,12 @@ window.tmWireframeDesigner = {
         // Shift+F10 / the ContextMenu key also make the browser fire a native contextmenu on the focused wrapper (not the svg):
         // keep it from opening a second, native menu over ours.
         // Release-click guard of the mobile long-press sheet: the first click after the hold that opened it is swallowed, and ANY new press
-        // disarms it (a real press means the user is interacting with the sheet or another control).
+        // disarms it (a real press means the user is interacting with the sheet or another control). Only the POINTER compatibility click of the
+        // lift is swallowed: a click with detail === 0 comes from the keyboard (Enter / Space on a button) or an assistive technology
+        // (a screen reader's activate), never from the finger that is still coming off the glass, and must reach its target.
         inst._onReleaseClick = (e) => {
             if (!inst.holdClickArmed) return;
+            if (e.detail === 0) return;
             if (Date.now() - (inst.lastHoldMenuAt || 0) > 5000) { inst.holdClickArmed = false; return; }
             inst.holdClickArmed = false;
             if (e.preventDefault) e.preventDefault();
@@ -1835,8 +1838,10 @@ window.tmWireframeDesigner = {
         // Only handle if SVG or a child has focus (or SVG is inside an active editor)
         if (!inst.svg.closest(':focus-within') && document.activeElement !== document.body) return;
         // The layers and pages panels own every key typed inside them (radio roaming, Alt+Arrow reorder, F2,
-        // Delete/Escape on a control), and so do the tablet overlay panels of the shell: none of them may also act on the canvas selection (nudge, delete, clear).
-        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-editor-shell__overlay')) return;
+        // Delete/Escape on a control), and so do the tablet overlay panels and the MOBILE sheet of the shell: none of them may also act on the canvas
+        // selection (nudge, delete, clear). The sheet matters most for Escape: the canvas used to consume it (clear selection + preventDefault), so the
+        // sheet's own focus trap saw a defaultPrevented key and never closed - a keyboard user was stuck in the sheet.
+        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-editor-shell__overlay, .tm-editor-shell__sheet')) return;
 
         const ids = [...inst.selectedIds];
 
@@ -2551,26 +2556,26 @@ window.tmWireframeDesigner = {
         inst.userViewChanged = true;
     },
 
-    // ── Mobile sheet ───────────────────────────────────────────────────────────
-
-    /** The shell's sheet body is one scroller shared by every tab: a tab (or a peek) must start at its top, not at the previous tab's offset. */
-    resetMobileSheetScroll: function (root) {
-        if (!root || !root.querySelector) return false;
-        const body = root.querySelector('.tm-editor-shell__sheet .tm-drawer__body');
-        if (!body) return false;
-        body.scrollTop = 0;
-        return true;
-    },
-
     // ── Mobile action bar focus (after the sheet unmounted) ────────────────────
+    // (The sheet's scroll reset is the shell's job now: TmEditorShell / tm-editor-shell.js resetSheetScroll.)
 
-    /** Moves the focus to the first tile of the editor's mobile action bar - only when the focus was lost (on <body> or detached). */
-    focusFirstMobileAction: function (root) {
+    /**
+     * Moves the focus to the action-bar tile that OPENED the sheet (`data-action-id` = actionId), else to the first tile - only when the
+     * focus was lost (on <body> or detached), so a focus the user placed elsewhere is never taken. A tile that moved into "More" (or an
+     * unknown id) falls back to the first tile.
+     */
+    focusMobileAction: function (root, actionId) {
         if (!root || !root.querySelector) return false;
         const active = document.activeElement;
         const lost = !active || active === document.body || !document.contains(active);
         if (!lost) return false;
-        const tile = root.querySelector('.tm-mobile-action-bar__action:not([disabled]), .tm-mobile-action-bar__more');
+        let tile = null;
+        if (actionId) {
+            for (const candidate of root.querySelectorAll('.tm-mobile-action-bar__action:not([disabled])')) {
+                if (candidate.getAttribute('data-action-id') === actionId) { tile = candidate; break; }
+            }
+        }
+        tile = tile || root.querySelector('.tm-mobile-action-bar__action:not([disabled]), .tm-mobile-action-bar__more');
         if (!tile) return false;
         tile.focus({ preventScroll: true });
         return true;

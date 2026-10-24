@@ -38998,6 +38998,12 @@
               "kind": "Property",
               "type": "string?",
               "description": "Name of the next command that would be undone, or null."
+            },
+            {
+              "name": "Revision",
+              "kind": "Property",
+              "type": "int",
+              "description": "A counter that grows by one on EVERY change of the history - a push (also a coalesced one, which edits the document without adding a step), an undo, a redo and a clear. The editor feeds it to the canvas' render gate as the \"the document changed behind your back\" token, so a command path can no longer forget to bump a hand-kept version."
             }
           ]
         },
@@ -41107,6 +41113,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-designer-export.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-designer-mobile.test.mjs",
           "kind": "JavaScript"
         },
         {

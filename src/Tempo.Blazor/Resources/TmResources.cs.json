@@ -5529,6 +5529,7 @@
   "TmWireframe_AnnounceDeleted": "Smazáno",
   "TmWireframe_AnnounceLocked": "Zamčeno",
   "TmWireframe_AnnounceUnlocked": "Odemčeno",
+  "TmWireframe_AnnounceSelectionPeek": "Vybráno: {0}. Otevřeny vlastnosti a akce.",
   "TmWireframe_MobilePagesTab": "Stránky",
   "TmWireframe_QuickActionsAriaLabel": "Akce s výběrem",
   "TmWireframe_MobileToolsAriaLabel": "Nástroje wireframu",

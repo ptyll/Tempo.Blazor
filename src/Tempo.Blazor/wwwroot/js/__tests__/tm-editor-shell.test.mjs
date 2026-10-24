@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    attachResize, canvasWidth, clampWidth, detachResize, disconnectCanvas, measureWidth, observeCanvas, loadPanelWidths, savePanelWidths, __resetForTests,
+    attachResize, canvasWidth, clampWidth, detachResize, disconnectCanvas, measureWidth, observeCanvas, loadPanelWidths, resetSheetScroll, savePanelWidths, __resetForTests,
 } from '../tm-editor-shell.js';
 
 test.beforeEach(() => {
@@ -379,4 +379,21 @@ test('disconnectCanvas stops the reports and is a safe no-op twice', () => {
 test('observeCanvas without ResizeObserver is a no-op', () => {
     delete globalThis.ResizeObserver;
     assert.doesNotThrow(() => observeCanvas({ querySelector: () => null }, null));
+});
+
+// ── the mobile sheet scroll reset (moved here from the wireframe script, plan 643bba06) ────────
+
+test('resetSheetScroll scrolls the shared sheet body to the top and reports it', () => {
+    const body = { scrollTop: 412 };
+    const stage = { querySelector: selector => (selector === '.tm-editor-shell__sheet .tm-drawer__body' ? body : null) };
+
+    assert.equal(resetSheetScroll(stage), true);
+    assert.equal(body.scrollTop, 0);
+});
+
+test('resetSheetScroll is a quiet no-op without a stage or without an open sheet', () => {
+    assert.equal(resetSheetScroll(null), false);
+    assert.equal(resetSheetScroll(undefined), false);
+    assert.equal(resetSheetScroll({}), false, 'an element without querySelector');
+    assert.equal(resetSheetScroll({ querySelector: () => null }), false, 'the sheet is closed: no body to reset');
 });

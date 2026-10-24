@@ -310,7 +310,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     protected override void OnParametersSet()
     {
         // A parameter pass comes from the host: it may have changed the document in place, so the gated canvas repaints.
-        _contentVersion++;
+        MarkContentChanged();
 
         // A forced layout never raises ResolvedLayoutChanged for its first value: adopt it (and its flips) here.
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout) ApplyResolvedLayout(LayoutMode);
@@ -374,7 +374,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
 
     private void OnStackChanged()
     {
-        _contentVersion++;   // a command / undo / redo changed the document: the (mobile, gated) canvas must repaint
+        // A command / undo / redo changed the document: ContentVersion follows the stack's Revision, so the (mobile, gated) canvas repaints.
         InvokeAsync(StateHasChanged);
     }
 
@@ -383,7 +383,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     private async Task OnDocumentChanged(WireframeDocument doc)
     {
         _document = doc;
-        _contentVersion++;
+        MarkContentChanged();
         PruneCommandStacks();
         await DocumentChanged.InvokeAsync(doc);
     }
@@ -817,7 +817,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     }
 
     /// <summary>Says the localized result of a quick action (Delete, Lock) through the canvas' polite live region: the pressed button is gone or changed.</summary>
-    private Task AnnounceAsync(string key) => _canvas is null ? Task.CompletedTask : _canvas.AnnounceAsync(Loc[key]);
+    private Task AnnounceAsync(string key) => AnnounceTextAsync(Loc[key]);
 
     private async Task OnLockFromContextMenu()
     {
@@ -1170,7 +1170,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
 
     private async Task RerenderCanvas()
     {
-        _contentVersion++;
+        MarkContentChanged();
         StateHasChanged();
         if (_document is not null)
             await DocumentChanged.InvokeAsync(_document);

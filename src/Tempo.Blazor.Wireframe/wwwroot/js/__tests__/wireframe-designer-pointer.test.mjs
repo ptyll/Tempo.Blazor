@@ -622,6 +622,33 @@ test('a hold on an element still opens the ELEMENT menu after the press re-rende
     assert.equal(calls.length, 1);
     assert.equal(calls[0][1], 'a');
 });
+// The release-click guard of the light-editing hold sheet swallows the POINTER compatibility click of the lift only: a click with
+// detail === 0 is a keyboard (Enter / Space) or assistive-technology activation and must reach its target.
+test('light editing: the click of the lift after a hold is swallowed once, but a keyboard / AT click (detail 0) passes and keeps the guard armed', async () => {
+    mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+    const c = await canvas({ lightEditing: true, coarse: true });
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    mock.timers.tick(500);
+    assert.equal(c.ref.named('OnElementContextMenu').length, 1, 'the hold opened the sheet');
+    assert.equal(c.inst().holdClickArmed, true, 'light editing arms the release-click guard');
+
+    const keyboard = { detail: 0, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; } };
+    doc.dispatch('click', keyboard);
+    assert.equal(keyboard.defaultPrevented, undefined, 'a keyboard / screen-reader activation is never swallowed');
+    assert.equal(keyboard.stopped, undefined);
+    assert.equal(c.inst().holdClickArmed, true, 'and it does not spend the guard that belongs to the finger lift');
+
+    const lift = { detail: 1, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; } };
+    doc.dispatch('click', lift);
+    assert.equal(lift.defaultPrevented, true, 'the pointer compatibility click of the lift is swallowed');
+    assert.equal(lift.stopped, true);
+    assert.equal(c.inst().holdClickArmed, false, 'once');
+
+    const next = { detail: 1, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; } };
+    doc.dispatch('click', next);
+    assert.equal(next.defaultPrevented, undefined, 'the second click is a real one');
+});
 test('a hold on empty canvas opens the canvas context menu', async () => {
     mock.timers.enable({ apis: ['setTimeout'] });
     const c = await canvas();
@@ -760,7 +787,8 @@ test('a finger resizes through the larger hit area', async () => {
 
 function key(c, name, over = {}) {
     c.svg.closest = (selector) => (selector === ':focus-within' ? c.svg : matches(c.svg, selector) ? c.svg : null);
-    doc.dispatch('keydown', { key: name, code: name, target: { tagName: 'DIV', closest: () => null, matches: () => false }, preventDefault() {}, ...over });
+    // Returns the event so a test can ask whether the canvas prevented it (defaultPrevented stays undefined until preventDefault runs).
+    return doc.dispatch('keydown', { key: name, code: name, target: { tagName: 'DIV', closest: () => null, matches: () => false }, preventDefault() { this.defaultPrevented = true; }, ...over });
 }
 
 test('arrow keys nudge the selection by 1 and Shift+arrow by one grid cell', async () => {
@@ -1225,6 +1253,20 @@ test('keys typed inside a side sheet (the tablet drawer / inspector) never act o
     assert.equal(c.ref.named('OnElementMoved').length, 0, 'no nudge');
     assert.equal(c.ref.named('OnDeleteSelected').length, 0, 'no delete');
     assert.equal(c.ref.named('OnClearSelection').length, 0, 'the sheet owns Escape (it closes itself)');
+});
+
+test('keys typed inside the MOBILE sheet never act on the canvas: Escape reaches the sheet\'s own focus trap un-prevented, so the sheet closes', async () => {
+    const c = await canvas({ gridSize: 8 });
+    element(c.svg, 'a', { x: 40, y: 40 });
+    engine.setSelection(c.svg, ['a']);
+    const inSheet = { tagName: 'BUTTON', closest: (selector) => (selector.includes('.tm-editor-shell__sheet') ? {} : null), matches: () => false };
+
+    const escape = key(c, 'Escape', { target: inSheet });
+    key(c, 'Delete', { target: inSheet });
+
+    assert.equal(escape.defaultPrevented, undefined, 'the canvas must not preventDefault an Escape typed in the sheet (the focus trap skips a defaultPrevented key)');
+    assert.equal(c.ref.named('OnClearSelection').length, 0, 'and must not clear the selection behind the sheet');
+    assert.equal(c.ref.named('OnDeleteSelected').length, 0);
 });
 
 test('relayout waits while a gesture is active (the sheet opens under a press) and runs when it is released', async () => {

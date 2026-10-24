@@ -76,6 +76,16 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         return double.NaN;
     }
 
+    /// <summary>Scrolls the mobile panels sheet back to its top (the sheet body is one scroller shared by every tab).</summary>
+    public async Task ResetSheetScrollAsync(ElementReference stage)
+    {
+        try
+        {
+            await _lazy.TryInvokeVoidAsync("resetSheetScroll", stage);
+        }
+        catch (Exception ex) when (IsBenign(ex)) { }
+    }
+
     /// <summary>Attaches the pointer-drag resize to a separator; a second attach with the same id replaces the first.</summary>
     public async Task AttachResizeAsync<T>(string id, ElementReference handle, ElementReference panel, ElementReference main,
         DotNetObjectReference<T> dotnet, string side, int min, int max, int minCanvas) where T : class

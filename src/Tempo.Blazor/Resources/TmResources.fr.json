@@ -5503,6 +5503,7 @@
   "TmWireframe_AnnounceDeleted": "Supprimé",
   "TmWireframe_AnnounceLocked": "Verrouillé",
   "TmWireframe_AnnounceUnlocked": "Déverrouillé",
+  "TmWireframe_AnnounceSelectionPeek": "Sélection : {0}. Propriétés et actions affichées.",
   "TmWireframe_MobilePagesTab": "Pages",
   "TmWireframe_QuickActionsAriaLabel": "Actions sur la sélection",
   "TmWireframe_MobileToolsAriaLabel": "Outils du wireframe",

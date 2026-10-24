@@ -116,7 +116,7 @@
                    anchors to its bottom edge and its snap fractions are fractions of the stage. The
                    sheet root is click-through, so the canvas keeps the pointer outside the sheet panel. *@
                 <div class="tm-editor-shell__stage @(AnyPanelOpen ? "tm-editor-shell__stage--sheet-open" : null)"
-                     style="@StageStyle">
+                     style="@StageStyle" @ref="_mobileStage">
                     <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
                     @if (AnyPanelOpen)
                     {
@@ -997,6 +997,7 @@
         }
 
         await RestoreFocusAsync();
+        await SyncSheetScrollAsync();
         await FocusOverlayAsync();
         await SyncResizersAsync();
         await SyncCanvasWidthAsync();

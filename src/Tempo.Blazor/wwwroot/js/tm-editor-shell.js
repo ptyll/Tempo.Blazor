@@ -62,6 +62,19 @@ export function measureWidth(element) {
 }
 
 /**
+ * Scrolls the mobile panels sheet back to its top. The sheet body is ONE scroller shared by every tab, so a tab switch would
+ * otherwise start at the previous tab's offset. Returns whether a sheet body was found.
+ * @param {HTMLElement|null} stage the `.tm-editor-shell__stage` element that hosts the sheet
+ * @returns {boolean}
+ */
+export function resetSheetScroll(stage) {
+    const body = stage?.querySelector?.('.tm-editor-shell__sheet .tm-drawer__body');
+    if (!body) return false;
+    body.scrollTop = 0;
+    return true;
+}
+
+/**
  * Reads the stored panel widths JSON, or null when nothing is stored / storage is unavailable.
  * @param {string} key the host-chosen persistence key
  * @returns {string|null}

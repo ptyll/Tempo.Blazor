@@ -18,6 +18,19 @@ public sealed class WireframeCommandStack
     /// <summary>Raised after every Push / Undo / Redo so the toolbar can refresh.</summary>
     public event Action? OnStackChanged;
 
+    /// <summary>
+    /// A counter that grows by one on EVERY change of the history - a push (also a coalesced one, which edits the document without
+    /// adding a step), an undo, a redo and a clear. The editor feeds it to the canvas' render gate as the "the document changed behind
+    /// your back" token, so a command path can no longer forget to bump a hand-kept version.
+    /// </summary>
+    public int Revision { get; private set; }
+
+    private void Notify()
+    {
+        unchecked { Revision++; }
+        OnStackChanged?.Invoke();
+    }
+
     /// <param name="maxDepth">Maximum undo steps retained (default 50).</param>
     public WireframeCommandStack(int maxDepth = 50)
     {
@@ -56,7 +69,7 @@ public sealed class WireframeCommandStack
             && prevMove.TryCoalesce(newMove))
         {
             // Merged – just notify, no stack change
-            OnStackChanged?.Invoke();
+            Notify();
             return;
         }
 
@@ -65,7 +78,7 @@ public sealed class WireframeCommandStack
             && _undoStack.Last?.Value is UpdateConnectorWaypointsCommand prevWp
             && prevWp.TryCoalesce(newWp))
         {
-            OnStackChanged?.Invoke();
+            Notify();
             return;
         }
 
@@ -76,7 +89,7 @@ public sealed class WireframeCommandStack
             _undoStack.RemoveFirst();
 
         _redoStack.Clear();
-        OnStackChanged?.Invoke();
+        Notify();
     }
 
     // ── Undo / Redo ───────────────────────────────────────────────────────────
@@ -89,7 +102,7 @@ public sealed class WireframeCommandStack
         _undoStack.RemoveLast();
         cmd.Undo();
         _redoStack.Push(cmd);
-        OnStackChanged?.Invoke();
+        Notify();
     }
 
     /// <summary>Re-applies the most recently undone command. No-op if stack is empty.</summary>
@@ -99,7 +112,7 @@ public sealed class WireframeCommandStack
         var cmd = _redoStack.Pop();
         cmd.Execute();
         _undoStack.AddLast(cmd);
-        OnStackChanged?.Invoke();
+        Notify();
     }
 
     /// <summary>Clears both stacks (e.g. after loading a new document).</summary>
@@ -107,6 +120,6 @@ public sealed class WireframeCommandStack
     {
         _undoStack.Clear();
         _redoStack.Clear();
-        OnStackChanged?.Invoke();
+        Notify();
     }
 }

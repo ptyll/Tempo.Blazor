@@ -34,11 +34,28 @@ public partial class TmWireframeEditor
     private bool _mobileOpenedBySelection;
     private bool _mobileFocusBarPending;
     private bool _mobileFocusAfterActionPending;   // after Delete / Lock: the "More" tile (or the canvas) takes a lost focus, never "Add"
-    private bool _mobileScrollResetPending;
+    private bool _mobileAnnouncePending;           // a selection peeked the sheet: say so politely once the render has shown it
     private ElementReference _editorRoot;
 
-    // A token the canvas compares (LightEditing parent-render gate): bumped by every path that may change the document behind its back.
-    private int _contentVersion;
+    // The action-bar tile (its TmActionItem.Id) that opened the sheet, so closing the sheet returns the focus THERE and not to the first tile.
+    // Null when a selection opened it (no tile involved) - the first tile is the fallback then, and also when the tile has moved into "More".
+    private string? _mobileOpenerActionId;
+    private const string MobileOpenerComponents = "components";
+    private const string MobileOpenerPagesLayers = "pages-layers";
+
+    // The token the canvas compares (LightEditing parent-render gate). Two parts, ONE definition (ContentVersion below): the command stack's own
+    // Revision (every push / undo / redo / clear - nothing to remember on a command path) plus _externalVersion for the paths that change the
+    // document WITHOUT a command (a host parameter pass, a replaced / imported document, a layout flip) - those call MarkContentChanged().
+    private int _externalVersion;
+
+    /// <summary>
+    /// The render-gate token of the gated (mobile) canvas. Within one document and page both parts only grow, so their sum changes on every
+    /// change and never repeats; a switch of page or document changes the canvas' own snapshot (document identity, active page) anyway.
+    /// </summary>
+    private int ContentVersion => unchecked(_externalVersion + _commandStack.Revision);
+
+    /// <summary>The document changed outside the command stack (host pass, replaced document, layout flip): the gated canvas must repaint.</summary>
+    private void MarkContentChanged() => _externalVersion++;
 
     private bool IsMobile => _resolvedLayout == TmLayoutMode.Mobile;
 
@@ -128,7 +145,7 @@ public partial class TmWireframeEditor
     {
         _mobilePanel = panel;
         _mobileOpenedBySelection = false;   // the user chose a tab: the sheet is theirs now, an empty-canvas tap must not close it
-        _mobileScrollResetPending = true;   // the sheet body is ONE scroller shared by every tab: each tab starts at its top
+        // The sheet body is ONE scroller shared by every tab: the shell scrolls it back to the top when the tab changes (TmEditorShell).
     }
 
     private void OnShellMobileSnapChanged(int index)
@@ -152,13 +169,16 @@ public partial class TmWireframeEditor
         _relayoutPending = true;
     }
 
-    private void OpenMobileSheet(EditorShellPanel panel, int snapIndex, bool bySelection = false)
+    /// <param name="openerActionId">The action-bar tile that opened the sheet. Omitted (a selection did it): a sheet that was already open keeps the tile that
+    /// opened it, a freshly opened one has none.</param>
+    private void OpenMobileSheet(EditorShellPanel panel, int snapIndex, bool bySelection = false, string? openerActionId = null)
     {
+        var wasOpen = _mobileOpen;
         _mobileOpen = true;
         _mobilePanel = panel;
         _mobileSnap = snapIndex;
         _mobileOpenedBySelection = bySelection;
-        _mobileScrollResetPending = true;
+        _mobileOpenerActionId = openerActionId ?? (wasOpen ? _mobileOpenerActionId : null);
         _relayoutPending = true;
     }
 
@@ -178,13 +198,13 @@ public partial class TmWireframeEditor
     private void ToggleMobileComponents()
     {
         if (MobileSheetShows(EditorShellPanel.Left)) CloseMobileSheet();
-        else OpenMobileSheet(EditorShellPanel.Left, MobileHalfSnapIndex);
+        else OpenMobileSheet(EditorShellPanel.Left, MobileHalfSnapIndex, openerActionId: MobileOpenerComponents);
     }
 
     private void ToggleMobilePagesLayers()
     {
         if (MobileSheetShows(EditorShellPanel.Extra)) CloseMobileSheet();
-        else OpenMobileSheet(EditorShellPanel.Extra, MobileHalfSnapIndex);
+        else OpenMobileSheet(EditorShellPanel.Extra, MobileHalfSnapIndex, openerActionId: MobileOpenerPagesLayers);
     }
 
     /// <summary>
@@ -197,6 +217,8 @@ public partial class TmWireframeEditor
         var keepContext = _mobileOpen && (_mobilePanel == EditorShellPanel.Right || _mobilePanel == EditorShellPanel.Extra);
         if (keepContext) return;
         OpenMobileSheet(EditorShellPanel.Right, MobilePeekSnapIndex, bySelection: !_mobileOpen);
+        // The sheet appeared under the user's finger: a screen reader user gets no other cue that the properties and quick actions are there.
+        _mobileAnnouncePending = true;
     }
 
     /// <summary>The selection became empty: a sheet that a selection opened has nothing left to show and gives the canvas its room back.</summary>
@@ -340,16 +362,26 @@ public partial class TmWireframeEditor
         await RerenderCanvas();
     }
 
+    // ── Announcements ─────────────────────────────────────────────────────────
+
+    /// <summary>Says the (already localized) text through the canvas' polite live region; a repeat is spoken again.</summary>
+    private Task AnnounceTextAsync(string text) => _canvas is null ? Task.CompletedTask : _canvas.AnnounceAsync(text);
+
     // ── Focus ─────────────────────────────────────────────────────────────────
 
-    /// <summary>After the sheet unmounted: puts the focus on the first tile of the action bar (a no-op when something else holds it).</summary>
+    /// <summary>
+    /// After the sheet unmounted: puts the focus on the action-bar tile that opened it (the first tile when none did; a no-op when something
+    /// else holds the focus). Also says politely that a selection peeked the sheet.
+    /// </summary>
     private async Task MobileAfterRenderAsync()
     {
-        if (_mobileScrollResetPending && _mobileOpen)
+        if (_mobileAnnouncePending)
         {
-            _mobileScrollResetPending = false;
-            try { await JS.InvokeVoidAsync("tmWireframeDesigner.resetMobileSheetScroll", _editorRoot); }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* no script */ }
+            _mobileAnnouncePending = false;
+            if (_mobileOpen && IsMobile && MobileHasSelection)
+            {
+                await AnnounceTextAsync(Loc["TmWireframe_AnnounceSelectionPeek", MobileSelectionTitle]);
+            }
         }
 
         if (_mobileFocusAfterActionPending)
@@ -361,7 +393,9 @@ public partial class TmWireframeEditor
 
         if (!_mobileFocusBarPending) return;
         _mobileFocusBarPending = false;
-        try { await JS.InvokeVoidAsync("tmWireframeDesigner.focusFirstMobileAction", _editorRoot); }
+        var opener = _mobileOpenerActionId;
+        _mobileOpenerActionId = null;
+        try { await JS.InvokeVoidAsync("tmWireframeDesigner.focusMobileAction", _editorRoot, opener); }
         catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* no bar / no script */ }
     }
 
@@ -377,11 +411,13 @@ public partial class TmWireframeEditor
         _mobileOpenedBySelection = false;
         _mobileFocusBarPending = false;
         _mobileFocusAfterActionPending = false;
+        _mobileAnnouncePending = false;
+        _mobileOpenerActionId = null;
         // The context menu swaps presentation (anchored <-> sheet) and its anchor is stale after a flip, and the connector tool is
         // tablet+ (the script falls back to select without telling .NET): close the menu, reset the tool.
         if (_ctxMenuOpen) CloseContextMenu();
         // The ONE place the tool mode is reset on a layout flip (the canvas script does not report its own fallback back).
         if (IsMobile && _toolMode == "connector") _toolMode = "select";
-        _contentVersion++;
+        MarkContentChanged();
     }
 }

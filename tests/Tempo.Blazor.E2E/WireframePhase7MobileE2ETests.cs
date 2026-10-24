@@ -448,6 +448,158 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
     }
 
 
+    // ── Plan 643bba06 (G2 review debt): landscape phones and the keyboard-only sheet ────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow(667, 375)]
+    [DataRow(844, 390)]
+    [Description("Edge: a phone in LANDSCAPE (667x375, 844x390) stays usable. The layout follows the editor's own container (< 768 = mobile): 667x375 is mobile, 844x390 has a >= 768 container and is the tablet layout - in both the 375/390 px high editor keeps a usable canvas, the panels stay inside it and nothing sticks out")]
+    public async Task Mobile_Landscape_StaysUsable(int width, int height)
+    {
+        var (page, editor) = await OpenAsync(width, height);
+
+        var layout = await editor.GetAttributeAsync("data-editor-layout");
+        var editorWidth = (await editor.BoundingBoxAsync())!.Width;
+        Assert.AreEqual(editorWidth < 768 ? "mobile" : "tablet", layout,
+            $"the layout follows the editor's own container ({editorWidth:0}px), never the viewport ({width}px)");
+        await AssertNothingWiderThanViewportAsync(page, width);
+        var canvas = (await editor.Locator(".tm-wd-canvas__svg").BoundingBoxAsync())!;
+        Assert.IsTrue(canvas.Height >= 120, $"the canvas keeps a usable height in landscape ({canvas.Height:0}px)");
+        await ShotAsync(page, $"mobile-landscape-{width}x{height}--editor");
+
+        if (layout != "mobile")
+        {
+            // Tablet in landscape: the palette is the left drawer; it must fit the 390 px high editor and close again.
+            await editor.Locator("[data-testid='wd-toggle-left']").TapAsync();
+            var drawer = editor.Locator("[data-testid='wd-left-drawer']");
+            await drawer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await page.WaitForTimeoutAsync(500);
+            var editorBox = (await editor.BoundingBoxAsync())!;
+            var drawerBox = (await drawer.BoundingBoxAsync())!;
+            Assert.IsTrue(drawerBox.Y >= editorBox.Y - 1 && drawerBox.Y + drawerBox.Height <= editorBox.Y + editorBox.Height + 1,
+                $"the drawer stays inside the {editorBox.Height:0}px editor");
+            await ShotAsync(page, $"mobile-landscape-{width}x{height}--drawer");
+            return;
+        }
+
+        var bar = await editor.Locator(".tm-mobile-action-bar__bar").BoundingBoxAsync();
+        Assert.IsNotNull(bar, "the action bar renders");
+        Assert.IsTrue(bar!.Width <= width + 0.5, "the bar is not wider than the viewport");
+
+        // The Components sheet opens at half: it stays inside the editor, and the palette tiles are still finger-sized.
+        await editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']").TapAsync();
+        var sheet = editor.Locator(".tm-editor-shell__sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(600);
+        var editorRect = (await editor.BoundingBoxAsync())!;
+        var panel = (await sheet.Locator(".tm-drawer__panel").BoundingBoxAsync())!;
+        Assert.IsTrue(panel.Y >= editorRect.Y - 1 && panel.Y + panel.Height <= editorRect.Y + editorRect.Height + 1,
+            $"the sheet stays inside the {editorRect.Height:0}px editor (sheet {panel.Y:0}..{panel.Y + panel.Height:0}, editor {editorRect.Y:0}..{editorRect.Y + editorRect.Height:0})");
+        var tile = (await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.BoundingBoxAsync())!;
+        Assert.IsTrue(tile.Height >= 43.5, $"the palette tile is finger-sized in landscape ({tile.Height:0}px)");
+        await AssertNothingWiderThanViewportAsync(page, width);
+        await ShotAsync(page, $"mobile-landscape-{width}x{height}--components-sheet");
+
+        await editor.Locator(".tm-editor-shell__sheet-close").TapAsync();
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+    }
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow(390, 844)]
+    [Description("Keyboard only: Enter on the Add tile opens the sheet, a palette item inserts on Enter (selection peeks the properties and is announced), Escape closes, and the focus is back on the Add tile - never on <body>")]
+    public async Task Mobile_KeyboardOnly_Sheet_OpenInsertEscape_FocusReturnsToTheOpener(int width, int height)
+    {
+        var (page, editor) = await OpenAsync(width, height, touch: false);
+        var add = editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']");
+        var before = await editor.Locator("g[data-el-id]").CountAsync();
+
+        // 1. Enter on the focused tile (a keyboard click: detail 0) opens the palette sheet.
+        await add.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        var sheet = editor.Locator(".tm-editor-shell__sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(500);
+
+        // 2. A palette item takes the keyboard: Enter inserts (no pointer involved) and selects the element, which peeks the properties.
+        var item = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
+        await item.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForFunctionAsync("n => document.querySelectorAll('.tm-wd-editor')[0].querySelectorAll('g[data-el-id]').length > n",
+            before, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await editor.Locator("[data-testid='wd-quick-actions']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        var status = editor.Locator("[data-testid='wd-canvas-status']");
+        await page.WaitForFunctionAsync("() => /^Selected: .+Properties and actions are open\\./.test(document.querySelector('.tm-wd-editor [data-testid=\"wd-canvas-status\"]').textContent.trim())",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.AreEqual("polite", await status.GetAttributeAsync("aria-live"), "the peek is announced politely, never assertively");
+
+        // 3. A keyboard activation of a quick action is NOT swallowed by the hold release-click guard (detail 0): Lock toggles on Enter.
+        var lock_ = editor.Locator("[data-testid='wd-quick-lock']");
+        await lock_.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForFunctionAsync("() => /^Locked/.test(document.querySelector('.tm-wd-editor [data-testid=\"wd-canvas-status\"]').textContent.trim())",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+
+        // 4. Escape closes the non-modal sheet and the focus is handed back to a tile of the action bar (the sheet unmounted the focused control).
+        await page.Keyboard.PressAsync("Escape");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+        await page.WaitForFunctionAsync("() => { const a = document.activeElement; return !!a && a !== document.body && !!a.closest('.tm-wd-editor'); }",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow("components")]
+    [DataRow("pages-layers")]
+    [Description("Keyboard: closing the sheet that a tile opened puts the focus back on THAT tile (not the first one), through the sheet's own close button")]
+    public async Task Mobile_Keyboard_CloseSheet_FocusReturnsToTheTileThatOpenedIt(string tile)
+    {
+        var (page, editor) = await OpenAsync(390, 844, touch: false);
+        var opener = editor.Locator($".tm-mobile-action-bar__action[data-action-id='{tile}']");
+        await opener.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        var sheet = editor.Locator(".tm-editor-shell__sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(400);
+
+        await editor.Locator(".tm-editor-shell__sheet-close").FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+
+        await page.WaitForFunctionAsync(
+            "id => document.activeElement?.getAttribute('data-action-id') === id",
+            tile, new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("Axe (wcag2a/aa): the mobile editor with the selection sheet peeked has no critical or serious violation - covers the sheet, the quick actions, the action bar and the live region")]
+    public async Task Mobile_SelectionSheet_Axe_NoCriticalOrSeriousViolations()
+    {
+        var (page, editor) = await OpenAsync(390, 844, touch: false);
+        await editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']").ClickAsync();
+        await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
+        await editor.Locator("[data-testid='wd-quick-actions']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(700);
+
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js" });
+        // The SVG scene is a drawing (its element semantics are covered by the canvas specs), and the Properties panel BODY is excluded on purpose:
+        // axe reports unlabeled inputs / selects there on every layout - a pre-existing panel finding recorded as a remaining task of plan 643bba06,
+        // not a mobile sheet defect. The sheet, quick actions, action bar and live region are what this spec guards.
+        var violations = await page.EvaluateAsync<string[]>(
+            """
+            async () => {
+                const host = document.querySelectorAll('.tm-wd-editor')[0];
+                const result = await axe.run({ include: [host], exclude: [['.tm-wd-canvas__svg'], ['.tm-wd-props']] }, {
+                    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .filter(v => v.impact === 'critical' || v.impact === 'serious')
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).slice(0, 4).join('; ')})`);
+            }
+            """);
+        Assert.AreEqual(0, violations.Length, "axe: " + string.Join(" | ", violations));
+    }
     // ── Regression: tablet and desktop are unchanged ────────────────────────────
 
     [TestMethod]

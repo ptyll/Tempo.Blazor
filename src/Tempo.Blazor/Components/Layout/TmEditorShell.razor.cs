@@ -10,6 +10,26 @@ namespace Tempo.Blazor.Components.Layout;
 // width commit) lives beside the markup file to keep the .razor under the source-file length ceiling.
 public partial class TmEditorShell
 {
+    // ── Mobile sheet scroll ─────────────────────────────────────────────────
+
+    private ElementReference _mobileStage;
+    private EditorShellPanel? _scrolledSheetTab;
+
+    /// <summary>
+    /// The sheet body is ONE scroller shared by every tab (and by a panel swapped for the other one): when the tab of an OPEN sheet
+    /// changes, the body is scrolled back to its top, so a tab never starts at the previous tab's offset. A sheet that was just opened is a
+    /// freshly mounted body that starts at its top anyway, so only a change while it stays open needs the reset.
+    /// </summary>
+    private async Task SyncSheetScrollAsync()
+    {
+        var tab = SheetShown ? SheetActive : (EditorShellPanel?)null;
+        var previous = _scrolledSheetTab;
+        _scrolledSheetTab = tab;
+        if (_disposed || tab is null || previous is null || previous == tab) return;
+        _shellJs ??= new EditorShellInterop(JS);
+        await _shellJs.ResetSheetScrollAsync(_mobileStage);
+    }
+
     // ── Resize separators ───────────────────────────────────────────────────
 
     /// <summary>

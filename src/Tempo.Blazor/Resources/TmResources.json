@@ -5477,6 +5477,7 @@
   "TmWireframe_AnnounceDeleted": "Deleted",
   "TmWireframe_AnnounceLocked": "Locked",
   "TmWireframe_AnnounceUnlocked": "Unlocked",
+  "TmWireframe_AnnounceSelectionPeek": "Selected: {0}. Properties and actions are open.",
   "TmWireframe_MobilePagesTab": "Pages",
   "TmWireframe_QuickActionsAriaLabel": "Selection actions",
   "TmWireframe_MobileToolsAriaLabel": "Wireframe tools",
