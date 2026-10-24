@@ -434,7 +434,7 @@
   "TmDemo_EmailTemplates_Editor_ImportLimit_Small": "1 kB",
   "TmDemo_EmailTemplates_Editor_ImportLimit_Unlimited": "Unlimited",
   "TmDemo_EmailTemplates_Editor_SaveBackground": "Save from a background thread",
-  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Host: unsaved changes yes",
-  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Host: unsaved changes no",
+  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Host: unsaved changes",
+  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Host: no unsaved changes",
   "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Layout: {0}"
 }

@@ -65,7 +65,10 @@ public sealed class EmailEditorUxPhase8E2ETests : EmailTemplateE2ETestBase
             "() => { const b = document.querySelector(`[data-testid='theme-toggle']`); if (!b) return false; b.click(); return true; }");
         clicked.Should().BeTrue("the demo host renders the theme toggle");
         await page.WaitForSelectorAsync("[data-theme='dark']", new() { Timeout = 15000 });
-        await page.WaitForTimeoutAsync(300);
+        // The theme switch starts CSS transitions on the surfaces; measurements/screenshots wait until none is running.
+        await page.WaitForFunctionAsync(
+            "() => document.getAnimations().filter(a => a instanceof CSSTransition && a.playState === 'running').length === 0",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
     }
 
     // ── Phone palette ───────────────────────────────────────────────────────────────────────
@@ -226,7 +229,9 @@ public sealed class EmailEditorUxPhase8E2ETests : EmailTemplateE2ETestBase
         // Widen the grid's own container (a wide inspector / a host with room): the caption comes back.
         await page.EvaluateAsync(
             "() => { const e = document.querySelector('[data-tm-table-editor]'); e.style.inlineSize = '640px'; e.style.maxInlineSize = 'none'; }");
-        await page.WaitForTimeoutAsync(200);
+        await page.WaitForFunctionAsync(
+            "() => getComputedStyle(document.querySelector('[data-tm-table-rowheader-text]')).display !== 'none'",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
         var display = await page.EvaluateAsync<string>(
             "() => getComputedStyle(document.querySelector('[data-tm-table-rowheader-text]')).display");
         display.Should().NotBe("none", "a grid wider than the narrow threshold keeps the caption");
@@ -283,7 +288,7 @@ public sealed class EmailEditorUxPhase8E2ETests : EmailTemplateE2ETestBase
 
         var bar = await page.Locator("[data-tm-demo-bar]").InnerTextAsync();
         bar.Should().Contain("Jen pro čtení").And.Contain("Výsledek uložení hostitelem")
-            .And.Contain("Hostitel: neuložené změny ne");
+            .And.Contain("Hostitel: žádné neuložené změny");
         bar.Should().NotContain("Host save result").And.NotContain("Read-only");
         var options = await page.Locator("[data-tm-demo-simulate] option").AllInnerTextsAsync();
         options.Should().Contain("Volat API").And.NotContain("Call the API");

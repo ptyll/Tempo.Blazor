@@ -590,6 +590,13 @@
 
 ### Changed
 
+- **E-mail import dialog: the structure preview is a flat virtualized list (phase 8; changed during the 2.10 cycle, so not a breaking change against a released version).** Impact: (1) the nested `<ul>` per section / column is gone — every
+  section, column and block is now one `<li class="tm-email-import__tree-row">` (`data-tm-import-section|column|block` unchanged) inside
+  `[data-tm-import-tree]`; (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
+  were removed, and a host that overrides `ITmEmailLocalizer` can drop that key; (3) only a window of rows is in the DOM, so a spec that counted every
+  `[data-tm-import-block]` must read the complete count from `[data-tm-import-tree][data-tm-import-rows]` (or the state card's `data-tm-import-blocks`).
+  Before: `cut.FindAll("[data-tm-import-block]").Count == blocks` (capped at 100). After: `tree.GetAttribute("data-tm-import-rows") == blocks + sections + columns`, and
+  scroll `[data-tm-import-tree]` to bring a later row into the DOM.
 - **The MJML HEAD is emitted through the same gate as the body (security blocker).**
   `mj-attributes` carries a TAG NAME and attribute NAMES, `mj-font` a URL and `mj-html-attributes` a raw
   name and value — all of them used to be written verbatim, so `<mj-all x" onclick="alert(2)="1">`, a
@@ -945,6 +952,9 @@
 
 ### Fixed
 
+- **E-mail editor: `DocumentTree` traversals are iterative and visit every node once.** The recursive walkers (`CollectBlockLists`, `ReassignIds` and the
+  other tree walks) overflowed the stack on a deeply nested document; they now use an explicit stack, are cycle-safe (visit-once) and are covered by
+  deep-tree tests. The public `DocumentTree` methods document this behaviour in their `<remarks>`.
 - **`TmDocumentOpenDialog` review debt (Recent / search scope, collapsed tree, contrast, footer, keyboard).**
   * Recent and the search without a folder send `Scope = Library` instead of `FolderPath = null`; the demo store
     therefore lists documents of NESTED folders in Recent (it used to list the root only).
@@ -1214,13 +1224,6 @@
 
 ### Breaking / Migration
 
-- **E-mail import dialog: the structure preview is a flat virtualized list (phase 8).** Impact: (1) the nested `<ul>` per section / column is gone — every
-  section, column and block is now one `<li class="tm-email-import__tree-row">` (`data-tm-import-section|column|block` unchanged) inside
-  `[data-tm-import-tree]`; (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
-  were removed, and a host that overrides `ITmEmailLocalizer` can drop that key; (3) only a window of rows is in the DOM, so a spec that counted every
-  `[data-tm-import-block]` must read the complete count from `[data-tm-import-tree][data-tm-import-rows]` (or the state card's `data-tm-import-blocks`).
-  Before: `cut.FindAll("[data-tm-import-block]").Count == blocks` (capped at 100). After: `tree.GetAttribute("data-tm-import-rows") == blocks + sections + columns`, and
-  scroll `[data-tm-import-tree]` to bring a later row into the DOM.
 - **Report Server: the email Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker` moved from `AddCommonServices` to the server host
   (phase 7, decision D11 now holds for the Report Server).** `Tempo.ReportServer.Web.Client` (the WebAssembly leg of the InteractiveAuto
   portal, `IsPackable=false`) no longer references `Tempo.Blazor.EmailTemplates.Engine`, so Scriban, Mjml.Net and AngleSharp are no longer part

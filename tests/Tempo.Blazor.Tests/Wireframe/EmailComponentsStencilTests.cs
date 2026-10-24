@@ -17,15 +17,27 @@ public sealed class EmailComponentsStencilTests
         "TmEmailTemplateEditor", "TmEmailCanvasBlock", "TmEmailItemList", "TmEmailItemDialog",
     ];
 
-    /// <summary>Every public (non-abstract) razor component of the e-mail package, by the type names the stencil work covers.</summary>
-    private static readonly string[] PublicComponents =
-    [
-        "TmEmailTemplateEditor", "TmEmailTemplateCanvas", "TmEmailCanvasBlock", "TmEmailTemplateToolbox", "TmEmailPropertyPanel",
-        "TmEmailTemplatePreview", "TmEmailImportDialog", "TmEmailExportDialog", "TmEmailValidationPanel", "TmEmailVariablePicker",
-        "TmEmailItemList", "TmEmailItemDialog", "TmEmailTableCellDialog", "TmEmailTableEditor", "TmEmailObjectFields",
-        "TmEmailClassesEditor", "TmEmailHtmlAttributesEditor", "TmEmailKeyValueEditor", "TmEmailListEditor",
-    ];
+    /// <summary>
+    /// Every public, non-abstract razor component of the e-mail package, derived by reflection from the assembly that ships
+    /// <c>TmEmailTemplateEditor</c> - a component added later is covered without touching this list.
+    /// </summary>
+    private static readonly string[] PublicComponents = typeof(Tempo.Blazor.EmailTemplates.Components.TmEmailTemplateEditor).Assembly
+        .GetExportedTypes()
+        .Where(t => t.IsAbstract == false
+                    && t.Name.StartsWith("TmEmail", StringComparison.Ordinal)
+                    && typeof(Microsoft.AspNetCore.Components.IComponent).IsAssignableFrom(t))
+        .Select(t => t.IsGenericTypeDefinition ? t.Name[..t.Name.IndexOf('`')] : t.Name)
+        .Distinct()
+        .OrderBy(n => n, StringComparer.Ordinal)
+        .ToArray();
 
+    [Fact]
+    public void ReflectionFindsTheKnownPublicComponents()
+    {
+        PublicComponents.Should().Contain(Placeable);
+        PublicComponents.Should().Contain("TmEmailListEditor", "generic component definitions count too (their name has no arity suffix here)");
+        PublicComponents.Length.Should().BeGreaterThanOrEqualTo(19);
+    }
     public static TheoryData<string> PlaceableTypes()
     {
         var data = new TheoryData<string>();

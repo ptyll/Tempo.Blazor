@@ -42,6 +42,9 @@
     /// </summary>
     private const float StructureRowHeight = 28f;
 
+    /// <summary>The id of the structure heading; the section is named through it (<c>aria-labelledby</c>), not by a second copy of the label.</summary>
+    private readonly string _structureTitleId = "email-import-structure-" + Guid.NewGuid().ToString("N");
+
     /// <summary>
     /// The file types the drop zone accepts, regardless of the active tab: a `.json` file dropped while the MJML
     /// tab is open has to work, so the WIDGET does not narrow the choice — the mode follows the file.
@@ -228,42 +231,44 @@
         @if (_structure.Count > 0)
         {
             <section class="tm-email-import__structure" data-tm-import-structure
-                     aria-label="@Loc["EmailEditor_Import_Structure"]">
-                <h4 class="tm-email-import__structure-title">@Loc["EmailEditor_Import_Structure"]</h4>
+                     aria-labelledby="@_structureTitleId">
+                <h4 class="tm-email-import__structure-title" id="@_structureTitleId">@Loc["EmailEditor_Import_Structure"]</h4>
                 @* Virtualized (phase 8): a template may carry thousands of blocks, and painting every row costs
                    more than the import itself, so only the rows in (and just around) the viewport are in the DOM and
-                   the list never stops short. Rows are ONE fixed height (the stylesheet pins it), the spacers are
-                   <li> so the list stays valid, and every row names its place (aria-level / posinset / setsize). *@
-                <ul class="tm-email-import__tree" data-tm-import-tree data-tm-import-rows="@_structure.Count"
-                    tabindex="0" aria-label="@Loc["EmailEditor_Import_Structure"]">
+                   the list never stops short. It is a div role=list with div role=listitem rows and div spacers: the
+                   Virtualize spacers are not list items, so an <ul> would carry empty <li> children. Every row names
+                   its place (aria-level / posinset / setsize). The section is named by the heading above. *@
+                <div class="tm-email-import__tree" role="list" data-tm-import-tree data-tm-import-rows="@_structure.Count"
+                     tabindex="0">
                     <Virtualize Items="_structure" Context="row" ItemSize="StructureRowHeight" OverscanCount="8"
-                                SpacerElement="li">
+                                SpacerElement="div">
                         @switch (row.Kind)
                         {
                             case StructureKind.Section:
-                                <li class="tm-email-import__tree-row tm-email-import__tree-section" data-tm-import-section="true"
-                                    aria-level="1" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
-                                    <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeSection"]</span>
-                                </li>
+                                <div class="tm-email-import__tree-row tm-email-import__tree-section" role="listitem" data-tm-import-section="true"
+                                     aria-level="1" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    <span class="tm-email-import__tree-label" title="@Loc["EmailEditor_Import_TreeSection"]">@Loc["EmailEditor_Import_TreeSection"]</span>
+                                </div>
                                 break;
                             case StructureKind.Column:
-                                <li class="tm-email-import__tree-row tm-email-import__tree-column" data-tm-import-column="true"
-                                    aria-level="2" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
-                                    <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeColumn"]</span>
-                                </li>
+                                <div class="tm-email-import__tree-row tm-email-import__tree-column" role="listitem" data-tm-import-column="true"
+                                     aria-level="2" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    <span class="tm-email-import__tree-label" title="@Loc["EmailEditor_Import_TreeColumn"]">@Loc["EmailEditor_Import_TreeColumn"]</span>
+                                </div>
                                 break;
                             default:
-                                <li class="tm-email-import__tree-row tm-email-import__tree-block"
-                                    data-tm-import-block="true"
-                                    data-tm-import-block-kind="@row.Type"
-                                    data-tm-import-block-nested="@(row.Nested ? "true" : null)"
-                                    aria-level="@(row.Nested ? 4 : 3)" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
-                                    @Loc[row.NameKey]
-                                </li>
+                                <div class="tm-email-import__tree-row tm-email-import__tree-block" role="listitem"
+                                     data-tm-import-block="true"
+                                     data-tm-import-block-kind="@row.Type"
+                                     data-tm-import-block-nested="@(row.Nested ? "true" : null)"
+                                     aria-level="@(row.Nested ? 4 : 3)" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    <span class="tm-email-import__tree-label" title="@Loc[row.NameKey]">@Loc[row.NameKey]</span>
+                                </div>
                                 break;
                         }
                     </Virtualize>
-                </ul>            </section>
+                </div>
+            </section>
         }
     </text>;
 

@@ -132,6 +132,33 @@ public class ImportDialogPhase10Tests : BunitContext, IDisposable
     }
 
     [Fact]
+    public void StructurePreview_IsADivList_WithDivSpacers_AndNoEmptyListItems()
+    {
+        var cut = Render<TmEmailImportDialog>(p => p.Add(c => c.Show, true));
+        cut.Find("#tab-import-json").Click();
+        cut.Find("[data-tm-import-input] textarea").Input(ManyBlocksJson(40));
+
+        var tree = cut.Find("[data-tm-import-tree]");
+        tree.TagName.Should().Be("DIV");
+        tree.GetAttribute("role").Should().Be("list");
+        tree.GetAttribute("aria-label").Should().BeNull("the section is named by the heading, not by a duplicate label");
+
+        cut.FindAll("[data-tm-import-tree] li").Should().BeEmpty("spacers are divs, so no empty <li> sits inside the list");
+        var rows = cut.FindAll("[data-tm-import-tree] [data-tm-import-block]");
+        rows.Should().NotBeEmpty();
+        rows.Should().OnlyContain(r => r.GetAttribute("role") == "listitem");
+        foreach (var row in rows)
+        {
+            var label = row.QuerySelector(".tm-email-import__tree-label")!;
+            label.GetAttribute("title").Should().Be(label.TextContent.Trim(), "the ellipsis span carries the full name as its title");
+        }
+
+        var section = cut.Find("[data-tm-import-structure]");
+        var titleId = cut.Find(".tm-email-import__structure-title").Id;
+        titleId.Should().NotBeNullOrEmpty();
+        section.GetAttribute("aria-labelledby").Should().Be(titleId);
+    }
+    [Fact]
     public void StructurePreview_RowsAreFixedHeight_SoTheVirtualizeSpacersAreExact()
     {
         var css = File.ReadAllText(Path.Combine(
@@ -139,6 +166,7 @@ public class ImportDialogPhase10Tests : BunitContext, IDisposable
 
         css.Should().MatchRegex(@"\.tm-email-import__tree-row\s*\{[^}]*block-size:\s*1\.75rem",
             "28 px is StructureRowHeight: a row that wrapped or grew would desynchronise the scroll extent");
+        css.Should().MatchRegex(@"\.tm-email-import__tree-row\s*\{[^}]*min-block-size:\s*1\.75rem");
         css.Should().MatchRegex(@"\.tm-email-import__tree-row\s*\{[^}]*white-space:\s*nowrap");
     }
 
@@ -148,6 +176,7 @@ public class ImportDialogPhase10Tests : BunitContext, IDisposable
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
         return dir?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
     }
+
     [Fact]
     public void Json_ParsesIntoTheSamePreview()
     {

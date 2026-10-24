@@ -16,12 +16,30 @@ internal sealed class CultureScope : IDisposable
 {
     private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
+    private readonly bool _explicit;
 
-    private CultureScope(CultureInfo culture, CultureInfo uiCulture)
+    private static readonly AsyncLocal<int> ExplicitScopes = new();
+
+    private CultureScope(CultureInfo culture, CultureInfo uiCulture, bool isExplicit)
     {
+        _explicit = isExplicit;
         CultureInfo.CurrentCulture = culture;
         CultureInfo.CurrentUICulture = uiCulture;
+        if (isExplicit)
+        {
+            ExplicitScopes.Value++;
+        }
     }
+
+    /// <summary>
+    /// True while a test (constructor, fixture field or body) holds a scope it opened through <see cref="Use(string)"/>.
+    /// The assembly default (<see cref="EnglishUiCultureAttribute"/>) runs AFTER the test class is constructed and must
+    /// not clobber such an explicit choice.
+    /// </summary>
+    internal static bool HasExplicitScope => ExplicitScopes.Value > 0;
+
+    /// <summary>Opens the assembly-default scope (invariant formatting, English UI) that does not count as an explicit choice.</summary>
+    internal static CultureScope UseAssemblyDefault(CultureInfo culture, CultureInfo uiCulture) => new(culture, uiCulture, isExplicit: false);
 
     /// <summary>Pins <paramref name="name"/> as both the current and the current UI culture.</summary>
     /// <param name="name">A culture name, e.g. <c>cs</c> or <c>fr</c>.</param>
@@ -31,12 +49,16 @@ internal sealed class CultureScope : IDisposable
     /// <param name="culture">The current culture.</param>
     /// <param name="uiCulture">The current UI culture; defaults to <paramref name="culture"/>.</param>
     public static CultureScope Use(CultureInfo culture, CultureInfo? uiCulture = null)
-        => new(culture, uiCulture ?? culture);
+        => new(culture, uiCulture ?? culture, isExplicit: true);
 
     /// <inheritdoc />
     public void Dispose()
     {
         CultureInfo.CurrentCulture = _culture;
         CultureInfo.CurrentUICulture = _uiCulture;
+        if (_explicit && ExplicitScopes.Value > 0)
+        {
+            ExplicitScopes.Value--;
+        }
     }
 }

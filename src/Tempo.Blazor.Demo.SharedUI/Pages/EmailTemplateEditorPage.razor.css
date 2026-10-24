@@ -6,7 +6,9 @@
        whether the save worked. What sits above the editor in the demo shell (MainLayout): the sticky page
        bar (~4.3rem) plus the main region's own top padding (py-8 = 2rem); 1rem is left under the editor. The
        old `100vh - 70px` forgot the 2rem padding, so the editor overran the viewport by ~30px and its status
-       bar fell off the bottom. dvh follows a mobile browser's collapsing toolbar. */
+       bar fell off the bottom. dvh follows a mobile browser's collapsing toolbar; the vh line below is the fallback for a
+       browser that does not know dvh. The two offsets mirror Tempo.Blazor.Demo.SharedUI/Layout/MainLayout.razor - change them together. */
+    height: calc(100vh - 4.3rem - 2rem - 1rem);
     height: calc(100dvh - 4.3rem - 2rem - 1rem);
     min-height: 600px;
 }

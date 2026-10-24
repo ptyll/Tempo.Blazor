@@ -295,6 +295,10 @@ The PNG / PDF export posts to `api/wireframe/export/png|pdf`. `ExportHttpClientN
 
 A press that selects on a tablet opens the inspector sheet, and the canvas reserves its room only after the lift (`data-wd-gesture`, so the svg never resizes under a drag that just began). A gesture that starts with the sheet ALREADY open must keep that reservation: the script reads the computed padding BEFORE it sets `data-wd-gesture` and marks `data-wd-reserved`, and the stylesheet drops the reservation only while a gesture runs without that marker. Without it the svg widened under the finger and a resize-handle drag ran in a moved coordinate system (`Touch_ResizeHandle(1024)`: a 360x240 button became 224x328). A handle press also counts as an active gesture from the PRESS (`inst.resize` / `rotate` / `waypoint`), not only from the drag threshold.
 
+## E-mail components as stencils (EMAIL-WIREFRAME-ROLES, plan 643bba06 phase 8)
+
+Four public components of `Tempo.Blazor.EmailTemplates` are placeable on a wireframe page and ship a declarative stencil in the `tempo` pack plus a schema in `BuiltInComponentSchemas` and a role: `TmEmailTemplateEditor` (`email-template-editor`), `TmEmailCanvasBlock` (`email-block`), `TmEmailItemList` (`list-view`) and `TmEmailItemDialog` (`dialog`). Every other public `TmEmail*` component is editor chrome (toolbox, inspector, import / export / validation dialogs, sub-editors): it has no stencil of its own, but its type name is a synonym of a role in the vocabulary (`TmEmailTemplateToolbox` -> `email-template-editor`), so every component still resolves a role. `EmailComponentsStencilTests` derives the component list by reflection, so a new public `TmEmail*` component without a role fails the test. The decision row is in `planning/tm-email-template-editor-2.10.md` (EMAIL-WIREFRAME-ROLES).
+
 ## E2E anchors (stable selectors)
 
 `.tm-wd-editor`, `.tm-wd-editor__toolbar`, `[data-region="left|canvas|right|toolbar|header"]`, the core `.tm-toolbar` /

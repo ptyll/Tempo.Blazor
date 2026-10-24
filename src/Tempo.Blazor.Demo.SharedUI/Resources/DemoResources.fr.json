@@ -434,7 +434,7 @@
   "TmDemo_EmailTemplates_Editor_ImportLimit_Small": "1 ko",
   "TmDemo_EmailTemplates_Editor_ImportLimit_Unlimited": "Illimité",
   "TmDemo_EmailTemplates_Editor_SaveBackground": "Enregistrer depuis un thread d’arrière-plan",
-  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hôte : modifications non enregistrées oui",
-  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hôte : modifications non enregistrées non",
+  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hôte : modifications non enregistrées",
+  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hôte : aucune modification non enregistrée",
   "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Disposition : {0}"
 }

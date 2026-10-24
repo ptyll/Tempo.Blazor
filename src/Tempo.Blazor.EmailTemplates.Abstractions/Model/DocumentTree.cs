@@ -9,6 +9,7 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Model;
 public static class DocumentTree
 {
     /// <summary>Enumerates every section, including those nested inside wrapper blocks.</summary>
+    /// <remarks>Iterative pre-order walk with an explicit stack (no recursion, so a deeply nested document cannot overflow the stack). Every node is visited once: an object-graph cycle built by hand terminates instead of looping.</remarks>
     public static IEnumerable<EmailSection> AllSections(EmailTemplateDocument document)
     {
         // Iterative pre-order walk (explicit stack): a hostile or broken document may nest thousands of
@@ -34,6 +35,7 @@ public static class DocumentTree
     }
 
     /// <summary>Enumerates every column anywhere in the document, recursing into all containers.</summary>
+    /// <remarks>Iterative pre-order walk with an explicit stack (no recursion, so a deeply nested document cannot overflow the stack). Every node is visited once: an object-graph cycle built by hand terminates instead of looping.</remarks>
     public static IEnumerable<EmailColumn> AllColumns(EmailTemplateDocument document)
     {
         var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
@@ -66,6 +68,7 @@ public static class DocumentTree
     }
 
     /// <summary>Enumerates every block list (a column's or a hero's <c>Blocks</c>) in the document.</summary>
+    /// <remarks>Iterative pre-order walk with an explicit stack (no recursion, so a deeply nested document cannot overflow the stack). Every node is visited once: an object-graph cycle built by hand terminates instead of looping.</remarks>
     public static IEnumerable<IList<EmailBlockBase>> AllBlockLists(EmailTemplateDocument document)
     {
         var acc = new List<IList<EmailBlockBase>>();
@@ -109,16 +112,20 @@ public static class DocumentTree
     }
 
     /// <summary>Enumerates every block anywhere in the document.</summary>
+    /// <remarks>Built on <see cref="AllBlockLists"/>, so it shares its iterative, visit-once traversal.</remarks>
     public static IEnumerable<EmailBlockBase> AllBlocks(EmailTemplateDocument document)
         => AllBlockLists(document).SelectMany(list => list);
 
     /// <summary>Assigns a fresh identifier to a block and to every node nested beneath it.</summary>
+    /// <remarks>Iterative walk with an explicit stack and a visit-once guard: a deeply nested or cyclic document neither overflows the stack nor loops. Identifiers are reassigned in pre-order; a node reachable twice is renumbered once.</remarks>
     public static void ReassignIds(EmailBlockBase block) => ReassignIdsIterative(block);
 
     /// <summary>Assigns a fresh identifier to a section and everything beneath it.</summary>
+    /// <remarks>Iterative walk with an explicit stack and a visit-once guard: a deeply nested or cyclic document neither overflows the stack nor loops. Identifiers are reassigned in pre-order; a node reachable twice is renumbered once.</remarks>
     public static void ReassignIds(EmailSection section) => ReassignIdsIterative(section);
 
     /// <summary>Assigns a fresh identifier to a column and every block beneath it.</summary>
+    /// <remarks>Iterative walk with an explicit stack and a visit-once guard: a deeply nested or cyclic document neither overflows the stack nor loops. Identifiers are reassigned in pre-order; a node reachable twice is renumbered once.</remarks>
     public static void ReassignIds(EmailColumn column) => ReassignIdsIterative(column);
 
     private static void ReassignIdsIterative(object root)

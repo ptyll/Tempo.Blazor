@@ -434,7 +434,7 @@
   "TmDemo_EmailTemplates_Editor_ImportLimit_Small": "1 kB",
   "TmDemo_EmailTemplates_Editor_ImportLimit_Unlimited": "Bez obmedzenia",
   "TmDemo_EmailTemplates_Editor_SaveBackground": "Uložiť z vlákna na pozadí",
-  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hostiteľ: neuložené zmeny áno",
-  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hostiteľ: neuložené zmeny nie",
+  "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hostiteľ: neuložené zmeny",
+  "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hostiteľ: žiadne neuložené zmeny",
   "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Rozloženie: {0}"
 }
