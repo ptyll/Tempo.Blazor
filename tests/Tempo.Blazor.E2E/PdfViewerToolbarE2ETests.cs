@@ -296,10 +296,11 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task PdfViewer_SearchCard_ToggleInMore_EscapeFocusesMoreTrigger()
     {
-        // Desktop 1280: the labelled toolbar overflows, the search toggle renders
+        // Desktop 1100 (at 1280 the current demo shell leaves the whole toolbar room, so the toggle never
+        // overflows there): the labelled toolbar overflows, the search toggle renders
         // collapsed (inert) and is offered in the "More" menu. Escape in the card must
         // focus the More TRIGGER (focusing an inert toggle would be a no-op).
-        var page = await OpenPdfPageAsync(1280);
+        var page = await OpenPdfPageAsync(1100);
         var section = page.Locator("section:has(h2:has-text('Document Search'))");
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
@@ -311,8 +312,10 @@ public class PdfViewerToolbarE2ETests : WasmTestBase
             State = Microsoft.Playwright.WaitForSelectorState.Attached,
             Timeout = 30000,
         });
-        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-hidden"),
-            "precondition: the search toggle overflows into More at this width.");
+        // The toolbar measures its overflow after the first layout / font load, so the collapse lands a moment
+        // after the toggle attaches: wait for the state (a one-shot read raced the measurement in ~1 run of 4).
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-hidden", "true",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
 
         // FZE-11: the card starts closed — open it through the More menu (the only
         // surface the collapsed toggle lives on at this width).

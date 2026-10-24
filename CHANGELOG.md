@@ -957,6 +957,11 @@
 
 ### Fixed
 
+- **`TmPdfViewer` stylesheet: the floating search card and the continuous overlay-slot rules are back (found by the plan-643bba06 phase-9 full E2E lane).**
+  A merge (`bb606ca8`) had reverted `TmPdfViewer.razor.css` to an older copy, so the FZE-11 search card (`.tm-pdf-viewer__search-card`, its docked-panel
+  offset and the wraps' `scroll-padding-top`), the FZE-13 `position: relative` of `.tm-pdf-viewer__continuous-wrap` (the annotation slots drifted by the
+  wrap's offset), the continuous text-layer span rules and the `--tm-pdf-comments-panel-width` knob were missing: the search card rendered as an unstyled
+  full-height block and 11 `PdfViewer_Continuous_*` / `PdfAnnotator_Continuous_*` E2E specs were red. Restored from `48af2368`; no API change.
 - **E-mail editor: `DocumentTree` traversals are iterative and visit every node once.** The recursive walkers (`CollectBlockLists`, `ReassignIds` and the
   other tree walks) overflowed the stack on a deeply nested document; they now use an explicit stack, are cycle-safe (visit-once) and are covered by
   deep-tree tests. The public `DocumentTree` methods document this behaviour in their `<remarks>`.
