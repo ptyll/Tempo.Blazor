@@ -26,6 +26,14 @@ The preview and the HTML export go through `IEmailPreviewRenderer`, one interfac
 whether that is a local call or an HTTP round-trip. `Tempo.Blazor.All` does not include either email
 package (adding the Engine to the metapackage would put Mjml.Net into every consumer).
 
+The same rule applies to the Report Server portal (an InteractiveAuto host): its WebAssembly leg
+(`Tempo.ReportServer.Web.Client`) carries the model, the stores and the `IReportScheduleRunner` seam only.
+The scheduled-report e-mail is rendered by the **server** host - `builder.Services.AddReportServerEmailDelivery()`
+in `Tempo.ReportServer.Web` registers `AddTempoEmailTemplateEngine()`, `ReportEmailDeliveryService` and
+`ReportScheduleWorker`. Never call `AddTempoEmailTemplateEngine()` from a registration that also runs in the
+browser (`AddCommonServices`); `PackageBoundaryTests` fails the build if any WebAssembly project closure
+reaches the Engine.
+
 The engine's NuGet dependency on `Abstractions` is pinned to an **exact** version (`[2.10.0]`), because
 the two assemblies share `internal` types through `InternalsVisibleTo`. Do not loosen it.
 

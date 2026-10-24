@@ -788,8 +788,12 @@ Rules that keep it that way:
 
 - **The editor package must never reference the Engine.** `PackageBoundaryTests`
   (`tests/Tempo.Blazor.EmailTemplates.Engine.Tests`) walks the transitive `ProjectReference` closure of
-  the editor, of the WASM demo and of `Tempo.Blazor.All`; the single documented exception is
-  `Tempo.ReportServer.Web.Client` (`IsPackable=false`).
+  the editor, of the WASM demos, of `Tempo.ReportServer.Web.Client` and of `Tempo.Blazor.All`; there is
+  **no exception any more** (D11 holds for the Report Server too). The scheduled-report e-mail is
+  rendered by the server host (`Tempo.ReportServer.Web`: `AddReportServerEmailDelivery()` registers
+  the Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker`); `AddCommonServices` (it also runs
+  in the WebAssembly leg) only registers the model/stores and the `IReportScheduleRunner` seam is absent
+  there, so the demo "Run now" button is not offered in the browser.
 - **The Engine pins `Abstractions` to an exact version** (`[2.10.0]`) through the
   `PinAbstractionsToTheExactVersion` MSBuild target, because the two share `internal` types through
   `InternalsVisibleTo`. `PackageBoundaryTests.PackedEngineNuspec_PinsAbstractionsToTheExactVersion` packs

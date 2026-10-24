@@ -56,6 +56,10 @@ builder.Services.AddCors(options =>
 // Client-safe UI/data services shared with the WebAssembly leg (symmetric DI).
 builder.Services.AddCommonServices(builder.Configuration);
 
+// Server-only: the email Engine (Scriban/Mjml.Net/AngleSharp) renders the scheduled report e-mail. It is
+// deliberately NOT part of AddCommonServices, which also runs in the WebAssembly leg (decision D11).
+builder.Services.AddReportServerEmailDelivery();
+
 // Host-only (server) services: report-server security + demo API key store.
 builder.Services.AddSingleton<IReportApiKeyStore, DemoReportApiKeyStore>();
 builder.Services.AddReportServerSecurity();

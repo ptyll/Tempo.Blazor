@@ -1183,6 +1183,23 @@
 
 ### Breaking / Migration
 
+- **Report Server: the email Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker` moved from `AddCommonServices` to the server host
+  (phase 7, decision D11 now holds for the Report Server).** `Tempo.ReportServer.Web.Client` (the WebAssembly leg of the InteractiveAuto
+  portal, `IsPackable=false`) no longer references `Tempo.Blazor.EmailTemplates.Engine`, so Scriban, Mjml.Net and AngleSharp are no longer part
+  of the browser download. `ReportEmailDeliveryService` and `ReportScheduleWorker` moved to `Tempo.ReportServer.Web` (same namespace
+  `Tempo.ReportServer.Web.Services`); the new `IReportScheduleRunner` seam (model assembly) is what `SchedulesPage` uses for the demo "Run now"
+  button, which is therefore **only offered where the server registered the runner** (the WebAssembly leg shows no button instead of failing on
+  click). `PackageBoundaryTests` lost its single documented exception: no WebAssembly closure may reach the Engine.
+  Impact: a host that called `AddCommonServices` and relied on it registering the Engine / delivery / worker must register them itself; a
+  test fixture that resolved `ReportScheduleWorker` needs `AddReportServerEmailDelivery()`.
+  ```csharp
+  // before - Program.cs of the server AND of the WebAssembly leg got the engine through AddCommonServices
+  builder.Services.AddCommonServices(builder.Configuration);
+
+  // after - AddCommonServices is client-safe; the server host adds the rendering half
+  builder.Services.AddCommonServices(builder.Configuration);
+  builder.Services.AddReportServerEmailDelivery();   // Tempo.ReportServer.Web only, never the WASM Program.cs
+  ```
 - **`TmWireframeEditor` / `TmWireframeDesignerCanvas`: the canvas now starts FITTED (`InitialZoom`, default `Fit`).** Before, the
   page was drawn by the svg's own `meet` scale, so a page larger than the canvas showed its edge-to-edge scale with no margin, a 1440 px page
   on a ~600 px canvas sat at ~30 % with the page touching the canvas border, and a page that did not fit left the zoom read-out reporting a

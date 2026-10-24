@@ -18,6 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Tempo.ReportServer.Web.Client\Tempo.ReportServer.Web.Client.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+    <!-- Server-only (D11): scheduled report e-mails are rendered here; the WebAssembly client never references the Engine. -->
+    <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Engine\Tempo.Blazor.EmailTemplates.Engine.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Reporting\Tempo.Blazor.Reporting.csproj" />
     <ProjectReference Include="..\Tempo.ReportServer.Api\Tempo.ReportServer.Api.csproj" />
   </ItemGroup>

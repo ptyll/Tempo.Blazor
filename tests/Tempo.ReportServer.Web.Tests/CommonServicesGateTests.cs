@@ -47,6 +47,39 @@ public sealed class CommonServicesGateTests
         scope.ServiceProvider.GetRequiredService<IPortalIdentity>().Should().BeOfType<ReportServerSessionState>();
     }
 
+    [Fact]
+    public void CommonServices_RegisterNoEngineBoundService()
+    {
+        // AddCommonServices runs in the WebAssembly leg too: the email Engine, the delivery service and the
+        // worker are server-only (decision D11, AddReportServerEmailDelivery).
+        var services = new ServiceCollection();
+        services.AddCommonServices(new ConfigurationBuilder().Build());
+
+        services.Should().NotContain(d => d.ServiceType == typeof(IReportScheduledDeliveryService));
+        services.Should().NotContain(d => d.ServiceType == typeof(ReportScheduleWorker));
+        services.Should().NotContain(d => d.ServiceType == typeof(IReportScheduleRunner));
+        services.Should().NotContain(d =>
+            d.ServiceType == typeof(Tempo.Blazor.EmailTemplates.Abstractions.Rendering.IEmailTemplateRenderer)
+            && d.ImplementationType != null
+            && d.ImplementationType.Assembly.GetName().Name == "Tempo.Blazor.EmailTemplates.Engine");
+        typeof(CommonServiceCollectionExtensions).Assembly.GetReferencedAssemblies()
+            .Select(a => a.Name)
+            .Should().NotContain("Tempo.Blazor.EmailTemplates.Engine");
+    }
+
+    [Fact]
+    public void ServerHost_RegistersDeliveryWorkerAndRunnerSeam()
+    {
+        var services = new ServiceCollection();
+        services.AddCommonServices(new ConfigurationBuilder().Build());
+        services.AddReportServerEmailDelivery();
+        services.AddScoped<AuthenticationStateProvider>(_ => new AnonymousAuthenticationStateProvider());
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IReportScheduledDeliveryService>().Should().BeOfType<ReportEmailDeliveryService>();
+        var runner = provider.GetRequiredService<IReportScheduleRunner>();
+        runner.Should().BeOfType<ReportScheduleWorker>().And.BeSameAs(provider.GetRequiredService<ReportScheduleWorker>());
+    }
     private static ServiceProvider BuildProvider(string? authority, string? clientId)
     {
         var settings = new Dictionary<string, string?>

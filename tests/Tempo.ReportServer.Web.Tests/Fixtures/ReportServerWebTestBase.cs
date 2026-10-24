@@ -17,7 +17,6 @@ public abstract class ReportServerWebTestBase : BunitContext
     protected ReportServerWebTestBase()
     {
         Services.AddTempoBlazorReporting();
-        Services.AddTempoEmailTemplateEngine();
         Services.AddSingleton<IReportApiKeyStore, DemoReportApiKeyStore>();
         Services.AddReportServerSecurity();
         Services.AddSingleton<DemoReportSourceFactory>();
@@ -32,8 +31,7 @@ public abstract class ReportServerWebTestBase : BunitContext
         Services.AddSingleton<ReportEmailTemplateGalleryStore>();
         Services.AddSingleton<IEmailTemplateStore>(sp => sp.GetRequiredService<ReportEmailTemplateGalleryStore>());
         Services.AddSingleton<IEmailSender, Smtp4DevEmailSender>();
-        Services.AddSingleton<IReportScheduledDeliveryService, ReportEmailDeliveryService>();
-        Services.AddSingleton<ReportScheduleWorker>();
+        Services.AddReportServerEmailDelivery();
         Services.AddScoped<ReportServerSessionState>();
         // Portal consumers depend on IPortalIdentity; the default test mode is the demo session
         // (same instance as SignIn()). Auth-mode tests register OidcPortalIdentity + test authorization.

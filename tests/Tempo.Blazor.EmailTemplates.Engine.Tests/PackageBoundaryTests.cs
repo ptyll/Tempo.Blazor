@@ -221,12 +221,13 @@ public class PackageBoundaryTests
     }
 
     [Fact]
-    public void ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine()
+    public void NoWasmHost_ReachesTheEngine_ReportServerIncluded()
     {
-        // Decision of the phase-6 review (contract §3.0/§6): the demo report server client renders the report
-        // e-mail locally in the browser, so it deliberately references the Engine even though it is
-        // Blazor WebAssembly. That exception is demo-only (IsPackable=false, unpublished) and it must stay
-        // the ONLY one: every other WebAssembly host has to render through IEmailPreviewRenderer.
+        // Decision D11 holds for the Report Server too (phase 7): the WebAssembly leg of the InteractiveAuto
+        // portal carries the model and the stores only, the scheduled report e-mail is rendered by the
+        // SERVER host (AddReportServerEmailDelivery). There is no documented exception any more — a WASM
+        // host whose closure reaches the Engine would put Scriban, Mjml.Net and AngleSharp back into the
+        // browser download.
         string[] wasmHosts =
         [
             "src/Tempo.Blazor.Demo/Tempo.Blazor.Demo.csproj",
@@ -239,14 +240,35 @@ public class PackageBoundaryTests
                 "src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj"))
             .ToList();
 
-        withEngine.Should().BeEquivalentTo(["src/Tempo.ReportServer.Web.Client/Tempo.ReportServer.Web.Client.csproj"],
-            "the report-server demo is the documented single exception; a second one would negate D11");
+        withEngine.Should().BeEmpty("no WebAssembly host may reference the Engine (D11), the Report Server client included");
 
-        var csproj = Load("src/Tempo.ReportServer.Web.Client/Tempo.ReportServer.Web.Client.csproj");
-        ((string?)csproj.Descendants().FirstOrDefault(e => e.Name.LocalName == "IsPackable")?.Value)
-            .Should().Be("false", "the exception is only acceptable while the client is not published");
+        ProjectClosure("src/Tempo.ReportServer.Web.Client/Tempo.ReportServer.Web.Client.csproj")
+            .Should().Contain(
+                "src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj",
+                "…otherwise the assertion above would be vacuous: the client really carries the e-mail model");
     }
 
+    [Fact]
+    public void ReportServerWebHost_IsTheServerThatRendersTheScheduledEmail()
+    {
+        // The other half of the move: the Engine did not disappear, it lives in the server host. Pinning it
+        // here keeps a future cleanup from "fixing" the boundary by deleting scheduled delivery.
+        var closure = ProjectClosure("src/Tempo.ReportServer.Web/Tempo.ReportServer.Web.csproj");
+        closure.Should().Contain("src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj");
+
+        var program = File.ReadAllText(Path.Combine(RepositoryRoot(), "src/Tempo.ReportServer.Web/Program.cs"));
+        program.Should().Contain("AddReportServerEmailDelivery()");
+
+        var common = File.ReadAllText(Path.Combine(
+            RepositoryRoot(), "src/Tempo.ReportServer.Web.Client/CommonServiceCollectionExtensions.cs"));
+        common.Should().NotContain("services.AddTempoEmailTemplateEngine(",
+            "AddCommonServices also runs in the WebAssembly leg");
+        common.Should().NotContain("ReportEmailDeliveryService").And.NotContain("ReportScheduleWorker");
+
+        var clientCsproj = Load("src/Tempo.ReportServer.Web.Client/Tempo.ReportServer.Web.Client.csproj");
+        ProjectReferences(clientCsproj).Should().NotContain(r =>
+            r.Path.Contains("Tempo.Blazor.EmailTemplates.Engine", StringComparison.Ordinal));
+    }
     [Fact]
     public void WasmDemo_StaysOnTheEditorPlusHostRendererPattern()
     {

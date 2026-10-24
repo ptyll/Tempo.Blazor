@@ -22,15 +22,16 @@ public static class CommonServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Reporting components + email template engine (renderer, generation, validation).
+        // Reporting components. The email Engine is NOT registered here: this method also runs in the
+        // WebAssembly leg, so rendering the scheduled e-mail is the server host's job (AddReportServerEmailDelivery).
         services.AddTempoBlazorReporting();
-        services.AddTempoEmailTemplateEngine();
 
         // In-memory demo catalog + report source factory.
         services.AddSingleton<DemoReportSourceFactory>();
         services.AddSingleton<ReportServerCatalogStore>();
 
-        // Scheduling + email delivery (all in-memory / abstraction-based, WASM-safe).
+        // Scheduling stores + e-mail template gallery and transport (in-memory / abstraction-based, WASM-safe).
+        // The renderer-bound delivery service and the worker live in the server host (AddReportServerEmailDelivery).
         services.AddSingleton<IReportScheduleClock, SystemReportScheduleClock>();
         services.AddSingleton<ReportScheduleStore>();
         services.AddSingleton<ReportRenderJobQueue>();
@@ -38,8 +39,6 @@ public static class CommonServiceCollectionExtensions
         services.AddSingleton<ReportEmailTemplateGalleryStore>();
         services.AddSingleton<IEmailTemplateStore>(sp => sp.GetRequiredService<ReportEmailTemplateGalleryStore>());
         services.AddSingleton<IEmailSender, Smtp4DevEmailSender>();
-        services.AddSingleton<IReportScheduledDeliveryService, ReportEmailDeliveryService>();
-        services.AddSingleton<ReportScheduleWorker>();
 
         // Per-circuit / per-client portal identity. When OIDC is configured (Authority + ClientId set)
         // the portal reflects the signed-in Keycloak principal — identity, tenant and role-gated UI — via

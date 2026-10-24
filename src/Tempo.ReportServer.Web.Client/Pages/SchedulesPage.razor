@@ -2,7 +2,7 @@
 @page "/admin/schedules"
 @inject IPortalIdentity Session
 @inject ITempoReportServerClient Client
-@inject ReportScheduleWorker Worker
+@inject IServiceProvider Services
 @inject ReportEmailOutbox Outbox
 
 <ReportServerShell Title="@Loc["ReportServer_Nav_Schedules"]" ActiveSection="schedules">
@@ -91,7 +91,7 @@
                             @* Demo-mode run-now: the in-memory client shares ReportScheduleStore with the
                                worker, so this renders + delivers through the smtp4dev outbox. Hidden when
                                the portal talks to a real Api (no run-now endpoint exists there). *@
-                            @if (_isDemoMode)
+                            @if (_canRunNow)
                             {
                                 <button type="button"
                                         class="rs-text-button"
@@ -212,10 +212,18 @@
     // run-now button and smtp4dev outbox only exist in that mode; a real Api has no run-now endpoint.
     private bool _isDemoMode;
 
+    // The run-now seam is registered by the SERVER host only (AddReportServerEmailDelivery): it renders the
+    // e-mail through the email Engine, which never ships to the browser (D11). On the WebAssembly leg there
+    // is no runner, so the button is not offered instead of failing on click.
+    private IReportScheduleRunner? _runner;
+    private bool _canRunNow;
+
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         _isDemoMode = Client is DemoTempoReportServerClient;
+        _runner = Services.GetService(typeof(IReportScheduleRunner)) as IReportScheduleRunner;
+        _canRunNow = _isDemoMode && _runner is not null;
         _reports = await Client.SearchReportsAsync(new ReportSearchRequestDto { TenantId = Session.CurrentTenantId });
         if (!_reports.Any(report => string.Equals(report.ReportId, _reportId, StringComparison.Ordinal)))
         {
@@ -229,7 +237,11 @@
         _runningScheduleId = scheduleId;
         try
         {
-            await Worker.RunScheduleNowAsync(Session.CurrentTenantId, scheduleId);
+            if (_runner is not null)
+            {
+                await _runner.RunScheduleNowAsync(Session.CurrentTenantId, scheduleId);
+            }
+
             await ReloadSchedulesAsync();
         }
         finally
