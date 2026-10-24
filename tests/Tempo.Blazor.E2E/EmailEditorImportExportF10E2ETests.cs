@@ -304,6 +304,8 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
                 || value.StartsWith("vbscript:", StringComparison.OrdinalIgnoreCase)
                 || value.StartsWith("data:text/html", StringComparison.OrdinalIgnoreCase));
 
+    private static string NormalizeLineEndings(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n');
+
     [TestMethod]
     public async Task F10_5_Export_CopyConfirmsInALiveRegion_AndNothingIsSent()
     {
@@ -330,7 +332,10 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
             .Should().Contain("Copied");
 
         var clipboard = await page.EvaluateAsync<string>("() => navigator.clipboard.readText()");
-        clipboard.Should().Be(expected, "the copy button copies exactly the exported text");
+        // A <textarea>'s value is always LF-normalised by the browser (HTML spec), while the clipboard keeps the
+        // exact exported string, which carries the host's CRLF on Windows — so compare line-ending-insensitively.
+        NormalizeLineEndings(clipboard).Should().Be(NormalizeLineEndings(expected),
+            "the copy button copies exactly the exported text (modulo the textarea's LF normalisation)");
 
         // No send was performed by the export: the send endpoint is only reached from the send form.
         (await page.Locator("[data-tm-export]").CountAsync()).Should().Be(1);

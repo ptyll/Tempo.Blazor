@@ -1899,6 +1899,12 @@
           "description": "Gets whether an undo is available."
         },
         {
+          "name": "Content",
+          "kind": "Property",
+          "type": "string",
+          "description": "The content signature of the current state: the canonical JSON with the timestamp left out. Two states with equal signatures are the same document as far as saving is concerned, so the editor compares this string (a memory comparison, no serialization) to decide that typing the saved text back is clean again."
+        },
+        {
           "name": "Version",
           "kind": "Property",
           "type": "long",

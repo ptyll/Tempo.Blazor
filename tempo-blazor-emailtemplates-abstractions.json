@@ -4551,6 +4551,18 @@
           ]
         },
         {
+          "name": "SerializeContent",
+          "kind": "Method",
+          "type": "string",
+          "description": "Serializes the CONTENT of a document: exactly Serialize without the UpdatedAt timestamp (a timestamp is bookkeeping, not content). The instance is never touched, not even temporarily, so it is safe to call on a document another component is reading. Two documents with equal signatures are the same template as far as saving is concerned.",
+          "parameters": [
+            {
+              "name": "document",
+              "type": "EmailTemplateDocument"
+            }
+          ]
+        },
+        {
           "name": "Options",
           "kind": "Property",
           "type": "static JsonSerializerOptions",

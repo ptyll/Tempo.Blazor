@@ -2940,13 +2940,14 @@
       ]
     },
     {
+      "itemName": "WireframeStencilThemeName",
       "kind": "Class",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.Wireframe",
       "description": "The shape a wireframe stencil theme name must have (decision WIREFRAME-STENCIL-THEME): at most MaxLength characters from [A-Za-z0-9._-]. The library treats any other name as the default tokens (no warning, nothing stored), and a host that takes a theme from request input (a query string, an export body) should reject it with the same rule before it reaches a log or a renderer.",
       "packageId": "Tempo.Blazor.Wireframe",
       "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframeStencilThemeName.cs",
-      "documentationStatus": "generated",
+      "documentationStatus": "merged",
       "members": [
         {
           "name": "MaxLength",
@@ -2967,7 +2968,12 @@
           ]
         }
       ],
-      "itemName": "WireframeStencilThemeName"
+      "examples": [
+        {
+          "title": "Validate a theme taken from request input",
+          "code": "if (!WireframeStencilThemeName.IsValid(request.Theme))\n{\n    return Results.BadRequest();\n}"
+        }
+      ]
     },
     {
       "itemName": "WireframeSvgRenderer",
@@ -4539,9 +4545,9 @@
   ],
   "summary": {
     "itemCount": 97,
-    "manualItemCount": 96,
+    "manualItemCount": 97,
     "generatedItemCount": 85,
-    "generatedOnlyItemCount": 1,
+    "generatedOnlyItemCount": 0,
     "componentCount": 10,
     "publicApiTypeCount": 75
   }
