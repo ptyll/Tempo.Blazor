@@ -97,6 +97,20 @@ with no test that reproduces it is deleted (N146, 2026-09-22: the
 `regression-2.9.0` set was byte-identical between "versions" and wired into
 nothing — it implied a verification that never ran).
 
+**Updating committed baselines (plan 643bba06, phase 9).** The editor-redesign screenshot sets
+(`__screenshots__/wireframe/phase2…phase7`, `document-library/{redesign,scope,mobile}`, the e-mail `f8/f9/f10-*` PNGs) are
+captured into the git-ignored `TestResults` folder by default and rewritten in the repository only on purpose:
+
+```powershell
+$env:TM_E2E_UPDATE_BASELINE = '1'
+dotnet test tests/Tempo.Blazor.E2E --filter "FullyQualifiedName~WireframePhase7MobileE2ETests"
+git status --short   # only the targeted sets may change; `git checkout -- <path>` everything else
+```
+
+Every set directory carries a `README.md` naming the producing test. Review a rewritten PNG against the design reference
+(`output/imagegen/tempo-reimagined/<package>/…`, git-ignored) before committing it. A full E2E run also rewrites tracked
+screenshots of unrelated suites (non-deterministic anti-aliasing / data dates): revert those instead of committing them.
+
 ## Node module lane
 
 JS engine unit tests run separately and are cheap enough for every commit:
@@ -114,9 +128,11 @@ JS engine unit tests run separately and are cheap enough for every commit:
   stack over the real core helpers, plus the engine tests that load `diagram-editor.js` in a
   `node:vm` context).
 - `npm run test:wireframe` — `src/Tempo.Blazor.Wireframe/wwwroot/js` (`wireframe-designer.js` loaded in a
-  `node:vm` context: export paint baking).
+  `node:vm` context: export paint baking) plus `wireframe-gestures.mjs`.
+- `npm run test:email-templates` — `tm-email-save-shortcut.js` (Ctrl/⌘+S guard).
+- `npm run test:pdf-viewer` — `pdf-viewer-size.mjs` and `pdf-viewer-render.mjs` (RenderTask bookkeeping).
 
-CI: `.github/workflows/js-node-tests.yml` runs all four lanes on every push and pull request.
+CI: `.github/workflows/js-node-tests.yml` runs all seven lanes (plus the document-editor bundle freshness check) on every push and pull request.
 
 ## Baseline policy
 

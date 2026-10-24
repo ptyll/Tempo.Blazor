@@ -590,6 +590,11 @@
 
 ### Changed
 
+- **Closing of the editor-redesign follow-up plan (phase 9): committed visual baselines and lane documentation.** The Wireframe phase 5-7 sets
+  (`__screenshots__/wireframe/phase5|6|7`), the `TmDocumentOpenDialog` mobile set (`__screenshots__/document-library/mobile`) and the dark 390 / 1024 e-mail
+  import and validation dialogs (`f10-import-dark-*`, `f10-validation-dark-*`, test `F10_14_Dark_Dialogs_AtPhoneAndTablet_StayReadableAndInView`) are now
+  tracked, each directory names its producing test in a `README.md`. They are rewritten only with `TM_E2E_UPDATE_BASELINE=1`
+  (see `docs/e2e-test-lanes.md`, "Updating committed baselines"). No product behaviour changed.
 - **E-mail import dialog: the structure preview is a flat virtualized list (phase 8; changed during the 2.10 cycle, so not a breaking change against a released version).** Impact: (1) the nested `<ul>` per section / column is gone — every
   section, column and block is now one `<li class="tm-email-import__tree-row">` (`data-tm-import-section|column|block` unchanged) inside
   `[data-tm-import-tree]`; (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
