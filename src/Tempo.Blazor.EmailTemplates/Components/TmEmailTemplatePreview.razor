@@ -216,6 +216,16 @@
     [Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
 
     /// <summary>
+    /// Optional cheap change signature of <see cref="Document"/>: a counter the host bumps whenever it edits
+    /// the document (the editor passes its own document revision). When supplied, "did the document change?"
+    /// is answered from the revision and the document reference alone - the preview does not serialize the
+    /// document on every parent re-render, which is O(document size) per keystroke. A host that does not
+    /// supply it (<see langword="null"/>, the default) keeps the content comparison, so nothing changes for it.
+    /// An in-place edit that is not announced by a new revision is, by this contract, not a change.
+    /// </summary>
+    [Parameter] public long? DocumentRevision { get; set; }
+
+    /// <summary>
     /// Optional variable data (JSON). When null, sample data is generated from the template. An external
     /// change is adopted as the new source of truth; between external changes the local edits are kept.
     /// </summary>
@@ -313,11 +323,43 @@
         }
     }
 
+    /// <summary>
+    /// Whether the document differs from the one the last parameter pass saw. With a host-supplied
+    /// <see cref="DocumentRevision"/> this is two cheap comparisons (reference + revision) and NO
+    /// serialization; without it the content is compared as before. It also keeps <see cref="_documentToken"/>,
+    /// the document part of the request key, current.
+    /// </summary>
+    private bool ObserveDocumentChange()
+    {
+        if (DocumentRevision is { } revision)
+        {
+            var changed = !ReferenceEquals(_lastDocument, Document) || _lastRevision != revision || _lastDocumentJson is not null;
+            _lastDocument = Document;
+            _lastRevision = revision;
+            _lastDocumentJson = null;
+            if (changed) _documentToken = Guid.NewGuid().ToString("N");
+            return changed;
+        }
+
+        var json = SerializeDocumentForRequestKey();
+        var contentChanged = !string.Equals(_lastDocumentJson, json, StringComparison.Ordinal) || _lastRevision is not null;
+        _lastDocumentJson = json;
+        _lastDocument = null;
+        _lastRevision = null;
+        _documentToken = json;
+        return contentChanged;
+    }
+
+    private EmailTemplateDocument? _lastDocument;
+    private long? _lastRevision;
+
+    /// <summary>The document part of the request key: a fresh token per revision, or the content itself.</summary>
+    private string _documentToken = string.Empty;
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        var documentJson = SerializeDocumentForRequestKey();
-        var documentChanged = !string.Equals(_lastDocumentJson, documentJson, StringComparison.Ordinal);
+        var documentChanged = ObserveDocumentChange();
         var cultureChanged = !string.Equals(_lastCulture, CultureName, StringComparison.Ordinal);
 
         if (!_initialized)
@@ -325,7 +367,6 @@
             _device = InitialDevice;
             _variablesJson = !string.IsNullOrWhiteSpace(VariablesJson) ? VariablesJson! : GenerateSampleJson();
             _lastExternalJson = VariablesJson;
-            _lastDocumentJson = documentJson;
             _lastCulture = CultureName;
             _initialized = true;
 
@@ -334,7 +375,6 @@
             return;
         }
 
-        _lastDocumentJson = documentJson;
         _lastCulture = CultureName;
 
         if (!string.Equals(VariablesJson, _lastExternalJson, StringComparison.Ordinal))
@@ -519,7 +559,7 @@
     private string BuildRequestKey()
     {
         var payload = string.Concat(
-            SerializeDocumentForRequestKey(), "\u0001",
+            _documentToken, "\u0001",
             _variablesJson, "\u0001",
             _substitute ? "true" : "false", "\u0001",
             CultureName ?? string.Empty);

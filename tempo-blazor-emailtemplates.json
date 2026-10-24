@@ -1467,6 +1467,12 @@
           "editorRequired": true
         },
         {
+          "name": "DocumentRevision",
+          "type": "long?",
+          "isRequired": false,
+          "description": "Optional cheap change signature of Document: a counter the host bumps whenever it edits the document (the editor passes its own revision). When supplied, the preview decides whether to render again from the reference and the revision alone and does not serialize the document on every parent re-render. Null (default) keeps the content comparison."
+        },
+        {
           "name": "FooterActions",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -1891,6 +1897,12 @@
           "kind": "Property",
           "type": "bool",
           "description": "Gets whether an undo is available."
+        },
+        {
+          "name": "Version",
+          "kind": "Property",
+          "type": "long",
+          "description": "The id of the current state. It changes on every Push (a coalesced one included), Initialize, and on an Undo/Redo that moves, where it becomes the id of the state landed on - so undoing back onto a saved state reads as that saved version again."
         }
       ]
     }

@@ -1,11 +1,23 @@
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
+using Tempo.Blazor.EmailTemplates.Abstractions.Serialization;
 
 namespace Tempo.Blazor.EmailTemplates.Services;
 
 /// <summary>
-/// Maintains undo/redo history of document snapshots. Each pushed state is a deep, independent copy,
-/// the depth is bounded, and rapid edits sharing a coalesce key within a short window merge into a
-/// single undo step (so typing is one undo, not one per keystroke).
+/// Maintains undo/redo history of document snapshots. Each pushed state is an immutable, independent
+/// snapshot, the depth is bounded, and rapid edits sharing a coalesce key within a short window merge into
+/// a single undo step (so typing is one undo, not one per keystroke).
+/// <para>
+/// Phase 7 (commit cost): a snapshot is the document's serialized JSON, not a materialized object graph.
+/// Taking one is a single serialization (a deep copy was serialize + deserialize), a string cannot be
+/// mutated through an alias, and the deserialization is paid only by an actual undo/redo.
+/// </para>
+/// <para>
+/// Every state also carries a <see cref="Version"/>: a monotonically increasing id the editor compares with
+/// the version the host last confirmed, which replaces re-serializing the whole document on every edit to
+/// ask "is it dirty?". A version id is never reused, not even by a coalesced push or by
+/// <see cref="Initialize"/>, so a version that was saved can never equal a later, different state.
+/// </para>
 /// </summary>
 public sealed class EditorHistoryService
 {
@@ -13,12 +25,15 @@ public sealed class EditorHistoryService
 
     private readonly TimeProvider _time;
     private readonly int _maxDepth;
-    private readonly LinkedList<EmailTemplateDocument> _undo = new();
-    private readonly Stack<EmailTemplateDocument> _redo = new();
+    private readonly LinkedList<Snapshot> _undo = new();
+    private readonly Stack<Snapshot> _redo = new();
 
-    private EmailTemplateDocument _current = new();
+    private Snapshot _current = new(string.Empty, 0);
+    private long _nextVersion;
     private string? _lastCoalesceKey;
     private DateTimeOffset _lastPushedAt;
+
+    private readonly record struct Snapshot(string Json, long Version);
 
     /// <summary>Initializes the service with an optional clock and history depth limit.</summary>
     public EditorHistoryService(TimeProvider? timeProvider = null, int maxDepth = 50)
@@ -33,12 +48,19 @@ public sealed class EditorHistoryService
     /// <summary>Gets whether a redo is available.</summary>
     public bool CanRedo => _redo.Count > 0;
 
+    /// <summary>
+    /// The id of the current state. It changes on every <see cref="Push"/> (a coalesced one included),
+    /// <see cref="Initialize"/>, and on an <see cref="Undo"/>/<see cref="Redo"/> that moves, where it becomes
+    /// the id of the state landed on - so undoing back onto a saved state reads as that saved version again.
+    /// </summary>
+    public long Version => _current.Version;
+
     /// <summary>Resets the history to a single baseline state.</summary>
     public void Initialize(EmailTemplateDocument document)
     {
         _undo.Clear();
         _redo.Clear();
-        _current = document.DeepClone();
+        _current = Capture(document);
         _lastCoalesceKey = null;
     }
 
@@ -60,7 +82,7 @@ public sealed class EditorHistoryService
             _redo.Clear();
         }
 
-        _current = document.DeepClone();
+        _current = Capture(document);
         _lastCoalesceKey = coalesceKey;
         _lastPushedAt = now;
     }
@@ -73,7 +95,7 @@ public sealed class EditorHistoryService
         _current = _undo.Last!.Value;
         _undo.RemoveLast();
         _lastCoalesceKey = null;
-        return _current.DeepClone();
+        return EmailTemplateSerializer.Deserialize(_current.Json);
     }
 
     /// <summary>Moves one step forward and returns an independent copy of that state, or <see langword="null"/>.</summary>
@@ -83,6 +105,9 @@ public sealed class EditorHistoryService
         _undo.AddLast(_current);
         _current = _redo.Pop();
         _lastCoalesceKey = null;
-        return _current.DeepClone();
+        return EmailTemplateSerializer.Deserialize(_current.Json);
     }
+
+    private Snapshot Capture(EmailTemplateDocument document)
+        => new(EmailTemplateSerializer.Serialize(document), ++_nextVersion);
 }

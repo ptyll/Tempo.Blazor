@@ -148,4 +148,63 @@ public class EditorSavedRelativeTimeTests : BunitContext
             CultureInfo.CurrentUICulture = previous;
         }
     }
+
+    [Fact]
+    public void WithNeitherTheLocalizerNorTheFormatter_NoFormatterIsResolved_AndNothingThrows()
+    {
+        // A test host with NO core localization at all. The full editor cannot render there (the core
+        // TmEditorShell injects ITmLocalizer), so the fallback is pinned where it lives: the resolver.
+        // A null formatter is what makes the badge say plain "Saved" instead of formatting a key.
+        using var provider = new ServiceCollection().BuildServiceProvider();
+
+        EmailRelativeTime.Resolve(provider, new FakeTimeProvider()).Should().BeNull();
+    }
+
+    [Fact]
+    public void WithOnlyTheCoreLocalizer_TheFormatterIsBuiltOverIt()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITmLocalizer>(new KeyEcho());
+        using var provider = services.BuildServiceProvider();
+
+        EmailRelativeTime.Resolve(provider, new FakeTimeProvider()).Should().BeOfType<TmRelativeTimeFormatter>();
+    }
+
+    [Fact]
+    public void ARegisteredFormatter_WinsOverTheBuiltOne()
+    {
+        var registered = new TmRelativeTimeFormatter(new KeyEcho(), new FakeTimeProvider());
+        var services = new ServiceCollection();
+        services.AddSingleton<ITmLocalizer>(new KeyEcho());
+        services.AddSingleton<ITmRelativeTimeFormatter>(registered);
+        using var provider = services.BuildServiceProvider();
+
+        EmailRelativeTime.Resolve(provider, new FakeTimeProvider()).Should().BeSameAs(registered);
+    }
+
+    [Fact]
+    public void WithoutARegisteredFormatter_TheEditorStillShowsASavedBadge_FromTheLocalizerAlone()
+    {
+        // The reachable half of the fallback: ITmLocalizer present (the shell needs it), no formatter.
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<ITmLocalizer>(new KeyEcho());
+
+        var cut = Render<TmEmailTemplateEditor>(p => p
+            .Add(c => c.Document, new EmailTemplateDocument())
+            .Add(c => c.TimeProvider, time)
+            .Add(c => c.OnSave, (EmailSaveRequest _) => Task.FromResult(EmailSaveResult.Saved())));
+
+        cut.Find("[data-tm-block=\"text\"]").Click();
+        cut.Find("[data-tm-save]").Click();
+        time.Advance(TimeSpan.FromDays(2));
+        cut.Render();
+
+        cut.Find("[data-tm-save-badge]").TextContent.Should().NotBeNullOrWhiteSpace();
+    }
+
+    private sealed class KeyEcho : ITmLocalizer
+    {
+        public string this[string key] => key;
+        public string this[string key, params object[] arguments] => key;
+    }
 }

@@ -1718,3 +1718,51 @@ Tím je splněn i požadavek F10/F11 „před uzavřením F12 znovu spustit cel�
 porovnáním `08-send-form.png` mezi HEAD a během: jediný rozdíl je náhodné GUID příjemce, layout je
 identický). Fáze 12 nemění UI, takže byly vráceny (`git checkout --`), aby diff neobsahoval 339 binárních
 souborů; kdo je chce aktualizovat, ať tak učiní samostatným commitem z vlastního běhu.
+
+## 9. Fáze 7 plánu 643bba06 — ReportServer bez enginu, náklad commitu a stav pickeru
+
+### 9.1 ReportServer a D11
+
+`Tempo.ReportServer.Web.Client` (WebAssembly noha InteractiveAuto portálu) už **nereferencuje Engine**:
+`AddCommonServices` (běží v obou nohách) registruje jen model, úložiště a bránu `IReportScheduleRunner`;
+`AddTempoEmailTemplateEngine()` + `ReportEmailDeliveryService` + `ReportScheduleWorker` registruje serverový
+hostitel přes `AddReportServerEmailDelivery()` (`Tempo.ReportServer.Web`). Výjimka v `PackageBoundaryTests`
+zmizela: žádný WASM hostitel nesmí mít Engine v uzávěru `ProjectReference`. Tlačítko „Run now“ se v prohlížeči
+nenabízí (bez runneru není co spustit) — viz CHANGELOG „Breaking / Migration“.
+
+### 9.2 Náklad commitu editoru
+
+Dřív jeden commit (`CommitAsync`) dělal `DeepClone()` pro historii (serializace + deserializace) a znovu celou
+serializaci kvůli `RecomputeDirty()`; undo/redo vracely `DeepClone()`. Teď:
+
+* `EditorHistoryService` drží snímek jako **neměnný JSON řetězec** + **`Version`** (monotónní id stavu, nikdy
+  se nepoužije dvakrát; undo/redo vrací verzi stavu, na který dopadly). Snímek = jedna serializace; deserializace
+  se platí jen při skutečném undo/redo.
+* `IsDirty` = `_history.Version != _baselineVersion` (O(1)). Baseline je verze snímku, který hostitel potvrdil
+  (úprava během letícího ukládání zůstává dirty; undo na uložený stav je zase čisté).
+* Koalescence zůstala (500 ms, stejný klíč): koalescovaný push je **nová verze**, takže úprava po uložení nikdy
+  nevypadá jako čistá.
+* Náhled (`TmEmailTemplatePreview.DocumentRevision`, volitelné, aditivní): „změnil se dokument?“ je porovnání
+  reference + revize, ne serializace dokumentu při každém re-renderu rodiče. Editor předává svůj `_revision`;
+  bez parametru se chová jako dřív (porovnání obsahu).
+
+Měření (xUnit, Debug sestavení, 300 opakování, průměr jednoho commitu = náklad serializace/klonování
+dokumentu s textovými bloky ≈ 70 znaků; bez vykreslení):
+
+| Bloků | Commit před (clone + serializace) | Commit po (jedna serializace) | Poměr |
+|---|---|---|---|
+| 3 | 0,147 ms | 0,054 ms | 2,7× |
+| 52 | 0,954 ms | 0,310 ms | 3,1× |
+| 200 | 3,892 ms | 1,110 ms | 3,5× |
+
+Celý klik „přidat blok“ včetně bUnit vykreslení (měřeno před změnou, `AddBlock` → `CommitAsync` →
+`StateHasChanged`): 3 bloky ≈ 18 ms, 52 ≈ 36 ms, 200 ≈ 304 ms. U 200 bloků tedy dominuje vykreslení plátna
+(`EmailCanvasRenderGate` už v F9A omezuje přestavbu na změněné bloky), ne model; cíl **< 100 ms na stisk v Server
+režimu** drží datová část s rezervou o dva řády (≈ 1 ms), plátno řeší signatura bloku z F9A.
+
+### 9.3 Stav variable pickeru přežije layout flip
+
+Rozhodnutí `EMAIL-VARIABLE-PICKER-FILTER`: `TmEmailVariablePicker.Filter`/`FilterChanged` (`@bind-Filter`),
+otevřený picker a jeho filtr žijí v `EmailInspectorState`, který vlastní **editor** (`TmEmailPropertyPanel.State`).
+Reset filtru = zavření pickeru (nebo jiný uzel); layout flip, který inspektor znovu vytvoří, filtr neresetuje.
+`TmEmailTemplateEditor` nedostal žádný parametr — kontrakt §3 (PostrionCore P06) beze změny.

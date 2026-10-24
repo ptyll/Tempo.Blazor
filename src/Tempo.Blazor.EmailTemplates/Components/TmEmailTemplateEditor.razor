@@ -73,7 +73,7 @@
 <TmModal Show="_showPreview" Title="@Loc["EmailEditor_Toolbar_Preview"]" Size="ModalSize.XLarge"
          LayoutMode="EffectiveResolvedLayout" OnClose="() => _showPreview = false">
     <ChildContent>
-        <TmEmailTemplatePreview @ref="_preview" Document="_document" />
+        <TmEmailTemplatePreview @ref="_preview" Document="_document" DocumentRevision="_revision" />
     </ChildContent>
     <Footer>
         @* "Refresh preview" forces a new render and cancels the one in flight; the editor itself never

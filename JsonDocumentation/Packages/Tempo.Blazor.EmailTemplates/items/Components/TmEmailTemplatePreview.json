@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "DocumentRevision",
+      "type": "long?",
+      "isRequired": false,
+      "description": "Optional cheap change signature of Document: a counter the host bumps whenever it edits the document (the editor passes its own revision). When supplied, the preview decides whether to render again from the reference and the revision alone and does not serialize the document on every parent re-render. Null (default) keeps the content comparison."
+    },
+    {
       "name": "Document",
       "type": "EmailTemplateDocument",
       "isRequired": true,

@@ -168,6 +168,9 @@ public partial class TmEmailTemplateEditor
         var revision = _revision;
         var epoch = _documentEpoch;
         var snapshot = _document.DeepClone();
+        // The history version of exactly the state the host is about to receive: the baseline becomes THIS
+        // version on success, so an edit made while the request is in flight (a newer version) stays dirty.
+        var snapshotVersion = _history.Version;
 
         IsSaving = true;
         _saveErrorMessage = null;
@@ -200,7 +203,7 @@ public partial class TmEmailTemplateEditor
             IsSaving = false;
         }
 
-        result = Record(result, snapshot, trigger, epoch);
+        result = Record(result, snapshotVersion, trigger, epoch);
         await InvokeAsync(StateHasChanged);
         return result;
     }
@@ -209,7 +212,7 @@ public partial class TmEmailTemplateEditor
     /// Stores the outcome (dirty baseline, badge state, conflict pause, announcement) and returns it
     /// unchanged. An outcome that belongs to a document the host has since replaced only answers its caller.
     /// </summary>
-    private EmailSaveResult Record(EmailSaveResult result, EmailTemplateDocument? snapshot, EmailSaveTrigger trigger, long epoch)
+    private EmailSaveResult Record(EmailSaveResult result, long? savedVersion, EmailSaveTrigger trigger, long epoch)
     {
         if (epoch != _documentEpoch) return result;
 
@@ -217,10 +220,10 @@ public partial class TmEmailTemplateEditor
 
         switch (result.Status)
         {
-            case EmailSaveStatus.Saved when snapshot is not null:
-                // The baseline is the SNAPSHOT the host confirmed, not the live document: an edit made
+            case EmailSaveStatus.Saved when savedVersion is not null:
+                // The baseline is the VERSION the host confirmed, not the live document: an edit made
                 // while the save was in flight stays dirty after success.
-                _baselineJson = ContentSignature(snapshot);
+                _baselineVersion = savedVersion.Value;
                 _lastSavedAt = TimeProvider.GetUtcNow();
                 _saveErrorMessage = null;
                 _conflictMessage = null;
@@ -262,30 +265,12 @@ public partial class TmEmailTemplateEditor
     // ── Dirty state ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// The canonical JSON of the document's content, used to compare against the confirmed baseline.
-    /// <paramref name="document"/>'s timestamp is cleared and restored instead of being serialized through a
-    /// deep copy: this runs on every edit (and twice per save), and a full clone of the tree per keystroke is
-    /// pure overhead. Every caller runs on the renderer's dispatcher, so no other thread observes the
-    /// temporarily null timestamp.
+    /// Recomputes <see cref="IsDirty"/> from the history version: O(1), no serialization (phase 7). The
+    /// document is dirty exactly when it is not the state the host last confirmed - undo/redo landing on that
+    /// state reads clean again because the history restores the version of the state it lands on.
     /// </summary>
-    private static string ContentSignature(EmailTemplateDocument document)
-    {
-        var updatedAt = document.UpdatedAt;
-        // Timestamps are not content: undoing back to the confirmed state must count as clean.
-        document.UpdatedAt = null;
-        try
-        {
-            return EmailTemplateSerializer.Serialize(document);
-        }
-        finally
-        {
-            document.UpdatedAt = updatedAt;
-        }
-    }
-
     private void RecomputeDirty()
-        => SetDirty(!string.Equals(ContentSignature(_document), _baselineJson, StringComparison.Ordinal));
-
+        => SetDirty(_history.Version != _baselineVersion);
     private void SetDirty(bool dirty)
     {
         if (IsDirty == dirty) return;
@@ -420,15 +405,8 @@ public partial class TmEmailTemplateEditor
     {
         get
         {
-            if (_relativeTime is not null) return _relativeTime;
-            if (Services.GetService(typeof(ITmRelativeTimeFormatter)) is ITmRelativeTimeFormatter registered)
-            {
-                return _relativeTime = registered;
-            }
-
-            return Services.GetService(typeof(ITmLocalizer)) is ITmLocalizer core
-                ? _relativeTime = new TmRelativeTimeFormatter(core, TimeProvider)
-                : null;
+            // Not cached while null: a host that registers a localizer later (tests) is picked up.
+            return _relativeTime ??= EmailRelativeTime.Resolve(Services, TimeProvider);
         }
     }
 

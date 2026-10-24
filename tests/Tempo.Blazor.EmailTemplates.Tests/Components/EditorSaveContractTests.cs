@@ -550,4 +550,31 @@ public class EditorSaveContractTests : EmailEditorTestBase
         calls.Should().Be(1);
         cut.Instance.IsSaving.Should().BeFalse();
     }
+
+    /// <summary>
+    /// Dispatcher affinity, proved on what a Blazor Server circuit enforces: the host's own callbacks
+    /// (<c>IsDirtyChanged</c>, here) must run on the renderer's synchronization context even when the
+    /// host called <c>SaveAsync()</c> from a thread-pool thread. Without the <c>InvokeAsync</c> hop in
+    /// <c>SaveAsync()</c> the save continues on the pool: the callback then runs off the dispatcher, where a
+    /// real circuit's parent <c>StateHasChanged()</c> throws "The current thread is not associated with the
+    /// Dispatcher" (the editor logs and swallows it, so the only honest observation is WHERE it ran).
+    /// </summary>
+    [Fact]
+    public async Task SaveAsync_FromAForeignThread_RunsTheHostCallbacksOnTheRenderersDispatcher()
+    {
+        var onDispatcher = new List<bool>();
+        var cut = Render<TmEmailTemplateEditor>(p => p
+            .Add(c => c.Document, DocWithTextBlock(out _))
+            .Add(c => c.IsDirtyChanged, (bool _) => onDispatcher.Add(Renderer.Dispatcher.CheckAccess()))
+            .Add(c => c.OnSave, (EmailSaveRequest _) => Task.FromResult(EmailSaveResult.Saved())));
+
+        cut.Find("[data-tm-block=\"text\"]").Click();   // dirty = true, raised on the dispatcher
+        onDispatcher.Should().Equal(true);
+
+        var result = await Task.Run(() => cut.Instance.SaveAsync());   // dirty = false, raised after the save
+
+        result.IsSaved.Should().BeTrue();
+        onDispatcher.Should().Equal(new[] { true, true },
+            "the clean transition caused by an off-thread SaveAsync() must still be raised on the dispatcher");
+    }
 }

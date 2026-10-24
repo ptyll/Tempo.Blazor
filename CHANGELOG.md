@@ -12,6 +12,19 @@
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **Template sandbox audit trail (`Tempo.Blazor.EmailTemplates.Abstractions`).**
   `ITemplateSecurityAuditSink` + `TemplateSecurityEvent` (`Kind`, `Detail`, `TemplateHash`,
   `TemplateExcerpt`, `Timestamp`) report every refused sandbox operation:
@@ -727,6 +740,19 @@
 
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **`TmWireframeEditor.ExportHttpClientName`: send the PNG / PDF export to an API on another origin.** A WebAssembly host next to a separate
   API (the demo) answered `405` for `api/wireframe/export/png|pdf` because the editor posted to its own origin. The new optional parameter
@@ -2035,6 +2061,19 @@
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **TmPdfViewer: counter-clockwise rotation (FZE-11).** `RotateCounterClockwiseAsync()` rotates
   0° → 270° → 180° → 90° — the exact inverse of `RotateAsync()`, which keeps its clockwise
   behavior. `AllowRotation` now renders both directions in the `data-tm-group="rotate"` group
@@ -3037,6 +3076,19 @@ var tools = toolbar.QuerySelector("[data-tm-group='tools']");
   `tabindex="-1"` so Tab leaves the grid instead of stepping into them.
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **Demo: table/list redesign opt-ins.** `/data-table` gains a Redesign (opt-in) playground (every opt-in behind a control that starts at its default, fixed dates, row-activation counter), a 24rem Mobile cards container, a standalone `TmViewManager` with Set as default and `TmFilterBuilder` in `Popover`/`Auto` with `ResultCountProvider`; `/multi-view-list` gains a matching playground. Wireframe stencils for `TmDataTable`, `TmMultiViewList`, `TmViewManager` and `TmFilterBuilder` expose the same opt-ins as props (`appearance`, `mobileLayout`, `showItemCount`, `viewSwitcherLabels`, `columnMenu`, `exportSelected`, `presentation`, `open`). No default changes.
 
@@ -7973,6 +8025,19 @@ which is exactly the red
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`TmDataTable.ShowResultSummary` (`bool?`).** The item count used to exist only inside the
   paging footer, so a table without a pager — `ShowPagination="false"`, grouping, a single page,
   a non-paging `ScrollMode` — printed nothing, and a reader (or a screen reader) could not tell
@@ -8793,6 +8858,19 @@ from keydown to keyup, so read the consumer notes at the bottom before upgrading
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`TmFilterableDropdown.AriaLabel`, a keyboard-operable trigger, and listbox semantics.** The
   trigger is a non-native focusable (`role="combobox"`), which activates only when the library says
   so: it now handles Enter, Space and ArrowDown to open. Items carry `role="option"` with
@@ -9369,6 +9447,19 @@ during the pack, not only in a test.
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`--tm-form-action-bar-z-index`, defaulting to `--tm-z-sticky`.** Overriding `--tm-z-sticky` was not a
   substitute: it moves EVERY sticky element, so a host that needed the bar above its mobile menu had to lift
   its own sidebar, scrim and header instead.
@@ -9478,6 +9569,19 @@ here is additive; no released member changed shape or meaning.
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`--tm-form-action-bar-inset-inline-start` / `--tm-form-action-bar-inset-inline-end` — the floating
   bar can be told about the shell's chrome.** `.tm-form-action-bar--floating-bottom` pinned `left: 0`,
   so in an application with a fixed side navigation the bar ran underneath it. The only way out was to
@@ -9546,6 +9650,19 @@ thing on screen and still had no supported way to ask for it. Everything here is
 member changed shape or meaning.
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **`TmDataTable<TItem>.PageSize` / `PageSizeChanged` / `public ChangePageSizeAsync(int)` — a way to
   change the page size of a table that is already mounted.** `DefaultPageSize` was read exactly once, in
@@ -9720,6 +9837,19 @@ broken since the pin toggle shipped.
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`TmDataTable.DefaultSortColumn` / `DefaultSortDirection`** — the order a table is in *before* the
   user touches a header. Sorting is tri-state (ascending → descending → none) and always started at
   "none", so a page whose list had previously arrived pre-sorted had no way to say so: not through a
@@ -9822,6 +9952,19 @@ broken since the pin toggle shipped.
 ## 2.8.8 - 2026-08-07
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **`TmPagination` is addressable from the outside.** It had no test hook of any kind: the only way
   to reach the prev/next buttons, a specific page button or the item-range text was to select on the
@@ -10048,6 +10191,19 @@ focus at all and `Home`/`End` did nothing.
 
 ### Added
 
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+
 - **`TmTabs` gains `HeaderLeading` and `HeaderTrailing` slots.** Content supplied to either slot is
   rendered beside the tab strip as a **sibling** of the `role="tablist"` element, never inside it:
   the strip runs a roving tabindex (arrow keys, `tabindex` 0/-1, `aria-selected`), so an element
@@ -10077,6 +10233,19 @@ focus at all and `Home`/`End` did nothing.
 ## 2.8.4 - 2026-07-29
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **Durable MCP idempotency boundary for Notion authoring.** `INotionIdempotentAggregateProvider`
   lets a host commit the complete response receipt of `notion_apply_block_operations` in the same
@@ -10150,6 +10319,19 @@ instead — it paints on `--tm-wysiwyg-remote-cursor-color`, a per-user runtime 
 paired `--tm-wysiwyg-remote-cursor-ink` and keeps the theme-independent white it was built on.
 
 ### Added
+
+- **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
+  bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
+  `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
+  inspector) no longer closes the picker and loses what was typed. The filter resets when the picker closes, not on a flip. The editor itself got no new
+  parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
+- **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
+  again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
+  revision; a host that does not supply it keeps the content comparison. Additive.
+- **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
+  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
+  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
+  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
 
 - **`--tm-control-hover-fill`** — the tint a selection control takes while hovered and unselected
   (`primary-100` light, `primary-900` dark). It resolves from the primary scale, so a consumer that

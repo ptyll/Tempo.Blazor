@@ -115,4 +115,89 @@ public class EditorHistoryServiceTests
         while (history.CanUndo) { history.Undo(); count++; }
         count.Should().Be(3);
     }
+
+    // ── Phase 7: a version id per state replaces the content comparison for the dirty flag ──────
+
+    [Fact]
+    public void Version_IsStable_UntilTheStateChanges()
+    {
+        var history = new EditorHistoryService();
+        history.Initialize(DocWithSubject("v1"));
+        var initial = history.Version;
+
+        history.Version.Should().Be(initial, "reading the version never changes it");
+
+        history.Push(DocWithSubject("v2"));
+        history.Version.Should().NotBe(initial);
+    }
+
+    [Fact]
+    public void Undo_RestoresTheVersionOfTheStateItLandsOn_AndRedoTheOneItLeft()
+    {
+        var history = new EditorHistoryService();
+        history.Initialize(DocWithSubject("v1"));
+        var v1 = history.Version;
+        history.Push(DocWithSubject("v2"));
+        var v2 = history.Version;
+
+        history.Undo();
+        history.Version.Should().Be(v1, "the dirty flag compares versions: undoing onto the saved state is clean again");
+
+        history.Redo();
+        history.Version.Should().Be(v2);
+    }
+
+    [Fact]
+    public void ACoalescedPush_IsANewState_SoItNeverEqualsTheVersionThatWasSaved()
+    {
+        var time = new FakeTimeProvider();
+        var history = new EditorHistoryService(time);
+        history.Initialize(DocWithSubject(""));
+        history.Push(DocWithSubject("a"), coalesceKey: "text");
+        var saved = history.Version;
+
+        time.Advance(TimeSpan.FromMilliseconds(50));
+        history.Push(DocWithSubject("ab"), coalesceKey: "text");
+
+        history.Version.Should().NotBe(saved, "an edit after a save must read as dirty even when it coalesces");
+    }
+
+    [Fact]
+    public void Initialize_StartsANewVersionSpace_SoAnOldSavedVersionCanNeverMatch()
+    {
+        var history = new EditorHistoryService();
+        history.Initialize(DocWithSubject("v1"));
+        var first = history.Version;
+
+        history.Initialize(DocWithSubject("v1"));
+
+        history.Version.Should().NotBe(first);
+    }
+
+    [Fact]
+    public void ANoOpUndoOrRedo_LeavesTheVersionAlone()
+    {
+        var history = new EditorHistoryService();
+        history.Initialize(DocWithSubject("v1"));
+        var version = history.Version;
+
+        history.Undo().Should().BeNull();
+        history.Redo().Should().BeNull();
+
+        history.Version.Should().Be(version);
+    }
+
+    [Fact]
+    public void ThePushedSnapshot_IsTakenAtPushTime_NotAliasedToTheLiveDocument()
+    {
+        var history = new EditorHistoryService();
+        history.Initialize(DocWithSubject("v1"));
+        var live = DocWithSubject("v2");
+        history.Push(live);
+
+        live.Subject = "mutated after the push";
+        history.Push(DocWithSubject("v3"));
+
+        history.Undo()!.Subject.Should().Be("v2");
+    }
 }

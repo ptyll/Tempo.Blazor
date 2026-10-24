@@ -224,7 +224,10 @@ public partial class TmEmailTemplateEditor
     private readonly ClipboardService _clipboard = new();
 
     private EmailTemplateDocument _document = new();
-    private string _baselineJson = string.Empty;
+    // The history version of the state the host last confirmed (or handed over). Dirty is "the current
+    // version differs from this one" - an integer comparison instead of serializing the whole document on
+    // every edit (phase 7, commit cost). Undoing onto the saved state restores the saved version.
+    private long _baselineVersion;
     private long _revision;
 
     /// <summary>
@@ -345,7 +348,7 @@ public partial class TmEmailTemplateEditor
             _hostDocument = Document;
             _history = new EditorHistoryService(TimeProvider);
             _history.Initialize(_document);
-            _baselineJson = ContentSignature(_document);
+            _baselineVersion = _history.Version;
             return;
         }
 
@@ -378,7 +381,7 @@ public partial class TmEmailTemplateEditor
         _dragPayload = null;
         _history = new EditorHistoryService(TimeProvider);
         _history.Initialize(_document);
-        _baselineJson = ContentSignature(_document);
+        _baselineVersion = _history.Version;
         _inspectorState.CloseVariables();
         _revision++;
         _lastSaveOutcome = null;
