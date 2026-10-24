@@ -74,6 +74,9 @@ internal sealed class TmWireframeSidePanel : ComponentBase
     /// <summary>Tablet / sheet presentation: the Components tab is a single column of named rows (a finger-sized list) instead of the 3-column tile grid.</summary>
     [Parameter] public bool SingleColumn { get; set; }
 
+    /// <summary>The stencil theme the toolbox previews are drawn with (see <see cref="TmWireframeToolbox.StencilTheme"/>).</summary>
+    [Parameter] public string? StencilTheme { get; set; }
+
     /// <summary>Namespaces every internal <c>data-testid</c> (forwarded from the editor's <c>TestIdPrefix</c>).</summary>
     [Parameter] public string? TestIdPrefix { get; set; }
 
@@ -140,6 +143,7 @@ internal sealed class TmWireframeSidePanel : ComponentBase
                 panel.AddComponentParameter(3, nameof(TmWireframeToolbox.ReadOnly), ReadOnly);
                 panel.AddComponentParameter(4, nameof(TmWireframeToolbox.Class), "tm-wd-editor__toolbox");
                 panel.AddComponentParameter(5, nameof(TmWireframeToolbox.SingleColumn), SingleColumn);
+            panel.AddComponentParameter(6, nameof(TmWireframeToolbox.StencilTheme), StencilTheme);
                 panel.CloseComponent();
             });
         }

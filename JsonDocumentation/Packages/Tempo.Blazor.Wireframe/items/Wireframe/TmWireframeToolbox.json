@@ -34,6 +34,13 @@
       "description": "Presents the palette as a single column of named rows (icon + name, a finger-sized target) instead of the 3-column tile grid. TmWireframeEditor sets it for its tablet overlay drawer; adds the tm-wd-toolbox--single-column modifier."
     },
     {
+      "name": "StencilTheme",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The stencil theme the mini-stencil previews are drawn with (indigo, indigo-dark, ...), so a recoloured canvas and its palette agree. null or unknown = the default tokens. TmWireframeEditor passes its resolved theme.",
+      "example": "StencilTheme=\"indigo\""
+    },
+    {
       "name": "ComponentScope",
       "type": "WireframeComponentScope?",
       "isRequired": false,

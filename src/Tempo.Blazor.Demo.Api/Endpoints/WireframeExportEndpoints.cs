@@ -12,8 +12,10 @@ public static class WireframeExportEndpoints
         group.MapPost("/png", async (
             WireframeExportRequest request,
             WireframeExportService service,
+            ILoggerFactory loggers,
             CancellationToken cancellationToken) =>
         {
+            LogTheme(loggers, request);
             var png = await service.ExportPngAsync(request, cancellationToken);
             var fileName = $"{request.FileName}.png";
             return Results.File(png, "image/png", fileName);
@@ -22,11 +24,21 @@ public static class WireframeExportEndpoints
         group.MapPost("/pdf", async (
             WireframeExportRequest request,
             WireframeExportService service,
+            ILoggerFactory loggers,
             CancellationToken cancellationToken) =>
         {
+            LogTheme(loggers, request);
             var pdf = await service.ExportPdfAsync(request, cancellationToken);
             var fileName = $"{request.FileName}.pdf";
             return Results.File(pdf, "application/pdf", fileName);
         });
+    }
+
+    // The browser posts the SVG it has already drawn with the theme, so the server rasterises it as it is. The name is logged (and an unknown one
+    // warned about through the same once-per-name path the editor uses) so a themed export that looks wrong can be traced to its theme.
+    private static void LogTheme(ILoggerFactory loggers, WireframeExportRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Theme)) return;
+        loggers.CreateLogger("Tempo.Blazor.Demo.Api.WireframeExport").LogInformation("Wireframe export drawn with stencil theme '{Theme}'.", request.Theme);
     }
 }

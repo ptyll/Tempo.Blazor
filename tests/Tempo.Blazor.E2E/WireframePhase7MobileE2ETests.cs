@@ -130,6 +130,9 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
         await editor.Locator("[data-testid='wd-quick-delete']").TapAsync();
         await page.WaitForFunctionAsync("n => document.querySelectorAll('.tm-wd-editor')[0].querySelectorAll('g[data-el-id]').length === n + 1",
             before, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        // The delete closed the selection-opened sheet and unmounted the button that had the focus: the focus must not fall to <body> (2.4.3).
+        await page.WaitForFunctionAsync("() => { const a = document.activeElement; return !!a && a !== document.body && !!a.closest('.tm-wd-editor'); }",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
         await editor.Locator("[data-testid='wd-mobile-tools'] button[aria-label^='Undo']").TapAsync();
         await page.WaitForFunctionAsync("n => document.querySelectorAll('.tm-wd-editor')[0].querySelectorAll('g[data-el-id]').length === n + 2",
             before, new PageWaitForFunctionOptions { Timeout = 10_000 });
@@ -280,14 +283,29 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
         Assert.IsTrue(metrics.GetProperty("footerBottom").GetDouble() <= metrics.GetProperty("vh").GetDouble() + 0.5, "the footer is not pushed below the screen");
         await ShotAsync(page, $"mobile-{width}--export-sheet");
 
-        // Export posts the SVG to api/wireframe/export/png. The WASM demo host has no such endpoint of its own (the request answers 405 there, a
-        // demo wiring gap that predates the sheet), so what this phase owns is asserted: the sheet's Export button sends the request and closes.
+        // Export posts the SVG to api/wireframe/export/png on the DEMO API (the editor names the "DemoApi" client; the WASM host itself serves
+        // no such endpoint and answered 405 before): the request goes to the API origin, answers 200 and a real PNG is downloaded.
         var request = page.WaitForRequestAsync(r => r.Url.Contains("api/wireframe/export/png", StringComparison.OrdinalIgnoreCase)
             && r.Method == "POST", new PageWaitForRequestOptions { Timeout = 30_000 });
-        await page.Locator(".tm-modal--sheet .tm-modal-footer button", new() { HasTextString = "Export" }).TapAsync();
+        var response = page.WaitForResponseAsync(r => r.Url.Contains("api/wireframe/export/png", StringComparison.OrdinalIgnoreCase)
+            && r.Request.Method == "POST", new PageWaitForResponseOptions { Timeout = 30_000 });
+        var download = await page.RunAndWaitForDownloadAsync(async () =>
+            await page.Locator(".tm-modal--sheet .tm-modal-footer button", new() { HasTextString = "Export" }).TapAsync(),
+            new PageRunAndWaitForDownloadOptions { Timeout = 60_000 });
         var sent = await request;
         var body = sent.PostData ?? string.Empty;
         Assert.IsTrue(body.Contains("<svg", StringComparison.Ordinal) || body.Contains("\\u003Csvg", StringComparison.Ordinal), "the exported SVG is the body of the request");
+        Assert.IsTrue(body.Contains("viewBox", StringComparison.Ordinal) && !body.Contains("width:100%", StringComparison.Ordinal),
+            "the exported SVG is the standalone page, not the live canvas element");
+        var answered = await response;
+        Assert.IsTrue(answered.Url.Contains(":5100", StringComparison.Ordinal), $"the export went to the Demo API origin, not the WASM host ({answered.Url})");
+        Assert.AreEqual(200, answered.Status, "the Demo API answers the export");
+        Assert.IsTrue(download.SuggestedFilename.EndsWith(".png", StringComparison.OrdinalIgnoreCase), $"downloaded {download.SuggestedFilename}");
+        var path = await download.PathAsync();
+        Assert.IsNotNull(path);
+        var bytes = await File.ReadAllBytesAsync(path!);
+        Assert.IsTrue(bytes.Length > 200, "the PNG has content");
+        CollectionAssert.AreEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, bytes.Take(4).ToArray(), "the file is a PNG (magic bytes)");
         await page.Locator(".tm-modal--sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
     }
 

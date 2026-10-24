@@ -40,6 +40,18 @@ public class WireframeAuthoringGuideToolsTests
     }
 
     [Fact]
+    public void GetAuthoringGuide_DocumentsTheStencilThemes()
+    {
+        var root = Parse(WireframeAuthoringGuideTools.GetAuthoringGuideScoped(SmallRegistry(), compact: true));
+
+        var themes = root.GetProperty("themes");
+        themes.GetProperty("stencilThemes").EnumerateArray().Select(p => p.GetString())
+            .Should().BeEquivalentTo(["indigo", "indigo-dark", "dark"]);
+        themes.GetProperty("documentField").GetString().Should().Contain("targetTheme");
+        themes.GetProperty("resolutionOrder").GetString().Should().Contain("StencilTheme").And.Contain("document targetTheme");
+    }
+
+    [Fact]
     public void GetAuthoringGuide_DefaultFull_DoesNotPageWithoutExplicitTake()
     {
         var root = Parse(WireframeAuthoringGuideTools.GetAuthoringGuideScoped(LargeRegistry(205)));

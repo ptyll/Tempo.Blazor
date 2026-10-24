@@ -175,7 +175,11 @@
                          overflow="visible">
                         @if (def is not null)
                         {
-                            @((RenderTreeBuilder __b) => def.RenderSvg(el, __b))
+                            @((RenderTreeBuilder __b) =>
+                            {
+                                using var __theme = Stencil.StencilThemeScope.Use(_theme);
+                                def.RenderSvg(el, __b);
+                            })
                         }
                         else
                         {

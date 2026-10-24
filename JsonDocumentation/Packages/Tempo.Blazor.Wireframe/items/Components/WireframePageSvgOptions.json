@@ -27,6 +27,11 @@
       "name": "BackgroundFill",
       "type": "string",
       "description": "Background fill colour used when ShowBackground is true. Defaults to \"white\"."
+    },
+    {
+      "name": "StencilTheme",
+      "type": "string?",
+      "description": "Stencil theme the page is drawn with (indigo, indigo-dark, dark, ...; decision WIREFRAME-STENCIL-THEME). null falls back to the page TargetTheme (and, in IWireframeSvgRenderer.RenderDocumentAsync, the document TargetTheme), then to the default tokens. An unknown name draws the default tokens and logs one warning."
     }
   ],
   "examples": [

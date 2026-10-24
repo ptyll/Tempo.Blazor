@@ -136,8 +136,16 @@
 .tm-wd-editor .tm-editor-shell__canvas {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding-inline: 0;
+  padding-block-start: 0;
   overflow: hidden;
+}
+
+/* The bottom padding is the shell's sheet reserve while a mobile sheet is open (_editor-shell.css, .tm-editor-shell__stage--sheet-open): the
+   editor drops it ONLY where no sheet can be open, so the shell's formula is the single source and never drifts from a copy here. */
+.tm-wd-editor .tm-editor-shell__main:not(.tm-editor-shell__main--mobile) .tm-editor-shell__canvas,
+.tm-wd-editor .tm-editor-shell__stage:not(.tm-editor-shell__stage--sheet-open) .tm-editor-shell__canvas {
+  padding-block-end: 0;
 }
 
 .tm-wd-editor .tm-editor-shell__panel {
@@ -2368,8 +2376,10 @@
 /* An open inspector sheet takes its width from the canvas, so the page never ends up under it. The left drawer is an
    overlay on purpose (a transient picker) and reserves nothing. */
 /* ... but not while a pointer gesture is running on the canvas (wireframe-designer.js marks the svg with data-wd-gesture): a press that
-   selects opens the sheet, and resizing the canvas under the finger would shift a drag that has just begun. It narrows on release. */
-.tm-wd-editor__canvas-region--sheet-right:not(:has([data-wd-gesture])) {
+   selects opens the sheet, and resizing the canvas under the finger would shift a drag that has just begun. It narrows on release.
+   A gesture that starts with the sheet ALREADY open (data-wd-reserved, set by the script from the computed padding at the press) keeps
+   the reservation: dropping it would widen the svg under the finger mid-drag (the Touch_ResizeHandle(1024,768) root cause). */
+.tm-wd-editor__canvas-region--sheet-right:not(:has([data-wd-gesture]:not([data-wd-reserved]))) {
   padding-inline-end: min(var(--tm-wd-sheet-w), 60%);
 }
 
@@ -2462,7 +2472,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Header stack: the document title row (title + host slots), then the select / pan / undo / redo / More tool row. */
-.tm-wd-editor__header-stack {
+.tm-wd-editor[data-editor-layout="mobile"] .tm-wd-editor__header-stack {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -2478,7 +2488,8 @@
 .tm-wd-editor__zoom-overlay {
   position: absolute;
   inset-block-start: var(--tm-space-2);
-  inset-inline-end: var(--tm-space-2);
+  /* viewport-fit=cover in landscape: keep the pill clear of a notch / rounded corner. */
+  inset-inline-end: max(var(--tm-space-2), env(safe-area-inset-right, 0px));
   z-index: var(--tm-z-inline-sheet, 10);
   /* One ROW (- | % | + | fit): with the sheet peeked the canvas band above it is only ~150 px tall, a column of four finger-sized
      targets would be clipped by the sheet (320 x 640 showed it). Four 44 px targets + the read-out fit a 288 px editor. */
@@ -2719,12 +2730,9 @@
     flex-shrink: 0;
   }
 
-  /* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end
-     of its canvas region, and the editor's own flat "padding: 0" above must not cancel that. The page is re-fitted into the remaining
-     room by the script (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. Phone band only. */
-  .tm-wd-editor .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
-    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
-  }
+  /* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end of
+     its canvas region (the editor no longer overrides it, see above). The page is re-fitted into the remaining room by the script
+     (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. */
 }
 
 /* The export dialog is a bottom sheet on a phone (TmModal MobilePresentation=Sheet, footer inline and sticky). It is portaled out of the editor. */
@@ -2740,6 +2748,15 @@
 @media (prefers-reduced-motion: no-preference) {
   .tm-wd-editor__zoom-overlay,
   .tm-wd-quick-actions {
-    animation: tm-wd-fade-in 0.18s ease-out;
+    animation: tm-wd-fade-in var(--tm-transition-normal);
   }
+}
+
+/* The context action sheet (phone): finger-sized, wrapping rows even with a fine pointer (a narrow desktop window is still the phone layout). */
+.tm-wd-editor__context-sheet .tm-wd-editor__context-item {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--tm-touch-target);
+  white-space: normal;
+  text-align: start;
 }

@@ -36092,6 +36092,12 @@
           "kind": "Property",
           "type": "string",
           "description": "SVG markup string (already cleaned of UI overlays)."
+        },
+        {
+          "name": "Theme",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The stencil theme the posted Svg was drawn with (indigo, indigo-dark, ...), or null for the default tokens. The browser has already drawn the SVG with it, so the server rasterises it as it is; the name travels with the request so a server can log it and keep the file in step with the canvas (decision WIREFRAME-STENCIL-THEME)."
         }
       ]
     },

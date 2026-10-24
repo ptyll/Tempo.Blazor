@@ -40,7 +40,7 @@
     },
     "targetTheme": {
       "type": "string",
-      "description": "Optional theme name selecting a token override set within the target packs."
+      "description": "Optional stencil theme name selecting a token override set within the target packs (the built-in pack ships 'indigo', 'indigo-dark' and 'dark'; 'light' or no value is the default). The editor's StencilTheme parameter wins over it; an unknown name draws the default tokens."
     }
   },
   "$defs": {
@@ -109,7 +109,7 @@
         },
         "targetTheme": {
           "type": "string",
-          "description": "Optional page-level theme override. When omitted, the page inherits the document theme."
+          "description": "Optional page-level stencil theme override. When omitted, the page inherits the document targetTheme."
         }
       }
     },

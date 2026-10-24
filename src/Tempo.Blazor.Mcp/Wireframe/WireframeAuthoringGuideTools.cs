@@ -65,6 +65,13 @@ public static class WireframeAuthoringGuideTools
                 anchors = new[] { "below", "rightOf" },
                 commonParams = new[] { "pageId", "children", "ids", "gap", "padding", "columns", "wrap", "margin", "x", "y", "w", "h", "role", "name" }
             },
+            themes = new
+            {
+                stencilThemes = new[] { "indigo", "indigo-dark", "dark" },
+                documentField = "WireframeDocument.targetTheme (and an optional per-page targetTheme) names the stencil theme the document is drawn with: the built-in pack ships 'indigo', 'indigo-dark' and 'dark'; 'light'/'default' (or no value) are the default tokens. An unknown name draws the default tokens (the editor logs one warning).",
+                resolutionOrder = "The editor's StencilTheme parameter wins over the page targetTheme, then the document targetTheme, then the default tokens. Set targetTheme when the design is meant for an indigo or dark product; leave it empty otherwise.",
+                scope = "Only stencil colours change (primary / info / surfaces / text); the page stays white paper, in the browser SVG export and in the server PNG / PDF export alike."
+            },
             elementFields = new
             {
                 name = "Optional human-readable element name, e.g. 'Login button'. Accepted by addElement, layout children and updateElement (null or empty clears it) and by whole-document payloads; shown in the inspector, used as the element's accessible name/tooltip and listed in the implementation brief."

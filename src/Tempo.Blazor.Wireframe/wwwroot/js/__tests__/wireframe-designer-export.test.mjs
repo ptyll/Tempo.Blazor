@@ -35,6 +35,10 @@ function makeTree(specs) {
             }));
         },
         cloneNode() { return makeTree(specs.map(spec => ({ ...spec }))); },
+        // The root element's own attributes (the export rewrites viewBox / width / height / style on it).
+        rootAttrs: new Map(),
+        setAttribute(name, value) { tree.rootAttrs.set(name, String(value)); },
+        removeAttribute(name) { tree.rootAttrs.delete(name); },
         get outerHTML() {
             return tree.nodes.map(n => `<${n.id}${[...n.attrs].map(([k, v]) => ` ${k}="${v}"`).join('')}/>`).join('');
         },
@@ -74,7 +78,7 @@ test('a selected connector with waypoint handles does not shift the label paint 
     });
     live.id = 'wd1';
     live.cloneNode = () => makeTree(specs.map(spec => ({ ...spec, computed: {} })));
-    engine.instances.set('wd1', { svg: live });
+    engine.instances.set('wd1', { svg: live, canvasW: 800, canvasH: 600 });
 
     const html = engine.exportSvg({ id: 'wd1' });
 
@@ -82,4 +86,41 @@ test('a selected connector with waypoint handles does not shift the label paint 
     assert.doesNotMatch(html, /wp1|wp2/, 'waypoint chrome is stripped');
     assert.doesNotMatch(html, /data-wd-paint/, 'the paint marker is removed from the export');
     assert.match(html, /<path1[^>]*stroke="rgb\(1, 1, 1\)"/, html);
+});
+
+// ── The exported svg is a standalone PAGE image, whatever the live view is (InitialZoom fits / pans / zooms the live viewBox) ──
+
+function exportRoot(attrsOfClone) {
+    const store = new Map(Object.entries(attrsOfClone));
+    const clone = {
+        querySelectorAll() { return []; },
+        getAttribute: n => (store.has(n) ? store.get(n) : null),
+        setAttribute: (n, v) => store.set(n, String(v)),
+        removeAttribute: n => store.delete(n),
+        get outerHTML() { return '<svg ' + [...store].map(([k, v]) => `${k}="${v}"`).join(' ') + '/>'; },
+        store,
+    };
+    const live = { cloneNode: () => clone, querySelectorAll: () => [] };
+    const engine = loadEngine({ getComputedStyle: () => ({ getPropertyValue: () => '' }) });
+    engine.instances.set('wd1', { svg: live, canvasW: 1440, canvasH: 900 });
+    return { engine, clone };
+}
+
+test('exportSvg resets the root to the page: viewBox 0 0 W H, explicit width / height, no live sizing style', () => {
+    const { engine, clone } = exportRoot({ viewBox: '-40 -61.5 1360 923', style: 'width:100%;height:100%;display:block;overflow:hidden;', class: 'tm-wd-canvas__svg', id: 'tm-wd-abc' });
+
+    const html = engine.exportSvg({ id: 'wd1' });
+
+    assert.equal(clone.getAttribute('viewBox'), '0 0 1440 900', 'a fitted / panned live view never leaks into the file');
+    assert.equal(clone.getAttribute('width'), '1440');
+    assert.equal(clone.getAttribute('height'), '900');
+    assert.equal(clone.getAttribute('style'), null, 'width:100%;height:100% would make the image 100 % of nothing');
+    assert.doesNotMatch(html, /overflow:hidden/);
+    assert.match(html, /^<svg /);
+});
+
+test('exportSvg keeps the xmlns so the rasteriser can read the file', () => {
+    const { engine, clone } = exportRoot({ viewBox: '0 0 800 600', xmlns: 'http://www.w3.org/2000/svg' });
+    engine.exportSvg({ id: 'wd1' });
+    assert.equal(clone.getAttribute('xmlns'), 'http://www.w3.org/2000/svg');
 });

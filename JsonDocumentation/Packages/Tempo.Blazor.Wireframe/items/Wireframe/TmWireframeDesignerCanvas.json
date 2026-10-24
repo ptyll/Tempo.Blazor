@@ -53,6 +53,21 @@
       "description": "Optional application scope used to resolve custom wireframe components."
     },
     {
+      "name": "InitialZoom",
+      "type": "WireframeInitialZoom",
+      "isRequired": false,
+      "defaultValue": "WireframeInitialZoom.Fit",
+      "description": "How the view is laid out at the first render, when Document is replaced, when the active page or its size changes and when this value changes. Fit (default) fits the page with a 40 px padding but never enlarges it past 100 %; ActualSize shows it at 100 %. A zoom the user chose is never overwritten automatically; OnZoomChangedEvent reports the real scale.",
+      "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
+    },
+    {
+      "name": "StencilTheme",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The stencil theme the elements are drawn with (indigo, indigo-dark, dark, ...). Resolution order: this parameter, the active page TargetTheme, the document TargetTheme, the default tokens; an unknown name draws the default tokens and logs one warning. The page itself stays white paper.",
+      "example": "StencilTheme=\"indigo\""
+    },
+    {
       "name": "OnSelectionChanged",
       "type": "EventCallback<string[]>",
       "isRequired": false,

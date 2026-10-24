@@ -89,14 +89,18 @@
                                          viewBox="0 0 @def.DefaultWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) @def.DefaultHeight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
                                          xmlns="http://www.w3.org/2000/svg"
                                          preserveAspectRatio="xMidYMid meet">
-                                        @((RenderTreeBuilder __b) => def.RenderSvg(
-                                            new WireframeElement
-                                            {
-                                                Id    = "preview",
-                                                Type  = def.Type,
-                                                W     = def.DefaultWidth,
-                                                H     = def.DefaultHeight
-                                            }, __b))
+                                        @((RenderTreeBuilder __b) =>
+                                        {
+                                            using var __theme = Stencil.StencilThemeScope.Use(_theme);
+                                            def.RenderSvg(
+                                                new WireframeElement
+                                                {
+                                                    Id    = "preview",
+                                                    Type  = def.Type,
+                                                    W     = def.DefaultWidth,
+                                                    H     = def.DefaultHeight
+                                                }, __b);
+                                        })
                                     </svg>
                                 </div>
                                 </div>

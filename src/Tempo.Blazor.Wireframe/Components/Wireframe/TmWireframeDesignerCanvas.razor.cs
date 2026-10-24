@@ -21,6 +21,7 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private WireframeComponentRegistry _registry { get; set; } = default!;
+    [Inject] private IServiceProvider _services { get; set; } = default!;
 
     // ── Cascaded command stack (provided by TmWireframeEditor) ───────────────
 
@@ -71,6 +72,22 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
 
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
+
+    /// <summary>
+    /// How the view is laid out at the first render, when <see cref="Document"/> is replaced, when the active page or its size changes
+    /// and when this value changes (decision WIREFRAME-INITIAL-ZOOM). <see cref="WireframeInitialZoom.Fit"/> (default) fits the page with a
+    /// 40 px padding but never enlarges it past 100 %; <see cref="WireframeInitialZoom.ActualSize"/> shows it at 100 %. A zoom the user
+    /// chose is never overwritten automatically (not even by a container resize); <see cref="OnZoomChangedEvent"/> reports the real scale.
+    /// </summary>
+    [Parameter] public WireframeInitialZoom InitialZoom { get; set; } = WireframeInitialZoom.Fit;
+
+    /// <summary>
+    /// The stencil theme the elements are drawn with (<c>indigo</c>, <c>indigo-dark</c>, <c>dark</c>, ...; decision WIREFRAME-STENCIL-THEME).
+    /// Resolution order: this parameter, the active page's <c>TargetTheme</c>, the document's <c>TargetTheme</c>, the default tokens. <c>null</c>,
+    /// blank, <c>light</c> and <c>default</c> are the default tokens; an unknown name draws the default tokens and logs one warning. The page
+    /// itself stays white paper: only the stencils change colour, exactly as in the SVG / PNG / PDF export.
+    /// </summary>
+    [Parameter] public string? StencilTheme { get; set; }
 
     /// <summary>Raised when the user changes the selection (single or multi).</summary>
     [Parameter] public EventCallback<string[]> OnSelectionChanged { get; set; }
@@ -146,6 +163,9 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     private bool _jsLightEditing;
     private double _jsCanvasW;
     private double _jsCanvasH;
+    // What the view was last laid out for (the initial zoom is applied again whenever it changes): the document instance, the active
+    // page, the page size and the mode. A user zoom is never part of it, so it is never reset by a parent render.
+    private (object? Doc, string? Page, double W, double H, WireframeInitialZoom Mode)? _laidOutFor;
 
     // Stable IDs for SVG defs so multiple canvas instances on the same page don't collide
     private readonly string _svgId       = "tm-wd-" + Guid.NewGuid().ToString("N")[..8];
@@ -169,6 +189,9 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
 
     private string[] _currentSelectionIds = [];
 
+    // The resolved stencil theme of this render (canonical name, null = default tokens).
+    private string? _theme;
+
     // Current connector selection IDs (drives .tm-wd-connector--selected CSS class)
     private string[] _currentConnectorSelectionIds = [];
 
@@ -184,13 +207,22 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     {
         _gs = GridSize.ToString(CultureInfo.InvariantCulture);
         _gl = (GridSize * 10).ToString(CultureInfo.InvariantCulture);
+        _theme = Stencil.StencilThemeScope.Resolve(StencilTheme, Document?.ActivePage?.TargetTheme, Document?.TargetTheme,
+            (_services.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory)) as Microsoft.Extensions.Logging.ILoggerFactory)
+                ?.CreateLogger("Tempo.Blazor.Components.Wireframe.TmWireframeDesignerCanvas"));
 
-        if (Document is not null)
+        // The script owns the view box once the canvas runs (pan, zoom, the initial fit): Blazor writes the page-sized box only
+        // when the PAGE SIZE changed (a new document, a resized page), never on an unrelated parent render - that would snap a
+        // fitted or user-zoomed view back to the whole page.
+        if (Document is not null && _viewBoxPage != (Document.Width, Document.Height))
         {
+            _viewBoxPage = (Document.Width, Document.Height);
             _viewBox = $"0 0 {Document.Width.ToString("0.##", CultureInfo.InvariantCulture)} " +
                        $"{Document.Height.ToString("0.##", CultureInfo.InvariantCulture)}";
         }
     }
+
+    private (double W, double H)? _viewBoxPage;
 
     /// <summary>How many times the canvas has rendered (a test seam: a left-tab switch or opening the "More" menu must not move it).</summary>
     internal int RenderCount { get; private set; }
@@ -198,13 +230,13 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     // Parent-render gate (LightEditing only): a parameter pass that changes nothing the scene shows is skipped. Own renders
     // (NotifyAndRender, the status line, a connector selection) never go through the gate: _parentPass is only true inside SetParametersAsync.
     private bool _parentPass;
-    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version)? _renderedSnapshot;
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version, WireframeInitialZoom Zoom, string? Theme, string? Prefix)? _renderedSnapshot;
 
     // Every [Parameter] that changes what the scene draws MUST be part of this tuple: a parent pass whose snapshot is unchanged is
     // skipped. Document identity does not see in-place edits - that is what ContentVersion is for (the host bumps it). The page's
     // Width/Height are listed explicitly because ResizeCanvasCommand mutates them in place on the same document instance.
-    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version) Snapshot()
-        => (Document, Document?.ActivePageId, Document?.Width ?? 0, Document?.Height ?? 0, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion);
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version, WireframeInitialZoom Zoom, string? Theme, string? Prefix) Snapshot()
+        => (Document, Document?.ActivePageId, Document?.Width ?? 0, Document?.Height ?? 0, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion, InitialZoom, _theme, TestIdPrefix);
 
     /// <inheritdoc />
     public override Task SetParametersAsync(ParameterView parameters)
@@ -247,6 +279,7 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
                 snapToObjects  = SnapToObjects,
                 canvasWidth    = Document?.Width  ?? 1200,
                 canvasHeight   = Document?.Height ?? 800,
+                initialZoom    = InitialZoomName(InitialZoom),
             };
 
             _jsReadOnly = ReadOnly;
@@ -255,10 +288,9 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
             _jsCanvasH = options.canvasHeight;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
 
-            // The page is fitted into the viewport by the svg itself (preserveAspectRatio=meet), so a page wider than
-            // the viewport starts zoomed out: tell the host the real scale instead of letting it show 100 %.
-            var fitted = await JS.InvokeAsync<double>("tmWireframeDesigner.getScale", _svgRef);
-            if (fitted > 0) await OnZoomChangedEvent.InvokeAsync(fitted);
+            // Lay the view out the way the host asked (Fit by default) and tell it the REAL scale instead of letting it show 100 %.
+            // While the svg has no size yet (a hidden tab) this reports 0 and the first real size lays the view out by relayout.
+            await ApplyInitialZoomAsync();
         }
         else if (_jsInitialized && _jsReadOnly != ReadOnly)
         {
@@ -284,6 +316,13 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
             await UpdateCanvasSize(Document.Width, Document.Height);
         }
 
+        if (_jsInitialized && !firstRender && Document is not null && _laidOutFor != LayoutKey())
+        {
+            // A new document, another page, another page size or another InitialZoom: start the view over. The user zoom of the SAME
+            // page is never touched (a parent render changes none of these).
+            await ApplyInitialZoomAsync();
+        }
+
         if (!firstRender && _jsInitialized && _currentSelectionIds.Length > 0)
         {
             // After Blazor re-renders the SVG (e.g. element resized via Properties Panel),
@@ -291,6 +330,23 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
             // selection so handles snap to the updated element dimensions.
             await JS.InvokeVoidAsync("tmWireframeDesigner.setSelection", _svgRef, _currentSelectionIds);
         }
+    }
+
+    private (object? Doc, string? Page, double W, double H, WireframeInitialZoom Mode) LayoutKey()
+        => (Document, Document?.ActivePageId, Document?.Width ?? 0, Document?.Height ?? 0, InitialZoom);
+
+    private static string InitialZoomName(WireframeInitialZoom zoom)
+        => zoom == WireframeInitialZoom.ActualSize ? "actual" : "fit";
+
+    /// <summary>Asks the script to lay the view out for the current document / page / mode and reports the real scale to the host.</summary>
+    private async Task ApplyInitialZoomAsync()
+    {
+        _laidOutFor = LayoutKey();
+        double scale;
+        try { scale = await JS.InvokeAsync<double>("tmWireframeDesigner.applyInitialZoom", _svgRef, InitialZoomName(InitialZoom)); }
+        catch (JSDisconnectedException) { return; }
+        catch (ObjectDisposedException) { return; }
+        if (scale > 0) await OnZoomChangedEvent.InvokeAsync(scale);
     }
 
     public async ValueTask DisposeAsync()

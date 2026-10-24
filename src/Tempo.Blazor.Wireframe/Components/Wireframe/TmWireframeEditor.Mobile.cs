@@ -126,10 +126,15 @@ public partial class TmWireframeEditor
     private void OnShellMobilePanelChanged(EditorShellPanel panel)
     {
         _mobilePanel = panel;
+        _mobileOpenedBySelection = false;   // the user chose a tab: the sheet is theirs now, an empty-canvas tap must not close it
         _mobileScrollResetPending = true;   // the sheet body is ONE scroller shared by every tab: each tab starts at its top
     }
 
-    private void OnShellMobileSnapChanged(int index) => _mobileSnap = index;
+    private void OnShellMobileSnapChanged(int index)
+    {
+        _mobileSnap = index;
+        _mobileOpenedBySelection = false;   // dragging the sheet to another snap is the user taking it over
+    }
 
     /// <summary>The shell closed or reopened its sheet (the × button, Escape, a swipe, or its own panels toggle on an embedded editor).</summary>
     private void OnMobileShellOpenChanged(bool open)
@@ -161,6 +166,9 @@ public partial class TmWireframeEditor
         if (!_mobileOpen) return;
         _mobileOpen = false;
         _mobileOpenedBySelection = false;
+        // A quick action (Delete, Lock) that closes the sheet unmounts the very button that had the focus: hand it to the action bar
+        // (the script moves it only when it was really lost, so a focus the user placed elsewhere is never taken away).
+        _mobileFocusBarPending = HasMobileChrome;
         _relayoutPending = true;
     }
 
@@ -193,7 +201,11 @@ public partial class TmWireframeEditor
     /// <summary>The selection became empty: a sheet that a selection opened has nothing left to show and gives the canvas its room back.</summary>
     private void MobileSelectionCleared()
     {
-        if (IsMobile && _mobileOpenedBySelection) CloseMobileSheet();
+        if (!IsMobile) return;
+        // A quick action (Delete / Lock) replaces the button that held the focus, whether the sheet closes or stays: ask the script to put
+        // the focus on the action bar - it moves it only when it was really lost, so a focus the user placed elsewhere is never taken.
+        _mobileFocusBarPending = HasMobileChrome;
+        if (_mobileOpenedBySelection) CloseMobileSheet();
     }
 
     // ── Action bar ────────────────────────────────────────────────────────────
@@ -354,6 +366,10 @@ public partial class TmWireframeEditor
         _mobileSnap = 0;
         _mobileOpenedBySelection = false;
         _mobileFocusBarPending = false;
+        // The context menu swaps presentation (anchored <-> sheet) and its anchor is stale after a flip, and the connector tool is
+        // tablet+ (the script falls back to select without telling .NET): close the menu, reset the tool.
+        if (_ctxMenuOpen) CloseContextMenu();
+        if (IsMobile && _toolMode == "connector") _toolMode = "select";
         _contentVersion++;
     }
 }

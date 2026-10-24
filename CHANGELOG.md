@@ -728,6 +728,16 @@
 
 ### Added
 
+- **`TmWireframeEditor.ExportHttpClientName`: send the PNG / PDF export to an API on another origin.** A WebAssembly host next to a separate
+  API (the demo) answered `405` for `api/wireframe/export/png|pdf` because the editor posted to its own origin. The new optional parameter
+  names an `IHttpClientFactory` client (like `TmDiagramEditor.ExportHttpClientName`); empty keeps the injected `HttpClient`, and a missing
+  factory or a client without a base address falls back to it. The `/wireframe-editor` demo names `DemoApi` in every editor, and now fills the
+  full viewport width from 1400 px up (the layout's `max-w-7xl` cap is lifted), so the editor is the desktop layout at 1440.
+- **`TmWireframeEditor`: review fixes of the phone (G2) layout.** Deselecting quick actions (Delete / Lock) hand the focus to the action bar
+  instead of dropping it on `<body>`; a flip desktop <-> phone closes an open context menu and resets the connector tool (the script now also
+  reports that fallback to .NET); the "opened by selection" flag is cleared once the user picks a tab or drags the sheet; the context action
+  sheet rows are finger-sized with a fine pointer too; the zoom pill respects `env(safe-area-inset-right)`; `.tm-wd-editor__header-stack` is
+  scoped to the phone layout; the canvas render snapshot includes `TestIdPrefix`.
 - **`TmEditorShell.TabletPanelPresentation` (`Docked` | `Overlay`): one shared tablet overlay for the editors.**
   `TabletPanelPresentation` (`Tempo.Blazor.Components.Layout`, next to `MobilePanelPresentation`; `Docked = 0`, `Overlay = 1`; decision
   `EDITOR-SHELL-TABLET-PRESENTATION`) is a new shell parameter, one value for both sides, **default `Docked` = today's
@@ -1173,6 +1183,35 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeEditor` / `TmWireframeDesignerCanvas`: the canvas now starts FITTED (`InitialZoom`, default `Fit`).** Before, the
+  page was drawn by the svg's own `meet` scale, so a page larger than the canvas showed its edge-to-edge scale with no margin, a 1440 px page
+  on a ~600 px canvas sat at ~30 % with the page touching the canvas border, and a page that did not fit left the zoom read-out reporting a
+  false value. The view is now laid out by script on the first render, when the `Document` is replaced and when the active page (or its
+  size) changes: `Fit` shows the whole page with a 40 px padding and **never enlarges past 100 %** (a page that fits stays at exactly 100 %
+  and is centred); a zoom the user chose (buttons, pinch, Ctrl+wheel) is no longer overwritten by anything automatic, a container resize
+  included, and the toolbar read-out always shows the real scale. Impact: screenshots / E2E that assumed the old edge-to-edge `viewBox`
+  (`0 0 W H`) now see a padded view box; a host that wants the previous look sets `ActualSize` (100 %, the page starts at its top-left
+  corner when it is larger than the canvas).
+  ```razor
+  <!-- before: the svg's own meet fit -->
+  <TmWireframeEditor Document="@doc" />
+  <!-- after: Fit is the default; ActualSize is the closest to the old behaviour -->
+  <TmWireframeEditor Document="@doc" InitialZoom="WireframeInitialZoom.ActualSize" />
+  ```
+  The exported SVG / PNG / PDF is unaffected: `exportSvg` now writes the PAGE (`viewBox="0 0 W H"`, explicit `width` / `height`, no live
+  sizing style) whatever the live view is, so a fitted, panned or zoomed canvas never leaks into a file.
+- **`TmWireframeEditor`: stencils follow a theme (`StencilTheme`, `WireframeDocument.TargetTheme` is now honoured).** The built-in pack
+  gains the themes `indigo` and `indigo-dark` (next to `dark`); `TmWireframeEditor`, `TmWireframeDesignerCanvas`, `TmWireframeToolbox` and
+  `WireframePageSvgOptions` take `StencilTheme`. Resolution: the parameter, the active page `TargetTheme`, the document `TargetTheme`, the default
+  tokens - **a document that already carries a `TargetTheme` (it was stored but never read) is now drawn with that theme.** An unknown name is the
+  default tokens plus one log warning; `light` / `default` are the default tokens. Documents without `TargetTheme` render exactly as before.
+  `Tempo.Blazor.Abstractions.Wireframe.Export.WireframeExportRequest` gains an optional `Theme`; the demo API logs it and its preview endpoints
+  accept `?theme=`. Migration: nothing to do unless a stored document has a `TargetTheme` you do not want applied - clear it or pass
+  `StencilTheme="light"`.
+- **`TmEditorShell`: the mobile sheet's canvas reserve is capped at 60 % of the stage.** The padding the shell leaves under the canvas while the
+  sheet is open (`.tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas`) used to be able to equal the whole stage on a short (landscape
+  phone) stage, leaving the canvas no height; it is now at most `60cqh` + the usual gap. The wireframe editor no longer carries its own copy of
+  the formula (it only removes the padding where no sheet can be open). Hosts that overrode `--tm-editor-shell-sheet-reserve` above 0.6 get 60 %.
 - **`TmWireframeEditor`: the tablet sheets are the core shell's overlay (`.tm-wd-sheet` is gone).** The left drawer and the
   inspector side sheet are now rendered by `TmEditorShell` with `TabletPanelPresentation.Overlay` instead of by the editor
   inside its canvas region. Impact: (1) the classes `.tm-wd-sheet`, `.tm-wd-sheet--left`, `.tm-wd-sheet--right`,

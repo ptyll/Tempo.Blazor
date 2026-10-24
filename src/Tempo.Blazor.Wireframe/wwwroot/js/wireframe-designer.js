@@ -52,6 +52,9 @@ window.tmWireframeDesigner = {
             showGrid: opts.showGrid !== false,
             canvasW: opts.canvasWidth || 1200,
             canvasH: opts.canvasHeight || 800,
+            // Initial zoom (decision WIREFRAME-INITIAL-ZOOM): 'fit' | 'actual', or undefined for a standalone host that never asked
+            // (the svg's own meet fit, as before). Set by TmWireframeDesignerCanvas.InitialZoom.
+            initialZoom: opts.initialZoom === 'fit' || opts.initialZoom === 'actual' ? opts.initialZoom : undefined,
 
             // drag-element state
             isDragging: false,
@@ -184,7 +187,10 @@ window.tmWireframeDesigner = {
         inst.lightEditing = !!light;
         if (inst.lightEditing) {
             [inst.resizeSession, inst.rotateSession, inst.waypointSession].forEach(function (session) { if (session) session.cancel('light-editing'); });
-            if (inst.toolMode === 'connector') this.setToolMode(svgElement, 'select');
+            if (inst.toolMode === 'connector') {
+                this.setToolMode(svgElement, 'select');
+                this._invokeQuiet(inst, 'OnToolModeChanged', 'select');   // the editor's tool row shows the real tool
+            }
         }
         this._updateHandles(inst);
     },
@@ -737,14 +743,43 @@ window.tmWireframeDesigner = {
         this._flushRelayout(inst);
     },
 
-    /** Marks a handle gesture (resize / rotate / waypoint) for CSS: see _bodyPress for why the sheet waits for the lift. */
+    /**
+     * Marks a gesture for CSS (the svg's data-wd-gesture): a side sheet that a PRESS opens reserves its room beside the canvas only
+     * after the lift (see _bodyPress). When the sheet is ALREADY open and its room already reserved, the marker must not make CSS drop
+     * that reservation - the svg would widen under the finger, the page would shift on screen and the drag would run in a moved
+     * coordinate system (Touch_ResizeHandle(1024,768): a 360x240 button became 224x328). So the script records that the reservation was
+     * in effect at the press (data-wd-reserved) and the stylesheet keeps the width while that marker is present.
+     */
+    _markGesture: function (inst) {
+        if (!inst.svg) return;
+        // Read the reservation FIRST: the moment data-wd-gesture is set the stylesheet may drop it, and a computed-style read after that
+        // would see 0 (the first version of this fix did exactly that and changed nothing).
+        const reserved = this._sheetReserved(inst);
+        inst.svg.setAttribute('data-wd-gesture', '');
+        if (reserved) inst.svg.setAttribute('data-wd-reserved', '');
+    },
+
+    /** Whether the editor's canvas region currently reserves room for an open inspector sheet (a non-zero inline-end padding). */
+    _sheetReserved: function (inst) {
+        const region = inst.svg && inst.svg.closest ? inst.svg.closest('.tm-wd-editor__canvas-region') : null;
+        if (!region || typeof getComputedStyle !== 'function') return false;
+        return parseFloat(getComputedStyle(region).paddingInlineEnd) > 0.5;
+    },
+
+    _unmarkGesture: function (inst) {
+        if (!inst.svg) return;
+        inst.svg.removeAttribute('data-wd-gesture');
+        inst.svg.removeAttribute('data-wd-reserved');
+    },
+
+    /** Marks a handle gesture (resize / rotate / waypoint) for CSS: see _markGesture. */
     _beginGesture: function (inst) {
-        if (inst.svg) inst.svg.setAttribute('data-wd-gesture', '');
+        this._markGesture(inst);
     },
 
     /** Ends a handle gesture: clears the CSS marker and runs a relayout the gesture postponed. */
     _endGesture: function (inst) {
-        if (inst.svg && !inst.body) inst.svg.removeAttribute('data-wd-gesture');
+        if (inst.svg && !inst.body) this._unmarkGesture(inst);
         this._flushRelayout(inst);
     },
 
@@ -1087,7 +1122,7 @@ window.tmWireframeDesigner = {
         };
         // CSS reads this: a side sheet that a press-selection opens reserves its room beside the canvas only AFTER the finger
         // is lifted, so the svg never resizes (and the finger's svg coordinates never shift) under a drag that has just begun.
-        inst.svg.setAttribute('data-wd-gesture', '');
+        this._markGesture(inst);
 
         if (wantPan) {
             body.kind = 'pan';
@@ -1470,7 +1505,7 @@ window.tmWireframeDesigner = {
     _bodyRelease: function (inst, info) {
         const body = inst.body;
         inst.body = null;
-        if (inst.svg) inst.svg.removeAttribute('data-wd-gesture');
+        this._unmarkGesture(inst);
 
         inst.isDragging = false;
         inst.dragElIds = [];
@@ -2251,6 +2286,57 @@ window.tmWireframeDesigner = {
         return fitScale;
     },
 
+    // ── Initial zoom (decision WIREFRAME-INITIAL-ZOOM) ────────────────────────────
+
+    /** The padding fit-to-view keeps around its subject (the same 40 px fitToView uses). */
+    INITIAL_ZOOM_PADDING: 40,
+
+    /**
+     * Lays the view out for the given svg size: 'fit' shows the WHOLE page (plus the padding) at the largest scale that fits and
+     * NEVER enlarges past 100 % (a page that fits at 100 % stays at exactly 100 %); 'actual' is 100 %. A page that does not fit an axis is pinned to its padded origin on that
+     * axis, a page that is smaller is centred, so a small page is never stretched and a large one starts at its top-left corner.
+     * Marks the view pristine (a later container resize lays it out again) and tells .NET the new view box.
+     */
+    _layoutInitial: function (inst, size, mode) {
+        const pad = this.INITIAL_ZOOM_PADDING;
+        const cw = inst.canvasW, ch = inst.canvasH;
+        // A page that fits the canvas at 100 % (its own size, no padding) stays at exactly 100 %: the padding must not shrink it.
+        const fitsActual = cw <= size.width && ch <= size.height;
+        const scale = mode === 'actual' || fitsActual
+            ? 1
+            : Math.min(size.width / (cw + pad * 2), size.height / (ch + pad * 2), 1);
+        const w = size.width / scale;
+        const h = size.height / scale;
+        // An axis the page overflows (actual size of a big page) starts at the padded origin; every other axis centres the page (for a
+        // fitted axis that IS the padded origin).
+        const x = cw > w ? -pad : cw / 2 - w / 2;
+        const y = ch > h ? -pad : ch / 2 - h / 2;
+        this._setViewBox(inst, x, y, w, h);
+        inst.scale = scale;
+        inst.userViewChanged = false;
+        inst.layoutRect = size;
+        return scale;
+    },
+
+    /**
+     * Applies the initial zoom (first render, a swapped document, a page switch, a changed page size, a changed InitialZoom). The
+     * optional <paramref name="mode"/> ('fit' | 'actual') replaces the remembered one; anything else keeps it, and a canvas that never
+     * had one behaves as 'fit'. Returns the scale the canvas is now drawn at (0 while the svg has no size, e.g. a hidden tab: nothing
+     * is changed and the first real size lays the view out through relayout). A zoom the user chose is NOT protected here: this is
+     * the explicit "start over" for a new subject; the automatic paths (resize) never call it.
+     */
+    applyInitialZoom: function (svgElement, mode) {
+        const inst = this.instances.get(svgElement ? svgElement.id : null);
+        if (!inst || inst.destroyed || !inst.svg) return 0;
+        if (mode === 'fit' || mode === 'actual') inst.initialZoom = mode;
+        const size = this._measure(inst);
+        if (!size) return 0;
+        const scale = this._layoutInitial(inst, size, inst.initialZoom || 'fit');
+        this._refreshHandlesIfCoarse(inst);
+        const vb = this._getViewBox(inst);
+        this._invokeQuiet(inst, 'OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        return scale;
+    },
     // ── Pan to canvas origin ──────────────────────────────────────────────────
 
     resetView: function (svgElement) {
@@ -2291,8 +2377,10 @@ window.tmWireframeDesigner = {
 
         let scale;
         if (!inst.userViewChanged) {
-            this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
-            scale = Math.min(next.width / inst.canvasW, next.height / inst.canvasH);
+            // A pristine view is laid out again the way it was first laid out: the initial zoom when the host chose one, else the meet fit.
+            scale = inst.initialZoom
+                ? this._layoutInitial(inst, next, inst.initialZoom)
+                : (this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH), Math.min(next.width / inst.canvasW, next.height / inst.canvasH));
         } else {
             const vb = this._getViewBox(inst);
             const base = prev || next;
@@ -2313,7 +2401,9 @@ window.tmWireframeDesigner = {
     },
 
     _gestureActive: function (inst) {
-        return !!(inst.body || inst.isDragging || inst.isResizing || inst.isRotating || inst.isDraggingWaypoint
+        // inst.resize / rotate / waypoint exist from the PRESS (isResizing & co. only from the drag threshold): a relayout between the two
+        // would move the viewBox under a finger that is already holding a handle.
+        return !!(inst.body || inst.resize || inst.rotate || inst.waypoint || inst.isDragging || inst.isResizing || inst.isRotating || inst.isDraggingWaypoint
             || inst.isPanning || inst.isRubberBand || inst.pinchStart || inst.middlePan);
     },
 
@@ -2433,6 +2523,13 @@ window.tmWireframeDesigner = {
         clone.querySelectorAll(
             '.tm-wd-selection, .tm-wd-rubber, .tm-wd-grid-overlay, .tm-wd-ruler, .tm-wd-waypoint-handle, .tm-wd-rotate-handle, .tm-wd-resize-handle, .tm-wd-connector__waypoint, .tm-wd-connector__waypoint-hit, .tm-wd-guide, .tm-wd-connector-preview, .tm-wd-hold-cue'
         ).forEach(el => el.remove());
+        // The export is the PAGE, not the live view: a fitted, panned or zoomed viewBox (InitialZoom Fit, a pinch, the padding around the page)
+        // and the live sizing style (width/height:100%) must not leak into the file, or the server rasteriser would read a window onto the page.
+        clone.setAttribute('viewBox', '0 0 ' + inst.canvasW + ' ' + inst.canvasH);
+        clone.setAttribute('width', String(inst.canvasW));
+        clone.setAttribute('height', String(inst.canvasH));
+        clone.removeAttribute('style');
+        clone.removeAttribute('id');
         return clone.outerHTML;
     },
 

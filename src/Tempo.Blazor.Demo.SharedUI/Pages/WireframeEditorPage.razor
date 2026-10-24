@@ -6,16 +6,21 @@
 @inject IHttpClientFactory HttpFactory
 @inject Tempo.Blazor.DocumentLibrary.ITempoDocumentLibraryProvider LibraryProvider
 @inject Tempo.Blazor.Demo.Services.ApiWireframeDocumentProvider WireframeDocuments
+@inject Tempo.Blazor.Services.ThemeService ThemeService
+@inject Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState ColorTheme
+@implements IDisposable
 
 <PageTitle>Wireframe Editor – Tempo.Blazor</PageTitle>
 
 @* Demo only: the wireframe editor resolves its layout from its own container width (desktop from 1200). With the 296px demo
-   sidebar a 1440 viewport leaves it ~1080px, so from 1400px up this page collapses the sidebar and gives the editor the full
-   width (a link back to the demo index stays in the header). The library breakpoints are untouched. *@
+   sidebar a 1440 viewport leaves it ~1080px, so from 1400px up this page collapses the sidebar AND lifts the layout's max-w-7xl
+   (1280px) cap, giving the editor the full width of the viewport (a link back to the demo index stays in the header). The library
+   breakpoints are untouched. *@
 <style>
     @@media (min-width: 1400px) {
         .demo-shell:has(.wd-demo-page) aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }
         .demo-shell:has(.wd-demo-page) main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+        .demo-shell:has(.wd-demo-page) main .max-w-7xl { max-width: none !important; }
     }
     .wd-demo-page__index-link { display: none; }
     @@media (min-width: 1400px) { .wd-demo-page__index-link { display: inline-block; } }
@@ -69,6 +74,8 @@
                            ShowGrid="true"
                            GridSize="8"
                            PageNavigation="WireframePageNavigation.Panel"
+                           ExportHttpClientName="DemoApi"
+                           StencilTheme="@StencilTheme"
                            Class="h-full">
             <HeaderActions>
                 <button class="px-3 py-1.5 text-sm rounded border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
@@ -167,6 +174,8 @@
     <div style="height: 560px;">
         <TmWireframeEditor Document="@_customDocument"
                            DocumentChanged="@(doc => _customDocument = doc)"
+                           ExportHttpClientName="DemoApi"
+                           StencilTheme="@StencilTheme"
                            Class="h-full" />
     </div>
 
@@ -200,9 +209,29 @@
             <TmWireframeEditor Document="@_narrowDocument"
                                DocumentChanged="@(doc => _narrowDocument = doc)"
                                TestIdPrefix="narrow"
+                               ExportHttpClientName="DemoApi"
+                               StencilTheme="@StencilTheme"
                                Class="h-full" />
         </div>
     }
+</section>
+
+<!-- ═══ Section 6: Standalone layers panel ══════════════════════════════════ -->
+<section class="demo-section mb-10" data-testid="wf-demo-layers">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">Standalone Layers Panel</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">TmWireframeLayersPanel</code> is a public component of its own.
+        The editor hosts it as the Layers tab with <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ShowCollapseToggle="false"</code>
+        (the tab owns the collapse); on its own the default keeps the header with its collapse toggle.
+    </p>
+    <div class="grid gap-4 sm:grid-cols-2">
+        <div class="max-w-sm border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" data-testid="wf-demo-layers-standalone">
+            <TmWireframeLayersPanel Document="@_document" DocumentChanged="@(doc => _document = doc)" />
+        </div>
+        <div class="max-w-sm border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" data-testid="wf-demo-layers-embedded">
+            <TmWireframeLayersPanel Document="@_document" DocumentChanged="@(doc => _document = doc)" ShowCollapseToggle="false" />
+        </div>
+    </div>
 </section>
 
 </div>
@@ -230,6 +259,27 @@
     protected override void OnInitialized()
     {
         _jsonPreview = WireframeSerializer.Serialize(_document);
+        // The stencils follow the demo's colour theme (default / indigo) and light / dark: the editors, the toolbox previews and the PNG / PDF
+        // export all take this name (decision WIREFRAME-STENCIL-THEME).
+        ThemeService.OnChanged += OnThemeChanged;
+        ColorTheme.Changed += OnThemeChanged;
+    }
+
+    /// <summary>The stencil theme of the active demo theme: <c>indigo</c> / <c>indigo-dark</c>, <c>dark</c>, or <c>null</c> (default tokens).</summary>
+    private string? StencilTheme => (ColorTheme.Current == Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState.Indigo, ThemeService.IsDark) switch
+    {
+        (true, true) => "indigo-dark",
+        (true, false) => "indigo",
+        (false, true) => "dark",
+        _ => null,
+    };
+
+    private void OnThemeChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ThemeService.OnChanged -= OnThemeChanged;
+        ColorTheme.Changed -= OnThemeChanged;
     }
 
     private async Task HandleOpenSelectedAsync(Tempo.Blazor.Components.Files.DocumentOpenResult result)

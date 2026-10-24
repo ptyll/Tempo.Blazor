@@ -47,7 +47,14 @@ public sealed class StencilPackCompiler
     private IEnumerable<WireframeComponentDef> CompileDefinitions(StencilPack pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
-        var tokens = StencilTokenScope.FromPack(pack);
+        StencilThemeScope.Register(pack.Themes.Keys);
+        // The token layers depend on the ambient stencil theme of the render pass (StencilThemeScope): one scope per theme name, built on first use.
+        var scopes = new System.Collections.Concurrent.ConcurrentDictionary<string, StencilTokenScope>(StringComparer.Ordinal);
+        StencilTokenScope TokensForCurrentTheme()
+        {
+            var name = StencilThemeScope.CurrentName;
+            return scopes.GetOrAdd(name ?? string.Empty, key => StencilTokenScope.FromPack(pack, key.Length == 0 ? null : key));
+        }
         var packMap = new Dictionary<string, StencilPack>(StringComparer.Ordinal)
         {
             [pack.Namespace] = pack
@@ -65,7 +72,7 @@ public sealed class StencilPackCompiler
             var render = component.Native is { } native
                 ? ResolveNative(pack, native)
                 : (Action<WireframeElement, RenderTreeBuilder>)((element, builder) =>
-                    StencilPackRenderer.Render(capturedComponent, element, tokens, builder, composition, logger: null));
+                    StencilPackRenderer.Render(capturedComponent, element, TokensForCurrentTheme(), builder, composition, logger: null));
 
             yield return new WireframeComponentDef
             {

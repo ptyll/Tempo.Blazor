@@ -163,6 +163,29 @@
       "description": "Optional application scope used to resolve custom wireframe components."
     },
     {
+      "name": "InitialZoom",
+      "type": "WireframeInitialZoom",
+      "isRequired": false,
+      "defaultValue": "WireframeInitialZoom.Fit",
+      "description": "How the canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM). Fit (default) fits the page with a 40 px padding but never enlarges it past 100 % - a page that fits stays at exactly 100 % and is centred; ActualSize shows it at 100 % (the page starts at its top-left corner when it is larger than the canvas). A zoom the user chose (buttons, pinch, Ctrl+wheel) is never overwritten automatically, not even by a container resize, and the toolbar zoom read-out always shows the real scale.",
+      "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
+    },
+    {
+      "name": "StencilTheme",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The stencil theme the canvas, the toolbox previews and the exports are drawn with: indigo, indigo-dark or dark for the built-in pack (decision WIREFRAME-STENCIL-THEME). Resolution order: this parameter, the active page TargetTheme, the document TargetTheme, then the default tokens. null, blank, light and default are the default tokens; an unknown name draws the default tokens and logs one warning. The page stays white paper - only the stencils are recoloured, in the browser SVG export and in the server PNG / PDF export alike.",
+      "example": "StencilTheme=\"indigo-dark\""
+    },
+    {
+      "name": "ExportHttpClientName",
+      "type": "string",
+      "isRequired": false,
+      "defaultValue": "\"\"",
+      "description": "Name of the IHttpClientFactory client the PNG / PDF export posts to (api/wireframe/export/png|pdf, resolved against that client base address). Empty uses the injected HttpClient, whose base is the host origin. A host whose page origin does not serve the export endpoints (a WebAssembly app next to a separate API) names the client that points at the API, like TmDiagramEditor.ExportHttpClientName. Without a registered factory, or when the named client has no base address, the injected HttpClient is used.",
+      "example": "ExportHttpClientName=\"DemoApi\""
+    },
+    {
       "name": "MobileActions",
       "type": "IReadOnlyList<TmActionItem>?",
       "isRequired": false,

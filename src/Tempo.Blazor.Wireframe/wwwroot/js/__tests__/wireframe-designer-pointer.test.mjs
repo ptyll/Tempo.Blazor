@@ -161,13 +161,13 @@ async function boot({ coarse = false } = {}) {
     return engine;
 }
 
-async function canvas({ readOnly = false, gridSize = 8, coarse = false, lightEditing = false } = {}) {
+async function canvas({ readOnly = false, gridSize = 8, coarse = false, lightEditing = false, initialZoom, canvasWidth = 800, canvasHeight = 600 } = {}) {
     await boot({ coarse });
     const svg = svgNode();
     const wrap = node('div', { class: 'tm-wd-canvas-wrap' });
     wrap.children.push(svg); svg.parent = wrap;
     const ref = dotnet();
-    const id = engine.init(svg, ref, { readOnly, gridSize, showGrid: true, canvasWidth: 800, canvasHeight: 600, lightEditing });
+    const id = engine.init(svg, ref, { readOnly, gridSize, showGrid: true, canvasWidth, canvasHeight, lightEditing, initialZoom });
     await engine.instances.get(id).ready;
     return { svg, wrap, ref, id, inst: () => engine.instances.get(id) };
 }
@@ -1101,6 +1101,101 @@ test('a ResizeObserver triggers one relayout per frame and is disconnected on de
     assert.equal(c2.inst().resizeObserver, null);
 });
 
+// ── InitialZoom (decision WIREFRAME-INITIAL-ZOOM): applyInitialZoom fits the page (padding 40) but never enlarges ──────────────
+
+const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-6, `${message ?? ''} expected ${expected}, got ${actual}`);
+
+test('applyInitialZoom fit: a page larger than the canvas is fitted with a 40 px padding and the real scale is returned', async () => {
+    const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
+    resizeSvg(c.svg, 720, 450);
+
+    const scale = engine.applyInitialZoom(c.svg);
+
+    // limiting axis: min(720 / 1520, 450 / 980) = 0.4592...
+    const expected = Math.min(720 / 1520, 450 / 980);
+    near(scale, expected, 'scale');
+    const vb = c.svg.viewBox.baseVal;
+    near(vb.width * scale, 720, 'the viewBox spans the svg width at that scale');
+    near(vb.height * scale, 450, 'and its height');
+    near(vb.y, -40, 'the limiting axis keeps the padding');
+    assert.equal(c.inst().userViewChanged, false, 'the fitted view is pristine: a container resize re-fits it');
+    assert.equal(c.inst().scale, scale);
+    assert.equal(c.ref.named('OnViewBoxChanged').length, 1, 'rulers / minimap learn the new view');
+});
+
+test('applyInitialZoom fit never enlarges: a small page stays at 100 % and is centred', async () => {
+    const c = await canvas({ initialZoom: 'fit', canvasWidth: 390, canvasHeight: 844 });
+    resizeSvg(c.svg, 1000, 900);
+
+    const scale = engine.applyInitialZoom(c.svg);
+
+    assert.equal(scale, 1, 'no zoom beyond 100 %');
+    const vb = c.svg.viewBox.baseVal;
+    near(vb.width, 1000);
+    near(vb.height, 900);
+    near(vb.x, (390 - 1000) / 2, 'centred horizontally');
+    near(vb.y, (844 - 900) / 2, 'centred vertically');
+});
+
+test('applyInitialZoom actual: 100 %, the page origin padded when the page is larger than the canvas, centred when it is smaller', async () => {
+    const big = await canvas({ initialZoom: 'actual', canvasWidth: 1440, canvasHeight: 900 });
+    resizeSvg(big.svg, 600, 400);
+    assert.equal(engine.applyInitialZoom(big.svg), 1);
+    let vb = big.svg.viewBox.baseVal;
+    near(vb.width, 600); near(vb.height, 400);
+    near(vb.x, -40, 'the page starts at the padded origin'); near(vb.y, -40);
+
+    const small = await canvas({ initialZoom: 'actual', canvasWidth: 300, canvasHeight: 200 });
+    resizeSvg(small.svg, 600, 400);
+    assert.equal(engine.applyInitialZoom(small.svg), 1);
+    vb = small.svg.viewBox.baseVal;
+    near(vb.x, (300 - 600) / 2); near(vb.y, (200 - 400) / 2);
+});
+
+test('applyInitialZoom takes the mode from its argument and remembers it', async () => {
+    const c = await canvas({ canvasWidth: 1440, canvasHeight: 900 });      // no initialZoom option: the legacy meet fit
+    resizeSvg(c.svg, 720, 450);
+
+    assert.equal(engine.applyInitialZoom(c.svg, 'actual'), 1);
+    assert.equal(c.inst().initialZoom, 'actual');
+    near(engine.applyInitialZoom(c.svg, 'fit'), Math.min(720 / 1520, 450 / 980));
+    assert.equal(c.inst().initialZoom, 'fit');
+    assert.equal(engine.applyInitialZoom(c.svg, 'nonsense') > 0, true, 'an unknown mode keeps the previous one');
+    assert.equal(c.inst().initialZoom, 'fit');
+});
+
+test('applyInitialZoom without a size (a hidden tab) changes nothing and reports 0; the first real size then lays the view out', async () => {
+    const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
+    resizeSvg(c.svg, 0, 0);
+    assert.equal(engine.applyInitialZoom(c.svg), 0);
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600', 'the viewBox is untouched');
+
+    resizeSvg(c.svg, 720, 450);
+    const scale = engine.relayout(c.svg);
+    near(scale, Math.min(720 / 1520, 450 / 980), 'the relayout uses the initial mode');
+});
+
+test('relayout of a pristine view re-applies the initial mode; a view the user zoomed keeps its zoom (no automatic overwrite)', async () => {
+    const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
+    resizeSvg(c.svg, 720, 450);
+    engine.applyInitialZoom(c.svg);
+    resizeSvg(c.svg, 1400, 880);                       // the panel closed: the canvas grew
+    near(engine.relayout(c.svg), Math.min(1400 / 1520, 880 / 980), 'pristine: refitted with the padding');
+    resizeSvg(c.svg, 2000, 1200);                      // a huge canvas: the whole page fits, so it stays at 100 %, never enlarged
+    assert.equal(engine.relayout(c.svg), 1, 'never above 100 %');
+
+    engine.zoomTo(c.svg, 2);                           // the user zooms
+    resizeSvg(c.svg, 720, 450);
+    assert.equal(engine.relayout(c.svg), 2, 'the user zoom survives a resize');
+    assert.equal(engine.applyInitialZoom(c.svg) <= 1, true, 'only an explicit apply (document / page change) resets it');
+});
+
+test('legacy canvas (no initialZoom option) keeps the plain page meet-fit on relayout', async () => {
+    const c = await canvas();
+    resizeSvg(c.svg, 400, 300);
+    assert.equal(engine.relayout(c.svg), 0.5);
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600');
+});
 test('keys typed inside a side sheet (the tablet drawer / inspector) never act on the canvas selection', async () => {
     const c = await canvas({ gridSize: 8 });
     element(c.svg, 'a', { x: 40, y: 40 });
@@ -1200,6 +1295,94 @@ test('the svg carries data-wd-gesture while a resize handle gesture runs too', a
     assert.equal(c.svg.hasAttribute('data-wd-gesture'), false, 'removed on release');
 });
 
+// Touch_ResizeHandle(1024,768) root cause: with the inspector sheet ALREADY open the canvas region reserves the sheet's width; the
+// gesture marker must not make CSS drop that reservation (the svg would widen under the finger and the drag would run in a shifted
+// coordinate system). The script records whether the reservation was in effect at the press.
+function reserveRegion(c, reserved) {
+    const region = node('div', { class: 'tm-wd-editor__canvas-region' });
+    const wrap = c.svg.parent;
+    region.children.push(wrap); wrap.parent = region;
+    // Emulates the stylesheet: the region reserves 300px unless a gesture marker WITHOUT data-wd-reserved sits on the svg.
+    globalThis.getComputedStyle = el => {
+        const dropped = c.svg.hasAttribute('data-wd-gesture') && !c.svg.hasAttribute('data-wd-reserved');
+        return { paddingInlineEnd: el === region && reserved && !dropped ? '300px' : '0px' };
+    };
+    return region;
+}
+
+test('a gesture started while the sheet reservation is already in effect marks it data-wd-reserved, so CSS keeps the canvas width', async () => {
+    const c = await canvas();
+    reserveRegion(c, true);
+    element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    engine.setSelection(c.svg, ['a']);
+    const handle = c.svg.querySelector('[data-handle="se"]');
+
+    handle.dispatch('pointerdown', touch(handle, { clientX: 140, clientY: 100 }));
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), true);
+    assert.equal(c.svg.hasAttribute('data-wd-reserved'), true, 'the reservation was in effect at the press');
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 200, clientY: 140 }));
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), false);
+    assert.equal(c.svg.hasAttribute('data-wd-reserved'), false, 'both markers are removed on release');
+    delete globalThis.getComputedStyle;
+});
+
+test('a body press that opens the sheet (no reservation yet) is NOT marked reserved: CSS defers the reservation until the lift', async () => {
+    const c = await canvas();
+    reserveRegion(c, false);
+    element(c.svg, 'a', { x: 40, y: 40 });
+    const g = c.svg.querySelector('[data-el-id="a"]');
+
+    c.svg.dispatch('pointerdown', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), true);
+    assert.equal(c.svg.hasAttribute('data-wd-reserved'), false);
+    c.svg.dispatch('pointerup', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    delete globalThis.getComputedStyle;
+});
+
+test('a body drag started with the reservation in effect is marked reserved too (an element drag beside an open inspector)', async () => {
+    const c = await canvas();
+    reserveRegion(c, true);
+    element(c.svg, 'a', { x: 40, y: 40 });
+    const g = c.svg.querySelector('[data-el-id="a"]');
+
+    c.svg.dispatch('pointerdown', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    assert.equal(c.svg.hasAttribute('data-wd-reserved'), true);
+    c.svg.dispatch('pointerup', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    assert.equal(c.svg.hasAttribute('data-wd-reserved'), false);
+    delete globalThis.getComputedStyle;
+});
+
+test('a handle press counts as a gesture BEFORE the drag threshold: a relayout in that window is deferred, then flushed on release', async () => {
+    const c = await canvas();
+    element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    engine.setSelection(c.svg, ['a']);
+    const handle = c.svg.querySelector('[data-handle="se"]');
+
+    handle.dispatch('pointerdown', touch(handle, { clientX: 140, clientY: 100 }));     // pressed, threshold not crossed: isResizing is still false
+    assert.equal(c.inst().isResizing, false);
+    resizeSvg(c.svg, 400, 300);
+    assert.equal(engine.relayout(c.svg), 0, 'deferred from the press, not only from the first move');
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600');
+
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 140, clientY: 100 }));
+    assert.equal(c.inst().relayoutDeferred, false, 'flushed on release');
+    assert.deepEqual(c.inst().layoutRect, { width: 400, height: 300 });
+});
+test('entering light editing with the connector tool active falls back to select AND tells .NET (the tool row must not show a stale tool)', async () => {
+    const c = await canvas();
+    engine.setToolMode(c.svg, 'connector');
+
+    engine.setLightEditing(c.svg, true);
+
+    assert.equal(c.inst().toolMode, 'select');
+    assert.deepEqual(c.ref.named('OnToolModeChanged'), [['OnToolModeChanged', 'select']]);
+});
+
+test('entering light editing with the select tool active reports nothing', async () => {
+    const c = await canvas();
+    engine.setLightEditing(c.svg, true);
+    assert.equal(c.ref.named('OnToolModeChanged').length, 0);
+});
 // ── mobile viewing + light edits (wireframe redesign plan ce19aa8c, phase 7, decision G2) ────────
 
 test('light editing: a selected element has its outline but NO resize / rotate grips, also on a coarse pointer', async () => {

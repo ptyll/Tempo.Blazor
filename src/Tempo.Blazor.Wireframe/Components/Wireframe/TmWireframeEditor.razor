@@ -358,6 +358,7 @@
         builder.AddComponentParameter(12, nameof(TmWireframeSidePanel.ActivePageChanged), EventCallback.Factory.Create<string>(this, OnPagesPanelActivePageChanged));
         builder.AddComponentParameter(13, nameof(TmWireframeSidePanel.SingleColumn), IsTablet);
         builder.AddComponentParameter(14, nameof(TmWireframeSidePanel.TestIdPrefix), TestIdPrefix);
+        builder.AddComponentParameter(15, nameof(TmWireframeSidePanel.StencilTheme), PaletteTheme);
         builder.CloseComponent();
     };
 
@@ -469,6 +470,8 @@
                                                SnapToObjects="@_snapToObjects"
                                                ReadOnly="@IsReadOnly"
                                                LightEditing="@IsMobile"
+                                               InitialZoom="@InitialZoom"
+                                               StencilTheme="@StencilTheme"
                                                ContentVersion="@_contentVersion"
                                                OnSelectionChanged="OnSelectionChanged"
                                                OnConnectorSelectionChanged="OnConnectorSelectionChanged"

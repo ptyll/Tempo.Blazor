@@ -210,7 +210,8 @@
    below the sheet panel floor (the whole panel: header + tabs + body, C8) and never exceeds the
    stage itself; both are host-overridable tokens. */
 .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
-    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+    /* Never more than 60 % of the stage: on a short (landscape phone) stage the reserve used to equal the whole stage and leave the canvas no height. */
+    padding-block-end: calc(min(60cqh, max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem)))) + var(--tm-space-4));
 }
 
 .tm-editor-shell__main--mobile > .tm-mobile-action-bar,

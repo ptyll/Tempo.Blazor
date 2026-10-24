@@ -39361,6 +39361,29 @@
           ]
         },
         {
+          "itemName": "WireframeInitialZoom",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe",
+          "description": "How the wireframe canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM). It never overrides a zoom the user chose afterwards, not even when the container is resized.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframeInitialZoom.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Fit",
+              "value": "0",
+              "description": "The whole page is fitted into the canvas with a 40 px padding, but only ever shrunk: a page that fits at 100 % stays at exactly 100 % and is centred. The default."
+            },
+            {
+              "name": "ActualSize",
+              "value": "1",
+              "description": "The page is shown at 100 %. A page larger than the canvas starts at its top-left corner (padded); a smaller page is centred. This is the behaviour before the parameter existed for a page that fits."
+            }
+          ],
+          "usageExample": "<TmWireframeEditor Document=\"@doc\" InitialZoom=\"WireframeInitialZoom.ActualSize\" />"
+        },
+        {
           "itemName": "WireframePageNavigation",
           "kind": "Enum",
           "category": "Components",
@@ -39477,6 +39500,11 @@
               "name": "BackgroundFill",
               "type": "string",
               "description": "Background fill colour used when ShowBackground is true. Defaults to \"white\"."
+            },
+            {
+              "name": "StencilTheme",
+              "type": "string?",
+              "description": "Stencil theme the page is drawn with (indigo, indigo-dark, dark, ...; decision WIREFRAME-STENCIL-THEME). null falls back to the page TargetTheme (and, in IWireframeSvgRenderer.RenderDocumentAsync, the document TargetTheme), then to the default tokens. An unknown name draws the default tokens and logs one warning."
             }
           ],
           "examples": [
@@ -39878,6 +39906,15 @@
               "defaultValue": "8"
             },
             {
+              "name": "InitialZoom",
+              "type": "WireframeInitialZoom",
+              "isRequired": false,
+              "default": "WireframeInitialZoom.Fit",
+              "description": "How the view is laid out at the first render, when Document is replaced, when the active page or its size changes and when this value changes. Fit (default) fits the page with a 40 px padding but never enlarges it past 100 %; ActualSize shows it at 100 %. A zoom the user chose is never overwritten automatically; OnZoomChangedEvent reports the real scale.",
+              "defaultValue": "WireframeInitialZoom.Fit",
+              "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
+            },
+            {
               "name": "LightEditing",
               "type": "bool",
               "isRequired": false,
@@ -40024,6 +40061,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, dragged elements snap to edges/centers of other elements."
+            },
+            {
+              "name": "StencilTheme",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The stencil theme the elements are drawn with (indigo, indigo-dark, dark, ...). Resolution order: this parameter, the active page TargetTheme, the document TargetTheme, the default tokens; an unknown name draws the default tokens and logs one warning. The page itself stays white paper.",
+              "example": "StencilTheme=\"indigo\""
             }
           ],
           "publicMethods": [
@@ -40098,6 +40142,15 @@
               "description": "Raised after every mutation so callers can persist the document."
             },
             {
+              "name": "ExportHttpClientName",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"\"",
+              "description": "Name of the IHttpClientFactory client the PNG / PDF export posts to (api/wireframe/export/png|pdf, resolved against that client base address). Empty uses the injected HttpClient, whose base is the host origin. A host whose page origin does not serve the export endpoints (a WebAssembly app next to a separate API) names the client that points at the API, like TmDiagramEditor.ExportHttpClientName. Without a registered factory, or when the named client has no base address, the injected HttpClient is used.",
+              "defaultValue": "\"\"",
+              "example": "ExportHttpClientName=\"DemoApi\""
+            },
+            {
               "name": "GridSize",
               "type": "int",
               "isRequired": false,
@@ -40122,6 +40175,15 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Host content at the start of the header, before the title (G9 slot). The editor has no built-in Save or Open."
+            },
+            {
+              "name": "InitialZoom",
+              "type": "WireframeInitialZoom",
+              "isRequired": false,
+              "default": "WireframeInitialZoom.Fit",
+              "description": "How the canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM). Fit (default) fits the page with a 40 px padding but never enlarges it past 100 % - a page that fits stays at exactly 100 % and is centred; ActualSize shows it at 100 % (the page starts at its top-left corner when it is larger than the canvas). A zoom the user chose (buttons, pinch, Ctrl+wheel) is never overwritten automatically, not even by a container resize, and the toolbar zoom read-out always shows the real scale.",
+              "defaultValue": "WireframeInitialZoom.Fit",
+              "example": "InitialZoom=\"WireframeInitialZoom.ActualSize\""
             },
             {
               "name": "LayoutBreakpoints",
@@ -40235,6 +40297,13 @@
               "default": "true",
               "description": "Show the component toolbox: the Components tab of the left panel. When no tab is left (no toolbox, no Layers, no Pages) the left panel is not rendered. Collapsing the panel is shell state (the strip toggle or the Components panel entry in the More menu).",
               "defaultValue": "true"
+            },
+            {
+              "name": "StencilTheme",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The stencil theme the canvas, the toolbox previews and the exports are drawn with: indigo, indigo-dark or dark for the built-in pack (decision WIREFRAME-STENCIL-THEME). Resolution order: this parameter, the active page TargetTheme, the document TargetTheme, then the default tokens. null, blank, light and default are the default tokens; an unknown name draws the default tokens and logs one warning. The page stays white paper - only the stencils are recoloured, in the browser SVG export and in the server PNG / PDF export alike.",
+              "example": "StencilTheme=\"indigo-dark\""
             },
             {
               "name": "Title",
@@ -40948,6 +41017,13 @@
               "isRequired": false,
               "description": "Presents the palette as a single column of named rows (icon + name, a finger-sized target) instead of the 3-column tile grid. TmWireframeEditor sets it for its tablet overlay drawer; adds the tm-wd-toolbox--single-column modifier.",
               "defaultValue": "false"
+            },
+            {
+              "name": "StencilTheme",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The stencil theme the mini-stencil previews are drawn with (indigo, indigo-dark, ...), so a recoloured canvas and its palette agree. null or unknown = the default tokens. TmWireframeEditor passes its resolved theme.",
+              "example": "StencilTheme=\"indigo\""
             }
           ],
           "cssClasses": [
@@ -41007,12 +41083,12 @@
         }
       ],
       "summary": {
-        "itemCount": 95,
-        "manualItemCount": 95,
-        "generatedItemCount": 83,
+        "itemCount": 96,
+        "manualItemCount": 96,
+        "generatedItemCount": 84,
         "generatedOnlyItemCount": 0,
         "componentCount": 10,
-        "publicApiTypeCount": 73
+        "publicApiTypeCount": 74
       }
     },
     {
@@ -102636,6 +102712,12 @@
               "kind": "Property",
               "type": "string",
               "description": "SVG markup string (already cleaned of UI overlays)."
+            },
+            {
+              "name": "Theme",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The stencil theme the posted Svg was drawn with (indigo, indigo-dark, ...), or null for the default tokens. The browser has already drawn the SVG with it, so the server rasterises it as it is; the name travels with the request so a server can log it and keep the file in step with the canvas (decision WIREFRAME-STENCIL-THEME)."
             }
           ]
         },
@@ -120768,10 +120850,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3302,
-    "manualItemCount": 3302,
+    "itemCount": 3303,
+    "manualItemCount": 3303,
     "generatedOnlyItemCount": 0,
     "componentCount": 487,
-    "publicApiTypeCount": 2762
+    "publicApiTypeCount": 2763
   }
 }

@@ -20,7 +20,10 @@ internal static class SampleWireframes
     {
         var doc = new WireframeDocument { Title = "Sample" };
         doc.Pages.Clear();
-        doc.Pages.Add(PageWith("Home", 800, 600, ("TmButton", 40, 40), ("TmCard", 40, 120)));
+        var home = PageWith("Home", 800, 600, ("TmButton", 40, 40), ("TmCard", 40, 120));
+        // A primary button: its fill is the theme's primary colour, so a themed preview visibly differs from the default one.
+        home.Elements[0].Props["variant"] = System.Text.Json.JsonSerializer.SerializeToElement("primary");
+        doc.Pages.Add(home);
         doc.Pages.Add(PageWith("Details", 1024, 768, ("TmDataTable", 30, 30)));
         doc.Pages.Add(PageWith("Settings", 640, 480, ("TmTextInput", 20, 20)));
         return doc;

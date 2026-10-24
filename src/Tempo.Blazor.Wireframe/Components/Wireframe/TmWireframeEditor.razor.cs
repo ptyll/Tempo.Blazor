@@ -36,6 +36,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private HttpClient Http { get; set; } = default!;
+    [Inject] private IServiceProvider Services { get; set; } = default!;
     [Inject] private WireframeComponentRegistry _registry { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────
@@ -168,6 +169,33 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
 
     /// <summary>
+    /// How the canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision
+    /// WIREFRAME-INITIAL-ZOOM; passed to <see cref="TmWireframeDesignerCanvas.InitialZoom"/>). <see cref="WireframeInitialZoom.Fit"/>
+    /// (default) fits the page with a 40 px padding but never enlarges it past 100 %; <see cref="WireframeInitialZoom.ActualSize"/> shows
+    /// it at 100 % (the behaviour before this parameter existed for a page that fits). The zoom the user chose is never overwritten
+    /// automatically, and the toolbar read-out always shows the real scale.
+    /// </summary>
+    [Parameter] public WireframeInitialZoom InitialZoom { get; set; } = WireframeInitialZoom.Fit;
+
+    /// <summary>
+    /// The stencil theme the canvas, the toolbox previews and the exports are drawn with (<c>indigo</c>, <c>indigo-dark</c>, <c>dark</c>, ...; decision
+    /// WIREFRAME-STENCIL-THEME). Resolution order: this parameter, the active page's <c>TargetTheme</c>, the document's <c>TargetTheme</c> (now
+    /// honoured), then the default tokens. <c>null</c>, blank, <c>light</c> and <c>default</c> are the default tokens; an unknown name draws the
+    /// default tokens and logs one warning. The page stays white paper - only the stencils are recoloured, in the browser SVG export and in the
+    /// server PNG / PDF export alike. A host usually passes the name of its active colour theme (the demo: <c>indigo</c> / <c>indigo-dark</c>).
+    /// </summary>
+    [Parameter] public string? StencilTheme { get; set; }
+
+    /// <summary>
+    /// Name of the <c>IHttpClientFactory</c> client the PNG / PDF export posts to (<c>api/wireframe/export/png|pdf</c>, resolved against that
+    /// client's base address). Empty (default) uses the injected <c>HttpClient</c>, whose base is the host's own origin. A host whose page
+    /// origin does not serve the export endpoints (a WebAssembly demo next to a separate API) names the client that points at the API, the
+    /// way <c>TmDiagramEditor.ExportHttpClientName</c> does. Without a registered <c>IHttpClientFactory</c>, or when the named client has no base address,
+    /// the injected <c>HttpClient</c> is used.
+    /// </summary>
+    [Parameter] public string ExportHttpClientName { get; set; } = "";
+
+    /// <summary>
     /// Host actions of the mobile action bar (editor container below 768 px, decision G2). The built-in tiles - Components, Pages &amp;
     /// layers, Export - come first; a host action pinned <see cref="ActionOverflow.Never"/> (for example "Save") keeps a tile of its own,
     /// the others join the "More" menu by their rank. There is no built-in Save or Open: hosts supply them here (and in
@@ -203,6 +231,10 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     private string[]         _selectedConnectorIds = [];
     private string?          _activeLayerId;
     private MinimapViewport? _minimapViewport;
+
+    // The theme name the palette previews follow: the parameter, else the active page's / the document's TargetTheme (resolved by the toolbox).
+    private string? PaletteTheme => !string.IsNullOrWhiteSpace(StencilTheme) ? StencilTheme
+        : !string.IsNullOrWhiteSpace(_activePage?.TargetTheme) ? _activePage!.TargetTheme : _document?.TargetTheme;
 
     private double _zoomLevel = 1.0;
     private string _zoomLabel => $"{(int)Math.Round(_zoomLevel * 100)}%";

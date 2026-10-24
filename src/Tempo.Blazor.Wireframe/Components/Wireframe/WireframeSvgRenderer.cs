@@ -38,7 +38,8 @@ public sealed class WireframeSvgRenderer : IWireframeSvgRenderer
         ArgumentNullException.ThrowIfNull(page);
 
         await using var htmlRenderer = new HtmlRenderer(_services, _loggerFactory);
-        return await RenderFragmentAsync(htmlRenderer, WireframePageSvg.BuildFragment(page, _registry, scope, options));
+        return await RenderFragmentAsync(htmlRenderer,
+            WireframePageSvg.BuildFragment(page, _registry, scope, options, documentTheme: null, _loggerFactory.CreateLogger<WireframeSvgRenderer>()));
     }
 
     /// <inheritdoc/>
@@ -54,7 +55,8 @@ public sealed class WireframeSvgRenderer : IWireframeSvgRenderer
         var results = new List<WireframePageRender>(document.Pages.Count);
         foreach (var page in document.Pages)
         {
-            var svg = await RenderFragmentAsync(htmlRenderer, WireframePageSvg.BuildFragment(page, _registry, scope, options));
+            var svg = await RenderFragmentAsync(htmlRenderer,
+                WireframePageSvg.BuildFragment(page, _registry, scope, options, document.TargetTheme, _loggerFactory.CreateLogger<WireframeSvgRenderer>()));
             results.Add(new WireframePageRender(page.Id, page.Name, page.Width, page.Height, svg));
         }
 

@@ -19,6 +19,13 @@ public sealed class WireframePageSvgOptions
 
     /// <summary>Background fill color used when <c>ShowBackground</c> is true.</summary>
     public string BackgroundFill { get; init; } = "white";
+
+    /// <summary>
+    /// Stencil theme the page is drawn with (<c>indigo</c>, <c>indigo-dark</c>, ...; decision WIREFRAME-STENCIL-THEME). <c>null</c> falls back to the
+    /// page's <c>TargetTheme</c> (and, in <c>IWireframeSvgRenderer.RenderDocumentAsync</c>, the document's), then to the default tokens. An unknown
+    /// name draws the default tokens and logs one warning.
+    /// </summary>
+    public string? StencilTheme { get; init; }
 }
 
 /// <summary>
@@ -51,10 +58,21 @@ public static class WireframePageSvg
         WireframeComponentRegistry registry,
         WireframeComponentScope? scope = null,
         WireframePageSvgOptions? options = null)
+        => BuildFragment(page, registry, scope, options, documentTheme: null, logger: null);
+
+    /// <summary>The fragment with the document's <c>TargetTheme</c> as the last theme fallback and a logger for the unknown-theme warning.</summary>
+    internal static RenderFragment BuildFragment(
+        WireframePage page,
+        WireframeComponentRegistry registry,
+        WireframeComponentScope? scope,
+        WireframePageSvgOptions? options,
+        string? documentTheme,
+        Microsoft.Extensions.Logging.ILogger? logger)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(registry);
         options ??= WireframePageSvgOptions.Default;
+        var theme = Stencil.StencilThemeScope.Resolve(options.StencilTheme, page.TargetTheme, documentTheme, logger);
 
         return builder =>
         {
@@ -157,7 +175,11 @@ public static class WireframePageSvg
                 builder.AddAttribute(36, "overflow", "visible");
 
                 if (def is not null)
-                    builder.AddContent(37, (RenderFragment)(b => def.RenderSvg(element, b)));
+                    builder.AddContent(37, (RenderFragment)(b =>
+                    {
+                        using var _ = Stencil.StencilThemeScope.Use(theme);
+                        def.RenderSvg(element, b);
+                    }));
                 else
                     builder.AddMarkupContent(38, BuildUnknownComponentFallback(element));
 

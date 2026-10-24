@@ -44,6 +44,12 @@ public partial class TmWireframeToolbox : ComponentBase
     /// </summary>
     [Parameter] public bool SingleColumn { get; set; }
 
+    /// <summary>
+    /// The stencil theme the mini-stencil previews are drawn with (<c>indigo</c>, <c>indigo-dark</c>, ...; decision WIREFRAME-STENCIL-THEME), so a
+    /// recoloured canvas and its palette agree. <c>null</c> / unknown = the default tokens. <c>TmWireframeEditor</c> passes its resolved theme.
+    /// </summary>
+    [Parameter] public string? StencilTheme { get; set; }
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     private ElementReference _containerRef;
@@ -70,6 +76,8 @@ public partial class TmWireframeToolbox : ComponentBase
     private bool _firstRender = true;
     private bool _readOnlySeen;
     private bool _singleColumnSeen;
+    private string? _themeSeen;
+    private string? _theme;
     private string? _classSeen;
     private WireframeComponentScope? _scopeSeen;
     private EventCallback<string> _callbackSeen;
@@ -92,6 +100,7 @@ public partial class TmWireframeToolbox : ComponentBase
         var defs = _registry.GetAll(ComponentScope).ToArray();
         var registryChanged = !defs.SequenceEqual(_allDefs);
 
+        _theme = Stencil.StencilThemeScope.Resolve(StencilTheme, null, null, null);
         _allDefs          = defs;
         _allCategories    = _registry.GetCategories(ComponentScope);
         _hasCustomComponents = _allDefs.Any(d => !d.IsBuiltIn);
@@ -99,11 +108,13 @@ public partial class TmWireframeToolbox : ComponentBase
         var changed = registryChanged
                       || ReadOnly != _readOnlySeen
                       || SingleColumn != _singleColumnSeen
+                      || !string.Equals(_theme, _themeSeen, StringComparison.Ordinal)
                       || !ReferenceEquals(ComponentScope, _scopeSeen)
                       || !string.Equals(Class, _classSeen, StringComparison.Ordinal)
                       || !OnComponentActivated.Equals(_callbackSeen);
         _readOnlySeen = ReadOnly;
         _singleColumnSeen = SingleColumn;
+        _themeSeen    = _theme;
         _scopeSeen    = ComponentScope;
         _classSeen    = Class;
         _callbackSeen = OnComponentActivated;

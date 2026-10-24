@@ -73,7 +73,8 @@ public partial class TmWireframeEditor
         {
             Svg = svg,
             FileName = result.FileName,
-            Options = result.Options
+            Options = result.Options,
+            Theme = PaletteTheme,
         };
 
         var endpoint = result.Format == "pdf"
@@ -82,7 +83,7 @@ public partial class TmWireframeEditor
 
         try
         {
-            var response = await Http.PostAsJsonAsync(endpoint, request);
+            var response = await ResolveExportClient().PostAsJsonAsync(endpoint, request);
             response.EnsureSuccessStatusCode();
 
             var bytes = await response.Content.ReadAsByteArrayAsync();
@@ -96,5 +97,16 @@ public partial class TmWireframeEditor
         {
             _importError = string.Format(Loc["TmWireframe_ExportError"], ex.Message);
         }
+    }
+
+    /// <summary>The client the server export posts to: the named factory client when the host asked for one, else the injected HttpClient.</summary>
+    private HttpClient ResolveExportClient()
+    {
+        if (string.IsNullOrWhiteSpace(ExportHttpClientName)) return Http;
+        var factory = Services.GetService(typeof(IHttpClientFactory)) as IHttpClientFactory;
+        var named = factory?.CreateClient(ExportHttpClientName);
+        // A factory hands out a default client for a name nobody configured; one without a base address cannot resolve the relative
+        // export route, so the injected client (the host origin) is the better answer than an InvalidOperationException.
+        return named is { BaseAddress: not null } ? named : Http;
     }
 }

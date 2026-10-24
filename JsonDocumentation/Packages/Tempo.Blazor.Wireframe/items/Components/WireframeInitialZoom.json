@@ -1,0 +1,23 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Wireframe",
+  "description": "How the wireframe canvas lays out its view at the first render, when the document is replaced and when the active page changes (decision WIREFRAME-INITIAL-ZOOM). It never overrides a zoom the user chose afterwards, not even when the container is resized.",
+  "packageId": "Tempo.Blazor.Wireframe",
+  "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframeInitialZoom.cs",
+  "documentationStatus": "authored",
+  "itemName": "WireframeInitialZoom",
+  "values": [
+    {
+      "name": "Fit",
+      "value": "0",
+      "description": "The whole page is fitted into the canvas with a 40 px padding, but only ever shrunk: a page that fits at 100 % stays at exactly 100 % and is centred. The default."
+    },
+    {
+      "name": "ActualSize",
+      "value": "1",
+      "description": "The page is shown at 100 %. A page larger than the canvas starts at its top-left corner (padded); a smaller page is centred. This is the behaviour before the parameter existed for a page that fits."
+    }
+  ],
+  "usageExample": "<TmWireframeEditor Document=\"@doc\" InitialZoom=\"WireframeInitialZoom.ActualSize\" />"
+}
