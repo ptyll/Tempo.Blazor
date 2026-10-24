@@ -153,21 +153,31 @@
     color: var(--tm-color-text);
 }
 
-.tm-email-import__tree,
-.tm-email-import__tree ul {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-1);
-    margin: 0;
-    padding-inline-start: var(--tm-space-4);
-    list-style: none;
-}
-
 .tm-email-import__tree {
+    /* Block flow, NOT a flex column: the Virtualize spacers carry an inline height, and a flex item shrinks, so a flex
+       list collapsed its own scroll extent (the list rendered empty). Every row is one fixed height instead. */
+    display: block;
+    margin: 0;
+    list-style: none;
     padding-inline-start: 0;
     max-block-size: 16rem;
     overflow-y: auto;
     overscroll-behavior: contain;
+}
+
+/* Virtualized rows: every row is ONE fixed height (28 px = StructureRowHeight in the markup), because the
+   Virtualize spacers are computed from it. The row clips instead of wrapping so a long localized block name can
+   never change the height and desynchronise the scroll extent. The indent states the depth the nested list used
+   to draw with its padding. */
+.tm-email-import__tree-row {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    block-size: 1.75rem;
+    min-inline-size: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .tm-email-import__tree-label {
@@ -179,23 +189,30 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
+.tm-email-import__tree-column {
+    padding-inline-start: var(--tm-space-4);
+}
+
 .tm-email-import__tree-column > .tm-email-import__tree-label,
 .tm-email-import__tree-block {
     color: var(--tm-color-text-secondary);
 }
 
 .tm-email-import__tree-block {
+    padding-inline-start: calc(var(--tm-space-4) * 2);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-email-import__tree-block[data-tm-import-block-nested="true"] {
-    font-style: italic;
+    padding-inline-start: calc(var(--tm-space-4) * 3);
 }
 
-.tm-email-import__structure-more {
-    margin: 0;
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-color-text-secondary);
+.tm-email-import__tree:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+.tm-email-import__tree-block[data-tm-import-block-nested="true"] {
+    font-style: italic;
 }
 
 /* What pressing Import does, said in the card next to the counts. */

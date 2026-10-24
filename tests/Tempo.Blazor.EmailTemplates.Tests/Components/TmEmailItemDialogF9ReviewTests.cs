@@ -410,19 +410,44 @@ public class TmEmailItemDialogF9ReviewTests : EmailEditorTestBase, IDisposable
     }
 
     [Fact]
-    public void The_pinned_column_toggle_carries_its_label_in_the_accessible_name_only()
+    public void The_pinned_column_toggle_is_named_by_aria_label_and_shows_a_decorative_short_caption()
     {
         var table = Table(2, 2);
         var cut = TableEditor(table);
 
         var rowControl = cut.Find("[data-tm-table-rowctl]");
+        // The toggle's accessible name is the FULL sentence ("Row 1 is a header row") on the input itself...
         rowControl.QuerySelectorAll(".tm-toggle-label-text").Should().BeEmpty(
-            "a visible label would double the width of the sticky column");
-        rowControl.QuerySelector("input[type='checkbox']").Should().NotBeNull();
+            "the visible caption is the editor's own short word, not the toggle's wrapper label");
         rowControl.QuerySelector("input[type='checkbox']")!.GetAttribute("aria-label")
             .Should().Be("EmailEditor_Table_RowHeaderLabel[1]");
+
+        // ...and the visible short caption ("Header") is decorative: aria-hidden, so it can be hidden by the
+        // narrow-container rule without ever changing what a screen reader announces.
+        var caption = rowControl.QuerySelector("[data-tm-table-rowheader-text]");
+        caption.Should().NotBeNull("the reference draws a text caption under the row switch");
+        caption!.TextContent.Trim().Should().Be("EmailEditor_Table_RowHeaderShort");
+        caption.GetAttribute("aria-hidden").Should().Be("true");
     }
 
+    [Fact]
+    public void A_narrow_container_hides_the_row_switch_caption_through_a_container_query()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.EmailTemplates", "Components", "TmEmailTableEditor.razor.css"));
+
+        css.Should().MatchRegex(@"\.tm-email-table-editor\s*\{[^}]*container-type:\s*inline-size",
+            "the editor is its own size container: the inspector column and the phone sheet are both narrower than the viewport");
+        css.Should().MatchRegex(@"@container[^{]*\(max-width:[^{]*\{[^@]*\.tm-email-table-editor__rowheader-text\s*\{\s*display:\s*none",
+            "a narrow grid keeps the pinned column to the switch and the trash only");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
+    }
     // ── The colour policy split ─────────────────────────────────────────────────────────────
 
     [Fact]

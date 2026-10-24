@@ -16,7 +16,8 @@ internal static class TestCulture
     internal static void PinEnglishUiCulture()
     {
         var en = CultureInfo.GetCultureInfo("en");
+        // Default for every thread the runner starts (and the thread-pool threads xUnit runs tests on); no bare assignment of the ambient
+        // CurrentUICulture here - CultureAssignmentGuardTests forbids that, and the default covers every test thread.
         CultureInfo.DefaultThreadCurrentUICulture = en;
-        CultureInfo.CurrentUICulture = en;
     }
 }

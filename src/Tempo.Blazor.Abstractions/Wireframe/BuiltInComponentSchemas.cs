@@ -134,6 +134,10 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmFileManager"] = ["attachment-manager", "file-drop"],
             ["TmDocumentManager"] = ["attachment-manager", "list-view"],
             ["TmDocumentOpenDialog"] = ["dialog", "list-view"],
+            ["TmEmailTemplateEditor"] = ["email-template-editor"],
+            ["TmEmailCanvasBlock"] = ["email-block"],
+            ["TmEmailItemList"] = ["list-view"],
+            ["TmEmailItemDialog"] = ["dialog"],
             ["TmDivider"] = ["section"],
             ["TmText"] = ["text"],
             ["TmCard"] = ["card"],
@@ -2698,6 +2702,50 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ]
         };
 
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmEmailTemplateEditor", Category = "Editors & Apps", DisplayName = "Email Template Editor",
+            DefaultWidth = 760, DefaultHeight = 460,
+            Props =
+            [
+                P("title",    "Template Name", PropType.String, "Welcome email", cat: "Content"),
+                P("readOnly", "Read-only",     PropType.Bool,   false,           cat: "State"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmEmailCanvasBlock", Category = "Editors & Apps", DisplayName = "Email Canvas Block",
+            DefaultWidth = 360, DefaultHeight = 84,
+            Props =
+            [
+                P("kind",     "Block Kind", PropType.Enum, "text", cat: "Content",
+                    opts: ["text", "button", "image", "divider"]),
+                P("selected", "Selected",   PropType.Bool, false,  cat: "State"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmEmailItemList", Category = "Editors & Apps", DisplayName = "Email Item List",
+            DefaultWidth = 300, DefaultHeight = 190,
+            Props =
+            [
+                P("itemCount", "Item Count", PropType.Int,  3,     cat: "Appearance"),
+                P("readOnly",  "Read-only",  PropType.Bool, false, cat: "State"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmEmailItemDialog", Category = "Editors & Apps", DisplayName = "Email Item Dialog",
+            DefaultWidth = 360, DefaultHeight = 260,
+            Props =
+            [
+                P("title",      "Title",       PropType.String, "Edit item", cat: "Content"),
+                P("showErrors", "Show Errors", PropType.Bool,   false,       cat: "State"),
+            ]
+        };
         yield return new WireframeComponentSchema
         {
             Type = "TmDocumentManager", Category = "Editors & Apps", DisplayName = "Document Manager",

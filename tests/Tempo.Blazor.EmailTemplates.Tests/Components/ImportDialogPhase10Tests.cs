@@ -95,6 +95,59 @@ public class ImportDialogPhase10Tests : BunitContext, IDisposable
         block.TextContent.Should().Be("block.text.name", "the type name is localized, not the discriminator");
     }
 
+    private static string ManyBlocksJson(int blocks)
+    {
+        var column = new EmailColumn();
+        for (var i = 0; i < blocks; i++) column.Blocks.Add(new EmailTextBlock { Content = "row " + i });
+        return EmailTemplateSerializer.Serialize(new EmailTemplateDocument
+        {
+            Subject = "S",
+            Sections = { new EmailSection { Columns = { column } } },
+        });
+    }
+
+    [Theory]
+    [InlineData(150)]
+    [InlineData(1000)]
+    public void StructurePreview_AboveTheFormerHundredRowLimit_IsVirtualizedNotTruncated(int blocks)
+    {
+        var cut = Render<TmEmailImportDialog>(p => p.Add(c => c.Show, true));
+        cut.Find("#tab-import-json").Click();
+
+        cut.Find("[data-tm-import-input] textarea").Input(ManyBlocksJson(blocks));
+
+        // The state card still counts EVERY block; the preview no longer stops at 100 and no longer needs a
+        // "…and N more blocks" note: its rows (1 section + 1 column + the blocks) all exist in the list model.
+        var summary = cut.Find("[data-tm-import-summary]");
+        summary.GetAttribute("data-tm-import-sections").Should().Be("1");
+        summary.GetAttribute("data-tm-import-blocks").Should().Be(blocks.ToString());
+        cut.Find("[data-tm-import-tree]").GetAttribute("data-tm-import-rows").Should().Be((blocks + 2).ToString());
+        cut.FindAll("[data-tm-import-structure-more]").Should().BeEmpty(
+            "nothing is left out any more, so there is no truncation note");
+
+        // A row names its place in the whole list, even though only a window of rows is in the DOM.
+        var first = cut.Find("[data-tm-import-block]");
+        first.GetAttribute("aria-posinset").Should().Be("3", "section and column come first");
+        first.GetAttribute("aria-setsize").Should().Be((blocks + 2).ToString());
+    }
+
+    [Fact]
+    public void StructurePreview_RowsAreFixedHeight_SoTheVirtualizeSpacersAreExact()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            RepositoryRoot(), "src", "Tempo.Blazor.EmailTemplates", "Components", "TmEmailImportDialog.razor.css"));
+
+        css.Should().MatchRegex(@"\.tm-email-import__tree-row\s*\{[^}]*block-size:\s*1\.75rem",
+            "28 px is StructureRowHeight: a row that wrapped or grew would desynchronise the scroll extent");
+        css.Should().MatchRegex(@"\.tm-email-import__tree-row\s*\{[^}]*white-space:\s*nowrap");
+    }
+
+    private static string RepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
+    }
     [Fact]
     public void Json_ParsesIntoTheSamePreview()
     {

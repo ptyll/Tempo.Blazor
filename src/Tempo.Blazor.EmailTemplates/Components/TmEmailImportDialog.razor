@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 @using System.Globalization
 @using System.Text
+@using Microsoft.AspNetCore.Components.Web.Virtualization
 @inject IBlockRegistry Registry
 
 @* §2.4.4–2.4.6 / B12: two modes (MJML / JSON) over a drop zone and a code surface, the limits of
@@ -36,11 +37,10 @@
 
 @code {
     /// <summary>
-    /// How many block rows the structure preview renders. A document can legally carry 2000 blocks; painting
-    /// all of them in a dialog costs more than the import itself, so the list stops and says how many rows are
-    /// left out (the counts in the state card are always complete).
+    /// The height (px) of one structure row. The list is virtualized, so every row has ONE height — the
+    /// stylesheet pins the same value in rem terms — and the spacers can be computed without measuring.
     /// </summary>
-    private const int StructureRowLimit = 100;
+    private const float StructureRowHeight = 28f;
 
     /// <summary>
     /// The file types the drop zone accepts, regardless of the active tab: a `.json` file dropped while the MJML
@@ -78,27 +78,32 @@
         Error,
     }
 
-    /// <summary>One row of the flattened structure preview.</summary>
-    /// <param name="Type">The block kind (shown as a data attribute for tests and hosts).</param>
-    /// <param name="NameKey">The localized toolbox name key of the kind.</param>
+    private enum StructureKind
+    {
+        Section,
+        Column,
+        Block,
+    }
+
+    /// <summary>One row of the flattened structure preview (sections, columns and blocks in document order).</summary>
+    /// <param name="Kind">Whether the row is a section, a column or a block.</param>
+    /// <param name="Position">The 1-based place of the row in the whole list (aria-posinset).</param>
+    /// <param name="Type">The block kind (shown as a data attribute for tests and hosts); blocks only.</param>
+    /// <param name="NameKey">The localized toolbox name key of the kind; blocks only.</param>
     /// <param name="Nested">Whether the block sits inside a container block.</param>
-    private sealed record StructureBlock(BlockType Type, string NameKey, bool Nested);
-
-    private sealed record StructureColumn(IReadOnlyList<StructureBlock> Blocks);
-
-    private sealed record StructureSection(IReadOnlyList<StructureColumn> Columns);
+    private sealed record StructureRow(StructureKind Kind, int Position, BlockType Type, string NameKey, bool Nested);
 
     private readonly EmailImportOptions _defaultOptions = new();
     private readonly List<string> _warnings = [];
     private readonly List<string> _errors = [];
-    private List<StructureSection> _structure = [];
+    private List<StructureRow> _structure = [];
+    private readonly Dictionary<BlockType, string> _nameKeys = [];
     private string _input = string.Empty;
     private bool _json;
     private EmailTemplateDocument? _preview;
     private ImportState _state = ImportState.Empty;
     private int _sections;
     private int _blocks;
-    private int _omittedBlocks;
 
     private EmailImportOptions Options => ImportOptions ?? _defaultOptions;
 
@@ -225,40 +230,40 @@
             <section class="tm-email-import__structure" data-tm-import-structure
                      aria-label="@Loc["EmailEditor_Import_Structure"]">
                 <h4 class="tm-email-import__structure-title">@Loc["EmailEditor_Import_Structure"]</h4>
-                <ul class="tm-email-import__tree">
-                    @foreach (var section in _structure)
-                    {
-                        <li class="tm-email-import__tree-section" data-tm-import-section="true">
-                            <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeSection"]</span>
-                            <ul>
-                                @foreach (var column in section.Columns)
-                                {
-                                    <li class="tm-email-import__tree-column" data-tm-import-column="true">
-                                        <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeColumn"]</span>
-                                        <ul>
-                                            @foreach (var block in column.Blocks)
-                                            {
-                                                <li class="tm-email-import__tree-block"
-                                                    data-tm-import-block="true"
-                                                    data-tm-import-block-kind="@block.Type"
-                                                    data-tm-import-block-nested="@(block.Nested ? "true" : null)">
-                                                    @Loc[block.NameKey]
-                                                </li>
-                                            }
-                                        </ul>
-                                    </li>
-                                }
-                            </ul>
-                        </li>
-                    }
-                </ul>
-                @if (_omittedBlocks > 0)
-                {
-                    <p class="tm-email-import__structure-more" data-tm-import-structure-more="true">
-                        @Loc["EmailEditor_Import_TreeTruncated", _omittedBlocks]
-                    </p>
-                }
-            </section>
+                @* Virtualized (phase 8): a template may carry thousands of blocks, and painting every row costs
+                   more than the import itself, so only the rows in (and just around) the viewport are in the DOM and
+                   the list never stops short. Rows are ONE fixed height (the stylesheet pins it), the spacers are
+                   <li> so the list stays valid, and every row names its place (aria-level / posinset / setsize). *@
+                <ul class="tm-email-import__tree" data-tm-import-tree data-tm-import-rows="@_structure.Count"
+                    tabindex="0" aria-label="@Loc["EmailEditor_Import_Structure"]">
+                    <Virtualize Items="_structure" Context="row" ItemSize="StructureRowHeight" OverscanCount="8"
+                                SpacerElement="li">
+                        @switch (row.Kind)
+                        {
+                            case StructureKind.Section:
+                                <li class="tm-email-import__tree-row tm-email-import__tree-section" data-tm-import-section="true"
+                                    aria-level="1" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeSection"]</span>
+                                </li>
+                                break;
+                            case StructureKind.Column:
+                                <li class="tm-email-import__tree-row tm-email-import__tree-column" data-tm-import-column="true"
+                                    aria-level="2" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeColumn"]</span>
+                                </li>
+                                break;
+                            default:
+                                <li class="tm-email-import__tree-row tm-email-import__tree-block"
+                                    data-tm-import-block="true"
+                                    data-tm-import-block-kind="@row.Type"
+                                    data-tm-import-block-nested="@(row.Nested ? "true" : null)"
+                                    aria-level="@(row.Nested ? 4 : 3)" aria-posinset="@row.Position" aria-setsize="@_structure.Count">
+                                    @Loc[row.NameKey]
+                                </li>
+                                break;
+                        }
+                    </Virtualize>
+                </ul>            </section>
         }
     </text>;
 
@@ -335,7 +340,6 @@
         _structure = [];
         _sections = 0;
         _blocks = 0;
-        _omittedBlocks = 0;
 
         if (string.IsNullOrWhiteSpace(_input))
         {
@@ -413,50 +417,38 @@
                 : Loc[message.Key, message.Detail];
 
     /// <summary>
-    /// Builds the section → column → block rows of the structure preview, container children included (and
-    /// flagged), capped at <see cref="StructureRowLimit"/> rows with the omitted count kept for the note.
+    /// Flattens the document into section → column → block rows in document order, container children included
+    /// (and flagged). Nothing is dropped: the list is virtualized, so its size costs the DOM nothing.
     /// </summary>
-    private List<StructureSection> BuildStructure(EmailTemplateDocument document)
+    private List<StructureRow> BuildStructure(EmailTemplateDocument document)
     {
-        var rendered = 0;
-        _omittedBlocks = 0;
-        var sections = new List<StructureSection>(document.Sections.Count);
+        var rows = new List<StructureRow>();
+        _nameKeys.Clear();
 
         foreach (var section in document.Sections)
         {
-            var columns = new List<StructureColumn>(section.Columns.Count);
+            rows.Add(new StructureRow(StructureKind.Section, rows.Count + 1, default, string.Empty, Nested: false));
             foreach (var column in section.Columns)
             {
-                var rows = new List<StructureBlock>();
-                Append(column.Blocks, nested: false, rows, ref rendered);
-                columns.Add(new StructureColumn(rows));
+                rows.Add(new StructureRow(StructureKind.Column, rows.Count + 1, default, string.Empty, Nested: false));
+                Append(column.Blocks, nested: false, rows);
             }
-
-            sections.Add(new StructureSection(columns));
         }
 
-        return sections;
+        return rows;
     }
 
-    private void Append(IEnumerable<EmailBlockBase> blocks, bool nested, List<StructureBlock> rows, ref int rendered)
+    private void Append(IEnumerable<EmailBlockBase> blocks, bool nested, List<StructureRow> rows)
     {
         foreach (var block in blocks)
         {
-            if (rendered >= StructureRowLimit)
-            {
-                _omittedBlocks++;
-                continue;
-            }
-
-            rendered++;
-            rows.Add(new StructureBlock(block.Type, NameKeyOf(block), nested));
+            rows.Add(new StructureRow(StructureKind.Block, rows.Count + 1, block.Type, NameKeyOf(block), nested));
             foreach (var children in ChildBlocks(block))
             {
-                Append(children, nested: true, rows, ref rendered);
+                Append(children, nested: true, rows);
             }
         }
     }
-
     private static IEnumerable<IReadOnlyList<EmailBlockBase>> ChildBlocks(EmailBlockBase block)
     {
         switch (block)
@@ -478,9 +470,17 @@
 
     /// <summary>The localized toolbox name of a block kind (the toolbox key table owns these names).</summary>
     private string NameKeyOf(EmailBlockBase block)
-        => Registry.GetAll().FirstOrDefault(d => d.Type == block.Type)?.NameKey
-           ?? $"block.{block.Type.ToString().ToLowerInvariant()}.name";
+    {
+        // Resolved once per kind per parse: a 2000-block document would otherwise scan the registry 2000 times.
+        if (!_nameKeys.TryGetValue(block.Type, out var key))
+        {
+            key = Registry.GetAll().FirstOrDefault(d => d.Type == block.Type)?.NameKey
+                  ?? $"block.{block.Type.ToString().ToLowerInvariant()}.name";
+            _nameKeys[block.Type] = key;
+        }
 
+        return key;
+    }
     /// <summary>
     /// The byte limit as the user reads it ("5 MB", "512 kB"). The unit prefix follows the CURRENT CULTURE
     /// (Czech and Slovak write "kB" the same way, but the decimal separator is a comma there).

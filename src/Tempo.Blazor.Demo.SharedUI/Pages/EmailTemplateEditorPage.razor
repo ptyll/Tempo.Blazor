@@ -6,7 +6,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<PageTitle>Edit template</PageTitle>
+<PageTitle>@Loc["TmDemo_EmailTemplates_Editor_PageTitle"]</PageTitle>
 
 <div class="tm-demo-email-editor-page" data-tm-email-editor-page
      data-tm-demo-resolved="@_resolvedLayout">
@@ -35,7 +35,7 @@
     @if (IsPhoneLayout)
     {
         <details class="tm-demo-email-editor-page__controls" data-tm-demo-controls>
-            <summary>Demo controls</summary>
+            <summary>@Loc["TmDemo_EmailTemplates_Editor_Controls"]</summary>
             <div class="tm-demo-email-editor-page__bar" data-tm-demo-bar>@DemoControls</div>
         </details>
     }
@@ -50,7 +50,7 @@
     }
     else if (_document is null)
     {
-        <TmEmptyState Icon="alert-triangle" Title="Template not found" />
+        <TmEmptyState Icon="alert-triangle" Title="@Loc["TmDemo_EmailTemplates_Editor_NotFound"]" />
     }
     else
     {
@@ -77,70 +77,70 @@
 @code {
     /// <summary>The demo's own switches: the host save result, the forced layout, the mobile presentation.</summary>
     private RenderFragment DemoControls => @<text>
-        <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>Back</TmButton>
+        <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>@Loc["TmDemo_EmailTemplates_Editor_Back"]</TmButton>
 
         @* Fáze 7 demo: the editor owns the dirty flag and the save outcome, the host only reports results.
            These two controls exercise the paths a host has to handle — a read-only editor, and a save the
            host rejects (failed) or refuses as stale (conflict). *@
-        <TmToggle Label="Read-only" Value="_readOnly" ValueChanged="OnReadOnlyChanged" data-tm-demo-readonly />
+        <TmToggle Label="@Loc["TmDemo_EmailTemplates_Editor_ReadOnly"]" Value="_readOnly" ValueChanged="OnReadOnlyChanged" data-tm-demo-readonly />
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Host save result</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_HostSaveResult"]</span>
             <select data-tm-demo-simulate @onchange="OnSimulationChanged">
-                <option value="real">Call the API</option>
-                <option value="failed">Simulate failure</option>
-                <option value="failed-long">Simulate a long failure message</option>
-                <option value="conflict">Simulate conflict</option>
+                <option value="real">@Loc["TmDemo_EmailTemplates_Editor_Simulate_Real"]</option>
+                <option value="failed">@Loc["TmDemo_EmailTemplates_Editor_Simulate_Failed"]</option>
+                <option value="failed-long">@Loc["TmDemo_EmailTemplates_Editor_Simulate_FailedLong"]</option>
+                <option value="conflict">@Loc["TmDemo_EmailTemplates_Editor_Simulate_Conflict"]</option>
             </select>
         </label>
         @* Fáze 9 demo: how the items of a social / navbar / carousel / accordion block are edited. Inline
            keeps every field in the inspector; Dialog edits one item at a time in a modal over a copy, which
            is the mode a touch host wants (the modal is a sheet on a phone). *@
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Item editing</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_ItemEditing"]</span>
             <select data-tm-demo-item-mode @onchange="OnItemModeChanged">
-                <option value="Inline">Inline</option>
-                <option value="Dialog">Dialog</option>
+                <option value="Inline">@Loc["TmDemo_EmailTemplates_Editor_ItemEditing_Inline"]</option>
+                <option value="Dialog">@Loc["TmDemo_EmailTemplates_Editor_ItemEditing_Dialog"]</option>
             </select>
         </label>
         @* Fáze 9A demo: whether the WYSIWYG canvas may request the template's remote images from THIS
            browser. Load (default) is the faithful preview; Placeholder issues no request at all, which is
            what a host wants for an imported template that may carry a tracking pixel. *@
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Canvas images</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_CanvasImages"]</span>
             <select data-tm-demo-canvas-images @onchange="OnCanvasImageLoadingChanged">
-                <option value="Load">Load</option>
-                <option value="Placeholder">Placeholder</option>
+                <option value="Load">@Loc["TmDemo_EmailTemplates_Editor_CanvasImages_Load"]</option>
+                <option value="Placeholder">@Loc["TmDemo_EmailTemplates_Editor_CanvasImages_Placeholder"]</option>
             </select>
         </label>
         @* Fáze 8 demo: force the editor's layout instead of resizing the browser. Auto lets the shell
            measure its own container (the production path); the other three pin a mode so the desktop /
            tablet / phone chrome can be reviewed side by side. *@
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Layout</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_Layout"]</span>
             <select data-tm-demo-layout @onchange="OnLayoutChanged">
-                <option value="Auto">Auto (container)</option>
-                <option value="Desktop">Desktop</option>
-                <option value="Tablet">Tablet</option>
-                <option value="Mobile">Mobile</option>
+                <option value="Auto">@Loc["TmDemo_EmailTemplates_Editor_Layout_Auto"]</option>
+                <option value="Desktop">@Loc["TmDemo_EmailTemplates_Editor_Layout_Desktop"]</option>
+                <option value="Tablet">@Loc["TmDemo_EmailTemplates_Editor_Layout_Tablet"]</option>
+                <option value="Mobile">@Loc["TmDemo_EmailTemplates_Editor_Layout_Mobile"]</option>
             </select>
         </label>
         @* EM3: Sheet is the mobile default (canvas + bottom sheet with Bloky | Vlastnosti), Tabs is the
            shell's alternative full-region Left | Canvas | Right tablist. *@
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Mobile panels</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_MobilePanels"]</span>
             <select data-tm-demo-presentation @onchange="OnPresentationChanged">
-                <option value="Sheet">Sheet</option>
-                <option value="Tabs">Tabs</option>
+                <option value="Sheet">@Loc["TmDemo_EmailTemplates_Editor_MobilePanels_Sheet"]</option>
+                <option value="Tabs">@Loc["TmDemo_EmailTemplates_Editor_MobilePanels_Tabs"]</option>
             </select>
         </label>
         @* Fáze 10 demo: the import limits belong to the HOST (EmailImportOptions). Default is the contract
            5 MB; "1 kB" exists so the too-large-input path can be exercised without a 6 MB file. *@
         <label class="tm-demo-email-editor-page__simulate">
-            <span>Import limit</span>
+            <span>@Loc["TmDemo_EmailTemplates_Editor_ImportLimit"]</span>
             <select data-tm-demo-import-limit @onchange="OnImportLimitChanged">
-                <option value="default">5 MB (default)</option>
-                <option value="1024">1 kB</option>
-                <option value="0">Unlimited</option>
+                <option value="default">@Loc["TmDemo_EmailTemplates_Editor_ImportLimit_Default"]</option>
+                <option value="1024">@Loc["TmDemo_EmailTemplates_Editor_ImportLimit_Small"]</option>
+                <option value="0">@Loc["TmDemo_EmailTemplates_Editor_ImportLimit_Unlimited"]</option>
             </select>
         </label>
         @* Phase 7 demo: a host calls SaveAsync() from wherever its own flow runs - a navigation guard, a
@@ -148,16 +148,16 @@
            button does exactly that (Task.Run) so the Blazor Server demo proves the editor hops back onto
            the dispatcher by itself: the host's IsDirtyChanged callback below must still reach the page. *@
         <button type="button" class="tm-demo-email-editor-page__simulate" data-tm-demo-save-background
-                @onclick="SaveFromBackgroundThreadAsync">Save from a background thread</button>
+                @onclick="SaveFromBackgroundThreadAsync">@Loc["TmDemo_EmailTemplates_Editor_SaveBackground"]</button>
         @* The editor's own badge already reports the save state; this is the HOST's view of the same thing,
            i.e. what arrived through IsDirtyChanged — the guard/leave flow keys off exactly this flag. The
            wording stays plain ("unsaved changes yes/no") instead of naming the internal flag. *@
         <span class="tm-demo-email-editor-page__status" data-tm-demo-dirty="@(_isDirty ? "true" : "false")"
               data-tm-demo-off-dispatcher="@_dirtyCallbacksOffDispatcher">
-            Host: unsaved changes @(_isDirty ? "yes" : "no")
+            @Loc[_isDirty ? "TmDemo_EmailTemplates_Editor_HostDirty_Yes" : "TmDemo_EmailTemplates_Editor_HostDirty_No"]
         </span>
         <span class="tm-demo-email-editor-page__status" data-tm-demo-resolved-layout="@_resolvedLayout">
-            Layout: @_resolvedLayout
+            @Loc["TmDemo_EmailTemplates_Editor_ResolvedLayout", _resolvedLayout.ToString()]
         </span>
     </text>;
 

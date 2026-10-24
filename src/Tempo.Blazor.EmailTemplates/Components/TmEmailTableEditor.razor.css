@@ -10,6 +10,10 @@
     flex-direction: column;
     gap: var(--tm-space-4);
     min-inline-size: 0;
+    /* The editor measures ITSELF: the inspector column and the phone sheet are both much narrower than the
+       viewport, so the caption rule below keys off this container, never off a media query. */
+    container-type: inline-size;
+    container-name: tm-email-table;
 }
 
 .tm-email-table-editor__section {
@@ -84,6 +88,21 @@
     text-align: center;
 }
 
+/* The short caption under the row switch ("Header"). It is decorative (aria-hidden; the switch keeps its full
+   aria-label), so it can disappear without changing the announced name. */
+.tm-email-table-editor__rowheader-text {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    line-height: 1.25;
+}
+
+/* Narrow grid (a phone sheet, the inspector column): the pinned column keeps only the switch and the trash,
+   so the cell columns keep their width (the reference's compact phone grid). */
+@container tm-email-table (max-width: 24rem) {
+    .tm-email-table-editor__rowheader-text {
+        display: none;
+    }
+}
 .tm-email-table-editor__cell {
     padding: var(--tm-space-2);
     vertical-align: top;

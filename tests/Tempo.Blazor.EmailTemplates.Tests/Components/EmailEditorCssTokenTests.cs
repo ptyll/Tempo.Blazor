@@ -48,6 +48,19 @@ public class EmailEditorCssTokenTests
     }
 
     [Fact]
+    public void The_phone_palette_packs_four_tiles_per_row_so_the_first_group_clears_the_default_snap()
+    {
+        var editor = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateEditor.razor.css").Text;
+
+        // Phase 8 (UX): three tiles per row left only the first row above the action bar at 390 px in the demo.
+        editor.Should().MatchRegex(
+            @"\[data-layout=""mobile""\]\s+\.tm-email-toolbox__items\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(4\.25rem,\s*1fr\)\)",
+            "a 4.25rem track packs four tiles into the ~318 px sheet body and three into a 320 px phone");
+        editor.Should().MatchRegex(
+            @"\[data-layout=""mobile""\]\s+\.tm-email-toolbox__items--layouts\s*\{[^}]*grid-template-columns:\s*1fr",
+            "the layout presets keep their one-column preview rows");
+    }
+    [Fact]
     public void The_editor_panels_and_the_canvas_use_tokens_only()
     {
         // Fáze 8: the panels are the shell's docked columns, so the SHELL owns the card chrome (its own

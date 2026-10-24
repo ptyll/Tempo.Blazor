@@ -32,6 +32,9 @@
 }
 
 .tm-demo-email-send__form {
+    /* The form is as tall as its fields, never stretched to the (taller) sticky preview beside it: the grid's
+       align-items already says so, the item states it too so a reordered/wrapped grid cannot stretch it. */
+    align-self: start;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-4);

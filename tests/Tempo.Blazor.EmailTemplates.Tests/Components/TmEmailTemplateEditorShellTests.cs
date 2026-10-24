@@ -428,7 +428,10 @@ public class TmEmailTemplateEditorShellTests : EmailEditorTestBase
         // @container/@media width step with 640/1024 would contradict the markup branch, so the email
         // rules key on the shell's data-layout attribute instead.
         var directory = Path.Combine(RepositoryRoot(), "src", "Tempo.Blazor.EmailTemplates", "Components");
-        var container = new Regex(@"@container\b");
+        // A NAMED container query (`@container tm-email-table (...)`) measures a component's OWN box (the table grid in a
+        // 200 px inspector column vs a phone sheet) and cannot contradict the shell's markup branch; an anonymous
+        // `@container (...)` would query the nearest ancestor container - i.e. the shell - and stays forbidden.
+        var container = new Regex(@"@container\b(?!\s+tm-email-[a-z-]+\s*\()");
         var widthMedia = new Regex(@"@media[^{]*(min|max)-width", RegexOptions.IgnoreCase);
         var offenders = new List<string>();
 
@@ -442,7 +445,7 @@ public class TmEmailTemplateEditorShellTests : EmailEditorTestBase
             offenders.AddRange(widthMedia.Matches(text).Select(m => $"{Path.GetFileName(path)}: {m.Value.Trim()}"));
         }
 
-        offenders.Should().BeEmpty("email CSS keys on the shell's data-layout, never on a width literal");
+        offenders.Should().BeEmpty("email CSS keys on the shell's data-layout, never on a width literal (only a component's own NAMED container may be queried)");
     }
 
     [Fact]

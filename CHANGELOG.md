@@ -12,6 +12,16 @@
 
 ### Added
 
+- **E-mail editor UX closing items (phase 8 of the follow-up plan).** The phone palette packs four tiles per row (three on a 320 px phone), so the
+  whole first group clears the sheet's default snap in the demo at 390 px. The inline table grid shows a short decorative "Header" caption under each
+  row switch and drops it through a named container query (`tm-email-table`, 24 rem) in a narrow inspector or sheet; the switch keeps its full
+  `aria-label` (new resource key `EmailEditor_Table_RowHeaderShort`). The import dialog's structure preview is virtualized (`Virtualize`, fixed 28 px rows,
+  `aria-level` / `aria-posinset` / `aria-setsize` per row, focusable scroll list) and lists EVERY block instead of stopping at 100; the state card counts are
+  unchanged. Demo: the editor page ends above the fold at 1440x900 (its status bar and "Saved" badge are visible), the send page's form is
+  `align-self: start`, and the editor page's chrome (switch-bar labels, select options, "Host: unsaved changes") comes from `DemoResources` in en/cs/sk/fr.
+- **Wireframe stencils and roles for the e-mail components (decision EMAIL-WIREFRAME-ROLES).** `TmEmailTemplateEditor` (role `email-template-editor`),
+  `TmEmailCanvasBlock` (role `email-block`), `TmEmailItemList` (`list-view`) and `TmEmailItemDialog` (`dialog`) are placeable stencils with a schema, a role and a
+  declarative entry in the built-in pack; every other public e-mail component is editor chrome that resolves a role through the vocabulary by its type name.
 - **`TmEmailVariablePicker.Filter` / `FilterChanged` (`@bind-Filter`) and an editor-owned inspector state.** The variable picker's search text is
   bindable; without a binding it behaves as before. `TmEmailPropertyPanel` takes the new optional `State` (`EmailInspectorState`, supplied by
   `TmEmailTemplateEditor`), which now also remembers the OPEN picker and its filter, so a desktop <-> tablet layout flip (which re-creates the
@@ -1204,6 +1214,13 @@
 
 ### Breaking / Migration
 
+- **E-mail import dialog: the structure preview is a flat virtualized list (phase 8).** Impact: (1) the nested `<ul>` per section / column is gone — every
+  section, column and block is now one `<li class="tm-email-import__tree-row">` (`data-tm-import-section|column|block` unchanged) inside
+  `[data-tm-import-tree]`; (2) the 100-row cap and its note are gone: `[data-tm-import-structure-more]` and the resource key `EmailEditor_Import_TreeTruncated`
+  were removed, and a host that overrides `ITmEmailLocalizer` can drop that key; (3) only a window of rows is in the DOM, so a spec that counted every
+  `[data-tm-import-block]` must read the complete count from `[data-tm-import-tree][data-tm-import-rows]` (or the state card's `data-tm-import-blocks`).
+  Before: `cut.FindAll("[data-tm-import-block]").Count == blocks` (capped at 100). After: `tree.GetAttribute("data-tm-import-rows") == blocks + sections + columns`, and
+  scroll `[data-tm-import-tree]` to bring a later row into the DOM.
 - **Report Server: the email Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker` moved from `AddCommonServices` to the server host
   (phase 7, decision D11 now holds for the Report Server).** `Tempo.ReportServer.Web.Client` (the WebAssembly leg of the InteractiveAuto
   portal, `IsPackable=false`) no longer references `Tempo.Blazor.EmailTemplates.Engine`, so Scriban, Mjml.Net and AngleSharp are no longer part

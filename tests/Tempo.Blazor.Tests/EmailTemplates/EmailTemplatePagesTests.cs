@@ -209,7 +209,8 @@ public class EmailTemplatePagesTests : BunitContext
         var cut = Render<EmailTemplateEditorPage>(p => p.Add(c => c.Id, id));
 
         cut.FindAll("[data-tm-email-editor]").Should().BeEmpty();
-        cut.Markup.Should().Contain("not found");
+        cut.Markup.Should().Contain("TmDemo_EmailTemplates_Editor_NotFound", "the empty state is localized copy, not shipped English")
+            .And.NotContain("Template not found");
     }
 
     // ── E10.4 / E10.5 send page ─────────────────────────────────────────────────────────────
@@ -392,6 +393,54 @@ public class EmailTemplatePagesTests : BunitContext
         guard.SaveAndLeaveText.Should().Be("TmDemo_EmailTemplates_Guard_SaveAndLeave");
         guard.ConfirmLeaveText.Should().Be("TmDemo_EmailTemplates_Guard_Leave");
         guard.CancelText.Should().Be("TmDemo_EmailTemplates_Guard_Stay");
+    }
+
+    [Fact]
+    public void EditorPage_ChromeTexts_ComeFromTheDemoResources()
+    {
+        var id = Guid.NewGuid();
+        _api.GetAsync(id, Arg.Any<CancellationToken>()).Returns(new EmailTemplateDetailDto
+        {
+            Id = id, Name = "Welcome", ContentJson = ContentJsonWith("Hi"),
+        });
+
+        var cut = Render<EmailTemplateEditorPage>(p => p.Add(c => c.Id, id));
+        var bar = cut.Find("[data-tm-demo-bar]");
+
+        // EchoTmLocalizer echoes the key: every switch-bar label, every <select> option and the host status
+        // line must be a DemoResources key, never shipped English (the page used to hardcode all of them).
+        bar.QuerySelector("[data-tm-back]")!.TextContent.Trim().Should().Be("TmDemo_EmailTemplates_Editor_Back");
+        bar.QuerySelector("[data-tm-demo-readonly]")!.OuterHtml.Should().Contain("TmDemo_EmailTemplates_Editor_ReadOnly");
+        bar.QuerySelectorAll("label.tm-demo-email-editor-page__simulate > span").Select(s => s.TextContent.Trim())
+            .Should().Equal(
+                "TmDemo_EmailTemplates_Editor_HostSaveResult",
+                "TmDemo_EmailTemplates_Editor_ItemEditing",
+                "TmDemo_EmailTemplates_Editor_CanvasImages",
+                "TmDemo_EmailTemplates_Editor_Layout",
+                "TmDemo_EmailTemplates_Editor_MobilePanels",
+                "TmDemo_EmailTemplates_Editor_ImportLimit");
+
+        // The option VALUES are the stable contract the E2E drives; only their text is copy.
+        bar.QuerySelectorAll("[data-tm-demo-simulate] option")
+            .Select(o => (o.GetAttribute("value"), o.TextContent.Trim()))
+            .Should().Equal(
+                ("real", "TmDemo_EmailTemplates_Editor_Simulate_Real"),
+                ("failed", "TmDemo_EmailTemplates_Editor_Simulate_Failed"),
+                ("failed-long", "TmDemo_EmailTemplates_Editor_Simulate_FailedLong"),
+                ("conflict", "TmDemo_EmailTemplates_Editor_Simulate_Conflict"));
+        bar.QuerySelectorAll("[data-tm-demo-layout] option").Select(o => o.GetAttribute("value"))
+            .Should().Equal("Auto", "Desktop", "Tablet", "Mobile");
+        bar.QuerySelectorAll("[data-tm-demo-layout] option").Select(o => o.TextContent.Trim())
+            .Should().OnlyContain(text => text.StartsWith("TmDemo_EmailTemplates_Editor_Layout_"));
+        bar.QuerySelectorAll("[data-tm-demo-import-limit] option").Select(o => o.TextContent.Trim())
+            .Should().OnlyContain(text => text.StartsWith("TmDemo_EmailTemplates_Editor_ImportLimit_"));
+
+        bar.QuerySelector("[data-tm-demo-dirty]")!.TextContent.Trim()
+            .Should().Be("TmDemo_EmailTemplates_Editor_HostDirty_No");
+        bar.QuerySelector("[data-tm-demo-resolved-layout]")!.TextContent.Trim()
+            .Should().StartWith("TmDemo_EmailTemplates_Editor_ResolvedLayout");
+        bar.QuerySelector("[data-tm-demo-save-background]")!.TextContent.Trim()
+            .Should().Be("TmDemo_EmailTemplates_Editor_SaveBackground");
     }
 
     [Fact]

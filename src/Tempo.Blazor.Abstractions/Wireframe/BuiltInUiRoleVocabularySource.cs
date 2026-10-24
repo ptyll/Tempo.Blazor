@@ -55,7 +55,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("empty-state", "Empty state", "Explains that no data or content is available.", "blank state", "prazdny stav", "TmEmptyState"),
         R("diff-view", "Diff view", "Shows differences between two values or versions.", "change diff", "porovnani zmen", "TmChangeDiff"),
         R("kanban-board", "Kanban board", "Shows work items in draggable columns.", "kanban", "kanban tabule", "TmKanbanBoard"),
-        R("list-view", "List view", "Displays records as a list or multiple saved views.", "multi view list", "seznam", "TmMultiViewList"),
+        R("list-view", "List view", "Displays records as a list or multiple saved views.", "multi view list", "seznam", "TmMultiViewList", "TmEmailItemList"),
         R("data-table", "Data table", "Displays tabular records with data operations.", "data grid", "grid", "tabulka dat", "TmDataTable", "TmDataGrid"),
         R("pagination", "Pagination", "Moves through pages of data.", "pager", "strankovani", "TmPagination"),
         R("bulk-action-bar", "Bulk action bar", "Shows actions for selected items.", "bulk actions", "hromadne akce", "TmBulkActionBar"),
@@ -64,7 +64,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("view-manager", "View manager", "Stores and switches saved data views.", "saved views", "sprava pohledu", "TmViewManager"),
         R("alert", "Alert", "Displays an inline message with severity.", "notice", "upozorneni", "TmAlert"),
         R("modal", "Modal", "Shows blocking overlay content.", "modal window", "modalni okno", "TmModal"),
-        R("dialog", "Dialog", "Asks for confirmation or focused input.", "confirmation dialog", "dialog", "TmDialog"),
+        R("dialog", "Dialog", "Asks for confirmation or focused input.", "confirmation dialog", "dialog", "TmDialog", "TmEmailImportDialog", "TmEmailExportDialog", "TmEmailItemDialog", "TmEmailTableCellDialog"),
         R("focus-scope", "Focus scope", "Traps keyboard focus inside an overlay.", "focus trap", "zachyceni fokusu", "TmFocusScope"),
         R("sheet-handle", "Sheet handle", "Drag handle that changes a sheet height.", "drag handle", "tahlo panelu", "TmSheetHandle"),
         R("tooltip", "Tooltip", "Displays short contextual help.", "hint", "napoveda", "TmTooltip"),
@@ -124,6 +124,8 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("data-import", "Data import", "Guides a file import: upload CSV/XLSX, map columns to a schema, dry-run validation, batched import with progress.", "import wizard", "import dat", "TmDataImport"),
         R("redaction-layer", "Redaction layer", "Marks rectangles over a document or image and exports a copy with the content destructively removed.", "blackout", "zacerneni", "TmRedactionLayer"),
         R("map", "Map", "Displays an interactive geographic map with markers or clusters.", "geographic map", "mapa", "TmMap"),
+        R("email-template-editor", "Email template editor", "Visual editor for an e-mail template: a block palette, a WYSIWYG canvas, an inspector, preview, import/export and validation, with host-reported saving. Its panels, sub-editors and dialogs are part of this editor's chrome.", "email editor", "mjml editor", "template editor", "editor e-mailove sablony", "TmEmailTemplateEditor", "TmEmailTemplateToolbox", "TmEmailPropertyPanel", "TmEmailTemplateCanvas", "TmEmailTemplatePreview", "TmEmailValidationPanel", "TmEmailVariablePicker", "TmEmailObjectFields", "TmEmailTableEditor", "TmEmailClassesEditor", "TmEmailHtmlAttributesEditor", "TmEmailKeyValueEditor", "TmEmailListEditor"),
+        R("email-block", "Email block", "One content block of an e-mail template as drawn on the editor canvas (text, button, image, divider, ...), with its selection state.", "mail block", "canvas block", "blok e-mailu", "TmEmailCanvasBlock"),
         R("editor-shell", "Editor shell", "Frames a canvas editor with header, toolbar, collapsible side panels, a status bar and mobile actions.", "editor frame", "editor layout", "editorovy ramec", "TmEditorShell"),
         R("side-panel", "Side panel", "Responsive inspector panel that docks in-flow on desktop and presents as a sheet on narrower containers.", "inspector panel", "properties panel", "bocni panel", "TmSidePanel")
     ];

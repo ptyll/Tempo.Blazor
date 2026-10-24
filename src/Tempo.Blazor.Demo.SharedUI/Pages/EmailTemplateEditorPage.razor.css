@@ -1,7 +1,13 @@
 .tm-demo-email-editor-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 70px);
+    /* The page must END above the fold, or the editor's status bar (the "Saved" badge, the read-only badge,
+       the failure alert) sits below the viewport at 1440x900 and a user has to scroll the PAGE to learn
+       whether the save worked. What sits above the editor in the demo shell (MainLayout): the sticky page
+       bar (~4.3rem) plus the main region's own top padding (py-8 = 2rem); 1rem is left under the editor. The
+       old `100vh - 70px` forgot the 2rem padding, so the editor overran the viewport by ~30px and its status
+       bar fell off the bottom. dvh follows a mobile browser's collapsing toolbar. */
+    height: calc(100dvh - 4.3rem - 2rem - 1rem);
     min-height: 600px;
 }
 

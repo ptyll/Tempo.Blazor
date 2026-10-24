@@ -43,6 +43,11 @@
                                     <TmToggle AriaLabel="@Loc["EmailEditor_Table_RowHeaderLabel", rowIndex + 1]"
                                               Value="row.IsHeader" Disabled="ReadOnly"
                                               ValueChanged="@(value => SetRowHeaderAsync(row, value))" />
+                                    @* A short VISIBLE caption under the switch (the reference draws one). It is decorative: the switch
+                                       is named by its aria-label, so the narrow-container rule can drop the text without
+                                       changing what a screen reader says. *@
+                                    <span class="tm-email-table-editor__rowheader-text" data-tm-table-rowheader-text
+                                          aria-hidden="true">@Loc["EmailEditor_Table_RowHeaderShort"]</span>
                                     <button type="button" class="tm-email-table-editor__icon-btn"
                                             data-tm-table-row-remove="true"
                                             aria-label="@Loc["EmailEditor_Table_RowRemoveLabel", rowIndex + 1]"

@@ -216,6 +216,23 @@
     background: transparent;
 }
 
+/* A denser palette on a phone: the sheet's default snap is ~65% of a 390 px viewport and the demo shell above
+   it already spends ~200 px, so three tiles per row left only the first row (and half of the second) above
+   the action bar. Four narrower tiles per row (auto-fill: a 320 px phone still falls back to three) put the
+   whole first group within reach without a scroll. The tiles keep their finger-sized height (coarse rule below)
+   and the label still wraps instead of cropping. */
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-toolbox__items {
+    grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-toolbox__items--layouts {
+    grid-template-columns: 1fr;
+}
+
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-toolbox__item {
+    min-block-size: 4rem;
+}
 /* ── The collapsed palette rail (the shell's LeftRail slot) ───────────────────────────── */
 
 .tm-email-editor__rail {
