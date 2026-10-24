@@ -143,10 +143,17 @@
                 <option value="0">Unlimited</option>
             </select>
         </label>
+        @* Phase 7 demo: a host calls SaveAsync() from wherever its own flow runs - a navigation guard, a
+           command handler, a background continuation - i.e. possibly OFF the renderer's dispatcher. This
+           button does exactly that (Task.Run) so the Blazor Server demo proves the editor hops back onto
+           the dispatcher by itself: the host's IsDirtyChanged callback below must still reach the page. *@
+        <button type="button" class="tm-demo-email-editor-page__simulate" data-tm-demo-save-background
+                @onclick="SaveFromBackgroundThreadAsync">Save from a background thread</button>
         @* The editor's own badge already reports the save state; this is the HOST's view of the same thing,
            i.e. what arrived through IsDirtyChanged — the guard/leave flow keys off exactly this flag. The
            wording stays plain ("unsaved changes yes/no") instead of naming the internal flag. *@
-        <span class="tm-demo-email-editor-page__status" data-tm-demo-dirty="@(_isDirty ? "true" : "false")">
+        <span class="tm-demo-email-editor-page__status" data-tm-demo-dirty="@(_isDirty ? "true" : "false")"
+              data-tm-demo-off-dispatcher="@_dirtyCallbacksOffDispatcher">
             Host: unsaved changes @(_isDirty ? "yes" : "no")
         </span>
         <span class="tm-demo-email-editor-page__status" data-tm-demo-resolved-layout="@_resolvedLayout">
@@ -375,7 +382,26 @@
     /// <summary>The layout the shell actually resolved — the demo shows it so a reviewer can see the decision.</summary>
     private void OnResolvedLayoutChanged(TmLayoutMode mode) => _resolvedLayout = mode;
 
-    private void OnIsDirtyChanged(bool isDirty) => _isDirty = isDirty;
+    private void OnIsDirtyChanged(bool isDirty)
+    {
+        // A callback the editor raises OFF the renderer's synchronization context is a dispatcher-affinity
+        // bug (a Blazor Server circuit would throw on the StateHasChanged that follows). Count it so the
+        // background-save spec can assert on something the failure cannot hide behind.
+        if (SynchronizationContext.Current is null) _dirtyCallbacksOffDispatcher++;
+        _isDirty = isDirty;
+    }
+
+    private int _dirtyCallbacksOffDispatcher;
+
+    /// <summary>
+    /// <see cref="TmEmailTemplateEditor.SaveAsync"/> from a thread-pool thread, the way a host's background
+    /// continuation would call it. The editor owns the dispatcher hop, so nothing here marshals.
+    /// </summary>
+    private async Task SaveFromBackgroundThreadAsync()
+    {
+        if (_editor is null) return;
+        await Task.Run(() => _editor.SaveAsync());
+    }
 
     private Task OnDocumentChangedAsync(EmailTemplateDocument document)
     {

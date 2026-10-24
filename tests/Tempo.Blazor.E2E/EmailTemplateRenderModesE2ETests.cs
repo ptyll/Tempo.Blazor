@@ -105,6 +105,45 @@ public sealed class EmailTemplateServerModeE2ETests : EmailTemplateRenderModeTes
         await Editor_RoundTripsASave_ThroughTheHostApi(page, "Server");
     }
 
+    /// <summary>
+    /// Phase 7 - dispatcher affinity of <c>SaveAsync()</c> on a REAL circuit. The page calls it from a
+    /// thread-pool thread; the editor must hop onto the renderer's dispatcher itself, otherwise its
+    /// <c>IsDirtyChanged</c> callback runs off-dispatcher and the host page's own re-render throws
+    /// ("The current thread is not associated with the Dispatcher") - the host would keep showing
+    /// "unsaved changes: yes" for a document that was in fact saved. Verified to fail without the hop.
+    /// </summary>
+    [TestMethod]
+    public async Task Server_SaveAsync_FromABackgroundThread_StillReachesTheHostOnTheDispatcher()
+    {
+        var page = await OpenLibraryAsync();
+        await page.Locator("[data-tm-new-template]").ClickAsync();
+        await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
+        await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 60000 });
+
+        var subject = page.Locator("[data-tm-prop='Subject'] input");
+        await subject.FillAsync($"Background save {Guid.NewGuid():N}"[..30]);
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-tm-demo-dirty]')?.getAttribute('data-tm-demo-dirty') === 'true'",
+            null, new() { Timeout = 20000 });
+
+        await page.Locator("[data-tm-demo-save-background]").ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-tm-save-badge]')?.getAttribute('data-tm-save-state') === 'saved'",
+            null, new() { Timeout = 40000 });
+        // The HOST's own view: IsDirtyChanged(false) reached the page and the page re-rendered.
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-tm-demo-dirty]')?.getAttribute('data-tm-demo-dirty') === 'false'",
+            null, new() { Timeout = 20000 });
+
+        // And it arrived ON the renderer's dispatcher: the demo counts every IsDirtyChanged callback that
+        // reached it without the renderer's synchronization context. Without the editor's InvokeAsync hop the
+        // clean transition of the off-thread save is such a callback (count 1), which a circuit turns into
+        // "The current thread is not associated with the Dispatcher" on the page's re-render.
+        (await page.Locator("[data-tm-demo-dirty]").GetAttributeAsync("data-tm-demo-off-dispatcher"))
+            .Should().Be("0", "SaveAsync() hops onto the dispatcher itself, whatever thread the host calls it from");
+    }
+
     [TestMethod]
     public async Task Server_Preview_ComesFromTheServerRenderer()
     {
