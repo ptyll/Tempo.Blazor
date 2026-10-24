@@ -57,7 +57,10 @@ public sealed class CommonServicesGateTests
 
         services.Should().NotContain(d => d.ServiceType == typeof(IReportScheduledDeliveryService));
         services.Should().NotContain(d => d.ServiceType == typeof(ReportScheduleWorker));
-        services.Should().NotContain(d => d.ServiceType == typeof(IReportScheduleRunner));
+        // The run-now seam is a null object here (CanRun = false): the page injects it directly, and only
+        // AddReportServerEmailDelivery swaps in the real worker (REPORTSERVER-ENGINE-SERVER-ONLY).
+        services.Should().ContainSingle(d => d.ServiceType == typeof(IReportScheduleRunner))
+            .Which.ImplementationType.Should().Be(typeof(UnavailableReportScheduleRunner));
         services.Should().NotContain(d =>
             d.ServiceType == typeof(Tempo.Blazor.EmailTemplates.Abstractions.Rendering.IEmailTemplateRenderer)
             && d.ImplementationType != null
@@ -79,6 +82,43 @@ public sealed class CommonServicesGateTests
         provider.GetRequiredService<IReportScheduledDeliveryService>().Should().BeOfType<ReportEmailDeliveryService>();
         var runner = provider.GetRequiredService<IReportScheduleRunner>();
         runner.Should().BeOfType<ReportScheduleWorker>().And.BeSameAs(provider.GetRequiredService<ReportScheduleWorker>());
+        runner.CanRun.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ServerHost_ResolvesTheRealRunner_InEitherCallOrder(bool commonFirst)
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+        if (commonFirst)
+        {
+            services.AddCommonServices(configuration);
+            services.AddReportServerEmailDelivery();
+        }
+        else
+        {
+            services.AddReportServerEmailDelivery();
+            services.AddCommonServices(configuration);
+        }
+
+        services.AddScoped<AuthenticationStateProvider>(_ => new AnonymousAuthenticationStateProvider());
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IReportScheduleRunner>().Should().BeOfType<ReportScheduleWorker>()
+            .Which.CanRun.Should().BeTrue();
+    }
+    [Fact]
+    public void WebAssemblyLeg_RunnerCannotRun()
+    {
+        var services = new ServiceCollection();
+        services.AddCommonServices(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+
+        var runner = provider.GetRequiredService<IReportScheduleRunner>();
+        runner.CanRun.Should().BeFalse();
+        runner.RunScheduleNowAsync("t", "s").GetAwaiter().GetResult().Should().BeNull();
     }
     private static ServiceProvider BuildProvider(string? authority, string? clientId)
     {

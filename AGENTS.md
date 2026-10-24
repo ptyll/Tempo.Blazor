@@ -792,8 +792,9 @@ Rules that keep it that way:
   **no exception any more** (D11 holds for the Report Server too). The scheduled-report e-mail is
   rendered by the server host (`Tempo.ReportServer.Web`: `AddReportServerEmailDelivery()` registers
   the Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker`); `AddCommonServices` (it also runs
-  in the WebAssembly leg) only registers the model/stores and the `IReportScheduleRunner` seam is absent
-  there, so the demo "Run now" button is not offered in the browser.
+  in the WebAssembly leg) only registers the model/stores and a null-object `IReportScheduleRunner`
+  (`CanRun = false`) that `AddReportServerEmailDelivery` replaces, so the demo "Run now" button is not offered in the browser
+  (decision `REPORTSERVER-ENGINE-SERVER-ONLY`).
 - **The Engine pins `Abstractions` to an exact version** (`[2.10.0]`) through the
   `PinAbstractionsToTheExactVersion` MSBuild target, because the two share `internal` types through
   `InternalsVisibleTo`. `PackageBoundaryTests.PackedEngineNuspec_PinsAbstractionsToTheExactVersion` packs

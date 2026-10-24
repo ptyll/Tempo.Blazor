@@ -172,6 +172,13 @@ public partial class TmEmailTemplateEditor
         // version on success, so an edit made while the request is in flight (a newer version) stays dirty.
         var snapshotVersion = _history.Version;
         var snapshotContent = _history.Content;
+        // Invariant the baseline relies on: EVERY change of _document is followed synchronously by a commit
+        // (Push), so the history's content signature IS the document being handed to the host. A mutation
+        // that skipped CommitAsync would make the baseline claim a state the host never received (silently
+        // clean after Saved). Debug builds check it; Release pays nothing.
+        System.Diagnostics.Debug.Assert(
+            string.Equals(snapshotContent, EmailTemplateSerializer.SerializeContent(snapshot), StringComparison.Ordinal),
+            "The editor history is out of step with the document at save time: a document change was not committed.");
 
         IsSaving = true;
         _saveErrorMessage = null;
@@ -407,11 +414,9 @@ public partial class TmEmailTemplateEditor
     /// </summary>
     private ITmRelativeTimeFormatter? RelativeTimeFormatter
     {
-        get
-        {
-            // Not cached while null: a host that registers a localizer later (tests) is picked up.
-            return _relativeTime ??= EmailRelativeTime.Resolve(Services, TimeProvider);
-        }
+        // Resolved lazily and cached once it resolves; a null result (no core localizer registered yet) is
+        // NOT cached, so a host that registers a localizer later (tests) is picked up on the next read.
+        get => _relativeTime ??= EmailRelativeTime.Resolve(Services, TimeProvider);
     }
 
     private void EnsureSavedAgeTimer()

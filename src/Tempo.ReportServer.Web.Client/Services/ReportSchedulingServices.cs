@@ -696,15 +696,49 @@ public interface IReportScheduledDeliveryService
 /// Runs a schedule right now (the demo "Run now" button). The WebAssembly-safe model assembly only
 /// declares the seam: the implementation renders the report e-mail through the email engine, so it is
 /// registered by the server host only (<c>AddReportServerEmailDelivery</c>) and the engine never
-/// reaches the browser (decision D11). When no runner is registered the page hides the button.
+/// reaches the browser (decisions D11 and <c>REPORTSERVER-ENGINE-SERVER-ONLY</c>).
+/// <para>
+/// The seam is leg-dependent by design: <c>AddCommonServices</c> (it also runs in the WebAssembly leg)
+/// registers <see cref="UnavailableReportScheduleRunner"/> (<see cref="CanRun"/> = <see langword="false"/>),
+/// and <c>AddReportServerEmailDelivery</c> replaces it with the real worker (<see cref="CanRun"/> =
+/// <see langword="true"/>). The page offers "Run now" only where <see cref="CanRun"/> is true. The
+/// WebAssembly leg never renders the e-mail; that is guarded by
+/// <c>NoWasmHost_ReachesTheEngine_ReportServerIncluded</c> and
+/// <c>ReportServerWebHost_IsTheServerThatRendersTheScheduledEmail</c>.
+/// </para>
 /// </summary>
 public interface IReportScheduleRunner
 {
+    /// <summary>
+    /// Whether this leg can run a schedule right now: <see langword="false"/> for the null-object runner
+    /// registered by <c>AddCommonServices</c> (the WebAssembly leg), <see langword="true"/> for the server worker.
+    /// </summary>
+    bool CanRun { get; }
+
     /// <summary>Queues and immediately delivers a schedule; <see langword="null"/> when it cannot run.</summary>
     Task<DeliveredReportEmail?> RunScheduleNowAsync(
         string tenantId,
         string scheduleId,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Null-object <see cref="IReportScheduleRunner"/> registered by <c>AddCommonServices</c>, so the schedules page
+/// can inject the seam directly in both legs of the InteractiveAuto portal. <see cref="CanRun"/> is
+/// <see langword="false"/> and nothing is ever rendered or delivered; <c>AddReportServerEmailDelivery</c>
+/// replaces it with the real worker in the server host (decision <c>REPORTSERVER-ENGINE-SERVER-ONLY</c>).
+/// </summary>
+public sealed class UnavailableReportScheduleRunner : IReportScheduleRunner
+{
+    /// <inheritdoc />
+    public bool CanRun => false;
+
+    /// <inheritdoc />
+    public Task<DeliveredReportEmail?> RunScheduleNowAsync(
+        string tenantId,
+        string scheduleId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<DeliveredReportEmail?>(null);
 }
 
 

@@ -91,7 +91,7 @@ public sealed class SchedulesPageTests : ReportServerWebTestBase
         using (UseUiCulture("en"))
         {
             Services.Replace(ServiceDescriptor.Singleton<ITempoReportServerClient, DemoTempoReportServerClient>());
-            Services.RemoveAll<IReportScheduleRunner>();
+            Services.Replace(ServiceDescriptor.Singleton<IReportScheduleRunner, UnavailableReportScheduleRunner>());
             SignIn();
 
             Render<SchedulesPage>().FindAll("[data-testid^='run-schedule-']").Should().BeEmpty();

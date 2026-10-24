@@ -320,15 +320,12 @@ deleguje na `AddTempoEmailTemplateEditor`.
 - Test (Fáze 6): obě pořadí (`Model`→`Engine` i `Engine`→`Model`) dají v `IHtmlContentSanitizer`
   **`AngleSharpHtmlContentSanitizer`** a stejnou instanci `TemplateSecurityOptions`.
 
-**Výjimka z pravidla „WASM bez Enginu“ (rozhodnutí moderátora, Fáze 6 review):**
-`Tempo.ReportServer.Web.Client` (Blazor WebAssembly host dema report serveru, `IsPackable=false`,
-nepublikovaný) **vědomě referencuje Engine ve WASM** — lokální doručení v demo plánovači
-(`ReportEmailDeliveryService`/`ReportScheduleWorker` renderují e-mail přímo v klientovi, protože demo
-nemá serverový render endpoint). To není rozpor s D11: D11 chrání **publikované** balíčky (UI balíček
-Engine nereferencuje, WASM demo `Tempo.Blazor.Demo` ho netáhne), kdežto tohle je interní demo host.
-Hlídá to `PackageBoundaryTests.ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine` (jen tento jediný
-WASM host smí Engine mít) a `Target:ReportServerClient` v `plan_report_remaining` (přesun registrace
-enginu na serverový hostitel, mimo 2.10.0).
+**~~Výjimka z pravidla „WASM bez Enginu“ (rozhodnutí moderátora, Fáze 6 review)~~ — PŘEKONÁNO rozhodnutím `REPORTSERVER-ENGINE-SERVER-ONLY` (§5.2, plán 643bba06 Fáze 7).**
+Dřívější výjimka (`Tempo.ReportServer.Web.Client` referencoval Engine ve WASM a renderoval plánovaný e-mail v prohlížeči;
+hlídal ji `PackageBoundaryTests.ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine`) **už neplatí**. D11 teď platí bez výjimky
+i pro Report Server: WASM noha nese jen model, úložiště a seam `IReportScheduleRunner`, e-mail renderuje serverový hostitel
+(`AddReportServerEmailDelivery()`), „Run now“ se nabízí jen tam, kde je zaregistrovaný runner. Hlídají to
+`NoWasmHost_ReachesTheEngine_ReportServerIncluded` a `ReportServerWebHost_IsTheServerThatRendersTheScheduledEmail`.
 
 **Rozhodnutí o namespacech:** přesouvané typy **zůstávají ve svých namespacech**
 (`…Abstractions.Templating`, `…Abstractions.Rendering`, `…Abstractions`), mění se jen assembly/balíček.
@@ -1285,6 +1282,8 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 
 | D29 | **Raw blok neznamená „spusť, co přišlo“ — `MarkupGuard` vždy odstraňuje nebezpečné elementy (rozhodnutí uživatele 2026-10-22, review Fáze 10 U1):** `MarkupGuard` odstraňuje `script`, `iframe`, `frame`, `frameset`, `object`, `embed`, `applet`, `base`, `form` a `portal` z KAŽDÉHO markupu, který projde renderem (raw blok, text blok, host-set HTML atribut, import), bez opt-in flagu; raw-text element (`script`) včetně obsahu až po uzavírací tag. Warning `render.markup.unsafe_element_removed` + audit `BlockedMember`; `Success` zůstává `true` (D23). Zdůvodnění: inbox preview i webmail otevírají zprávu v dokumentu, který spouští skript — „autor to vložil do raw bloku“ není důvod vydat živý `<script>`; `<base>` přepisuje rozlišení relativních URL a `<form>` umí POSTovat vstup příjemce. Interaktivní obsah v e-mailu je mimo rozsah (odkaz na hostovanou stránku). Breaking pro raw blok s takovým elementem (CHANGELOG „Breaking / Migration“). Manuální úkol f5d9f954 (raw blok `<script>` opt-in) je tím vyřešený. |
 | D28 | **Nadpisy `h1`–`h6` jsou v allow-listu sanitizéru (rozhodnutí uživatele 2026-10-26, review F9A):** `HtmlSanitizerPolicy.AllowedTags` (jediný zdroj, D12) obsahuje `h1`, `h2`, `h3`, `h4`, `h5`, `h6`. Jsou to **formátovací** elementy stejně jako `b`/`i`: obě implementace (`AngleSharpHtmlContentSanitizer` i `ConservativeHtmlContentSanitizer`) je emitují **bez atributů** — `<h1 onclick=x style="…">Ahoj</h1>` → `<h1>Ahoj</h1>`, `<h2><img onerror></h2>` → `<h2>…</h2>` s escapovaným obsahem. Důvod: e-mailový autor píše typografii nadpisy a WYSIWYG plátno ji musí zobrazit; bez allow-listu se nadpis na plátně i v exportu zobrazil jako text s závorkami. Bezpečnostní důsledek žádný — atributy (`style`, `on*`, `class`) byly a zůstávají zakázané, takže nadpis nemůže přebarvit editor ani spustit skript. Paritní XSS sada obou sanitizérů (`SanitizerXssVectors.Payloads`) obsahuje vektory s nadpisy a zůstává zelená. |
+| REPORTSERVER-ENGINE-SERVER-ONLY | **Engine je u Report Serveru jen na serveru (plán 643bba06, Fáze 7; překonává výjimku z §3.0 a bod „ReportServer (mimo 2.10.0)“ v §6):** WASM noha InteractiveAuto portálu (`Tempo.ReportServer.Web.Client`) nese **jen model, úložiště a seam `IReportScheduleRunner`** — žádný Scriban/Mjml.Net/AngleSharp. Plánovaný e-mail renderuje serverový hostitel přes `AddReportServerEmailDelivery()` (`AddTempoEmailTemplateEngine()` + `ReportEmailDeliveryService` + `ReportScheduleWorker`). Seam je závislý na noze: `AddCommonServices` registruje null-object `UnavailableReportScheduleRunner` (`CanRun = false`), `AddReportServerEmailDelivery` ho přes `Replace(...)` nahradí skutečným workerem (`CanRun = true`; výsledek nezávisí na pořadí volání). Tlačítko „Run now“ se nabízí **jen tam, kde je zaregistrovaný runner** (`SchedulesPage` injektuje `IReportScheduleRunner` přímo a čte `CanRun`). Hlídá to `NoWasmHost_ReachesTheEngine_ReportServerIncluded` (žádný WASM uzávěr nesahá na Engine, bez výjimky) a `ReportServerWebHost_IsTheServerThatRendersTheScheduledEmail` (server je ten, kdo renderuje). Dokumentováno v `HOSTING.md`, CHANGELOG „Breaking / Migration“ a XML doc `IReportScheduleRunner`. |
+| EMAIL-PREVIEW-DOCUMENT-REVISION | **`TmEmailTemplatePreview.DocumentRevision` (`long?`, volitelný, aditivní; plán 643bba06, Fáze 7):** „změnil se dokument?“ se rozhoduje podle **dvojice (reference dokumentu, revize)**, ne serializací dokumentu při každém re-renderu rodiče. Editor předává svůj `_revision`. Změna reference **nebo** revize = změna; **neohlášená editace in-place (bez nové revize) podle kontraktu změnou není** — hostitel, který dokument upravuje na místě, musí revizi zvýšit. `null` (výchozí) zachovává dřívější porovnání obsahu, takže hostitel bez parametru se nemění. Důsledek: undo vrací dřívější obsah, ale zvyšuje revizi (a vrací novou instanci dokumentu), takže stojí jedno zbytečné vykreslení stejného obsahu — cena za to, že se při každém re-renderu neserializuje. Dokumentováno v XML doc `DocumentRevision`, CHANGELOG „Added“ a §9.2. |
 
 
 ### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)
@@ -1326,12 +1325,9 @@ neobsahuje žádné otevřené otázky.
 - **Fáze 11** musí parametrizovat E2E viewport (dnes pevně 1440×900 v `EmailTemplateE2ETestBase.cs:37`) a přidat
   1024/390/320 px + screenshoty podle referenčních `screen-id`. (Přepnutí WASM dema na
   `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` patří už do Fáze 6 — viz výše.)
-- **ReportServer (mimo 2.10.0):** `Tempo.ReportServer.Web.Client` dnes vědomě referencuje Engine ve WASM —
-  lokální doručení v demo plánovači. Při další práci na report serveru přesunout
-  `AddTempoEmailTemplateEngine` + `ReportEmailDeliveryService` + `ReportScheduleWorker` z `AddCommonServices`
-  do serverového hostitele a klientovi nechat jen `AddTempoEmailTemplateModel`; pak rozšířit
-  `PackageBoundaryTests`. Hlídá to `ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine` (jen tenhle
-  jediný WASM host smí Engine mít).
+- ~~**ReportServer (mimo 2.10.0):** přesunout `AddTempoEmailTemplateEngine` + `ReportEmailDeliveryService` + `ReportScheduleWorker` z `AddCommonServices` do serverového hostitele.~~
+  **PŘEKONÁNO a provedeno** ve Fázi 7 plánu 643bba06 (rozhodnutí `REPORTSERVER-ENGINE-SERVER-ONLY`, §5.2 a §9.1): klient nechává jen model/úložiště/seam
+  `IReportScheduleRunner`, `PackageBoundaryTests` už žádnou výjimku nemá.
 - **Fáze 12**: release gate = základový plán `faf503eb` má Completed F0/F1/F2/F6; bez toho 2.10.0 nevychází.
   Do CHANGELOG patří i B7 s receptem na migraci balíčku.
 
@@ -1730,6 +1726,14 @@ hostitel přes `AddReportServerEmailDelivery()` (`Tempo.ReportServer.Web`). Výj
 zmizela: žádný WASM hostitel nesmí mít Engine v uzávěru `ProjectReference`. Tlačítko „Run now“ se v prohlížeči
 nenabízí (bez runneru není co spustit) — viz CHANGELOG „Breaking / Migration“.
 
+Rozhodnutí `REPORTSERVER-ENGINE-SERVER-ONLY` (§5.2): seam je závislý na noze. `AddCommonServices` registruje null-object
+`UnavailableReportScheduleRunner` (`CanRun = false`), `AddReportServerEmailDelivery()` ho přes `Replace(...)` nahradí
+`ReportScheduleWorker` (`CanRun = true`; pořadí volání nehraje roli, test `ServerHost_ResolvesTheRealRunner_InEitherCallOrder`).
+`SchedulesPage` injektuje `IReportScheduleRunner` přímo a nabízí „Run now“ jen při `CanRun`. WASM noha tedy model/úložiště/seam
+má, ale e-mail nikdy nerenderuje; hlídají to `NoWasmHost_ReachesTheEngine_ReportServerIncluded` a
+`ReportServerWebHost_IsTheServerThatRendersTheScheduledEmail`. Dřívější výjimka z §3.0 a bod „ReportServer (mimo 2.10.0)“ v §6 jsou přeškrtnuté
+jako překonané.
+
 ### 9.2 Náklad commitu editoru
 
 Dřív jeden commit (`CommitAsync`) dělal `DeepClone()` pro historii (serializace + deserializace) a znovu celou
@@ -1748,7 +1752,12 @@ serializaci kvůli `RecomputeDirty()`; undo/redo vracely `DeepClone()`. Teď:
   nevypadá jako čistá.
 * Náhled (`TmEmailTemplatePreview.DocumentRevision`, volitelné, aditivní): „změnil se dokument?“ je porovnání
   reference + revize, ne serializace dokumentu při každém re-renderu rodiče. Editor předává svůj `_revision`;
-  bez parametru se chová jako dřív (porovnání obsahu).
+  bez parametru se chová jako dřív (porovnání obsahu). Rozhodnutí `EMAIL-PREVIEW-DOCUMENT-REVISION` (§5.2): signaturou je dvojice
+  (reference, revize); neohlášená editace in-place změnou není; undo vrací starý obsah, ale zvyšuje revizi, takže stojí jedno
+  vykreslení navíc.
+* Baseline uložení: `EditorHistoryService.Capture` už dokument nemodifikuje (ani dočasně): obsah se serializuje přes
+  `EmailTemplateSerializer.SerializeContent` (bez `UpdatedAt`). V Debug sestavení `ExecuteSaveAsync` navíc ověřuje, že obsah historie
+  odpovídá serializaci dokumentu předávaného hostiteli (každá změna `_document` se musí commitnout synchronně).
 
 Měření (xUnit, Debug sestavení, 300 opakování, průměr jednoho commitu = náklad serializace/klonování
 dokumentu s textovými bloky ≈ 70 znaků; bez vykreslení):
@@ -1764,9 +1773,46 @@ Po doplnění porovnání obsahu (viz výše) druhé měření: 3 bloky 0,190 �
 
 Celý klik „přidat blok“ včetně bUnit vykreslení (měřeno před změnou, `AddBlock` → `CommitAsync` →
 `StateHasChanged`): 3 bloky ≈ 18 ms, 52 ≈ 36 ms, 200 ≈ 304 ms. U 200 bloků tedy dominuje vykreslení plátna
-(`EmailCanvasRenderGate` už v F9A omezuje přestavbu na změněné bloky), ne model; cíl **< 100 ms na stisk v Server
-režimu** drží datová část s rezervou o dva řády (≈ 1 ms), plátno řeší signatura bloku z F9A.
+(`EmailCanvasRenderGate` už v F9A omezuje přestavbu na změněné bloky), ne model.
 
+#### Cíl „< 100 ms na stisk v Server režimu“ — změřený důkaz
+
+Cíl je prokázán dvěma měřeními stejného scénáře: dokument s **200 bloky**, otevřený inspektor, jeden koalescovaný textový
+stisk (`CommitAsync("props")`: snímek historie + dirty kontrola + `DocumentChanged` + plán auto-save + render).
+
+**(a) bUnit, in-process, Release** — `EditorKeystrokePerformanceTests` (`[Trait("Category","Perf")]`,
+`dotnet test tests/Tempo.Blazor.EmailTemplates.Tests -c Release --filter Category=Perf`), 60 stisků po 10 zahřívacích, callback pole se
+volá na dispatcheru jako `input` v prohlížeči (`IElement.Input` by přidal přeparsování DOMu bUnit, které nezaplatí žádný prohlížeč
+ani okruh). Čas = serverová část stisku bez sítě; render běží přes testovací renderer, který překreslí celý strom a přeskakuje `ShouldRender`
+(viz `TmEmailCanvasPerformanceTests`), takže je to horní odhad.
+
+| Běh | commit (input → `DocumentChanged`) p50 / p95 | commit + render p50 / p95 | max |
+|---|---|---|---|
+| 1 | 6,4 / 13,6 ms | 25,0 / 43,8 ms | 49,5 ms |
+| 2 | 7,2 / 16,3 ms | 31,6 / 46,2 ms | 60,3 ms |
+| 3 | 8,0 / 20,6 ms | 30,8 / 47,8 ms | 49,9 ms |
+| 4 (`-c Release`, ostatní testy paralelně) | 7,7 / 22,0 ms | 40,3 / 60,6 ms | 71,2 ms |
+
+Strop v testu: commit p95 < 50 ms, commit + render p95 < 100 ms (generické stropy proti řádovým regresím, ne benchmark; v Debug se jen
+reportuje). Test běží v samostatné neparalelní kolekci `Perf`, protože pod zátěží ostatních testů se čísla zhoršují.
+
+**(b) Playwright, Blazor Server (:7107, skutečný SignalR okruh)** — `EmailEditorKeystrokePerformanceE2ETests`
+(`[TestCategory("Performance")]`, běží v perf lane: `scripts/run-e2e-perf.ps1 -Filter "FullyQualifiedName~EmailEditorKeystrokePerformance"`,
+ne v plné lane). Šablona s 200 bloky se vytvoří přes demo API, 50 stisků (po 5 zahřívacích) do pole „Text“ tlačítka;
+`performance.now()` v `input` (capture) → první mutace `MutationObserver`u na upraveném bloku plátna (prohlížeč → server → commit →
+diff → zpět → DOM), zároveň se počítají mutace ostatních bloků (musí být 0).
+
+| Běh | p50 | p95 | min | max | mutací cizích bloků |
+|---|---|---|---|---|---|
+| 1 | 8,5 ms | 17,5 ms | 6,0 ms | 27,3 ms | 0 |
+| 2 | 8,5 ms | 13,0 ms | 5,7 ms | 41,3 ms | 0 |
+| 3 | 8,9 ms | 21,8 ms | 5,9 ms | 29,9 ms | 0 |
+| 4 | 8,4 ms | 16,9 ms | 5,9 ms | 50,9 ms | 0 |
+
+Assert: p95 < 100 ms (cíl plánu sám). Naměřeno p95 13–22 ms, tedy s rezervou ≈ 5×; měřeno lokálně (loopback, bez síťové latence
+reálného nasazení — ta se k číslům přičítá 1:1 jako RTT SignalR). Pozn.: starší spec `Typing_in_the_inspector_repaints_only_the_edited_block`
+(WASM, 52 bloků) hlídá jen katastrofickou regresi (1500 ms) a ověřuje, že se překreslí jen upravený blok; jeho historický komentář
+(~560 ms/stisk) se týká dřívějšího stavu před touto fází.
 ### 9.3 Stav variable pickeru přežije layout flip
 
 Rozhodnutí `EMAIL-VARIABLE-PICKER-FILTER`: `TmEmailVariablePicker.Filter`/`FilterChanged` (`@bind-Filter`),

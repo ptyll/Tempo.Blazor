@@ -19,7 +19,7 @@ namespace Tempo.ReportServer.Web.Services;
 /// </summary>
 /// <remarks>
 /// Schedules delegate to <see cref="ReportScheduleStore"/> and schedule-run history is derived from
-/// <see cref="ReportEmailOutbox"/>, so the run-now button (<see cref="ReportScheduleWorker.RunScheduleNowAsync"/>)
+/// <see cref="ReportEmailOutbox"/>, so the run-now button (<see cref="IReportScheduleRunner.RunScheduleNowAsync"/>)
 /// renders/delivers through the same path the schedules page lists. Rendering and parameter metadata go
 /// through <see cref="DemoReportSourceFactory"/>, which keeps the hand-authored demo definitions
 /// (sales-register, sales-dashboard, …) as the single source of truth.

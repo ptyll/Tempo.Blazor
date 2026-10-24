@@ -57,6 +57,9 @@ public sealed class ReportScheduleWorker : IReportScheduleRunner
     }
 
     /// <inheritdoc />
+    public bool CanRun => true;
+
+    /// <inheritdoc />
     public async Task<DeliveredReportEmail?> RunScheduleNowAsync(
         string tenantId,
         string scheduleId,

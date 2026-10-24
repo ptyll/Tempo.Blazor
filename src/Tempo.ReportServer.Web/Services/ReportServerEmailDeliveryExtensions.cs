@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tempo.Blazor.EmailTemplates.Abstractions;
 
 namespace Tempo.ReportServer.Web.Services;
@@ -6,7 +7,7 @@ namespace Tempo.ReportServer.Web.Services;
 /// Registration of the server-only half of scheduled report delivery. The e-mail is rendered by the
 /// email Engine (Scriban sandbox, Mjml.Net, AngleSharp sanitizer), which must run in the server process
 /// and never in the browser: <c>Tempo.ReportServer.Web.Client</c> (the WebAssembly leg) only carries the
-/// model, stores and the <see cref="IReportScheduleRunner"/> seam (decision D11).
+/// model, stores and the <see cref="IReportScheduleRunner"/> seam (decisions D11, <c>REPORTSERVER-ENGINE-SERVER-ONLY</c>).
 /// </summary>
 public static class ReportServerEmailDeliveryServiceCollectionExtensions
 {
@@ -24,7 +25,9 @@ public static class ReportServerEmailDeliveryServiceCollectionExtensions
         services.AddTempoEmailTemplateEngine();
         services.AddSingleton<IReportScheduledDeliveryService, ReportEmailDeliveryService>();
         services.AddSingleton<ReportScheduleWorker>();
-        services.AddSingleton<IReportScheduleRunner>(sp => sp.GetRequiredService<ReportScheduleWorker>());
+        // Replaces the null-object UnavailableReportScheduleRunner that AddCommonServices registered (CanRun = false),
+        // whatever the call order: the server leg is the only one that can run a schedule now.
+        services.Replace(ServiceDescriptor.Singleton<IReportScheduleRunner>(sp => sp.GetRequiredService<ReportScheduleWorker>()));
         return services;
     }
 }

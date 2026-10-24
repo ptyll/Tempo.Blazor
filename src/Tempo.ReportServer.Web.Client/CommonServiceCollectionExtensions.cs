@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tempo.Blazor.EmailTemplates.Abstractions;
 using Tempo.Blazor.EmailTemplates.Abstractions.Contracts;
 using Tempo.Blazor.Reporting.Configuration;
@@ -39,6 +40,10 @@ public static class CommonServiceCollectionExtensions
         services.AddSingleton<ReportEmailTemplateGalleryStore>();
         services.AddSingleton<IEmailTemplateStore>(sp => sp.GetRequiredService<ReportEmailTemplateGalleryStore>());
         services.AddSingleton<IEmailSender, Smtp4DevEmailSender>();
+        // Null-object run-now seam (CanRun = false): the WebAssembly leg keeps it, AddReportServerEmailDelivery
+        // replaces it with the real worker in the server host (REPORTSERVER-ENGINE-SERVER-ONLY).
+        // TryAdd: when the server host already registered the real worker, it is not shadowed by the null object.
+        services.TryAddSingleton<IReportScheduleRunner, UnavailableReportScheduleRunner>();
 
         // Per-circuit / per-client portal identity. When OIDC is configured (Authority + ClientId set)
         // the portal reflects the signed-in Keycloak principal — identity, tenant and role-gated UI — via

@@ -125,20 +125,9 @@ public sealed class EditorHistoryService
     }
 
     /// <summary>
-    /// One serialization. The timestamp is cleared and restored around it instead of serializing a copy (every
-    /// caller runs on the renderer's dispatcher, so nothing observes the temporarily null value).
+    /// One serialization of the content (<see cref="EmailTemplateSerializer.SerializeContent"/> leaves the
+    /// timestamp out without ever writing to the document, so a reader on another thread never sees it flicker).
     /// </summary>
     private Snapshot Capture(EmailTemplateDocument document)
-    {
-        var updatedAt = document.UpdatedAt;
-        document.UpdatedAt = null;
-        try
-        {
-            return new Snapshot(EmailTemplateSerializer.Serialize(document), ++_nextVersion, updatedAt);
-        }
-        finally
-        {
-            document.UpdatedAt = updatedAt;
-        }
-    }
+        => new(EmailTemplateSerializer.SerializeContent(document), ++_nextVersion, document.UpdatedAt);
 }

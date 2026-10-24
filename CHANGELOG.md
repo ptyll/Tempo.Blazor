@@ -19,11 +19,19 @@
   parameter. Purely additive (decision EMAIL-VARIABLE-PICKER-FILTER).
 - **`TmEmailTemplatePreview.DocumentRevision` (`long?`, optional).** A cheap change signature: when supplied, the preview decides whether to render
   again from the document reference and the revision, instead of serializing the whole document on every parent re-render. The editor passes its own
-  revision; a host that does not supply it keeps the content comparison. Additive.
+  revision; a host that does not supply it keeps the content comparison. Additive. Contract (decision EMAIL-PREVIEW-DOCUMENT-REVISION): the signature is
+  (document reference, revision); an in-place edit that is not announced by a new revision is not a change, and an undo that restores earlier content
+  still bumps the revision, so it costs one extra render of the same content.
 - **Editor commit cost no longer grows with a serialize-per-edit.** `EditorHistoryService` stores immutable JSON snapshots with a monotonic
-  `Version`; `IsDirty` compares versions (O(1)) instead of re-serializing the document, and a commit is one serialization instead of a deep copy plus
-  a second serialization (about 3x less model work at 3/52/200 blocks, measured in `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is
-  unchanged: undo onto the saved state is clean, an edit during an in-flight save stays dirty, a coalesced edit after a save is dirty.
+  `Version`; `IsDirty` is an integer version check with a string-compare fallback (no serialization per edit beyond the one history snapshot), and a commit is one
+  serialization instead of a deep copy plus a second serialization (about 3x less model work at 3/52/200 blocks, measured in
+  `planning/tm-email-template-editor-2.10.md`, 9.2). Behaviour is unchanged: undo onto the saved state is clean, an edit during an in-flight save stays
+  dirty, a coalesced edit after a save is dirty. The snapshot no longer touches the live document (`EmailTemplateSerializer.SerializeContent` leaves out
+  `UpdatedAt` itself). Measured keystroke latency on a 200-block document: in-process bUnit (Release) p95 44-61 ms for commit + render under a test
+  renderer that repaints the whole tree; in the Blazor Server demo (browser `input` to the painted canvas block, 50 keystrokes) p50 8.5 ms, p95 13-22 ms
+  on loopback, i.e. under the 100 ms target (new perf-lane spec `EmailEditorKeystrokePerformanceE2ETests`, bUnit `Category=Perf`; tables in the plan, 9.2).
+- **`EmailTemplateSerializer.SerializeContent(EmailTemplateDocument)`.** `Serialize` without the `UpdatedAt` timestamp, without ever writing to the
+  document. Additive.
 
 - **Template sandbox audit trail (`Tempo.Blazor.EmailTemplates.Abstractions`).**
   `ITemplateSecurityAuditSink` + `TemplateSecurityEvent` (`Kind`, `Detail`, `TemplateHash`,
@@ -1201,8 +1209,9 @@
   portal, `IsPackable=false`) no longer references `Tempo.Blazor.EmailTemplates.Engine`, so Scriban, Mjml.Net and AngleSharp are no longer part
   of the browser download. `ReportEmailDeliveryService` and `ReportScheduleWorker` moved to `Tempo.ReportServer.Web` (same namespace
   `Tempo.ReportServer.Web.Services`); the new `IReportScheduleRunner` seam (model assembly) is what `SchedulesPage` uses for the demo "Run now"
-  button, which is therefore **only offered where the server registered the runner** (the WebAssembly leg shows no button instead of failing on
-  click). `PackageBoundaryTests` lost its single documented exception: no WebAssembly closure may reach the Engine.
+  button, which is therefore **only offered where the runner can run** (decision REPORTSERVER-ENGINE-SERVER-ONLY): `IReportScheduleRunner` gained
+  `CanRun`; `AddCommonServices` registers the null-object `UnavailableReportScheduleRunner` (`CanRun = false`), and `AddReportServerEmailDelivery()`
+  replaces it with the real worker (`CanRun = true`) whatever the call order, so the WebAssembly leg shows no button instead of failing on click. `PackageBoundaryTests` lost its single documented exception: no WebAssembly closure may reach the Engine.
   Impact: a host that called `AddCommonServices` and relied on it registering the Engine / delivery / worker must register them itself; a
   test fixture that resolved `ReportScheduleWorker` needs `AddReportServerEmailDelivery()`.
   ```csharp

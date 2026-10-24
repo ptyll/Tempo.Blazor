@@ -34,6 +34,12 @@ in `Tempo.ReportServer.Web` registers `AddTempoEmailTemplateEngine()`, `ReportEm
 browser (`AddCommonServices`); `PackageBoundaryTests` fails the build if any WebAssembly project closure
 reaches the Engine.
 
+The "Run now" button of the demo schedules page is **leg-dependent by design**. `IReportScheduleRunner` has a `CanRun` flag:
+`AddCommonServices` registers a null-object `UnavailableReportScheduleRunner` (`CanRun = false`) in both legs, and
+`AddReportServerEmailDelivery()` replaces it (`Replace(...)`, so the call order does not matter) with the real
+`ReportScheduleWorker` (`CanRun = true`). The page injects the seam directly and offers the button only when `CanRun` is
+true: the server leg shows it, the browser (WebAssembly) leg does not, because it cannot render the e-mail.
+
 The engine's NuGet dependency on `Abstractions` is pinned to an **exact** version (`[2.10.0]`), because
 the two assemblies share `internal` types through `InternalsVisibleTo`. Do not loosen it.
 

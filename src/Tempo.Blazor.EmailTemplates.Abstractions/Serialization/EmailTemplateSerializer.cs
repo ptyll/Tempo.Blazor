@@ -75,6 +75,18 @@ public static partial class EmailTemplateSerializer
     /// (<see cref="EmailTemplateDocument.SchemaVersion"/> on the instance is never mutated).
     /// </summary>
     public static string Serialize(EmailTemplateDocument document)
+        => SerializeCore(document, includeTimestamp: true);
+
+    /// <summary>
+    /// Serializes the CONTENT of a document: exactly <see cref="Serialize(EmailTemplateDocument)"/> without the
+    /// <see cref="EmailTemplateDocument.UpdatedAt"/> timestamp (a timestamp is bookkeeping, not content). The
+    /// instance is never touched, not even temporarily, so it is safe to call on a document another component
+    /// is reading. Two documents with equal signatures are the same template as far as saving is concerned.
+    /// </summary>
+    public static string SerializeContent(EmailTemplateDocument document)
+        => SerializeCore(document, includeTimestamp: false);
+
+    private static string SerializeCore(EmailTemplateDocument document, bool includeTimestamp)
     {
         ArgumentNullException.ThrowIfNull(document);
 
@@ -95,6 +107,12 @@ public static partial class EmailTemplateSerializer
             ?? throw new EmailTemplateSerializationException("The template JSON serialized to null.");
 
         node[SchemaVersionPropertyName] = EmailTemplateDocument.CurrentSchemaVersion;
+        if (!includeTimestamp)
+        {
+            node.Remove(options.PropertyNamingPolicy?.ConvertName(nameof(EmailTemplateDocument.UpdatedAt))
+                        ?? nameof(EmailTemplateDocument.UpdatedAt));
+        }
+
         return node.ToJsonString(options);
     }
 

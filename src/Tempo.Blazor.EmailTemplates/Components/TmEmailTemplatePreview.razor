@@ -221,7 +221,13 @@
     /// is answered from the revision and the document reference alone - the preview does not serialize the
     /// document on every parent re-render, which is O(document size) per keystroke. A host that does not
     /// supply it (<see langword="null"/>, the default) keeps the content comparison, so nothing changes for it.
-    /// An in-place edit that is not announced by a new revision is, by this contract, not a change.
+    /// An in-place edit that is not announced by a new revision is, by this contract, not a change
+    /// (decision <c>EMAIL-PREVIEW-DOCUMENT-REVISION</c>).
+    /// <para>
+    /// The signature is "revision or reference changed", not "content changed": an undo that restores the
+    /// previous content still bumps the revision (and replaces the document instance), so it costs one extra
+    /// render of the same content - the price of not serializing on every re-render.
+    /// </para>
     /// </summary>
     [Parameter] public long? DocumentRevision { get; set; }
 
