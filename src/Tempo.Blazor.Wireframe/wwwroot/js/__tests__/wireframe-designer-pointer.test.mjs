@@ -1175,6 +1175,22 @@ test('applyInitialZoom without a size (a hidden tab) changes nothing and reports
     near(scale, Math.min(720 / 1520, 450 / 980), 'the relayout uses the initial mode');
 });
 
+test('applyInitialZoom without a size for a NEW subject drops the old user zoom and measured baseline, so the first real size lays it out', async () => {
+    const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
+    resizeSvg(c.svg, 720, 450);
+    engine.applyInitialZoom(c.svg);
+    engine.zoomTo(c.svg, 2);                           // the user zoomed the previous page
+    assert.equal(c.inst().userViewChanged, true);
+
+    resizeSvg(c.svg, 0, 0);                            // the next page is switched to while the canvas is hidden
+    assert.equal(engine.applyInitialZoom(c.svg), 0);
+    assert.equal(c.inst().userViewChanged, false, 'the new subject starts pristine');
+    assert.equal(c.inst().layoutRect, null, 'and without a measured baseline');
+
+    resizeSvg(c.svg, 720, 450);
+    near(engine.relayout(c.svg), Math.min(720 / 1520, 450 / 980), 'the first real size lays the new subject out (not the old zoom)');
+});
+
 test('relayout of a pristine view re-applies the initial mode; a view the user zoomed keeps its zoom (no automatic overwrite)', async () => {
     const c = await canvas({ initialZoom: 'fit', canvasWidth: 1440, canvasHeight: 900 });
     resizeSvg(c.svg, 720, 450);

@@ -87,8 +87,8 @@ public sealed class EditorShellTabletOverlayE2ETests : WasmTestBase
         await Overlay(page, "right").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
         await Overlay(page, "left").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
         Assert.AreEqual(1, await page.Locator($"{Host} .tm-editor-shell__overlay").CountAsync(), "exactly one overlay");
-        Assert.AreEqual("true", await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-pressed"));
-        Assert.AreEqual("false", await page.Locator("[data-testid='es-overlay-toggle-left']").GetAttributeAsync("aria-pressed"));
+        Assert.IsNull(await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-pressed"), "the panel toggle carries aria-expanded only");
+        Assert.IsNull(await page.Locator("[data-testid='es-overlay-toggle-left']").GetAttributeAsync("aria-pressed"));
         Assert.AreEqual("true", await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-expanded"));
         Assert.AreEqual("false", await page.Locator("[data-testid='es-overlay-toggle-left']").GetAttributeAsync("aria-expanded"));
         var controls = await page.Locator("[data-testid='es-overlay-toggle-right']").GetAttributeAsync("aria-controls");

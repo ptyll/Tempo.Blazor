@@ -2330,7 +2330,13 @@ window.tmWireframeDesigner = {
         if (!inst || inst.destroyed || !inst.svg) return 0;
         if (mode === 'fit' || mode === 'actual') inst.initialZoom = mode;
         const size = this._measure(inst);
-        if (!size) return 0;
+        if (!size) {
+            // No size yet (a hidden tab): nothing can be laid out, but the NEW subject must not inherit the previous subject's user zoom or its
+            // measured baseline - the first real size has to lay it out through relayout (pristine view, no remembered layout rect).
+            inst.userViewChanged = false;
+            inst.layoutRect = null;
+            return 0;
+        }
         const scale = this._layoutInitial(inst, size, inst.initialZoom || 'fit');
         this._refreshHandlesIfCoarse(inst);
         const vb = this._getViewBox(inst);
@@ -2567,6 +2573,21 @@ window.tmWireframeDesigner = {
         const tile = root.querySelector('.tm-mobile-action-bar__action:not([disabled]), .tm-mobile-action-bar__more');
         if (!tile) return false;
         tile.focus({ preventScroll: true });
+        return true;
+    },
+
+    /**
+     * After a quick action (Delete / Lock) replaced the button that held the focus: the "More" tile of the action bar (it opens menus and
+     * never inserts anything, unlike "Add"), else the canvas. Moves the focus only when it was really lost.
+     */
+    focusAfterMobileAction: function (root) {
+        if (!root || !root.querySelector) return false;
+        const active = document.activeElement;
+        const lost = !active || active === document.body || !document.contains(active);
+        if (!lost) return false;
+        const target = root.querySelector('.tm-mobile-action-bar__more:not([disabled])') || root.querySelector('.tm-wd-canvas-wrap');
+        if (!target) return false;
+        target.focus({ preventScroll: true });
         return true;
     },
 

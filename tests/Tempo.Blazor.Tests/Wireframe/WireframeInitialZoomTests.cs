@@ -109,6 +109,20 @@ public class WireframeInitialZoomTests : LocalizationTestBase
 
         reported.Should().BeEmpty("a canvas without a size has no scale to report");
     }
+    [Fact]
+    public void Canvas_ZeroScale_StillCountsAsLaidOut_SoALaterParentRenderNeverResetsAUserZoom()
+    {
+        Register();
+        JSInterop.Setup<double>(Apply, _ => true).SetResult(0);
+        var doc = TwoPages();
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(c => c.Document, doc));
+        JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(1);
+
+        cut.Render();
+        cut.Render();
+
+        JSInterop.Invocations.Count(i => i.Identifier == Apply).Should().Be(1, "the script already marked the subject pristine; re-asking would fight a later user zoom");
+    }
 
     // ── Document / page / size / mode changes re-apply; anything else does not ─
 

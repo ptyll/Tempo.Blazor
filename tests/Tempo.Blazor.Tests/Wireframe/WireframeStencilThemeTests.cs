@@ -131,6 +131,70 @@ public sealed class WireframeStencilThemeTests : LocalizationTestBase
         logger.Messages.Should().ContainSingle().Which.Should().Contain(name);
     }
 
+    [Theory]
+    [InlineData("has space")]
+    [InlineData("a/b")]
+    [InlineData("<script>")]
+    [InlineData("x\ny")]
+    [InlineData("caf\u00e9")]
+    public void Resolve_MalformedName_IsTheDefaultTokens_NeverWarnedNeverStored(string name)
+    {
+        var logger = new ListLogger();
+
+        StencilThemeScope.Resolve(name, null, null, logger).Should().BeNull();
+
+        logger.Messages.Should().BeEmpty("a malformed name is not echoed into a log");
+        using (StencilThemeScope.Use(name)) StencilThemeScope.CurrentName.Should().BeNull();
+    }
+
+    [Fact]
+    public void Resolve_OverLongName_IsTheDefaultTokens_Silently_AndTheLimitItselfIsAccepted()
+    {
+        var logger = new ListLogger();
+
+        StencilThemeScope.Resolve(new string('a', WireframeStencilThemeName.MaxLength + 1), null, null, logger).Should().BeNull();
+        logger.Messages.Should().BeEmpty();
+
+        WireframeStencilThemeName.IsValid(new string('a', WireframeStencilThemeName.MaxLength)).Should().BeTrue();
+        WireframeStencilThemeName.IsValid(new string('a', WireframeStencilThemeName.MaxLength + 1)).Should().BeFalse();
+        WireframeStencilThemeName.IsValid("indigo-dark_1.2").Should().BeTrue();
+        WireframeStencilThemeName.IsValid(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_ManyDistinctUnknownNames_AreCapped_WithOneSuppressionLine()
+    {
+        StencilThemeScope.ResetWarnedForTests();
+        try
+        {
+            var logger = new ListLogger();
+            for (var i = 0; i < StencilThemeScope.MaxWarnedNames * 3; i++)
+                StencilThemeScope.Resolve("unknown-" + i, null, null, logger).Should().BeNull();
+
+            logger.Messages.Count(m => m.Contains("suppressed")).Should().Be(1);
+            logger.Messages.Should().HaveCount(StencilThemeScope.MaxWarnedNames + 1, "64 names, then ONE suppression line");
+
+            // Without a logger nothing is stored at all.
+            StencilThemeScope.ResetWarnedForTests();
+            for (var i = 0; i < StencilThemeScope.MaxWarnedNames * 3; i++)
+                StencilThemeScope.Resolve("silent-" + i, null, null, logger: null).Should().BeNull();
+            var after = new ListLogger();
+            StencilThemeScope.Resolve("fresh-name", null, null, after).Should().BeNull();
+            after.Messages.Should().ContainSingle("the null-logger calls stored nothing, so the cap is still open");
+        }
+        finally { StencilThemeScope.ResetWarnedForTests(); }
+    }
+
+    [Fact]
+    public void Resolve_KnowsTheBuiltInThemes_EvenWhenACustomPackCompiledFirst()
+    {
+        // A custom pack registering its themes first must not stop the built-in ones from being seeded (the old Known.IsEmpty check did).
+        StencilThemeScope.Register(["brand-first"]);
+
+        StencilThemeScope.Resolve("indigo-dark", null, null, null).Should().Be("indigo-dark");
+        StencilThemeScope.Resolve("brand-first", null, null, null).Should().Be("brand-first");
+    }
+
     // ── Rendering ─────────────────────────────────────────────────────────────
 
     [Fact]

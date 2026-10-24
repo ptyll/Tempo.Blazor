@@ -88,6 +88,14 @@ public partial class TmEditorShell
     /// </summary>
     [Parameter] public string? LeftOverlayTestId { get; set; }
 
+    /// <summary>
+    /// The <c>aria-level</c> of the overlay panel titles (<see cref="TabletPanelPresentation.Overlay"/> only; they are <c>role="heading"</c>). Default <c>2</c>:
+    /// a host whose page nests the editor under an <c>h2</c> section passes <c>3</c> so the outline stays consistent. Values outside 1-6 fall back to 2.
+    /// </summary>
+    [Parameter] public int OverlayHeadingLevel { get; set; } = 2;
+
+    private int EffectiveOverlayHeadingLevel => OverlayHeadingLevel is >= 1 and <= 6 ? OverlayHeadingLevel : 2;
+
     /// <summary>The <c>data-testid</c> of the Right overlay side sheet root (<see cref="TabletPanelPresentation.Overlay"/> only). Null uses <c>editor-shell-right-overlay</c>.</summary>
     [Parameter] public string? RightOverlayTestId { get; set; }
 

@@ -1208,10 +1208,16 @@
   `Tempo.Blazor.Abstractions.Wireframe.Export.WireframeExportRequest` gains an optional `Theme`; the demo API logs it and its preview endpoints
   accept `?theme=`. Migration: nothing to do unless a stored document has a `TargetTheme` you do not want applied - clear it or pass
   `StencilTheme="light"`.
+- **`TmEditorShell`: new `OverlayHeadingLevel` parameter (default `2`)** - the `aria-level` of the tablet overlay panel titles. The panel toggles of the
+  wireframe editor and the editor-shell demo carry `aria-expanded` only (no `aria-pressed`); the open look is a class.
+- **Wireframe stencil themes are bounded.** A theme name longer than 64 characters or outside `[A-Za-z0-9._-]` is the default tokens (no warning, nothing
+  stored; `WireframeStencilThemeName.IsValid`), the once-per-name warning set is capped at 64 names and the demo API answers `400` for such a name
+  (`?theme=`, export `Theme`). The export request now carries the resolved canonical theme (or `null`), not the raw parameter.
 - **`TmEditorShell`: the mobile sheet's canvas reserve is capped at 60 % of the stage.** The padding the shell leaves under the canvas while the
   sheet is open (`.tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas`) used to be able to equal the whole stage on a short (landscape
-  phone) stage, leaving the canvas no height; it is now at most `60cqh` + the usual gap. The wireframe editor no longer carries its own copy of
-  the formula (it only removes the padding where no sheet can be open). Hosts that overrode `--tm-editor-shell-sheet-reserve` above 0.6 get 60 %.
+  phone) stage, leaving the canvas no height; it is now at most `--tm-editor-shell-sheet-reserve-max` (new token, default `0.6`) of the stage + the usual gap. The wireframe editor no longer
+  carries its own copy of the formula (it only removes the padding where no sheet can be open). Hosts that overrode `--tm-editor-shell-sheet-reserve`
+  above 0.6 get 60 % unless they raise `--tm-editor-shell-sheet-reserve-max`.
 - **`TmWireframeEditor`: the tablet sheets are the core shell's overlay (`.tm-wd-sheet` is gone).** The left drawer and the
   inspector side sheet are now rendered by `TmEditorShell` with `TabletPanelPresentation.Overlay` instead of by the editor
   inside its canvas region. Impact: (1) the classes `.tm-wd-sheet`, `.tm-wd-sheet--left`, `.tm-wd-sheet--right`,

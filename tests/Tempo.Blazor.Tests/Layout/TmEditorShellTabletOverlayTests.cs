@@ -120,6 +120,17 @@ public class TmEditorShellTabletOverlayTests : LocalizationTestBase
         cut.FindComponent<TmFocusScope>().Instance.Modal.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(3, "3")]
+    [InlineData(0, "2")]
+    [InlineData(7, "2")]
+    public void Overlay_HeadingLevel_FollowsOverlayHeadingLevel_AndFallsBackToTwoWhenOutOfRange(int level, string expected)
+    {
+        var cut = RenderShell(TmLayoutMode.Tablet, new Host { Left = true }, extra: p => p.Add(x => x.OverlayHeadingLevel, level));
+
+        cut.Find(".tm-editor-shell__overlay-title").GetAttribute("aria-level").Should().Be(expected);
+    }
+
     [Fact]
     public void Overlay_Tablet_RightOpen_IsANonModalSideSheet()
     {

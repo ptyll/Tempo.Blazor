@@ -15,6 +15,7 @@ public static class WireframeExportEndpoints
             ILoggerFactory loggers,
             CancellationToken cancellationToken) =>
         {
+            if (WireframeThemeRequest.Validate(request.Theme) is { } invalid) return invalid;
             LogTheme(loggers, request);
             var png = await service.ExportPngAsync(request, cancellationToken);
             var fileName = $"{request.FileName}.png";
@@ -27,6 +28,7 @@ public static class WireframeExportEndpoints
             ILoggerFactory loggers,
             CancellationToken cancellationToken) =>
         {
+            if (WireframeThemeRequest.Validate(request.Theme) is { } invalid) return invalid;
             LogTheme(loggers, request);
             var pdf = await service.ExportPdfAsync(request, cancellationToken);
             var fileName = $"{request.FileName}.pdf";
@@ -34,11 +36,11 @@ public static class WireframeExportEndpoints
         });
     }
 
-    // The browser posts the SVG it has already drawn with the theme, so the server rasterises it as it is. The name is logged (and an unknown one
-    // warned about through the same once-per-name path the editor uses) so a themed export that looks wrong can be traced to its theme.
+    // The browser posts the SVG it has already drawn with the theme, so the server rasterises it as it is. The name is validated (400 when malformed) and logged so a themed export that looks wrong can be traced to its theme.
     private static void LogTheme(ILoggerFactory loggers, WireframeExportRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Theme)) return;
-        loggers.CreateLogger("Tempo.Blazor.Demo.Api.WireframeExport").LogInformation("Wireframe export drawn with stencil theme '{Theme}'.", request.Theme);
+        // Only a validated name reaches the log (WireframeThemeRequest.Validate ran first), never raw input.
+        loggers.CreateLogger("Tempo.Blazor.Demo.Api.WireframeExport").LogInformation("Wireframe export drawn with stencil theme '{Theme}'.", request.Theme.Trim());
     }
 }

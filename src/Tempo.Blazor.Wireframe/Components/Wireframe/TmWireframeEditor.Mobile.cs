@@ -33,6 +33,7 @@ public partial class TmWireframeEditor
     // The sheet was opened by a selection (not by an action-bar tile): when the selection becomes empty it closes again.
     private bool _mobileOpenedBySelection;
     private bool _mobileFocusBarPending;
+    private bool _mobileFocusAfterActionPending;   // after Delete / Lock: the "More" tile (or the canvas) takes a lost focus, never "Add"
     private bool _mobileScrollResetPending;
     private ElementReference _editorRoot;
 
@@ -203,9 +204,11 @@ public partial class TmWireframeEditor
     {
         if (!IsMobile) return;
         // A quick action (Delete / Lock) replaces the button that held the focus, whether the sheet closes or stays: ask the script to put
-        // the focus on the action bar - it moves it only when it was really lost, so a focus the user placed elsewhere is never taken.
-        _mobileFocusBarPending = HasMobileChrome;
+        // the focus on the "More" tile (else the canvas) - NOT on "Add", which would read as an invitation to insert something right after a
+        // delete. It moves the focus only when it was really lost, so a focus the user placed elsewhere is never taken.
         if (_mobileOpenedBySelection) CloseMobileSheet();
+        _mobileFocusBarPending = false;
+        _mobileFocusAfterActionPending = true;
     }
 
     // ── Action bar ────────────────────────────────────────────────────────────
@@ -349,6 +352,13 @@ public partial class TmWireframeEditor
             catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* no script */ }
         }
 
+        if (_mobileFocusAfterActionPending)
+        {
+            _mobileFocusAfterActionPending = false;
+            try { await JS.InvokeVoidAsync("tmWireframeDesigner.focusAfterMobileAction", _editorRoot); }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* no script */ }
+        }
+
         if (!_mobileFocusBarPending) return;
         _mobileFocusBarPending = false;
         try { await JS.InvokeVoidAsync("tmWireframeDesigner.focusFirstMobileAction", _editorRoot); }
@@ -366,9 +376,11 @@ public partial class TmWireframeEditor
         _mobileSnap = 0;
         _mobileOpenedBySelection = false;
         _mobileFocusBarPending = false;
+        _mobileFocusAfterActionPending = false;
         // The context menu swaps presentation (anchored <-> sheet) and its anchor is stale after a flip, and the connector tool is
         // tablet+ (the script falls back to select without telling .NET): close the menu, reset the tool.
         if (_ctxMenuOpen) CloseContextMenu();
+        // The ONE place the tool mode is reset on a layout flip (the canvas script does not report its own fallback back).
         if (IsMobile && _toolMode == "connector") _toolMode = "select";
         _contentVersion++;
     }

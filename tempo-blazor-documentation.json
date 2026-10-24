@@ -19676,6 +19676,14 @@
           "description": "The data-testid of the overlay close button. Null uses the open overlay's test id with a -close suffix."
         },
         {
+          "name": "OverlayHeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "2",
+          "description": "The aria-level of the tablet overlay panel titles (role=heading, Overlay only). Default 2; pass 3 when the editor sits under an h2 section. Values outside 1-6 fall back to 2.",
+          "defaultValue": "2"
+        },
+        {
           "name": "PersistWidthsKey",
           "type": "string?",
           "isRequired": false,

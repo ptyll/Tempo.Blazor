@@ -304,6 +304,42 @@ public class TmWireframeEditorMobileTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Mobile_DeleteAndLock_AreAnnouncedThroughThePoliteLiveRegion()
+    {
+        var cut = RenderEditor();
+        var id = AddElement(cut);
+        Select(cut, id);
+        string Status() => cut.Find("[data-testid='wd-canvas-status']").TextContent.Trim();
+
+        cut.Find("[data-testid='wd-quick-lock']").Click();
+        cut.WaitForAssertion(() => Status().Should().Be("Locked"));
+
+        cut.Find("[data-testid='wd-quick-lock']").Click();
+        cut.WaitForAssertion(() => Status().Should().Be("Unlocked"));
+
+        cut.Find("[data-testid='wd-quick-delete']").Click();
+        cut.WaitForAssertion(() => Status().Should().Be("Deleted"));
+        cut.Find("[data-testid='wd-canvas-status']").GetAttribute("aria-live").Should().Be("polite");
+    }
+
+    [Fact]
+    public void Mobile_DeleteOrLock_AsksForTheFocusOnTheMoreTileOrCanvas_NotOnAdd()
+    {
+        var cut = RenderEditor();
+        var id = AddElement(cut);
+        Select(cut, id);
+
+        cut.Find("[data-testid='wd-quick-delete']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            JSInterop.Invocations.Select(i => i.Identifier).Should().Contain("tmWireframeDesigner.focusAfterMobileAction");
+            JSInterop.Invocations.Select(i => i.Identifier).Should().NotContain("tmWireframeDesigner.focusFirstMobileAction",
+                "the first tile is \"Add\": focusing it right after a delete reads as an invitation to insert");
+        });
+    }
+
+    [Fact]
     public void Mobile_QuickDuplicate_AddsACopy_AsOneUndoableStep()
     {
         var cut = RenderEditor();

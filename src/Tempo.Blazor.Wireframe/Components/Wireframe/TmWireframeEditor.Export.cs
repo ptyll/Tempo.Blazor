@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tempo.Blazor.Abstractions.Wireframe.Export;
 
 namespace Tempo.Blazor.Components.Wireframe;
@@ -74,7 +76,7 @@ public partial class TmWireframeEditor
             Svg = svg,
             FileName = result.FileName,
             Options = result.Options,
-            Theme = PaletteTheme,
+            Theme = ResolveExportTheme(),
         };
 
         var endpoint = result.Format == "pdf"
@@ -99,7 +101,20 @@ public partial class TmWireframeEditor
         }
     }
 
-    /// <summary>The client the server export posts to: the named factory client when the host asked for one, else the injected HttpClient.</summary>
+    private bool _exportClientFallbackLogged;
+
+    /// <summary>
+    /// The canonical stencil theme name the exported SVG was drawn with (the same host → page → document order the canvas uses), or <c>null</c>
+    /// for the default tokens (also for <c>light</c> / <c>default</c>, a blank, a malformed or an unknown name). Informational for the server.
+    /// </summary>
+    private string? ResolveExportTheme()
+        => Stencil.StencilThemeScope.Resolve(StencilTheme, _activePage?.TargetTheme, _document?.TargetTheme, Services.GetService<ILoggerFactory>()?.CreateLogger<TmWireframeEditor>());
+
+    /// <summary>
+    /// The client the server export posts to: the named factory client when the host asked for one, else the injected HttpClient. Unlike
+    /// <c>TmDiagramEditor</c> (which throws for a missing factory or an unusable client) this falls back to the injected client, and says so with
+    /// ONE warning per editor instance so a misconfigured <see cref="ExportHttpClientName"/> is visible instead of silently posting to the host origin.
+    /// </summary>
     private HttpClient ResolveExportClient()
     {
         if (string.IsNullOrWhiteSpace(ExportHttpClientName)) return Http;
@@ -107,6 +122,15 @@ public partial class TmWireframeEditor
         var named = factory?.CreateClient(ExportHttpClientName);
         // A factory hands out a default client for a name nobody configured; one without a base address cannot resolve the relative
         // export route, so the injected client (the host origin) is the better answer than an InvalidOperationException.
-        return named is { BaseAddress: not null } ? named : Http;
+        if (named is { BaseAddress: not null }) return named;
+
+        if (!_exportClientFallbackLogged)
+        {
+            _exportClientFallbackLogged = true;
+            Services.GetService<ILoggerFactory>()?.CreateLogger<TmWireframeEditor>().LogWarning(
+                "Wireframe export: ExportHttpClientName '{ClientName}' is set but {Reason}; the injected HttpClient is used for the export.",
+                ExportHttpClientName, factory is null ? "no IHttpClientFactory is registered" : "that client has no BaseAddress");
+        }
+        return Http;
     }
 }

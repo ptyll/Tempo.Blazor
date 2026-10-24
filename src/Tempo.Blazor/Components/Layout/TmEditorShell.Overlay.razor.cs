@@ -143,10 +143,10 @@ public partial class TmEditorShell
             {
                 inner.OpenElement(0, "div");
                 inner.AddAttribute(1, "class", "tm-editor-shell__overlay-header");
-                // A level-2 heading: the panel is a named region of the editor and a screen-reader user can reach it by heading.
+                // A heading (level = OverlayHeadingLevel, default 2): the panel is a named region of the editor and a screen-reader user can reach it by heading.
                 inner.OpenElement(2, "div");
                 inner.AddAttribute(3, "role", "heading");
-                inner.AddAttribute(4, "aria-level", "2");
+                inner.AddAttribute(4, "aria-level", EffectiveOverlayHeadingLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 inner.AddAttribute(5, "class", "tm-editor-shell__overlay-title");
                 inner.AddAttribute(6, "id", _overlayTitleId);
                 inner.AddContent(7, PanelTitle(side));

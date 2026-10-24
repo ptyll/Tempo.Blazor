@@ -203,13 +203,18 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
+    // Created once (not per parameter pass): the unknown-theme warning only needs a logger, not a fresh factory lookup per render.
+    private Microsoft.Extensions.Logging.ILogger? _logger;
+
+    protected override void OnInitialized()
+        => _logger = (_services.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory)) as Microsoft.Extensions.Logging.ILoggerFactory)
+            ?.CreateLogger("Tempo.Blazor.Components.Wireframe.TmWireframeDesignerCanvas");
+
     protected override void OnParametersSet()
     {
         _gs = GridSize.ToString(CultureInfo.InvariantCulture);
         _gl = (GridSize * 10).ToString(CultureInfo.InvariantCulture);
-        _theme = Stencil.StencilThemeScope.Resolve(StencilTheme, Document?.ActivePage?.TargetTheme, Document?.TargetTheme,
-            (_services.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory)) as Microsoft.Extensions.Logging.ILoggerFactory)
-                ?.CreateLogger("Tempo.Blazor.Components.Wireframe.TmWireframeDesignerCanvas"));
+        _theme = Stencil.StencilThemeScope.Resolve(StencilTheme, Document?.ActivePage?.TargetTheme, Document?.TargetTheme, _logger);
 
         // The script owns the view box once the canvas runs (pan, zoom, the initial fit): Blazor writes the page-sized box only
         // when the PAGE SIZE changed (a new document, a resized page), never on an unrelated parent render - that would snap a
@@ -341,6 +346,8 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     /// <summary>Asks the script to lay the view out for the current document / page / mode and reports the real scale to the host.</summary>
     private async Task ApplyInitialZoomAsync()
     {
+        // The subject counts as laid out even when the svg has no size yet: the script then marks the view pristine (no user zoom, no remembered
+        // size), so the first real size lays it out through relayout. Re-asking on every render instead would reset a zoom the user chose later.
         _laidOutFor = LayoutKey();
         double scale;
         try { scale = await JS.InvokeAsync<double>("tmWireframeDesigner.applyInitialZoom", _svgRef, InitialZoomName(InitialZoom)); }
@@ -384,10 +391,16 @@ public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposab
     /// read-only flip never call this. The same text is announced again on a repeat (a trailing no-break space alternates).
     /// </summary>
     [JSInvokable("OnGestureCancelled")]
-    public async Task JsOnGestureCancelled()
+    public Task JsOnGestureCancelled() => AnnounceAsync(Loc["TmWireframeCanvas_GestureCancelled"]);
+
+    /// <summary>
+    /// Says <paramref name="message"/> through the canvas' polite live region (the editor announces Delete / Lock with it, because the button that
+    /// was pressed has just been replaced). The same text is announced again on a repeat (a trailing no-break space alternates).
+    /// </summary>
+    internal async Task AnnounceAsync(string message)
     {
         _statusToggle = !_statusToggle;
-        _statusMessage = Loc["TmWireframeCanvas_GestureCancelled"] + (_statusToggle ? "\u00A0" : "");
+        _statusMessage = message + (_statusToggle ? "\u00A0" : "");
         await InvokeAsync(StateHasChanged);
     }
 

@@ -51,6 +51,17 @@ public class WireframeExportRoutingTests : LocalizationTestBase
         });
     }
 
+    private sealed class Capturing(Recorder inner) : HttpMessageHandler
+    {
+        public List<string> Bodies { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Bodies.Add(request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken));
+            return await new HttpClient(inner).SendAsync(new HttpRequestMessage(request.Method, request.RequestUri), cancellationToken);
+        }
+    }
+
     private static Task ExportAsync(IRenderedComponent<TmWireframeEditor> cut, string format)
     {
         var dialog = cut.FindComponent<TmWireframeExportDialog>().Instance;
@@ -96,6 +107,74 @@ public class WireframeExportRoutingTests : LocalizationTestBase
         await ExportAsync(cut, "png");
 
         own.Calls.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData("light", null)]
+    [InlineData("default", null)]
+    [InlineData("INDIGO-dark", "indigo-dark")]
+    [InlineData("definitely-not-a-theme", null)]
+    [InlineData("bad theme!", null)]
+    [InlineData(null, null)]
+    public async Task Export_SendsTheResolvedCanonicalTheme_OrNull(string? stencilTheme, string? expected)
+    {
+        var capture = new Capturing(new Recorder());
+        var registry = new WireframeComponentRegistry();
+        Services.AddSingleton(registry);
+        Services.AddSingleton(new HttpClient(capture) { BaseAddress = new Uri("https://host.test/") });
+        JSInterop.Setup<string>("tmWireframeDesigner.exportSvg", _ => true).SetResult("<svg xmlns='http://www.w3.org/2000/svg'/>");
+        JSInterop.SetupVoid("tmWireframe.download", _ => true);
+        _ = new Tempo.Blazor.Components.Wireframe.BuiltInStencilPackProvider().GetDefinitions().Count();   // compiling the pack registers its theme names
+        var cut = Render<TmWireframeEditor>(p =>
+        {
+            p.Add(e => e.Document, new WireframeDocument { Title = "Export", Width = 800, Height = 600 });
+            p.Add(e => e.LayoutMode, TmLayoutMode.Desktop);
+            p.Add(e => e.StencilTheme, stencilTheme);
+        });
+
+        await ExportAsync(cut, "png");
+
+        var body = System.Text.Json.JsonDocument.Parse(capture.Bodies.Should().ContainSingle().Subject).RootElement;
+        var theme = body.GetProperty("theme");
+        if (expected is null) theme.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        else theme.GetString().Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task ExportHttpClientName_FallingBack_LogsOneWarning()
+    {
+        var own = new Recorder();
+        var logs = new WarningCollector();
+        Services.AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(new CollectingFactory(logs));
+        var cut = RenderEditor(own, api: null, p => p.Add(e => e.ExportHttpClientName, "DemoApi"));
+
+        await ExportAsync(cut, "png");
+        await ExportAsync(cut, "pdf");
+
+        own.Calls.Should().HaveCount(2);
+        logs.Warnings.Should().ContainSingle().Which.Should().Contain("DemoApi").And.Contain("BaseAddress");
+    }
+
+    private sealed class WarningCollector
+    {
+        public List<string> Warnings { get; } = [];
+    }
+
+    private sealed class CollectingFactory(WarningCollector sink) : Microsoft.Extensions.Logging.ILoggerFactory
+    {
+        public void AddProvider(Microsoft.Extensions.Logging.ILoggerProvider provider) { }
+        public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName) => new CollectingLogger(sink);
+        public void Dispose() { }
+    }
+
+    private sealed class CollectingLogger(WarningCollector sink) : Microsoft.Extensions.Logging.ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == Microsoft.Extensions.Logging.LogLevel.Warning) sink.Warnings.Add(formatter(state, exception));
+        }
     }
 
     [Fact]

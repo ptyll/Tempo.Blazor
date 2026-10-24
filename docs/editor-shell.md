@@ -43,7 +43,8 @@ usable (the inline drawer root is click-through).
 | Focus | a panel opened from a toolbar control moves the focus to its × (so Escape works from the keyboard) and Escape / × returns it to the opener; a focus that sits on the canvas (a selection opened the panel) is never taken away; nothing moves at load |
 | Semantics | `TmFocusScope` with `Modal=false` (`aria-modal="false"`, nothing inert, no top layer, no `TmDrawer`), named by `aria-labelledby` its title, which is a level-2 heading (`role="heading" aria-level="2"`, a `div` so no host `h2` rule restyles it) |
 | DOM order | the left overlay renders **before** the canvas and the right one **after** it (the Tab order follows what the user sees); both sit at fixed positions in the markup, so the canvas is never remounted by a side switch |
-| Toggle wiring | `LeftPanelId` / `RightPanelId` are public: the id of the element that holds the panel content (the overlay body, the docked `aside`, the mobile region). A host toggle renders `aria-expanded` (`true` while the side is open) and `aria-controls` **only while it is open** — a closed overlay is not in the DOM, so there is nothing to control |
+| Heading level | the panel titles are `role="heading"` with `aria-level` = `OverlayHeadingLevel` (default `2`; pass `3` when the editor sits under an `h2` section) |
+| Toggle wiring | `LeftPanelId` / `RightPanelId` are public: the id of the element that holds the panel content (the overlay body, the docked `aside`, the mobile region). A host toggle renders `aria-expanded` (`true` while the side is open) and `aria-controls` **only while it is open** - and no `aria-pressed` (that would read "toggle button, pressed, expanded"); show the open look with a class — a closed overlay is not in the DOM, so there is nothing to control |
 | Touch / motion | the × is `--tm-touch-target` (44 px) on `(pointer: coarse)`; the entrance fade runs only under `prefers-reduced-motion: no-preference` |
 
 **Test ids and classes are a contract.** An explicit `LeftOverlayTestId` / `RightOverlayTestId` / `OverlayCloseTestId` is rendered **verbatim** — `TestIdPrefix` namespaces only the defaults, so the host namespaces its own value (the wireframe editor passes `TestId("wd-left-drawer")`). The classes `.tm-editor-shell__overlay`, `.tm-editor-shell__overlay--left` and `.tm-editor-shell__overlay--right` are stable selectors host stylesheets and E2E may rely on; the inner `…__overlay-header` / `__overlay-title` / `__overlay-close` / `__overlay-body` follow them.
@@ -126,7 +127,10 @@ a private flag that could disagree with the host.
   `[0.5, 1.0]`): invalid values are dropped, the list is sorted/deduplicated with the `TmDrawer`
   rules, an empty result falls back to the default, and the lowest snap drives the canvas reserve.
   On a short stage the 14rem floor applies to the whole sheet panel (header, tabs and body), capped
-  at the stage height (`--tm-editor-shell-sheet-min-block`).
+  at the stage height (`--tm-editor-shell-sheet-min-block`). The canvas reserve under an open sheet is capped at
+  `--tm-editor-shell-sheet-reserve-max` of the stage (default `0.6`; host-overridable next to
+  `--tm-editor-shell-sheet-reserve` and `--tm-editor-shell-sheet-min-block`), so a short landscape-phone stage keeps a usable
+  canvas. The shell is the sole owner of this reserve - an editor does not carry its own copy of the formula.
 * `MobileActionsMaxVisible` (default `3`, the bar's own default) is how many of the
   `MobileActions` stay on the action bar before the rest overflow into the bar's own "More" menu.
   A host whose action set is the editor's primary navigation raises it so those commands stay one

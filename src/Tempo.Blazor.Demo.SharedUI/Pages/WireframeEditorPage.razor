@@ -23,14 +23,18 @@
         .demo-shell:has(.wd-demo-page) main .max-w-7xl { max-width: none !important; }
     }
     .wd-demo-page__index-link { display: none; }
-    @@media (min-width: 1400px) { .wd-demo-page__index-link { display: inline-block; } }
+    @@media (min-width: 1400px) {
+        /* A real top margin and scroll-margin so a sticky/fixed header never covers the link, and a colour with enough contrast on the page background (light and dark). */
+        .wd-demo-page__index-link { display: inline-block; margin-top: 1rem; scroll-margin-top: 5rem; color: var(--tm-color-primary-700, #1d4ed8); text-decoration: underline; }
+        .dark .wd-demo-page__index-link, [data-theme="dark"] .wd-demo-page__index-link { color: var(--tm-color-primary-300, #93c5fd); }
+    }
 </style>
 
 <div class="wd-demo-page">
 
 <!-- Page Header -->
 <div class="mb-8">
-    <a href="./" class="wd-demo-page__index-link text-sm text-primary-600 hover:underline mb-2" data-testid="wf-demo-index-link">← All demos</a>
+    <a href="./" class="wd-demo-page__index-link text-sm mb-2" data-testid="wf-demo-index-link">← All demos</a>
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Wireframe Editor</h1>
     <p class="text-slate-600 dark:text-slate-400">
         SVG-based wireframe design tool for quickly sketching UI layouts with Tempo.Blazor components.
@@ -197,7 +201,7 @@
     <div class="mb-3">
         <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                 data-testid="wf-demo-narrow-toggle"
-                aria-pressed="@(_showNarrow ? "true" : "false")"
+                aria-expanded="@(_showNarrow ? "true" : "false")"
                 @onclick="ToggleNarrow">
             @(_showNarrow ? "Hide narrow editor" : "Show narrow editor")
         </button>

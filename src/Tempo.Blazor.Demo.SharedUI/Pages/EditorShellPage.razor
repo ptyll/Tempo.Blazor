@@ -99,8 +99,8 @@
                 </Header>
                 <Toolbar>
                     <div class="es-editor-toolbar" role="group" aria-label="@Loc["TmEditorShellDemo_ToolbarLabel"]">
-                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayLeft" aria-pressed="@(_overlayLeftOpen ? "true" : "false")" aria-expanded="@(_overlayLeftOpen ? "true" : "false")" aria-controls="@(_overlayLeftOpen ? _overlayShell?.LeftPanelId : null)" data-testid="es-overlay-toggle-left">@Loc["TmEditorShellDemo_Blocks"]</TmButton>
-                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayRight" aria-pressed="@(_overlayRightOpen ? "true" : "false")" aria-expanded="@(_overlayRightOpen ? "true" : "false")" aria-controls="@(_overlayRightOpen ? _overlayShell?.RightPanelId : null)" data-testid="es-overlay-toggle-right">@Loc["TmEditorShellDemo_Properties"]</TmButton>
+                        <TmButton Variant="@(_overlayLeftOpen ? ButtonVariant.Primary : ButtonVariant.Secondary)" Size="ButtonSize.Sm" OnClick="ToggleOverlayLeft" aria-expanded="@(_overlayLeftOpen ? "true" : "false")" aria-controls="@(_overlayLeftOpen ? _overlayShell?.LeftPanelId : null)" data-testid="es-overlay-toggle-left">@Loc["TmEditorShellDemo_Blocks"]</TmButton>
+                        <TmButton Variant="@(_overlayRightOpen ? ButtonVariant.Primary : ButtonVariant.Secondary)" Size="ButtonSize.Sm" OnClick="ToggleOverlayRight" aria-expanded="@(_overlayRightOpen ? "true" : "false")" aria-controls="@(_overlayRightOpen ? _overlayShell?.RightPanelId : null)" data-testid="es-overlay-toggle-right">@Loc["TmEditorShellDemo_Properties"]</TmButton>
                     </div>
                 </Toolbar>
                 <Left>@Toolbox("-overlay")</Left>
@@ -132,7 +132,7 @@
                 </FooterContent>
             </TmSidePanel>
             <div class="es-side-panel-host__content">
-                <TmButton OnClick="ToggleInspector" aria-pressed="@InspectorPressed" id="side-panel-toggle" data-testid="side-panel-toggle">
+                <TmButton OnClick="ToggleInspector" aria-expanded="@InspectorExpanded" id="side-panel-toggle" data-testid="side-panel-toggle">
                     @(_inspectorOpen ? Loc["TmSidePanelDemo_HideInspector"] : Loc["TmSidePanelDemo_ShowInspector"])
                 </TmButton>
                 <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleInspectorSide" data-testid="side-panel-side-toggle">@(_inspectorSide == SidePanelSide.Left ? Loc["TmSidePanelDemo_SideRight"] : Loc["TmSidePanelDemo_SideLeft"])</TmButton>
@@ -238,7 +238,7 @@
         </TmFormField>
     </div>;
 
-    private string InspectorPressed => _inspectorOpen ? "true" : "false";
+    private string InspectorExpanded => _inspectorOpen ? "true" : "false";
 
     // X14/X18: built per parameter set so a culture switch re-renders the labels; the
     // EventCallback receiver is this page, so its own markup re-renders when an action runs.

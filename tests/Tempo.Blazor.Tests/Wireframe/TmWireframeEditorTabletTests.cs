@@ -131,7 +131,7 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
         cut.InvokeAsync(() => canvas.JsOnSelectionChanged([])).GetAwaiter().GetResult();
 
         cut.FindAll("[data-testid='wd-inspector-sheet']").Should().BeEmpty("nothing is selected: the inspector sheet has nothing to show");
-        ToggleInspector(cut).GetAttribute("aria-pressed").Should().Be("false");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
     }
 
     [Fact]
@@ -204,12 +204,12 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
     public void Tablet_ToggleButtons_ReflectTheOpenSheet()
     {
         var cut = RenderEditor();
-        ToggleLeft(cut).GetAttribute("aria-pressed").Should().Be("false");
+        ToggleLeft(cut).GetAttribute("aria-expanded").Should().Be("false");
 
         ToggleLeft(cut).Click();
 
-        ToggleLeft(cut).GetAttribute("aria-pressed").Should().Be("true");
-        ToggleInspector(cut).GetAttribute("aria-pressed").Should().Be("false");
+        ToggleLeft(cut).GetAttribute("aria-expanded").Should().Be("true");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
         close.Click();
 
         cut.FindAll("[data-testid='wd-inspector-sheet']").Should().BeEmpty();
-        ToggleInspector(cut).GetAttribute("aria-pressed").Should().Be("false");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
         cut.InvokeAsync(() => scope.HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
 
         cut.FindAll("[data-testid='wd-inspector-sheet']").Should().BeEmpty();
-        ToggleInspector(cut).GetAttribute("aria-pressed").Should().Be("false");
+        ToggleInspector(cut).GetAttribute("aria-expanded").Should().Be("false");
     }
 
     // ── Canvas viewport ────────────────────────────────────────────────────────

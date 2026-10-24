@@ -275,14 +275,14 @@
             @if (HasLeftContent)
             {
                 <TmToolbarButton Icon="@IconNames.PanelLeft" Text="@Loc["TmWireframe_SheetLeftTitle"]" Tooltip="@Loc["TmWireframe_ToggleToolbox"]"
-                                 LabelPosition="ToolbarLabelPosition.Below" Pressed="@LeftSheetOpen"
+                                 LabelPosition="ToolbarLabelPosition.Below" Class="@PanelToggleClass(LeftSheetOpen)"
                                  OnClick="ToggleLeftSheet" data-testid="@TestId("wd-toggle-left")"
                                  aria-expanded="@(LeftSheetOpen ? "true" : "false")" aria-controls="@(LeftSheetOpen ? _shell?.LeftPanelId : null)" />
             }
             @if (ShowPropertiesPanel)
             {
                 <TmToolbarButton Icon="@IconNames.PanelRight" Text="@Loc["TmWireframe_SheetInspectorTitle"]" Tooltip="@Loc["TmWireframe_ToggleProperties"]"
-                                 LabelPosition="ToolbarLabelPosition.Below" Pressed="@InspectorSheetOpen"
+                                 LabelPosition="ToolbarLabelPosition.Below" Class="@PanelToggleClass(InspectorSheetOpen)"
                                  OnClick="ToggleInspectorSheet" data-testid="@TestId("wd-toggle-inspector")"
                                  aria-expanded="@(InspectorSheetOpen ? "true" : "false")" aria-controls="@(InspectorSheetOpen ? _shell?.RightPanelId : null)" />
             }

@@ -130,6 +130,13 @@
       "description": "The data-testid of the Left overlay drawer root (Overlay only). Null uses editor-shell-left-overlay, namespaced by TestIdPrefix."
     },
     {
+      "name": "OverlayHeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "defaultValue": "2",
+      "description": "The aria-level of the tablet overlay panel titles (role=heading, Overlay only). Default 2; pass 3 when the editor sits under an h2 section. Values outside 1-6 fall back to 2."
+    },
+    {
       "name": "RightOverlayTestId",
       "type": "string?",
       "isRequired": false,

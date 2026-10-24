@@ -4,18 +4,11 @@
 
 <div class="tm-wd-layers @(ShowCollapseToggle ? null : "tm-wd-layers--embedded") @Class"
      data-collapsed="@(ShowCollapseToggle && _collapsed ? "True" : "False")">
-    @if (ShowCollapseToggle)
-    {
-        <button type="button" class="tm-wd-layers__toggle" @onclick="ToggleCollapse"
-                aria-expanded="@(_collapsed ? "false" : "true")"
-                aria-label="@Loc["TmWireframe_LayersToggle"]" title="@Loc["TmWireframe_LayersToggle"]">
-            <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
-        </button>
-    }
-
-    <div class="tm-wd-layers__inner">
-        <div class="tm-wd-layers__header">
-            <h3 class="tm-wd-layers__title">@Loc["TmWireframe_LayersTitle"]</h3>
+    @* The header row stays visible when the panel is collapsed: the collapse toggle lives INSIDE it (a labelled, finger-sized button next to
+       the title and the add button) instead of a full-width unlabelled tab above it. *@
+    <div class="tm-wd-layers__header">
+        <h3 class="tm-wd-layers__title">@Loc["TmWireframe_LayersTitle"]</h3>
+        <div class="tm-wd-layers__header-actions">
             <button type="button" class="tm-wd-layers__add-btn"
                     aria-label="@Loc["TmWireframe_AddLayer"]"
                     title="@Loc["TmWireframe_AddLayer"]"
@@ -24,7 +17,18 @@
                     disabled="@ReadOnly">
                 <TmIcon Name="@IconNames.Plus" />
             </button>
+            @if (ShowCollapseToggle)
+            {
+                <button type="button" class="tm-wd-layers__toggle" @onclick="ToggleCollapse"
+                        aria-expanded="@(_collapsed ? "false" : "true")"
+                        aria-label="@Loc["TmWireframe_LayersToggle"]" title="@Loc["TmWireframe_LayersToggle"]">
+                    <TmIcon Name="@(_collapsed ? IconNames.ChevronUp : IconNames.ChevronDown)" />
+                </button>
+            }
         </div>
+    </div>
+
+    <div class="tm-wd-layers__inner">
 
         @* The rows are the radios of ONE radiogroup (the active layer). A row carries other controls
            (visibility, lock, menu) next to its radio, so the rows themselves are plain containers

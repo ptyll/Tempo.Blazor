@@ -190,8 +190,8 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     /// Name of the <c>IHttpClientFactory</c> client the PNG / PDF export posts to (<c>api/wireframe/export/png|pdf</c>, resolved against that
     /// client's base address). Empty (default) uses the injected <c>HttpClient</c>, whose base is the host's own origin. A host whose page
     /// origin does not serve the export endpoints (a WebAssembly demo next to a separate API) names the client that points at the API, the
-    /// way <c>TmDiagramEditor.ExportHttpClientName</c> does. Without a registered <c>IHttpClientFactory</c>, or when the named client has no base address,
-    /// the injected <c>HttpClient</c> is used.
+    /// way <c>TmDiagramEditor.ExportHttpClientName</c> does. Unlike the diagram editor (which throws), a missing <c>IHttpClientFactory</c> or a named client
+    /// without a base address falls back to the injected <c>HttpClient</c> and logs one warning.
     /// </summary>
     [Parameter] public string ExportHttpClientName { get; set; } = "";
 
@@ -235,6 +235,10 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     // The theme name the palette previews follow: the parameter, else the active page's / the document's TargetTheme (resolved by the toolbox).
     private string? PaletteTheme => !string.IsNullOrWhiteSpace(StencilTheme) ? StencilTheme
         : !string.IsNullOrWhiteSpace(_activePage?.TargetTheme) ? _activePage!.TargetTheme : _document?.TargetTheme;
+
+    // A panel toggle announces its state with aria-expanded ONLY (aria-pressed on top reads "toggle button, pressed, expanded"): the open look
+    // is a class, not a pressed state, and its More-menu copy stays a plain entry.
+    private static string PanelToggleClass(bool open) => open ? "tm-wd-editor__panel-toggle tm-wd-editor__panel-toggle--active" : "tm-wd-editor__panel-toggle";
 
     private double _zoomLevel = 1.0;
     private string _zoomLabel => $"{(int)Math.Round(_zoomLevel * 100)}%";
@@ -588,6 +592,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
         else
             _commandStack.Push(new Commands.LockElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
+        await AnnounceAsync(currentlyLocked ? "TmWireframe_AnnounceUnlocked" : "TmWireframe_AnnounceLocked");
     }
 
     private bool SelectedIdsContainGroup()
@@ -806,14 +811,20 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
             _selectedConnectorIds = [];
             if (_selectedIds.Length == 0) MobileSelectionCleared();
         }
+        else return;
         await RerenderCanvas();
+        await AnnounceAsync("TmWireframe_AnnounceDeleted");
     }
+
+    /// <summary>Says the localized result of a quick action (Delete, Lock) through the canvas' polite live region: the pressed button is gone or changed.</summary>
+    private Task AnnounceAsync(string key) => _canvas is null ? Task.CompletedTask : _canvas.AnnounceAsync(Loc[key]);
 
     private async Task OnLockFromContextMenu()
     {
         if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.LockElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
+        await AnnounceAsync("TmWireframe_AnnounceLocked");
     }
 
     private async Task OnUnlockFromContextMenu()
@@ -821,6 +832,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
         if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.UnlockElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
+        await AnnounceAsync("TmWireframe_AnnounceUnlocked");
     }
 
     private async Task ContextMenuToggleGrid() => await OnInspectorShowGridChanged(!_showGrid);

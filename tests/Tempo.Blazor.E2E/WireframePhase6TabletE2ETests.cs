@@ -152,7 +152,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("Edge: opening the inspector while the drawer is open closes the drawer (and the reverse): never two sheets; the toggles carry aria-pressed")]
+    [Description("Edge: opening the inspector while the drawer is open closes the drawer (and the reverse): never two sheets; the toggles carry aria-expanded (and no aria-pressed)")]
     public async Task Tablet_AtMostOneSheet_TogglesReflectState()
     {
         var (_, editor) = await OpenAsync(1024, 768, keepSidebar: false, dark: false);
@@ -161,14 +161,14 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
 
         await left.TapAsync();
         await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync();
-        Assert.AreEqual("true", await left.GetAttributeAsync("aria-pressed"));
+        Assert.AreEqual("true", await left.GetAttributeAsync("aria-expanded"));
 
         await right.TapAsync();
         await editor.Locator("[data-testid='wd-inspector-sheet']").WaitForAsync();
         await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         Assert.AreEqual(1, await editor.Locator(".tm-editor-shell__overlay").CountAsync());
-        Assert.AreEqual("false", await left.GetAttributeAsync("aria-pressed"));
-        Assert.AreEqual("true", await right.GetAttributeAsync("aria-pressed"));
+        Assert.AreEqual("false", await left.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await right.GetAttributeAsync("aria-expanded"));
 
         await left.TapAsync();
         await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync();

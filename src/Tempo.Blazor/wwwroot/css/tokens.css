@@ -449,6 +449,8 @@
   --tm-touch-target:           2.75rem;
   /* TmEditorShell TabletPanelPresentation.Overlay: the width of the overlay drawer / side sheet (capped at 60 % of the editor in the component). A host overrides it on an ancestor. */
   --tm-editor-shell-overlay-width: 20rem;
+  /* TmEditorShell mobile sheet: the canvas reserve under an open sheet never exceeds this fraction of the stage (a short landscape-phone stage keeps a usable canvas). A host overrides it on an ancestor. */
+  --tm-editor-shell-sheet-reserve-max: 0.6;
   /* A whole box-shadow value: a 2px surface gap, then a 2px primary ring. The gap
      keeps the ring visible on any fill, and the primary step clears 3:1 against the
      surface in both themes. */

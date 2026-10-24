@@ -19678,6 +19678,14 @@
               "description": "The data-testid of the overlay close button. Null uses the open overlay's test id with a -close suffix."
             },
             {
+              "name": "OverlayHeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "2",
+              "description": "The aria-level of the tablet overlay panel titles (role=heading, Overlay only). Default 2; pass 3 when the editor sits under an h2 section. Values outside 1-6 fall back to 2.",
+              "defaultValue": "2"
+            },
+            {
               "name": "PersistWidthsKey",
               "type": "string?",
               "isRequired": false,
@@ -39515,6 +39523,36 @@
           ]
         },
         {
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Wireframe",
+          "description": "The shape a wireframe stencil theme name must have (decision WIREFRAME-STENCIL-THEME): at most MaxLength characters from [A-Za-z0-9._-]. The library treats any other name as the default tokens (no warning, nothing stored), and a host that takes a theme from request input (a query string, an export body) should reject it with the same rule before it reaches a log or a renderer.",
+          "packageId": "Tempo.Blazor.Wireframe",
+          "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/WireframeStencilThemeName.cs",
+          "documentationStatus": "generated",
+          "members": [
+            {
+              "name": "MaxLength",
+              "kind": "Field",
+              "type": "int",
+              "description": "The longest accepted theme name."
+            },
+            {
+              "name": "IsValid",
+              "kind": "Method",
+              "type": "bool",
+              "description": "true when name is unset (null / blank) or a well-formed theme name. Surrounding white space is ignored. Well-formed does not mean known: an unknown name is still valid and draws the default tokens.",
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": "string?"
+                }
+              ]
+            }
+          ],
+          "itemName": "WireframeStencilThemeName"
+        },
+        {
           "itemName": "WireframeSvgRenderer",
           "kind": "Class",
           "category": "Components",
@@ -41083,12 +41121,12 @@
         }
       ],
       "summary": {
-        "itemCount": 96,
+        "itemCount": 97,
         "manualItemCount": 96,
-        "generatedItemCount": 84,
-        "generatedOnlyItemCount": 0,
+        "generatedItemCount": 85,
+        "generatedOnlyItemCount": 1,
         "componentCount": 10,
-        "publicApiTypeCount": 74
+        "publicApiTypeCount": 75
       }
     },
     {
@@ -120850,10 +120888,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3303,
+    "itemCount": 3304,
     "manualItemCount": 3303,
-    "generatedOnlyItemCount": 0,
+    "generatedOnlyItemCount": 1,
     "componentCount": 487,
-    "publicApiTypeCount": 2763
+    "publicApiTypeCount": 2764
   }
 }
