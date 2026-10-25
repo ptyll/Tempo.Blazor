@@ -4598,6 +4598,8 @@
   "TmScheduler_Day": "Day",
   "TmScheduler_Month": "Month",
   "TmScheduler_More": "+{0} more",
+  "TmScheduler_MoreAria_One": "{0} more event on {1} – open day view",
+  "TmScheduler_MoreAria_Other": "{0} more events on {1} – open day view",
   "TmScheduler_Next": "Next",
   "TmScheduler_NoEvents": "No events",
   "TmScheduler_Prev": "Previous",

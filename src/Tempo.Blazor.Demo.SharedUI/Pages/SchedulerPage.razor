@@ -78,12 +78,18 @@
     </div>
 
     <div class="showcase-card" data-testid="scheduler-month-template" style="min-height: 500px; position: relative; overflow: hidden;">
-        <TmScheduler View="TmScheduleViewType.Month"
+        <TmScheduler @bind-View="_templateView"
                      CurrentDate="_templateDate"
                      Events="_templateEvents"
                      ReadOnly="true"
                      OnEventClick="HandleEventClick">
             <EventTemplate Context="evt">
+                @if (_templateView != TmScheduleViewType.Month)
+                {
+                    <span data-testid="scheduler-month-template-event">@evt.Title</span>
+                }
+                else
+                {
                 <div class="tm-demo-month-event-template" data-testid="scheduler-month-template-event"
                      style="display: grid; gap: 2px; min-width: 0; margin: -2px; border-radius: 6px; padding: 4px 6px; background: @evt.Color; color: white; box-shadow: 0 1px 2px rgba(15,23,42,.18);">
                     <strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@evt.Title</strong>
@@ -91,6 +97,40 @@
                         @evt.Description
                     </span>
                 </div>
+                }
+            </EventTemplate>
+        </TmScheduler>
+    </div>
+</section>
+
+<!-- Ranges: Timeline day, Agenda range, +N more -->
+<section class="demo-section" data-testid="scheduler-ranges-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Ranges, templates and overflow</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                Timeline is one day, the agenda title shows its 30-day range, and "+N more" opens that day.
+            </p>
+            <label class="text-sm text-slate-600 dark:text-slate-400 mt-2 inline-flex items-center gap-2">
+                <input type="checkbox" data-testid="scheduler-ranges-sunday"
+                       @bind="_rangesSunday" />
+                Week starts on Sunday
+            </label>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">B14/B24</span>
+    </div>
+
+    <div class="showcase-card" data-testid="scheduler-ranges" style="min-height: 500px; position: relative; overflow: hidden;">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3" data-testid="scheduler-ranges-result">@_rangesResult</p>
+        <TmScheduler @bind-View="_rangesView"
+                     @bind-CurrentDate="_rangesDate"
+                     Events="_rangesEvents"
+                     FirstDayOfWeek="@(_rangesSunday ? 0 : 1)"
+                     MaxVisibleEvents="3"
+                     ReadOnly="true"
+                     OnEventClick="HandleRangesEventClick">
+            <EventTemplate Context="evt">
+                <span data-testid="scheduler-ranges-event">@evt.Title</span>
             </EventTemplate>
         </TmScheduler>
     </div>
@@ -292,9 +332,24 @@
     private TmScheduleViewType _interactiveView = TmScheduleViewType.Month;
     private DateTime _currentDate = DateTime.Today;
     private DateTime _templateDate = new(2026, 7, 2);
+    private TmScheduleViewType _templateView = TmScheduleViewType.Month;
     private DateTime _weekDate = DateTime.Today;
     private DateTime _dayDate = DateTime.Today;
     private DateTime _agendaDate = DateTime.Today;
+    private TmScheduleViewType _rangesView = TmScheduleViewType.Month;
+    private DateTime _rangesDate = new(2026, 6, 15);
+    private string _rangesResult = "Click an event";
+    private bool _rangesSunday;
+
+    private void HandleRangesEventClick(TmScheduleEvent evt) => _rangesResult = $"Clicked: {evt.Title}";
+    private List<TmScheduleEvent> _rangesEvents = new()
+    {
+        new() { Id = "r1", Title = "Overflow A", Start = new DateTime(2026, 6, 10, 9, 0, 0), End = new DateTime(2026, 6, 10, 10, 0, 0), Color = "#3b82f6" },
+        new() { Id = "r2", Title = "Overflow B", Start = new DateTime(2026, 6, 10, 10, 0, 0), End = new DateTime(2026, 6, 10, 11, 0, 0), Color = "#10b981" },
+        new() { Id = "r3", Title = "Overflow C", Start = new DateTime(2026, 6, 10, 11, 0, 0), End = new DateTime(2026, 6, 10, 12, 0, 0), Color = "#f59e0b" },
+        new() { Id = "r4", Title = "Overflow D", Start = new DateTime(2026, 6, 10, 13, 0, 0), End = new DateTime(2026, 6, 10, 14, 0, 0), Color = "#ef4444" },
+        new() { Id = "r5", Title = "Range Anchor", Start = new DateTime(2026, 6, 15, 8, 0, 0), End = new DateTime(2026, 6, 15, 18, 0, 0), Color = "#8b5cf6" },
+    };
     private DateTime _timelineDate = DateTime.Today;
     private DateTime _interactiveDate = DateTime.Today;
     private string _lastAction = "None yet - try clicking on an event or slot!";

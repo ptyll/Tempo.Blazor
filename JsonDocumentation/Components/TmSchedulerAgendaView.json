@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerAgendaView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays up to 30 days of upcoming events.",
+  "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays AgendaDays (default 30) of events from the start date.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -18,7 +18,7 @@
       "type": "int",
       "isRequired": false,
       "default": "30",
-      "description": "Number of days to show in agenda."
+      "description": "Number of days to show in the agenda. Values below 1 are treated as 1."
     },
     {
       "name": "Events",
@@ -31,6 +31,12 @@
       "type": "EventCallback<TmScheduleEvent>",
       "isRequired": false,
       "description": "Fires when an event is clicked."
+    },
+    {
+      "name": "EventTemplate",
+      "type": "RenderFragment<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Optional custom event renderer used inside each agenda row. The row chrome (the colour dot) stays; the time, title and description are replaced."
     }
   ],
   "cssClasses": [

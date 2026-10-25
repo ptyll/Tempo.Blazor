@@ -9,15 +9,23 @@ internal static class DateTimeHelpers
 {
     /// <summary>
     /// Returns <see cref="DateOnly"/> values that fill the calendar grid for the given year/month,
-    /// starting on Monday. The grid always contains six weeks so the calendar
-    /// keeps a stable shape while navigating between months.
-    /// Leading and trailing cells contain days from adjacent months.
+    /// starting on Monday (the historical contract; the culture's own first day is not consulted).
+    /// The grid always contains six weeks so the calendar keeps a stable shape while navigating
+    /// between months. Leading and trailing cells contain days from adjacent months.
     /// </summary>
     public static IReadOnlyList<DateOnly> GetCalendarDays(int year, int month)
+        => GetCalendarDays(year, month, DayOfWeek.Monday);
+
+    /// <summary>
+    /// Returns <see cref="DateOnly"/> values that fill the calendar grid for the given year/month,
+    /// starting on <paramref name="firstDayOfWeek"/>. The grid always contains six weeks so the
+    /// calendar keeps a stable shape while navigating between months.
+    /// Leading and trailing cells contain days from adjacent months.
+    /// </summary>
+    public static IReadOnlyList<DateOnly> GetCalendarDays(int year, int month, DayOfWeek firstDayOfWeek)
     {
-        var first  = new DateOnly(year, month, 1);
-        // Mon=0 offset: (DayOfWeek + 6) % 7
-        var startOffset = ((int)first.DayOfWeek + 6) % 7;
+        var first = new DateOnly(year, month, 1);
+        var startOffset = ((int)first.DayOfWeek - (int)firstDayOfWeek + 7) % 7;
         var start = first.AddDays(-startOffset);
         const int count = 42;
         var days = new DateOnly[count];
@@ -36,20 +44,21 @@ internal static class DateTimeHelpers
         => culture.DateTimeFormat.GetAbbreviatedMonthName(month);
 
     /// <summary>
-    /// Returns 7 abbreviated day-header strings starting on Monday,
-    /// honouring the culture's <see cref="DateTimeFormatInfo.FirstDayOfWeek"/>.
+    /// Returns 7 abbreviated day-header strings starting on Monday. The culture supplies the
+    /// names only; its <see cref="DateTimeFormatInfo.FirstDayOfWeek"/> is not consulted.
     /// </summary>
     public static IReadOnlyList<string> GetDayHeaders(CultureInfo culture)
+        => GetDayHeaders(culture, DayOfWeek.Monday);
+
+    /// <summary>
+    /// Returns 7 abbreviated day-header strings starting on <paramref name="firstDayOfWeek"/>.
+    /// </summary>
+    public static IReadOnlyList<string> GetDayHeaders(CultureInfo culture, DayOfWeek firstDayOfWeek)
     {
         var abbr = culture.DateTimeFormat.AbbreviatedDayNames; // Sun=0 … Sat=6
-        // Reorder: start from Monday
         var result = new string[7];
         for (var i = 0; i < 7; i++)
-        {
-            // Mon=1 in DayOfWeek; map slot i → DayOfWeek (Mon=1,…,Sun=0)
-            var dow = (i + 1) % 7; // 0=Mon→1, 1=Tue→2, … 6=Sun→0
-            result[i] = abbr[dow];
-        }
+            result[i] = abbr[((int)firstDayOfWeek + i) % 7];
         return result;
     }
 

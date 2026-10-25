@@ -122,6 +122,42 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         eventEls[0].TextContent.Should().Contain("Meeting");
     }
 
+    /// <summary>
+    /// B24: EventTemplate must replace the inner content of a positioned timed event AND of an
+    /// all-day chip. The positioning wrapper and the resize handles stay.
+    /// </summary>
+    [Fact]
+    public void TimeGrid_Uses_EventTemplate()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Timed", new DateTime(2025, 6, 10, 14, 0, 0), new DateTime(2025, 6, 10, 15, 0, 0)),
+            Evt("Away", new DateTime(2025, 6, 10), new DateTime(2025, 6, 11), allDay: true)
+        };
+
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, events)
+            .Add(c => c.ReadOnly, false)
+            .Add(c => c.EventTemplate, (RenderFragment<TmScheduleEvent>)(e => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "timegrid-custom");
+                builder.AddContent(2, $"CUSTOM:{e.Title}");
+                builder.CloseElement();
+            })));
+
+        var timed = cut.Find(".tm-scheduler-timegrid-event");
+        timed.QuerySelector(".timegrid-custom")!.TextContent.Should().Contain("CUSTOM:Timed");
+        timed.QuerySelectorAll(".tm-scheduler-timegrid-event-title").Should().BeEmpty();
+        timed.QuerySelectorAll(".tm-scheduler-event-resize-handle").Count.Should().Be(2,
+            "the positioning wrapper and resize handles stay; only the inner content is replaced");
+
+        var allDay = cut.Find(".tm-scheduler-timegrid-allday-event");
+        allDay.QuerySelector(".timegrid-custom")!.TextContent.Should().Be("CUSTOM:Away");
+        allDay.TextContent.Should().NotContain("Away\n");
+    }
+
     [Fact]
     public void Event_Positioned_With_Top_And_Height_Style()
     {

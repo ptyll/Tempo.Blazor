@@ -3703,8 +3703,9 @@ to{transform:translateY(0);}
 .tm-scheduler-month-event--allday:hover{filter:brightness(0.9);}
 .tm-scheduler-month-event-time{color:var(--tm-text-tertiary,#94a3b8);font-size:0.625rem;flex-shrink:0;}
 .tm-scheduler-month-event-title{overflow:hidden;text-overflow:ellipsis;}
-.tm-scheduler-month-more{font-size:0.6875rem;color:var(--tm-text-tertiary,#94a3b8);padding:1px var(--tm-space-1,0.25rem);cursor:pointer;}
+.tm-scheduler-month-more{appearance:none;background:none;border:0;font:inherit;font-size:0.6875rem;text-align:start;width:100%;display:block;color:var(--tm-text-tertiary,#94a3b8);padding:1px var(--tm-space-1,0.25rem);cursor:pointer;}
 .tm-scheduler-month-more:hover{color:var(--tm-color-primary);}
+.tm-scheduler-month-more:focus-visible{outline:2px solid transparent;box-shadow:var(--tm-focus-ring);}
 .tm-scheduler-month-event[draggable="true"]{cursor:grab;}
 .tm-scheduler-month-event[draggable="true"]:active{cursor:grabbing;}
 .tm-scheduler-month-event--dragging{opacity:0.5;}

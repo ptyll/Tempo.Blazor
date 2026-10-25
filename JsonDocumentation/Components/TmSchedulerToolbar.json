@@ -17,7 +17,19 @@
       "name": "CurrentDate",
       "type": "DateTime",
       "isRequired": true,
-      "description": "Currently displayed date."
+      "description": "Currently displayed date. The Month title is this date's month."
+    },
+    {
+      "name": "RangeStart",
+      "type": "DateTime",
+      "isRequired": false,
+      "description": "Inclusive start of the range the title describes. The scheduler fills it from the same range it loads. Day and Timeline titles show this day; Week and Agenda titles start here."
+    },
+    {
+      "name": "RangeEnd",
+      "type": "DateTime",
+      "isRequired": false,
+      "description": "Exclusive end of the range the title describes. Week and Agenda titles cover [RangeStart, RangeEnd - 1]."
     },
     {
       "name": "OnViewChange",

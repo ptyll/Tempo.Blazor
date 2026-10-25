@@ -957,6 +957,7 @@
 
 ### Fixed
 
+- **`TmScheduler`: `EventTemplate` renders in every view, and `FirstDayOfWeek` drives the month grid (B14/B24).** The custom event template previously reached only the month view; the day and week time grid (timed events and the all-day row), the timeline and the agenda now render it too, keeping their positioning wrapper and resize handles. `FirstDayOfWeek` (previously only the week columns) now also sets the month grid's first column, the loaded week range and the week title. See Breaking / Migration below for the range, navigation and "+N more" changes that ship with this fix.
 - **Wireframe mobile (G2) review debt (plan 643bba06, carry-forward 439e11a6).** (1) Closing the mobile sheet returns the focus to the action-bar tile that opened it (it used to land on the first tile); a selection-opened sheet and a tile that moved into "More" still fall back to the first tile. (2) A selection that peeks the sheet is announced politely (new resource key `TmWireframe_AnnounceSelectionPeek`, en / cs / sk / fr). (3) The sheet's scroll reset moved from `tmWireframeDesigner.resetMobileSheetScroll` into `TmEditorShell` (`tm-editor-shell.js resetSheetScroll`); `tmWireframeDesigner.focusFirstMobileAction(root)` became `focusMobileAction(root, actionId)` - both are internal helpers of the packaged script. (4) The hold release-click guard no longer swallows a keyboard or assistive-technology click (`detail === 0`). (5) **Escape typed inside the mobile sheet closed nothing**: the canvas key handler consumed it (clear selection + `preventDefault`) before the sheet's focus trap, so a keyboard user could not dismiss the sheet; keys inside `.tm-editor-shell__sheet` now belong to the sheet. (6) The canvas' `ContentVersion` follows the new public `WireframeCommandStack.Revision` plus one `MarkContentChanged()` helper instead of six hand-bumped increments. Covered by `TmWireframeEditorMobileG2Tests`, the wireframe / overlay node lanes and the landscape (667x375, 844x390), keyboard-only and axe specs of `WireframePhase7MobileE2ETests`. No parameter changed.
 - **`TmPdfViewer` stylesheet: the floating search card and the continuous overlay-slot rules are back (found by the plan-643bba06 phase-9 full E2E lane).**
   A merge (`bb606ca8`) had reverted `TmPdfViewer.razor.css` to an older copy, so the FZE-11 search card (`.tm-pdf-viewer__search-card`, its docked-panel
@@ -1235,6 +1236,62 @@
 
 ### Breaking / Migration
 
+- **`TmScheduler`: Timeline is a single day, Agenda navigates by `AgendaDays`, and "Today" follows the display timezone (B14/B24).**
+  Before, the Timeline view drew one day but loaded and navigated a week (prev/next moved ±7 days, the title showed the week range), the Agenda view rendered 30 days but loaded and navigated a calendar month (prev/next moved ±1 month, the title showed the month name), and the Today button used `DateTime.Today` whenever the display zone happened to equal the machine zone. Now the Timeline range is `[day, day+1)`, prev/next move one day and the title is the culture's long date; the Agenda range is `[CurrentDate, CurrentDate + AgendaDays)` (the new `AgendaDays` parameter, default 30; a non-positive value is treated as 1), prev/next move by `AgendaDays` and the title shows the rendered range in the current culture ("15. května – 13. června 2025" in Czech); Today is today in the scheduler timezone taken from the injected `TimeProvider` (a `FakeTimeProvider` in tests). The month query now covers exactly the rendered six-week grid (June 2026 ends on 13 July, not a week past the month). Impact: a host whose `IScheduleDataProvider` assumed the Timeline week window gets a one-day query.
+  ```razor
+  <!-- before: Timeline loaded and navigated a week -->
+  <TmScheduler View="TmScheduleViewType.Timeline" @bind-CurrentDate="_date" DataProvider="_provider" />
+
+  <!-- after: keep the old week window by using the Week view -->
+  <TmScheduler View="TmScheduleViewType.Week" @bind-CurrentDate="_date" DataProvider="_provider" />
+
+  <!-- or widen the query yourself, ignoring the one-day range the scheduler asks for -->
+  public Task<IReadOnlyList<TmScheduleEvent>> GetEventsAsync(TmScheduleQuery query, CancellationToken ct)
+      => LoadAsync(query.RangeStart.AddDays(-3), query.RangeEnd.AddDays(3), ct);
+  ```
+- **`TmScheduler`: `FirstDayOfWeek` now drives the month grid, the week range and the week title together.**
+  Before, `FirstDayOfWeek` only moved the week view's columns; the month grid, the loaded week range and the week title stayed Monday-first whatever the value. Now one value drives all three, and values outside 0–6 wrap (`8` is Monday, `-1` is Saturday). Impact: a host that passed `FirstDayOfWeek="0"` to shift only the week columns now also gets a Sunday-first month grid, a Sunday-start loaded range and a Sunday-start title. Pass `1` to keep the previous Monday behaviour.
+  ```razor
+  <!-- before: 0 moved the week columns only; the month grid stayed Monday-first -->
+  <TmScheduler FirstDayOfWeek="0" View="TmScheduleViewType.Month" />
+
+  <!-- after: pass 1 to keep the Monday grid, range and title -->
+  <TmScheduler FirstDayOfWeek="1" View="TmScheduleViewType.Month" />
+  ```
+- **`TmScheduler`: "+N more" is a native `<button>` and opens the Day view unless `OnMoreClick` is handled.**
+  Before, the overflow indicator was a non-interactive `div.tm-scheduler-month-more`, so a click fell through to the day cell and host CSS qualified with `div` matched it. Now it is a `<button type="button" class="tm-scheduler-month-more">` with its own accessible name ("{count} more events on {date} – open day view"), so a `div.tm-scheduler-month-more` selector matches nothing — drop the element qualifier and keep the class. It raises the new `OnMoreClick` with the day's date; without a delegate the scheduler opens that day in the Day view, raising `CurrentDateChanged` before `ViewChanged`. The fallback only takes effect when the host binds both `@bind-View` and `@bind-CurrentDate`; a host that sets `View` without `ViewChanged` stays on the month. The cap comes from the new `MaxVisibleEvents` parameter (default 3, previously hardcoded). Impact: a host that handled `OnSlotClick` and treated the overflow click as a day click no longer receives it.
+  ```razor
+  <!-- before: the overflow click arrived as OnSlotClick, and host CSS targeted the div -->
+  <TmScheduler View="TmScheduleViewType.Month" OnSlotClick="OpenDay" />
+
+  <!-- after: the Day fallback needs both bindings; or handle the overflow yourself -->
+  <TmScheduler @bind-View="_view" @bind-CurrentDate="_date" MaxVisibleEvents="3" />
+  <TmScheduler View="TmScheduleViewType.Month" OnMoreClick="ShowOverflow" />
+  ```
+- **`TmScheduler`: `EventTemplate` now renders in the Day, Week, Timeline and Agenda views too.**
+  Before, the template replaced only the month cell's content; the other views kept their built-in time and title. Now the same template renders inside every view, and the positioning wrapper and resize handles stay. Impact: a template written for the wide month cell also renders inside the narrow time-grid bars and the timeline row, where a long layout is clipped. Branch on the bound view inside the template.
+  ```razor
+  <!-- before: one template, rendered only in the month view -->
+  <TmScheduler EventTemplate="e => @<span>@e.Title</span>" />
+
+  <!-- after: the template runs in every view, so keep the compact views compact -->
+  <TmScheduler @bind-View="_view" EventTemplate="Event" />
+  @code {
+      RenderFragment<TmScheduleEvent> Event => e => @<span>@(_view == TmScheduleViewType.Month ? e.Title : e.Start.ToString("HH:mm"))</span>;
+  }
+  ```
+- **`TmGantt` calendar mode inherits the scheduler range, title and overflow behaviour.**
+  The Gantt calendar mode embeds `TmScheduler`, so it now loads exactly the rendered month grid, titles the range it renders, and its "+N more" opens that day. A host that read the Gantt calendar's query range or styled `div.tm-scheduler-month-more` needs the same migration as `TmScheduler`.
+- **`TmSchedulerToolbar`: `RangeStart` and `RangeEnd` are additive, and the Agenda title is the rendered range.**
+  The toolbar never had `AgendaDays` or `FirstDayOfWeek`; nothing is removed. `RangeStart` (inclusive) and `RangeEnd` (exclusive) are new, and `TmScheduler` fills them from the one range it loads, so the title and the query cannot drift. The Agenda title used to be the month name; it is now the range that is rendered ("15. května – 13. června 2025" in Czech). A host that renders the toolbar standalone and omits the range gets the scheduler's own default: a Monday-first week, or 30 agenda days. Pass the range to title anything else.
+  ```razor
+  <!-- before: the Agenda title was the month name, whatever the rendered range -->
+  <TmSchedulerToolbar View="TmScheduleViewType.Agenda" CurrentDate="_date" />
+
+  <!-- after: the title covers [RangeStart, RangeEnd - 1]; omit both for the Monday-week / 30-day default -->
+  <TmSchedulerToolbar View="TmScheduleViewType.Agenda" CurrentDate="_date"
+                      RangeStart="_date" RangeEnd="_date.AddDays(30)" />
+  ```
 - **Report Server: the email Engine, `ReportEmailDeliveryService` and `ReportScheduleWorker` moved from `AddCommonServices` to the server host
   (phase 7, decision D11 now holds for the Report Server).** `Tempo.ReportServer.Web.Client` (the WebAssembly leg of the InteractiveAuto
   portal, `IsPackable=false`) no longer references `Tempo.Blazor.EmailTemplates.Engine`, so Scriban, Mjml.Net and AngleSharp are no longer part

@@ -67,6 +67,12 @@
       "type": "EventCallback<SchedulerEventContext>",
       "isRequired": false,
       "description": "Fires when right-clicking on an event."
+    },
+    {
+      "name": "EventTemplate",
+      "type": "RenderFragment<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Optional custom event renderer used inside each positioned timeline bar. The bar's positioning and resize handles stay; only the inner content is replaced."
     }
   ],
   "cssClasses": [

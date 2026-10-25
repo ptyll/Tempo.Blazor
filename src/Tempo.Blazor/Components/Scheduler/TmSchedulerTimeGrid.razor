@@ -64,7 +64,14 @@
                          style="@(e.Color is not null ? $"--event-color: {e.Color};" : "")"
                          @onclick="@(() => OnEventClick.InvokeAsync(e))"
                          @onclick:stopPropagation="true">
-                        @e.Title
+                        @if (EventTemplate is not null)
+                        {
+                            @EventTemplate(e)
+                        }
+                        else
+                        {
+                            @e.Title
+                        }
                     </div>
                 }
             </div>
@@ -230,17 +237,24 @@
             builder.AddAttribute(9, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
             builder.AddEventStopPropagationAttribute(10, "oncontextmenu", true);
 
-            // Time
-            builder.OpenElement(11, "span");
-            builder.AddAttribute(13, "class", "tm-scheduler-timegrid-event-time");
-            builder.AddContent(14, $"{e.Start:HH:mm} – {e.End:HH:mm}");
-            builder.CloseElement();
+            if (EventTemplate is not null)
+            {
+                builder.AddContent(11, EventTemplate(e));
+            }
+            else
+            {
+                // Time
+                builder.OpenElement(12, "span");
+                builder.AddAttribute(13, "class", "tm-scheduler-timegrid-event-time");
+                builder.AddContent(14, $"{e.Start:HH:mm} – {e.End:HH:mm}");
+                builder.CloseElement();
 
-            // Title
-            builder.OpenElement(15, "span");
-            builder.AddAttribute(16, "class", "tm-scheduler-timegrid-event-title");
-            builder.AddContent(17, e.Title);
-            builder.CloseElement();
+                // Title
+                builder.OpenElement(15, "span");
+                builder.AddAttribute(16, "class", "tm-scheduler-timegrid-event-title");
+                builder.AddContent(17, e.Title);
+                builder.CloseElement();
+            }
 
             // Resize handles - JS handles the mousedown automatically
             if (!ReadOnly && !e.IsReadOnly)

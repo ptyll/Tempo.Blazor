@@ -45,6 +45,23 @@ public sealed class TmSchedulerMonthTemplateE2ETests : WasmTestBase
         StringAssert.Contains(style, "--event-color: #dc2626");
 
         await CaptureSchedulerAsync(card, "tm-scheduler-month-template");
+
+        // The same template reaches the other four views (B24).
+        await AssertTemplateInViewAsync(card, "Week", "HV-1023");
+        await AssertTemplateInViewAsync(card, "Day", "HV-1044");
+        await AssertTemplateInViewAsync(card, "Timeline", "HV-1044");
+        // The agenda starts on the current date (2 July), so the 1 July event is outside its range.
+        await AssertTemplateInViewAsync(card, "Agenda", "HV-1044");
+    }
+
+    private static async Task AssertTemplateInViewAsync(ILocator card, string view, string title)
+    {
+        await card.Locator($".tm-scheduler-toolbar-view-btn[data-view='{view}']").ClickAsync();
+        await Assertions.Expect(card.Locator(".tm-scheduler-toolbar-view-btn--active"))
+            .ToHaveAttributeAsync("data-view", view);
+        var templated = card.Locator("[data-testid='scheduler-month-template-event']",
+            new LocatorLocatorOptions { HasText = title });
+        await Assertions.Expect(templated.First).ToBeVisibleAsync();
     }
 
     private async Task<IPage> OpenSchedulerPageAsync()

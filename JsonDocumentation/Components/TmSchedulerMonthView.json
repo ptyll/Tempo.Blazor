@@ -81,6 +81,19 @@
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,
       "description": "Optional custom event renderer used inside each month event wrapper."
+    },
+    {
+      "name": "FirstDayOfWeek",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "First day of the week (0 = Sunday, 1 = Monday). Default: 1 (Monday)."
+    },
+    {
+      "name": "OnMoreClick",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false,
+      "description": "Fires when the \"+N more\" button of a day cell is activated, with that day's date."
     }
   ],
   "cssClasses": [

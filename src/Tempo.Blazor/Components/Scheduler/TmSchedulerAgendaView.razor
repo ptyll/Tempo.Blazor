@@ -28,20 +28,27 @@
                              @onclick="@(() => OnEventClick.InvokeAsync(e))">
                             <span class="tm-scheduler-agenda-event-dot"
                                   style="@(e.Color is not null ? $"background-color: {e.Color};" : "")"></span>
-                            <span class="tm-scheduler-agenda-event-time">
-                                @if (e.AllDay)
-                                {
-                                    @Loc["TmScheduler_AllDay"]
-                                }
-                                else
-                                {
-                                    @e.Start.ToString("HH:mm")@(" – ")@e.End.ToString("HH:mm")
-                                }
-                            </span>
-                            <span class="tm-scheduler-agenda-event-title">@e.Title</span>
-                            @if (!string.IsNullOrEmpty(e.Description))
+                            @if (EventTemplate is not null)
                             {
-                                <span class="tm-scheduler-agenda-event-desc">@e.Description</span>
+                                @EventTemplate(e)
+                            }
+                            else
+                            {
+                                <span class="tm-scheduler-agenda-event-time">
+                                    @if (e.AllDay)
+                                    {
+                                        @Loc["TmScheduler_AllDay"]
+                                    }
+                                    else
+                                    {
+                                        @e.Start.ToString("HH:mm")@(" – ")@e.End.ToString("HH:mm")
+                                    }
+                                </span>
+                                <span class="tm-scheduler-agenda-event-title">@e.Title</span>
+                                @if (!string.IsNullOrEmpty(e.Description))
+                                {
+                                    <span class="tm-scheduler-agenda-event-desc">@e.Description</span>
+                                }
                             }
                         </div>
                     }
@@ -57,7 +64,7 @@
     /// <summary>Currently displayed start date.</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
 
-    /// <summary>Number of days to show in agenda.</summary>
+    /// <summary>Number of days to show in the agenda. Values below 1 are treated as 1.</summary>
     [Parameter] public int AgendaDays { get; set; } = 30;
 
     /// <summary>Events to display.</summary>
@@ -65,6 +72,12 @@
 
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>
+    /// Optional custom event renderer used inside each agenda row.
+    /// The row chrome (the colour dot) stays; the time, title and description are replaced.
+    /// </summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -76,8 +89,9 @@
         _groupedEvents.Clear();
         if (Events is null || Events.Count == 0) return;
 
-        var rangeStart = CurrentDate.Date;
-        var rangeEnd = rangeStart.AddDays(AgendaDays);
+        var range = SchedulerRange.Visible(TmScheduleViewType.Agenda, CurrentDate, new SchedulerRangeOptions(1, AgendaDays));
+        var rangeStart = range.Start;
+        var rangeEnd = range.End;
 
         var eventsInRange = Events
             .Where(e => e.Start < rangeEnd && e.End > rangeStart)

@@ -163,4 +163,33 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
             "an event without a colour takes the theme's event fill from CSS, not an inline fallback");
         style.Should().NotContain("#3b82f6");
     }
+
+    /// <summary>
+    /// B24: EventTemplate replaces the title inside the positioned timeline bar. Resize handles stay.
+    /// </summary>
+    [Fact]
+    public void Timeline_Uses_EventTemplate()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            new() { Title = "Standup", Start = new DateTime(2025, 6, 10, 10, 0, 0), End = new DateTime(2025, 6, 10, 11, 0, 0), ResourceId = "room-a" }
+        };
+
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, TestResources)
+            .Add(c => c.Events, events)
+            .Add(c => c.EventTemplate, (RenderFragment<TmScheduleEvent>)(e => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "timeline-custom");
+                builder.AddContent(2, $"CUSTOM:{e.Title}");
+                builder.CloseElement();
+            })));
+
+        var bar = cut.Find(".tm-scheduler-timeline-event");
+        bar.QuerySelector(".timeline-custom")!.TextContent.Should().Contain("CUSTOM:Standup");
+        bar.QuerySelectorAll(".tm-scheduler-timeline-event-title").Should().BeEmpty();
+        bar.QuerySelectorAll(".tm-scheduler-event-resize-handle").Count.Should().Be(2);
+    }
 }

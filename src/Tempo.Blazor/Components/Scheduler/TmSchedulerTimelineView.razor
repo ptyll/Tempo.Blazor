@@ -61,7 +61,14 @@
                          @onclick:stopPropagation="true"
                          @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
                          @oncontextmenu:stopPropagation="true">
-                        <span class="tm-scheduler-timeline-event-title">@e.Title</span>
+                        @if (EventTemplate is not null)
+                        {
+                            @EventTemplate(e)
+                        }
+                        else
+                        {
+                            <span class="tm-scheduler-timeline-event-title">@e.Title</span>
+                        }
                         @if (!ReadOnly && !e.IsReadOnly)
                         {
                             <div class="tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--left"
@@ -108,6 +115,12 @@
 
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>
+    /// Optional custom event renderer used inside each positioned timeline bar.
+    /// The bar's positioning and resize handles stay; only the inner content is replaced.
+    /// </summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
 
     /// <summary>Whether events are read-only.</summary>
     [Parameter] public bool ReadOnly { get; set; }

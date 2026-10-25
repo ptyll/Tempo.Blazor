@@ -19,6 +19,7 @@
                 + (isToday ? " tm-scheduler-month-day--today" : "");
 
             <div class="@css"
+                 data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
                  @onclick="@(() => HandleDayClick(d))"
                  @ondragover:preventDefault="true"
                  @ondrop="@(() => HandleDrop(d))"
@@ -60,7 +61,10 @@
 
                     @if (remaining > 0)
                     {
-                        <div class="tm-scheduler-month-more">@string.Format(Loc["TmScheduler_More"], remaining)</div>
+                        <button type="button" class="tm-scheduler-month-more"
+                                aria-label="@Loc.Plural("TmScheduler_MoreAria", remaining, SchedulerRange.FormatDayTitle(d.ToDateTime(TimeOnly.MinValue), CultureInfo.CurrentUICulture))"
+                                @onclick="@(() => HandleMoreClick(d))"
+                                @onclick:stopPropagation="true">@string.Format(Loc["TmScheduler_More"], remaining)</button>
                     }
                 }
             </div>
@@ -110,11 +114,18 @@
     /// <summary>Optional custom event renderer used inside each month event wrapper.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
 
+    /// <summary>First day of the week (0 = Sunday, 1 = Monday, …). Default: 1 (Monday).</summary>
+    [Parameter] public int FirstDayOfWeek { get; set; } = 1;
+
+    /// <summary>Fires when the "+N more" button of a day cell is activated, with that day's date.</summary>
+    [Parameter] public EventCallback<DateTime> OnMoreClick { get; set; }
+
     protected override void OnParametersSet()
     {
         var culture = CultureInfo.CurrentUICulture;
-        _days = DateTimeHelpers.GetCalendarDays(CurrentDate.Year, CurrentDate.Month);
-        _dayHeaders = DateTimeHelpers.GetDayHeaders(culture);
+        var firstDay = (DayOfWeek)SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);
+        _days = SchedulerRange.MonthDays(CurrentDate, FirstDayOfWeek);
+        _dayHeaders = DateTimeHelpers.GetDayHeaders(culture, firstDay);
         BuildEventMap();
     }
 
@@ -152,6 +163,8 @@
     }
 
     private Task HandleEventClick(TmScheduleEvent evt) => OnEventClick.InvokeAsync(evt);
+
+    private Task HandleMoreClick(DateOnly date) => OnMoreClick.InvokeAsync(date.ToDateTime(TimeOnly.MinValue));
 
     private void HandleDragStart(TmScheduleEvent evt) => _draggedEvent = evt;
 

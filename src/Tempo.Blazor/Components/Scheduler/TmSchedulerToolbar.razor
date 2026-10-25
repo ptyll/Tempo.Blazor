@@ -42,8 +42,20 @@
     /// <summary>Current view type.</summary>
     [Parameter] public TmScheduleViewType View { get; set; }
 
-    /// <summary>Currently displayed date.</summary>
+    /// <summary>Currently displayed date. The Month title is this date's month.</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>
+    /// Inclusive start of the range the title describes. The scheduler fills it from the same range
+    /// it loads. Day and Timeline titles show this day; Week and Agenda titles start here.
+    /// </summary>
+    [Parameter] public DateTime RangeStart { get; set; }
+
+    /// <summary>
+    /// Exclusive end of the range the title describes. Week and Agenda titles cover
+    /// <c>[RangeStart, RangeEnd − 1]</c>.
+    /// </summary>
+    [Parameter] public DateTime RangeEnd { get; set; }
 
     /// <summary>Fires when the user clicks a view button.</summary>
     [Parameter] public EventCallback<TmScheduleViewType> OnViewChange { get; set; }
@@ -68,33 +80,18 @@
         get
         {
             var culture = CultureInfo.CurrentUICulture;
+            // No range handed in: title the same Monday-week / 30-day default the scheduler uses.
+            var fallback = SchedulerRange.Visible(View, CurrentDate, new SchedulerRangeOptions(1, 30));
+            var start = RangeStart == default ? fallback.Start : RangeStart.Date;
+            var endInclusive = RangeEnd == default ? fallback.End.AddDays(-1) : RangeEnd.Date.AddDays(-1);
             return View switch
             {
-                TmScheduleViewType.Day => CurrentDate.ToString("dddd, d. MMMM yyyy", culture),
-                TmScheduleViewType.Week => GetWeekTitle(culture),
+                TmScheduleViewType.Day or TmScheduleViewType.Timeline => SchedulerRange.FormatDayTitle(start, culture),
+                TmScheduleViewType.Week or TmScheduleViewType.Agenda => SchedulerRange.FormatRange(start, endInclusive, culture),
                 TmScheduleViewType.Month => $"{culture.DateTimeFormat.GetMonthName(CurrentDate.Month)} {CurrentDate.Year}",
-                TmScheduleViewType.Agenda => $"{culture.DateTimeFormat.GetMonthName(CurrentDate.Month)} {CurrentDate.Year}",
-                TmScheduleViewType.Timeline => GetWeekTitle(culture),
                 _ => CurrentDate.ToString("MMMM yyyy", culture)
             };
         }
-    }
-
-    private string GetWeekTitle(CultureInfo culture)
-    {
-        var weekStart = GetWeekStart(CurrentDate);
-        var weekEnd = weekStart.AddDays(6);
-        if (weekStart.Month == weekEnd.Month)
-            return $"{weekStart.Day}–{weekEnd.Day}. {culture.DateTimeFormat.GetMonthName(weekStart.Month)} {weekStart.Year}";
-        if (weekStart.Year == weekEnd.Year)
-            return $"{weekStart.Day}. {culture.DateTimeFormat.GetAbbreviatedMonthName(weekStart.Month)} – {weekEnd.Day}. {culture.DateTimeFormat.GetAbbreviatedMonthName(weekEnd.Month)} {weekEnd.Year}";
-        return $"{weekStart:d} – {weekEnd:d}";
-    }
-
-    private static DateTime GetWeekStart(DateTime date)
-    {
-        var offset = ((int)date.DayOfWeek + 6) % 7;
-        return date.AddDays(-offset).Date;
     }
 
     private string GetViewLabel(TmScheduleViewType view) => view switch

@@ -23717,6 +23717,13 @@
       ],
       "parameters": [
         {
+          "name": "AgendaDays",
+          "type": "int",
+          "isRequired": false,
+          "default": "30",
+          "description": "Number of days the Agenda view loads, renders and navigates by. Default: 30."
+        },
+        {
           "name": "AllowPrint",
           "type": "bool",
           "isRequired": false,
@@ -23758,20 +23765,27 @@
           "name": "EventTemplate",
           "type": "RenderFragment<TmScheduleEvent>?",
           "isRequired": false,
-          "description": "Custom event template used by the month view event renderer."
+          "description": "Custom event template. Replaces the inner content of an event in every view (month, day, week, agenda, timeline); the positioning wrapper and resize handles stay."
         },
         {
           "name": "FirstDayOfWeek",
           "type": "int",
           "isRequired": false,
           "default": "1",
-          "description": "First day of week (0=Sun, 1=Mon). Default: 1 (Monday)."
+          "description": "First day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday). Default: 1 (Monday). Drives the month grid, the week range and the week title together; values outside 0-6 wrap."
         },
         {
           "name": "HideTimeGrid",
           "type": "bool",
           "isRequired": false,
           "description": "When true, hides the hourly time grid body in Day and Week views (only column headers and all-day row are shown)."
+        },
+        {
+          "name": "MaxVisibleEvents",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
         },
         {
           "name": "OnEventChanged",
@@ -23790,6 +23804,12 @@
           "type": "EventCallback<SchedulerEventContext>",
           "isRequired": false,
           "description": "Fires when right-clicking on an event."
+        },
+        {
+          "name": "OnMoreClick",
+          "type": "EventCallback<DateTime>",
+          "isRequired": false,
+          "description": "Fires when the \"+N more\" button of a month day cell is activated, with that day's date. Without a delegate the scheduler opens that day in the Day view, but only when the host binds both @bind-View and @bind-CurrentDate; with either binding missing the click is inert."
         },
         {
           "name": "OnSlotClick",
@@ -23928,7 +23948,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays up to 30 days of upcoming events.",
+      "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays AgendaDays (default 30) of events from the start date.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerAgendaView.razor",
       "documentationStatus": "merged",
@@ -23941,7 +23961,7 @@
           "type": "int",
           "isRequired": false,
           "default": "30",
-          "description": "Number of days to show in agenda."
+          "description": "Number of days to show in the agenda. Values below 1 are treated as 1."
         },
         {
           "name": "CurrentDate",
@@ -23954,6 +23974,12 @@
           "type": "IReadOnlyList<TmScheduleEvent>?",
           "isRequired": false,
           "description": "Events to display."
+        },
+        {
+          "name": "EventTemplate",
+          "type": "RenderFragment<TmScheduleEvent>?",
+          "isRequired": false,
+          "description": "Optional custom event renderer used inside each agenda row. The row chrome (the colour dot) stays; the time, title and description are replaced."
         },
         {
           "name": "OnEventClick",
@@ -24163,6 +24189,13 @@
           "description": "Optional custom event renderer used inside each month event wrapper."
         },
         {
+          "name": "FirstDayOfWeek",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "First day of the week (0 = Sunday, 1 = Monday). Default: 1 (Monday)."
+        },
+        {
           "name": "MaxVisibleEvents",
           "type": "int",
           "isRequired": false,
@@ -24186,6 +24219,12 @@
           "type": "EventCallback<SchedulerEventContext>",
           "isRequired": false,
           "description": "Fires when right-clicking on an event."
+        },
+        {
+          "name": "OnMoreClick",
+          "type": "EventCallback<DateTime>",
+          "isRequired": false,
+          "description": "Fires when the \"+N more\" button of a day cell is activated, with that day's date."
         },
         {
           "name": "OnSlotClick",
@@ -24395,6 +24434,12 @@
           "description": "Events to display."
         },
         {
+          "name": "EventTemplate",
+          "type": "RenderFragment<TmScheduleEvent>?",
+          "isRequired": false,
+          "description": "Optional custom event renderer used inside each positioned timeline bar. The bar's positioning and resize handles stay; only the inner content is replaced."
+        },
+        {
           "name": "OnEventChanged",
           "type": "EventCallback<TmScheduleEvent>",
           "isRequired": false,
@@ -24483,7 +24528,7 @@
           "name": "CurrentDate",
           "type": "DateTime",
           "isRequired": false,
-          "description": "Currently displayed date."
+          "description": "Currently displayed date. The Month title is this date's month."
         },
         {
           "name": "OnNext",
@@ -24514,6 +24559,18 @@
           "type": "EventCallback<TmScheduleViewType>",
           "isRequired": false,
           "description": "Fires when the user clicks a view button."
+        },
+        {
+          "name": "RangeEnd",
+          "type": "DateTime",
+          "isRequired": false,
+          "description": "Exclusive end of the range the title describes. Week and Agenda titles cover [RangeStart, RangeEnd - 1]."
+        },
+        {
+          "name": "RangeStart",
+          "type": "DateTime",
+          "isRequired": false,
+          "description": "Inclusive start of the range the title describes. The scheduler fills it from the same range it loads. Day and Timeline titles show this day; Week and Agenda titles start here."
         },
         {
           "name": "ShowPrint",

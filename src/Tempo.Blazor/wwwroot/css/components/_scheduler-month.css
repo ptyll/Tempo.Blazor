@@ -114,7 +114,14 @@
 }
 
 .tm-scheduler-month-more {
+    appearance: none;
+    background: none;
+    border: 0;
+    font: inherit;
     font-size: 0.6875rem;
+    text-align: start;
+    width: 100%;
+    display: block;
     color: var(--tm-text-tertiary, #94a3b8);
     padding: 1px var(--tm-space-1, 0.25rem);
     cursor: pointer;
@@ -122,6 +129,11 @@
 
 .tm-scheduler-month-more:hover {
     color: var(--tm-color-primary);
+}
+
+.tm-scheduler-month-more:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Drag & Drop ── */

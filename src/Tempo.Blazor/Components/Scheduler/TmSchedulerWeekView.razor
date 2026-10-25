@@ -64,17 +64,5 @@
     }
 
     private List<DateOnly> GetWeekDates()
-    {
-        var current = DateOnly.FromDateTime(CurrentDate);
-        var firstDay = (DayOfWeek)FirstDayOfWeek;
-
-        // Find start of week
-        var diff = ((int)current.DayOfWeek - (int)firstDay + 7) % 7;
-        var weekStart = current.AddDays(-diff);
-
-        var result = new List<DateOnly>(7);
-        for (var i = 0; i < 7; i++)
-            result.Add(weekStart.AddDays(i));
-        return result;
-    }
+        => SchedulerRange.WeekDates(CurrentDate, FirstDayOfWeek).ToList();
 }

@@ -167,4 +167,33 @@ public class TmSchedulerAgendaViewTests : LocalizationTestBase
         var dot = cut.Find(".tm-scheduler-agenda-event-dot");
         dot.GetAttribute("style").Should().Contain("background-color: #e74c3c");
     }
+
+    /// <summary>
+    /// B24: EventTemplate replaces the title/time/description inside the agenda row. The row chrome stays.
+    /// </summary>
+    [Fact]
+    public void Agenda_Uses_EventTemplate()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 9, 30, 0), desc: "Daily")
+        };
+
+        var cut = Render<TmSchedulerAgendaView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 1))
+            .Add(c => c.Events, events)
+            .Add(c => c.EventTemplate, (RenderFragment<TmScheduleEvent>)(e => builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "agenda-custom");
+                builder.AddContent(2, $"CUSTOM:{e.Title}");
+                builder.CloseElement();
+            })));
+
+        var row = cut.Find(".tm-scheduler-agenda-event");
+        row.QuerySelector(".agenda-custom")!.TextContent.Should().Contain("CUSTOM:Standup");
+        row.QuerySelectorAll(".tm-scheduler-agenda-event-title").Should().BeEmpty();
+        row.QuerySelector(".tm-scheduler-agenda-event-dot").Should().NotBeNull(
+            "the row chrome (dot) stays; only the inner content is replaced");
+    }
 }

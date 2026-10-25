@@ -231,4 +231,75 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
         cut.Find(".custom-month-event").TextContent.Should().Contain("CUSTOM: Maintenance");
         cut.FindAll(".tm-scheduler-month-event-title").Should().BeEmpty();
     }
+
+    /// <summary>
+    /// B14: the month grid and its day headers start on the configured first day of the week.
+    /// June 2025 starts on a Sunday, so a Sunday-first grid opens on 1 June (no leading May cells).
+    /// </summary>
+    [Fact]
+    public void Month_Respects_FirstDayOfWeek_Sunday()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.FirstDayOfWeek, 0));
+
+        var headers = cut.FindAll(".tm-scheduler-month-day-header");
+        headers.Count.Should().Be(7);
+        var culture = System.Globalization.CultureInfo.CurrentUICulture;
+        headers[0].TextContent.Trim().Should().Be(culture.DateTimeFormat.AbbreviatedDayNames[(int)DayOfWeek.Sunday]);
+        headers[6].TextContent.Trim().Should().Be(culture.DateTimeFormat.AbbreviatedDayNames[(int)DayOfWeek.Saturday]);
+
+        var days = cut.FindAll(".tm-scheduler-month-day");
+        days[0].ClassList.Should().NotContain("tm-scheduler-month-day--other");
+        days[0].QuerySelector(".tm-scheduler-month-day-number")!.TextContent.Should().Be("1");
+    }
+
+    /// <summary>
+    /// B24: "+N more" is a real button and raises OnMoreClick with the day, without bubbling into the day click.
+    /// </summary>
+    [Fact]
+    public void Month_More_Is_Button_And_Invokes_OnMoreClick()
+    {
+        DateTime? moreDay = null;
+        var slotClicked = false;
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Evt1", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0)),
+            Evt("Evt2", new DateTime(2025, 6, 10, 10, 0, 0), new DateTime(2025, 6, 10, 11, 0, 0)),
+            Evt("Evt3", new DateTime(2025, 6, 10, 11, 0, 0), new DateTime(2025, 6, 10, 12, 0, 0)),
+            Evt("Evt4", new DateTime(2025, 6, 10, 13, 0, 0), new DateTime(2025, 6, 10, 14, 0, 0))
+        };
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.MaxVisibleEvents, 3)
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, _ => slotClicked = true))
+            .Add(c => c.OnMoreClick, EventCallback.Factory.Create<DateTime>(this, d => moreDay = d)));
+
+        var more = cut.Find(".tm-scheduler-month-more");
+        more.TagName.Should().Be("BUTTON");
+        more.GetAttribute("type").Should().Be("button");
+        more.Click();
+
+        moreDay.Should().Be(new DateTime(2025, 6, 10));
+        slotClicked.Should().BeFalse("the more button must not bubble into the day-cell click");
+    }
+
+    /// <summary>The overflow button names the day it opens, not just the count.</summary>
+    [Fact]
+    public void Month_More_AriaLabel_Names_The_Day()
+    {
+        var events = Enumerable.Range(0, 4).Select(i =>
+            Evt($"Evt{i}", new DateTime(2025, 6, 10, 9 + i, 0, 0), new DateTime(2025, 6, 10, 10 + i, 0, 0))).ToList();
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.MaxVisibleEvents, 3));
+
+        var label = cut.Find(".tm-scheduler-month-more").GetAttribute("aria-label") ?? string.Empty;
+        label.Should().Contain("2025");
+        label.Should().Contain("10");
+    }
 }

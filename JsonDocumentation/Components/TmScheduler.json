@@ -104,7 +104,7 @@
       "type": "int",
       "isRequired": false,
       "default": "1",
-      "description": "First day of week (0=Sun, 1=Mon). Default: 1 (Monday)."
+      "description": "First day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday). Default: 1 (Monday). Drives the month grid, the week range and the week title together; values outside 0-6 wrap."
     },
     {
       "name": "WorkDayStart",
@@ -150,7 +150,27 @@
       "name": "EventTemplate",
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,
-      "description": "Custom event template used by the month view event renderer."
+      "description": "Custom event template. Replaces the inner content of an event in every view (month, day, week, agenda, timeline); the positioning wrapper and resize handles stay."
+    },
+    {
+      "name": "AgendaDays",
+      "type": "int",
+      "isRequired": false,
+      "default": "30",
+      "description": "Number of days the Agenda view loads, renders and navigates by. Default: 30."
+    },
+    {
+      "name": "MaxVisibleEvents",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+    },
+    {
+      "name": "OnMoreClick",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false,
+      "description": "Fires when the \"+N more\" button of a month day cell is activated, with that day's date. Without a delegate the scheduler opens that day in the Day view, but only when the host binds both @bind-View and @bind-CurrentDate; with either binding missing the click is inert."
     },
     {
       "name": "Class",

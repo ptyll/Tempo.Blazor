@@ -8,6 +8,8 @@
 <div class="tm-scheduler @Class">
     <TmSchedulerToolbar View="@View"
                         CurrentDate="@CurrentDate"
+                        RangeStart="@VisibleRange.Start"
+                        RangeEnd="@VisibleRange.End"
                         OnViewChange="@HandleViewChange"
                         OnPrev="@NavigatePrev"
                         OnNext="@NavigateNext"
@@ -22,7 +24,8 @@
                 <TmSchedulerMonthView CurrentDate="@CurrentDate"
                                       Today="@TodayInDisplayZone()"
                                       Events="@_loadedEvents"
-                                      MaxVisibleEvents="3"
+                                      MaxVisibleEvents="@MaxVisibleEvents"
+                                      FirstDayOfWeek="@NormalizedFirstDay"
                                       ReadOnly="@ReadOnly"
                                       ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
                                       OnSlotClick="@OnSlotClick"
@@ -30,6 +33,7 @@
                                       OnEventChanged="@HandleEventChangedAsync"
                                       OnSlotContextMenu="@OnSlotContextMenu"
                                       OnEventContextMenu="@OnEventContextMenu"
+                                      OnMoreClick="@HandleMoreClickAsync"
                                       EventTemplate="@EventTemplate" />
                 break;
 
@@ -52,7 +56,7 @@
                 <TmSchedulerWeekView CurrentDate="@CurrentDate"
                                      Events="@_loadedEvents"
                                      Resources="@Resources"
-                                     FirstDayOfWeek="@FirstDayOfWeek"
+                                     FirstDayOfWeek="@NormalizedFirstDay"
                                      SlotDuration="@SlotDuration"
                                      ReadOnly="@ReadOnly"
                                      HideTimeGrid="@HideTimeGrid"
@@ -66,8 +70,10 @@
 
             case TmScheduleViewType.Agenda:
                 <TmSchedulerAgendaView CurrentDate="@CurrentDate"
+                                       AgendaDays="@NormalizedAgendaDays"
                                        Events="@_loadedEvents"
-                                       OnEventClick="@OnEventClick" />
+                                       OnEventClick="@OnEventClick"
+                                       EventTemplate="@EventTemplate" />
                 break;
 
             case TmScheduleViewType.Timeline:
@@ -80,7 +86,8 @@
                                          OnEventClick="@OnEventClick"
                                          OnEventChanged="@HandleEventChangedAsync"
                                          OnSlotContextMenu="@OnSlotContextMenu"
-                                         OnEventContextMenu="@OnEventContextMenu" />
+                                         OnEventContextMenu="@OnEventContextMenu"
+                                         EventTemplate="@EventTemplate" />
                 break;
         }
     </div>
@@ -142,7 +149,10 @@
     /// <summary>Resources for grouping (timeline/resource views).</summary>
     [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
 
-    /// <summary>First day of week (0=Sun, 1=Mon). Default: 1 (Monday).</summary>
+    /// <summary>
+    /// First day of the week (0 = Sunday, 1 = Monday, …, 6 = Saturday). Default: 1 (Monday).
+    /// Drives the month grid, the week range and the week title together; values outside 0–6 wrap.
+    /// </summary>
     [Parameter] public int FirstDayOfWeek { get; set; } = 1;
 
     /// <summary>Work day start time.</summary>
@@ -163,8 +173,21 @@
     /// <summary>When true, events are rendered in adjacent-month day cells visible in the month grid. Default: true.</summary>
     [Parameter] public bool ShowAdjacentMonthEvents { get; set; } = true;
 
-    /// <summary>Custom event template.</summary>
+    /// <summary>Custom event template. Replaces the inner content of an event in every view (month, day, week, agenda, timeline); the positioning wrapper and resize handles stay.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    /// <summary>Number of days the Agenda view loads, renders and navigates by. Default: 30.</summary>
+    [Parameter] public int AgendaDays { get; set; } = 30;
+
+    /// <summary>Maximum events shown in a month day cell before "+N more". Default: 3.</summary>
+    [Parameter] public int MaxVisibleEvents { get; set; } = 3;
+
+    /// <summary>
+    /// Fires when the "+N more" button of a month day cell is activated, with that day's date.
+    /// Without a delegate the scheduler opens that day in the Day view, but only when the host binds
+    /// both <c>@bind-View</c> and <c>@bind-CurrentDate</c>; with either binding missing the click is inert.
+    /// </summary>
+    [Parameter] public EventCallback<DateTime> OnMoreClick { get; set; }
 
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
@@ -201,17 +224,22 @@
             return tz;
         }
 
-        return Services.GetService<ITmUserTimeZone>()?.Zone ?? TimeZoneInfo.Local;
+        return Services.GetService<ITmUserTimeZone>()?.Zone ?? Clock.LocalTimeZone;
     }
 
-    /// <summary>Today's date in the display zone ("Today" navigation); falls back to the machine-local date.</summary>
+    /// <summary>
+    /// Clock behind "Today" and every other "now" computation. Resolved through
+    /// <see cref="IServiceProvider"/> so a consumer that never registers a <see cref="TimeProvider"/>
+    /// still gets <see cref="TimeProvider.System"/> — a bare <c>[Inject] TimeProvider</c> would throw
+    /// for exactly those consumers. Tests register a FakeTimeProvider.
+    /// </summary>
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
+    /// <summary>Today's date in the display zone ("Today" navigation), taken from <see cref="Clock"/>.</summary>
     private DateTime TodayInDisplayZone()
-    {
-        var zone = ResolveTimeZone();
-        return zone.Equals(TimeZoneInfo.Local)
-            ? DateTime.Today
-            : TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).Date;
-    }
+        => TimeZoneInfo.ConvertTime(Clock.GetUtcNow(), ResolveTimeZone()).Date;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -256,7 +284,7 @@
 
     private async Task LoadEventsAsync()
     {
-        var (rangeStart, rangeEnd) = GetVisibleRange();
+        var (rangeStart, rangeEnd) = VisibleRange;
         var tz = ResolveTimeZone();
         var normalize = !string.IsNullOrWhiteSpace(TimeZoneId);
 
@@ -363,34 +391,17 @@
         await OnEventChanged.InvokeAsync(e);
     }
 
-    private (DateTime Start, DateTime End) GetVisibleRange()
-    {
-        return View switch
-        {
-            TmScheduleViewType.Day => (CurrentDate.Date, CurrentDate.Date.AddDays(1)),
-            TmScheduleViewType.Week => GetWeekRange(),
-            TmScheduleViewType.Month => GetMonthRange(),
-            TmScheduleViewType.Agenda => (CurrentDate.Date, CurrentDate.Date.AddDays(30)),
-            TmScheduleViewType.Timeline => GetWeekRange(),
-            _ => (CurrentDate.Date, CurrentDate.Date.AddDays(1))
-        };
-    }
+    /// <summary>The week start normalized to 0..6, shared by the grid, the range and the title.</summary>
+    private int NormalizedFirstDay => SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);
 
-    private (DateTime, DateTime) GetWeekRange()
-    {
-        var offset = ((int)CurrentDate.DayOfWeek + 6) % 7;
-        var weekStart = CurrentDate.Date.AddDays(-offset);
-        return (weekStart, weekStart.AddDays(7));
-    }
+    /// <summary>The agenda length clamped to at least one day, shared by the load, the view and the title.</summary>
+    private int NormalizedAgendaDays => SchedulerRange.NormalizeAgendaDays(AgendaDays);
 
-    private (DateTime, DateTime) GetMonthRange()
-    {
-        var first = new DateTime(CurrentDate.Year, CurrentDate.Month, 1);
-        var last = first.AddMonths(1);
-        // Include adjacent month days visible in the grid
-        var gridStart = first.AddDays(-((int)first.DayOfWeek + 6) % 7);
-        return (gridStart, last.AddDays(7));
-    }
+    /// <summary>The one range this render loads, titles and hands to the view.</summary>
+    private SchedulerRangeOptions RangeOptions => new(NormalizedFirstDay, NormalizedAgendaDays);
+
+    private (DateTime Start, DateTime End) VisibleRange
+        => SchedulerRange.Visible(View, CurrentDate, RangeOptions);
 
     private async Task HandleViewChange(TmScheduleViewType newView)
     {
@@ -399,34 +410,40 @@
 
     private async Task NavigatePrev()
     {
-        var newDate = View switch
-        {
-            TmScheduleViewType.Day => CurrentDate.AddDays(-1),
-            TmScheduleViewType.Week => CurrentDate.AddDays(-7),
-            TmScheduleViewType.Month => CurrentDate.AddMonths(-1),
-            TmScheduleViewType.Agenda => CurrentDate.AddMonths(-1),
-            TmScheduleViewType.Timeline => CurrentDate.AddDays(-7),
-            _ => CurrentDate.AddMonths(-1)
-        };
-        await CurrentDateChanged.InvokeAsync(newDate);
+        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, CurrentDate, -1, RangeOptions));
     }
 
     private async Task NavigateNext()
     {
-        var newDate = View switch
-        {
-            TmScheduleViewType.Day => CurrentDate.AddDays(1),
-            TmScheduleViewType.Week => CurrentDate.AddDays(7),
-            TmScheduleViewType.Month => CurrentDate.AddMonths(1),
-            TmScheduleViewType.Agenda => CurrentDate.AddMonths(1),
-            TmScheduleViewType.Timeline => CurrentDate.AddDays(7),
-            _ => CurrentDate.AddMonths(1)
-        };
-        await CurrentDateChanged.InvokeAsync(newDate);
+        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, CurrentDate, 1, RangeOptions));
     }
 
     private async Task NavigateToday()
     {
         await CurrentDateChanged.InvokeAsync(TodayInDisplayZone());
+    }
+
+    /// <summary>
+    /// "+N more": a host delegate wins; without one the scheduler opens that day in the Day view.
+    /// </summary>
+    private async Task HandleMoreClickAsync(DateTime day)
+    {
+        if (OnMoreClick.HasDelegate)
+        {
+            await OnMoreClick.InvokeAsync(day);
+            return;
+        }
+
+        // The fallback only helps a host that bound both callbacks; with one missing the click is
+        // inert, so the month stays put instead of half-switching.
+        if (!CurrentDateChanged.HasDelegate || !ViewChanged.HasDelegate)
+        {
+            return;
+        }
+
+        // The date moves first, so a host that reloads on each callback never queries the old date
+        // in the new view.
+        await CurrentDateChanged.InvokeAsync(day.Date);
+        await ViewChanged.InvokeAsync(TmScheduleViewType.Day);
     }
 }

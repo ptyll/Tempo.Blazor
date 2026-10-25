@@ -4471,6 +4471,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDiagram_LayoutTree"] = "Tree",
         ["TmDiagram_LayoutTreeLR"] = "Tree Left-Right",
         ["TmDiagram_LayoutTree_Tooltip"] = "Tree layout using d3-hierarchy",
+        ["TmScheduler_MoreAria_One"] = "{0} more event on {1} – open day view",
+        ["TmScheduler_MoreAria_Other"] = "{0} more events on {1} – open day view",
     });
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -8234,6 +8236,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDiagram_LayoutTree"] = "Strom",
         ["TmDiagram_LayoutTreeLR"] = "Strom zleva doprava",
         ["TmDiagram_LayoutTree_Tooltip"] = "Stromové rozložení pomocí d3-hierarchy",
+        ["TmScheduler_MoreAria_One"] = "{0} další událost dne {1} – otevřít denní pohled",
+        ["TmScheduler_MoreAria_Few"] = "{0} další události dne {1} – otevřít denní pohled",
+        ["TmScheduler_MoreAria_Many"] = "{0} další události dne {1} – otevřít denní pohled",
+        ["TmScheduler_MoreAria_Other"] = "{0} dalších událostí dne {1} – otevřít denní pohled",
     }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 

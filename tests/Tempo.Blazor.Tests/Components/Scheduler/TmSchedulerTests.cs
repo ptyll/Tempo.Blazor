@@ -1,7 +1,12 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using Tempo.Blazor.Components.Scheduler;
+using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -237,5 +242,313 @@ public class TmSchedulerTests : LocalizationTestBase
         var eventEl = cut.Find(".tm-scheduler-month-event");
         eventEl.GetAttribute("style").Should().Contain("--event-color: #16a34a");
         cut.Find(".scheduler-month-template").TextContent.Should().Contain("Custom Month");
+    }
+
+    /// <summary>
+    /// B14: Timeline loads a single day. The data provider receives [day, day+1), not the week.
+    /// </summary>
+    [Fact]
+    public async Task Timeline_Range_Is_Single_Day()
+    {
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TmScheduleEvent>>([]));
+
+        Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Timeline)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15, 14, 30, 0))
+            .Add(c => c.DataProvider, provider));
+
+        await provider.Received(1).GetEventsAsync(
+            Arg.Is<TmScheduleQuery>(q =>
+                q.RangeStart == new DateTime(2025, 6, 15) &&
+                q.RangeEnd == new DateTime(2025, 6, 16)),
+            Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>B14: Timeline prev/next moves one day, not a week.</summary>
+    [Fact]
+    public void Timeline_PrevNext_Moves_One_Day()
+    {
+        DateTime date = new DateTime(2025, 6, 15);
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Timeline)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+
+        cut.Find("[data-testid='scheduler-next']").Click();
+        date.Should().Be(new DateTime(2025, 6, 16));
+
+        cut.Render(p => p
+            .Add(c => c.View, TmScheduleViewType.Timeline)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+        cut.Find("[data-testid='scheduler-prev']").Click();
+        date.Should().Be(new DateTime(2025, 6, 15));
+    }
+
+    /// <summary>
+    /// B14: Agenda loads and navigates by AgendaDays (default 30), not by a calendar month.
+    /// </summary>
+    [Fact]
+    public async Task Agenda_Range_And_Navigation_Follow_AgendaDays()
+    {
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TmScheduleEvent>>([]));
+
+        DateTime date = new DateTime(2025, 5, 15);
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Agenda)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.AgendaDays, 30)
+            .Add(c => c.DataProvider, provider)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+
+        await provider.Received().GetEventsAsync(
+            Arg.Is<TmScheduleQuery>(q =>
+                q.RangeStart == new DateTime(2025, 5, 15) &&
+                q.RangeEnd == new DateTime(2025, 6, 14)),
+            Arg.Any<CancellationToken>());
+
+        cut.Find("[data-testid='scheduler-next']").Click();
+        date.Should().Be(new DateTime(2025, 6, 14));
+
+        cut.Render(p => p
+            .Add(c => c.View, TmScheduleViewType.Agenda)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.AgendaDays, 30)
+            .Add(c => c.DataProvider, provider)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+        cut.Find("[data-testid='scheduler-prev']").Click();
+        date.Should().Be(new DateTime(2025, 5, 15));
+
+        cut.FindComponent<TmSchedulerAgendaView>().Instance.AgendaDays.Should().Be(30);
+    }
+
+    /// <summary>
+    /// A non-positive AgendaDays is normalized once: the provider, the view and the title all see one day.
+    /// </summary>
+    [Fact]
+    public async Task AgendaDays_NonPositive_Is_Normalized_Consistently()
+    {
+        using var _ = CultureScope.Use("cs-CZ");
+
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TmScheduleEvent>>([]));
+
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Agenda)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.AgendaDays, 0)
+            .Add(c => c.DataProvider, provider));
+
+        await provider.Received(1).GetEventsAsync(
+            Arg.Is<TmScheduleQuery>(q =>
+                q.RangeStart == new DateTime(2025, 6, 15) && q.RangeEnd == new DateTime(2025, 6, 16)),
+            Arg.Any<CancellationToken>());
+        cut.FindComponent<TmSchedulerAgendaView>().Instance.AgendaDays.Should().Be(1);
+        cut.Find(".tm-scheduler-toolbar-title").TextContent.Should().Be("15. června 2025");
+    }
+
+    /// <summary>
+    /// B24: "+N more" without an OnMoreClick delegate switches to Day view on that day.
+    /// </summary>
+    [Fact]
+    public void Month_More_Without_Delegate_Switches_To_Day()
+    {
+        TmScheduleViewType? view = null;
+        DateTime? date = null;
+        var events = new List<TmScheduleEvent>();
+        for (var i = 0; i < 4; i++)
+        {
+            events.Add(new TmScheduleEvent
+            {
+                Title = $"Evt{i}",
+                Start = new DateTime(2025, 6, 10, 9 + i, 0, 0),
+                End = new DateTime(2025, 6, 10, 10 + i, 0, 0)
+            });
+        }
+
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.ViewChanged, EventCallback.Factory.Create<TmScheduleViewType>(this, v => view = v))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+
+        cut.Find(".tm-scheduler-month-more").Click();
+
+        view.Should().Be(TmScheduleViewType.Day);
+        date.Should().Be(new DateTime(2025, 6, 10));
+    }
+
+    /// <summary>
+    /// The Day fallback runs only when the host binds both callbacks, so it can follow the date and
+    /// the view together. With only the date bound the click is inert: the callback must not fire.
+    /// </summary>
+    [Fact]
+    public void Month_More_With_Only_The_Date_Bound_Is_Inert()
+    {
+        DateTime? date = null;
+        var events = new List<TmScheduleEvent>();
+        for (var i = 0; i < 4; i++)
+        {
+            events.Add(new TmScheduleEvent
+            {
+                Title = $"Evt{i}",
+                Start = new DateTime(2025, 6, 10, 9 + i, 0, 0),
+                End = new DateTime(2025, 6, 10, 10 + i, 0, 0)
+            });
+        }
+
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+
+        cut.Find(".tm-scheduler-month-more").Click();
+
+        date.Should().BeNull("the fallback needs both bindings, so a lone date binding stays silent");
+        cut.FindAll(".tm-scheduler-month-day").Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// The month query covers exactly the rendered grid: June 2026 ends on 2026-07-13, and February
+    /// 2026 with a Sunday-first week starts on the 1st and ends on 2026-03-15.
+    /// </summary>
+    [Theory]
+    [InlineData(2026, 6, 1, "2026-07-13")]
+    [InlineData(2026, 2, 0, "2026-03-15")]
+    public async Task Month_Range_Covers_Rendered_Grid(int year, int month, int firstDay, string end)
+    {
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TmScheduleEvent>>([]));
+
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(year, month, 15))
+            .Add(c => c.FirstDayOfWeek, firstDay)
+            .Add(c => c.DataProvider, provider));
+
+        var expectedStart = month == 2
+            ? new DateTime(2026, 2, 1)
+            : new DateTime(2026, 6, 1);
+        await provider.Received(1).GetEventsAsync(
+            Arg.Is<TmScheduleQuery>(q => q.RangeStart == expectedStart && q.RangeEnd == DateTime.Parse(end)),
+            Arg.Any<CancellationToken>());
+
+        // The query is exactly the grid the month view rendered, not a separately computed range.
+        var rendered = cut.FindAll(".tm-scheduler-month-day").ToList();
+        rendered.Should().NotBeEmpty();
+        DateTime.Parse(rendered[0].GetAttribute("data-date")!).Should().Be(expectedStart);
+        DateTime.Parse(rendered[^1].GetAttribute("data-date")!).AddDays(1).Should().Be(DateTime.Parse(end));
+    }
+
+    /// <summary>A Sunday-first week containing Sunday 15 June 2025 is [15 June, 22 June).</summary>
+    [Fact]
+    public async Task Week_Range_Respects_FirstDayOfWeek()
+    {
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TmScheduleEvent>>([]));
+
+        Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Week)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.FirstDayOfWeek, 0)
+            .Add(c => c.DataProvider, provider));
+
+        await provider.Received(1).GetEventsAsync(
+            Arg.Is<TmScheduleQuery>(q =>
+                q.RangeStart == new DateTime(2025, 6, 15) && q.RangeEnd == new DateTime(2025, 6, 22)),
+            Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// The fallback raises the date before the view, so the reload never queries the old date in the
+    /// new view: the last provider query is the opened day.
+    /// </summary>
+    [Fact]
+    public async Task Month_More_Fallback_Loads_The_Opened_Day_Last()
+    {
+        var events = Enumerable.Range(0, 4).Select(i => new TmScheduleEvent
+        {
+            Title = $"Evt{i}",
+            Start = new DateTime(2025, 6, 10, 9 + i, 0, 0),
+            End = new DateTime(2025, 6, 10, 10 + i, 0, 0)
+        }).ToList();
+
+        var queries = new List<TmScheduleQuery>();
+        var provider = Substitute.For<IScheduleDataProvider>();
+        provider.GetEventsAsync(Arg.Any<TmScheduleQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                queries.Add(ci.Arg<TmScheduleQuery>());
+                return Task.FromResult<IReadOnlyList<TmScheduleEvent>>(events);
+            });
+
+        TmScheduleViewType view = TmScheduleViewType.Month;
+        DateTime date = new DateTime(2025, 6, 15);
+        IRenderedComponent<TmScheduler> cut = null!;
+        void Rerender() => cut.Render(p => p
+            .Add(c => c.View, view)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.Events, events)
+            .Add(c => c.DataProvider, provider)
+            .Add(c => c.ViewChanged, EventCallback.Factory.Create<TmScheduleViewType>(this, v => { view = v; Rerender(); }))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => { date = d; Rerender(); })));
+
+        cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, view)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.Events, events)
+            .Add(c => c.DataProvider, provider)
+            .Add(c => c.ViewChanged, EventCallback.Factory.Create<TmScheduleViewType>(this, v => { view = v; Rerender(); }))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => { date = d; Rerender(); })));
+
+        cut.Find(".tm-scheduler-month-more").Click();
+
+        queries.Last().RangeStart.Should().Be(new DateTime(2025, 6, 10));
+        queries.Last().RangeEnd.Should().Be(new DateTime(2025, 6, 11));
+    }
+
+    /// <summary>
+    /// "Today" is today in the scheduler timezone, taken from the injected TimeProvider — never DateTime.Today.
+    /// </summary>
+    [Fact]
+    public void Today_Uses_Scheduler_TimeZone()
+    {
+        var prague = TimeZoneInfo.FindSystemTimeZoneById(
+            TimeZoneInfo.TryFindSystemTimeZoneById("Europe/Prague", out _)
+                ? "Europe/Prague"
+                : "Central Europe Standard Time");
+        // 2025-06-15 22:30 UTC is already 2025-06-16 in Prague (CEST, UTC+2).
+        var clock = new FakeTimeProvider(new DateTimeOffset(2025, 6, 15, 22, 30, 0, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(clock);
+
+        DateTime? received = null;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.TimeZoneId, prague.Id)
+            .Add(c => c.CurrentDate, new DateTime(2025, 1, 1))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => received = d)));
+
+        cut.Find("[data-testid='scheduler-today']").Click();
+
+        received.Should().Be(new DateTime(2025, 6, 16));
+    }
+
+    /// <summary>MaxVisibleEvents is forwarded to the month view (default 3).</summary>
+    [Fact]
+    public void MaxVisibleEvents_Is_Forwarded_To_MonthView()
+    {
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.MaxVisibleEvents, 5));
+
+        cut.FindComponent<TmSchedulerMonthView>().Instance.MaxVisibleEvents.Should().Be(5);
     }
 }
