@@ -87,6 +87,16 @@ public class DebtTokenBaselineScreenshots : BaselineGeneratorTestBase
     [Description("Captures the light and dark rendering of a demo route for the token-debt review")]
     public async Task Capture_LightAndDark(string route, string name)
     {
+        // The class is one dynamic row per demo route. A phase that only restyles one
+        // component sets TM_DEBT_SCREENSHOT to that row's name so the other routes are
+        // not rewritten.
+        var only = Environment.GetEnvironmentVariable("TM_DEBT_SCREENSHOT");
+        if (!string.IsNullOrWhiteSpace(only)
+            && !string.Equals(name, only, StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Inconclusive($"Skipped: TM_DEBT_SCREENSHOT={only}.");
+        }
+
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);

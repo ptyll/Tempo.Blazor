@@ -1,4 +1,8 @@
 /* ═══════════════ TmSchedulerDayView ═══════════════ */
 .tm-scheduler-day {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: var(--tm-space-2, 0.5rem);
 }

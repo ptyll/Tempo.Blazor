@@ -277,4 +277,29 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
 
         cut.Find("[role='grid']").GetAttribute("aria-label").Should().Be("Timeline");
     }
+
+    /// <summary>
+    /// The bar follows the display wall-clock, not the machine zone. A +14 offset is no machine
+    /// zone, so the 09:00 wall-clock must land at the 09:00 mark on every machine.
+    /// </summary>
+    [Fact]
+    public void Timeline_Bar_Follows_The_Display_Wall_Clock_Not_The_Machine_Zone()
+    {
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2026, 3, 29))
+            .Add(c => c.Resources, TestResources)
+            .Add(c => c.Events,
+            [
+                new TmScheduleEvent
+                {
+                    Id = "dst", Title = "Standup", ResourceId = "room-a",
+                    Start = new DateTimeOffset(2026, 3, 29, 9, 0, 0, TimeSpan.FromHours(14)),
+                    End = new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.FromHours(14))
+                }
+            ]));
+
+        var bar = cut.Find(".tm-scheduler-timeline-event");
+        bar.GetAttribute("style").Should().Contain("left: 37.5000%");
+        bar.GetAttribute("style").Should().Contain("width: 4.166");
+    }
 }

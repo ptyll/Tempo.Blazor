@@ -4663,6 +4663,8 @@
   "TmScheduler_MoreAria_Other": "{0} ďalších udalostí dňa {1} – otvoriť denné zobrazenie",
   "TmScheduler_Next": "Ďalšie",
   "TmScheduler_NoEvents": "Žiadne udalosti",
+  "TmScheduler_AgendaEmptyTitle": "Nič nie je naplánované",
+  "TmScheduler_AgendaEmptyDescription": "V tomto rozsahu nie sú žiadne udalosti.",
   "TmScheduler_Prev": "Predchádzajúce",
   "TmScheduler_Print": "Tlačiť",
   "TmScheduler_SlotAriaLabel": "od {0} do {1}, {2}",

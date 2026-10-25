@@ -4637,6 +4637,8 @@
   "TmScheduler_MoreAria_Other": "{0} événements supplémentaires le {1} – ouvrir la vue Jour",
   "TmScheduler_Next": "Suivant",
   "TmScheduler_NoEvents": "Aucun événement",
+  "TmScheduler_AgendaEmptyTitle": "Rien de planifié",
+  "TmScheduler_AgendaEmptyDescription": "Cette plage ne contient aucun événement.",
   "TmScheduler_Prev": "Précédent",
   "TmScheduler_Print": "Imprimer",
   "TmScheduler_SlotAriaLabel": "de {0} à {1}, {2}",

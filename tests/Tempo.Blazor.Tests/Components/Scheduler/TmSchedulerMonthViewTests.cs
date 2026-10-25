@@ -137,7 +137,7 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
         chip.QuerySelector(".tm-scheduler-month-event-title").Should().NotBeNull();
 
         var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_scheduler-month.css"));
-        css.Should().Contain(".tm-scheduler-month-event--allday .tm-scheduler-month-event-title",
+        css.Should().Contain(".tm-scheduler-month-event--allday:not(.tm-scheduler-event--tinted) .tm-scheduler-month-event-title",
             "the shared title colour paints theme text on the solid fill; the all-day title must inherit the chip's own");
         css.Should().Contain("color: inherit");
     }

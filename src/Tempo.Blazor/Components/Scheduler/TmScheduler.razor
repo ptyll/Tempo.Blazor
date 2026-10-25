@@ -28,6 +28,8 @@
                                       FirstDayOfWeek="@NormalizedFirstDay"
                                       ReadOnly="@ReadOnly"
                                       ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
+                                      HighlightWeekends="@HighlightWeekends"
+                                      AllDayEventStyle="@AllDayEventStyle"
                                       OnSlotClick="@OnSlotClick"
                                       OnEventClick="@OnEventClick"
                                       OnEventChanged="@HandleEventChangedAsync"
@@ -45,6 +47,9 @@
                                     SlotDuration="@SlotDuration"
                                     ReadOnly="@ReadOnly"
                                     HideTimeGrid="@HideTimeGrid"
+                                    Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                                    HighlightWeekends="@HighlightWeekends"
+                                    AllDayEventStyle="@AllDayEventStyle"
                                     OnSlotClick="@OnSlotClick"
                                     OnEventClick="@OnEventClick"
                                     OnEventChanged="@HandleEventChangedAsync"
@@ -61,6 +66,9 @@
                                      SlotDuration="@SlotDuration"
                                      ReadOnly="@ReadOnly"
                                      HideTimeGrid="@HideTimeGrid"
+                                     Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                                     HighlightWeekends="@HighlightWeekends"
+                                     AllDayEventStyle="@AllDayEventStyle"
                                      OnSlotClick="@OnSlotClick"
                                      OnEventClick="@OnEventClick"
                                      OnEventChanged="@HandleEventChangedAsync"
@@ -173,6 +181,20 @@
 
     /// <summary>When true, events are rendered in adjacent-month day cells visible in the month grid. Default: true.</summary>
     [Parameter] public bool ShowAdjacentMonthEvents { get; set; } = true;
+
+    /// <summary>
+    /// When true, Saturday and Sunday cells (month) and columns (day/week) get
+    /// <c>tm-scheduler-month-day--weekend</c> / <c>tm-scheduler-timegrid-col--weekend</c>.
+    /// Default false, so an existing host keeps the previous unmarked grid.
+    /// </summary>
+    [Parameter] public bool HighlightWeekends { get; set; }
+
+    /// <summary>
+    /// Paint of an all-day event. <see cref="TmAllDayEventStyle.Solid"/> (the default) keeps the
+    /// historical solid fill. <see cref="TmAllDayEventStyle.Tinted"/> uses the shared tinted surface
+    /// and adds <c>tm-scheduler-event--tinted</c>.
+    /// </summary>
+    [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
 
     /// <summary>Custom event template. Replaces the inner content of an event in every view (month, day, week, agenda, timeline); the positioning wrapper and resize handles stay.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }

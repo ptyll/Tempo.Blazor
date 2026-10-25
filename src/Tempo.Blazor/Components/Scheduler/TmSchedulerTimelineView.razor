@@ -45,7 +45,7 @@
                     var widthPct = GetEventWidthPercent(e);
                     var eventColor = e.Color ?? r.Color;
 
-                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event @e.CssClass"
+                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event tm-scheduler-event-surface @e.CssClass"
                          role="button" tabindex="@(ResourceIndex(r.Id) == _activeResourceIndex ? "0" : "-1")"
                          aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
                          data-tm-roving="@_rovingId"
@@ -66,10 +66,11 @@
                         @if (EventTemplate is not null)
                         {
                             <span class="tm-sr-only">@EventAriaLabel(e)</span>
-                            @EventTemplate(e)
+                            <span class="tm-scheduler-event-content">@EventTemplate(e)</span>
                         }
                         else
                         {
+                            <span class="tm-scheduler-timeline-event-time">@e.Start.ToString("t", CultureInfo.CurrentUICulture) – @e.End.ToString("t", CultureInfo.CurrentUICulture)</span>
                             <span class="tm-scheduler-timeline-event-title">@e.Title</span>
                         }
                         @if (!ReadOnly && !e.IsReadOnly)
@@ -95,8 +96,7 @@
     private DotNetObjectReference<TmSchedulerTimelineView>? _dotNetRef;
     private bool _jsRegistered;
     private ElementReference _containerRef;
-    private ElementReference _activeSlotRef;
-    private ElementReference _contextMenuRef;
+
     private readonly Dictionary<string, ElementReference> _eventRefs = new();
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
     private int _activeResourceIndex;
@@ -190,8 +190,7 @@
     private string EventAriaLabel(TmScheduleEvent e)
         => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
 
-    private string? EventStyle(string? color) => color is null ? null
-        : $" --event-color: {color};{SchedulerColor.ReadableText(color)}";
+    private static string? EventStyle(string? color) => color is null ? null : $" --event-color: {color};";
 
     // Roving tabindex: Left/Right move a slot, Up/Down the resource row, Enter activates the slot.
     private async Task HandleSlotKeyDown(KeyboardEventArgs e, string resourceId, int slotIndex)
@@ -255,15 +254,17 @@
 
     private int GetEventStartMinutes(TmScheduleEvent evt)
     {
+        // Position by display wall-clock (StartLocal), so a display zone that differs from the
+        // machine zone, and a DST day, land the bar on the hour the user sees.
         var dayStart = CurrentDate.Date;
-        var minutes = (int)(evt.Start - dayStart).TotalMinutes;
+        var minutes = (int)(evt.StartLocal - dayStart).TotalMinutes;
         return Math.Max(0, Math.Min(minutes, 24 * 60));
     }
 
     private double GetEventWidthPercent(TmScheduleEvent evt)
     {
         var startMin = GetEventStartMinutes(evt);
-        var endMin = (int)(evt.End - CurrentDate.Date).TotalMinutes;
+        var endMin = (int)(evt.EndLocal - CurrentDate.Date).TotalMinutes;
         endMin = Math.Max(startMin + 1, Math.Min(endMin, 24 * 60));
         return (endMin - startMin) / (24.0 * 60) * 100;
     }
@@ -274,7 +275,7 @@
     {
         if (OnSlotContextMenu.HasDelegate)
         {
-            var (x, y) = await SchedulerA11y.MenuPointAsync(JS, _contextMenuRef, e);
+            var (x, y) = await SchedulerA11y.SlotMenuPointAsync(JS, _containerRef, slotStart, resourceId, e);
             await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
             {
                 Start = slotStart,

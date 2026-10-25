@@ -17,6 +17,16 @@ public enum TmScheduleViewType
     Timeline
 }
 
+/// <summary>How an all-day event is painted. Solid is the historical fill; Tinted uses the shared event surface.</summary>
+public enum TmAllDayEventStyle
+{
+    /// <summary>Solid fill of the event colour. The default, and the markup from before this option existed.</summary>
+    Solid,
+
+    /// <summary>Tinted surface with a coloured left stripe, the same card as a timed event.</summary>
+    Tinted
+}
+
 /// <summary>Represents a scheduled event or appointment.</summary>
 public class TmScheduleEvent
 {

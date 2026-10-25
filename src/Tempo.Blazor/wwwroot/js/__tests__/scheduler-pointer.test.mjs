@@ -37,7 +37,9 @@ function el(classes = [], parent = null, rect = { left: 0, top: 0, width: 0, hei
         closest(selector) {
             for (let n = node; n; n = n.parent) {
                 const wanted = selector.split(',').map(s => s.trim());
-                if (wanted.some(s => s.startsWith('.') && n.classList.contains(s.slice(1)))) return n;
+                if (wanted.some(s => s.startsWith('.')
+                    ? n.classList.contains(s.slice(1))
+                    : s.startsWith('[') && n.attrs.has(s.slice(1, s.indexOf('='))))) return n;
             }
             return null;
         },
@@ -525,4 +527,33 @@ test('the same ordering holds for the timeline left handle', () => {
 
     assert.equal(t.event.style.left, '19%');
     assert.equal(t.event.style.width, '10%');
+});
+
+test('focusRovingStop scrolls the grid so the slot clears the sticky head', () => {
+    const grid = el(['tm-scheduler-timegrid']);
+    const scroller = el(['tm-scheduler-timegrid-scroll'], grid, { left: 0, top: 100, width: 700, height: 400 });
+    scroller.attrs.set('data-tm-scroll', 'timegrid');
+    scroller.scrollTop = 0;
+    const head = el(['tm-scheduler-timegrid-head'], scroller, { left: 0, top: 100, width: 700, height: 60 });
+    const slot = el(['tm-scheduler-timegrid-slot'], scroller, { left: 0, top: 120, width: 100, height: 30 });
+    slot.dataset.start = '2026-05-12T09:00';
+    slot.focus = () => { slot.focused = true; };
+    grid.querySelector = selector => selector.includes('09:00') ? slot : null;
+    scroller.querySelector = selector => selector.includes('timegrid-head') ? head : null;
+
+    scheduler.focusRovingStop(grid, '[data-start="2026-05-12T09:00"]');
+
+    assert.equal(slot.focused, true);
+    assert.equal(scroller.scrollTop, -40, 'the slot moves below the 60px sticky head');
+});
+
+test('slotPoint finds the slot by its start and resource', () => {
+    const grid = el(['tm-scheduler-timegrid']);
+    const slot = el(['tm-scheduler-timegrid-slot'], grid, { left: 140, top: 260, width: 100, height: 30 });
+    slot.dataset.start = '2026-05-12T08:00';
+    slot.dataset.resource = 'room-a';
+    grid.querySelector = selector => selector.includes('2026-05-12T08:00') && selector.includes('room-a') ? slot : null;
+
+    assert.deepEqual(scheduler.slotPoint(grid, '2026-05-12T08:00', 'room-a'), [140, 260]);
+    assert.deepEqual(scheduler.slotPoint(grid, '2026-05-12T08:00', 'room-b'), [0, 0]);
 });

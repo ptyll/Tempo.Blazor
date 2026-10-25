@@ -112,14 +112,29 @@
             };
             // Capture on the root: the cell stops a bubbling keydown, so a bubble listener never sees it.
             root.addEventListener('keydown', handler, true);
+            // preventDefault stops the key's own scroll. Moving the DOM focus afterwards still scrolls
+            // the page, so the page position is put back once the focus has landed.
+            var restore = function () {
+                if (window.scrollX !== root.__tmSchedulerScrollX || window.scrollY !== root.__tmSchedulerScrollY)
+                    window.scrollTo(root.__tmSchedulerScrollX, root.__tmSchedulerScrollY);
+            };
+            var remember = function () {
+                root.__tmSchedulerScrollX = window.scrollX;
+                root.__tmSchedulerScrollY = window.scrollY;
+            };
+            root.addEventListener('keydown', remember, true);
+            root.addEventListener('focusin', restore);
             root.__tmSchedulerScrollGuard = handler;
+            root.__tmSchedulerScrollRestore = restore;
         },
 
         /** Removes the guard from the element it was added to, in the same phase. */
         detachScrollGuard: function (root) {
             if (!root || !root.__tmSchedulerScrollGuard) return;
             root.removeEventListener('keydown', root.__tmSchedulerScrollGuard, true);
+            root.removeEventListener('focusin', root.__tmSchedulerScrollRestore);
             delete root.__tmSchedulerScrollGuard;
+            delete root.__tmSchedulerScrollRestore;
         },
 
         /** The element's viewport box, so a keyboard context menu can open on the cell itself. */
@@ -160,6 +175,23 @@
             var y = window.scrollY;
             try { stop.focus({ preventScroll: true }); } catch (e) { stop.focus(); }
             if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
+            // The page must not jump, but the grid's own scroller must show the slot below its sticky head.
+            var scroller = typeof stop.closest === 'function' ? stop.closest('[data-tm-scroll]') : null;
+            if (!scroller || typeof scroller.getBoundingClientRect !== 'function') return;
+            var head = scroller.querySelector('.tm-scheduler-timegrid-head');
+            var headHeight = head && typeof head.getBoundingClientRect === 'function' ? head.getBoundingClientRect().height : 0;
+            var box = stop.getBoundingClientRect();
+            var frame = scroller.getBoundingClientRect();
+            if (box.top < frame.top + headHeight) scroller.scrollTop -= frame.top + headHeight - box.top;
+            else if (box.bottom > frame.bottom) scroller.scrollTop += box.bottom - frame.bottom;
+        },
+
+        /** The slot identified by its start (and resource, when the grid has them), inside the grid. */
+        slotPoint: function (root, start, resourceId) {
+            if (!root || typeof root.querySelector !== 'function') return [0, 0];
+            var selector = '[data-start="' + start + '"]';
+            if (resourceId) selector += '[data-resource="' + resourceId + '"]';
+            return this.elementPoint(root.querySelector(selector));
         },
 
         /**

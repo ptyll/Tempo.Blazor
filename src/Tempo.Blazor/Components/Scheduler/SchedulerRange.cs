@@ -152,6 +152,25 @@ internal static class SchedulerRange
     private static bool UsableMonthDayPattern(string pattern)
         => pattern.Contains('M') && pattern.Contains('d');
 
+    /// <summary>
+    /// A column header in the culture's own order: the abbreviated weekday and the short date with
+    /// its year, and the separator next to that year, removed. ("Tue", "5/12") in en-US,
+    /// ("Út", "12.05") in cs-CZ. The weekday's first letter is uppercased.
+    /// </summary>
+    public static (string Weekday, string Date) FormatColumnHeader(DateOnly date, CultureInfo culture)
+    {
+        var day = date.ToDateTime(TimeOnly.MinValue);
+        var weekday = day.ToString("ddd", culture).Trim();
+        if (weekday.Length > 0)
+            weekday = culture.TextInfo.ToUpper(weekday[0]) + weekday[1..];
+        var pattern = culture.DateTimeFormat.ShortDatePattern;
+        var stripped = System.Text.RegularExpressions.Regex.Replace(pattern, @"y+\.?", "").Trim(' ', '.', '/', '-');
+        if (!stripped.Contains('M') || !stripped.Contains('d'))
+            stripped = UsableMonthDayPattern(culture.DateTimeFormat.MonthDayPattern)
+                ? culture.DateTimeFormat.MonthDayPattern : "M/d";
+        return (weekday, day.ToString(stripped, culture).Trim());
+    }
+
     /// <summary>The long date with its first letter capitalized, for the Day and Timeline titles.</summary>
     public static string FormatDayTitle(DateTime day, CultureInfo culture)
     {

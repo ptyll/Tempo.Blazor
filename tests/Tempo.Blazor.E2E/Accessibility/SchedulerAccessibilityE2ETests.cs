@@ -134,6 +134,41 @@ public sealed class SchedulerAccessibilityE2ETests : WasmTestBase
     }
 
     /// <summary>
+    /// Thirty ArrowDown presses must keep the focused slot inside the scroller, below the sticky head,
+    /// without moving the page.
+    /// </summary>
+    [TestMethod]
+    public async Task Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller()
+    {
+        var page = await OpenAsync();
+        var section = page.Locator("[data-testid='scheduler-week-section']");
+        var slot = section.Locator(".tm-scheduler-timegrid-slot[tabindex='0']");
+        await slot.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await slot.FocusAsync();
+
+        var before = await page.EvaluateAsync<double>("() => window.scrollY");
+        for (var i = 0; i < 30; i++)
+            await page.Keyboard.PressAsync("ArrowDown");
+        var after = await page.EvaluateAsync<double>("() => window.scrollY");
+        Assert.AreEqual(before, after, 1, "ArrowDown must scroll the grid, not the page.");
+
+        var visible = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const slot = document.querySelector('[data-testid="scheduler-week-section"] .tm-scheduler-timegrid-slot[tabindex="0"]');
+                const scroller = slot && slot.closest('[data-tm-scroll]');
+                const head = scroller && scroller.querySelector('.tm-scheduler-timegrid-head');
+                if (!slot || !scroller) return false;
+                const box = slot.getBoundingClientRect();
+                const frame = scroller.getBoundingClientRect();
+                const headBottom = head ? head.getBoundingClientRect().bottom : frame.top;
+                return box.top >= headBottom - 1 && box.bottom <= frame.bottom + 1;
+            }
+            """);
+        Assert.IsTrue(visible, "the focused slot must sit inside the scroller, below the sticky head.");
+    }
+
+    /// <summary>
     /// Shift+F10 on a day cell opens the context menu exactly once, and the menu is positioned from
     /// the element rather than from a zero point.
     /// </summary>

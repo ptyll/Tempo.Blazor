@@ -94,6 +94,17 @@ public class SchedulerRangeTests
     public void FormatDayTitle_Capitalizes_The_Long_Date(string culture, string expected)
         => SchedulerRange.FormatDayTitle(new DateTime(2025, 6, 15), Culture(culture)).Should().Be(expected);
 
+    [Theory]
+    [InlineData("en-US", "Tue 5/12")]
+    [InlineData("cs-CZ", "Út 12.05")]
+    [InlineData("fr-FR", "Mar. 12/05")]
+    [InlineData("de-DE", "Di 12.05")]
+    public void FormatColumnHeader_Drops_The_Year(string culture, string expected)
+    {
+        var (weekday, date) = SchedulerRange.FormatColumnHeader(new DateOnly(2026, 5, 12), Culture(culture));
+        $"{weekday} {date}".Should().Be(expected);
+    }
+
     private static CultureInfo Culture(string name) => CultureInfo.GetCultureInfo(name);
 
     private static SchedulerRangeOptions Options(int firstDay) => new(firstDay, 30);

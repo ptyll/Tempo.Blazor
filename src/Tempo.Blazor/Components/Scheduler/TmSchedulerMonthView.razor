@@ -23,9 +23,11 @@
             var d = _days[rowIndex * 7 + col];
             var isOther = d.Month != CurrentDate.Month;
             var isToday = d == DateOnly.FromDateTime(Today);
+            var isWeekend = HighlightWeekends && d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
             var css = "tm-scheduler-month-day"
                 + (isOther ? " tm-scheduler-month-day--other" : "")
-                + (isToday ? " tm-scheduler-month-day--today" : "");
+                + (isToday ? " tm-scheduler-month-day--today" : "")
+                + (isWeekend ? " tm-scheduler-month-day--weekend" : "");
 
             @* The cell is a non-native focusable: Enter activates on keydown, Space on keyup. *@
             <div @key="d" class="@css"
@@ -55,7 +57,7 @@
                         var e = evt;
                         @* The event is a non-native focusable nested in the emulating cell, so its
                            keys are fenced off the cell's handler. *@
-                        <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @e.CssClass"
+                        <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(!e.AllDay || AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface" : "") @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @(e.AllDay && AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event--tinted" : "") @e.CssClass"
                              role="button"
                              tabindex="@(d == ActiveDate ? "0" : "-1")"
                              aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
@@ -135,6 +137,12 @@
 
     /// <summary>When true, events are also rendered in adjacent-month day cells visible in the grid.</summary>
     [Parameter] public bool ShowAdjacentMonthEvents { get; set; } = true;
+
+    /// <summary>When true, Saturday and Sunday cells get <c>tm-scheduler-month-day--weekend</c>.</summary>
+    [Parameter] public bool HighlightWeekends { get; set; }
+
+    /// <summary>Paint of an all-day event. Tinted adds <c>tm-scheduler-event--tinted</c>.</summary>
+    [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
 
     /// <summary>Whether drag/drop is disabled.</summary>
     [Parameter] public bool ReadOnly { get; set; }
@@ -242,8 +250,13 @@
         => SchedulerA11y.DayCellLabel(Loc, date, GetEventsForDate(date).Count, CultureInfo.CurrentUICulture);
 
     // A consumer colour that white text cannot clear keeps the solid fill and switches the text.
-    private string? EventStyle(TmScheduleEvent e) => e.Color is null ? null
-        : $"--event-color: {e.Color};{SchedulerColor.ReadableText(e.Color)}";
+    private string? EventStyle(TmScheduleEvent e)
+    {
+        if (e.Color is null) return null;
+        var readable = e.AllDay && AllDayEventStyle == TmAllDayEventStyle.Solid
+            ? SchedulerColor.ReadableText(e.Color) : "";
+        return $"--event-color: {e.Color};{readable}";
+    }
 
     // Roving tabindex over the day cells. PageUp/PageDown step a month and keep the day number.
     private async Task HandleDayKeyDown(KeyboardEventArgs e, DateOnly date)

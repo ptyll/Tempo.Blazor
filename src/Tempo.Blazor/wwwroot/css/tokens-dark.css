@@ -222,6 +222,10 @@
   --tm-scheduler-event-fg:     var(--tm-color-white);
   /* Kept dark in the dark theme too: it is read on the consumer's own light fill. */
   --tm-scheduler-event-fg-on-light: #000000;
+  --tm-scheduler-weekend-bg: color-mix(in srgb, var(--tm-bg-muted) 55%, transparent);
+  --tm-scheduler-event-tint: 14%;
+  --tm-scheduler-event-border-tint: 28%;
+  --tm-scheduler-event-bar-width: var(--tm-space-1);
 
   /* ── Aliases that read a theme-dependent token ──────────────── */
   /* Each one is the SAME expression tokens.css declares on :root, repeated here for the

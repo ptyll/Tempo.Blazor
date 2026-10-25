@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Models
 @using System.Globalization
 @inject IJSRuntime JS
@@ -7,12 +8,12 @@
 <div class="tm-scheduler-toolbar">
     <div class="tm-scheduler-toolbar-nav">
         <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-prev")"
-                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev">&#8249;</button>
+                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev"><TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" /></button>
         <button type="button" class="tm-scheduler-toolbar-nav-btn tm-scheduler-toolbar-today-btn"
                 data-testid="@TestId("scheduler-today")"
                 @onclick="OnToday">@Loc["TmScheduler_Today"]</button>
         <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-next")"
-                aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext">&#8250;</button>
+                aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext"><TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" /></button>
     </div>
 
     <h2 class="tm-scheduler-toolbar-title" aria-live="polite" aria-atomic="true">@DisplayTitle</h2>
@@ -42,7 +43,7 @@
                     data-testid="@TestId("scheduler-print")"
                     aria-label="@Loc["TmScheduler_Print"]"
                     title="@Loc["TmScheduler_Print"]"
-                    @onclick="OnPrint">@Loc["TmScheduler_Print"]</button>
+                    @onclick="OnPrint"><TmIcon Name="@IconNames.Printer" Size="IconSize.Sm" /></button>
         }
     </div>
 </div>

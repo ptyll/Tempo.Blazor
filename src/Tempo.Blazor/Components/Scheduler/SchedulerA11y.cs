@@ -78,6 +78,26 @@ internal static class SchedulerA11y
             return (e.ClientX, e.ClientY);
         }
     }
+
+    /// <summary>
+    /// The keyboard point of the slot the key was pressed in. A captured reference goes stale when the
+    /// roving stop moves, so the slot is found by its start (and resource) inside the grid.
+    /// </summary>
+    public static async Task<(double X, double Y)> SlotMenuPointAsync(
+        IJSRuntime js, ElementReference root, DateTime slotStart, string? resourceId, MouseEventArgs e)
+    {
+        if (e.ClientX > 0 || e.ClientY > 0) return (e.ClientX, e.ClientY);
+        try
+        {
+            var start = slotStart.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
+            var box = await js.InvokeAsync<double[]?>("TempoBlazor.Scheduler.slotPoint", root, start, resourceId);
+            return box is { Length: >= 2 } ? (box[0], box[1]) : (e.ClientX, e.ClientY);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            return (e.ClientX, e.ClientY);
+        }
+    }
 }
 
 /// <summary>Pure grid movement for a roving tabindex. Returns -1 for a key that is not a move.</summary>

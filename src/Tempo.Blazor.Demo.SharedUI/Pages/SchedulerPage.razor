@@ -215,6 +215,44 @@
     </div>
 </section>
 
+<!-- Highlighted weekends and tinted all-day events -->
+<section class="demo-section" data-testid="scheduler-highlight-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Weekends and all-day style</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Opt-in weekend wash and the tinted all-day card</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
+        <div class="mb-4 flex items-center gap-4">
+            <TmToggle @bind-Value="_highlightWeekends" Label="Highlight weekends" />
+            <TmToggle Value="@(_allDayStyle == TmAllDayEventStyle.Tinted)"
+                      ValueChanged="OnAllDayStyleChanged"
+                      Label="Tinted all-day events" />
+        </div>
+        <TmScheduler View="TmScheduleViewType.Month"
+                     CurrentDate="_highlightDate"
+                     Events="_highlightEvents"
+                     HighlightWeekends="_highlightWeekends"
+                     AllDayEventStyle="_allDayStyle" />
+    </div>
+</section>
+
+<!-- An agenda range with nothing in it -->
+<section class="demo-section" data-testid="scheduler-empty-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Empty agenda</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">A range with no events</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="min-height: 240px; position: relative; overflow: hidden;">
+        <TmScheduler View="TmScheduleViewType.Agenda" CurrentDate="_highlightDate" Events="_emptyEvents" />
+    </div>
+</section>
+
 <!-- Interactive Demo -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
@@ -352,6 +390,21 @@
     };
     private DateTime _timelineDate = DateTime.Today;
     private DateTime _interactiveDate = DateTime.Today;
+    private DateTime _highlightDate = new(2026, 5, 12);
+    private bool _highlightWeekends = true;
+    private TmAllDayEventStyle _allDayStyle = TmAllDayEventStyle.Tinted;
+    private readonly List<TmScheduleEvent> _emptyEvents = [];
+    private readonly List<TmScheduleEvent> _highlightEvents =
+    [
+        new() { Title = "Company retreat that runs long enough to wrap the card title onto the available width", Start = new DateTime(2026, 5, 16), End = new DateTime(2026, 5, 17), AllDay = true, Color = "#8b5cf6" },
+        new() { Title = "Standup", Start = new DateTime(2026, 5, 12, 9, 0, 0), End = new DateTime(2026, 5, 12, 9, 30, 0), Color = "#3b82f6" }
+    ];
+
+    private Task OnAllDayStyleChanged(bool tinted)
+    {
+        _allDayStyle = tinted ? TmAllDayEventStyle.Tinted : TmAllDayEventStyle.Solid;
+        return Task.CompletedTask;
+    }
     private string _lastAction = "None yet - try clicking on an event or slot!";
 
     // Context Menu State

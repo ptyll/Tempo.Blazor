@@ -2,16 +2,21 @@
 .tm-scheduler-timeline {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm, 0.25rem);
     overflow-x: auto;
 }
 
 /* ── Header ── */
+.tm-scheduler-timeline-header,
+.tm-scheduler-timeline-row {
+    min-width: calc(10rem + 24 * 3rem);
+}
+
 .tm-scheduler-timeline-header {
     display: flex;
-    border-bottom: 2px solid var(--tm-border-color, #e2e8f0);
-    background: var(--tm-bg-surface-secondary, #f8fafc);
+    border-bottom: 2px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
     position: sticky;
     top: 0;
     z-index: 2;
@@ -19,19 +24,19 @@
 
 .tm-scheduler-timeline-resource-header {
     flex-shrink: 0;
-    width: 8rem;
-    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+    width: 10rem;
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timeline-time-header {
-    flex: 1;
-    min-width: 3rem;
+    flex: 1 1 0;
+    min-width: 0;
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-1, 0.25rem);
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-weight: var(--tm-font-weight-semibold, 600);
     color: var(--tm-text-secondary);
     text-align: center;
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timeline-time-header:last-child {
@@ -47,7 +52,7 @@
 .tm-scheduler-timeline-row {
     display: flex;
     min-height: 3rem;
-    border-bottom: 1px solid var(--tm-border-color, #f1f5f9);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timeline-row:last-child {
@@ -55,24 +60,26 @@
 }
 
 .tm-scheduler-timeline-resource-label {
+    width: 10rem;
     flex-shrink: 0;
-    width: 8rem;
+    width: 10rem;
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
     font-size: var(--tm-font-size-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
-    color: var(--tm-text-primary, #0f172a);
-    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+    color: var(--tm-text-primary);
+    border-right: 1px solid var(--tm-border-color);
     border-left: 3px solid var(--tm-color-primary);
     display: flex;
     align-items: center;
-    background: var(--tm-bg-surface-secondary, #f8fafc);
+    background: var(--tm-bg-surface-secondary);
 }
 
 /* ── Row body (horizontal timeline) ── */
 .tm-scheduler-timeline-row-body {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     position: relative;
-    min-height: 3rem;
+    min-height: 3.5rem;
 }
 
 /* ── Slot ── */
@@ -81,7 +88,7 @@
     top: 0;
     bottom: 0;
     cursor: pointer;
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
     transition: background-color 0.1s ease;
 }
 
@@ -99,23 +106,25 @@
 }
 
 .tm-scheduler-timeline-slot:hover {
-    background: var(--tm-color-surface-hover, rgba(241, 245, 249, 0.5));
+    background: var(--tm-color-surface-hover);
 }
 
 /* ── Event ── */
 .tm-scheduler-timeline-event {
     position: absolute;
-    top: 4px;
-    bottom: 4px;
-    border-radius: var(--tm-radius-xs, 0.125rem);
-    padding: 0 var(--tm-space-2, 0.5rem);
+    top: 2px;
+    height: 3.25rem;
+    border-radius: var(--tm-radius-sm);
+    padding: 0 var(--tm-space-2);
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
     cursor: pointer;
     overflow: visible;
     z-index: 1;
-    background: var(--event-color, var(--tm-scheduler-event-bg));
-    color: var(--event-text-color, var(--tm-scheduler-event-fg));
+    overflow: hidden;
+    container-type: inline-size;
     font-size: var(--tm-font-size-xs, 0.75rem);
     transition: filter 0.1s ease;
 }
@@ -125,12 +134,35 @@
     z-index: 2;
 }
 
+.tm-scheduler-timeline-event .tm-scheduler-event-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-scheduler-timeline-event-time {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+@container (width < 3.5rem) {
+    .tm-scheduler-timeline-event-time { display: none; }
+}
+
 .tm-scheduler-timeline-event-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
     min-width: 0;
+    max-width: 100%;
 }
 
 /* ── Resize handles ── */
@@ -147,7 +179,7 @@
 }
 
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 40%, transparent);
 }
 
 /* A finger needs a larger target than a mouse (B13), but never so wide that the two handles cover

@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerTimelineView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Horizontal timeline view with resource rows and 24-hour time slots. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). An EventTemplate must not contain its own focusable element.",
+  "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe; templated content sits in tm-scheduler-event-content, which ellipsizes, with the resize handles outside it. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -86,7 +86,9 @@
     "tm-scheduler-timeline-row-body",
     "tm-scheduler-timeline-slot",
     "tm-scheduler-timeline-event",
+    "tm-scheduler-event-content",
     "tm-scheduler-timeline-event-title",
+    "tm-scheduler-timeline-event-time",
     "tm-scheduler-event-resize-handle",
     "tm-scheduler-event-resize-handle--left",
     "tm-scheduler-event-resize-handle--right"

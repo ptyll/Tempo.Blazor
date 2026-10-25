@@ -81,6 +81,26 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true, hides the hourly time grid body (only header and all-day row are shown)."
+    },
+    {
+      "name": "Today",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+    },
+    {
+      "name": "HighlightWeekends",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend."
+    },
+    {
+      "name": "AllDayEventStyle",
+      "type": "TmAllDayEventStyle",
+      "isRequired": false,
+      "default": "Solid",
+      "description": "Paint of an all-day event. Tinted adds tm-scheduler-event--tinted."
     }
   ],
   "cssClasses": [
@@ -99,6 +119,16 @@
     "tm-scheduler-timegrid-allday-event",
     "tm-scheduler-timegrid-time-gutter",
     "tm-scheduler-timegrid-time-label",
+    "tm-scheduler-timegrid-scroll",
+    "tm-scheduler-timegrid-col-header-label",
+    "tm-scheduler-timegrid-col-header--today",
+    "tm-scheduler-timegrid-col--today",
+    "tm-scheduler-timegrid-col--weekend",
+    "tm-scheduler-timegrid-slot--half",
+    "tm-scheduler-event-content",
+    "tm-scheduler-event--tinted",
+    "tm-scheduler-event-surface",
+    "tm-scheduler-event--compact",
     "tm-scheduler-timegrid-body",
     "tm-scheduler-timegrid-col",
     "tm-scheduler-timegrid-slot",

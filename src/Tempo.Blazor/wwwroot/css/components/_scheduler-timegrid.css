@@ -2,22 +2,35 @@
 .tm-scheduler-timegrid {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--tm-border-color, #e2e8f0);
+    height: 100%;
+    min-height: 0;
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm, 0.25rem);
     overflow: hidden;
 }
 
 /* ── Header ── */
+.tm-scheduler-timegrid-head {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--tm-bg-surface-secondary);
+}
+
 .tm-scheduler-timegrid-header {
     display: flex;
-    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
-    background: var(--tm-bg-surface-secondary, #f8fafc);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-scheduler-timegrid-time-gutter-header {
     flex-shrink: 0;
     width: 4rem;
-    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+    border-right: 1px solid var(--tm-border-color);
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-scheduler-timegrid-col-header {
@@ -26,7 +39,7 @@
     flex-direction: column;
     align-items: center;
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-1, 0.25rem);
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-col-header:last-child {
@@ -34,17 +47,15 @@
 }
 
 .tm-scheduler-timegrid-col-header-weekday {
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-text-tertiary, #94a3b8);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
 }
 
 .tm-scheduler-timegrid-col-header-date {
     font-size: var(--tm-font-size-lg, 1.125rem);
     font-weight: var(--tm-font-weight-bold, 700);
-    color: var(--tm-text-primary, #0f172a);
+    color: var(--tm-text-primary);
 }
 
 /* ── Resource grouping ── */
@@ -52,7 +63,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-col-header-group:last-child {
@@ -61,7 +72,7 @@
 
 .tm-scheduler-timegrid-resource-labels {
     display: flex;
-    border-top: 1px solid var(--tm-border-color, #f1f5f9);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-resource-label {
@@ -69,9 +80,9 @@
     text-align: center;
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-weight: var(--tm-font-weight-medium, 500);
-    color: var(--tm-text-secondary, #64748b);
+    color: var(--tm-text-secondary);
     padding: var(--tm-space-1, 0.25rem);
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
     border-bottom: 3px solid var(--tm-color-primary);
 }
 
@@ -82,7 +93,7 @@
 .tm-scheduler-timegrid-resource-col {
     flex: 1;
     position: relative;
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-resource-col:last-child {
@@ -93,8 +104,8 @@
 .tm-scheduler-timegrid-allday {
     display: flex;
     min-height: 2rem;
-    border-bottom: 2px solid var(--tm-border-color, #e2e8f0);
-    background: var(--tm-bg-surface-secondary, #f8fafc);
+    border-bottom: 2px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-scheduler-timegrid-allday-col {
@@ -103,14 +114,14 @@
     flex-wrap: wrap;
     gap: 2px;
     padding: var(--tm-space-1, 0.25rem);
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-allday-col:last-child {
     border-right: none;
 }
 
-.tm-scheduler-timegrid-allday-event {
+.tm-scheduler-timegrid-allday-event:not(.tm-scheduler-event--tinted) {
     background: var(--event-color, var(--tm-scheduler-event-bg));
     color: var(--event-text-color, var(--tm-scheduler-event-fg));
     font-size: 0.6875rem;
@@ -126,19 +137,51 @@
     filter: brightness(0.9);
 }
 
+.tm-scheduler-timegrid-allday-event.tm-scheduler-event--tinted {
+    color: var(--tm-text-primary);
+}
+
 /* ── Time gutter ── */
 .tm-scheduler-timegrid-time-gutter {
     flex-shrink: 0;
     width: 4rem;
-    position: relative;
-    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--tm-bg-surface);
+    border-right: 1px solid var(--tm-border-color);
+}
+
+@media print {
+    .tm-scheduler-timegrid,
+    .tm-scheduler-timegrid-scroll {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .tm-scheduler-timegrid-head,
+    .tm-scheduler-timegrid-time-gutter-header {
+        position: static;
+    }
+
+    /* The gutter stays positioned so its absolute hour labels keep their anchor. Static would
+       send them to the page edge. Relative does not stick, so nothing is clipped. */
+    .tm-scheduler-timegrid-time-gutter {
+        position: relative;
+    }
+}
+
+.tm-scheduler-timegrid-time-gutter .tm-scheduler-timegrid-time-label:first-child {
+    transform: none;
+    top: 0;
 }
 
 .tm-scheduler-timegrid-time-label {
     position: absolute;
     right: var(--tm-space-2, 0.5rem);
     font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-text-tertiary, #94a3b8);
+    color: var(--tm-text-secondary);
     transform: translateY(-50%);
     white-space: nowrap;
 }
@@ -156,23 +199,54 @@
 }
 
 /* ── Body ── */
+.tm-scheduler-timegrid-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+
+
 .tm-scheduler-timegrid-body {
     display: flex;
     position: relative;
-    /* 24 hours * 3rem per hour = 72rem */
+    /* 24 hours * 3rem per hour = 72rem. The track stays this tall even when the
+       host is shorter: event geometry and resize math are percentages of it.
+       The wrapper above is what scrolls, so a bounded host shows the working day. */
     height: 72rem;
-    overflow-y: auto;
 }
 
 /* ── Column ── */
 .tm-scheduler-timegrid-col {
     flex: 1;
     position: relative;
-    border-right: 1px solid var(--tm-border-color, #f1f5f9);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-timegrid-col:last-child {
     border-right: none;
+}
+
+.tm-scheduler-timegrid-col--weekend {
+    background: var(--tm-scheduler-weekend-bg);
+}
+
+.tm-scheduler-timegrid-col--today {
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
+}
+
+.tm-scheduler-timegrid-col-header--today .tm-scheduler-timegrid-col-header-weekday,
+.tm-scheduler-timegrid-col-header--today .tm-scheduler-timegrid-col-header-date {
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-scheduler-timegrid-col-header-label {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    display: inline-flex;
+    gap: var(--tm-space-1);
 }
 
 /* ── Slot ── */
@@ -180,7 +254,7 @@
     position: absolute;
     left: 0;
     right: 0;
-    border-bottom: 1px solid var(--tm-border-color, #f1f5f9);
+    border-bottom: 1px solid var(--tm-border-color);
     cursor: pointer;
     transition: background-color 0.1s ease;
 }
@@ -200,20 +274,51 @@
 }
 
 .tm-scheduler-timegrid-slot:hover {
-    background: var(--tm-color-surface-hover, rgba(241, 245, 249, 0.5));
+    background: var(--tm-color-surface-hover);
+}
+
+/* A slot that does not start on the hour. The hour line stays solid. */
+.tm-scheduler-timegrid-slot--half {
+    border-bottom-style: dashed;
 }
 
 /* ── Event ── */
 .tm-scheduler-timegrid-event {
+    container-type: inline-size;
     position: absolute;
-    border-radius: var(--tm-radius-xs, 0.125rem);
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--tm-radius-sm);
+    padding: var(--tm-space-1) var(--tm-space-2);
     overflow: hidden;
     cursor: pointer;
     z-index: 1;
-    border-left: 3px solid var(--event-color, var(--tm-color-primary));
-    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 15%, var(--tm-bg-surface));
-    transition: box-shadow 0.1s ease;
+}
+
+.tm-scheduler-timegrid-event.tm-scheduler-event--compact {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-scheduler-timegrid-event.tm-scheduler-event--compact .tm-scheduler-timegrid-event-title {
+    order: -1;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-scheduler-timegrid-event.tm-scheduler-event--compact .tm-scheduler-timegrid-event-time {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A week column is about 8rem, so the time only fits beside the title in a wider column. */
+@container (width < 9rem) {
+    .tm-scheduler-timegrid-event.tm-scheduler-event--compact .tm-scheduler-timegrid-event-time { display: none; }
 }
 
 .tm-scheduler-timegrid-event:hover {
@@ -223,14 +328,22 @@
 
 .tm-scheduler-timegrid-event-time {
     font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-text-secondary, #64748b);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+}
+
+.tm-scheduler-timegrid-event .tm-scheduler-event-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .tm-scheduler-timegrid-event-title {
     font-size: var(--tm-font-size-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
-    color: var(--tm-text-primary, #0f172a);
+    color: var(--tm-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -242,7 +355,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger);
     z-index: 3;
     pointer-events: none;
 }
@@ -255,7 +368,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger);
 }
 
 /* ── Drag & Drop ── */
@@ -290,7 +403,7 @@
 }
 
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 40%, transparent);
 }
 
 /* A finger needs a larger target than a mouse (B13), but never so large that the two handles cover

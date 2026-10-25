@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerDayView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Single-day time grid view with configurable slot duration, resource grouping, drag-and-drop, and resize support. Delegates rendering to TmSchedulerTimeGrid.",
+  "description": "Single-day time grid view with configurable slot duration, resource grouping, drag-and-drop, and resize support. Delegates rendering to TmSchedulerTimeGrid, so a timed event is a tinted card with a coloured left stripe and an all-day event keeps its solid fill. The column header is sentence case.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -79,6 +79,26 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true, hides the hourly time grid body."
+    },
+    {
+      "name": "Today",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+    },
+    {
+      "name": "HighlightWeekends",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, a Saturday or Sunday column gets tm-scheduler-timegrid-col--weekend."
+    },
+    {
+      "name": "AllDayEventStyle",
+      "type": "TmAllDayEventStyle",
+      "isRequired": false,
+      "default": "Solid",
+      "description": "Paint of an all-day event, forwarded to the time grid."
     }
   ],
   "cssClasses": [

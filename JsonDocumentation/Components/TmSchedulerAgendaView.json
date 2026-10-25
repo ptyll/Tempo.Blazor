@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerAgendaView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays AgendaDays (default 30) of events from the start date. Accessibility: a role=list (only when there are events) whose items each hold a role=group labelled by the date, and every event is a native button. An EventTemplate must not contain its own focusable element.",
+  "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Each group reads as a row: the day number, weekday and month stacked on the left, then the events. A range with no events renders the shared TmEmptyState (TmScheduler_AgendaEmptyTitle, TmScheduler_AgendaEmptyDescription) inside tm-scheduler-agenda-empty. Displays AgendaDays (default 30) of events from the start date. Accessibility: a role=list (only when there are events) whose items each hold a role=group labelled by the date, and every event is a native button. An EventTemplate must not contain its own focusable element.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

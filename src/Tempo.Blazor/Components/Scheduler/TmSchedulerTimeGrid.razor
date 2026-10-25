@@ -11,7 +11,9 @@
 </script>
 
 <div class="tm-scheduler-timegrid" @ref="_containerRef" data-slot-duration="@SlotDuration">
-    @* Header row *@
+    <div class="tm-scheduler-timegrid-scroll" data-tm-scroll="timegrid">
+    @* One sticky head, so the all-day row follows the header without a hard-coded offset. *@
+    <div class="tm-scheduler-timegrid-head">
     <div class="tm-scheduler-timegrid-header">
         <div class="tm-scheduler-timegrid-time-gutter-header"></div>
         @foreach (var date in Dates)
@@ -22,9 +24,11 @@
             @if (_hasResources)
             {
                 <div class="tm-scheduler-timegrid-col-header-group">
-                    <div class="tm-scheduler-timegrid-col-header">
-                        <span class="tm-scheduler-timegrid-col-header-weekday">@d.ToString("ddd", culture)</span>
-                        <span class="tm-scheduler-timegrid-col-header-date">@d.Day</span>
+                    <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)">
+                        <span class="tm-scheduler-timegrid-col-header-label">
+                            <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
+                            <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
+                        </span>
                     </div>
                     <div class="tm-scheduler-timegrid-resource-labels">
                         @foreach (var r in Resources!)
@@ -39,9 +43,11 @@
             }
             else
             {
-                <div class="tm-scheduler-timegrid-col-header">
-                    <span class="tm-scheduler-timegrid-col-header-weekday">@d.ToString("ddd", culture)</span>
-                    <span class="tm-scheduler-timegrid-col-header-date">@d.Day</span>
+                <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)">
+                    <span class="tm-scheduler-timegrid-col-header-label">
+                        <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
+                        <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
+                    </span>
                 </div>
             }
         }
@@ -60,7 +66,7 @@
                 @foreach (var evt in allDayEvents)
                 {
                     var e = evt;
-                    <div @key="e.Id" class="tm-scheduler-timegrid-allday-event"
+                    <div @key="e.Id" class="tm-scheduler-timegrid-allday-event @(AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface tm-scheduler-event--tinted" : "")"
                          role="button" tabindex="@(IsActiveColumn(d) ? "0" : "-1")"
                          aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
                          data-tm-roving="@_rovingId"
@@ -85,10 +91,11 @@
             </div>
         }
     </div>
+    </div>
 
     @if (!HideTimeGrid)
     {
-    @* Time grid body *@
+    @* The track itself stays 72rem so event geometry and resize math keep measuring the full day. *@
     <div class="tm-scheduler-timegrid-body">
         <div class="tm-scheduler-timegrid-time-gutter">
             @for (var hour = 0; hour < 24; hour++)
@@ -126,7 +133,7 @@
                 var dayEvents = GetTimedEventsForDate(d);
                 var positioned = LayoutOverlappingEvents(dayEvents);
 
-                <div class="tm-scheduler-timegrid-col" role="group" aria-label="@d.ToString("D", CultureInfo.CurrentUICulture)">
+                <div class="tm-scheduler-timegrid-col @ColumnClass(d)" role="group" aria-label="@d.ToString("D", CultureInfo.CurrentUICulture)">
                     @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
                     {
                         @Slot(d, slotIndex, null)
@@ -137,6 +144,7 @@
         }
     </div>
     }
+    </div>
 </div>
 
 @code {
@@ -149,8 +157,6 @@
     private Dictionary<DateOnly, List<TmScheduleEvent>> _allDayMap = new();
     private TmScheduleEvent? _draggedEvent;
     private ElementReference _containerRef;
-    private ElementReference _activeSlotRef;
-    private ElementReference _contextMenuRef;
     private readonly Dictionary<string, ElementReference> _eventRefs = new();
     private bool _focusAfterRender;
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
@@ -193,6 +199,24 @@
 
     /// <summary>When true, hides the hourly time grid body (only header and all-day row are shown).</summary>
     [Parameter] public bool HideTimeGrid { get; set; }
+
+    /// <summary>Today in the display zone. The matching column gets <c>tm-scheduler-timegrid-col--today</c>.</summary>
+    [Parameter] public DateOnly Today { get; set; }
+
+    /// <summary>When true, Saturday and Sunday columns get <c>tm-scheduler-timegrid-col--weekend</c>.</summary>
+    [Parameter] public bool HighlightWeekends { get; set; }
+
+    /// <summary>Paint of an all-day event. Tinted adds <c>tm-scheduler-event--tinted</c>.</summary>
+    [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
+
+    private string ColumnClass(DateOnly date)
+    {
+        var css = "";
+        if (date == Today) css = "tm-scheduler-timegrid-col--today";
+        if (HighlightWeekends && date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            css += " tm-scheduler-timegrid-col--weekend";
+        return css;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -257,8 +281,14 @@
     private string EventAriaLabel(TmScheduleEvent e)
         => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
 
-    private string? EventStyle(TmScheduleEvent e) => e.Color is null ? null
-        : $"--event-color: {e.Color};{SchedulerColor.ReadableText(e.Color)}";
+    private string? EventStyle(TmScheduleEvent e)
+    {
+        if (e.Color is null) return null;
+        // Only a solid all-day fill needs a readable text colour; a tinted event uses the theme text.
+        var text = e.AllDay && AllDayEventStyle != TmAllDayEventStyle.Tinted
+            ? SchedulerColor.ReadableText(e.Color) : "";
+        return $"--event-color: {e.Color};{text}";
+    }
 
     // Roving tabindex: Up/Down move a slot, Left/Right a day, Enter activates the slot.
     // Roving tabindex over the flat columns. Up/Down move a slot, Left/Right a column.
@@ -309,7 +339,8 @@
 
             var active = IsActiveSlot(d, si, resourceId);
             builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "class", "tm-scheduler-timegrid-slot");
+            var half = slotEnd.Minute != 0;
+            builder.AddAttribute(1, "class", half ? "tm-scheduler-timegrid-slot tm-scheduler-timegrid-slot--half" : "tm-scheduler-timegrid-slot");
             builder.AddAttribute(2, "style", $"top: {F(GetMinuteTopPercent(si * SlotDuration))}%; height: {F(GetSlotHeightPercent())}%;");
             builder.AddAttribute(3, "role", "button");
             builder.AddAttribute(4, "tabindex", active ? "0" : "-1");
@@ -331,6 +362,7 @@
 
     private RenderFragment RenderPositionedEvents(DateOnly d, List<PositionedEvent> positioned) => builder =>
     {
+        var sequence = 0;
         foreach (var pe in positioned)
         {
             var e = pe.Event;
@@ -339,45 +371,53 @@
             var widthPct = 100.0 / pe.TotalLanes;
             var leftPct = widthPct * pe.Lane;
 
-            builder.OpenElement(0, "div");
+            builder.OpenElement(sequence++, "div");
             builder.SetKey(e.Id);
-            builder.AddAttribute(1, "class", $"tm-scheduler-timegrid-event {e.CssClass}");
-            builder.AddAttribute(2, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%;{EventStyle(e)}");
-            builder.AddAttribute(3, "role", "button");
-            builder.AddAttribute(4, "tabindex", IsActiveColumn(d) ? "0" : "-1");
-            builder.AddAttribute(5, "data-tm-roving", _rovingId);
+            var compact = (e.End - e.Start).TotalMinutes < 45 ? "tm-scheduler-event--compact" : "";
+            builder.AddAttribute(sequence++, "class", $"tm-scheduler-timegrid-event tm-scheduler-event-surface {compact} {e.CssClass}");
+            builder.AddAttribute(sequence++, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%;{EventStyle(e)}");
+            builder.AddAttribute(sequence++, "role", "button");
+            builder.AddAttribute(sequence++, "tabindex", IsActiveColumn(d) ? "0" : "-1");
+            builder.AddAttribute(sequence++, "data-tm-roving", _rovingId);
             if (EventTemplate is null)
-                builder.AddAttribute(6, "aria-label", EventAriaLabel(e));
-            builder.AddAttribute(7, "title", e.Title);
-            builder.AddAttribute(18, "data-event-id", e.Id);
-            builder.AddAttribute(8, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
-            builder.AddAttribute(9, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
-            builder.AddAttribute(10, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
-            builder.AddEventStopPropagationAttribute(11, "onclick", true);
-            builder.AddAttribute(12, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyDown(k, e)));
-            builder.AddEventStopPropagationAttribute(13, "onkeydown", true);
-            builder.AddAttribute(14, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyUp(k, e)));
-            builder.AddEventStopPropagationAttribute(15, "onkeyup", true);
-            builder.AddAttribute(16, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
-            builder.AddEventStopPropagationAttribute(17, "oncontextmenu", true);
-            builder.AddEventPreventDefaultAttribute(19, "oncontextmenu", true);
+                builder.AddAttribute(sequence++, "aria-label", EventAriaLabel(e));
+            builder.AddAttribute(sequence++, "title", e.Title);
+            builder.AddAttribute(sequence++, "data-event-id", e.Id);
+            builder.AddAttribute(sequence++, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
+            builder.AddAttribute(sequence++, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
+            builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
+            builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
+            builder.AddAttribute(sequence++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyDown(k, e)));
+            builder.AddEventStopPropagationAttribute(sequence++, "onkeydown", true);
+            builder.AddAttribute(sequence++, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyUp(k, e)));
+            builder.AddEventStopPropagationAttribute(sequence++, "onkeyup", true);
+            builder.AddAttribute(sequence++, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
+            builder.AddEventStopPropagationAttribute(sequence++, "oncontextmenu", true);
+            builder.AddEventPreventDefaultAttribute(sequence++, "oncontextmenu", true);
 
             if (EventTemplate is not null)
             {
-                builder.AddContent(11, EventTemplate(e));
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-sr-only");
+                builder.AddContent(sequence++, EventAriaLabel(e));
+                builder.CloseElement();
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-event-content");
+                builder.AddContent(sequence++, EventTemplate(e));
+                builder.CloseElement();
             }
             else
             {
                 // Time
-                builder.OpenElement(12, "span");
-                builder.AddAttribute(13, "class", "tm-scheduler-timegrid-event-time");
-                builder.AddContent(14, $"{e.Start.ToString("t", CultureInfo.CurrentUICulture)} – {e.End.ToString("t", CultureInfo.CurrentUICulture)}");
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-timegrid-event-time");
+                builder.AddContent(sequence++, $"{e.Start.ToString("t", CultureInfo.CurrentUICulture)} – {e.End.ToString("t", CultureInfo.CurrentUICulture)}");
                 builder.CloseElement();
 
                 // Title
-                builder.OpenElement(15, "span");
-                builder.AddAttribute(16, "class", "tm-scheduler-timegrid-event-title");
-                builder.AddContent(17, e.Title);
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-timegrid-event-title");
+                builder.AddContent(sequence++, e.Title);
                 builder.CloseElement();
             }
 
@@ -385,19 +425,19 @@
             if (!ReadOnly && !e.IsReadOnly)
             {
                 // Top resize handle (start time)
-                builder.OpenElement(18, "div");
-                builder.AddAttribute(19, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--top");
-                builder.AddAttribute(20, "draggable", "false");
-                builder.AddAttribute(21, "data-resize-edge", "top");
-                builder.AddAttribute(22, "ondragstart", "event.preventDefault(); event.stopPropagation();");
+                builder.OpenElement(sequence++, "div");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--top");
+                builder.AddAttribute(sequence++, "draggable", "false");
+                builder.AddAttribute(sequence++, "data-resize-edge", "top");
+                builder.AddAttribute(sequence++, "ondragstart", "event.preventDefault(); event.stopPropagation();");
                 builder.CloseElement();
 
                 // Bottom resize handle (end time)
-                builder.OpenElement(23, "div");
-                builder.AddAttribute(24, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--bottom");
-                builder.AddAttribute(25, "draggable", "false");
-                builder.AddAttribute(26, "data-resize-edge", "bottom");
-                builder.AddAttribute(27, "ondragstart", "event.preventDefault(); event.stopPropagation();");
+                builder.OpenElement(sequence++, "div");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--bottom");
+                builder.AddAttribute(sequence++, "draggable", "false");
+                builder.AddAttribute(sequence++, "data-resize-edge", "bottom");
+                builder.AddAttribute(sequence++, "ondragstart", "event.preventDefault(); event.stopPropagation();");
                 builder.CloseElement();
             }
 
@@ -631,7 +671,7 @@
     {
         if (OnSlotContextMenu.HasDelegate)
         {
-            var (x, y) = await MenuPointAsync(e);
+            var (x, y) = await MenuPointAsync(e, slotStart, resourceId);
             await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
             {
                 Start = slotStart,
@@ -643,9 +683,9 @@
         }
     }
 
-    /// <summary>A keyboard context menu reports 0,0, so the element's own box is the point the menu opens from.</summary>
-    private Task<(double X, double Y)> MenuPointAsync(MouseEventArgs e)
-        => SchedulerA11y.MenuPointAsync(JS, _contextMenuRef, e);
+    /// <summary>A keyboard context menu reports 0,0, so the slot's own box is the point the menu opens from.</summary>
+    private Task<(double X, double Y)> MenuPointAsync(MouseEventArgs e, DateTime slotStart, string? resourceId)
+        => SchedulerA11y.SlotMenuPointAsync(JS, _containerRef, slotStart, resourceId, e);
 
     private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
     {

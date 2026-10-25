@@ -2,15 +2,34 @@
 .tm-scheduler {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 0;
     background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color, #e2e8f0);
-    border-radius: var(--tm-radius-lg, 0.5rem);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-sm);
     overflow: hidden;
 }
 
+/* The one event surface. A view rule may set geometry, never a second color-mix of --event-color. */
+.tm-scheduler-event-surface {
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) var(--tm-scheduler-event-tint), var(--tm-bg-surface));
+    border: 1px solid color-mix(in srgb, var(--event-color, var(--tm-color-primary)) var(--tm-scheduler-event-border-tint), transparent);
+    border-left: var(--tm-scheduler-event-bar-width) solid var(--event-color, var(--tm-color-primary));
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-xs);
+}
+
+.tm-scheduler-event-surface:hover {
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) var(--tm-scheduler-event-tint), var(--tm-bg-surface));
+    filter: brightness(0.97);
+}
+
 .tm-scheduler-body {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Toolbar ──────────────────────────────── */
@@ -18,9 +37,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--tm-space-4, 1rem);
-    padding: var(--tm-space-3, 0.75rem) var(--tm-space-4, 1rem);
-    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
     flex-wrap: wrap;
 }
 
@@ -34,20 +54,20 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2rem;
-    height: 2rem;
-    padding: 0 var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-border-color, #e2e8f0);
-    border-radius: var(--tm-radius-sm, 0.25rem);
+    min-width: var(--tm-space-9);
+    height: var(--tm-space-9);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-bg-surface);
-    color: var(--tm-text-primary, #0f172a);
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .tm-scheduler-toolbar-nav-btn:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+    background: var(--tm-color-surface-hover);
     border-color: var(--tm-color-primary);
 }
 
@@ -57,9 +77,9 @@
 
 .tm-scheduler-toolbar-title {
     margin: 0;
-    font-size: var(--tm-font-size-lg, 1.125rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-text-primary, #0f172a);
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
     text-align: center;
     flex: 1;
     min-width: 0;
@@ -68,42 +88,43 @@
 .tm-scheduler-toolbar-views {
     display: flex;
     align-items: center;
-    gap: 0;
-    border: 1px solid var(--tm-border-color, #e2e8f0);
-    border-radius: var(--tm-radius-sm, 0.25rem);
+    gap: var(--tm-space-1);
+    padding: 2px;
+    height: var(--tm-space-9);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-muted);
     overflow: hidden;
 }
 
 .tm-scheduler-toolbar-view-btn {
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
+    padding: var(--tm-space-1) var(--tm-space-3);
     border: none;
-    border-right: 1px solid var(--tm-border-color, #e2e8f0);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-secondary, #475569);
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-medium, 500);
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    min-height: 1.75rem;
     cursor: pointer;
     transition: background-color 0.15s ease, color 0.15s ease;
     white-space: nowrap;
 }
 
-.tm-scheduler-toolbar-view-btn:last-child {
-    border-right: none;
-}
-
 .tm-scheduler-toolbar-view-btn:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
-    color: var(--tm-text-primary, #0f172a);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
 }
 
 .tm-scheduler-toolbar-view-btn--active {
-    background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-xs);
 }
 
 .tm-scheduler-toolbar-view-btn--active:hover {
-    background: var(--tm-color-primary-hover);
-    color: var(--tm-color-on-primary);
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-primary-hover);
 }
 
 .tm-scheduler-toolbar-nav-btn:focus-visible,
@@ -125,87 +146,79 @@
     z-index: 1000;
     min-width: 160px;
     background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color, #e2e8f0);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-    padding: var(--tm-space-1, 0.25rem) 0;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    box-shadow: var(--tm-shadow-lg);
+    padding: var(--tm-space-1) 0;
 }
 
 .tm-scheduler-context-menu-item {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
+    gap: var(--tm-space-2);
     width: 100%;
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    padding: var(--tm-space-2) var(--tm-space-3);
     border: none;
     background: transparent;
-    color: var(--tm-text-primary, #1e293b);
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
     text-align: left;
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
 .tm-scheduler-context-menu-item:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-scheduler-context-menu-item--danger {
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
 }
 
 .tm-scheduler-context-menu-item--danger:hover {
-    background: color-mix(in srgb, var(--tm-color-danger, #ef4444) 10%, transparent);
+    background: color-mix(in srgb, var(--tm-color-danger) 10%, transparent);
 }
 
 .tm-scheduler-context-menu-divider {
     height: 1px;
-    margin: var(--tm-space-1, 0.25rem) 0;
-    background: var(--tm-border-color, #e2e8f0);
+    margin: var(--tm-space-1) 0;
+    background: var(--tm-border-color);
 }
 
 .tm-scheduler-context-menu-icon {
     width: 1rem;
     height: 1rem;
     flex-shrink: 0;
-    color: var(--tm-text-tertiary, #94a3b8);
+    color: var(--tm-text-tertiary);
 }
 
-/* Dark mode support */
-[data-theme="dark"] .tm-scheduler-context-menu,
-.tm-dark .tm-scheduler-context-menu {
-    background: var(--tm-bg-surface, #1e293b);
-    border-color: var(--tm-border-color, #334155);
-}
-
-[data-theme="dark"] .tm-scheduler-context-menu-item,
-.tm-dark .tm-scheduler-context-menu-item {
-    color: var(--tm-text-primary, #f1f5f9);
-}
-
-[data-theme="dark"] .tm-scheduler-context-menu-item:hover,
-.tm-dark .tm-scheduler-context-menu-item:hover {
-    background: var(--tm-color-surface-hover, #334155);
-}
-
-[data-theme="dark"] .tm-scheduler-context-menu-divider,
-.tm-dark .tm-scheduler-context-menu-divider {
-    background: var(--tm-border-color, #334155);
-}
+/* Dark mode comes from the token files: every colour above reads a --tm-* token. */
 
 /* ── Print ─────────────────────────────────────────────────────────── */
 .tm-scheduler-toolbar-print {
-    padding: 0.25rem 0.6rem;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm, 4px);
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: var(--tm-space-9);
+    margin-left: var(--tm-space-2);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
     color: var(--tm-text-secondary);
-    font-size: var(--tm-text-sm, 0.875rem);
+    font-size: var(--tm-font-size-sm);
     cursor: pointer;
 }
 .tm-scheduler-toolbar-print:hover { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
 
 @media print {
+    .tm-scheduler,
+    .tm-scheduler-body {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
     .tm-scheduler-toolbar-nav,
     .tm-scheduler-toolbar-views { display: none !important; }
     .tm-scheduler { border: none; box-shadow: none; }

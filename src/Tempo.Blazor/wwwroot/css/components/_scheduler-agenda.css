@@ -4,13 +4,29 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-4, 1rem);
+    background: var(--tm-bg-workspace);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-scheduler-agenda-card {
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    padding: var(--tm-space-3);
+}
+
+.tm-scheduler-agenda-group-body {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--tm-space-3);
 }
 
 .tm-scheduler-agenda-group {
-    display: flex;
-    gap: var(--tm-space-4, 1rem);
-    padding-bottom: var(--tm-space-4, 1rem);
-    border-bottom: 1px solid var(--tm-border-color, #f1f5f9);
+    display: block;
+    gap: var(--tm-space-4);
+    padding-bottom: var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-scheduler-agenda-group:last-child {
@@ -30,20 +46,19 @@
 .tm-scheduler-agenda-date-day {
     font-size: var(--tm-font-size-2xl, 1.5rem);
     font-weight: var(--tm-font-weight-bold, 700);
-    color: var(--tm-text-primary, #0f172a);
+    color: var(--tm-text-primary);
     line-height: 1;
 }
 
 .tm-scheduler-agenda-date-weekday {
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-text-tertiary, #94a3b8);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-secondary);
 }
 
 .tm-scheduler-agenda-date-month {
     font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-text-secondary, #64748b);
+    color: var(--tm-text-secondary);
 }
 
 .tm-scheduler-agenda-events {
@@ -54,9 +69,10 @@
 }
 
 .tm-scheduler-agenda-event {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--tm-space-3, 0.75rem);
+    display: grid;
+    grid-template-columns: auto minmax(7rem, max-content) minmax(0, 1fr) minmax(0, 2fr);
+    align-items: center;
+    gap: var(--tm-space-3);
     padding: var(--tm-space-3, 0.75rem);
     border: none;
     background: transparent;
@@ -75,7 +91,7 @@
 }
 
 .tm-scheduler-agenda-event:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-scheduler-agenda-event-dot {
@@ -88,8 +104,9 @@
 }
 
 .tm-scheduler-agenda-event-time {
+    font-variant-numeric: tabular-nums;
     font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-text-secondary, #64748b);
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     min-width: 7rem;
     flex-shrink: 0;
@@ -98,12 +115,12 @@
 .tm-scheduler-agenda-event-title {
     font-size: var(--tm-font-size-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
-    color: var(--tm-text-primary, #0f172a);
+    color: var(--tm-text-primary);
 }
 
 .tm-scheduler-agenda-event-desc {
     font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-text-tertiary, #94a3b8);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-scheduler-agenda-empty {
@@ -111,6 +128,6 @@
     align-items: center;
     justify-content: center;
     min-height: 12rem;
-    color: var(--tm-text-tertiary, #94a3b8);
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-tertiary);
+    font-size: var(--tm-text-sm);
 }

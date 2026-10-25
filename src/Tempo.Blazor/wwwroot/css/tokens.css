@@ -497,6 +497,13 @@
   /* Text on a light consumer colour, where white falls below 4.5:1. A fixed dark
      value, not gray-900: the dark theme flips gray-900 to white. */
   --tm-scheduler-event-fg-on-light: #000000;
+  /* Weekend column and cell wash. A light mix of the muted surface, so it stays
+     visible in both themes without a second colour. */
+  --tm-scheduler-weekend-bg: color-mix(in srgb, var(--tm-bg-muted) 55%, transparent);
+  /* One event surface. Views keep geometry; the mix lives in .tm-scheduler-event-surface. */
+  --tm-scheduler-event-tint: 14%;
+  --tm-scheduler-event-border-tint: 28%;
+  --tm-scheduler-event-bar-width: var(--tm-space-1);
 
   /* Calendar picker. The selected day fills with -600, not the theme's primary step:
      white text on the dark primary step (-400) falls short of 3:1, and -600 holds in

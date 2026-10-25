@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu. The toolbar view switcher is a radiogroup and the title is a polite live region.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar uses chevron icons for previous and next and a printer icon for print, and the view switcher is a segmented control. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a radiogroup and the title is a polite live region.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -186,6 +186,20 @@
       "description": "Whether the toolbar shows a Print button (uses the browser print dialog with print CSS). Default: true."
     },
     {
+      "name": "HighlightWeekends",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, Saturday and Sunday cells (month) and columns (day/week) get tm-scheduler-month-day--weekend / tm-scheduler-timegrid-col--weekend. Default false, so an existing host keeps the unmarked grid."
+    },
+    {
+      "name": "AllDayEventStyle",
+      "type": "TmAllDayEventStyle",
+      "isRequired": false,
+      "default": "Solid",
+      "description": "Paint of an all-day event. Solid (the default) keeps the historical solid fill. Tinted adds tm-scheduler-event--tinted and uses the shared tinted surface with --tm-text-primary."
+    },
+    {
       "name": "TimeZoneId",
       "type": "string?",
       "isRequired": false,
@@ -203,10 +217,31 @@
     "tm-scheduler-toolbar-views",
     "tm-scheduler-toolbar-view-btn",
     "tm-scheduler-toolbar-view-btn--active",
+    "tm-scheduler-toolbar-print",
+    "tm-scheduler-event-content",
     "tm-scheduler-context-menu",
     "tm-scheduler-context-menu-item",
     "tm-scheduler-context-menu-item--danger",
-    "tm-scheduler-context-menu-divider"
+    "tm-scheduler-context-menu-divider",
+    "tm-scheduler-month-day--weekend",
+    "tm-scheduler-month-day--today",
+    "tm-scheduler-timegrid-col--today",
+    "tm-scheduler-timegrid-col--weekend",
+    "tm-scheduler-timegrid-slot--half",
+    "tm-scheduler-event--tinted",
+    "tm-scheduler-timeline-event-time",
+    "tm-scheduler-timeline-event-title"
+  ],
+  "cssVariables": [
+    { "name": "--event-color", "description": "The event's own colour, set inline from TmScheduleEvent.Color. A missing colour falls back to --tm-color-primary for the tint and the stripe, and to --tm-scheduler-event-bg for a solid all-day fill." },
+    { "name": "--event-text-color", "description": "Text colour on a solid event fill. Set inline to --tm-scheduler-event-fg-on-light when white text would fall below 4.5:1 on the consumer colour; otherwise the theme's --tm-scheduler-event-fg." },
+    { "name": "--tm-scheduler-event-bg", "description": "Solid fill of an all-day event that sets no colour. Defaults to --tm-color-primary-600." },
+    { "name": "--tm-scheduler-event-fg", "description": "Text on a solid event fill. Defaults to white." },
+    { "name": "--tm-scheduler-event-fg-on-light", "description": "Text on a light consumer colour. Black in both themes." },
+    { "name": "--tm-scheduler-weekend-bg", "description": "Wash of a weekend cell or column when HighlightWeekends is true. A mix of --tm-bg-muted." },
+    { "name": "--tm-scheduler-event-tint", "description": "Amount of the event colour mixed into the shared surface. 14%." },
+    { "name": "--tm-scheduler-event-border-tint", "description": "Amount of the event colour mixed into the shared surface border. 28%." },
+    { "name": "--tm-scheduler-event-bar-width", "description": "Width of the shared surface left bar. Defaults to --tm-space-1." }
   ],
   "usedAbstractions": [
     {

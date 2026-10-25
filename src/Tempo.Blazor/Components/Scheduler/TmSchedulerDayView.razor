@@ -8,6 +8,9 @@
                          SlotDuration="@SlotDuration"
                          ReadOnly="@ReadOnly"
                          HideTimeGrid="@HideTimeGrid"
+                         Today="@Today"
+                         HighlightWeekends="@HighlightWeekends"
+                         AllDayEventStyle="@AllDayEventStyle"
                          OnSlotClick="@OnSlotClick"
                          OnEventClick="@OnEventClick"
                          OnEventChanged="@OnEventChanged"
@@ -54,6 +57,15 @@
 
     /// <summary>When true, hides the hourly time grid body.</summary>
     [Parameter] public bool HideTimeGrid { get; set; }
+
+    /// <summary>Today in the display zone. The matching column gets <c>tm-scheduler-timegrid-col--today</c>.</summary>
+    [Parameter] public DateOnly Today { get; set; }
+
+    /// <summary>When true, a Saturday or Sunday column gets <c>tm-scheduler-timegrid-col--weekend</c>.</summary>
+    [Parameter] public bool HighlightWeekends { get; set; }
+
+    /// <summary>Paint of an all-day event, forwarded to the time grid.</summary>
+    [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
 
     protected override void OnParametersSet()
     {

@@ -23710,7 +23710,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu. The toolbar view switcher is a radiogroup and the title is a polite live region.",
+          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar uses chevron icons for previous and next and a printer icon for print, and the view switcher is a segmented control. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a radiogroup and the title is a polite live region.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmScheduler.razor",
           "documentationStatus": "merged",
@@ -23724,6 +23724,13 @@
               "isRequired": false,
               "default": "30",
               "description": "Number of days the Agenda view loads, renders and navigates by. Default: 30."
+            },
+            {
+              "name": "AllDayEventStyle",
+              "type": "TmAllDayEventStyle",
+              "isRequired": false,
+              "default": "TmAllDayEventStyle.Solid",
+              "description": "Paint of an all-day event. Solid (the default) keeps the historical solid fill. Tinted adds tm-scheduler-event--tinted and uses the shared tinted surface with --tm-text-primary."
             },
             {
               "name": "AllowPrint",
@@ -23781,6 +23788,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, hides the hourly time grid body in Day and Week views (only column headers and all-day row are shown)."
+            },
+            {
+              "name": "HighlightWeekends",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Saturday and Sunday cells (month) and columns (day/week) get tm-scheduler-month-day--weekend / tm-scheduler-timegrid-col--weekend. Default false, so an existing host keeps the unmarked grid.",
+              "default": "false"
             },
             {
               "name": "MaxVisibleEvents",
@@ -23914,10 +23928,58 @@
             "tm-scheduler-toolbar-views",
             "tm-scheduler-toolbar-view-btn",
             "tm-scheduler-toolbar-view-btn--active",
+            "tm-scheduler-toolbar-print",
+            "tm-scheduler-event-content",
             "tm-scheduler-context-menu",
             "tm-scheduler-context-menu-item",
             "tm-scheduler-context-menu-item--danger",
-            "tm-scheduler-context-menu-divider"
+            "tm-scheduler-context-menu-divider",
+            "tm-scheduler-month-day--weekend",
+            "tm-scheduler-month-day--today",
+            "tm-scheduler-timegrid-col--today",
+            "tm-scheduler-timegrid-col--weekend",
+            "tm-scheduler-timegrid-slot--half",
+            "tm-scheduler-event--tinted",
+            "tm-scheduler-timeline-event-time",
+            "tm-scheduler-timeline-event-title"
+          ],
+          "cssVariables": [
+            {
+              "name": "--event-color",
+              "description": "The event's own colour, set inline from TmScheduleEvent.Color. A missing colour falls back to --tm-color-primary for the tint and the stripe, and to --tm-scheduler-event-bg for a solid all-day fill."
+            },
+            {
+              "name": "--event-text-color",
+              "description": "Text colour on a solid event fill. Set inline to --tm-scheduler-event-fg-on-light when white text would fall below 4.5:1 on the consumer colour; otherwise the theme's --tm-scheduler-event-fg."
+            },
+            {
+              "name": "--tm-scheduler-event-bg",
+              "description": "Solid fill of an all-day event that sets no colour. Defaults to --tm-color-primary-600."
+            },
+            {
+              "name": "--tm-scheduler-event-fg",
+              "description": "Text on a solid event fill. Defaults to white."
+            },
+            {
+              "name": "--tm-scheduler-event-fg-on-light",
+              "description": "Text on a light consumer colour. Black in both themes."
+            },
+            {
+              "name": "--tm-scheduler-weekend-bg",
+              "description": "Wash of a weekend cell or column when HighlightWeekends is true. A mix of --tm-bg-muted."
+            },
+            {
+              "name": "--tm-scheduler-event-tint",
+              "description": "Amount of the event colour mixed into the shared surface. 14%."
+            },
+            {
+              "name": "--tm-scheduler-event-border-tint",
+              "description": "Amount of the event colour mixed into the shared surface border. 28%."
+            },
+            {
+              "name": "--tm-scheduler-event-bar-width",
+              "description": "Width of the shared surface left bar. Defaults to --tm-space-1."
+            }
           ],
           "usedAbstractions": [
             {
@@ -23950,7 +24012,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays AgendaDays (default 30) of events from the start date. Accessibility: a role=list (only when there are events) whose items each hold a role=group labelled by the date, and every event is a native button. An EventTemplate must not contain its own focusable element.",
+          "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Each group reads as a row: the day number, weekday and month stacked on the left, then the events. A range with no events renders the shared TmEmptyState (TmScheduler_AgendaEmptyTitle, TmScheduler_AgendaEmptyDescription) inside tm-scheduler-agenda-empty. Displays AgendaDays (default 30) of events from the start date. Accessibility: a role=list (only when there are events) whose items each hold a role=group labelled by the date, and every event is a native button. An EventTemplate must not contain its own focusable element.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerAgendaView.razor",
           "documentationStatus": "merged",
@@ -24017,7 +24079,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Single-day time grid view with configurable slot duration, resource grouping, drag-and-drop, and resize support. Delegates rendering to TmSchedulerTimeGrid.",
+          "description": "Single-day time grid view with configurable slot duration, resource grouping, drag-and-drop, and resize support. Delegates rendering to TmSchedulerTimeGrid, so a timed event is a tinted card with a coloured left stripe and an all-day event keeps its solid fill. The column header is sentence case.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerDayView.razor",
           "documentationStatus": "merged",
@@ -24025,6 +24087,13 @@
             "@using Tempo.Blazor.Components.Scheduler"
           ],
           "parameters": [
+            {
+              "name": "AllDayEventStyle",
+              "type": "TmAllDayEventStyle",
+              "isRequired": false,
+              "default": "TmAllDayEventStyle.Solid",
+              "description": "Paint of an all-day event, forwarded to the time grid."
+            },
             {
               "name": "CurrentDate",
               "type": "DateTime",
@@ -24048,6 +24117,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, hides the hourly time grid body."
+            },
+            {
+              "name": "HighlightWeekends",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, a Saturday or Sunday column gets tm-scheduler-timegrid-col--weekend.",
+              "default": "false"
             },
             {
               "name": "OnEventChanged",
@@ -24097,6 +24173,12 @@
               "isRequired": false,
               "default": "30",
               "description": "Duration of each time slot in minutes."
+            },
+            {
+              "name": "Today",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
             }
           ],
           "cssClasses": [
@@ -24164,7 +24246,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
+          "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler. A timed event renders as a tinted card (a light tint of the event colour, a coloured left stripe, a small radius and shadow); an all-day event keeps a solid fill so its text contrast holds. Weekday headers are sentence case. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerMonthView.razor",
           "documentationStatus": "merged",
@@ -24172,6 +24254,13 @@
             "@using Tempo.Blazor.Components.Scheduler"
           ],
           "parameters": [
+            {
+              "name": "AllDayEventStyle",
+              "type": "TmAllDayEventStyle",
+              "isRequired": false,
+              "default": "TmAllDayEventStyle.Solid",
+              "description": "Paint of an all-day event. Tinted adds tm-scheduler-event--tinted."
+            },
             {
               "name": "CurrentDate",
               "type": "DateTime",
@@ -24202,6 +24291,13 @@
               "isRequired": false,
               "default": "1",
               "description": "First day of the week (0 = Sunday, 1 = Monday). Default: 1 (Monday)."
+            },
+            {
+              "name": "HighlightWeekends",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Saturday and Sunday cells get tm-scheduler-month-day--weekend.",
+              "default": "false"
             },
             {
               "name": "MaxVisibleEvents",
@@ -24279,6 +24375,7 @@
             "tm-scheduler-month-day-number",
             "tm-scheduler-month-event",
             "tm-scheduler-month-event--allday",
+            "tm-scheduler-event-content",
             "tm-scheduler-month-event-time",
             "tm-scheduler-month-event-title",
             "tm-scheduler-month-more",
@@ -24309,6 +24406,13 @@
           ],
           "parameters": [
             {
+              "name": "AllDayEventStyle",
+              "type": "TmAllDayEventStyle",
+              "isRequired": false,
+              "default": "TmAllDayEventStyle.Solid",
+              "description": "Paint of an all-day event. Tinted adds tm-scheduler-event--tinted."
+            },
+            {
               "name": "Dates",
               "type": "IReadOnlyList<DateOnly>",
               "isRequired": true,
@@ -24333,6 +24437,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, hides the hourly time grid body (only header and all-day row are shown)."
+            },
+            {
+              "name": "HighlightWeekends",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
+              "default": "false"
             },
             {
               "name": "OnEventChanged",
@@ -24382,6 +24493,12 @@
               "isRequired": false,
               "default": "30",
               "description": "Duration of each time slot in minutes."
+            },
+            {
+              "name": "Today",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
             }
           ],
           "cssClasses": [
@@ -24400,6 +24517,16 @@
             "tm-scheduler-timegrid-allday-event",
             "tm-scheduler-timegrid-time-gutter",
             "tm-scheduler-timegrid-time-label",
+            "tm-scheduler-timegrid-scroll",
+            "tm-scheduler-timegrid-col-header-label",
+            "tm-scheduler-timegrid-col-header--today",
+            "tm-scheduler-timegrid-col--today",
+            "tm-scheduler-timegrid-col--weekend",
+            "tm-scheduler-timegrid-slot--half",
+            "tm-scheduler-event-content",
+            "tm-scheduler-event--tinted",
+            "tm-scheduler-event-surface",
+            "tm-scheduler-event--compact",
             "tm-scheduler-timegrid-body",
             "tm-scheduler-timegrid-col",
             "tm-scheduler-timegrid-slot",
@@ -24423,7 +24550,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Horizontal timeline view with resource rows and 24-hour time slots. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). An EventTemplate must not contain its own focusable element.",
+          "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe; templated content sits in tm-scheduler-event-content, which ellipsizes, with the resize handles outside it. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerTimelineView.razor",
           "documentationStatus": "merged",
@@ -24510,7 +24637,9 @@
             "tm-scheduler-timeline-row-body",
             "tm-scheduler-timeline-slot",
             "tm-scheduler-timeline-event",
+            "tm-scheduler-event-content",
             "tm-scheduler-timeline-event-title",
+            "tm-scheduler-timeline-event-time",
             "tm-scheduler-event-resize-handle",
             "tm-scheduler-event-resize-handle--left",
             "tm-scheduler-event-resize-handle--right"
@@ -24618,7 +24747,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Seven-day time grid view with configurable first day of week, slot duration, resource grouping, and drag-and-drop. Delegates rendering to TmSchedulerTimeGrid.",
+          "description": "Seven-day time grid view with configurable first day of week, slot duration, resource grouping, and drag-and-drop. Delegates rendering to TmSchedulerTimeGrid, so a timed event is a tinted card with a coloured left stripe and an all-day event keeps its solid fill. Column headers are sentence case.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerWeekView.razor",
           "documentationStatus": "merged",
@@ -24626,6 +24755,13 @@
             "@using Tempo.Blazor.Components.Scheduler"
           ],
           "parameters": [
+            {
+              "name": "AllDayEventStyle",
+              "type": "TmAllDayEventStyle",
+              "isRequired": false,
+              "default": "TmAllDayEventStyle.Solid",
+              "description": "Paint of an all-day event, forwarded to the time grid."
+            },
             {
               "name": "CurrentDate",
               "type": "DateTime",
@@ -24656,6 +24792,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, hides the hourly time grid body."
+            },
+            {
+              "name": "HighlightWeekends",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
+              "default": "false"
             },
             {
               "name": "OnEventChanged",
@@ -24705,6 +24848,12 @@
               "isRequired": false,
               "default": "30",
               "description": "Duration of each time slot in minutes."
+            },
+            {
+              "name": "Today",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
             }
           ],
           "cssClasses": [
@@ -85397,6 +85546,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmAllDayEventStyle",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "How an all-day event is painted. Solid is the historical fill; Tinted uses the shared event surface.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmChangeInfo",
           "kind": "Record",
           "category": "Models",
@@ -104080,12 +104239,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1491,
-        "manualItemCount": 1491,
-        "generatedItemCount": 1474,
+        "itemCount": 1492,
+        "manualItemCount": 1492,
+        "generatedItemCount": 1475,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1474
+        "publicApiTypeCount": 1475
       }
     },
     {
@@ -121066,10 +121225,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3304,
-    "manualItemCount": 3304,
+    "itemCount": 3305,
+    "manualItemCount": 3305,
     "generatedOnlyItemCount": 0,
     "componentCount": 487,
-    "publicApiTypeCount": 2764
+    "publicApiTypeCount": 2765
   }
 }

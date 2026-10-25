@@ -1,4 +1,6 @@
 @namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Models
 @using System.Globalization
 
@@ -6,19 +8,21 @@
     @if (_groupedEvents.Count == 0)
     {
         <div class="tm-scheduler-agenda-empty">
-            <p>@Loc["TmScheduler_NoEvents"]</p>
+            <TmEmptyState Icon="@IconNames.Calendar"
+                          Title="@Loc["TmScheduler_AgendaEmptyTitle"]"
+                          Description="@Loc["TmScheduler_AgendaEmptyDescription"]" />
         </div>
     }
     else
     {
-        <div role="list" aria-label="@Loc["TmScheduler_AgendaList"]">
+        <div class="tm-scheduler-agenda-card" role="list" aria-label="@Loc["TmScheduler_AgendaList"]">
         @foreach (var group in _groupedEvents)
         {
             var culture = CultureInfo.CurrentUICulture;
             <div class="tm-scheduler-agenda-group" role="listitem">
-                <div role="group" aria-label="@group.Key.ToString("D", culture)">
+                <div class="tm-scheduler-agenda-group-body" role="group" aria-label="@group.Key.ToString("D", culture)">
                 <div class="tm-scheduler-agenda-date">
-                    <span class="tm-scheduler-agenda-date-day">@group.Key.ToString("dd", culture)</span>
+                    <span class="tm-scheduler-agenda-date-day">@group.Key.Day</span>
                     <span class="tm-scheduler-agenda-date-weekday">@group.Key.ToString("dddd", culture)</span>
                     <span class="tm-scheduler-agenda-date-month">@group.Key.ToString("MMMM yyyy", culture)</span>
                 </div>

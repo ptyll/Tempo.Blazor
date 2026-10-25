@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "How an all-day event is painted. Solid is the historical fill; Tinted uses the shared event surface.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmAllDayEventStyle"
+}

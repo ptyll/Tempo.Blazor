@@ -4611,6 +4611,8 @@
   "TmScheduler_MoreAria_Other": "{0} more events on {1} – open day view",
   "TmScheduler_Next": "Next",
   "TmScheduler_NoEvents": "No events",
+  "TmScheduler_AgendaEmptyTitle": "Nothing scheduled",
+  "TmScheduler_AgendaEmptyDescription": "This range has no events.",
   "TmScheduler_Prev": "Previous",
   "TmScheduler_Print": "Print",
   "TmScheduler_SlotAriaLabel": "{0} to {1}, {2}",
