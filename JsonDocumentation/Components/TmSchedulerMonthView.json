@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerMonthView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler.",
+  "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -94,11 +94,19 @@
       "type": "EventCallback<DateTime>",
       "isRequired": false,
       "description": "Fires when the \"+N more\" button of a day cell is activated, with that day's date."
+    },
+    {
+      "name": "CurrentDateChanged",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false,
+      "description": "Fires when PageUp/PageDown moves the roving stop into another month, with that month's date. TmScheduler binds it to CurrentDateChanged."
     }
   ],
   "cssClasses": [
     "tm-scheduler-month",
     "tm-scheduler-month-grid",
+    "tm-scheduler-month-header-row",
+    "tm-scheduler-month-row",
     "tm-scheduler-month-day-header",
     "tm-scheduler-month-day",
     "tm-scheduler-month-day--other",

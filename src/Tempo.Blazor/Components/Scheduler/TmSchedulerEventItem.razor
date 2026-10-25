@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
+@using System.Globalization
 
 @if (EventTemplate is not null)
 {
@@ -7,8 +8,15 @@
 }
 else
 {
+    @* role=button on a div has no native activation, so Enter (keydown) and Space (keyup) are
+       emulated per docs/keyboard-activation-convention.md. A held Enter must not repeat. *@
     <div class="tm-scheduler-event @Event.CssClass"
-         @onclick="@(() => OnClick.InvokeAsync(Event))">
+         role="button"
+         tabindex="0"
+         aria-label="@AriaLabel"
+         @onclick="@(() => OnClick.InvokeAsync(Event))"
+         @onkeydown="HandleKeyDown"
+         @onkeyup="HandleKeyUp">
         <span class="tm-scheduler-event-dot"
               style="@(Event.Color is not null ? $"background-color: {Event.Color};" : "")"></span>
         <span class="tm-scheduler-event-time">
@@ -18,7 +26,7 @@ else
             }
             else
             {
-                @Event.Start.ToString("HH:mm")
+                @Event.Start.ToString("t", CultureInfo.CurrentUICulture)
             }
         </span>
         <span class="tm-scheduler-event-title">@Event.Title</span>
@@ -34,4 +42,20 @@ else
 
     /// <summary>Optional custom template for rendering.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    private string AriaLabel => SchedulerA11y.EventLabel(Loc, Event, CultureInfo.CurrentUICulture);
+
+    private Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (SchedulerA11y.IsEnterActivation(e))
+            return OnClick.InvokeAsync(Event);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (SchedulerA11y.IsSpaceActivation(e))
+            return OnClick.InvokeAsync(Event);
+        return Task.CompletedTask;
+    }
 }

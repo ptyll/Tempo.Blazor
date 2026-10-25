@@ -220,6 +220,8 @@
   --tm-calendar-view-highlight:    var(--tm-color-primary-400);
   --tm-scheduler-event-bg:     var(--tm-color-primary-600);
   --tm-scheduler-event-fg:     var(--tm-color-white);
+  /* Kept dark in the dark theme too: it is read on the consumer's own light fill. */
+  --tm-scheduler-event-fg-on-light: #000000;
 
   /* ── Aliases that read a theme-dependent token ──────────────── */
   /* Each one is the SAME expression tokens.css declares on :root, repeated here for the

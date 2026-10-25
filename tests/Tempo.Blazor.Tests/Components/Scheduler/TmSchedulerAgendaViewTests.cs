@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -113,8 +114,7 @@ public class TmSchedulerAgendaViewTests : LocalizationTestBase
             .Add(c => c.Events, events));
 
         var timeEl = cut.Find(".tm-scheduler-agenda-event-time");
-        // Mock localizer returns [TmScheduler_AllDay]
-        timeEl.TextContent.Should().Contain("TmScheduler_AllDay");
+        timeEl.TextContent.Should().Contain("All day");
     }
 
     [Fact]
@@ -195,5 +195,54 @@ public class TmSchedulerAgendaViewTests : LocalizationTestBase
         row.QuerySelectorAll(".tm-scheduler-agenda-event-title").Should().BeEmpty();
         row.QuerySelector(".tm-scheduler-agenda-event-dot").Should().NotBeNull(
             "the row chrome (dot) stays; only the inner content is replaced");
+    }
+
+    /// <summary>
+    /// Agenda is a list: the root is role=list, each day is a labelled group, and every event is a
+    /// native button (so Enter/Space activate once without emulation).
+    /// </summary>
+    [Fact]
+    public void Agenda_List_Semantics()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 9, 30, 0)),
+            Evt("Review", new DateTime(2025, 6, 11, 14, 0, 0), new DateTime(2025, 6, 11, 15, 0, 0))
+        };
+
+        var cut = Render<TmSchedulerAgendaView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 1))
+            .Add(c => c.Events, events));
+
+        var list = cut.Find("[role='list']");
+        list.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+
+        var groups = cut.FindAll("[role='listitem']");
+        groups.Count.Should().Be(2);
+        groups.Should().OnlyContain(g => g.QuerySelector("[role='group'][aria-label]") != null);
+
+        var events_ = cut.FindAll(".tm-scheduler-agenda-event");
+        events_.Should().OnlyContain(e => e.TagName == "BUTTON");
+        events_.Should().OnlyContain(e => e.GetAttribute("type") == "button");
+
+        using (CultureScope.Use("en-US"))
+        {
+            var american = Render<TmSchedulerAgendaView>(p => p
+                .Add(c => c.CurrentDate, new DateTime(2025, 6, 1))
+                .Add(c => c.Events, events));
+            american.Find(".tm-scheduler-agenda-event").GetAttribute("aria-label")
+                .Should().Contain("AM", "the label uses the culture's short time");
+        }
+    }
+
+    /// <summary>An empty agenda has no list role, so the empty state is not a list without items.</summary>
+    [Fact]
+    public void Empty_Agenda_Has_No_List_Role()
+    {
+        var cut = Render<TmSchedulerAgendaView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 1)));
+
+        cut.FindAll("[role='list']").Should().BeEmpty();
+        cut.Find(".tm-scheduler-agenda-empty").Should().NotBeNull();
     }
 }

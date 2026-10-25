@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Scheduler;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -191,5 +192,89 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
         bar.QuerySelector(".timeline-custom")!.TextContent.Should().Contain("CUSTOM:Standup");
         bar.QuerySelectorAll(".tm-scheduler-timeline-event-title").Should().BeEmpty();
         bar.QuerySelectorAll(".tm-scheduler-event-resize-handle").Count.Should().Be(2);
+    }
+
+    /// <summary>
+    /// Each resource row is a row with a row header, and its slots share one roving tab stop.
+    /// Right moves a slot, Down moves to the next resource's same slot, Enter raises OnSlotClick.
+    /// </summary>
+    [Fact]
+    public void Rows_Have_Row_Header_And_Keyboard()
+    {
+        var clicks = new List<(DateTime Start, DateTime End)>();
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, TestResources)
+            .Add(c => c.SlotDuration, 60)
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, clicks.Add)));
+
+        var rows = cut.FindAll("[role='row']");
+        rows.Count.Should().Be(3);
+        rows.Should().OnlyContain(r => r.QuerySelector("[role='rowheader']") != null);
+        rows[0].QuerySelector("[role='rowheader']")!.TextContent.Should().Contain("Room A");
+
+        var slots = cut.FindAll(".tm-scheduler-timeline-slot");
+        slots.Count(s => s.GetAttribute("tabindex") == "0").Should().Be(1);
+        slots.Count(s => s.GetAttribute("tabindex") == "-1").Should().Be(slots.Count - 1);
+
+        var active = cut.Find(".tm-scheduler-timeline-slot[tabindex='0']");
+        active.GetAttribute("data-start").Should().Be("2025-06-10T00:00");
+        active.GetAttribute("data-resource").Should().Be("room-a");
+
+        active.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        var moved = cut.Find(".tm-scheduler-timeline-slot[tabindex='0']");
+        moved.GetAttribute("data-start").Should().Be("2025-06-10T01:00");
+
+        moved.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        var nextRow = cut.Find(".tm-scheduler-timeline-slot[tabindex='0']");
+        nextRow.GetAttribute("data-resource").Should().Be("room-b");
+        nextRow.GetAttribute("data-start").Should().Be("2025-06-10T01:00");
+
+        nextRow.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().ContainSingle();
+        clicks[0].Start.Should().Be(new DateTime(2025, 6, 10, 1, 0, 0));
+    }
+
+    /// <summary>
+    /// Enter and Space on a timeline event raise OnEventClick once and never the slot behind it.
+    /// The event is a tab stop only inside the active resource row.
+    /// </summary>
+    [Fact]
+    public void Timeline_Event_Activates_Once_And_Only_The_Active_Row_Is_A_Tab_Stop()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            new() { Title = "Standup", Start = new DateTime(2025, 6, 10, 9, 0, 0), End = new DateTime(2025, 6, 10, 10, 0, 0), ResourceId = "room-a" },
+            new() { Title = "Review", Start = new DateTime(2025, 6, 10, 11, 0, 0), End = new DateTime(2025, 6, 10, 12, 0, 0), ResourceId = "room-b" }
+        };
+        var clicks = new List<string>();
+        var slots = new List<(DateTime, DateTime)>();
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, TestResources)
+            .Add(c => c.Events, events)
+            .Add(c => c.OnEventClick, EventCallback.Factory.Create<TmScheduleEvent>(this, e => clicks.Add(e.Title)))
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, slots.Add)));
+
+        var rows = cut.FindAll("[role='row']");
+        rows[0].QuerySelectorAll(".tm-scheduler-timeline-event[tabindex='0']").Length.Should().Be(1);
+        rows[1].QuerySelectorAll(".tm-scheduler-timeline-event[tabindex='0']").Length.Should().Be(0);
+
+        var item = cut.Find(".tm-scheduler-timeline-event[tabindex='0']");
+        item.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        item.KeyUp(new KeyboardEventArgs { Key = " " });
+        clicks.Should().Equal("Standup", "Standup");
+        slots.Should().BeEmpty();
+    }
+
+    /// <summary>The timeline grid has its own accessible name, distinct from the calendar grid.</summary>
+    [Fact]
+    public void Timeline_Grid_Has_Its_Own_Label()
+    {
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, TestResources));
+
+        cut.Find("[role='grid']").GetAttribute("aria-label").Should().Be("Timeline");
     }
 }

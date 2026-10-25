@@ -1,11 +1,11 @@
 @namespace Tempo.Blazor.Components.Scheduler
-@implements IDisposable
+@implements IAsyncDisposable
 @using Microsoft.Extensions.DependencyInjection
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @inject Microsoft.JSInterop.IJSRuntime JS
 
-<div class="tm-scheduler @Class">
+<div class="tm-scheduler @Class" @ref="_rootRef">
     <TmSchedulerToolbar View="@View"
                         CurrentDate="@CurrentDate"
                         RangeStart="@VisibleRange.Start"
@@ -34,6 +34,7 @@
                                       OnSlotContextMenu="@OnSlotContextMenu"
                                       OnEventContextMenu="@OnEventContextMenu"
                                       OnMoreClick="@HandleMoreClickAsync"
+                                      CurrentDateChanged="@(CurrentDateChanged.HasDelegate ? HandleMonthKeyboardNavigateAsync : default)"
                                       EventTemplate="@EventTemplate" />
                 break;
 
@@ -259,6 +260,17 @@
             {
                 await _userZoneObserver.ProbeAsync();
             }
+
+            // One guard per scheduler, attached to the root. A later render reuses it.
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.attachScrollGuard", _rootRef);
+                _scrollGuardAttached = true;
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+            {
+                // Without the script the arrows still move; only the page scroll comes back.
+            }
         }
     }
 
@@ -279,8 +291,23 @@
         StateHasChanged();
     });
 
-    /// <summary>Unsubscribes from the user zone; the component no longer refreshes when it changes.</summary>
-    public void Dispose() => _userZoneObserver?.Dispose();
+    /// <summary>Unsubscribes from the user zone and removes the scroll guard.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        _userZoneObserver?.Dispose();
+        if (!_scrollGuardAttached) return;
+        try
+        {
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            // The circuit is already gone, so there is no listener left to remove.
+        }
+    }
+
+    private ElementReference _rootRef;
+    private bool _scrollGuardAttached;
 
     private async Task LoadEventsAsync()
     {
@@ -417,6 +444,9 @@
     {
         await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, CurrentDate, 1, RangeOptions));
     }
+
+    private Task HandleMonthKeyboardNavigateAsync(DateTime date)
+        => CurrentDateChanged.InvokeAsync(date.Date);
 
     private async Task NavigateToday()
     {

@@ -1,5 +1,5 @@
 {
-  "count": 4672,
+  "count": 4670,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2054,7 +2054,7 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-month.css|border-right: 1px solid var(--tm-border-color, #f1f5f9);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-month.css|border: 1px solid var(--tm-border-color, #e2e8f0);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-month.css|color: var(--tm-text-primary, #0f172a);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-month.css|color: var(--tm-text-tertiary, #94a3b8);": 3,
+    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-month.css|color: var(--tm-text-tertiary, #94a3b8);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timegrid.css|background: rgba(255, 255, 255, 0.3);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timegrid.css|background: var(--tm-bg-surface-secondary, #f8fafc);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timegrid.css|background: var(--tm-color-danger, #ef4444);": 2,
@@ -2078,7 +2078,6 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timeline.css|border-right: 1px solid var(--tm-border-color, #f1f5f9);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timeline.css|border: 1px solid var(--tm-border-color, #e2e8f0);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timeline.css|color: var(--tm-text-primary, #0f172a);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler-timeline.css|color: var(--tm-text-tertiary, #94a3b8);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler.css|background: color-mix(in srgb, var(--tm-color-danger, #ef4444) 10%, transparent);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler.css|background: var(--tm-bg-surface, #1e293b);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_scheduler.css|background: var(--tm-border-color, #334155);": 1,

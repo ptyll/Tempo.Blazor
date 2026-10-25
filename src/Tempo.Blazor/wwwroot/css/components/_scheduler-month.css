@@ -4,10 +4,20 @@
 }
 
 .tm-scheduler-month-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--tm-border-color, #e2e8f0);
     border-radius: var(--tm-radius-sm, 0.25rem);
+}
+
+.tm-scheduler-month-header-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.tm-scheduler-month-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
 }
 
 .tm-scheduler-month-day-header {
@@ -38,13 +48,25 @@
     background: var(--tm-color-surface-hover, #f1f5f9);
 }
 
-.tm-scheduler-month-day:nth-child(7n + 14) {
+.tm-scheduler-month-day:nth-child(7n) {
     border-right: none;
+}
+
+.tm-scheduler-month-day:focus-visible,
+.tm-scheduler-month-event:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    position: relative;
+    z-index: 1;
 }
 
 .tm-scheduler-month-day--other {
     background: var(--tm-bg-surface-secondary, #f8fafc);
-    opacity: 0.5;
+    color: var(--tm-text-secondary);
+}
+
+.tm-scheduler-month-day--other .tm-scheduler-month-day-number {
+    color: var(--tm-text-secondary);
 }
 
 .tm-scheduler-month-day--today {
@@ -99,11 +121,11 @@
 }
 
 .tm-scheduler-month-event--allday:hover {
-    filter: brightness(0.9);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 25%, var(--tm-bg-surface));
 }
 
 .tm-scheduler-month-event-time {
-    color: var(--tm-text-tertiary, #94a3b8);
+    color: var(--tm-text-secondary);
     font-size: 0.625rem;
     flex-shrink: 0;
 }
@@ -111,6 +133,13 @@
 .tm-scheduler-month-event-title {
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--tm-text-primary);
+}
+
+/* A timed event is a tint, so its title needs the theme text. An all-day chip is a solid fill
+   and already carries a readable --event-text-color; the shared rule must not override it. */
+.tm-scheduler-month-event--allday .tm-scheduler-month-event-title {
+    color: inherit;
 }
 
 .tm-scheduler-month-more {

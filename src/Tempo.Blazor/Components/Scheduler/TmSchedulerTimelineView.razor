@@ -17,30 +17,24 @@
     </div>
 
     @* Resource rows *@
+    <div class="tm-scheduler-timeline-body" role="grid"
+         aria-label="@Loc["TmScheduler_TimelineGrid"]"
+         aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown">
     @foreach (var resource in _resources)
     {
         var r = resource;
         var rowEvents = GetEventsForResource(r.Id);
 
-        <div class="tm-scheduler-timeline-row" data-resource="@r.Id">
-            <div class="tm-scheduler-timeline-resource-label"
+        <div class="tm-scheduler-timeline-row" role="row" data-resource="@r.Id">
+            <div class="tm-scheduler-timeline-resource-label" role="rowheader"
                  style="@(r.Color is not null ? $"border-left-color: {r.Color};" : "")">
                 @r.Name
             </div>
-            <div class="tm-scheduler-timeline-row-body">
+            <div class="tm-scheduler-timeline-row-body" role="gridcell">
                 @* Slots *@
                 @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
                 {
-                    var si = slotIndex;
-                    var slotStart = CurrentDate.Date.AddMinutes(si * SlotDuration);
-                    var slotEnd = slotStart.AddMinutes(SlotDuration);
-                     <div class="tm-scheduler-timeline-slot"
-                          style="left: @F(GetMinuteLeftPercent(si * SlotDuration))%; width: @F(GetSlotWidthPercent())%;"
-                          @ondrop="@(() => HandleSlotDrop(slotStart, slotEnd, r.Id))"
-                          @ondragover:preventDefault="true"
-                          @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"
-                          @oncontextmenu="@(e => HandleSlotContextMenu(e, slotStart, slotEnd, r.Id))"
-                          @oncontextmenu:preventDefault="true"></div>
+                    @Slot(r.Id, slotIndex)
                 }
 
                 @* Events *@
@@ -51,18 +45,27 @@
                     var widthPct = GetEventWidthPercent(e);
                     var eventColor = e.Color ?? r.Color;
 
-                    <div class="tm-scheduler-timeline-event @e.CssClass"
-                         style="left: @F(leftPct)%; width: @F(widthPct)%;@(eventColor is not null ? $" --event-color: {eventColor};" : "")"
+                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event @e.CssClass"
+                         role="button" tabindex="@(ResourceIndex(r.Id) == _activeResourceIndex ? "0" : "-1")"
+                         aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
+                         data-tm-roving="@_rovingId"
+                         style="left: @F(leftPct)%; width: @F(widthPct)%;@EventStyle(eventColor)"
                          title="@e.Title"
                          data-event-id="@e.Id"
                          draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
                          @ondragstart="@(() => HandleDragStart(e, r.Id))"
                          @onclick="@(() => OnEventClick.InvokeAsync(e))"
                          @onclick:stopPropagation="true"
-                         @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
+                         @onkeydown="@(k => HandleEventKeyDown(k, e))"
+                         @onkeydown:stopPropagation="true"
+                         @onkeyup="@(k => HandleEventKeyUp(k, e))"
+                         @onkeyup:stopPropagation="true"
+                         @oncontextmenu="@(args => HandleEventContextMenu(args, e))"
+                         @oncontextmenu:preventDefault="true"
                          @oncontextmenu:stopPropagation="true">
                         @if (EventTemplate is not null)
                         {
+                            <span class="tm-sr-only">@EventAriaLabel(e)</span>
                             @EventTemplate(e)
                         }
                         else
@@ -85,12 +88,20 @@
             </div>
         </div>
     }
+    </div>
 </div>
 
 @code {
     private DotNetObjectReference<TmSchedulerTimelineView>? _dotNetRef;
     private bool _jsRegistered;
     private ElementReference _containerRef;
+    private ElementReference _activeSlotRef;
+    private ElementReference _contextMenuRef;
+    private readonly Dictionary<string, ElementReference> _eventRefs = new();
+    private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
+    private int _activeResourceIndex;
+    private bool _moveFocus;
+    private int _activeSlotIndex;
 
     private int _slotsPerDay;
     private List<TmScheduleResource> _resources = [];
@@ -137,8 +148,86 @@
     protected override void OnParametersSet()
     {
         _slotsPerDay = 24 * 60 / Math.Max(1, SlotDuration);
-        _resources = Resources?.ToList() ?? [new TmScheduleResource { Id = "_default", Name = "" }];
+        _resources = Resources?.ToList() ?? [new TmScheduleResource { Id = "_default", Name = Loc["TmScheduler_Timeline"] }];
+        if (_activeResourceIndex >= _resources.Count) _activeResourceIndex = 0;
+        if (_activeSlotIndex >= _slotsPerDay) _activeSlotIndex = 0;
         BuildResourceEventMap();
+    }
+
+    private RenderFragment Slot(string resourceId, int slotIndex) => builder =>
+    {
+        {
+            var si = slotIndex;
+            var slotStart = CurrentDate.Date.AddMinutes(si * SlotDuration);
+            var slotEnd = slotStart.AddMinutes(SlotDuration);
+            var active = IsActiveSlot(resourceId, si);
+
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "tm-scheduler-timeline-slot");
+            builder.AddAttribute(2, "role", "button");
+            builder.AddAttribute(3, "tabindex", active ? "0" : "-1");
+            builder.AddAttribute(4, "aria-label", SchedulerA11y.SlotLabel(Loc, slotStart, slotEnd, CultureInfo.CurrentUICulture));
+            builder.AddAttribute(5, "data-tm-roving", _rovingId);
+            builder.AddAttribute(6, "data-start", slotStart.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+            builder.AddAttribute(7, "data-resource", resourceId);
+            builder.AddAttribute(8, "style", $"left: {F(GetMinuteLeftPercent(si * SlotDuration))}%; width: {F(GetSlotWidthPercent())}%;");
+            builder.AddAttribute(9, "ondrop", EventCallback.Factory.Create(this, () => HandleSlotDrop(slotStart, slotEnd, resourceId)));
+            builder.AddEventPreventDefaultAttribute(10, "ondragover", true);
+            builder.AddAttribute(11, "onclick", EventCallback.Factory.Create(this, () => OnSlotClick.InvokeAsync((slotStart, slotEnd))));
+            builder.AddAttribute(12, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleSlotKeyDown(e, resourceId, si)));
+            builder.AddAttribute(13, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleSlotKeyUp(e, slotStart, slotEnd)));
+            builder.AddAttribute(14, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, e => HandleSlotContextMenu(e, slotStart, slotEnd, resourceId)));
+            builder.AddEventPreventDefaultAttribute(15, "oncontextmenu", true);
+            builder.CloseElement();
+        }
+    };
+
+    private bool IsActiveSlot(string resourceId, int slotIndex)
+        => _resources.Count > 0
+           && resourceId == _resources[Math.Clamp(_activeResourceIndex, 0, _resources.Count - 1)].Id
+           && slotIndex == _activeSlotIndex;
+
+    private string EventAriaLabel(TmScheduleEvent e)
+        => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
+
+    private string? EventStyle(string? color) => color is null ? null
+        : $" --event-color: {color};{SchedulerColor.ReadableText(color)}";
+
+    // Roving tabindex: Left/Right move a slot, Up/Down the resource row, Enter activates the slot.
+    private async Task HandleSlotKeyDown(KeyboardEventArgs e, string resourceId, int slotIndex)
+    {
+        if (SchedulerA11y.HasModifier(e)) return;
+        var index = ResourceIndex(resourceId) * _slotsPerDay + slotIndex;
+        var target = RovingGrid.Move(index, e.Key, _slotsPerDay, _resources.Count * _slotsPerDay);
+        if (target >= 0)
+        {
+            _activeResourceIndex = target / _slotsPerDay;
+            _activeSlotIndex = target % _slotsPerDay;
+            _moveFocus = true;
+            return;
+        }
+
+        if (SchedulerA11y.IsEnterActivation(e))
+        {
+            var start = CurrentDate.Date.AddMinutes(slotIndex * SlotDuration);
+            await OnSlotClick.InvokeAsync((start, start.AddMinutes(SlotDuration)));
+        }
+    }
+
+    private Task HandleSlotKeyUp(KeyboardEventArgs e, DateTime slotStart, DateTime slotEnd)
+        => SchedulerA11y.IsSpaceActivation(e) ? OnSlotClick.InvokeAsync((slotStart, slotEnd)) : Task.CompletedTask;
+
+    private Task HandleEventKeyDown(KeyboardEventArgs e, TmScheduleEvent evt)
+        => SchedulerA11y.IsEnterActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+
+    private Task HandleEventKeyUp(KeyboardEventArgs e, TmScheduleEvent evt)
+        => SchedulerA11y.IsSpaceActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+
+    private int ResourceIndex(string resourceId)
+    {
+        for (var i = 0; i < _resources.Count; i++)
+            if (_resources[i].Id == resourceId) return i;
+        return 0;
     }
 
     private void BuildResourceEventMap()
@@ -185,26 +274,28 @@
     {
         if (OnSlotContextMenu.HasDelegate)
         {
+            var (x, y) = await SchedulerA11y.MenuPointAsync(JS, _contextMenuRef, e);
             await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
             {
                 Start = slotStart,
                 End = slotEnd,
                 ResourceId = resourceId,
-                ClientX = e.ClientX,
-                ClientY = e.ClientY
+                ClientX = x,
+                ClientY = y
             });
         }
     }
 
-    private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
+    private async Task HandleEventContextMenu(MouseEventArgs args, TmScheduleEvent evt)
     {
         if (OnEventContextMenu.HasDelegate)
         {
+            var (x, y) = await SchedulerA11y.MenuPointAsync(JS, _eventRefs.GetValueOrDefault(evt.Id), args);
             await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
             {
                 Event = evt,
-                ClientX = e.ClientX,
-                ClientY = e.ClientY
+                ClientX = x,
+                ClientY = y
             });
         }
     }
@@ -225,6 +316,19 @@
             catch (JSException) { }
             catch (InvalidOperationException) { }
             catch (TaskCanceledException) { }
+        }
+
+        if (_moveFocus)
+        {
+            _moveFocus = false;
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusRovingStop", _containerRef, ".tm-scheduler-timeline-slot[tabindex='0']");
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+            {
+                // The tabindex already moved; a missing circuit only skips the focus.
+            }
         }
     }
 

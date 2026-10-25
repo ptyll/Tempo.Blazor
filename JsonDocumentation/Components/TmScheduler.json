@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu. The toolbar view switcher is a radiogroup and the title is a polite live region.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

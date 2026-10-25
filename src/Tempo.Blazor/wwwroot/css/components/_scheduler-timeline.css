@@ -29,13 +29,18 @@
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-1, 0.25rem);
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-text-tertiary, #94a3b8);
+    color: var(--tm-text-secondary);
     text-align: center;
     border-right: 1px solid var(--tm-border-color, #f1f5f9);
 }
 
 .tm-scheduler-timeline-time-header:last-child {
     border-right: none;
+}
+
+.tm-scheduler-timeline-body {
+    display: flex;
+    flex-direction: column;
 }
 
 /* ── Resource row ── */
@@ -78,6 +83,19 @@
     cursor: pointer;
     border-right: 1px solid var(--tm-border-color, #f1f5f9);
     transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-timeline-event:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    z-index: 2;
+}
+
+/* Inset, so a slot at the row's edge does not paint its ring outside the cell. */
+.tm-scheduler-timeline-slot:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary), inset 0 0 0 4px var(--tm-bg-surface);
+    z-index: 2;
 }
 
 .tm-scheduler-timeline-slot:hover {

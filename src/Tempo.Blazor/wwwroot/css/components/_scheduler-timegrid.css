@@ -185,6 +185,20 @@
     transition: background-color 0.1s ease;
 }
 
+.tm-scheduler-timegrid-event:focus-visible,
+.tm-scheduler-timegrid-allday-event:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    z-index: 2;
+}
+
+/* Inset, so a slot at the grid's edge does not paint its ring outside the cell. */
+.tm-scheduler-timegrid-slot:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary), inset 0 0 0 4px var(--tm-bg-surface);
+    z-index: 2;
+}
+
 .tm-scheduler-timegrid-slot:hover {
     background: var(--tm-color-surface-hover, rgba(241, 245, 249, 0.5));
 }

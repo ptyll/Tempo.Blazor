@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerTimeGrid",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Reusable vertical time grid used internally by day and week views. Renders date columns with hour slots, all-day event row, overlapping event layout, drag-and-drop, and resize handles with JS interop.",
+  "description": "Reusable vertical time grid used internally by day and week views. Renders date columns with hour slots, all-day event row, overlapping event layout, drag-and-drop, and resize handles with JS interop. Accessibility: the slots share one roving tab stop (Up/Down a slot, Left/Right a column, crossing a resource column before the next day) and events are role=button. An EventTemplate must not contain its own focusable element.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

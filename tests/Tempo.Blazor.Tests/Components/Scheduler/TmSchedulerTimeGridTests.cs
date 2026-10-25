@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Scheduler;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -120,6 +121,24 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         var eventEls = cut.FindAll(".tm-scheduler-timegrid-event");
         eventEls.Count.Should().Be(1);
         eventEls[0].TextContent.Should().Contain("Meeting");
+    }
+
+    /// <summary>
+    /// A timed event suppresses the browser's context menu, the same way a slot and a month cell do.
+    /// </summary>
+    [Fact]
+    public void Timed_Event_Prevents_The_Native_Context_Menu()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Meeting", new DateTime(2025, 6, 10, 14, 0, 0), new DateTime(2025, 6, 10, 15, 0, 0))
+        };
+
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, events));
+
+        cut.Find(".tm-scheduler-timegrid-event").OuterHtml.Should().Contain("oncontextmenu").And.Contain("preventDefault");
     }
 
     /// <summary>
@@ -269,5 +288,127 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         style.Should().NotContain("--event-color",
             "an event without a colour takes the theme's event fill from CSS, not an inline fallback");
         style.Should().NotContain("#3b82f6");
+    }
+
+    /// <summary>
+    /// Roving tabindex over the slots: exactly one slot is a tab stop, never one per slot (336 in a
+    /// week). Up/Down move by a slot, Left/Right by a day, and Enter raises OnSlotClick once.
+    /// </summary>
+    [Fact]
+    public void Slots_Are_Roving_Not_336_Tab_Stops()
+    {
+        var dates = Enumerable.Range(0, 7).Select(i => new DateOnly(2025, 6, 9).AddDays(i)).ToList();
+        var clicks = new List<(DateTime Start, DateTime End)>();
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, dates)
+            .Add(c => c.SlotDuration, 30)
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, clicks.Add)));
+
+        var slots = cut.FindAll(".tm-scheduler-timegrid-slot");
+        slots.Count.Should().Be(7 * 48);
+        slots.Count(s => s.GetAttribute("tabindex") == "0").Should().Be(1,
+            "a week of 30-minute slots is one tab stop, not 336");
+        slots.Count(s => s.GetAttribute("tabindex") == "-1").Should().Be(slots.Count - 1);
+
+        var active = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        active.GetAttribute("data-start").Should().Be("2025-06-09T00:00");
+
+        active.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']").GetAttribute("data-start").Should().Be("2025-06-09T00:30");
+
+        cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']").GetAttribute("data-start").Should().Be("2025-06-10T00:30");
+
+        cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        var landed = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        landed.GetAttribute("data-start").Should().Be("2025-06-10T00:00");
+
+        landed.KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        clicks.Should().BeEmpty();
+        landed.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().ContainSingle();
+        clicks[0].Start.Should().Be(new DateTime(2025, 6, 10, 0, 0, 0));
+    }
+
+    /// <summary>
+    /// With resources the columns are flat (day x resource) and the arrows cross them. Exactly one
+    /// slot is a tab stop, and each slot names its resource.
+    /// </summary>
+    [Fact]
+    public void Slots_With_Resources_Have_One_Tab_Stop_And_Arrows_Cross_Resource_Columns()
+    {
+        var resources = new List<TmScheduleResource>
+        {
+            new() { Id = "room-a", Name = "Room A" },
+            new() { Id = "room-b", Name = "Room B" }
+        };
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 9), new DateOnly(2025, 6, 10)])
+            .Add(c => c.Resources, resources)
+            .Add(c => c.SlotDuration, 60));
+
+        var slots = cut.FindAll(".tm-scheduler-timegrid-slot");
+        slots.Count.Should().Be(2 * 2 * 24);
+        slots.Count(s => s.GetAttribute("tabindex") == "0").Should().Be(1);
+        slots.Should().OnlyContain(s => s.GetAttribute("data-resource") != null);
+
+        var active = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        active.GetAttribute("data-resource").Should().Be("room-a");
+
+        active.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        var moved = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        moved.GetAttribute("data-resource").Should().Be("room-b");
+        moved.GetAttribute("data-start").Should().Be("2025-06-09T00:00");
+
+        moved.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        var nextDay = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        nextDay.GetAttribute("data-resource").Should().Be("room-a");
+        nextDay.GetAttribute("data-start").Should().Be("2025-06-10T00:00");
+    }
+
+    /// <summary>
+    /// Enter and Space on a timed event and on an all-day event each raise OnEventClick once, and a
+    /// key on the event never also activates the slot behind it.
+    /// </summary>
+    [Fact]
+    public void Events_Activate_Once_And_Do_Not_Activate_The_Slot()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            new() { Title = "Standup", Start = new DateTime(2025, 6, 9, 9, 0, 0), End = new DateTime(2025, 6, 9, 10, 0, 0) },
+            new() { Title = "Holiday", Start = new DateTime(2025, 6, 9), End = new DateTime(2025, 6, 10), AllDay = true }
+        };
+        var clicks = new List<string>();
+        var slots = new List<(DateTime, DateTime)>();
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 9)])
+            .Add(c => c.Events, events)
+            .Add(c => c.OnEventClick, EventCallback.Factory.Create<TmScheduleEvent>(this, e => clicks.Add(e.Title)))
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, slots.Add)));
+
+        var timed = cut.Find(".tm-scheduler-timegrid-event");
+        timed.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        timed.KeyUp(new KeyboardEventArgs { Key = " " });
+        clicks.Should().Equal("Standup", "Standup");
+
+        var allDay = cut.Find(".tm-scheduler-timegrid-allday-event");
+        allDay.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().HaveCount(3);
+        slots.Should().BeEmpty("the event's keys are fenced off the slot");
+    }
+
+    /// <summary>A day column is a labelled group, and a slot's name uses words and the culture's time.</summary>
+    [Fact]
+    public void Day_Columns_Are_Labelled_Groups()
+    {
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 9)])
+            .Add(c => c.SlotDuration, 60));
+
+        cut.FindAll("[role='group']").Should().NotBeEmpty();
+        cut.Find("[role='group']").GetAttribute("aria-label").Should().Contain("2025");
+
+        var slot = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
+        slot.GetAttribute("aria-label").Should().Contain(" to ");
     }
 }

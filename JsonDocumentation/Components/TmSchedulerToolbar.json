@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerToolbar",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Navigation toolbar for the scheduler with previous/next/today buttons, a date title, and view switcher tabs (Day, Week, Month, Agenda, Timeline). Typically used internally by TmScheduler.",
+  "description": "Navigation toolbar for the scheduler with previous/next/today buttons, a date title, and view switcher tabs (Day, Week, Month, Agenda, Timeline). Typically used internally by TmScheduler. Accessibility: the title is aria-live=polite and the view switcher is a radiogroup of radios with one roving tab stop.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

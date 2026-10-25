@@ -49,7 +49,7 @@
 </section>
 
 <!-- Basic Scheduler -->
-<section class="demo-section">
+<section class="demo-section" data-testid="scheduler-month-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Month View</h2>
@@ -137,7 +137,7 @@
 </section>
 
 <!-- Week View -->
-<section class="demo-section">
+<section class="demo-section" data-testid="scheduler-week-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Week View</h2>
@@ -157,7 +157,7 @@
 </section>
 
 <!-- Day View -->
-<section class="demo-section">
+<section class="demo-section" data-testid="scheduler-day-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Day View</h2>
@@ -177,7 +177,7 @@
 </section>
 
 <!-- Agenda View -->
-<section class="demo-section">
+<section class="demo-section" data-testid="scheduler-agenda-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Agenda View</h2>
@@ -195,7 +195,7 @@
 </section>
 
 <!-- Timeline View -->
-<section class="demo-section">
+<section class="demo-section" data-testid="scheduler-timeline-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Timeline View</h2>
@@ -378,6 +378,7 @@
         new() { Id = "4", Title = "Code Review", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
         new() { Id = "5", Title = "Sprint Planning", Start = DateTime.Today.AddDays(2).AddHours(9), End = DateTime.Today.AddDays(2).AddHours(11), Color = "#ef4444" },
         new() { Id = "6", Title = "Design Workshop", Start = DateTime.Today.AddDays(3).AddHours(13), End = DateTime.Today.AddDays(3).AddHours(16), Color = "#ec4899" },
+        new() { Id = "7", Title = "Company Holiday", Start = DateTime.Today, End = DateTime.Today.AddDays(1), AllDay = true, Color = "#8b5cf6" },
     };
 
     private List<TmScheduleEvent> _templateEvents = new()

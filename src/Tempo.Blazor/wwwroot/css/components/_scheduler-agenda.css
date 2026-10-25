@@ -58,9 +58,20 @@
     align-items: flex-start;
     gap: var(--tm-space-3, 0.75rem);
     padding: var(--tm-space-3, 0.75rem);
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    width: 100%;
     border-radius: var(--tm-radius-sm, 0.25rem);
     cursor: pointer;
     transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-agenda-event:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-scheduler-agenda-event:hover {

@@ -114,9 +114,61 @@ const ev = (target, over = {}) => ({
 // ── contract kept ───────────────────────────────────────────────────────────────────────────
 
 test('window.TempoBlazor.Scheduler keeps init, registerInstance, unregisterInstance, destroy', () => {
-    for (const name of ['init', 'registerInstance', 'unregisterInstance', 'destroy', 'cancelResize']) {
+    for (const name of ['init', 'registerInstance', 'unregisterInstance', 'destroy', 'cancelResize', 'focusRovingStop', 'attachScrollGuard', 'detachScrollGuard', 'elementPoint']) {
         assert.equal(typeof scheduler[name], 'function', name);
     }
+});
+
+test('focusRovingStop moves the DOM focus onto the one roving stop', () => {
+    const root = { querySelector: () => null };
+    scheduler.focusRovingStop(null, "[tabindex='0']");
+    scheduler.focusRovingStop(root, "[tabindex='0']");
+
+    const focused = [];
+    const stop = { focus: options => focused.push(options) };
+    root.querySelector = selector => selector === "[role='gridcell'][tabindex='0']" ? stop : null;
+    scheduler.focusRovingStop(root, "[role='gridcell'][tabindex='0']");
+    assert.deepEqual(focused, [{ preventScroll: true }]);
+});
+
+test('the scroll guard prevents default only for an unmodified roving key on a roving stop', () => {
+    const listeners = [];
+    const root = {
+        contains: target => target && target.inside !== false,
+        addEventListener: (type, handler, capture) => listeners.push({ type, handler, capture }),
+        removeEventListener: (type, handler, capture) => {
+            const at = listeners.findIndex(l => l.type === type && l.handler === handler);
+            if (at >= 0) listeners.splice(at, 1);
+        },
+    };
+    const stop = role => ({
+        getAttribute: name => name === 'role' ? role : null,
+        closest: selector => selector === '[data-tm-roving]' ? stop(role) : null,
+    });
+    const press = (key, target, modifiers = {}) => {
+        const event = { key, target, preventDefault() { event.prevented = true; }, ...modifiers };
+        for (const listener of listeners) listener.handler(event);
+        return event.prevented === true;
+    };
+
+    scheduler.attachScrollGuard(root);
+    scheduler.attachScrollGuard(root);
+    assert.equal(listeners.length, 1, 'a second attach on the same root adds nothing');
+    assert.equal(listeners[0].capture, true, 'capture on the root, because the cell stops the bubbling keydown');
+
+    assert.equal(press('ArrowDown', stop('gridcell')), true);
+    assert.equal(press('PageDown', stop('gridcell')), true);
+    assert.equal(press(' ', stop('button')), true);
+    assert.equal(press(' ', stop('gridcell')), true);
+
+    assert.equal(press('ArrowDown', stop('gridcell'), { ctrlKey: true }), false, 'a modified chord is the browser\'s');
+    assert.equal(press(' ', stop('radio')), false, 'space on a radio keeps its native behaviour');
+    assert.equal(press('ArrowDown', { closest: () => null }), false, 'a key outside a roving stop scrolls');
+    assert.equal(press('ArrowDown', { ...stop('gridcell'), inside: false }), false, 'a key outside this scheduler scrolls');
+    assert.equal(press('a', stop('gridcell')), false);
+
+    scheduler.detachScrollGuard(root);
+    assert.equal(listeners.length, 0, 'detach removes the listener from the element it was added to');
 });
 
 test('no mouse listener is registered any more - the gesture is Pointer Events on the document', () => {

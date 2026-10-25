@@ -11,10 +11,12 @@
     }
     else
     {
+        <div role="list" aria-label="@Loc["TmScheduler_AgendaList"]">
         @foreach (var group in _groupedEvents)
         {
             var culture = CultureInfo.CurrentUICulture;
-            <div class="tm-scheduler-agenda-group">
+            <div class="tm-scheduler-agenda-group" role="listitem">
+                <div role="group" aria-label="@group.Key.ToString("D", culture)">
                 <div class="tm-scheduler-agenda-date">
                     <span class="tm-scheduler-agenda-date-day">@group.Key.ToString("dd", culture)</span>
                     <span class="tm-scheduler-agenda-date-weekday">@group.Key.ToString("dddd", culture)</span>
@@ -24,12 +26,14 @@
                     @foreach (var evt in group.Value)
                     {
                         var e = evt;
-                        <div class="tm-scheduler-agenda-event @e.CssClass"
-                             @onclick="@(() => OnEventClick.InvokeAsync(e))">
+                        <button type="button" class="tm-scheduler-agenda-event @e.CssClass"
+                                aria-label="@(EventTemplate is null ? AgendaEventLabel(e) : null)"
+                                @onclick="@(() => OnEventClick.InvokeAsync(e))">
                             <span class="tm-scheduler-agenda-event-dot"
                                   style="@(e.Color is not null ? $"background-color: {e.Color};" : "")"></span>
                             @if (EventTemplate is not null)
                             {
+                                <span class="tm-sr-only">@AgendaEventLabel(e)</span>
                                 @EventTemplate(e)
                             }
                             else
@@ -41,7 +45,7 @@
                                     }
                                     else
                                     {
-                                        @e.Start.ToString("HH:mm")@(" – ")@e.End.ToString("HH:mm")
+                                        @e.Start.ToString("t", culture)@(" – ")@e.End.ToString("t", culture)
                                     }
                                 </span>
                                 <span class="tm-scheduler-agenda-event-title">@e.Title</span>
@@ -50,11 +54,13 @@
                                     <span class="tm-scheduler-agenda-event-desc">@e.Description</span>
                                 }
                             }
-                        </div>
+                        </button>
                     }
+                </div>
                 </div>
             </div>
         }
+        </div>
     }
 </div>
 
@@ -83,6 +89,9 @@
     {
         BuildGroupedEvents();
     }
+
+    private string AgendaEventLabel(TmScheduleEvent e)
+        => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
 
     private void BuildGroupedEvents()
     {

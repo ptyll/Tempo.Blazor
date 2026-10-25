@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerEventItem",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Renders a single scheduler event with a color dot, time label, and title. Supports a custom RenderFragment template for fully customized event rendering.",
+  "description": "Renders a single scheduler event with a color dot, time label, and title. Supports a custom RenderFragment template for fully customized event rendering. Accessibility: the item is role=button with an accessible name carrying the title and time range, activated by Enter and Space exactly once.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

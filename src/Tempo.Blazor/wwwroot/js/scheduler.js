@@ -24,6 +24,27 @@
     })();
 
     var HANDLE_SELECTOR = '.tm-scheduler-event-resize-handle';
+    var ROVING_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+
+    /**
+     * Whether a keydown would scroll the page instead of moving the roving stop. Space is guarded
+     * only on a button or a grid cell; a modified chord is the browser's own gesture.
+     * @param {{ key?: string, altKey?: boolean, ctrlKey?: boolean, metaKey?: boolean, shiftKey?: boolean, target?: any }} event
+     */
+    function shouldSuppressRovingScroll(event) {
+        if (!event) return false;
+        var key = event.key;
+        var isSpace = key === ' ' || key === 'Spacebar';
+        if (!isSpace && ROVING_KEYS.indexOf(key) < 0) return false;
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') return false;
+        var stop = target.closest('[data-tm-roving]');
+        if (!stop) return false;
+        if (!isSpace) return true;
+        var role = stop.getAttribute && stop.getAttribute('role');
+        return role === 'button' || role === 'gridcell';
+    }
     var MIN_SIZE = 10;       // px: an event is never dragged smaller than this
     var THRESHOLD = 2;       // px of movement before a mouse/pen press becomes a resize
     var LONG_PRESS_MS = 400; // touch only: a quick swipe scrolls; hold, then drag, resizes
@@ -75,6 +96,39 @@
          * Register a .NET instance reference for a scheduler container element.
          * Called from C# OnAfterRenderAsync.
          */
+        /**
+         * One keydown listener per scheduler root that stops the browser scrolling the page while
+         * the roving keyboard moves inside it. Only a roving stop is guarded, and a modified chord
+         * is left to the browser. Losing this script only restores the scrolling.
+         */
+        attachScrollGuard: function (root) {
+            if (!root || root.__tmSchedulerScrollGuard) return;
+            var handler = function (event) {
+                // Only a key whose target is inside this scheduler. A document listener would also
+                // swallow the arrows of a grid the page hosts beside it.
+                if (!root.contains(event.target)) return;
+                if (!shouldSuppressRovingScroll(event)) return;
+                event.preventDefault();
+            };
+            // Capture on the root: the cell stops a bubbling keydown, so a bubble listener never sees it.
+            root.addEventListener('keydown', handler, true);
+            root.__tmSchedulerScrollGuard = handler;
+        },
+
+        /** Removes the guard from the element it was added to, in the same phase. */
+        detachScrollGuard: function (root) {
+            if (!root || !root.__tmSchedulerScrollGuard) return;
+            root.removeEventListener('keydown', root.__tmSchedulerScrollGuard, true);
+            delete root.__tmSchedulerScrollGuard;
+        },
+
+        /** The element's viewport box, so a keyboard context menu can open on the cell itself. */
+        elementPoint: function (element) {
+            if (!element || typeof element.getBoundingClientRect !== 'function') return [0, 0];
+            var box = element.getBoundingClientRect();
+            return [box.left, box.top];
+        },
+
         registerInstance: function (element, dotNetRef) {
             if (element) {
                 this._dotNetRefs.set(element, dotNetRef);
@@ -89,6 +143,23 @@
             if (element) {
                 this._dotNetRefs.delete(element);
             }
+        },
+
+        /**
+         * Move the DOM focus onto the roving stop the keyboard handler just selected. The tabindex
+         * change alone leaves the focus on the element the key was pressed in. preventScroll asks the
+         * browser not to jump; it ignores that for a cell below the fold, so the page scroll is put back.
+         */
+        focusRovingStop: function (root, selector) {
+            if (!root) return;
+            var stop = root.querySelector(selector);
+            if (!stop || typeof stop.focus !== 'function') return;
+            // The browser scrolls a newly focused cell into view even with preventScroll, which
+            // jumps the page by a viewport. Remember the scroll and put it back.
+            var x = window.scrollX;
+            var y = window.scrollY;
+            try { stop.focus({ preventScroll: true }); } catch (e) { stop.focus(); }
+            if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
         },
 
         /**

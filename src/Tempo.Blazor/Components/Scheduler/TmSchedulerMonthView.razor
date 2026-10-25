@@ -2,25 +2,43 @@
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Pickers
 @using System.Globalization
+@inject IJSRuntime JS
 
-<div class="tm-scheduler-month">
-    <div class="tm-scheduler-month-grid">
-        @foreach (var header in _dayHeaders)
+<div class="tm-scheduler-month" @ref="_gridRef">
+    <div class="tm-scheduler-month-grid" role="grid" aria-label="@Loc["TmScheduler_CalendarGrid"]"
+         aria-describedby="@_hintId" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End PageUp PageDown">
+        <span id="@_hintId" class="tm-sr-only">@Loc["TmScheduler_GridKeyboardHint"]</span>
+        <div class="tm-scheduler-month-header-row" role="row">
+            @foreach (var header in _dayHeaders)
+            {
+                <div class="tm-scheduler-month-day-header" role="columnheader">@header</div>
+            }
+        </div>
+        @for (var row = 0; row < _days.Count / 7; row++)
         {
-            <div class="tm-scheduler-month-day-header">@header</div>
-        }
-        @foreach (var day in _days)
-        {
-            var d = day;
+            var rowIndex = row;
+            <div class="tm-scheduler-month-row" role="row">
+            @for (var col = 0; col < 7; col++)
+            {
+            var d = _days[rowIndex * 7 + col];
             var isOther = d.Month != CurrentDate.Month;
             var isToday = d == DateOnly.FromDateTime(Today);
             var css = "tm-scheduler-month-day"
                 + (isOther ? " tm-scheduler-month-day--other" : "")
                 + (isToday ? " tm-scheduler-month-day--today" : "");
 
-            <div class="@css"
+            @* The cell is a non-native focusable: Enter activates on keydown, Space on keyup. *@
+            <div @key="d" class="@css"
+                 role="gridcell"
+                 tabindex="@(d == ActiveDate ? "0" : "-1")"
+                 aria-current="@(isToday ? "date" : null)"
+                 aria-label="@DayLabel(d)"
+                 data-tm-roving="@_rovingId"
                  data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                 @ref="_cellRefs[d]"
                  @onclick="@(() => HandleDayClick(d))"
+                 @onkeydown="@(e => HandleDayKeyDown(e, d))"
+                 @onkeyup="@(e => HandleDayKeyUp(e, d))"
                  @ondragover:preventDefault="true"
                  @ondrop="@(() => HandleDrop(d))"
                  @oncontextmenu="@(e => HandleDayContextMenu(e, d))"
@@ -35,24 +53,36 @@
                     @foreach (var evt in visible)
                     {
                         var e = evt;
-                        <div class="tm-scheduler-month-event @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @e.CssClass"
-                             style="@(e.Color is not null ? $"--event-color: {e.Color};" : "")"
+                        @* The event is a non-native focusable nested in the emulating cell, so its
+                           keys are fenced off the cell's handler. *@
+                        <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @e.CssClass"
+                             role="button"
+                             tabindex="@(d == ActiveDate ? "0" : "-1")"
+                             aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
+                             data-tm-roving="@_rovingId"
+                             style="@EventStyle(e)"
                              title="@e.Title"
                              draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
                              @ondragstart="@(() => HandleDragStart(e))"
                              @onclick="@(() => HandleEventClick(e))"
                              @onclick:stopPropagation="true"
-                             @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
+                             @onkeydown="@(k => HandleEventKeyDown(k, e))"
+                             @onkeydown:stopPropagation="true"
+                             @onkeyup="@(k => HandleEventKeyUp(k, e))"
+                             @onkeyup:stopPropagation="true"
+                             @oncontextmenu="@(args => HandleEventContextMenu(args, e))"
+                             @oncontextmenu:preventDefault="true"
                              @oncontextmenu:stopPropagation="true">
                             @if (EventTemplate is not null)
                             {
+                                <span class="tm-sr-only">@EventAriaLabel(e)</span>
                                 @EventTemplate(e)
                             }
                             else
                             {
                                 @if (!e.AllDay)
                                 {
-                                    <span class="tm-scheduler-month-event-time">@e.Start.ToString("HH:mm")</span>
+                                    <span class="tm-scheduler-month-event-time">@e.Start.ToString("t", CultureInfo.CurrentUICulture)</span>
                                 }
                                 <span class="tm-scheduler-month-event-title">@e.Title</span>
                             }
@@ -62,11 +92,16 @@
                     @if (remaining > 0)
                     {
                         <button type="button" class="tm-scheduler-month-more"
+                                tabindex="@(d == ActiveDate ? "0" : "-1")"
+                                @onkeydown:stopPropagation="true"
+                                @onkeyup:stopPropagation="true"
                                 aria-label="@Loc.Plural("TmScheduler_MoreAria", remaining, SchedulerRange.FormatDayTitle(d.ToDateTime(TimeOnly.MinValue), CultureInfo.CurrentUICulture))"
                                 @onclick="@(() => HandleMoreClick(d))"
                                 @onclick:stopPropagation="true">@string.Format(Loc["TmScheduler_More"], remaining)</button>
                     }
                 }
+            </div>
+            }
             </div>
         }
     </div>
@@ -75,6 +110,14 @@
 @code {
     private IReadOnlyList<DateOnly> _days = [];
     private IReadOnlyList<string> _dayHeaders = [];
+    private DateOnly _activeDate;
+    private (int Year, int Month) _renderedMonth;
+    private ElementReference _gridRef;
+    private readonly Dictionary<DateOnly, ElementReference> _cellRefs = new();
+    private readonly Dictionary<string, ElementReference> _eventRefs = new();
+    private bool _focusAfterRender;
+    private readonly string _hintId = "tm-scheduler-hint-" + Guid.NewGuid().ToString("N");
+    private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
     private Dictionary<DateOnly, List<TmScheduleEvent>> _eventMap = new();
     private TmScheduleEvent? _draggedEvent;
 
@@ -120,14 +163,51 @@
     /// <summary>Fires when the "+N more" button of a day cell is activated, with that day's date.</summary>
     [Parameter] public EventCallback<DateTime> OnMoreClick { get; set; }
 
+    /// <summary>
+    /// Fires when PageUp/PageDown moves the roving stop into another month, with that month's date.
+    /// The scheduler binds it so the grid follows the keyboard; a host rendering the view alone can
+    /// bind it to change <c>CurrentDate</c>.
+    /// </summary>
+    [Parameter] public EventCallback<DateTime> CurrentDateChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Spent only once the grid contains the date the key asked for, so a PageUp/PageDown that
+        // is still waiting on the host does not focus a stale cell.
+        if (!_focusAfterRender || !_days.Contains(_activeDate)) return;
+        _focusAfterRender = false;
+        try
+        {
+            if (_cellRefs.TryGetValue(ActiveDate, out var cell))
+                await cell.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            // The circuit is gone or the element was replaced mid-key: the tabindex already moved.
+        }
+    }
+
     protected override void OnParametersSet()
     {
         var culture = CultureInfo.CurrentUICulture;
         var firstDay = (DayOfWeek)SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);
         _days = SchedulerRange.MonthDays(CurrentDate, FirstDayOfWeek);
         _dayHeaders = DateTimeHelpers.GetDayHeaders(culture, firstDay);
+        // The stop opens on the displayed date, and follows the host when it changes the month.
+        // A keyboard move inside the same month keeps its own stop.
+        var month = (CurrentDate.Year, CurrentDate.Month);
+        if (_activeDate == default || month != _renderedMonth)
+        {
+            _activeDate = new DateOnly(CurrentDate.Year, CurrentDate.Month,
+                Math.Min(CurrentDate.Day, DateTime.DaysInMonth(CurrentDate.Year, CurrentDate.Month)));
+            // The cells are new, so a reference captured for last month's date must not outlive it.
+            _cellRefs.Clear();
+        }
+        _renderedMonth = month;
         BuildEventMap();
     }
+
+    private DateOnly ActiveDate => _days.Contains(_activeDate) ? _activeDate : _days.FirstOrDefault();
 
     private void BuildEventMap()
     {
@@ -154,6 +234,63 @@
 
     private List<TmScheduleEvent> GetEventsForDate(DateOnly date)
         => _eventMap.TryGetValue(date, out var list) ? list : [];
+
+    private string EventAriaLabel(TmScheduleEvent e)
+        => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
+
+    private string DayLabel(DateOnly date)
+        => SchedulerA11y.DayCellLabel(Loc, date, GetEventsForDate(date).Count, CultureInfo.CurrentUICulture);
+
+    // A consumer colour that white text cannot clear keeps the solid fill and switches the text.
+    private string? EventStyle(TmScheduleEvent e) => e.Color is null ? null
+        : $"--event-color: {e.Color};{SchedulerColor.ReadableText(e.Color)}";
+
+    // Roving tabindex over the day cells. PageUp/PageDown step a month and keep the day number.
+    private async Task HandleDayKeyDown(KeyboardEventArgs e, DateOnly date)
+    {
+        if (SchedulerA11y.HasModifier(e)) return;
+        var index = _days.ToList().IndexOf(date);
+        if (index < 0) return;
+
+        var target = RovingGrid.Move(index, e.Key, 7, _days.Count);
+        if (target >= 0)
+        {
+            _activeDate = _days[target];
+            _focusAfterRender = true;
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "PageDown": await MoveActiveMonth(1, date); break;
+            case "PageUp": await MoveActiveMonth(-1, date); break;
+            case "Enter" when SchedulerA11y.IsEnterActivation(e):
+                await HandleDayClick(date);
+                break;
+        }
+    }
+
+    private Task HandleDayKeyUp(KeyboardEventArgs e, DateOnly date)
+        => SchedulerA11y.IsSpaceActivation(e) ? HandleDayClick(date) : Task.CompletedTask;
+
+    private async Task MoveActiveMonth(int delta, DateOnly date)
+    {
+        var target = date.AddMonths(delta);
+        var daysInMonth = DateTime.DaysInMonth(target.Year, target.Month);
+        var landed = new DateOnly(target.Year, target.Month, Math.Min(date.Day, daysInMonth));
+        // No host to follow into the other month: stay on the nearest day the grid already shows.
+        if (!CurrentDateChanged.HasDelegate)
+            landed = _days.Contains(landed) ? landed : _days.OrderBy(d => Math.Abs(d.DayNumber - landed.DayNumber)).First();
+        _activeDate = landed;
+        _focusAfterRender = true;
+        await CurrentDateChanged.InvokeAsync(landed.ToDateTime(TimeOnly.MinValue));
+    }
+
+    private Task HandleEventKeyDown(KeyboardEventArgs e, TmScheduleEvent evt)
+        => SchedulerA11y.IsEnterActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
+
+    private Task HandleEventKeyUp(KeyboardEventArgs e, TmScheduleEvent evt)
+        => SchedulerA11y.IsSpaceActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
 
     private Task HandleDayClick(DateOnly date)
     {
@@ -184,28 +321,26 @@
 
     private async Task HandleDayContextMenu(MouseEventArgs e, DateOnly date)
     {
-        if (OnSlotContextMenu.HasDelegate)
+        if (!OnSlotContextMenu.HasDelegate) return;
+        var (x, y) = await SchedulerA11y.MenuPointAsync(JS, _cellRefs.GetValueOrDefault(date), e);
+        await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
         {
-            await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
-            {
-                Start = date.ToDateTime(TimeOnly.MinValue),
-                End = date.ToDateTime(new TimeOnly(23, 59, 59)),
-                ClientX = e.ClientX,
-                ClientY = e.ClientY
-            });
-        }
+            Start = date.ToDateTime(TimeOnly.MinValue),
+            End = date.ToDateTime(new TimeOnly(23, 59, 59)),
+            ClientX = x,
+            ClientY = y
+        });
     }
 
-    private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
+    private async Task HandleEventContextMenu(MouseEventArgs args, TmScheduleEvent evt)
     {
-        if (OnEventContextMenu.HasDelegate)
+        if (!OnEventContextMenu.HasDelegate) return;
+        var (x, y) = await SchedulerA11y.MenuPointAsync(JS, _eventRefs.GetValueOrDefault(evt.Id), args);
+        await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
         {
-            await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
-            {
-                Event = evt,
-                ClientX = e.ClientX,
-                ClientY = e.ClientY
-            });
-        }
+            Event = evt,
+            ClientX = x,
+            ClientY = y
+        });
     }
 }

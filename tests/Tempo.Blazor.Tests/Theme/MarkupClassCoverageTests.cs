@@ -204,7 +204,8 @@ public sealed class MarkupClassCoverageTests
         // F10's table dialog emits this label hook with no rule (2.9.1).
         "tm-rte-table-preview-label",
         "tm-rte-token-loading",
-        "tm-scheduler-event",
+        // TmSchedulerEventItem now styles .tm-scheduler-event (the :focus-visible ring), so the
+        // entry left the unstyled population.
         "tm-scheduler-event-dot",
         "tm-scheduler-event-time",
         "tm-scheduler-event-title",

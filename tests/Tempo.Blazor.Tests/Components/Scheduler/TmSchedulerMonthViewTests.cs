@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Scheduler;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -113,6 +114,32 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
             .Add(c => c.Events, events));
 
         cut.FindAll(".tm-scheduler-month-event--allday").Count.Should().Be(1);
+    }
+
+    /// <summary>
+    /// The shared title colour is the theme's primary text, which fails on a solid all-day fill.
+    /// An all-day title inherits the chip's own text colour instead.
+    /// </summary>
+    [Fact]
+    public void AllDay_Title_Inherits_The_Event_Text_Colour()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Holiday", new DateTime(2025, 6, 10), new DateTime(2025, 6, 11), allDay: true, color: "#f59e0b")
+        };
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events));
+
+        var chip = cut.Find(".tm-scheduler-month-event--allday");
+        chip.GetAttribute("style").Should().Contain("--event-text-color");
+        chip.QuerySelector(".tm-scheduler-month-event-title").Should().NotBeNull();
+
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_scheduler-month.css"));
+        css.Should().Contain(".tm-scheduler-month-event--allday .tm-scheduler-month-event-title",
+            "the shared title colour paints theme text on the solid fill; the all-day title must inherit the chip's own");
+        css.Should().Contain("color: inherit");
     }
 
     [Fact]
@@ -301,5 +328,257 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
         var label = cut.Find(".tm-scheduler-month-more").GetAttribute("aria-label") ?? string.Empty;
         label.Should().Contain("2025");
         label.Should().Contain("10");
+    }
+
+    /// <summary>
+    /// A11y: the month is an ARIA grid — one row of column headers and six rows of grid cells.
+    /// June 2025 is a Monday-first month, so the first cell is 26 May.
+    /// </summary>
+    [Fact]
+    public void Month_Has_Grid_Rows_And_Gridcells()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
+
+        var grid = cut.Find("[role='grid']");
+        grid.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+
+        var headers = cut.FindAll("[role='columnheader']");
+        headers.Count.Should().Be(7);
+
+        var rows = cut.FindAll("[role='row']");
+        rows.Count.Should().Be(7, "one header row plus the six week rows");
+        rows.Skip(1).Should().OnlyContain(r => r.QuerySelectorAll("[role='gridcell']").Length == 7);
+
+        cut.FindAll("[role='gridcell']").Count.Should().Be(42);
+        cut.Find("[role='gridcell'][data-date='2025-05-26']").Should().NotBeNull();
+    }
+
+    /// <summary>Roving tabindex: exactly one day cell is a tab stop, the rest are tabindex -1.</summary>
+    [Fact]
+    public void Month_Roving_Tabindex_Single_Tab_Stop()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
+
+        var cells = cut.FindAll("[role='gridcell']");
+        cells.Count(c => c.GetAttribute("tabindex") == "0").Should().Be(1);
+        cells.Count(c => c.GetAttribute("tabindex") == "-1").Should().Be(41);
+    }
+
+    /// <summary>
+    /// Arrow keys move the roving stop: Right by a day, Down by a week, Home/End across the row,
+    /// PageUp/PageDown by a month (the grid rebuilds around the new month).
+    /// </summary>
+    [Fact]
+    public void Month_ArrowRight_Moves_Focus_To_Next_Day()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
+
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-15",
+            "the roving stop opens on the displayed date, not the first of the month");
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-16");
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-23");
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "Home" });
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-23");
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "End" });
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-29");
+
+        // PageDown asks the host for the next month, keeping the day number.
+        var requested = new List<DateTime>();
+        cut.Render(p => p
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, requested.Add)));
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "PageDown" });
+        requested.Should().ContainSingle().Which.Should().Be(new DateTime(2025, 7, 29));
+
+        cut.Render(p => p.Add(c => c.CurrentDate, new DateTime(2025, 7, 15)));
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-07-15");
+        cut.FindAll("[role='gridcell']").Count.Should().Be(42);
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "PageUp" });
+        requested.Should().HaveCount(2);
+        requested[1].Should().Be(new DateTime(2025, 6, 15));
+    }
+
+    /// <summary>
+    /// Enter on a day cell raises OnSlotClick exactly once. A held key (Repeat) must not re-fire,
+    /// and Space activates on keyup, matching the native button split.
+    /// </summary>
+    [Fact]
+    public void Month_Enter_On_Day_Invokes_OnSlotClick_Once()
+    {
+        var clicks = new List<(DateTime Start, DateTime End)>();
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.OnSlotClick, EventCallback.Factory.Create<(DateTime, DateTime)>(this, clicks.Add)));
+
+        var cell = ActiveCell(cut);
+        cell.KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        clicks.Should().BeEmpty("a held Enter must not re-activate");
+
+        cell.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().ContainSingle();
+        clicks[0].Start.Should().Be(new DateTime(2025, 6, 15));
+
+        cell.KeyDown(new KeyboardEventArgs { Key = " " });
+        clicks.Should().ContainSingle("Space activates on keyup, not keydown");
+        cell.KeyUp(new KeyboardEventArgs { Key = " " });
+        clicks.Should().HaveCount(2);
+    }
+
+    /// <summary>
+    /// PageUp/PageDown keep the day number across month lengths, and a host that does not bind the
+    /// callback keeps the stop inside the rendered grid.
+    /// </summary>
+    [Fact]
+    public void Month_PageKeys_Clamp_The_Day_And_Stay_Put_Without_A_Delegate()
+    {
+        var requested = new List<DateTime>();
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 12, 31))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, requested.Add)));
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "PageDown" });
+        requested.Should().ContainSingle().Which.Should().Be(new DateTime(2026, 1, 31));
+
+        cut.Render(p => p.Add(c => c.CurrentDate, new DateTime(2026, 1, 31)));
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "PageDown" });
+        requested.Should().HaveCount(2);
+        requested[1].Should().Be(new DateTime(2026, 2, 28), "February 2026 has 28 days");
+
+        var clamped = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
+        ActiveCell(clamped).KeyDown(new KeyboardEventArgs { Key = "PageDown" });
+        ActiveCell(clamped).GetAttribute("data-date").Should().Be("2025-07-06",
+            "without a delegate the stop stays on the nearest day the rendered grid shows");
+    }
+
+    /// <summary>
+    /// Shift+F10 raises the context menu exactly once, through the native contextmenu path, and the
+    /// coordinates come from the element rather than from a synthetic zero point.
+    /// </summary>
+    [Fact]
+    public void Month_ContextMenu_Fires_Once_With_Element_Coordinates()
+    {
+        var menus = new List<(double X, double Y)>();
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0))
+        };
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.OnSlotContextMenu, EventCallback.Factory.Create<SchedulerSlotContext>(this, c => menus.Add((c.ClientX, c.ClientY))))
+            .Add(c => c.OnEventContextMenu, EventCallback.Factory.Create<SchedulerEventContext>(this, c => menus.Add((c.ClientX, c.ClientY)))));
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "F10", ShiftKey = true });
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ContextMenu" });
+        menus.Should().BeEmpty("the key itself never opens the menu; the native contextmenu event does");
+
+        ActiveCell(cut).ContextMenu(new MouseEventArgs { ClientX = 40, ClientY = 60 });
+        menus.Should().ContainSingle();
+        menus[0].X.Should().BeGreaterThan(0);
+        menus[0].Y.Should().BeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// Alt, Ctrl and Meta arrows are the browser's gestures, so the roving stop ignores them.
+    /// </summary>
+    [Fact]
+    public void Month_Ignores_Modified_Arrows()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
+
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ArrowRight", AltKey = true });
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ArrowRight", CtrlKey = true });
+        ActiveCell(cut).KeyDown(new KeyboardEventArgs { Key = "ArrowDown", MetaKey = true });
+        ActiveCell(cut).GetAttribute("data-date").Should().Be("2025-06-15");
+    }
+
+    /// <summary>
+    /// The grid has one tab stop: events and the overflow button are reachable only inside the
+    /// active cell, so Tab from that cell enters them and Tab elsewhere skips them.
+    /// </summary>
+    [Fact]
+    public void Month_Events_Are_Tab_Stops_Only_Inside_The_Active_Cell()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0)),
+            Evt("Review", new DateTime(2025, 6, 16, 14, 0, 0), new DateTime(2025, 6, 16, 15, 0, 0))
+        };
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events));
+
+        var active = ActiveCell(cut);
+        active.QuerySelectorAll("[role='button'][tabindex='0']").Length.Should().Be(1);
+        cut.Find("[data-date='2025-06-16']").QuerySelectorAll("[role='button'][tabindex='0']").Length.Should().Be(0);
+        cut.FindAll("[tabindex='0']").Count.Should().Be(2, "the active cell plus its one event");
+    }
+
+    /// <summary>
+    /// Today carries aria-current, and a cell's name is the long date plus the plural event count.
+    /// </summary>
+    [Fact]
+    public void Month_Day_Label_Names_The_Date_And_The_Event_Count()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0)),
+            Evt("Review", new DateTime(2025, 6, 15, 14, 0, 0), new DateTime(2025, 6, 15, 15, 0, 0))
+        };
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Today, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events));
+
+        var today = cut.Find("[data-date='2025-06-15']");
+        today.GetAttribute("aria-current").Should().Be("date");
+        today.GetAttribute("aria-label").Should().Contain("2025").And.Contain("2 events");
+
+        cut.Find("[data-date='2025-06-16']").GetAttribute("aria-label").Should().Contain("no events");
+        cut.Find("[role='grid']").GetAttribute("aria-describedby").Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>
+    /// A templated event carries no aria-label of its own; the time is a screen-reader prefix so the
+    /// template's own text stays the visible name.
+    /// </summary>
+    [Fact]
+    public void Month_Templated_Event_Has_A_Screen_Reader_Prefix_Instead_Of_An_Aria_Label()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0))
+        };
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.EventTemplate, e => builder => builder.AddContent(0, e.Title)));
+
+        var item = cut.Find(".tm-scheduler-month-event");
+        item.GetAttribute("aria-label").Should().BeNull();
+        item.QuerySelector(".tm-sr-only").Should().NotBeNull();
+        item.InnerHtml.Should().Contain("Standup");
+    }
+
+    private static AngleSharp.Dom.IElement ActiveCell(IRenderedComponent<TmSchedulerMonthView> cut)
+        => cut.Find("[role='gridcell'][tabindex='0']");
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("Repo root not found.");
     }
 }

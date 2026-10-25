@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerTimelineView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Horizontal timeline view with resource rows and 24-hour time slots. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop.",
+  "description": "Horizontal timeline view with resource rows and 24-hour time slots. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). An EventTemplate must not contain its own focusable element.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -78,6 +78,7 @@
   "cssClasses": [
     "tm-scheduler-timeline",
     "tm-scheduler-timeline-header",
+    "tm-scheduler-timeline-body",
     "tm-scheduler-timeline-resource-header",
     "tm-scheduler-timeline-time-header",
     "tm-scheduler-timeline-row",
