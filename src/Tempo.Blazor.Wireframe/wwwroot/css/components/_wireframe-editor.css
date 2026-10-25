@@ -2761,6 +2761,70 @@
     flex-shrink: 0;
   }
 
+  /* The phone LAYOUT decides the target size, not the pointer: a narrow desktop window, a docked browser side panel or a touchless phone emulator
+     resolve to this layout with `(pointer: fine)`, where every `(pointer: coarse)` rule above and below stays off. Mirror them here so the header
+     chrome, the sheet tabs, the Pages / Layers rows and the title are 44 px with a mouse too (WireframeMobileMouseE2ETests). */
+  .tm-wd-editor .tm-toolbar-btn,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__title,
+  .tm-wd-editor__page-tab,
+  .tm-wd-editor__page-tab-add,
+  .tm-wd-editor__page-tab-dup,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-editor-shell__tab,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-side__tabs .tm-tab,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__item,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__add,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__item,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__name,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__move-section select,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__move-section .tm-select {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-toolbar-btn--icon-only,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__page-tab-add {
+    min-inline-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__name {
+    display: flex;
+    align-items: center;
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__active,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__visibility,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__lock,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__delete,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__add-btn,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__toggle,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__row-menu .tm-context-menu__trigger,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__row-menu .tm-context-menu__trigger {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__select {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  /* Nothing the flow needs is hover-only: the trash of a layer row ("quiet on a fine pointer") is always shown on the phone layout, or - when
+     the list is too narrow for five finger-sized targets - steps aside for the row menu's Delete entry exactly like on a coarse pointer. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__delete {
+    opacity: 1;
+  }
+
+  /* Drag-and-drop reorder is not the phone's path (the row menu / Alt+Arrow carry it): the grip would only steal width from the name. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__drag-handle {
+    display: none;
+  }
+
+  @container tm-wd-layers-list (width <= 22rem) {
+    .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__delete {
+      display: none;
+    }
+  }
+
   /* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end of
      its canvas region (the editor no longer overrides it, see above). The page is re-fitted into the remaining room by the script
      (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. */
@@ -2783,8 +2847,10 @@
   }
 }
 
-/* The context action sheet (phone): finger-sized, wrapping rows even with a fine pointer (a narrow desktop window is still the phone layout). */
-.tm-wd-editor__context-sheet .tm-wd-editor__context-item {
+/* The context action sheet (phone): finger-sized, wrapping rows even with a fine pointer (a narrow desktop window is still the phone layout).
+   Keyed on the core sheet root, not on a class of ours: TmOverlayPanel ignores `Class` in its sheet presentation, so the former
+   `.tm-wd-editor__context-sheet` selector never matched anything and the rows were only 44 px under `(pointer: coarse)`. */
+.tm-overlay-panel-sheet .tm-wd-editor__context-item {
   display: flex;
   align-items: center;
   min-block-size: var(--tm-touch-target);

@@ -1840,8 +1840,8 @@ window.tmWireframeDesigner = {
         // The layers and pages panels own every key typed inside them (radio roaming, Alt+Arrow reorder, F2,
         // Delete/Escape on a control), and so do the tablet overlay panels and the MOBILE sheet of the shell: none of them may also act on the canvas
         // selection (nudge, delete, clear). The sheet matters most for Escape: the canvas used to consume it (clear selection + preventDefault), so the
-        // sheet's own focus trap saw a defaultPrevented key and never closed - a keyboard user was stuck in the sheet.
-        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-editor-shell__overlay, .tm-editor-shell__sheet')) return;
+        // sheet's own focus trap saw a defaultPrevented key and never closed - a keyboard user was stuck in the sheet. The phone's CONTEXT ACTION SHEET\n        // (.tm-overlay-panel-sheet, opened by a right click / long-press / Shift+F10) is the same kind of surface: its Escape belongs to its own drawer.
+        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-editor-shell__overlay, .tm-editor-shell__sheet, .tm-overlay-panel-sheet')) return;
 
         const ids = [...inst.selectedIds];
 

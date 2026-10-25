@@ -260,6 +260,13 @@ In an editor container **below 768 px** (`data-editor-layout="mobile"`) the edit
 download: the link with the `download` attribute opens the file in a new tab (PNG / PDF / SVG / JSON are all viewable) and the user saves it from the share sheet - a platform
 limit, not something the component can change.
 
+**The layout, not the pointer, decides (mouse on a phone layout).** A narrow desktop window, a docked browser side panel or a touchless phone emulator resolves to
+the mobile layout with `(pointer: fine)` / `(hover: hover)`. Everything above works with real mouse events - click opens the Add sheet and inserts, a click selects
+and peeks the Properties sheet, a click on the empty page deselects, Duplicate / Lock / Delete are clicks, a **right click** opens the same action sheet as a long
+press (`.tm-overlay-panel-sheet`, never the fixed anchored menu) and **Escape** closes it (the canvas key handler leaves keys typed inside any sheet - the shell sheet and
+this action sheet - to the sheet's own focus trap). The 44 px targets (`--tm-touch-target`) therefore also hang on `.tm-wd-editor` inside the `< 768 px` container query,
+not only on `(pointer: coarse)`: header tool row, page tabs, sheet tabs, Pages / Layers rows and controls, the action-sheet rows; the layer trash is not hover-only there.
+Covered by `WireframeMobileMouseE2ETests` (390x844, `HasTouch=false`); the touch twin is `WireframePhase7MobileE2ETests`.
 **Layout anchors:** `wd-mobile-tools`, `wd-zoom-overlay`, `wd-zoom-in|out|fit`, `wd-quick-actions`, `wd-quick-duplicate|lock|delete`,
 `.tm-mobile-action-bar__action[data-action-id="components|pages-layers|export"]`, `.tm-wd-editor__zoom-overlay`, `.tm-wd-quick-actions`, `[data-light-editing]` on `.tm-wd-canvas-wrap`.
 ## Phase 5 carry-forward (phase 6)

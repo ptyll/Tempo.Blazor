@@ -1269,6 +1269,19 @@ test('keys typed inside the MOBILE sheet never act on the canvas: Escape reaches
     assert.equal(c.ref.named('OnDeleteSelected').length, 0);
 });
 
+test('keys typed inside the context ACTION sheet (right click / long-press on the phone layout) never act on the canvas: Escape reaches the drawer\'s focus trap un-prevented', async () => {
+    const c = await canvas({ gridSize: 8 });
+    element(c.svg, 'a', { x: 40, y: 40 });
+    engine.setSelection(c.svg, ['a']);
+    const inActionSheet = { tagName: 'BUTTON', closest: (selector) => (selector.includes('.tm-overlay-panel-sheet') ? {} : null), matches: () => false };
+
+    const escape = key(c, 'Escape', { target: inActionSheet });
+    key(c, 'Delete', { target: inActionSheet });
+
+    assert.equal(escape.defaultPrevented, undefined, 'a prevented Escape is ignored by the sheet\'s focus trap, so the sheet could never be closed from the keyboard');
+    assert.equal(c.ref.named('OnClearSelection').length, 0, 'and the selection behind the sheet stays');
+    assert.equal(c.ref.named('OnDeleteSelected').length, 0);
+});
 test('relayout waits while a gesture is active (the sheet opens under a press) and runs when it is released', async () => {
     const c = await canvas();
     c.inst().isDragging = true;               // a press selected the element and the inspector sheet narrowed the canvas under the finger
