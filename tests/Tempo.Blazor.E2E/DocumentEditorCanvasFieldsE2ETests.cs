@@ -197,16 +197,16 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task<string> ReadBlockTextAsync(IPage page, string blockId)
-        => page.EvaluateAsync<string>(
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
-            async blockId => {
+            blockId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
                 if (!handle) {
                     return '';
                 }
 
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const blocks = Array.isArray(model?.body?.blocks) ? model.body.blocks : [];
                 const block = blocks.find(candidate => String(candidate?.id || '') === String(blockId || ''));
@@ -308,36 +308,23 @@ public sealed class DocumentEditorCanvasFieldsE2ETests : WasmTestBase
     private static async Task<PhaseE5CommandProbe> ExecuteCanvasCommandAsync(IPage page, string commandId, object payload)
     {
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                return await page.EvaluateAsync<PhaseE5CommandProbe>(
-                    """
-                    async ({ commandId, json }) => {
-                        const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
-                        const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                        const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
-                        const raw = interop.execCommand(handle, commandId, json);
-                        const parsed = JSON.parse(raw || '{}');
-                        return {
-                            handled: parsed?.handled === true,
-                            changed: parsed?.result?.changed === true,
-                            operation: String(parsed?.result?.operation || parsed?.result?.commandId || ''),
-                            debug: JSON.stringify(parsed)
-                        };
-                    }
-                    """,
-                    new { commandId, json });
+        return await CanvasInteropBridge.EvaluateAsync<PhaseE5CommandProbe>(page,
+            """
+            ({ commandId, json }) => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                const interop = window.__tmCanvasInterop;
+                const raw = interop.execCommand(handle, commandId, json);
+                const parsed = JSON.parse(raw || '{}');
+                return {
+                    handled: parsed?.handled === true,
+                    changed: parsed?.result?.changed === true,
+                    operation: String(parsed?.result?.operation || parsed?.result?.commandId || ''),
+                    debug: JSON.stringify(parsed)
+                };
             }
-            catch (PlaywrightException ex) when (attempt == 0 && ex.Message.Contains("Execution context was destroyed", StringComparison.OrdinalIgnoreCase))
-            {
-                await page.WaitForLoadStateAsync(LoadState.Load, new PageWaitForLoadStateOptions { Timeout = 20_000 });
-                await WaitForPhaseE5ReadyAsync(page);
-            }
-        }
-
-        throw new InvalidOperationException($"Canvas command '{commandId}' did not return a result.");
+            """,
+            new { commandId, json });
     }
 
     private static string CreateOutputDirectory(string viewport)

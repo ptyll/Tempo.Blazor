@@ -236,8 +236,23 @@ promise while the WASM demo host is busy, and Playwright 1.51 rewrites **every**
 
 Rule: **do not await a page-side timer/promise inside one `EvaluateAsync`.** Dispatch the events from separate synchronous
 evaluates (the round trip is the press duration) or poll with `WaitForFunctionAsync` and a synchronous predicate. When this
-message shows up, run with `DEBUG=pw:protocol` before suspecting the app or adding a retry. The other specs that catch this
-message and retry (`DocumentEditorCanvas*E2ETests` helpers) match the same shape and are candidates for the same fix.
+message shows up, run with `DEBUG=pw:protocol` before suspecting the app or adding a retry.
+
+**Document-editor canvas specs (same root cause, fixed).** Seven `DocumentEditorCanvas*E2ETests` classes (Autocorrect, Fields,
+InlineFormat, MathEquations, SearchOutlineToc, ShapesDrawings, UxFix) carried "retry on Execution context was destroyed"
+wrappers (`IsExecutionContextReset`, `EvaluateWithContextRetryAsync`, ...). Every one wrapped an `async` evaluate that did
+`await import('…/interop.mjs')` (or awaited a page timer / animation frames) and every retried failure carried a `Promise was collected`
+answer with no frame navigation, so none guarded a real navigation. They are removed together with `ContextLossRetryPolicyTests` (it
+only unit-tested the UxFix policy helpers, which no longer exist; no other user remained). The specs now read the engine through
+`CanvasInteropBridge` (loads the module once with a synchronous `WaitForFunction` predicate, parks it on `window.__tmCanvasInterop`,
+all later evaluates are synchronous) and wait for paint with `CanvasInteropBridge.WaitForFramesAsync` instead of `Task.Delay`.
+What stays from the old UxFix policy is the guard: `FrameNavigated` is counted after the page is ready and a real mid-test
+navigation fails the test. The two retained `catch (TimeoutException)` + reload loops in `OpenDocumentAsync`/`OpenPhaseE8DocumentAsync`
+are the cold-boot kind (a `GotoAsync` timeout), not context-loss retries. `CanvasEvaluateGuardTests` (browser-free) fails when a
+canvas spec matches the "Execution context was destroyed" text again or awaits a promise / `import()` inside an evaluate; ten
+canvas classes that still do the latter are listed in its frozen `NotYetConverted` set, which may only shrink.
+Verified: the seven converted classes (29 tests) pass; `InMemoryDocumentEditorProvider.SeedCanvasSearchOutlineTocDocument` now keeps an already saved document, because the demo re-runs the seeder on in-app navigation and silently replaced the edits the SearchOutlineToc specs had just saved.
+
 ## Boot readiness and cold-boot recovery
 
 `PlaywrightTestBase.WaitForAppReadyAsync` waits on **states** (`DOMContentLoaded`, the app shell, then the

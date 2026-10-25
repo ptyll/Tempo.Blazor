@@ -42,7 +42,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     /// <summary>
     /// N211: a frame navigation after the canvas page is marked ready is a finding, not a flake —
     /// but until now the evaluate retry swallowed "Execution context was destroyed" up to 4× per
-    /// call, so a mid-test reload vanished. <see cref="OpenDocumentAsync"/> registers a
+    /// call, so a mid-test reload vanished (the retry is gone: see the note at <c>_frameNavigationsSinceReady</c>). <see cref="OpenDocumentAsync"/> registers a
     /// <c>FrameNavigated</c> counter once the page is ready and this cleanup asserts it stayed at
     /// zero. A test that navigates on purpose must reset the counter itself before continuing.
     /// </summary>
@@ -249,15 +249,15 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     // Counts page-break blocks in the engine model (body blocks of type 'pageBreak').
     private static Task<int> ReadPageBreakCountAsync(IPage page)
-        => EvaluateWithContextRetryAsync<int>(page, 
+        => CanvasInteropBridge.EvaluateAsync<int>(page,
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs').then(module => {
+                return (module => {
                     const model = JSON.parse(module.getModelJson(handle) || '{}');
                     return (model?.body?.blocks || []).filter(b => String(b?.type || '').toLowerCase() === 'pagebreak').length;
-                });
+                })(window.__tmCanvasInterop);
             }
             """);
 
@@ -292,8 +292,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var lastPageIndex = enginePageCount - 1;
         await page.Locator($"[data-testid='document-page-navigator-item'][data-page-index='{lastPageIndex}']").ClickAsync();
         await page.WaitForTimeoutAsync(600);
-        var visibleAfterNav = await EvaluateWithContextRetryAsync<string>(page, 
-            "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-visible-page-indexes') || ''");
+        var visibleAfterNav = await page.EvaluateAsync<string>("() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-visible-page-indexes') || ''");
         var navigatedToLast = visibleAfterNav.Split(',').Contains(lastPageIndex.ToString());
 
         await File.WriteAllTextAsync(
@@ -329,7 +328,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b11-copy");
-        await EvaluateWithContextRetryAsync<string>(page, "value => { navigator.clipboard.writeText(value); return 'ok'; }", "SENTINEL-UX-B11");
+        await page.EvaluateAsync<string>("value => { navigator.clipboard.writeText(value); return 'ok'; }", "SENTINEL-UX-B11");
 
         await SelectCanvasTextRangeViaInteropAsync(page, OverviewBlockId, 0, 9); // "The agree"
         await OpenTextContextMenuAtAsync(page, OverviewBlockId, 4);
@@ -338,7 +337,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var copyDisabled = await page.GetByTestId("document-context-copy").IsDisabledAsync();
         await ClickTestIdViaJsAsync(page, "document-context-copy");
         await page.WaitForTimeoutAsync(400);
-        var clipboard = await EvaluateWithContextRetryAsync<string>(page, "() => navigator.clipboard.readText()");
+        var clipboard = await page.EvaluateAsync<string>("() => navigator.clipboard.readText()");
 
         await File.WriteAllTextAsync(
             Path.Combine(output, "manifest.json"),
@@ -372,7 +371,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var cutDisabled = await page.GetByTestId("document-context-cut").IsDisabledAsync();
         await ClickTestIdViaJsAsync(page, "document-context-cut");
         await page.WaitForTimeoutAsync(500);
-        var clipboard = await EvaluateWithContextRetryAsync<string>(page, "() => navigator.clipboard.readText()");
+        var clipboard = await page.EvaluateAsync<string>("() => navigator.clipboard.readText()");
         var after = await ReadBlockTextAsync(page, OverviewBlockId);
 
         await File.WriteAllTextAsync(
@@ -400,7 +399,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b12-paste");
-        await EvaluateWithContextRetryAsync<string>(page, "value => { navigator.clipboard.writeText(value); return 'ok'; }", "Zq7paste");
+        await page.EvaluateAsync<string>("value => { navigator.clipboard.writeText(value); return 'ok'; }", "Zq7paste");
 
         // Caret at the start of the overview paragraph, then paste via the context menu.
         await SelectCanvasTextRangeViaInteropAsync(page, OverviewBlockId, 0, 0);
@@ -437,12 +436,12 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await WaitForObjectPresentAsync(page, LeftWrapImageId);
 
         var output = CreateOutputDirectory("b4-caption-wrap");
-        var caption = await EvaluateWithContextRetryAsync<string>(page, 
+        var caption = await CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             objectId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs').then(module => {
+                return (module => {
                     const debug = JSON.parse(module.getRuntimeDebugSnapshotJson(handle) || '{}');
                     const blocks = [...(debug?.layout?.blocks || []), ...(debug?.render?.selectionLayout?.blocks || [])];
                     const imgs = blocks.filter(b => b?.type === 'image' || b?.captionRect || b?.captionLines);
@@ -455,7 +454,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
                         captionRectHeight: block.captionRect?.height || 0,
                         imageWidth: block.rect?.width || 0,
                     } : null);
-                });
+                })(window.__tmCanvasInterop);
             }
             """,
             LeftWrapImageId);
@@ -501,8 +500,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var fieldMenuVisible = await page.GetByTestId("document-header-footer-insert-field-menu").IsVisibleAsync();
 
         // Visual editing affordance (B6 scope 3): dim the body, dashed-frame the active slot, label the band.
-        var overlay = await EvaluateWithContextRetryAsync<string>(page, 
-            """
+        var overlay = await page.EvaluateAsync<string>("""
             () => JSON.stringify({
                 label: !!document.querySelector('[data-testid="document-canvas-hf-label"]'),
                 labelText: document.querySelector('[data-testid="document-canvas-hf-label"]')?.textContent || null,
@@ -547,12 +545,12 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b10-footer-field");
-        var footer = await EvaluateWithContextRetryAsync<string>(page, 
+        var footer = await CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs').then(module => {
+                return (module => {
                     const model = JSON.parse(module.getModelJson(handle) || '{}');
                     const footers = (model?.headersFooters || []).filter(hf => String(hf?.type || '').toLowerCase() === 'footer');
                     const runs = footers.flatMap(hf => (hf?.blocks || []).flatMap(b => b?.content?.runs || []));
@@ -561,7 +559,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
                         literalPageOne: runs.some(r => String(r?.text || '').includes('Page 1')),
                         runTypes: runs.map(r => r?.type || (r?.field ? 'field' : '?')),
                     });
-                });
+                })(window.__tmCanvasInterop);
             }
             """);
 
@@ -592,19 +590,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         // Sample the toolbar's presence over ~2s rather than a single instantaneous check: a flicker (the bug)
         // shows up as intermittent samples, "gone" as zero, and the fixed "stays" as nearly all present. A
         // single IsVisible can race a transient Blazor re-render that briefly swaps the DOM node.
-        var presence = await EvaluateWithContextRetryAsync<int[]>(page, 
-            """
-            async () => {
-                const sleep = ms => new Promise(r => setTimeout(r, ms));
-                let present = 0; const total = 20;
-                for (let i = 0; i < total; i += 1) {
-                    const el = document.querySelector('[data-testid="document-mini-toolbar"]');
-                    if (el && el.getClientRects().length > 0) present += 1;
-                    await sleep(100);
-                }
-                return [present, total];
-            }
-            """);
+        var presence = await SampleMiniToolbarPresenceAsync(page, 20);
         await ScreenshotAsync(page, Path.Combine(output, "00-after-selection.png"));
 
         var presentSamples = presence[0];
@@ -662,8 +648,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         }
 
         var presence = await SampleMiniToolbarPresenceAsync(page);
-        var toolbarMode = await EvaluateWithContextRetryAsync<string>(page, 
-            "() => document.querySelector('[data-testid=\"document-mini-toolbar\"]')?.getAttribute('data-mini-toolbar-mode') || ''");
+        var toolbarMode = await page.EvaluateAsync<string>("() => document.querySelector('[data-testid=\"document-mini-toolbar\"]')?.getAttribute('data-mini-toolbar-mode') || ''");
         var hasImagePanel = await page.GetByTestId("document-image-wrap-panel").CountAsync();
         await ScreenshotAsync(page, Path.Combine(output, "00-image-selected.png"));
 
@@ -862,8 +847,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     }
 
     private static Task<WrappedLineProbe> FindWrappedContinuationLineAsync(IPage page)
-        => EvaluateWithContextRetryAsync<WrappedLineProbe>(page, 
-            """
+        => page.EvaluateAsync<WrappedLineProbe>("""
             () => {
                 const rects = Array.from(document.querySelectorAll('[data-canvas-text-rect]'))
                     .map(node => {
@@ -906,8 +890,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             """);
 
     private static Task<CaretRect> ReadCaretRectAsync(IPage page)
-        => EvaluateWithContextRetryAsync<CaretRect>(page, 
-            """
+        => page.EvaluateAsync<CaretRect>("""
             () => {
                 const caret = document.querySelector('[data-canvas-caret][data-testid="document-canvas-caret"]')
                     || document.querySelector('[data-canvas-caret]');
@@ -921,42 +904,19 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     // flicker (intermittent) and "never shown" (zero), without racing a transient Blazor re-render.
     private static async Task<int[]> SampleMiniToolbarPresenceAsync(IPage page, int total = 15)
     {
-        // Sample per-tick from C# (one short evaluate each) so a single canvas re-paint that tears down the JS
-        // execution context costs at most one retried sample instead of failing the whole 1.5s in-browser loop.
+        // Sample per-tick from C# (one short synchronous evaluate each, the 100 ms spacing is a Playwright-side wait): an in-page
+        // awaited setTimeout loop would be one long async evaluate, the shape Chromium answers with "Promise was collected".
         var present = 0;
         for (var i = 0; i < total; i++)
         {
-            bool visible;
-            try
-            {
-                visible = await EvaluateWithContextRetryAsync<bool>(page, 
-                    """
-                    () => {
-                        const el = document.querySelector('[data-testid="document-mini-toolbar"]');
-                        return !!el && el.getClientRects().length > 0;
-                    }
-                    """);
-            }
-            catch (PlaywrightException)
-            {
-                // Execution context destroyed by a repaint — retry this sample once after a short settle.
-                await page.WaitForTimeoutAsync(100);
-                try
-                {
-                    visible = await EvaluateWithContextRetryAsync<bool>(page, 
-                        """
-                        () => {
-                            const el = document.querySelector('[data-testid="document-mini-toolbar"]');
-                            return !!el && el.getClientRects().length > 0;
-                        }
-                        """);
+            // One short SYNCHRONOUS evaluate per tick. A failure here is a finding (the page navigated / crashed), not a sample to drop.
+            var visible = await page.EvaluateAsync<bool>(
+                """
+                () => {
+                    const el = document.querySelector('[data-testid="document-mini-toolbar"]');
+                    return !!el && el.getClientRects().length > 0;
                 }
-                catch (PlaywrightException)
-                {
-                    visible = false;
-                }
-            }
-
+                """);
             if (visible)
             {
                 present += 1;
@@ -981,22 +941,21 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     // re-renders from the debounced toolbar sync, which trips Playwright's stability check even though a real
     // user click lands fine, the backdrop sitting a z-index below the menu).
     private static Task ClickTestIdViaJsAsync(IPage page, string testId)
-        => EvaluateWithContextRetryAsync(page, 
-            "id => document.querySelector(`[data-testid=\"${id}\"]`)?.click()",
+        => page.EvaluateAsync("id => document.querySelector(`[data-testid=\"${id}\"]`)?.click()",
             testId);
 
     // Reads a block's plain text from the engine model (concatenated run text).
     private static Task<string> ReadBlockTextAsync(IPage page, string blockId)
-        => EvaluateWithContextRetryAsync<string>(page, 
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             blockId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs').then(module => {
+                return (module => {
                     const model = JSON.parse(module.getModelJson(handle) || '{}');
                     const block = (model?.body?.blocks || []).find(b => String(b?.id || '') === blockId);
                     return (block?.content?.runs || []).map(r => String(r?.text || '')).join('');
-                });
+                })(window.__tmCanvasInterop);
             }
             """,
             blockId);
@@ -1004,36 +963,33 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     // B6: enter/exit header-footer editing through the engine seam (a synthetic dblclick into the band is
     // unreliable on /document-editor); still drives the real region push → contextual tab.
     private static Task EditHeaderFooterViaInteropAsync(IPage page, string type)
-        => EvaluateWithContextRetryAsync(page, 
+        => CanvasInteropBridge.EvaluateAsync(page,
             """
             type => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                    .then(module => module.editHeaderFooter(handle, type));
+                return (module => module.editHeaderFooter(handle, type))(window.__tmCanvasInterop);
             }
             """,
             type);
 
     private static Task CloseHeaderFooterViaInteropAsync(IPage page)
-        => EvaluateWithContextRetryAsync(page, 
+        => CanvasInteropBridge.EvaluateAsync(page,
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                    .then(module => module.closeHeaderFooter(handle));
+                return (module => module.closeHeaderFooter(handle))(window.__tmCanvasInterop);
             }
             """);
 
     private static Task<string> ReadSelectionRegionAsync(IPage page)
-        => EvaluateWithContextRetryAsync<string>(page, 
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                    .then(module => JSON.parse(module.getSelectionStateJson(handle) || '{}').region || 'Body');
+                return (module => JSON.parse(module.getSelectionStateJson(handle) || '{}').region || 'Body')(window.__tmCanvasInterop);
             }
             """);
 
@@ -1051,21 +1007,9 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await page.Mouse.MoveAsync((float)cx, (float)cy);
         for (var i = 0; i < 24; i++)
         {
-            bool found;
-            try
-            {
-                found = await EvaluateWithContextRetryAsync<bool>(page, 
-                    "blockId => document.querySelectorAll(`[data-canvas-text-rect][data-block-id=\"${blockId}\"]`).length >= 1",
-                    blockId);
-            }
-            catch (PlaywrightException) when (i < 23)
-            {
-                // A canvas re-paint can tear down the JS execution context mid-evaluate ("Execution context was
-                // destroyed, most likely because of a navigation"). Let the page settle and retry the probe.
-                await page.WaitForTimeoutAsync(150);
-                continue;
-            }
-
+            var found = await page.EvaluateAsync<bool>(
+                "blockId => document.querySelectorAll(`[data-canvas-text-rect][data-block-id=\"${blockId}\"]`).length >= 1",
+                blockId);
             if (found)
             {
                 return;
@@ -1078,86 +1022,39 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         throw new InvalidOperationException($"Could not scroll block {blockId} into view.");
     }
 
-    // The first evaluate after the canvas flips ready can race a transient execution-context swap (the
-    // engine mounts a fresh render pass on an idle continuation; window state survives — verified by
-    // probe). Retry THAT first loss once — N211: retrying every later call (the old attempt<4 loop)
-    // let a real mid-test reload pass silently against a fresh page. A repeated loss now fails with
-    // the number of frame navigations since ready instead of being retried away.
+    // The page-side scripts of this class are SYNCHRONOUS (module access through CanvasInteropBridge, no awaited page timers): the former
+    // "retry the first Execution context was destroyed" policy (N211) wrapped exactly the evaluates that Chromium answered with
+    // "Promise was collected" and Playwright mis-reported as a navigation (docs/e2e-test-lanes.md), so it hid a defect class instead of a
+    // transient. What stays from N211 is the guard: FrameNavigated is counted after ready and AssertNoUnexpectedFrameNavigations fails
+    // the test if the page really navigated.
     private static int _frameNavigationsSinceReady;
-
-    /// <summary>The two Playwright messages that mean "the JS context died under us" (N211).</summary>
-    internal static bool IsTransientContextLoss(PlaywrightException ex)
-        => ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal)
-           || ex.Message.Contains("because of a navigation", StringComparison.Ordinal);
-
-    /// <summary>
-    /// Retry is allowed on the FIRST evaluate attempt only — attempt 0 is the post-ready transient.
-    /// attempt &gt;= 1 means the context died AGAIN within ~250 ms: that is a navigation/reload, not
-    /// a transient, and must surface as a failure carrying the navigation count.
-    /// </summary>
-    internal static bool ShouldRetryContextLoss(PlaywrightException ex, int attempt)
-        => IsTransientContextLoss(ex) && attempt == 0;
-
-    /// <summary>The failure message for a repeated context loss — includes the navigation count.</summary>
-    internal static string ContextLossFailureMessage(int attempt, int frameNavigationsSinceReady)
-        => $"Execution context was destroyed again on evaluate retry #{attempt} — "
-           + $"{frameNavigationsSinceReady} frame navigation(s) since the page was marked ready. "
-           + "A mid-test navigation/reload is a finding, not a retryable flake (N211).";
-
-    private static Task EvaluateWithContextRetryAsync(IPage page, string expression, object? arg = null)
-        => EvaluateWithContextRetryAsync<object?>(page, expression, arg);
-
-    private static async Task<T> EvaluateWithContextRetryAsync<T>(IPage page, string expression, object? arg = null)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                return await page.EvaluateAsync<T>(expression, arg);
-            }
-            catch (PlaywrightException ex) when (IsTransientContextLoss(ex))
-            {
-                if (!ShouldRetryContextLoss(ex, attempt))
-                {
-                    throw new InvalidOperationException(
-                        ContextLossFailureMessage(attempt, Volatile.Read(ref _frameNavigationsSinceReady)), ex);
-                }
-
-                await page.WaitForTimeoutAsync(250);
-            }
-        }
-    }
-
     // Selects an image/drawing object through the engine's programmatic seam (interop.selectObject), avoiding
     // the unreliable synthetic pointer click on the full editor while still driving the real selection push.
     private static Task<string> SelectCanvasObjectViaInteropAsync(IPage page, string objectId)
-        => EvaluateWithContextRetryAsync<string>(page,
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             objectId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                    .then(module => module.selectObject(handle, objectId) || '');
+                return (module => module.selectObject(handle, objectId) || '')(window.__tmCanvasInterop);
             }
             """,
             objectId);
 
     // Selects a text range (blockId[start..end]) through the engine's programmatic seam (interop.selectTextRange).
     private static Task<string> SelectCanvasTextRangeViaInteropAsync(IPage page, string blockId, int startOffset, int endOffset)
-        => EvaluateWithContextRetryAsync<string>(page,
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
             ([blockId, startOffset, endOffset]) => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                    .then(module => module.selectTextRange(handle, blockId, startOffset, endOffset) || '');
+                return (module => module.selectTextRange(handle, blockId, startOffset, endOffset) || '')(window.__tmCanvasInterop);
             }
             """,
             new object[] { blockId, startOffset, endOffset });
 
     private static Task<int[]> ReadPageDomOrderAsync(IPage page)
-        => EvaluateWithContextRetryAsync<int[]>(page, 
-            """
+        => page.EvaluateAsync<int[]>("""
             () => Array.from(document.querySelectorAll('[data-testid="document-canvas-page"]'))
                 .map(node => Number(node.getAttribute('data-page-index') || '-1'))
             """);
@@ -1177,8 +1074,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     private static async Task<(double X, double Y)> ReadViewportCenterAsync(IPage page)
     {
-        var box = await EvaluateWithContextRetryAsync<CenterPoint>(page, 
-            """
+        var box = await page.EvaluateAsync<CenterPoint>("""
             () => {
                 const page = document.querySelector('[data-testid="document-canvas-page"]')
                     || document.querySelector('[data-testid="document-canvas-engine-root"]');
@@ -1194,8 +1090,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         // Read both drag endpoints in one evaluate, after scrolling the selection into view once, so the two
         // points are expressed in the same (post-scroll) viewport frame. Two separate ReadCanvasPointAsync
         // calls would each scroll and leave the first endpoint stale.
-        var range = await EvaluateWithContextRetryAsync<CanvasRangePoints>(page, 
-            """
+        var range = await page.EvaluateAsync<CanvasRangePoints>("""
             ([blockId, startOffset, endOffset]) => {
                 const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
                     .map(node => ({
@@ -1256,8 +1151,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)
-        => EvaluateWithContextRetryAsync<CanvasPoint>(page, 
-            """
+        => page.EvaluateAsync<CanvasPoint>("""
             ([blockId, offset]) => {
                 const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
                     .map(node => ({
@@ -1282,8 +1176,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             new object[] { blockId, offset });
 
     private static async Task<int> ReadIntAttrAsync(IPage page, string attr)
-        => await EvaluateWithContextRetryAsync<int>(page, 
-            $"() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('{attr}') || '0')");
+        => await page.EvaluateAsync<int>($"() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('{attr}') || '0')");
 
     private static Task ScreenshotAsync(IPage page, string path)
         => page.GetByTestId("document-editor-demo").ScreenshotAsync(new LocatorScreenshotOptions

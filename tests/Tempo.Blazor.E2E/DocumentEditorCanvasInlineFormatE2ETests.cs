@@ -195,37 +195,21 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
 
     private static async Task<CanvasTextRange> SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
     {
-        Exception? lastTransientException = null;
-        for (var attempt = 0; attempt < 10; attempt++)
-        {
-            try
-            {
-                await WaitForCanvasCommandBridgeAsync(page);
-                var target = await ReadCanvasTextRangeAsync(page, blockId, startOffset, endOffset);
-                var resultJson = await page.EvaluateAsync<string>(
-                    """
-                    ([blockId, startOffset, endOffset]) => {
-                        const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
-                        const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                        return import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs')
-                            .then(module => module.selectTextRange(handle, blockId, startOffset, endOffset) || '');
-                    }
-                    """,
-                    new object[] { blockId, startOffset, endOffset });
-                using var result = JsonDocument.Parse(resultJson);
-                Assert.IsTrue(result.RootElement.GetProperty("selected").GetBoolean(), $"Expected canvas interop selection for {blockId}[{startOffset}..{endOffset}].");
-                await AssertSelectionStillVisibleAsync(page, blockId);
-                return target;
+        await WaitForCanvasCommandBridgeAsync(page);
+        var target = await ReadCanvasTextRangeAsync(page, blockId, startOffset, endOffset);
+        var resultJson = await CanvasInteropBridge.EvaluateAsync<string>(page,
+            """
+            ([blockId, startOffset, endOffset]) => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                return (module => module.selectTextRange(handle, blockId, startOffset, endOffset) || '')(window.__tmCanvasInterop);
             }
-            catch (PlaywrightException ex) when (attempt < 9 && IsExecutionContextReset(ex))
-            {
-                lastTransientException = ex;
-                await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new PageWaitForLoadStateOptions { Timeout = 20_000 });
-                await Task.Delay(1_000);
-            }
-        }
-
-        throw new InvalidOperationException($"Canvas selection for {blockId}[{startOffset}..{endOffset}] could not execute after transient context resets.", lastTransientException);
+            """,
+            new object[] { blockId, startOffset, endOffset });
+        using var result = JsonDocument.Parse(resultJson);
+        Assert.IsTrue(result.RootElement.GetProperty("selected").GetBoolean(), $"Expected canvas interop selection for {blockId}[{startOffset}..{endOffset}].");
+        await AssertSelectionStillVisibleAsync(page, blockId);
+        return target;
     }
 
     private static Task WaitForCanvasCommandBridgeAsync(IPage page)
@@ -238,10 +222,6 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
             }
             """,
             new PageWaitForFunctionOptions { Timeout = 15_000 });
-
-    private static bool IsExecutionContextReset(PlaywrightException ex)
-        => ex.Message.Contains("Execution context was destroyed", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("Cannot find context with specified id", StringComparison.OrdinalIgnoreCase);
 
     private static Task<CanvasTextRange> ReadCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
         => page.EvaluateAsync<CanvasTextRange>(

@@ -918,6 +918,13 @@ public class InMemoryDocumentEditorProvider : IDocumentEditorProvider, ITmActivi
     /// <summary>Seeds a document that exercises canvas search, bookmarks, outline extraction, and generated TOC.</summary>
     public DocumentEditorDocument SeedCanvasSearchOutlineTocDocument(string documentId = CanvasSearchOutlineTocDocumentId)
     {
+        // Keep a document the user already saved: the demo host re-runs this seeder on every in-app navigation back to the page, and
+        // re-seeding would silently replace the saved edits (generated TOC, replaced text) with the pristine seed.
+        if (_documents.TryGetValue(documentId, out var existing))
+        {
+            return Clone(existing.Document);
+        }
+
         var document = DocumentEditorDocument.Empty(documentId);
         var sectionId = "phase18-section-main";
         document.Metadata.Title = "Canvas search outline and TOC";

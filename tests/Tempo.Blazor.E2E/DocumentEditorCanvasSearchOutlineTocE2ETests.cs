@@ -118,7 +118,13 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = updatedTocScreenshotPath, FullPage = true });
         TestContext.AddResultFile(updatedTocScreenshotPath);
 
+        // Wait for the provider PUT of THIS document: the status-bar "boundary" alone can already look clean before the click's save has
+        // been issued, and navigating away while the save (and the provider's local mirror of it) is in flight reloads the old seed.
+        var saved = page.WaitForResponseAsync(
+            response => response.Request.Method == "PUT" && response.Url.Contains("/api/document-editor/documents/" + Phase18DocumentId, StringComparison.Ordinal),
+            new PageWaitForResponseOptions { Timeout = 30_000 });
         await page.GetByTestId("document-save").ClickAsync();
+        Assert.IsTrue((await saved).Ok, "the save request succeeded");
         await WaitForSaveBoundaryAsync(page);
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
         await page.WaitForFunctionAsync(
@@ -236,12 +242,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForTocModelEntryCountAtLeastAsync(IPage page, int expectedMinimum)
-        => page.WaitForFunctionAsync(
+        => CanvasInteropBridge.WaitForFunctionAsync(page,
             """
-            async expectedMinimum => {
+            expectedMinimum => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const count = (model?.body?.blocks || []).filter(block => block?.content?.tableOfContents?.isEntry === true).length;
                 return count >= expectedMinimum;
@@ -281,12 +287,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForTocTextAsync(IPage page, string text)
-        => page.WaitForFunctionAsync(
+        => CanvasInteropBridge.WaitForFunctionAsync(page,
             """
-            async text => {
+            text => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const blocks = Array.isArray(model?.body?.blocks) ? model.body.blocks : [];
                 return blocks
@@ -298,12 +304,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForBlockTextAsync(IPage page, string blockId, string text)
-        => page.WaitForFunctionAsync(
+        => CanvasInteropBridge.WaitForFunctionAsync(page,
             """
-            async ({ blockId, text }) => {
+            ({ blockId, text }) => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const block = (model?.body?.blocks || []).find(item => item?.id === blockId);
                 const value = (block?.content?.runs || []).map(run => String(run?.text || run?.field?.displayText || '')).join('');
@@ -314,12 +320,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForModelTextAsync(IPage page, string text)
-        => page.WaitForFunctionAsync(
+        => CanvasInteropBridge.WaitForFunctionAsync(page,
             """
-            async text => {
+            text => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const value = (model?.body?.blocks || [])
                     .flatMap(block => block?.content?.runs || [])
@@ -332,12 +338,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task WaitForBookmarkAsync(IPage page, string bookmarkName)
-        => page.WaitForFunctionAsync(
+        => CanvasInteropBridge.WaitForFunctionAsync(page,
             """
-            async bookmarkName => {
+            bookmarkName => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const navigation = JSON.parse(interop.getNavigationStateJson(handle) || '{}');
                 return Array.isArray(navigation?.bookmarks) && navigation.bookmarks.some(item => item?.name === bookmarkName);
             }
@@ -346,13 +352,13 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task<Phase18Probe> ReadProbeAsync(IPage page)
-        => page.EvaluateAsync<Phase18Probe>(
+        => CanvasInteropBridge.EvaluateAsync<Phase18Probe>(page,
             """
-            async () => {
+            () => {
                 const first = document.querySelector('[data-testid="document-canvas-page"]');
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const text = (model?.body?.blocks || [])
                     .flatMap(block => block?.content?.runs || [])
@@ -368,16 +374,16 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             """);
 
     private static Task<string[]> ReadTableOfContentsTextsAsync(IPage page)
-        => page.EvaluateAsync<string[]>(
+        => CanvasInteropBridge.EvaluateAsync<string[]>(page,
             """
-            async () => {
+            () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
                 if (!handle) {
                     return [];
                 }
 
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle));
                 const blocks = Array.isArray(model?.body?.blocks) && model.body.blocks.length > 0
                     ? model.body.blocks
@@ -391,12 +397,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             """);
 
     private static Task<Phase18HeadingProbe[]> ReadOutlineAsync(IPage page)
-        => page.EvaluateAsync<Phase18HeadingProbe[]>(
+        => CanvasInteropBridge.EvaluateAsync<Phase18HeadingProbe[]>(page,
             """
-            async () => {
+            () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const navigation = JSON.parse(interop.getNavigationStateJson(handle) || '{}');
                 return (navigation?.outline || []).map(item => ({
                     blockId: String(item?.blockId || ''),
@@ -408,12 +414,12 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             """);
 
     private static Task<string> ReadBlockTextAsync(IPage page, string blockId)
-        => page.EvaluateAsync<string>(
+        => CanvasInteropBridge.EvaluateAsync<string>(page,
             """
-            async blockId => {
+            blockId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const model = JSON.parse(interop.getModelJson(handle) || '{}');
                 const block = (model?.body?.blocks || []).find(item => item?.id === blockId);
                 return (block?.content?.runs || []).map(run => String(run?.text || run?.field?.displayText || '')).join('');
@@ -424,38 +430,25 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
     private static async Task<Phase18CommandProbe> ExecuteCanvasCommandAsync(IPage page, string commandId, object payload)
     {
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                return await page.EvaluateAsync<Phase18CommandProbe>(
-                    """
-                    async ({ commandId, json }) => {
-                        const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
-                        const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                        const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
-                        const raw = interop.execCommand(handle, commandId, json);
-                        const parsed = JSON.parse(raw || '{}');
-                        return {
-                            handled: parsed?.handled === true,
-                            changed: parsed?.result?.changed === true,
-                            selectionChanged: parsed?.result?.selectionChanged === true,
-                            bookmarkCount: Number(parsed?.result?.bookmarkCount || 0),
-                            targetBlockId: String(parsed?.result?.target?.blockId || parsed?.result?.bookmark?.blockId || ''),
-                            debug: JSON.stringify(parsed)
-                        };
-                    }
-                    """,
-                    new { commandId, json });
+        return await CanvasInteropBridge.EvaluateAsync<Phase18CommandProbe>(page,
+            """
+            ({ commandId, json }) => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                const interop = window.__tmCanvasInterop;
+                const raw = interop.execCommand(handle, commandId, json);
+                const parsed = JSON.parse(raw || '{}');
+                return {
+                    handled: parsed?.handled === true,
+                    changed: parsed?.result?.changed === true,
+                    selectionChanged: parsed?.result?.selectionChanged === true,
+                    bookmarkCount: Number(parsed?.result?.bookmarkCount || 0),
+                    targetBlockId: String(parsed?.result?.target?.blockId || parsed?.result?.bookmark?.blockId || ''),
+                    debug: JSON.stringify(parsed)
+                };
             }
-            catch (PlaywrightException ex) when (attempt == 0 && ex.Message.Contains("Execution context was destroyed", StringComparison.OrdinalIgnoreCase))
-            {
-                await page.WaitForLoadStateAsync(LoadState.Load, new PageWaitForLoadStateOptions { Timeout = 20_000 });
-                await WaitForPhase18ReadyAsync(page);
-            }
-        }
-
-        throw new InvalidOperationException($"Canvas command '{commandId}' did not return a result.");
+            """,
+            new { commandId, json });
     }
 
     private static async Task<Phase18CommandProbe[]> ExecuteCanvasCommandBatchAsync(
@@ -470,49 +463,36 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
             })
             .ToArray();
 
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                return await page.EvaluateAsync<Phase18CommandProbe[]>(
-                    """
-                    async commands => {
-                        const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
-                        const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                        const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
-                        return commands.map(command => {
-                            const raw = interop.execCommand(handle, command.commandId, command.json);
-                            const parsed = JSON.parse(raw || '{}');
-                            return {
-                                handled: parsed?.handled === true,
-                                changed: parsed?.result?.changed === true,
-                                selectionChanged: parsed?.result?.selectionChanged === true,
-                                bookmarkCount: Number(parsed?.result?.bookmarkCount || 0),
-                                targetBlockId: String(parsed?.result?.target?.blockId || parsed?.result?.bookmark?.blockId || ''),
-                                debug: JSON.stringify(parsed)
-                            };
-                        });
-                    }
-                    """,
-                    commandPayload);
+        return await CanvasInteropBridge.EvaluateAsync<Phase18CommandProbe[]>(page,
+            """
+            commands => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                const interop = window.__tmCanvasInterop;
+                return commands.map(command => {
+                    const raw = interop.execCommand(handle, command.commandId, command.json);
+                    const parsed = JSON.parse(raw || '{}');
+                    return {
+                        handled: parsed?.handled === true,
+                        changed: parsed?.result?.changed === true,
+                        selectionChanged: parsed?.result?.selectionChanged === true,
+                        bookmarkCount: Number(parsed?.result?.bookmarkCount || 0),
+                        targetBlockId: String(parsed?.result?.target?.blockId || parsed?.result?.bookmark?.blockId || ''),
+                        debug: JSON.stringify(parsed)
+                    };
+                });
             }
-            catch (PlaywrightException ex) when (attempt == 0 && ex.Message.Contains("Execution context was destroyed", StringComparison.OrdinalIgnoreCase))
-            {
-                await page.WaitForLoadStateAsync(LoadState.Load, new PageWaitForLoadStateOptions { Timeout = 20_000 });
-                await WaitForPhase18ReadyAsync(page);
-            }
-        }
-
-        throw new InvalidOperationException("Canvas command batch did not return a result.");
+            """,
+            commandPayload);
     }
 
     private static Task<Phase18NavigationProbe> ReadNavigationProbeAsync(IPage page)
-        => page.EvaluateAsync<Phase18NavigationProbe>(
+        => CanvasInteropBridge.EvaluateAsync<Phase18NavigationProbe>(page,
             """
-            async () => {
+            () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const interop = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const interop = window.__tmCanvasInterop;
                 const navigation = JSON.parse(interop.getNavigationStateJson(handle) || '{}');
                 return {
                     outline: (navigation?.outline || []).map(item => ({
