@@ -131,6 +131,14 @@ public partial class TmWireframePropertiesPanel : TmComponentBase, IDisposable
     private string _gridSizeId => _idPrefix + "-grid-size";
     private string _elementNameId => _idPrefix + "-el-name";
 
+    /// <summary>
+    /// A stable, panel-unique DOM id for a control (<c>&lt;label for&gt;</c> / <c>aria-labelledby</c> target). Several
+    /// panels can live on one page (editor + standalone), so the id carries the per-instance prefix; the key is reduced
+    /// to id-safe characters because it can embed a component property name.
+    /// </summary>
+    private string FieldId(string key)
+        => _idPrefix + "-" + new string(key.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_').ToArray());
+
     private string _canvasWInput = "";
     private string _canvasHInput = "";
     private bool _canvasSizeInvalid;

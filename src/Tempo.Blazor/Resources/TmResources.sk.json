@@ -5379,6 +5379,7 @@
   "TmWireframeProps_SendToBack": "Premiestniť do pozadia",
   "TmWireframeProps_StartArrow": "Počiatočná šípka",
   "TmWireframeProps_Stroke": "Obrys",
+  "TmWireframeProps_ColorPicker": "Výber farby: {0}",
   "TmWireframeProps_StrokeWidth": "Šírka obrysu",
   "TmWireframeProps_Type": "Typ",
   "TmWireframeProps_Types": "Typy",

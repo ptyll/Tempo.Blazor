@@ -5379,6 +5379,7 @@
   "TmWireframeProps_SendToBack": "Dozadu",
   "TmWireframeProps_StartArrow": "Šipka na začátku",
   "TmWireframeProps_Stroke": "Barva čáry",
+  "TmWireframeProps_ColorPicker": "Výběr barvy: {0}",
   "TmWireframeProps_StrokeWidth": "Tloušťka čáry",
   "TmWireframeProps_Type": "Typ",
   "TmWireframeProps_Types": "Typy",

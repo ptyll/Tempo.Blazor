@@ -572,24 +572,68 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
     }
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("Axe (wcag2a/aa): the mobile editor with the selection sheet peeked has no critical or serious violation - covers the sheet, the quick actions, the action bar and the live region")]
-    public async Task Mobile_SelectionSheet_Axe_NoCriticalOrSeriousViolations()
+    [DataRow(390, 844, "mobile")]
+    [DataRow(1024, 768, "tablet")]
+    [DataRow(1440, 900, "desktop")]
+    [Description("Axe (wcag2a/aa): the editor INCLUDING the Properties panel (.tm-wd-props - no exclusion any more) has no critical or serious violation on mobile (selection sheet peeked), tablet (inspector sheet) and desktop (docked inspector), for an empty selection (Canvas / Page / Grid) and for a selected element")]
+    public async Task Axe_PropertiesPanelIncluded_NoCriticalOrSeriousViolations(int width, int height, string layout)
     {
-        var (page, editor) = await OpenAsync(390, 844, touch: false);
-        await editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']").ClickAsync();
-        await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
-        await editor.Locator("[data-testid='wd-quick-actions']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
-        await page.WaitForTimeoutAsync(700);
-
+        var (page, editor) = await OpenAsync(width, height, touch: layout != "desktop");
+        Assert.AreEqual(layout, await editor.GetAttributeAsync("data-editor-layout"));
         await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js" });
-        // The SVG scene is a drawing (its element semantics are covered by the canvas specs), and the Properties panel BODY is excluded on purpose:
-        // axe reports unlabeled inputs / selects there on every layout - a pre-existing panel finding recorded as a remaining task of plan 643bba06,
-        // not a mobile sheet defect. The sheet, quick actions, action bar and live region are what this spec guards.
+
+        // 1. Empty selection: tablet / desktop show the Canvas | Page | Grid inspector; a phone has no empty-selection sheet.
+        if (layout == "tablet")
+        {
+            await editor.Locator("[data-testid='wd-toggle-inspector']").ClickAsync();
+            await editor.Locator("[data-testid='wd-inspector-sheet']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+
+        if (layout != "mobile")
+        {
+            await editor.Locator("[data-testid='wd-section-canvas']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await page.WaitForTimeoutAsync(700);   // sheet slide-in must not be sampled mid-transform
+            await AssertNoAxeViolationsAsync(page, $"{layout} / empty selection");
+        }
+
+        // 2. A selected element: insert one through the palette (selects it) - the Element / Layout / per-type prop sections.
+        if (layout == "tablet")
+        {
+            await editor.Locator("[data-testid='wd-toggle-left']").ClickAsync();
+            await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+        else if (layout == "mobile")
+        {
+            await editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']").ClickAsync();
+        }
+
+        await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
+        if (layout == "mobile")
+        {
+            await editor.Locator("[data-testid='wd-quick-actions']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+        else
+        {
+            // On a tablet the insert replaces the palette drawer with the inspector sheet (at most one sheet is open) - do not toggle it back off.
+            await editor.Locator("[data-testid='wd-element-name']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+
+        await page.WaitForTimeoutAsync(700);
+        Assert.IsTrue(await editor.Locator(".tm-wd-props input, .tm-wd-props select").CountAsync() > 0, "the Properties panel is in the DOM (it must be part of the scan)");
+        await AssertNoAxeViolationsAsync(page, $"{layout} / element selected");
+    }
+
+    /// <summary>
+    /// axe over the whole first editor, Properties panel included. Only the SVG scene is out of scope: it is a drawing whose element
+    /// semantics are covered by the canvas specs.
+    /// </summary>
+    private static async Task AssertNoAxeViolationsAsync(IPage page, string state)
+    {
         var violations = await page.EvaluateAsync<string[]>(
             """
             async () => {
                 const host = document.querySelectorAll('.tm-wd-editor')[0];
-                const result = await axe.run({ include: [host], exclude: [['.tm-wd-canvas__svg'], ['.tm-wd-props']] }, {
+                const result = await axe.run({ include: [host], exclude: [['.tm-wd-canvas__svg']] }, {
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']
                 });
@@ -598,7 +642,7 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
                     .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).slice(0, 4).join('; ')})`);
             }
             """);
-        Assert.AreEqual(0, violations.Length, "axe: " + string.Join(" | ", violations));
+        Assert.AreEqual(0, violations.Length, $"axe [{state}]: " + string.Join(" | ", violations));
     }
     // ── Regression: tablet and desktop are unchanged ────────────────────────────
 

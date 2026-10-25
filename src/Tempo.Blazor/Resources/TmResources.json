@@ -5327,6 +5327,7 @@
   "TmWireframeProps_SendToBack": "Send to back",
   "TmWireframeProps_StartArrow": "Start Arrow",
   "TmWireframeProps_Stroke": "Stroke",
+  "TmWireframeProps_ColorPicker": "{0} color picker",
   "TmWireframeProps_StrokeWidth": "Stroke Width",
   "TmWireframeProps_Type": "Type",
   "TmWireframeProps_Types": "Types",

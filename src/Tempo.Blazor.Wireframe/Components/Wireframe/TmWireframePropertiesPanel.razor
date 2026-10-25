@@ -20,7 +20,6 @@
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label" for="@_presetId">@Loc["TmWireframeProps_DevicePreset"]</label>
                     <select id="@_presetId" class="tm-wd-props__select" data-testid="@TestId("wd-device-preset")"
-                            aria-label="@Loc["TmWireframeProps_DevicePreset"]"
                             disabled="@canvasDisabled"
                             @onchange="OnDevicePresetChanged">
                         @foreach (var preset in WireframeDevicePresets.All)
@@ -121,16 +120,16 @@
             {
                 var c = _connectors[0];
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Routing"]</label>
-                    <select class="tm-wd-props__select" value="@c.Routing" @onchange="e => OnConnectorRoutingChanged(c.Id, e)">
+                    <label class="tm-wd-props__label" for="@FieldId("c-routing")">@Loc["TmWireframeProps_Routing"]</label>
+                    <select id="@FieldId("c-routing")" class="tm-wd-props__select" value="@c.Routing" @onchange="e => OnConnectorRoutingChanged(c.Id, e)">
                         <option value="straight">Straight</option>
                         <option value="orthogonal">Orthogonal</option>
                         <option value="curved">Curved</option>
                     </select>
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_StartArrow"]</label>
-                    <select class="tm-wd-props__select" value="@c.StartArrow" @onchange="e => OnConnectorArrowChanged(c.Id, true, e)">
+                    <label class="tm-wd-props__label" for="@FieldId("c-start")">@Loc["TmWireframeProps_StartArrow"]</label>
+                    <select id="@FieldId("c-start")" class="tm-wd-props__select" value="@c.StartArrow" @onchange="e => OnConnectorArrowChanged(c.Id, true, e)">
                         <option value="none">None</option>
                         <option value="classic">Classic</option>
                         <option value="block">Block</option>
@@ -140,8 +139,8 @@
                     </select>
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_EndArrow"]</label>
-                    <select class="tm-wd-props__select" value="@c.EndArrow" @onchange="e => OnConnectorArrowChanged(c.Id, false, e)">
+                    <label class="tm-wd-props__label" for="@FieldId("c-end")">@Loc["TmWireframeProps_EndArrow"]</label>
+                    <select id="@FieldId("c-end")" class="tm-wd-props__select" value="@c.EndArrow" @onchange="e => OnConnectorArrowChanged(c.Id, false, e)">
                         <option value="none">None</option>
                         <option value="classic">Classic</option>
                         <option value="block">Block</option>
@@ -151,19 +150,21 @@
                     </select>
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Stroke"]</label>
+                    <label class="tm-wd-props__label" for="@FieldId("c-stroke")">@Loc["TmWireframeProps_Stroke"]</label>
                     <div class="tm-wd-props__color-row">
-                        <input type="color" class="tm-wd-props__color-swatch" value="@c.Stroke" @onchange="e => OnConnectorStrokeChanged(c.Id, e)" />
-                        <input type="text" class="tm-wd-props__input" value="@c.Stroke" @oninput="e => OnConnectorStrokeChanged(c.Id, e)" />
+                        <input type="color" class="tm-wd-props__color-swatch" value="@c.Stroke"
+                               aria-label="@Loc["TmWireframeProps_ColorPicker", Loc["TmWireframeProps_Stroke"]]"
+                               @onchange="e => OnConnectorStrokeChanged(c.Id, e)" />
+                        <input id="@FieldId("c-stroke")" type="text" class="tm-wd-props__input" value="@c.Stroke" @oninput="e => OnConnectorStrokeChanged(c.Id, e)" />
                     </div>
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_StrokeWidth"]</label>
-                    <input class="tm-wd-props__input" type="number" step="0.5" min="0.5" max="20" value="@c.StrokeWidth.ToString("0.#", CultureInfo.InvariantCulture)" @oninput="e => OnConnectorStrokeWidthChanged(c.Id, e)" />
+                    <label class="tm-wd-props__label" for="@FieldId("c-stroke-w")">@Loc["TmWireframeProps_StrokeWidth"]</label>
+                    <input id="@FieldId("c-stroke-w")" class="tm-wd-props__input" type="number" step="0.5" min="0.5" max="20" value="@c.StrokeWidth.ToString("0.#", CultureInfo.InvariantCulture)" @oninput="e => OnConnectorStrokeWidthChanged(c.Id, e)" />
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Label"]</label>
-                    <input class="tm-wd-props__input" type="text" value="@c.Label" @oninput="e => OnConnectorLabelChanged(c.Id, e)" />
+                    <label class="tm-wd-props__label" for="@FieldId("c-label")">@Loc["TmWireframeProps_Label"]</label>
+                    <input id="@FieldId("c-label")" class="tm-wd-props__input" type="text" value="@c.Label" @oninput="e => OnConnectorLabelChanged(c.Id, e)" />
                 </div>
             }
             else
@@ -210,14 +211,14 @@
                            @onchange="OnElementNameChanged" />
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Type"]</label>
-                    <input class="tm-wd-props__input tm-wd-props__input--readonly"
+                    <label class="tm-wd-props__label" for="@FieldId("el-type")">@Loc["TmWireframeProps_Type"]</label>
+                    <input id="@FieldId("el-type")" class="tm-wd-props__input tm-wd-props__input--readonly"
                            value="@_elements[0].Type" readonly />
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_ZIndex"]</label>
+                    <label class="tm-wd-props__label" for="@FieldId("el-z")">@Loc["TmWireframeProps_ZIndex"]</label>
                     <div class="tm-wd-props__row">
-                        <input class="tm-wd-props__input tm-wd-props__input--grow"
+                        <input id="@FieldId("el-z")" class="tm-wd-props__input tm-wd-props__input--grow"
                                type="number" step="1"
                                value="@_elements[0].ZIndex"
                                @oninput="@(e => OnZIndexChanged(e))" />
@@ -232,8 +233,8 @@
                     </div>
                 </div>
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Rotation"]</label>
-                    <input class="tm-wd-props__input"
+                    <label class="tm-wd-props__label" for="@FieldId("el-rotation")">@Loc["TmWireframeProps_Rotation"]</label>
+                    <input id="@FieldId("el-rotation")" class="tm-wd-props__input"
                            type="number" step="1"
                            value="@_elements[0].Rotation.ToString("0.##", CultureInfo.InvariantCulture)"
                            @oninput="@(e => OnRotationChanged(e))" />
@@ -250,15 +251,15 @@
                 @if (!string.IsNullOrEmpty(_elements[0].GroupId))
                 {
                     <div class="tm-wd-props__field">
-                        <label class="tm-wd-props__label">@Loc["TmWireframeProps_Group"]</label>
-                        <input class="tm-wd-props__input tm-wd-props__input--readonly"
+                        <label class="tm-wd-props__label" for="@FieldId("el-group")">@Loc["TmWireframeProps_Group"]</label>
+                        <input id="@FieldId("el-group")" class="tm-wd-props__input tm-wd-props__input--readonly"
                                value="@GetGroupLabel(_elements[0].GroupId!)"
                                readonly />
                     </div>
                 }
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Layer"]</label>
-                    <select class="tm-wd-props__select"
+                    <label class="tm-wd-props__label" for="@FieldId("el-layer")">@Loc["TmWireframeProps_Layer"]</label>
+                    <select id="@FieldId("el-layer")" class="tm-wd-props__select"
                             value="@(_elements[0].LayerId ?? "")"
                             @onchange="e => OnLayerChanged(e)">
                         @foreach (var layer in Document?.Layers.OrderBy(l => l.Order).ToList() ?? new List<WireframeLayer>())
@@ -271,8 +272,8 @@
             else
             {
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframeProps_Types"]</label>
-                    <input class="tm-wd-props__input tm-wd-props__input--readonly"
+                    <label class="tm-wd-props__label" for="@FieldId("el-types")">@Loc["TmWireframeProps_Types"]</label>
+                    <input id="@FieldId("el-types")" class="tm-wd-props__input tm-wd-props__input--readonly"
                            value="@string.Join(", ", _elements.Select(e => e.Type).Distinct())"
                            readonly />
                 </div>
@@ -295,8 +296,8 @@
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_Arrange"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
-                    <label class="tm-wd-props__label">@Loc["TmWireframe_Align"]</label>
-                    <div class="tm-wd-props__row tm-wd-props__row--wrap">
+                    <span class="tm-wd-props__label" id="@FieldId("align-label")">@Loc["TmWireframe_Align"]</span>
+                    <div class="tm-wd-props__row tm-wd-props__row--wrap" role="group" aria-labelledby="@FieldId("align-label")">
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignLeft"]" aria-label="@Loc["TmWireframe_AlignLeft"]" @onclick="() => OnAlign(WireframeAlignment.Left)"><TmIcon Name="@IconNames.AlignLeft" /></button>
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterH"]" aria-label="@Loc["TmWireframe_AlignCenterH"]" @onclick="() => OnAlign(WireframeAlignment.CenterH)"><TmIcon Name="@IconNames.AlignCenter" /></button>
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignRight"]" aria-label="@Loc["TmWireframe_AlignRight"]" @onclick="() => OnAlign(WireframeAlignment.Right)"><TmIcon Name="@IconNames.AlignRight" /></button>
@@ -308,8 +309,8 @@
                 @if (_elements.Count >= 3)
                 {
                     <div class="tm-wd-props__field">
-                        <label class="tm-wd-props__label">@Loc["TmWireframe_Distribute"]</label>
-                        <div class="tm-wd-props__row">
+                        <span class="tm-wd-props__label" id="@FieldId("distribute-label")">@Loc["TmWireframe_Distribute"]</span>
+                        <div class="tm-wd-props__row" role="group" aria-labelledby="@FieldId("distribute-label")">
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeHorizontal"]" @onclick="() => OnDistribute(WireframeDistribution.Horizontal)">@Loc["TmWireframe_DistributeHorizontal"]</button>
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeVertical"]" @onclick="() => OnDistribute(WireframeDistribution.Vertical)">@Loc["TmWireframe_DistributeVertical"]</button>
                         </div>
@@ -378,16 +379,17 @@
                     var valStr   = GetDisplayValue(prop.Name, prop);
 
                     <div class="tm-wd-props__field @(hasError ? "tm-wd-props__field--error" : "")">
-                        <label class="tm-wd-props__label">
+                        <label class="tm-wd-props__label" id="@FieldId("p-" + prop.Name + "-label")" for="@FieldId("p-" + prop.Name)">
                             @prop.DisplayName
-                            @if (prop.IsRequired) { <span class="tm-wd-props__required">*</span> }
+                            @if (prop.IsRequired) { <span class="tm-wd-props__required" aria-hidden="true">*</span> }
                         </label>
 
                         @switch (prop.Type)
                         {
                             case PropType.Bool:
                                 <label class="tm-wd-props__toggle">
-                                    <input type="checkbox"
+                                    <input id="@FieldId("p-" + prop.Name)" type="checkbox"
+                                           aria-labelledby="@FieldId("p-" + prop.Name + "-label")"
                                            checked="@(valStr == "true")"
                                            indeterminate="@isMixed"
                                            @onchange="@(e => OnBoolPropChanged(prop.Name, e))" />
@@ -396,7 +398,7 @@
                                 break;
 
                             case PropType.Enum when prop.Options is { Length: > 0 }:
-                                <select class="tm-wd-props__select @(isMixed ? "tm-wd-props__input--mixed" : "")"
+                                <select id="@FieldId("p-" + prop.Name)" class="tm-wd-props__select @(isMixed ? "tm-wd-props__input--mixed" : "")"
                                         value="@(isMixed ? "" : valStr)"
                                         @onchange="@(e => OnStringPropChanged(prop.Name, e))">
                                     @if (isMixed)
@@ -414,9 +416,10 @@
                                 <div class="tm-wd-props__color-row">
                                     <input type="color"
                                            class="tm-wd-props__color-swatch"
+                                           aria-label="@Loc["TmWireframeProps_ColorPicker", prop.DisplayName]"
                                            value="@(isMixed ? "#000000" : valStr)"
                                            @onchange="@(e => OnStringPropChanged(prop.Name, e))" />
-                                    <input type="text"
+                                    <input id="@FieldId("p-" + prop.Name)" type="text"
                                            class="tm-wd-props__input @(isMixed ? "tm-wd-props__input--mixed" : "") @(hasError ? "tm-wd-props__input--error" : "")"
                                            placeholder="@(isMixed ? Loc["TmWireframeProps_MixedPlaceholder"] : "#rrggbb")"
                                            value="@(isMixed ? "" : valStr)"
@@ -426,7 +429,7 @@
 
                             case PropType.Int:
                             case PropType.Double:
-                                <input type="number"
+                                <input id="@FieldId("p-" + prop.Name)" type="number"
                                        class="tm-wd-props__input @(isMixed ? "tm-wd-props__input--mixed" : "") @(hasError ? "tm-wd-props__input--error" : "")"
                                        step="@(prop.Type == PropType.Int ? "1" : "0.01")"
                                        placeholder="@(isMixed ? Loc["TmWireframeProps_MixedPlaceholder"] : "")"
@@ -435,7 +438,7 @@
                                 break;
 
                             case PropType.StringList:
-                                <input type="text"
+                                <input id="@FieldId("p-" + prop.Name)" type="text"
                                        class="tm-wd-props__input @(isMixed ? "tm-wd-props__input--mixed" : "") @(hasError ? "tm-wd-props__input--error" : "")"
                                        placeholder="@(isMixed ? Loc["TmWireframeProps_MixedPlaceholder"] : Loc["TmWireframeProps_CommaSeparatedPlaceholder"])"
                                        value="@(isMixed ? "" : valStr)"
@@ -443,7 +446,7 @@
                                 break;
 
                             default: @* String, Icon, Object, unknown *@
-                                <input type="text"
+                                <input id="@FieldId("p-" + prop.Name)" type="text"
                                        class="tm-wd-props__input @(isMixed ? "tm-wd-props__input--mixed" : "") @(hasError ? "tm-wd-props__input--error" : "")"
                                        placeholder="@(isMixed ? Loc["TmWireframeProps_MixedPlaceholder"] : (prop.Default?.ToString() ?? ""))"
                                        value="@(isMixed ? "" : valStr)"
@@ -469,8 +472,8 @@
 @code {
     private RenderFragment RenderLayoutField(string label, string? value, string fieldKey, string placeholder) =>
         @<div class="tm-wd-props__field">
-            <label class="tm-wd-props__label">@label</label>
-            <input type="number"
+            <label class="tm-wd-props__label" for="@FieldId("layout-" + fieldKey)">@label</label>
+            <input id="@FieldId("layout-" + fieldKey)" type="number"
                    class="tm-wd-props__input @(value == MixedMarker ? "tm-wd-props__input--mixed" : "")"
                    step="1"
                    placeholder="@(value == MixedMarker ? Loc["TmWireframeProps_MixedPlaceholder"] : placeholder)"

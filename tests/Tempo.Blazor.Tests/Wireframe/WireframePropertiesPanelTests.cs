@@ -477,7 +477,7 @@ public class WireframePropertiesPanelRenderTests : LocalizationTestBase
 
         var select = cut.Find("select[data-testid='wd-device-preset']");
         select.ClassList.Should().Contain("tm-wd-props__select");
-        select.GetAttribute("aria-label").Should().Be("Device preset");
+        cut.Find($"label[for='{select.Id}']").TextContent.Should().Be("Device preset", "the visible label names the select (label[for])");
         cut.FindAll("select[data-testid='wd-device-preset'] option").Select(o => o.TextContent).Should().Equal(
             "Desktop (1440×900)", "Laptop (1280×800)", "Tablet (1024×768)",
             "iPhone 14 (390×844)", "Android (360×800)", "Custom");

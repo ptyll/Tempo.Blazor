@@ -5353,6 +5353,7 @@
   "TmWireframeProps_SendToBack": "Mettre à l'arrière-plan",
   "TmWireframeProps_StartArrow": "Flèche de début",
   "TmWireframeProps_Stroke": "Trait",
+  "TmWireframeProps_ColorPicker": "Sélecteur de couleur : {0}",
   "TmWireframeProps_StrokeWidth": "Épaisseur du trait",
   "TmWireframeProps_Type": "Type",
   "TmWireframeProps_Types": "Types",
