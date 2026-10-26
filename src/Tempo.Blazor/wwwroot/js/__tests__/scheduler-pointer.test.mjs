@@ -116,7 +116,7 @@ const ev = (target, over = {}) => ({
 // ── contract kept ───────────────────────────────────────────────────────────────────────────
 
 test('window.TempoBlazor.Scheduler keeps init, registerInstance, unregisterInstance, destroy', () => {
-    for (const name of ['init', 'registerInstance', 'unregisterInstance', 'destroy', 'cancelResize', 'focusRovingStop', 'attachScrollGuard', 'detachScrollGuard', 'elementPoint']) {
+    for (const name of ['init', 'registerInstance', 'unregisterInstance', 'destroy', 'cancelResize', 'focusRovingStop', 'attachScrollGuard', 'detachScrollGuard', 'elementPoint', 'scrollToTime']) {
         assert.equal(typeof scheduler[name], 'function', name);
     }
 });
@@ -666,4 +666,61 @@ test('focusCalendarDay waits out the opening key, clears it on blur, and never q
 
     api.focusCalendarDay(null);
     assert.equal(day.focused, 2, 'no root means no document-wide query, including :popover-open');
+});
+
+test('a clipped hour range sizes the minute from data-range-minutes, not a hard-coded day', () => {
+    const g = timegrid({ slot: 30 });
+    // 08:00-17:00 is 540 minutes. A 540px body is one minute per pixel, so +60px snaps to 60.
+    g.grid.dataset.rangeMinutes = '540';
+    g.body.rect = { left: 0, top: 0, width: 700, height: 540 };
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    g.bottom.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 160 + 60 }));
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 160 + 60 }));
+
+    assert.deepEqual(ref.calls, [['NotifyResizeComplete', 'e1', 60, 'bottom']],
+        '540 visible minutes over 540px is one minute per pixel, not 1440/540');
+});
+
+test('scrollToTime scrolls the grid scroller by the visible range, under the sticky head', () => {
+    const scroller = { scrollTop: 0, scrollHeight: 960 };
+    const head = { offsetHeight: 48 };
+    const root = {
+        dataset: { rangeStart: '480', rangeMinutes: '540' },
+        querySelector(selector) {
+            if (selector === '[data-tm-scroll]') return scroller;
+            if (selector.includes('tm-scheduler-timegrid-head')) return head;
+            return null;
+        },
+    };
+
+    scheduler.scrollToTime(root, 8 * 60 + 30);
+    // 30 minutes into a 540 minute range, over a 912px track, is 50.666px.
+    assert.ok(Math.abs(scroller.scrollTop - (912 * 30 / 540)) < 0.01, scroller.scrollTop);
+
+    scheduler.scrollToTime(root, 7 * 60);
+    assert.ok(Math.abs(scroller.scrollTop - (912 * 30 / 540)) < 0.01, 'a time before the range does not scroll');
+
+    scheduler.scrollToTime(null, 600);
+    assert.equal(scroller.scrollTop > 0, true);
+});
+
+test('scrollToTime scrolls a timeline root horizontally, past its label column', () => {
+    const label = { offsetWidth: 192 };
+    const root = {
+        dataset: { rangeStart: '0', rangeMinutes: '1440', tmScroll: 'timeline' },
+        scrollLeft: 0,
+        scrollWidth: 1392,
+        matches(selector) { return selector === '[data-tm-scroll]'; },
+        querySelector(selector) {
+            if (selector === '.tm-scheduler-timeline-resource-header') return label;
+            return null;
+        },
+    };
+
+    scheduler.scrollToTime(root, 8 * 60);
+    // 8 hours of 24, over the 1200px track that follows the 192px label.
+    assert.ok(Math.abs(root.scrollLeft - (1200 * 8 / 24)) < 0.01, root.scrollLeft);
 });

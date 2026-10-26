@@ -2,17 +2,21 @@
 @using Tempo.Blazor.Models
 @using System.Globalization
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
-<div class="tm-scheduler-timeline" @ref="_containerRef" data-slot-duration="@SlotDuration">
+<CascadingValue Value="_ticker" IsFixed="true">
+<div class="tm-scheduler-timeline" @ref="_containerRef" data-slot-duration="@SlotDuration" data-tm-scroll="timeline"
+     data-range-start="@RangeStartMinutes" data-range-minutes="@RangeMinutes"
+     style="--tm-scheduler-visible-hours: @RangeHours.ToString(CultureInfo.InvariantCulture);">
     @* Header: time columns *@
     <div class="tm-scheduler-timeline-header">
-        <div class="tm-scheduler-timeline-resource-header"></div>
-        @for (var hour = 0; hour < 24; hour++)
+        <div class="tm-scheduler-timeline-resource-header tm-scheduler-timeline-resource-header--sticky">@Loc["TmScheduler_Resources"]</div>
+        @for (var hour = RangeStartMinutes / 60; hour < (RangeStartMinutes + RangeMinutes) / 60; hour++)
         {
             var h = hour;
-            <div class="tm-scheduler-timeline-time-header">@h.ToString("D2"):00</div>
+            <div class="tm-scheduler-timeline-time-header">@DateTime.Today.AddHours(h).ToString("t", CultureInfo.CurrentUICulture)</div>
         }
     </div>
 
@@ -26,72 +30,33 @@
         var rowEvents = GetEventsForResource(r.Id);
 
         <div class="tm-scheduler-timeline-row" role="row" data-resource="@r.Id">
-            <div class="tm-scheduler-timeline-resource-label" role="rowheader"
+            <div class="tm-scheduler-timeline-resource-label tm-scheduler-timeline-resource-label--sticky" role="rowheader"
                  style="@(r.Color is not null ? $"border-left-color: {r.Color};" : "")">
-                @r.Name
+                @SchedulerResourceHeader.Render(r, ResourceHeaderTemplate, AvatarSize.Sm)
             </div>
-            <div class="tm-scheduler-timeline-row-body" role="gridcell">
+            <div class="tm-scheduler-timeline-row-body" role="gridcell" style="@($"--tm-scheduler-lanes: {LaneCount(r.Id).ToString(CultureInfo.InvariantCulture)}")">
                 @* Slots *@
                 @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
                 {
                     @Slot(r.Id, slotIndex)
                 }
 
+                @if (ShowNowIndicator)
+                {
+                    @NowLine(r == _resources[0])
+                }
+
                 @* Events *@
                 @foreach (var evt in rowEvents)
                 {
-                    var e = evt;
-                    var leftPct = GetMinuteLeftPercent(GetEventStartMinutes(e));
-                    var widthPct = GetEventWidthPercent(e);
-                    var eventColor = e.Color ?? r.Color;
-
-                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event tm-scheduler-event-surface @(IsSelectedEvent(e) ? "tm-scheduler-timeline-event--selected" : "") @e.CssClass"
-                         aria-current="@(IsSelectedEvent(e) ? "true" : null)"
-                         role="button" tabindex="@(ResourceIndex(r.Id) == _activeResourceIndex ? "0" : "-1")"
-                         aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
-                         data-tm-roving="@_rovingId"
-                         style="left: @F(leftPct)%; width: @F(widthPct)%;@EventStyle(eventColor)"
-                         title="@e.Title"
-                         data-event-id="@e.Id"
-                         draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
-                         @ondragstart="@(() => HandleDragStart(e, r.Id))"
-                         @onclick="@(() => HandleEventClick(e))"
-                         @onclick:stopPropagation="true"
-                         @onkeydown="@(k => HandleEventKeyDown(k, e))"
-                         @onkeydown:stopPropagation="true"
-                         @onkeyup="@(k => HandleEventKeyUp(k, e))"
-                         @onkeyup:stopPropagation="true"
-                         @oncontextmenu="@(args => HandleEventContextMenu(args, e))"
-                         @oncontextmenu:preventDefault="true"
-                         @oncontextmenu:stopPropagation="true">
-                        @if (EventTemplate is not null)
-                        {
-                            <span class="tm-sr-only">@EventAriaLabel(e)</span>
-                            <span class="tm-scheduler-event-content">@EventTemplate(e)</span>
-                        }
-                        else
-                        {
-                            <span class="tm-scheduler-timeline-event-time">@e.Start.ToString("t", CultureInfo.CurrentUICulture) – @e.End.ToString("t", CultureInfo.CurrentUICulture)</span>
-                            <span class="tm-scheduler-timeline-event-title">@e.Title</span>
-                        }
-                        @if (!ReadOnly && !e.IsReadOnly)
-                        {
-                            <div class="tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--left"
-                                 draggable="false"
-                                 data-resize-edge="left"
-                                 ondragstart="event.preventDefault(); event.stopPropagation();"></div>
-                            <div class="tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--right"
-                                 draggable="false"
-                                 data-resize-edge="right"
-                                 ondragstart="event.preventDefault(); event.stopPropagation();"></div>
-                        }
-                    </div>
+                    @TimelineEvent(r, evt)
                 }
             </div>
         </div>
     }
     </div>
 </div>
+</CascadingValue>
 
 @code {
     private DotNetObjectReference<TmSchedulerTimelineView>? _dotNetRef;
@@ -99,12 +64,123 @@
     private ElementReference _containerRef;
 
     private readonly Dictionary<string, ElementReference> _eventRefs = new();
+
+    /// <summary>How many times this view itself rendered. A now-indicator tick must not raise it.</summary>
+    internal int RenderCount { get; private set; }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        RenderCount++;
+        base.OnAfterRender(firstRender);
+    }
+
+    
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
     private int _activeResourceIndex;
     private bool _moveFocus;
     private int _activeSlotIndex;
 
     private int _slotsPerDay;
+    private TimeSpan? _scrolledTo;
+    private SchedulerNowTicker? _ticker;
+    private readonly List<SchedulerNowIndicator> _indicators = [];
+    private bool _disposed;
+
+    private RenderFragment TimelineEvent(TmScheduleResource resource, TmScheduleEvent e) => builder =>
+    {
+        var lane = LaneOf(resource.Id, e);
+        var sequence = 0;
+        builder.OpenElement(sequence++, "div");
+        builder.SetKey(e.Id);
+        builder.AddAttribute(sequence++, "class",
+            $"tm-scheduler-timeline-event tm-scheduler-event-surface {(IsSelectedEvent(e) ? "tm-scheduler-timeline-event--selected" : "")} {e.CssClass}");
+        if (IsSelectedEvent(e)) builder.AddAttribute(sequence++, "aria-current", "true");
+        builder.AddAttribute(sequence++, "role", "button");
+        builder.AddAttribute(sequence++, "tabindex", ResourceIndex(resource.Id) == _activeResourceIndex ? "0" : "-1");
+        if (EventTemplate is null) builder.AddAttribute(sequence++, "aria-label", EventAriaLabel(e));
+        builder.AddAttribute(sequence++, "data-tm-roving", _rovingId);
+        builder.AddAttribute(sequence++, "style",
+            $"--tm-scheduler-event-start: {(GetEventStartMinutes(e) - RangeStartMinutes).ToString(CultureInfo.InvariantCulture)}; --tm-scheduler-event-end: {(EventEndMinutes(e) - RangeStartMinutes).ToString(CultureInfo.InvariantCulture)}; --tm-scheduler-lane: {lane.Lane.ToString(CultureInfo.InvariantCulture)};{EventStyle(e.Color ?? resource.Color)}");
+        builder.AddAttribute(sequence++, "title", e.Title);
+        builder.AddAttribute(sequence++, "data-event-id", e.Id);
+        builder.AddAttribute(sequence++, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
+        builder.AddAttribute(sequence++, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e, resource.Id)));
+        builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, () => HandleEventClick(e)));
+        builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
+        builder.AddAttribute(sequence++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyDown(k, e)));
+        builder.AddEventStopPropagationAttribute(sequence++, "onkeydown", true);
+        builder.AddAttribute(sequence++, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyUp(k, e)));
+        builder.AddEventStopPropagationAttribute(sequence++, "onkeyup", true);
+        builder.AddAttribute(sequence++, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandleEventContextMenu(args, e)));
+        builder.AddEventPreventDefaultAttribute(sequence++, "oncontextmenu", true);
+        builder.AddEventStopPropagationAttribute(sequence++, "oncontextmenu", true);
+        if (EventTemplate is not null)
+        {
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-sr-only");
+            builder.AddContent(sequence++, EventAriaLabel(e));
+            builder.CloseElement();
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-content");
+            builder.AddContent(sequence++, EventTemplate(e));
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-timeline-event-time");
+            builder.AddContent(sequence++, $"{e.Start.ToString("t", CultureInfo.CurrentUICulture)} – {e.End.ToString("t", CultureInfo.CurrentUICulture)}");
+            builder.CloseElement();
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-timeline-event-title");
+            builder.AddContent(sequence++, e.Title);
+            builder.CloseElement();
+        }
+
+        if (!ReadOnly && !e.IsReadOnly)
+        {
+            // Literal classes, not an interpolated suffix: the markup sweep counts those as stems.
+            builder.OpenElement(sequence++, "div");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--left");
+            builder.AddAttribute(sequence++, "draggable", "false");
+            builder.AddAttribute(sequence++, "data-resize-edge", "left");
+            builder.AddAttribute(sequence++, "ondragstart", "event.preventDefault(); event.stopPropagation();");
+            builder.CloseElement();
+
+            builder.OpenElement(sequence++, "div");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--right");
+            builder.AddAttribute(sequence++, "draggable", "false");
+            builder.AddAttribute(sequence++, "data-resize-edge", "right");
+            builder.AddAttribute(sequence++, "ondragstart", "event.preventDefault(); event.stopPropagation();");
+            builder.CloseElement();
+        }
+
+        builder.AddElementReferenceCapture(sequence, r => _eventRefs[e.Id] = r);
+        builder.CloseElement();
+    };
+
+    private RenderFragment NowLine(bool labelled) => builder =>
+    {
+        builder.OpenComponent<SchedulerNowIndicator>(0);
+        builder.AddComponentParameter(1, nameof(SchedulerNowIndicator.Date), DateOnly.FromDateTime(CurrentDate));
+        builder.AddComponentParameter(2, nameof(SchedulerNowIndicator.RangeStartMinutes), RangeStartMinutes);
+        builder.AddComponentParameter(3, nameof(SchedulerNowIndicator.RangeMinutes), RangeMinutes);
+        builder.AddComponentParameter(4, nameof(SchedulerNowIndicator.TimeZone), TimeZone);
+        builder.AddComponentParameter(5, nameof(SchedulerNowIndicator.Axis), SchedulerNowAxis.Horizontal);
+        builder.AddComponentParameter(6, nameof(SchedulerNowIndicator.Labelled), labelled);
+        builder.AddComponentReferenceCapture(7, c => TrackIndicator((SchedulerNowIndicator)c));
+        builder.CloseComponent();
+    };
+
+    private void TrackIndicator(SchedulerNowIndicator indicator)
+    {
+        if (_indicators.Contains(indicator)) return;
+        indicator.OnDisposed = line => ReleaseIndicator(line);
+        _indicators.Add(indicator);
+    }
+
+    private void ReleaseIndicator(SchedulerNowIndicator indicator) => _indicators.Remove(indicator);
+
     private List<TmScheduleResource> _resources = [];
     private Dictionary<string, List<TmScheduleEvent>> _resourceEventMap = new();
     private TmScheduleEvent? _draggedEvent;
@@ -152,32 +228,82 @@
     /// <summary>Fires when right-clicking on an event.</summary>
     [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
+    /// <summary>First minute of the working day. With <see cref="ShowFullDay"/> false it is the first rendered hour.</summary>
+    [Parameter] public TimeOnly WorkDayStart { get; set; } = new(8, 0);
+
+    /// <summary>Last minute of the working day.</summary>
+    [Parameter] public TimeOnly WorkDayEnd { get; set; } = new(17, 0);
+
+    /// <summary>When false the timeline shows only the working hours. Default true.</summary>
+    [Parameter] public bool ShowFullDay { get; set; } = true;
+
+    /// <summary>When set, the timeline scrolls this time into view after the first render. Null does not scroll.</summary>
+    [Parameter] public TimeSpan? ScrollToTime { get; set; }
+
+    /// <summary>When true the current day draws the current-time indicator. Default true.</summary>
+    [Parameter] public bool ShowNowIndicator { get; set; } = true;
+
+    /// <summary>When true, slots outside the working day get <c>tm-scheduler-timeline-slot--offhours</c>. Default false.</summary>
+    [Parameter] public bool HighlightOffHours { get; set; }
+
+
+
+    /// <summary>Display zone for the current-time indicator.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+
+    /// <summary>Replaces the default resource header.</summary>
+    [Parameter] public RenderFragment<TmScheduleResource>? ResourceHeaderTemplate { get; set; }
+
+    private int RangeStartMinutes => SchedulerRange.WorkingRange(WorkDayStart, WorkDayEnd, SlotDuration, ShowFullDay).Start;
+
+    private int RangeMinutes
+    {
+        get
+        {
+            var (start, end) = SchedulerRange.WorkingRange(WorkDayStart, WorkDayEnd, SlotDuration, ShowFullDay);
+            return Math.Max(SlotDuration, end - start);
+        }
+    }
+
+    private double RangeHours => RangeMinutes / 60.0;
+
+    private Dictionary<string, Dictionary<string, SchedulerLayout.PositionedEvent>> _lanes = new();
+
     protected override void OnParametersSet()
     {
-        _slotsPerDay = 24 * 60 / Math.Max(1, SlotDuration);
+        if (ShowNowIndicator)
+            _ticker ??= new SchedulerNowTicker(Clock, TickIndicators);
+        _slotsPerDay = RangeMinutes / Math.Max(1, SlotDuration);
         _resources = Resources?.ToList() ?? [new TmScheduleResource { Id = "_default", Name = Loc["TmScheduler_Timeline"] }];
         if (_activeResourceIndex >= _resources.Count) _activeResourceIndex = 0;
         if (_activeSlotIndex >= _slotsPerDay) _activeSlotIndex = 0;
         BuildResourceEventMap();
+        BuildLanes();
     }
 
     private RenderFragment Slot(string resourceId, int slotIndex) => builder =>
     {
         {
             var si = slotIndex;
-            var slotStart = CurrentDate.Date.AddMinutes(si * SlotDuration);
+            var slotStart = CurrentDate.Date.AddMinutes(RangeStartMinutes + si * SlotDuration);
             var slotEnd = slotStart.AddMinutes(SlotDuration);
             var active = IsActiveSlot(resourceId, si);
 
             builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "class", "tm-scheduler-timeline-slot");
+            var offHours = IsOffHours(slotStart);
+            builder.AddAttribute(1, "class", "tm-scheduler-timeline-slot" + (offHours ? " tm-scheduler-timeline-slot--offhours" : ""));
             builder.AddAttribute(2, "role", "button");
             builder.AddAttribute(3, "tabindex", active ? "0" : "-1");
             builder.AddAttribute(4, "aria-label", SchedulerA11y.SlotLabel(Loc, slotStart, slotEnd, CultureInfo.CurrentUICulture));
             builder.AddAttribute(5, "data-tm-roving", _rovingId);
             builder.AddAttribute(6, "data-start", slotStart.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
             builder.AddAttribute(7, "data-resource", resourceId);
-            builder.AddAttribute(8, "style", $"left: {F(GetMinuteLeftPercent(si * SlotDuration))}%; width: {F(GetSlotWidthPercent())}%;");
+            builder.AddAttribute(8, "style", $"left: {F(MinutePercent(RangeStartMinutes + si * SlotDuration))}%; width: {F(SlotWidthPercent())}%;");
             builder.AddAttribute(9, "ondrop", EventCallback.Factory.Create(this, () => HandleSlotDrop(slotStart, slotEnd, resourceId)));
             builder.AddEventPreventDefaultAttribute(10, "ondragover", true);
             builder.AddAttribute(11, "onclick", EventCallback.Factory.Create(this, () => OnSlotClick.InvokeAsync((slotStart, slotEnd))));
@@ -215,7 +341,7 @@
 
         if (SchedulerA11y.IsEnterActivation(e))
         {
-            var start = CurrentDate.Date.AddMinutes(slotIndex * SlotDuration);
+            var start = CurrentDate.Date.AddMinutes(RangeStartMinutes + slotIndex * SlotDuration);
             await OnSlotClick.InvokeAsync((start, start.AddMinutes(SlotDuration)));
         }
     }
@@ -262,27 +388,67 @@
     }
 
     private List<TmScheduleEvent> GetEventsForResource(string resourceId)
-        => _resourceEventMap.TryGetValue(resourceId, out var list) ? list : [];
+        => _resourceEventMap.TryGetValue(resourceId, out var list) ? list.Where(IntersectsRange).ToList() : [];
 
-    private static double GetMinuteLeftPercent(int minutes) => minutes / (24.0 * 60) * 100;
-    private double GetSlotWidthPercent() => SlotDuration / (24.0 * 60) * 100;
+    /// <summary>An event outside the clipped range is not rendered, so it is not a focus stop either.</summary>
+    private bool IntersectsRange(TmScheduleEvent evt)
+    {
+        var start = (int)(evt.StartLocal - CurrentDate.Date).TotalMinutes;
+        var end = (int)(evt.EndLocal - CurrentDate.Date).TotalMinutes;
+        if (evt.EndLocal.Date > evt.StartLocal.Date) end = 24 * 60;
+        return end > RangeStartMinutes && start < RangeStartMinutes + RangeMinutes;
+    }
+
+    /// <summary>
+    /// Overlapping bars of one resource stack into lanes instead of painting on top of each other.
+    /// The same grouping the time grid uses, applied per resource row.
+    /// </summary>
+    private void BuildLanes()
+    {
+        _lanes = new Dictionary<string, Dictionary<string, SchedulerLayout.PositionedEvent>>();
+        foreach (var (resourceId, events) in _resourceEventMap)
+            _lanes[resourceId] = SchedulerLayout.Assign(events.Where(IntersectsRange).ToList()).ToDictionary(p => p.Event.Id);
+    }
+
+    private double MinutePercent(int minutes) => (minutes - RangeStartMinutes) / (double)RangeMinutes * 100;
+    private double SlotWidthPercent() => SlotDuration / (double)RangeMinutes * 100;
 
     private int GetEventStartMinutes(TmScheduleEvent evt)
     {
         // Position by display wall-clock (StartLocal), so a display zone that differs from the
         // machine zone, and a DST day, land the bar on the hour the user sees.
-        var dayStart = CurrentDate.Date;
-        var minutes = (int)(evt.StartLocal - dayStart).TotalMinutes;
-        return Math.Max(0, Math.Min(minutes, 24 * 60));
+        var minutes = (int)(evt.StartLocal - CurrentDate.Date).TotalMinutes;
+        return Math.Clamp(minutes, RangeStartMinutes, RangeStartMinutes + RangeMinutes);
     }
 
-    private double GetEventWidthPercent(TmScheduleEvent evt)
+    private int EventEndMinutes(TmScheduleEvent evt)
     {
         var startMin = GetEventStartMinutes(evt);
         var endMin = (int)(evt.EndLocal - CurrentDate.Date).TotalMinutes;
-        endMin = Math.Max(startMin + 1, Math.Min(endMin, 24 * 60));
-        return (endMin - startMin) / (24.0 * 60) * 100;
+        return Math.Clamp(Math.Max(startMin + 1, endMin), RangeStartMinutes, RangeStartMinutes + RangeMinutes);
     }
+
+    private SchedulerLayout.PositionedEvent LaneOf(string resourceId, TmScheduleEvent evt)
+        => _lanes.TryGetValue(resourceId, out var lanes) && lanes.TryGetValue(evt.Id, out var lane)
+            ? lane : new SchedulerLayout.PositionedEvent(evt, 0, 1);
+
+    private int LaneCount(string resourceId)
+        => _lanes.TryGetValue(resourceId, out var lanes) && lanes.Count > 0 ? lanes.Values.Max(l => l.TotalLanes) : 1;
+
+    private bool IsOffHours(DateTime slotStart)
+    {
+        if (!HighlightOffHours) return false;
+        var minute = slotStart.Hour * 60 + slotStart.Minute;
+        return minute < WorkDayStart.Hour * 60 + WorkDayStart.Minute
+            || minute >= WorkDayEnd.Hour * 60 + WorkDayEnd.Minute;
+    }
+
+    private void TickIndicators() => _ = InvokeAsync(() =>
+    {
+        if (_disposed) return;
+        foreach (var indicator in _indicators.ToArray())
+            indicator.Tick();
+    });
 
     private static string F(double value) => value.ToString("F4", CultureInfo.InvariantCulture);
 
@@ -332,6 +498,22 @@
             catch (JSException) { }
             catch (InvalidOperationException) { }
             catch (TaskCanceledException) { }
+        }
+
+        if (_jsRegistered && ScrollToTime != _scrolledTo)
+        {
+            _scrolledTo = ScrollToTime;
+            if (ScrollToTime is { } scrollTo)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("TempoBlazor.Scheduler.scrollToTime", _containerRef, scrollTo.TotalMinutes);
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+                {
+                    // A dropped circuit only skips the scroll.
+                }
+            }
         }
 
         if (_moveFocus)
@@ -427,6 +609,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+        _ticker?.Dispose();
         if (_jsRegistered)
         {
             try

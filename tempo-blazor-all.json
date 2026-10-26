@@ -23792,8 +23792,8 @@
               "name": "CurrentDate",
               "type": "DateTime",
               "isRequired": false,
-              "default": "DateTime.Today",
-              "description": "Currently displayed date (determines visible range)."
+              "description": "Currently displayed date (determines visible range).",
+              "default": "Today"
             },
             {
               "name": "CurrentDateChanged",
@@ -23845,6 +23845,13 @@
               "description": "When true, hides the hourly time grid body in Day and Week views (only column headers and all-day row are shown)."
             },
             {
+              "name": "HighlightOffHours",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, hours outside the working day are tinted. Default false, so a full-day grid stays uniform.",
+              "default": "false"
+            },
+            {
               "name": "HighlightWeekends",
               "type": "bool",
               "isRequired": false,
@@ -23857,6 +23864,13 @@
               "isRequired": false,
               "default": "3",
               "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+            },
+            {
+              "name": "MonthWeeks",
+              "type": "TmSchedulerMonthWeeks",
+              "isRequired": false,
+              "default": "TmSchedulerMonthWeeks.Six",
+              "description": "How many weeks the month grid renders. Auto drops an empty trailing week, so a month that fits renders 35 days."
             },
             {
               "name": "OnAddClick",
@@ -23907,10 +23921,22 @@
               "description": "Whether events are read-only (no drag/resize)."
             },
             {
+              "name": "ResourceHeaderTemplate",
+              "type": "RenderFragment<TmScheduleResource>?",
+              "isRequired": false,
+              "description": "Replaces the default resource header (initials avatar, name and resource type) in the time grid and the timeline."
+            },
+            {
               "name": "Resources",
               "type": "IReadOnlyList<TmScheduleResource>?",
               "isRequired": false,
               "description": "Resources for grouping (timeline/resource views)."
+            },
+            {
+              "name": "ScrollToTime",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "When set, Day, Week and Timeline scroll this time into view after the first render. Null does not scroll."
             },
             {
               "name": "SelectedDate",
@@ -23944,11 +23970,31 @@
               "description": "When true, events are rendered in adjacent-month day cells visible in the month grid. Default: true."
             },
             {
+              "name": "ShowEventResource",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, a timed event in the time grid names its resource under the title."
+            },
+            {
+              "name": "ShowFullDay",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false, Day, Week and Timeline render only the working hours. Default true, the full day."
+            },
+            {
               "name": "ShowHeader",
               "type": "bool",
               "isRequired": false,
               "default": "true",
               "description": "When false, the toolbar row — which is this component's header — is not rendered."
+            },
+            {
+              "name": "ShowNowIndicator",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true, today's column draws the current-time indicator. Default true; set false to restore the previous look."
             },
             {
               "name": "SlotDuration",
@@ -23983,10 +24029,17 @@
               "description": "Views the toolbar switcher offers, in the given order. Null offers every view. A View that is not offered is inserted at its canonical position."
             },
             {
+              "name": "WeekDays",
+              "type": "TmSchedulerWeekDays",
+              "isRequired": false,
+              "default": "TmSchedulerWeekDays.FullWeek",
+              "description": "Which days the week renders. WorkWeek keeps the first five; the title and the data load use the same range."
+            },
+            {
               "name": "WorkDayEnd",
               "type": "TimeOnly",
               "isRequired": false,
-              "description": "Work day end time.",
+              "description": "Work day end time. With ShowFullDay false it is the last rendered minute.",
               "default": "new(17, 0)"
             },
             {
@@ -24025,7 +24078,16 @@
             "tm-scheduler-timegrid-slot--half",
             "tm-scheduler-event--tinted",
             "tm-scheduler-timeline-event-time",
-            "tm-scheduler-timeline-event-title"
+            "tm-scheduler-timeline-event-title",
+            "tm-scheduler-resource-header",
+            "tm-scheduler-resource-header-avatar",
+            "tm-scheduler-resource-header-name",
+            "tm-scheduler-resource-header-type",
+            "tm-scheduler-timegrid-slot--offhours",
+            "tm-scheduler-timegrid-event-resource",
+            "tm-scheduler-timegrid-time-label--last",
+            "tm-scheduler-timeline-resource-header--sticky",
+            "tm-scheduler-timeline-now"
           ],
           "cssVariables": [
             {
@@ -24063,6 +24125,26 @@
             {
               "name": "--tm-scheduler-event-bar-width",
               "description": "Width of the shared surface left bar. Defaults to --tm-space-1."
+            },
+            {
+              "name": "--tm-scheduler-hour-height",
+              "description": "Height of one hour in the time grid. Defaults to 3rem."
+            },
+            {
+              "name": "--tm-scheduler-visible-hours",
+              "description": "Read-only. The component sets it to the visible range in hours, and the geometry reads it."
+            },
+            {
+              "name": "--tm-scheduler-offhours-bg",
+              "description": "Wash of a slot outside working hours when HighlightOffHours is true. A 6% mix of --tm-text-secondary."
+            },
+            {
+              "name": "--tm-scheduler-lane-height",
+              "description": "Height of one timeline lane. Defaults to 3.5rem."
+            },
+            {
+              "name": "--tm-scheduler-timeline-hour-width",
+              "description": "Width of one timeline hour. Defaults to 5rem."
             }
           ],
           "usedAbstractions": [
@@ -24215,6 +24297,13 @@
               "description": "When true, hides the hourly time grid body."
             },
             {
+              "name": "HighlightOffHours",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, hours outside the working day are tinted, forwarded to the time grid.",
+              "default": "false"
+            },
+            {
               "name": "HighlightWeekends",
               "type": "bool",
               "isRequired": false,
@@ -24258,10 +24347,22 @@
               "description": "Whether events are read-only."
             },
             {
+              "name": "ResourceHeaderTemplate",
+              "type": "RenderFragment<TmScheduleResource>?",
+              "isRequired": false,
+              "description": "Replaces the default resource header, forwarded to the time grid."
+            },
+            {
               "name": "Resources",
               "type": "IReadOnlyList<TmScheduleResource>?",
               "isRequired": false,
               "description": "Resources for grouping columns."
+            },
+            {
+              "name": "ScrollToTime",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "When set, the grid scrolls this time into view after the first render, forwarded to the time grid."
             },
             {
               "name": "SelectedDate",
@@ -24282,6 +24383,26 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "ShowEventResource",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true a timed event names its resource, forwarded to the time grid."
+            },
+            {
+              "name": "ShowFullDay",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the grid shows only the working hours, forwarded to the time grid."
+            },
+            {
+              "name": "ShowNowIndicator",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true today's column draws the current-time indicator, forwarded to the time grid."
+            },
+            {
               "name": "SlotDuration",
               "type": "int",
               "isRequired": false,
@@ -24289,10 +24410,30 @@
               "description": "Duration of each time slot in minutes."
             },
             {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone for the current-time indicator, forwarded to the time grid."
+            },
+            {
               "name": "Today",
               "type": "DateOnly",
               "isRequired": false,
               "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+            },
+            {
+              "name": "WorkDayEnd",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "Last minute of the working day, forwarded to the time grid.",
+              "default": "new(17, 0)"
+            },
+            {
+              "name": "WorkDayStart",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "First minute of the working day, forwarded to the time grid.",
+              "default": "new(8, 0)"
             }
           ],
           "cssClasses": [
@@ -24421,6 +24562,13 @@
               "description": "Max events visible per day cell before showing \"+N more\"."
             },
             {
+              "name": "MonthWeeks",
+              "type": "TmSchedulerMonthWeeks",
+              "isRequired": false,
+              "default": "TmSchedulerMonthWeeks.Six",
+              "description": "How many weeks the grid renders. Auto drops an empty trailing week."
+            },
+            {
               "name": "OnEventChanged",
               "type": "EventCallback<TmScheduleEvent>",
               "isRequired": false,
@@ -24497,8 +24645,8 @@
               "name": "Today",
               "type": "DateTime",
               "isRequired": false,
-              "default": "DateTime.Today",
-              "description": "Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today."
+              "description": "Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today.",
+              "default": "DateTime.Today"
             }
           ],
           "cssClasses": [
@@ -24571,10 +24719,23 @@
               "description": "Optional custom event template."
             },
             {
+              "name": "HideDateHeaders",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the date header row is not rendered. A Day view with resources sets it."
+            },
+            {
               "name": "HideTimeGrid",
               "type": "bool",
               "isRequired": false,
               "description": "When true, hides the hourly time grid body (only header and all-day row are shown)."
+            },
+            {
+              "name": "HighlightOffHours",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, hours outside the working day are tinted. Default false.",
+              "default": "false"
             },
             {
               "name": "HighlightWeekends",
@@ -24620,10 +24781,22 @@
               "description": "Whether events are read-only (no drag/resize)."
             },
             {
+              "name": "ResourceHeaderTemplate",
+              "type": "RenderFragment<TmScheduleResource>?",
+              "isRequired": false,
+              "description": "Replaces the default resource header (initials avatar, name and resource type)."
+            },
+            {
               "name": "Resources",
               "type": "IReadOnlyList<TmScheduleResource>?",
               "isRequired": false,
               "description": "Resources for grouping columns."
+            },
+            {
+              "name": "ScrollToTime",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "When set, the grid scrolls this time to the top of the visible track after the first render. Null does not scroll."
             },
             {
               "name": "SelectedDate",
@@ -24644,6 +24817,26 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "ShowEventResource",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true a timed event names its resource under the title."
+            },
+            {
+              "name": "ShowFullDay",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the grid shows only the working hours. Default true."
+            },
+            {
+              "name": "ShowNowIndicator",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true today's column draws the current-time indicator. Default true."
+            },
+            {
               "name": "SlotDuration",
               "type": "int",
               "isRequired": false,
@@ -24651,10 +24844,30 @@
               "description": "Duration of each time slot in minutes."
             },
             {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone for the current-time indicator. Null uses the injected clock's local zone."
+            },
+            {
               "name": "Today",
               "type": "DateOnly",
               "isRequired": false,
               "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+            },
+            {
+              "name": "WorkDayEnd",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "Last minute of the working day.",
+              "default": "new(17, 0)"
+            },
+            {
+              "name": "WorkDayStart",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "First minute of the working day. With ShowFullDay false it is the first rendered hour.",
+              "default": "new(8, 0)"
             }
           ],
           "cssClasses": [
@@ -24690,6 +24903,13 @@
             "tm-scheduler-timegrid-event-time",
             "tm-scheduler-timegrid-event-title",
             "tm-scheduler-timegrid-now",
+            "tm-scheduler-timegrid-slot--offhours",
+            "tm-scheduler-timegrid-event-resource",
+            "tm-scheduler-timegrid-time-label--last",
+            "tm-scheduler-resource-header",
+            "tm-scheduler-resource-header-avatar",
+            "tm-scheduler-resource-header-name",
+            "tm-scheduler-resource-header-type",
             "tm-scheduler-event-resize-handle",
             "tm-scheduler-event-resize-handle--top",
             "tm-scheduler-event-resize-handle--bottom"
@@ -24733,6 +24953,13 @@
               "description": "Optional custom event renderer used inside each positioned timeline bar. The bar's positioning and resize handles stay; only the inner content is replaced."
             },
             {
+              "name": "HighlightOffHours",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, hours outside the working day are tinted. Default false.",
+              "default": "false"
+            },
+            {
               "name": "OnEventChanged",
               "type": "EventCallback<TmScheduleEvent>",
               "isRequired": false,
@@ -24769,10 +24996,22 @@
               "description": "Whether events are read-only."
             },
             {
+              "name": "ResourceHeaderTemplate",
+              "type": "RenderFragment<TmScheduleResource>?",
+              "isRequired": false,
+              "description": "Replaces the default resource header."
+            },
+            {
               "name": "Resources",
               "type": "IReadOnlyList<TmScheduleResource>?",
               "isRequired": false,
               "description": "Resources to display as rows."
+            },
+            {
+              "name": "ScrollToTime",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "When set, the timeline scrolls this time into view after the first render. Null does not scroll."
             },
             {
               "name": "SelectedEvent",
@@ -24787,11 +25026,45 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "ShowFullDay",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the timeline shows only the working hours. Default true."
+            },
+            {
+              "name": "ShowNowIndicator",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true the current day draws the current-time indicator. Default true."
+            },
+            {
               "name": "SlotDuration",
               "type": "int",
               "isRequired": false,
               "default": "30",
               "description": "Duration of each time slot in minutes."
+            },
+            {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone for the current-time indicator."
+            },
+            {
+              "name": "WorkDayEnd",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "Last minute of the working day.",
+              "default": "new(17, 0)"
+            },
+            {
+              "name": "WorkDayStart",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "First minute of the working day. With ShowFullDay false it is the first rendered hour.",
+              "default": "new(8, 0)"
             }
           ],
           "cssClasses": [
@@ -24799,6 +25072,11 @@
             "tm-scheduler-timeline-header",
             "tm-scheduler-timeline-body",
             "tm-scheduler-timeline-resource-header",
+            "tm-scheduler-timeline-resource-header--sticky",
+            "tm-scheduler-timeline-resource-label--sticky",
+            "tm-scheduler-timeline-slot--offhours",
+            "tm-scheduler-timeline-now",
+            "tm-scheduler-resource-header",
             "tm-scheduler-timeline-time-header",
             "tm-scheduler-timeline-row",
             "tm-scheduler-timeline-resource-label",
@@ -24927,7 +25205,6 @@
               "name": "Today",
               "type": "DateOnly",
               "isRequired": false,
-              "default": "DateOnly.FromDateTime(DateTime.Today)",
               "description": "The day the calendar marks as today. TmScheduler passes its display-zone today."
             },
             {
@@ -25012,6 +25289,13 @@
               "description": "When true, hides the hourly time grid body."
             },
             {
+              "name": "HighlightOffHours",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, hours outside the working day are tinted, forwarded to the time grid.",
+              "default": "false"
+            },
+            {
               "name": "HighlightWeekends",
               "type": "bool",
               "isRequired": false,
@@ -25055,10 +25339,22 @@
               "description": "Whether events are read-only."
             },
             {
+              "name": "ResourceHeaderTemplate",
+              "type": "RenderFragment<TmScheduleResource>?",
+              "isRequired": false,
+              "description": "Replaces the default resource header, forwarded to the time grid."
+            },
+            {
               "name": "Resources",
               "type": "IReadOnlyList<TmScheduleResource>?",
               "isRequired": false,
               "description": "Resources for grouping columns."
+            },
+            {
+              "name": "ScrollToTime",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "When set, the grid scrolls this time into view after the first render, forwarded to the time grid."
             },
             {
               "name": "SelectedDate",
@@ -25079,6 +25375,26 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "ShowEventResource",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true a timed event names its resource, forwarded to the time grid."
+            },
+            {
+              "name": "ShowFullDay",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the grid shows only the working hours, forwarded to the time grid."
+            },
+            {
+              "name": "ShowNowIndicator",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true today's column draws the current-time indicator, forwarded to the time grid."
+            },
+            {
               "name": "SlotDuration",
               "type": "int",
               "isRequired": false,
@@ -25086,10 +25402,37 @@
               "description": "Duration of each time slot in minutes."
             },
             {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone for the current-time indicator, forwarded to the time grid."
+            },
+            {
               "name": "Today",
               "type": "DateOnly",
               "isRequired": false,
               "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+            },
+            {
+              "name": "WeekDays",
+              "type": "TmSchedulerWeekDays",
+              "isRequired": false,
+              "default": "TmSchedulerWeekDays.FullWeek",
+              "description": "Which days the week renders. WorkWeek keeps the first five."
+            },
+            {
+              "name": "WorkDayEnd",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "Last minute of the working day, forwarded to the time grid.",
+              "default": "new(17, 0)"
+            },
+            {
+              "name": "WorkDayStart",
+              "type": "TimeOnly",
+              "isRequired": false,
+              "description": "First minute of the working day, forwarded to the time grid.",
+              "default": "new(8, 0)"
             }
           ],
           "cssClasses": [
@@ -86017,6 +86360,26 @@
           ]
         },
         {
+          "itemName": "TmSchedulerMonthWeeks",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "How many weeks a scheduler month renders. Six always renders six; Auto drops an empty trailing week.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TmSchedulerWeekDays",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Which days a scheduler week renders. FullWeek renders all seven; WorkWeek keeps the first five.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmScheduleViewType",
           "kind": "Enum",
           "category": "Models",
@@ -104475,12 +104838,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1492,
-        "manualItemCount": 1492,
-        "generatedItemCount": 1475,
+        "itemCount": 1494,
+        "manualItemCount": 1494,
+        "generatedItemCount": 1477,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1475
+        "publicApiTypeCount": 1477
       }
     },
     {
@@ -121461,10 +121824,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3305,
-    "manualItemCount": 3305,
+    "itemCount": 3307,
+    "manualItemCount": 3307,
     "generatedOnlyItemCount": 0,
     "componentCount": 487,
-    "publicApiTypeCount": 2765
+    "publicApiTypeCount": 2767
   }
 }

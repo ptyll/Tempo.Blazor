@@ -11,6 +11,16 @@
                          Today="@Today"
                          HighlightWeekends="@HighlightWeekends"
                          AllDayEventStyle="@AllDayEventStyle"
+                         WorkDayStart="@WorkDayStart"
+                         WorkDayEnd="@WorkDayEnd"
+                         ShowFullDay="@ShowFullDay"
+                         HighlightOffHours="@HighlightOffHours"
+                         ScrollToTime="@ScrollToTime"
+                         ShowNowIndicator="@ShowNowIndicator"
+                         TimeZone="@TimeZone"
+                         HideDateHeaders="@_hasResources"
+                         ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                         ShowEventResource="@ShowEventResource"
                          OnSlotClick="@OnSlotClick"
                          SelectedDate="@SelectedDate"
                          SelectedEvent="@SelectedEvent"
@@ -78,6 +88,35 @@
 
     /// <summary>Paint of an all-day event, forwarded to the time grid.</summary>
     [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
+
+    /// <summary>First minute of the working day, forwarded to the time grid.</summary>
+    [Parameter] public TimeOnly WorkDayStart { get; set; } = new(8, 0);
+
+    /// <summary>Last minute of the working day, forwarded to the time grid.</summary>
+    [Parameter] public TimeOnly WorkDayEnd { get; set; } = new(17, 0);
+
+    /// <summary>When false the grid shows only the working hours, forwarded to the time grid.</summary>
+    [Parameter] public bool ShowFullDay { get; set; } = true;
+
+    /// <summary>When true, slots outside the working day are tinted. Forwarded to the time grid. Default false.</summary>
+    [Parameter] public bool HighlightOffHours { get; set; }
+
+    /// <summary>When set, the grid scrolls this time into view after the first render, forwarded to the time grid.</summary>
+    [Parameter] public TimeSpan? ScrollToTime { get; set; }
+
+    /// <summary>When true today's column draws the current-time indicator, forwarded to the time grid.</summary>
+    [Parameter] public bool ShowNowIndicator { get; set; } = true;
+
+    /// <summary>Display zone for the current-time indicator, forwarded to the time grid.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
+    /// <summary>Replaces the default resource header, forwarded to the time grid.</summary>
+    [Parameter] public RenderFragment<TmScheduleResource>? ResourceHeaderTemplate { get; set; }
+
+    /// <summary>When true a timed event names its resource, forwarded to the time grid.</summary>
+    [Parameter] public bool ShowEventResource { get; set; }
+
+    private bool _hasResources => Resources is { Count: > 0 };
 
     protected override void OnParametersSet()
     {

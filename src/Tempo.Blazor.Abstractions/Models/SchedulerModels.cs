@@ -17,6 +17,26 @@ public enum TmScheduleViewType
     Timeline
 }
 
+/// <summary>Which days the week view renders. FullWeek is the historical seven columns.</summary>
+public enum TmSchedulerWeekDays
+{
+    /// <summary>Monday to Sunday, or whatever <c>FirstDayOfWeek</c> starts. The default.</summary>
+    FullWeek,
+
+    /// <summary>Monday to Friday of the displayed week, hiding the weekend.</summary>
+    WorkWeek
+}
+
+/// <summary>How many weeks the month grid renders. Six is the historical stable shape.</summary>
+public enum TmSchedulerMonthWeeks
+{
+    /// <summary>Always six weeks, so navigating months never changes the grid height. The default.</summary>
+    Six,
+
+    /// <summary>Five weeks when the month fits, six when it does not.</summary>
+    Auto
+}
+
 /// <summary>How an all-day event is painted. Solid is the historical fill; Tinted uses the shared event surface.</summary>
 public enum TmAllDayEventStyle
 {

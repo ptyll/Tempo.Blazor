@@ -45,8 +45,10 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
     [Fact]
     public void Today_Has_Today_Class()
     {
+        // The scheduler passes today; the view no longer reads DateTime.Today itself.
         var cut = Render<TmSchedulerMonthView>(p => p
-            .Add(c => c.CurrentDate, DateTime.Today));
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Today, new DateTime(2025, 6, 15)));
 
         cut.FindAll(".tm-scheduler-month-day--today").Count.Should().Be(1);
     }
@@ -66,13 +68,14 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Today_Parameter_Defaults_To_Machine_Today()
+    public void Today_Parameter_Does_Not_Default_To_Machine_Today()
     {
+        // Rule 21: a view rendered on its own must not read the machine clock. The scheduler passes today.
         var cut = Render<TmSchedulerMonthView>(p => p
-            .Add(c => c.CurrentDate, DateTime.Today));
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
 
-        cut.Instance.Today.Should().Be(DateTime.Today);
-        cut.FindAll(".tm-scheduler-month-day--today").Count.Should().Be(1);
+        cut.Instance.Today.Should().Be(default);
+        cut.FindAll(".tm-scheduler-month-day--today").Should().BeEmpty();
     }
 
     [Fact]

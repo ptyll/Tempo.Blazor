@@ -4647,6 +4647,8 @@
   "TmScheduler_SlotAriaLabel": "de {0} à {1}, {2}",
   "TmScheduler_Timeline": "Chronologie",
   "TmScheduler_TimelineGrid": "Chronologie",
+  "TmScheduler_NowIndicator": "Heure actuelle {0}",
+  "TmScheduler_Resources": "Ressources",
   "TmScheduler_Today": "Aujourd'hui",
   "TmScheduler_ViewSwitcher": "Affichage",
   "TmScheduler_Week": "Semaine",

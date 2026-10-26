@@ -161,7 +161,60 @@
       "type": "TimeOnly",
       "isRequired": false,
       "default": "new(17, 0)",
-      "description": "Work day end time."
+      "description": "Work day end time. With ShowFullDay false it is the last rendered minute."
+    },
+    {
+      "name": "WeekDays",
+      "type": "TmSchedulerWeekDays",
+      "isRequired": false,
+      "default": "FullWeek",
+      "description": "Which days the week renders. WorkWeek keeps the first five; the title and the data load use the same range."
+    },
+    {
+      "name": "MonthWeeks",
+      "type": "TmSchedulerMonthWeeks",
+      "isRequired": false,
+      "default": "Six",
+      "description": "How many weeks the month grid renders. Auto drops an empty trailing week, so a month that fits renders 35 days."
+    },
+    {
+      "name": "ScrollToTime",
+      "type": "TimeSpan?",
+      "isRequired": false,
+      "description": "When set, Day, Week and Timeline scroll this time into view after the first render. Null does not scroll."
+    },
+    {
+      "name": "ShowFullDay",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false, Day, Week and Timeline render only the working hours. Default true, the full day."
+    },
+    {
+      "name": "HighlightOffHours",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, hours outside the working day are tinted. Default false, so a full-day grid stays uniform."
+    },
+    {
+      "name": "ShowNowIndicator",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, today's column draws the current-time indicator. Default true; set false to restore the previous look."
+    },
+    {
+      "name": "ResourceHeaderTemplate",
+      "type": "RenderFragment<TmScheduleResource>?",
+      "isRequired": false,
+      "description": "Replaces the default resource header (initials avatar, name and resource type) in the time grid and the timeline."
+    },
+    {
+      "name": "ShowEventResource",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, a timed event in the time grid names its resource under the title."
     },
     {
       "name": "SlotDuration",
@@ -272,7 +325,16 @@
     "tm-scheduler-timegrid-slot--half",
     "tm-scheduler-event--tinted",
     "tm-scheduler-timeline-event-time",
-    "tm-scheduler-timeline-event-title"
+    "tm-scheduler-timeline-event-title",
+    "tm-scheduler-resource-header",
+    "tm-scheduler-resource-header-avatar",
+    "tm-scheduler-resource-header-name",
+    "tm-scheduler-resource-header-type",
+    "tm-scheduler-timegrid-slot--offhours",
+    "tm-scheduler-timegrid-event-resource",
+    "tm-scheduler-timegrid-time-label--last",
+    "tm-scheduler-timeline-resource-header--sticky",
+    "tm-scheduler-timeline-now"
   ],
   "cssVariables": [
     { "name": "--event-color", "description": "The event's own colour, set inline from TmScheduleEvent.Color. A missing colour falls back to --tm-color-primary for the tint and the stripe, and to --tm-scheduler-event-bg for a solid all-day fill." },
@@ -283,7 +345,12 @@
     { "name": "--tm-scheduler-weekend-bg", "description": "Wash of a weekend cell or column when HighlightWeekends is true. A mix of --tm-bg-muted." },
     { "name": "--tm-scheduler-event-tint", "description": "Amount of the event colour mixed into the shared surface. 14%." },
     { "name": "--tm-scheduler-event-border-tint", "description": "Amount of the event colour mixed into the shared surface border. 28%." },
-    { "name": "--tm-scheduler-event-bar-width", "description": "Width of the shared surface left bar. Defaults to --tm-space-1." }
+    { "name": "--tm-scheduler-event-bar-width", "description": "Width of the shared surface left bar. Defaults to --tm-space-1." },
+    { "name": "--tm-scheduler-hour-height", "description": "Height of one hour in the time grid. Defaults to 3rem." },
+    { "name": "--tm-scheduler-visible-hours", "description": "Read-only. The component sets it to the visible range in hours, and the geometry reads it." },
+    { "name": "--tm-scheduler-offhours-bg", "description": "Wash of a slot outside working hours when HighlightOffHours is true. A 6% mix of --tm-text-secondary." },
+    { "name": "--tm-scheduler-lane-height", "description": "Height of one timeline lane. Defaults to 3.5rem." },
+    { "name": "--tm-scheduler-timeline-hour-width", "description": "Width of one timeline hour. Defaults to 5rem." }
   ],
   "usedAbstractions": [
     {

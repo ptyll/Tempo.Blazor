@@ -4673,6 +4673,8 @@
   "TmScheduler_SlotAriaLabel": "od {0} do {1}, {2}",
   "TmScheduler_Timeline": "Časová osa",
   "TmScheduler_TimelineGrid": "Časová osa",
+  "TmScheduler_NowIndicator": "Aktuální čas {0}",
+  "TmScheduler_Resources": "Zdroje",
   "TmScheduler_Today": "Dnes",
   "TmScheduler_ViewSwitcher": "Zobrazení",
   "TmScheduler_Week": "Týden",

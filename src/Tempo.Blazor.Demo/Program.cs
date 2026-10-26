@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
@@ -25,6 +26,16 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+// A pinned clock is demo-only and only answers ?now=. The library never reads it; the scheduler's
+// now indicator does, so an E2E can assert the line for a known instant in two zones.
+builder.Services.AddScoped<TimeProvider>(sp =>
+{
+    var navigation = sp.GetRequiredService<NavigationManager>();
+    return DemoPinnedClock.TryRead(navigation.ToAbsoluteUri(navigation.Uri).Query, out var pinned)
+        ? new DemoPinnedClock(pinned)
+        : TimeProvider.System;
+});
 
 builder.Services.AddHttpClient("DemoApi", c =>
     c.BaseAddress = new Uri("https://localhost:5100"));
@@ -179,3 +190,31 @@ catch
 }
 
 await host.RunAsync();
+
+/// <summary>A clock frozen at one instant. The scheduler now indicator reads it when the demo URL pins <c>?now=</c>.</summary>
+file sealed class DemoPinnedClock(DateTimeOffset instant) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => instant.ToUniversalTime();
+
+    public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+    public static bool TryRead(string query, out DateTimeOffset pinned)
+    {
+        pinned = default;
+        if (string.IsNullOrEmpty(query)) return false;
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var split = part.IndexOf('=');
+            if (split <= 0) continue;
+            if (!string.Equals(Uri.UnescapeDataString(part[..split]), "now", StringComparison.Ordinal)) continue;
+            return DateTimeOffset.TryParse(
+                Uri.UnescapeDataString(part[(split + 1)..]),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out pinned);
+        }
+
+        return false;
+    }
+}

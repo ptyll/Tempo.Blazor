@@ -2060,6 +2060,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["day","week","month","agenda","timeline"]),
                 P("showPrint", "Show Print", PropType.Bool, true, cat: "Appearance"),
                 P("showAddButton", "Show Add Button", PropType.Bool, false, cat: "Appearance"),
+                P("workWeek", "Work Week", PropType.Bool, false, cat: "Appearance"),
+                P("showNowIndicator", "Show Now Indicator", PropType.Bool, true, cat: "Appearance"),
             ]
         };
 

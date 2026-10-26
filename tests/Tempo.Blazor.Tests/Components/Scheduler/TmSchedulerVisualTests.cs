@@ -141,7 +141,7 @@ public class TmSchedulerVisualTests : LocalizationTestBase
 
         var grid = Css("_scheduler-timegrid.css");
         Rule(grid, ".tm-scheduler-timegrid-scroll").Should().Contain("overflow-y: auto");
-        Rule(grid, ".tm-scheduler-timegrid-body").Should().Contain("height: 72rem");
+        Rule(grid, ".tm-scheduler-timegrid-body").Should().Contain("height: calc(var(--tm-scheduler-visible-hours, 24) * var(--tm-scheduler-hour-height, 3rem))");
         Rule(grid, ".tm-scheduler-timegrid-body").Should().NotContain("overflow");
     }
 

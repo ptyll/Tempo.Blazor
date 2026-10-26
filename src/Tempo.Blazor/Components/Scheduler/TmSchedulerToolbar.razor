@@ -183,7 +183,7 @@
     [Parameter] public bool ShowHeader { get; set; } = true;
 
     /// <summary>The day the calendar marks as today. The scheduler passes its display-zone today.</summary>
-    [Parameter] public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    [Parameter] public DateOnly Today { get; set; }
 
     /// <summary>Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab.</summary>
     [Parameter] public string? InstanceId { get; set; }

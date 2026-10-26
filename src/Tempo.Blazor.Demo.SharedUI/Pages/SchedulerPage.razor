@@ -152,6 +152,7 @@
                      @bind-CurrentDate="_weekDate"
                      @bind-SelectedEvent="_weekSelected"
                      Events="_weekEvents"
+                     ScrollToTime="@_scrollToEight"
                      SlotDuration="30"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick" />
@@ -172,6 +173,7 @@
         <TmScheduler View="TmScheduleViewType.Day"
                      @bind-CurrentDate="_dayDate"
                      Events="_dayEvents"
+                     ScrollToTime="@_scrollToEight"
                      SlotDuration="15"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick" />
@@ -197,6 +199,99 @@
     </div>
 </section>
 
+<!-- Working hours, work week and the current-time indicator -->
+<section class="demo-section" data-testid="scheduler-range-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Working hours and the current time</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">A work week clipped to 08:00-17:00, with the current-time indicator</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300" data-testid="scheduler-range-end">Morning Standup ends @_weekEvents.First(e => e.Id == "w1").End.ToString("HH:mm")</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Range</span>
+    </div>
+
+    <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
+        <TmScheduler View="TmScheduleViewType.Week"
+                     @bind-CurrentDate="_weekDate"
+                     Events="_weekEvents"
+                     WeekDays="TmSchedulerWeekDays.WorkWeek"
+                     ShowFullDay="false"
+                     WorkDayStart="@(new TimeOnly(8, 0))"
+                     WorkDayEnd="@(new TimeOnly(17, 0))"
+                     ShowNowIndicator="true"
+                     HighlightOffHours="true"
+                     ScrollToTime="@_rangeScrollTo"
+                     OnEventChanged="HandleRangeEventChanged"
+                     SlotDuration="60" />
+    </div>
+</section>
+
+<!-- A pinned instant shown in two zones, so the now line's place is a known number. -->
+<section class="demo-section" data-testid="scheduler-now-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Current time in two zones</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">The same instant drawn for Prague and New York</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;" data-testid="scheduler-now-prague">
+        <TmScheduler View="TmScheduleViewType.Day"
+                     CurrentDate="@_nowDay"
+                     Events="_nowEvents"
+                     TimeZoneId="Europe/Prague"
+                     ShowNowIndicator="true"
+                     ScrollToTime="@_scrollToEight"
+                     SlotDuration="60" />
+    </div>
+    <div class="showcase-card mt-4" style="height: 600px; position: relative; overflow: hidden;" data-testid="scheduler-now-newyork">
+        <TmScheduler View="TmScheduleViewType.Day"
+                     CurrentDate="@_nowDay"
+                     Events="_nowEvents"
+                     TimeZoneId="America/New_York"
+                     ShowNowIndicator="true"
+                     ScrollToTime="@_scrollToFour"
+                     SlotDuration="60" />
+    </div>
+</section>
+
+<!-- Day view with a resource column, so the header shows the avatar. -->
+<section class="demo-section" data-testid="scheduler-resource-day-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Day view with resources</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Each room heads its own column</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
+        <TmScheduler View="TmScheduleViewType.Day"
+                     @bind-CurrentDate="_dayDate"
+                     Events="_resourceDayEvents"
+                     Resources="_resources"
+                     ShowEventResource="true"
+                     ScrollToTime="@_scrollToEight"
+                     SlotDuration="60" />
+    </div>
+</section>
+
+<!-- June 2026 fits in five weeks, so Auto drops the empty sixth row. -->
+<section class="demo-section" data-testid="scheduler-month-auto-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Month, five weeks</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">June 2026 with the empty trailing week dropped</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
+        <TmScheduler View="TmScheduleViewType.Month"
+                     CurrentDate="@(new DateTime(2026, 6, 15))"
+                     MonthWeeks="TmSchedulerMonthWeeks.Auto"
+                     Events="_sampleEvents" />
+    </div>
+</section>
+
 <!-- Timeline View -->
 <section class="demo-section" data-testid="scheduler-timeline-section">
     <div class="flex items-center justify-between mb-4">
@@ -212,6 +307,7 @@
                      @bind-CurrentDate="_timelineDate"
                      Events="_timelineEvents"
                      Resources="_resources"
+                     ScrollToTime="@_scrollToEight"
                      SlotDuration="60"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick" />
@@ -455,7 +551,7 @@
 
     private List<TmScheduleResource> _resources = new()
     {
-        new() { Id = "room-a", Name = "Conference Room A", Color = "#3b82f6" },
+        new() { Id = "room-a", Name = "Conference Room A", Color = "#3b82f6", ResourceType = "Meeting room" },
         new() { Id = "room-b", Name = "Conference Room B", Color = "#10b981" },
         new() { Id = "room-c", Name = "Meeting Room C", Color = "#f59e0b" },
         new() { Id = "room-d", Name = "Board Room", Color = "#8b5cf6" },
@@ -478,6 +574,31 @@
         new() { Id = "mt2", Title = "HV-1044 Planned maintenance", Description = "Running", Start = new DateTime(2026, 7, 2, 9, 0, 0), End = new DateTime(2026, 7, 2, 12, 0, 0), Color = "#ea580c", CssClass = "tm-demo-month-event--running" },
         new() { Id = "mt3", Title = "HV-1060 Recovery confirmed", Description = "Resolved", Start = new DateTime(2026, 7, 4, 13, 0, 0), End = new DateTime(2026, 7, 4, 15, 0, 0), Color = "#16a34a", CssClass = "tm-demo-month-event--resolved" },
     };
+
+    /// <summary>The range section scrolls to 08:00, so the clipped day starts in view.</summary>
+    private TimeSpan? _rangeScrollTo = new(8, 0, 0);
+    private readonly TimeSpan _scrollToEight = new(8, 0, 0);
+    private readonly TimeSpan _scrollToFour = new(4, 0, 0);
+
+    /// <summary>The day the pinned now-line section shows. 15 June 2026 is a Monday.</summary>
+    private readonly DateTime _nowDay = new(2026, 6, 15);
+    private readonly List<TmScheduleEvent> _nowEvents =
+    [
+        new() { Id = "now-1", Title = "Standup", Start = new DateTime(2026, 6, 15, 9, 0, 0), End = new DateTime(2026, 6, 15, 9, 30, 0), Color = "#3b82f6" },
+    ];
+
+    private readonly List<TmScheduleEvent> _resourceDayEvents =
+    [
+        new() { Id = "rd1", Title = "Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6", ResourceId = "room-a" },
+        new() { Id = "rd2", Title = "Workshop", Start = DateTime.Today.AddHours(13), End = DateTime.Today.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
+    ];
+
+    private void HandleRangeEventChanged(TmScheduleEvent changed)
+    {
+        var index = _weekEvents.FindIndex(e => e.Id == changed.Id);
+        if (index >= 0) _weekEvents[index] = changed;
+        StateHasChanged();
+    }
 
     private List<TmScheduleEvent> _weekEvents = new()
     {
@@ -514,6 +635,8 @@
         new() { Id = "t3", Title = "Workshop", Start = DateTime.Today.AddHours(13), End = DateTime.Today.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
         new() { Id = "t4", Title = "Demo", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6", ResourceId = "room-c" },
         new() { Id = "t5", Title = "Training", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
+        // Overlaps Meeting A, so Room A shows two lanes.
+        new() { Id = "t6", Title = "Interview", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(10.5), Color = "#ec4899", ResourceId = "room-a" },
     };
 
     private TmScheduleViewType _toolbarView = TmScheduleViewType.Month;

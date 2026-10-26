@@ -130,9 +130,10 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
             .Add(c => c.Events, events));
 
         var eventEl = cut.Find(".tm-scheduler-timeline-event");
+        // Geometry is a unitless custom property, so the stylesheet owns the percentage.
         var style = eventEl.GetAttribute("style") ?? "";
-        style.Should().Contain("left:");
-        style.Should().Contain("width:");
+        style.Should().Contain("--tm-scheduler-event-start: 720");
+        style.Should().Contain("--tm-scheduler-event-end: 840");
     }
 
     [Fact]
@@ -298,9 +299,10 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
                 }
             ]));
 
+        // 09:00 in the display zone is minute 540, whatever offset the event was stored with.
         var bar = cut.Find(".tm-scheduler-timeline-event");
-        bar.GetAttribute("style").Should().Contain("left: 37.5000%");
-        bar.GetAttribute("style").Should().Contain("width: 4.166");
+        bar.GetAttribute("style").Should().Contain("--tm-scheduler-event-start: 540");
+        bar.GetAttribute("style").Should().Contain("--tm-scheduler-event-end: 600");
     }
 
     /// <summary>The selected timeline bar carries aria-selected and the selected class.</summary>

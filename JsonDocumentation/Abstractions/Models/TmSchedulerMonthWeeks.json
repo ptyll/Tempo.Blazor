@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "How many weeks a scheduler month renders. Six always renders six; Auto drops an empty trailing week.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmSchedulerMonthWeeks"
+}

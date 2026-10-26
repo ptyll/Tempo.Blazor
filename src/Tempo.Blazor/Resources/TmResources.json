@@ -4621,6 +4621,8 @@
   "TmScheduler_SlotAriaLabel": "{0} to {1}, {2}",
   "TmScheduler_Timeline": "Timeline",
   "TmScheduler_TimelineGrid": "Timeline",
+  "TmScheduler_NowIndicator": "Current time {0}",
+  "TmScheduler_Resources": "Resources",
   "TmScheduler_Today": "Today",
   "TmScheduler_ViewSwitcher": "View",
   "TmScheduler_Week": "Week",

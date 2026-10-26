@@ -12,8 +12,9 @@ internal static class SchedulerRange
 {
     /// <summary>
     /// The half-open range a view renders for <paramref name="current"/>. Month covers exactly the
-    /// rendered six-week grid; Week starts on the configured first day; Agenda spans its day count
-    /// from the current date; Day and Timeline are that single day.
+    /// rendered grid (six weeks, or five when <see cref="SchedulerRangeOptions.MonthWeeks"/> is Auto
+    /// and the month fits); Week starts on the configured first day and spans the configured week
+    /// days; Agenda spans its day count from the current date; Day and Timeline are that single day.
     /// </summary>
     public static (DateTime Start, DateTime End) Visible(
         TmScheduleViewType view, DateTime current, SchedulerRangeOptions options)
@@ -21,8 +22,8 @@ internal static class SchedulerRange
         var day = current.Date;
         return view switch
         {
-            TmScheduleViewType.Week => Week(day, options.FirstDay),
-            TmScheduleViewType.Month => Month(day, options.FirstDay),
+            TmScheduleViewType.Week => WeekRange(day, options),
+            TmScheduleViewType.Month => Month(day, options.FirstDay, options.MonthWeeks),
             TmScheduleViewType.Agenda => (day, day.AddDays(options.AgendaLength)),
             _ => (day, day.AddDays(1))
         };
@@ -33,8 +34,17 @@ internal static class SchedulerRange
 
     /// <summary>The seven dates of the week containing <paramref name="current"/>.</summary>
     public static IReadOnlyList<DateOnly> WeekDates(DateTime current, int firstDayOfWeek)
+        => WeekDates(current, firstDayOfWeek, TmSchedulerWeekDays.FullWeek);
+
+    /// <summary>
+    /// The dates the week view renders: the week starting on <paramref name="firstDayOfWeek"/>,
+    /// trimmed to five days for <see cref="TmSchedulerWeekDays.WorkWeek"/>.
+    /// </summary>
+    public static IReadOnlyList<DateOnly> WeekDates(DateTime current, int firstDayOfWeek, TmSchedulerWeekDays weekDays)
     {
-        var (start, _) = Week(current.Date, NormalizeFirstDay(firstDayOfWeek));
+        if (weekDays == TmSchedulerWeekDays.WorkWeek)
+            return WorkWeekDates(current, firstDayOfWeek);
+        var (start, _) = Week(current.Date, NormalizeFirstDay(firstDayOfWeek), 7);
         return Enumerable.Range(0, 7).Select(i => DateOnly.FromDateTime(start.AddDays(i))).ToList();
     }
 
@@ -43,7 +53,19 @@ internal static class SchedulerRange
 
     /// <summary>The 42 dates of the month grid containing <paramref name="current"/>.</summary>
     public static IReadOnlyList<DateOnly> MonthDays(DateTime current, int firstDayOfWeek)
-        => DateTimeHelpers.GetCalendarDays(current.Year, current.Month, (DayOfWeek)NormalizeFirstDay(firstDayOfWeek));
+        => MonthDays(current, firstDayOfWeek, TmSchedulerMonthWeeks.Six);
+
+    /// <summary>
+    /// The dates the month grid renders. <see cref="TmSchedulerMonthWeeks.Six"/> is always 42 days;
+    /// <see cref="TmSchedulerMonthWeeks.Auto"/> drops the trailing week when the month fits in five.
+    /// </summary>
+    public static IReadOnlyList<DateOnly> MonthDays(DateTime current, int firstDayOfWeek, TmSchedulerMonthWeeks weeks)
+    {
+        var days = DateTimeHelpers.GetCalendarDays(current.Year, current.Month, (DayOfWeek)NormalizeFirstDay(firstDayOfWeek));
+        if (weeks == TmSchedulerMonthWeeks.Auto && days[^7].Month != current.Month)
+            return days.Take(35).ToList();
+        return days;
+    }
 
     /// <summary>
     /// The date one navigation step away. <paramref name="direction"/> is negative for previous.
@@ -178,26 +200,71 @@ internal static class SchedulerRange
         return text.Length == 0 ? text : culture.TextInfo.ToUpper(text[0]) + text[1..];
     }
 
+    /// <summary>
+    /// The visible minute range of a day. A full day is midnight to midnight. A clipped day snaps the
+    /// start down and the end up to the slot grid, so a 08:30 start on a 60 minute slot begins at
+    /// 08:00. An end that is not after the start is not a range, so the day stays full.
+    /// </summary>
+    public static (int Start, int End) WorkingRange(TimeOnly start, TimeOnly end, int slotMinutes, bool showFullDay)
+    {
+        if (showFullDay) return (0, 24 * 60);
+        var slot = Math.Max(1, slotMinutes);
+        var startMinutes = start.Hour * 60 + start.Minute;
+        var endMinutes = end.Hour * 60 + end.Minute;
+        if (endMinutes <= startMinutes) return (0, 24 * 60);
+        return (startMinutes / slot * slot, (endMinutes + slot - 1) / slot * slot);
+    }
+
+    /// <summary>
+    /// The dates a work week renders: the Monday-Friday subset of the week that contains
+    /// <paramref name="day"/>, whatever day that week starts on.
+    /// </summary>
+    public static IReadOnlyList<DateOnly> WorkWeekDates(DateTime day, int firstDayOfWeek)
+    {
+        var week = WeekDates(day, firstDayOfWeek, TmSchedulerWeekDays.FullWeek);
+        return week.Where(d => d.DayOfWeek is >= DayOfWeek.Monday and <= DayOfWeek.Friday).ToList();
+    }
+
+    /// <summary>
+    /// The half-open range the week view loads. A work week loads exactly the Monday-Friday it
+    /// renders, so the title, the columns and the data request describe the same days.
+    /// </summary>
+    private static (DateTime Start, DateTime End) WeekRange(DateTime day, SchedulerRangeOptions options)
+    {
+        if (options.WeekDays == TmSchedulerWeekDays.WorkWeek)
+        {
+            var days = WorkWeekDates(day, options.FirstDay);
+            return (days[0].ToDateTime(TimeOnly.MinValue), days[^1].ToDateTime(TimeOnly.MinValue).AddDays(1));
+        }
+
+        return Week(day, options.FirstDay, 7);
+    }
+
     /// <summary>The half-open week containing <paramref name="day"/>, already normalized.</summary>
-    private static (DateTime Start, DateTime End) Week(DateTime day, int firstDay)
+    private static (DateTime Start, DateTime End) Week(DateTime day, int firstDay, int length)
     {
         var offset = ((int)day.DayOfWeek - firstDay + 7) % 7;
         var start = day.AddDays(-offset);
-        return (start, start.AddDays(7));
+        return (start, start.AddDays(length));
     }
 
     /// <summary>The half-open month grid containing <paramref name="day"/>, already normalized.</summary>
-    private static (DateTime Start, DateTime End) Month(DateTime day, int firstDay)
+    private static (DateTime Start, DateTime End) Month(DateTime day, int firstDay, TmSchedulerMonthWeeks weeks)
     {
-        var days = MonthDays(day, firstDay);
+        var days = MonthDays(day, firstDay, weeks);
         return (days[0].ToDateTime(TimeOnly.MinValue), days[^1].ToDateTime(TimeOnly.MinValue).AddDays(1));
     }
+
 }
 
 /// <summary>
-/// The two knobs a range depends on, normalized once so every consumer sees the same values.
+/// The knobs a range depends on, normalized once so every consumer sees the same values.
 /// </summary>
-internal readonly record struct SchedulerRangeOptions(int FirstDayOfWeek, int AgendaDays)
+internal readonly record struct SchedulerRangeOptions(
+    int FirstDayOfWeek,
+    int AgendaDays,
+    TmSchedulerWeekDays WeekDays = TmSchedulerWeekDays.FullWeek,
+    TmSchedulerMonthWeeks MonthWeeks = TmSchedulerMonthWeeks.Six)
 {
     /// <summary>The week start folded into 0..6.</summary>
     public int FirstDay => SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);

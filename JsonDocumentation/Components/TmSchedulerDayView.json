@@ -117,7 +117,16 @@
       "isRequired": false,
       "default": "Solid",
       "description": "Paint of an all-day event, forwarded to the time grid."
-    }
+    },
+    { "name": "WorkDayStart", "type": "TimeOnly", "isRequired": false, "default": "new(8, 0)", "description": "First minute of the working day, forwarded to the time grid." },
+    { "name": "WorkDayEnd", "type": "TimeOnly", "isRequired": false, "default": "new(17, 0)", "description": "Last minute of the working day, forwarded to the time grid." },
+    { "name": "ShowFullDay", "type": "bool", "isRequired": false, "default": "true", "description": "When false the grid shows only the working hours, forwarded to the time grid." },
+    { "name": "HighlightOffHours", "type": "bool", "isRequired": false, "default": "false", "description": "When true, hours outside the working day are tinted, forwarded to the time grid." },
+    { "name": "ScrollToTime", "type": "TimeSpan?", "isRequired": false, "description": "When set, the grid scrolls this time into view after the first render, forwarded to the time grid." },
+    { "name": "ShowNowIndicator", "type": "bool", "isRequired": false, "default": "true", "description": "When true today's column draws the current-time indicator, forwarded to the time grid." },
+    { "name": "TimeZone", "type": "TimeZoneInfo?", "isRequired": false, "description": "Display zone for the current-time indicator, forwarded to the time grid." },
+    { "name": "ResourceHeaderTemplate", "type": "RenderFragment<TmScheduleResource>?", "isRequired": false, "description": "Replaces the default resource header, forwarded to the time grid." },
+    { "name": "ShowEventResource", "type": "bool", "isRequired": false, "description": "When true a timed event names its resource, forwarded to the time grid." }
   ],
   "cssClasses": [
     "tm-scheduler-day"

@@ -54,6 +54,7 @@
       "default": "Solid",
       "description": "Paint of an all-day event. Tinted adds tm-scheduler-event--tinted."
     },
+    { "name": "MonthWeeks", "type": "TmSchedulerMonthWeeks", "isRequired": false, "default": "Six", "description": "How many weeks the grid renders. Auto drops an empty trailing week." },
     {
       "name": "ReadOnly",
       "type": "bool",

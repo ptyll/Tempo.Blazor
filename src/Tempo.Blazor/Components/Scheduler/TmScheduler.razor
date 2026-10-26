@@ -8,7 +8,7 @@
 <div class="tm-scheduler @Class" @ref="_rootRef">
     <TmSchedulerToolbar View="@View"
                         Views="@Views"
-                        CurrentDate="@CurrentDate"
+                        CurrentDate="@EffectiveDate"
                         RangeStart="@VisibleRange.Start"
                         RangeEnd="@VisibleRange.End"
                         ShowHeader="@ShowHeader"
@@ -32,11 +32,12 @@
         @switch (View)
         {
             case TmScheduleViewType.Month:
-                <TmSchedulerMonthView CurrentDate="@CurrentDate"
+                <TmSchedulerMonthView CurrentDate="@EffectiveDate"
                                       Today="@TodayInDisplayZone()"
                                       Events="@_loadedEvents"
                                       MaxVisibleEvents="@MaxVisibleEvents"
                                       FirstDayOfWeek="@NormalizedFirstDay"
+                                      MonthWeeks="@MonthWeeks"
                                       ReadOnly="@ReadOnly"
                                       ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
                                       HighlightWeekends="@HighlightWeekends"
@@ -55,7 +56,7 @@
                 break;
 
             case TmScheduleViewType.Day:
-                <TmSchedulerDayView CurrentDate="@CurrentDate"
+                <TmSchedulerDayView CurrentDate="@EffectiveDate"
                                     Events="@_loadedEvents"
                                     Resources="@Resources"
                                     SlotDuration="@SlotDuration"
@@ -64,6 +65,15 @@
                                     Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
                                     HighlightWeekends="@HighlightWeekends"
                                     AllDayEventStyle="@AllDayEventStyle"
+                                    WorkDayStart="@WorkDayStart"
+                                    WorkDayEnd="@WorkDayEnd"
+                                    ShowFullDay="@ShowFullDay"
+                                    HighlightOffHours="@HighlightOffHours"
+                                    ScrollToTime="@ScrollToTime"
+                                    ShowNowIndicator="@ShowNowIndicator"
+                                    TimeZone="@ResolveTimeZone()"
+                                    ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                                    ShowEventResource="@ShowEventResource"
                                     OnSlotClick="@HandleSlotClickAsync"
                                     SelectedDate="@SelectedDate"
                                     SelectedEvent="@SelectedEvent"
@@ -76,16 +86,26 @@
                 break;
 
             case TmScheduleViewType.Week:
-                <TmSchedulerWeekView CurrentDate="@CurrentDate"
+                <TmSchedulerWeekView CurrentDate="@EffectiveDate"
                                      Events="@_loadedEvents"
                                      Resources="@Resources"
                                      FirstDayOfWeek="@NormalizedFirstDay"
+                                     WeekDays="@WeekDays"
                                      SlotDuration="@SlotDuration"
                                      ReadOnly="@ReadOnly"
                                      HideTimeGrid="@HideTimeGrid"
                                      Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
                                      HighlightWeekends="@HighlightWeekends"
                                      AllDayEventStyle="@AllDayEventStyle"
+                                     WorkDayStart="@WorkDayStart"
+                                     WorkDayEnd="@WorkDayEnd"
+                                     ShowFullDay="@ShowFullDay"
+                                     HighlightOffHours="@HighlightOffHours"
+                                     ScrollToTime="@ScrollToTime"
+                                     ShowNowIndicator="@ShowNowIndicator"
+                                     TimeZone="@ResolveTimeZone()"
+                                     ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                                     ShowEventResource="@ShowEventResource"
                                      OnSlotClick="@HandleSlotClickAsync"
                                      SelectedDate="@SelectedDate"
                                      SelectedEvent="@SelectedEvent"
@@ -98,7 +118,7 @@
                 break;
 
             case TmScheduleViewType.Agenda:
-                <TmSchedulerAgendaView CurrentDate="@CurrentDate"
+                <TmSchedulerAgendaView CurrentDate="@EffectiveDate"
                                        AgendaDays="@NormalizedAgendaDays"
                                        Events="@_loadedEvents"
                                        SelectedEvent="@SelectedEvent"
@@ -108,11 +128,19 @@
                 break;
 
             case TmScheduleViewType.Timeline:
-                <TmSchedulerTimelineView CurrentDate="@CurrentDate"
+                <TmSchedulerTimelineView CurrentDate="@EffectiveDate"
                                          Events="@_loadedEvents"
                                          Resources="@Resources"
                                          SlotDuration="@SlotDuration"
                                          ReadOnly="@ReadOnly"
+                                         WorkDayStart="@WorkDayStart"
+                                         WorkDayEnd="@WorkDayEnd"
+                                         ShowFullDay="@ShowFullDay"
+                                         HighlightOffHours="@HighlightOffHours"
+                                         ScrollToTime="@ScrollToTime"
+                                         ShowNowIndicator="@ShowNowIndicator"
+                                         TimeZone="@ResolveTimeZone()"
+                                         ResourceHeaderTemplate="@ResourceHeaderTemplate"
                                          OnSlotClick="@HandleSlotClickAsync"
                                          SelectedEvent="@SelectedEvent"
                                          SelectedEventChanged="@HandleSelectedEventAsync"
@@ -152,8 +180,8 @@
     /// <summary>Fires when the view type changes.</summary>
     [Parameter] public EventCallback<TmScheduleViewType> ViewChanged { get; set; }
 
-    /// <summary>Currently displayed date (determines visible range).</summary>
-    [Parameter] public DateTime CurrentDate { get; set; } = DateTime.Today;
+    /// <summary>Currently displayed date (determines visible range). Defaults to today in the display zone.</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
 
     /// <summary>Fires when navigation changes the date.</summary>
     [Parameter] public EventCallback<DateTime> CurrentDateChanged { get; set; }
@@ -267,6 +295,30 @@
     /// <summary>Fires when the user clicks the add button. The button renders only when a delegate is bound.</summary>
     [Parameter] public EventCallback OnAddClick { get; set; }
 
+    /// <summary>Which days the week view renders. <see cref="TmSchedulerWeekDays.WorkWeek"/> hides the weekend.</summary>
+    [Parameter] public TmSchedulerWeekDays WeekDays { get; set; } = TmSchedulerWeekDays.FullWeek;
+
+    /// <summary>How many weeks the month grid renders. <see cref="TmSchedulerMonthWeeks.Auto"/> drops an empty trailing week.</summary>
+    [Parameter] public TmSchedulerMonthWeeks MonthWeeks { get; set; } = TmSchedulerMonthWeeks.Six;
+
+    /// <summary>When false, Day, Week and Timeline render only the working hours. Default true, the full day.</summary>
+    [Parameter] public bool ShowFullDay { get; set; } = true;
+
+    /// <summary>When true, slots outside the working day are tinted. Default false, so a full day stays unmarked.</summary>
+    [Parameter] public bool HighlightOffHours { get; set; }
+
+    /// <summary>When set, Day, Week and Timeline scroll this time into view after the first render. Null does not scroll.</summary>
+    [Parameter] public TimeSpan? ScrollToTime { get; set; }
+
+    /// <summary>When true, today's column draws the current-time indicator. Default true.</summary>
+    [Parameter] public bool ShowNowIndicator { get; set; } = true;
+
+    /// <summary>Replaces the default resource header in the time grid and the timeline.</summary>
+    [Parameter] public RenderFragment<TmScheduleResource>? ResourceHeaderTemplate { get; set; }
+
+    /// <summary>When true, a timed event names its resource under the title.</summary>
+    [Parameter] public bool ShowEventResource { get; set; }
+
     /// <summary>Opens the browser print dialog; the scheduler's print stylesheet lays out the current view for paper.</summary>
     public async Task PrintAsync()
     {
@@ -312,6 +364,12 @@
     /// <summary>Today's date in the display zone ("Today" navigation), taken from <see cref="Clock"/>.</summary>
     private DateTime TodayInDisplayZone()
         => TimeZoneInfo.ConvertTime(Clock.GetUtcNow(), ResolveTimeZone()).Date;
+
+    /// <summary>
+    /// The date every range, step and view reads. A default <see cref="CurrentDate"/> means today in
+    /// the display zone, and it is never written back: a host that binds a default field keeps it.
+    /// </summary>
+    private DateTime EffectiveDate => CurrentDate == default ? TodayInDisplayZone() : CurrentDate.Date;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -498,10 +556,10 @@
     private int NormalizedAgendaDays => SchedulerRange.NormalizeAgendaDays(AgendaDays);
 
     /// <summary>The one range this render loads, titles and hands to the view.</summary>
-    private SchedulerRangeOptions RangeOptions => new(NormalizedFirstDay, NormalizedAgendaDays);
+    private SchedulerRangeOptions RangeOptions => new(NormalizedFirstDay, NormalizedAgendaDays, WeekDays, MonthWeeks);
 
     private (DateTime Start, DateTime End) VisibleRange
-        => SchedulerRange.Visible(View, CurrentDate, RangeOptions);
+        => SchedulerRange.Visible(View, EffectiveDate, RangeOptions);
 
     private async Task HandleViewChange(TmScheduleViewType newView)
     {
@@ -510,12 +568,12 @@
 
     private async Task NavigatePrev()
     {
-        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, CurrentDate, -1, RangeOptions));
+        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, EffectiveDate, -1, RangeOptions));
     }
 
     private async Task NavigateNext()
     {
-        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, CurrentDate, 1, RangeOptions));
+        await CurrentDateChanged.InvokeAsync(SchedulerRange.Step(View, EffectiveDate, 1, RangeOptions));
     }
 
     private Task HandleMonthKeyboardNavigateAsync(DateTime date)

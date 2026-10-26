@@ -1,5 +1,11 @@
 /* ═══════════════ TmScheduler ═══════════════ */
 .tm-scheduler {
+    --tm-scheduler-hour-height: 3rem;
+    --tm-scheduler-offhours-bg: color-mix(in srgb, var(--tm-text-secondary) 6%, transparent);
+    --tm-scheduler-lane-height: 3.5rem;
+    --tm-scheduler-timeline-hour-width: 5rem;
+    --tm-scheduler-timeline-resource-width: 12rem;
+    --tm-scheduler-now: 0;
     display: flex;
     flex-direction: column;
     height: 100%;

@@ -10,7 +10,7 @@
 /* ── Header ── */
 .tm-scheduler-timeline-header,
 .tm-scheduler-timeline-row {
-    min-width: calc(10rem + 24 * 3rem);
+    min-width: calc(var(--tm-scheduler-timeline-resource-width, 12rem) + var(--tm-scheduler-visible-hours, 24) * var(--tm-scheduler-timeline-hour-width, 5rem));
 }
 
 .tm-scheduler-timeline-header {
@@ -23,9 +23,22 @@
 }
 
 .tm-scheduler-timeline-resource-header {
-    flex-shrink: 0;
-    width: 10rem;
+    flex: 0 0 var(--tm-scheduler-timeline-resource-width, 12rem);
+    width: var(--tm-scheduler-timeline-resource-width, 12rem);
     border-right: 1px solid var(--tm-border-color);
+    display: flex;
+    align-items: center;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-scheduler-timeline-resource-header--sticky {
+    position: sticky;
+    left: 0;
+    z-index: 3;
 }
 
 .tm-scheduler-timeline-time-header {
@@ -59,10 +72,15 @@
     border-bottom: none;
 }
 
+.tm-scheduler-timeline-resource-label--sticky {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+}
+
 .tm-scheduler-timeline-resource-label {
-    width: 10rem;
-    flex-shrink: 0;
-    width: 10rem;
+    width: var(--tm-scheduler-timeline-resource-width, 12rem);
+    flex: 0 0 var(--tm-scheduler-timeline-resource-width, 12rem);
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
     font-size: var(--tm-font-size-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
@@ -79,7 +97,8 @@
     flex: 1 1 0;
     min-width: 0;
     position: relative;
-    min-height: 3.5rem;
+    isolation: isolate;
+    min-height: calc(var(--tm-scheduler-lanes, 1) * var(--tm-scheduler-lane-height, 3.5rem));
 }
 
 /* ── Slot ── */
@@ -105,15 +124,49 @@
     z-index: 2;
 }
 
+.tm-scheduler-timeline-slot--offhours {
+    background: var(--tm-scheduler-offhours-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-scheduler-timeline-now {
+        transition: none;
+    }
+}
+
 .tm-scheduler-timeline-slot:hover {
     background: var(--tm-color-surface-hover);
+}
+
+.tm-scheduler-timeline-now {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--tm-scheduler-now, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
+    width: 2px;
+    background: var(--tm-color-danger);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.tm-scheduler-timeline-now::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-danger);
 }
 
 /* ── Event ── */
 .tm-scheduler-timeline-event {
     position: absolute;
-    top: 2px;
-    height: 3.25rem;
+    top: calc(var(--tm-scheduler-lane, 0) * var(--tm-scheduler-lane-height, 3.5rem));
+    height: calc(var(--tm-scheduler-lane-height, 3.5rem) - 0.25rem);
+    left: calc(var(--tm-scheduler-event-start, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
+    width: calc((var(--tm-scheduler-event-end, 0) - var(--tm-scheduler-event-start, 0)) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-2);
     display: flex;

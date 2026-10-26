@@ -77,6 +77,34 @@
         ready: Promise.resolve(),
 
         /**
+         * Scrolls the grid's own scroller so <paramref>minutes</paramref> sits near the top, under
+         * the sticky head. The root carries data-range-start and data-range-minutes, so a clipped
+         * day scrolls by the same range the resize maths use. A time outside the range is a no-op.
+         */
+        scrollToTime: function (root, minutes) {
+            if (!root || typeof root.querySelector !== 'function') return;
+            // The timeline root is itself the scroller; the time grid wraps one.
+            var scroller = root.matches && root.matches('[data-tm-scroll]')
+                ? root
+                : root.querySelector('[data-tm-scroll]');
+            if (!scroller) return;
+            var start = parseInt(root.dataset.rangeStart) || 0;
+            var range = parseInt(root.dataset.rangeMinutes) || 24 * 60;
+            var offset = minutes - start;
+            if (offset < 0 || offset > range || range <= 0) return;
+            var fraction = offset / range;
+            if (scroller.dataset && scroller.dataset.tmScroll === 'timeline') {
+                var label = scroller.querySelector('.tm-scheduler-timeline-resource-header');
+                var labelWidth = label ? label.offsetWidth : 0;
+                scroller.scrollLeft = (scroller.scrollWidth - labelWidth) * fraction;
+                return;
+            }
+            var head = root.querySelector('.tm-scheduler-timegrid-head');
+            var headHeight = head ? head.offsetHeight : 0;
+            scroller.scrollTop = Math.max(0, (scroller.scrollHeight - headHeight) * fraction);
+        },
+
+        /**
          * Moves focus to the selected day in the title calendar owned by <paramref>root</paramref>,
          * or to today. The root is the toolbar (or the open panel) passed from Blazor — a
          * document-wide <c>:popover-open</c> query throws in engines that do not know the selector.
@@ -345,6 +373,8 @@
                 ? container.closest('.tm-scheduler-timeline')
                 : container.closest('.tm-scheduler-timegrid');
             var slotMinutes = parseInt(schedulerContainer && schedulerContainer.dataset.slotDuration) || 30;
+            // The visible range, not a hard-coded day: a grid clipped to working hours publishes both.
+            var rangeMinutes = parseInt(schedulerContainer && schedulerContainer.dataset.rangeMinutes) || 24 * 60;
 
             var containerRect = container.getBoundingClientRect();
             var eventRect = eventElement.getBoundingClientRect();
@@ -370,8 +400,8 @@
                 originalSize: isTimeline ? eventRect.width : eventRect.height,
                 originalLeft: isTimeline ? eventRect.left - containerRect.left : 0,
                 originalTop: !isTimeline ? eventRect.top - containerRect.top : 0,
-                // Minutes per pixel ratio (24 hours = 1440 minutes)
-                minutesPerPixel: (24 * 60) / containerSize,
+                // Minutes per pixel of the VISIBLE range (1440 for a full day, less when clipped).
+                minutesPerPixel: rangeMinutes / containerSize,
                 delta: 0
             };
 

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Which days a scheduler week renders. FullWeek renders all seven; WorkWeek keeps the first five.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmSchedulerWeekDays"
+}

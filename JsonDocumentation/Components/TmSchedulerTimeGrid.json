@@ -119,7 +119,17 @@
       "isRequired": false,
       "default": "Solid",
       "description": "Paint of an all-day event. Tinted adds tm-scheduler-event--tinted."
-    }
+    },
+    { "name": "WorkDayStart", "type": "TimeOnly", "isRequired": false, "default": "new(8, 0)", "description": "First minute of the working day. With ShowFullDay false it is the first rendered hour." },
+    { "name": "WorkDayEnd", "type": "TimeOnly", "isRequired": false, "default": "new(17, 0)", "description": "Last minute of the working day." },
+    { "name": "ShowFullDay", "type": "bool", "isRequired": false, "default": "true", "description": "When false the grid shows only the working hours. Default true." },
+    { "name": "HighlightOffHours", "type": "bool", "isRequired": false, "default": "false", "description": "When true, hours outside the working day are tinted. Default false." },
+    { "name": "ScrollToTime", "type": "TimeSpan?", "isRequired": false, "description": "When set, the grid scrolls this time to the top of the visible track after the first render. Null does not scroll." },
+    { "name": "ShowNowIndicator", "type": "bool", "isRequired": false, "default": "true", "description": "When true today's column draws the current-time indicator. Default true." },
+    { "name": "TimeZone", "type": "TimeZoneInfo?", "isRequired": false, "description": "Display zone for the current-time indicator. Null uses the injected clock's local zone." },
+    { "name": "HideDateHeaders", "type": "bool", "isRequired": false, "description": "When true the date header row is not rendered. A Day view with resources sets it." },
+    { "name": "ResourceHeaderTemplate", "type": "RenderFragment<TmScheduleResource>?", "isRequired": false, "description": "Replaces the default resource header (initials avatar, name and resource type)." },
+    { "name": "ShowEventResource", "type": "bool", "isRequired": false, "description": "When true a timed event names its resource under the title." }
   ],
   "cssClasses": [
     "tm-scheduler-timegrid",
@@ -154,6 +164,13 @@
     "tm-scheduler-timegrid-event-time",
     "tm-scheduler-timegrid-event-title",
     "tm-scheduler-timegrid-now",
+    "tm-scheduler-timegrid-slot--offhours",
+    "tm-scheduler-timegrid-event-resource",
+    "tm-scheduler-timegrid-time-label--last",
+    "tm-scheduler-resource-header",
+    "tm-scheduler-resource-header-avatar",
+    "tm-scheduler-resource-header-name",
+    "tm-scheduler-resource-header-type",
     "tm-scheduler-event-resize-handle",
     "tm-scheduler-event-resize-handle--top",
     "tm-scheduler-event-resize-handle--bottom"

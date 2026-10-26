@@ -105,6 +105,38 @@ public class TmSchedulerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Default_Date_Renders_An_Event_Scheduled_For_Today()
+    {
+        // A default CurrentDate means today, not year 1. An event for today must be in range.
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Day)
+            .Add(c => c.Events, new List<TmScheduleEvent>
+            {
+                new() { Id = "today", Title = "Today's standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5) }
+            }));
+
+        cut.FindAll(".tm-scheduler-timegrid-event").Should().ContainSingle()
+            .Which.TextContent.Should().Contain("Today's standup");
+    }
+
+    [Fact]
+    public void Next_And_Prev_Step_From_Today_When_The_Date_Is_Default()
+    {
+        DateTime date = default;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Day)
+            .Add(c => c.CurrentDate, date)
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => date = d)));
+
+        cut.Find("[data-testid='scheduler-next']").Click();
+        date.Date.Should().Be(DateTime.Today.AddDays(1));
+
+        date = default;
+        cut.Find("[data-testid='scheduler-prev']").Click();
+        date.Date.Should().Be(DateTime.Today.AddDays(-1));
+    }
+
+    [Fact]
     public void Today_Navigation_Returns_To_Today()
     {
         DateTime date = new DateTime(2025, 1, 1);

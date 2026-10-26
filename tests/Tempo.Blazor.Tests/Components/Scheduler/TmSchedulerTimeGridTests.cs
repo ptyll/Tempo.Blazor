@@ -16,6 +16,51 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         bool allDay = false, string? color = null) =>
         new() { Title = title, Start = start, End = end, AllDay = allDay, Color = color };
 
+    [Theory]
+    [InlineData(30, 0, 1440)]
+    [InlineData(15, 0, 1440)]
+    [InlineData(30, 510, 540)]
+    public void Slot_Sizes_Cover_The_Whole_Range(int slot, int start, int minutes)
+    {
+        // Integer division used to leave the last slots short of the range, so a day summed to 96%.
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.SlotDuration, slot)
+            .Add(c => c.ShowFullDay, start == 0)
+            .Add(c => c.WorkDayStart, new TimeOnly(start / 60, start % 60))
+            .Add(c => c.WorkDayEnd, start == 0 ? new TimeOnly(23, 59) : new TimeOnly((start + minutes) / 60, (start + minutes) % 60)));
+
+        var sizes = cut.FindAll(".tm-scheduler-timegrid-slot")
+            .Select(s => Minutes(s, "--tm-scheduler-slot-size"))
+            .ToList();
+        sizes.Sum().Should().Be(minutes);
+    }
+
+    [Fact]
+    public void Label_Offset_Matches_The_Event_Offset_For_The_Same_Time()
+    {
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, new List<TmScheduleEvent>
+            {
+                Evt("Noon", new DateTime(2025, 6, 10, 12, 0, 0), new DateTime(2025, 6, 10, 13, 0, 0))
+            }));
+
+        var label = cut.FindAll(".tm-scheduler-timegrid-time-label").Single(l => l.TextContent.Contains("12:"));
+        var evt = cut.Find(".tm-scheduler-timegrid-event");
+        Minutes(label, "--tm-scheduler-label-offset").Should().Be(Minutes(evt, "--tm-scheduler-event-start"));
+    }
+
+    private static int Minutes(AngleSharp.Dom.IElement element, string variable)
+    {
+        var style = element.GetAttribute("style") ?? "";
+        var marker = variable + ": ";
+        var start = style.IndexOf(marker, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"{variable} should be a unitless minute count, got '{style}'");
+        var end = style.IndexOf(';', start);
+        return int.Parse(style[(start + marker.Length)..end], System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     [Fact]
     public void Renders_TimeGrid_Container()
     {
@@ -33,8 +78,8 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
 
         var labels = cut.FindAll(".tm-scheduler-timegrid-time-label");
         labels.Count.Should().BeGreaterThan(0);
-        // 24 hour labels + 1 allday label = 25
-        labels.Count.Should().Be(25);
+        // 24 hour labels + the closing midnight + the all-day label.
+        labels.Count.Should().Be(26);
     }
 
     [Fact]
@@ -190,9 +235,11 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
             .Add(c => c.Events, events));
 
         var eventEl = cut.Find(".tm-scheduler-timegrid-event");
+        // Geometry is a unitless custom property. The stylesheet turns it into a percentage,
+        // so a culture that formats doubles with a comma never reaches an inline style.
         var style = eventEl.GetAttribute("style") ?? "";
-        style.Should().Contain("top:");
-        style.Should().Contain("height:");
+        style.Should().Contain("--tm-scheduler-event-start: 720");
+        style.Should().Contain("--tm-scheduler-event-end: 780");
     }
 
     [Fact]
@@ -247,13 +294,12 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         var eventEls = cut.FindAll(".tm-scheduler-timegrid-event");
         eventEls.Count.Should().Be(2);
 
-        // Overlapping events should have width < 100% and different left positions
+        // Overlapping events take separate lanes. The stylesheet derives width and left from them.
         var styleA = eventEls[0].GetAttribute("style") ?? "";
         var styleB = eventEls[1].GetAttribute("style") ?? "";
-        styleA.Should().Contain("width:");
-        styleB.Should().Contain("width:");
-        styleA.Should().Contain("left:");
-        styleB.Should().Contain("left:");
+        styleA.Should().Contain("--tm-scheduler-lane: 0");
+        styleB.Should().Contain("--tm-scheduler-lane: 1");
+        styleA.Should().Contain("--tm-scheduler-lanes: 2");
     }
 
     [Fact]

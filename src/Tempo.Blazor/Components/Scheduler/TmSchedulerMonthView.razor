@@ -130,8 +130,11 @@
     /// <summary>Currently displayed date (determines which month to show).</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
 
-    /// <summary>Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today.</summary>
-    [Parameter] public DateTime Today { get; set; } = DateTime.Today;
+    /// <summary>Today's date in the display zone (highlights the today cell). The scheduler passes its own.</summary>
+    [Parameter] public DateTime Today { get; set; }
+
+    /// <summary>How many weeks the grid renders. <see cref="TmSchedulerMonthWeeks.Auto"/> drops an empty trailing week.</summary>
+    [Parameter] public TmSchedulerMonthWeeks MonthWeeks { get; set; } = TmSchedulerMonthWeeks.Six;
 
     /// <summary>Events to display.</summary>
     [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
@@ -215,7 +218,7 @@
     {
         var culture = CultureInfo.CurrentUICulture;
         var firstDay = (DayOfWeek)SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);
-        _days = SchedulerRange.MonthDays(CurrentDate, FirstDayOfWeek);
+        _days = SchedulerRange.MonthDays(CurrentDate, FirstDayOfWeek, MonthWeeks);
         _dayHeaders = DateTimeHelpers.GetDayHeaders(culture, firstDay);
         // The stop opens on the displayed date, and follows the host when it changes the month.
         // A keyboard move inside the same month keeps its own stop.

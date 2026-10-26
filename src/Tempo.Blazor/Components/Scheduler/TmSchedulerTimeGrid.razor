@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Models
 @using System.Globalization
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.DependencyInjection
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
@@ -10,7 +11,10 @@
     // This will be used by the custom event
 </script>
 
-<div class="tm-scheduler-timegrid" @ref="_containerRef" data-slot-duration="@SlotDuration">
+<CascadingValue Value="_ticker" IsFixed="true">
+<div class="tm-scheduler-timegrid" @ref="_containerRef" data-slot-duration="@SlotDuration"
+     data-range-start="@RangeStartMinutes" data-range-minutes="@RangeMinutes"
+     style="--tm-scheduler-visible-hours: @RangeHours.ToString(CultureInfo.InvariantCulture);">
     <div class="tm-scheduler-timegrid-scroll" data-tm-scroll="timegrid">
     @* One sticky head, so the all-day row follows the header without a hard-coded offset. *@
     <div class="tm-scheduler-timegrid-head">
@@ -24,19 +28,23 @@
             @if (_hasResources)
             {
                 <div class="tm-scheduler-timegrid-col-header-group">
-                    <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)"
-                         aria-label="@(IsSelectedDate(d) ? SelectedColumnLabel(d) : null)">
-                        <span class="tm-scheduler-timegrid-col-header-label">
-                            <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
-                            <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
-                        </span>
-                    </div>
+                    @if (!HideDateHeaders)
+                    {
+                        <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)"
+                             aria-label="@(IsSelectedDate(d) ? SelectedColumnLabel(d) : null)">
+                            <span class="tm-scheduler-timegrid-col-header-label">
+                                <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
+                                <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
+                            </span>
+                        </div>
+                    }
                     <div class="tm-scheduler-timegrid-resource-labels">
                         @foreach (var r in Resources!)
                         {
+                            var resource = r;
                             <div class="tm-scheduler-timegrid-resource-label"
-                                 style="@(r.Color is not null ? $"border-bottom-color: {r.Color};" : "")">
-                                @r.Name
+                                 style="@(resource.Color is not null ? $"border-bottom-color: {resource.Color};" : "")">
+                                @SchedulerResourceHeader.Render(resource, ResourceHeaderTemplate)
                             </div>
                         }
                     </div>
@@ -98,15 +106,28 @@
 
     @if (!HideTimeGrid)
     {
-    @* The track itself stays 72rem so event geometry and resize math keep measuring the full day. *@
+    @* The track is one hour-height per visible hour, so event geometry and resize math measure the same range. *@
     <div class="tm-scheduler-timegrid-body">
         <div class="tm-scheduler-timegrid-time-gutter">
-            @for (var hour = 0; hour < 24; hour++)
+            @for (var hour = RangeStartMinutes / 60; hour <= (RangeStartMinutes + RangeMinutes) / 60 && hour <= 24; hour++)
             {
                 var h = hour;
-                <div class="tm-scheduler-timegrid-time-label" style="top: @GetHourTopPercent(h)%;">
-                    @h.ToString("D2"):00
-                </div>
+                var closing = h * 60 == RangeStartMinutes + RangeMinutes;
+                @* Two literal class attributes: an interpolated suffix is an unmeasurable stem. *@
+                @if (closing)
+                {
+                    <div class="tm-scheduler-timegrid-time-label tm-scheduler-timegrid-time-label--last"
+                         style="--tm-scheduler-label-offset: @(h * 60 - RangeStartMinutes);">
+                        @HourLabel(h)
+                    </div>
+                }
+                else
+                {
+                    <div class="tm-scheduler-timegrid-time-label"
+                         style="--tm-scheduler-label-offset: @(h * 60 - RangeStartMinutes);">
+                        @HourLabel(h)
+                    </div>
+                }
             }
         </div>
         @foreach (var date in Dates)
@@ -128,6 +149,10 @@
                             @Slot(d, slotIndex, r.Id)
                         }
                         @RenderPositionedEvents(d, positioned)
+                        @if (ShowNowIndicator)
+                        {
+                            @NowLine(d)
+                        }
                     </div>
                 }
             }
@@ -142,6 +167,10 @@
                         @Slot(d, slotIndex, null)
                     }
                     @RenderPositionedEvents(d, positioned)
+                    @if (ShowNowIndicator)
+                    {
+                        @NowLine(d)
+                    }
                 </div>
             }
         }
@@ -149,18 +178,52 @@
     }
     </div>
 </div>
+</CascadingValue>
 
 @code {
     private DotNetObjectReference<TmSchedulerTimeGrid>? _dotNetRef;
     private bool _jsRegistered;
 
     private int _slotsPerDay;
+    private TimeSpan? _scrolledTo;
+    private SchedulerNowTicker? _ticker;
+
+    /// <summary>How many times this grid itself rendered. A now-indicator tick must not raise it.</summary>
+    internal int RenderCount { get; private set; }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        RenderCount++;
+        base.OnAfterRender(firstRender);
+    }
     private bool _hasResources;
     private Dictionary<DateOnly, List<TmScheduleEvent>> _timedMap = new();
     private Dictionary<DateOnly, List<TmScheduleEvent>> _allDayMap = new();
     private TmScheduleEvent? _draggedEvent;
     private ElementReference _containerRef;
     private readonly Dictionary<string, ElementReference> _eventRefs = new();
+    private readonly List<SchedulerNowIndicator> _indicators = [];
+    private bool _disposed;
+
+    private RenderFragment NowLine(DateOnly date) => builder =>
+    {
+        builder.OpenComponent<SchedulerNowIndicator>(0);
+        builder.AddComponentParameter(1, nameof(SchedulerNowIndicator.Date), date);
+        builder.AddComponentParameter(2, nameof(SchedulerNowIndicator.RangeStartMinutes), RangeStartMinutes);
+        builder.AddComponentParameter(3, nameof(SchedulerNowIndicator.RangeMinutes), RangeMinutes);
+        builder.AddComponentParameter(4, nameof(SchedulerNowIndicator.TimeZone), TimeZone);
+        builder.AddComponentReferenceCapture(5, c => TrackIndicator((SchedulerNowIndicator)c));
+        builder.CloseComponent();
+    };
+
+    private void TrackIndicator(SchedulerNowIndicator indicator)
+    {
+        if (_indicators.Contains(indicator)) return;
+        indicator.OnDisposed = line => ReleaseIndicator(line);
+        _indicators.Add(indicator);
+    }
+
+    private void ReleaseIndicator(SchedulerNowIndicator indicator) => _indicators.Remove(indicator);
     private bool _focusAfterRender;
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
     // Flat column index over Dates x Resources, so arrows cross a resource before the next day.
@@ -221,6 +284,55 @@
     /// <summary>Paint of an all-day event. Tinted adds <c>tm-scheduler-event--tinted</c>.</summary>
     [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
 
+    /// <summary>First minute of the working day, used to tint and, with <see cref="ShowFullDay"/> false, to clip the grid.</summary>
+    [Parameter] public TimeOnly WorkDayStart { get; set; } = new(8, 0);
+
+    /// <summary>Last minute of the working day.</summary>
+    [Parameter] public TimeOnly WorkDayEnd { get; set; } = new(17, 0);
+
+    /// <summary>When false the grid shows only <see cref="WorkDayStart"/> to <see cref="WorkDayEnd"/>. Default true.</summary>
+    [Parameter] public bool ShowFullDay { get; set; } = true;
+
+    /// <summary>When true, slots outside the working day get <c>tm-scheduler-timegrid-slot--offhours</c>. Default false.</summary>
+    [Parameter] public bool HighlightOffHours { get; set; }
+
+    /// <summary>When set, the grid scrolls this time to the top of the visible track after the first render. Null does not scroll.</summary>
+    [Parameter] public TimeSpan? ScrollToTime { get; set; }
+
+    /// <summary>When true, today's column draws the current-time indicator. Default true.</summary>
+    [Parameter] public bool ShowNowIndicator { get; set; } = true;
+
+    /// <summary>Display zone for the current-time indicator. Null uses the injected clock's local zone.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
+    /// <summary>When true, a Day view with resources hides the date header above them. The date is already the view.</summary>
+    [Parameter] public bool HideDateHeaders { get; set; }
+
+    /// <summary>Replaces the default resource header (avatar, name, type).</summary>
+    [Parameter] public RenderFragment<TmScheduleResource>? ResourceHeaderTemplate { get; set; }
+
+    /// <summary>When true, a timed event names its resource under the title.</summary>
+    [Parameter] public bool ShowEventResource { get; set; }
+
+    private int RangeStartMinutes => SchedulerRange.WorkingRange(WorkDayStart, WorkDayEnd, SlotDuration, ShowFullDay).Start;
+
+    private int RangeMinutes
+    {
+        get
+        {
+            var (start, end) = SchedulerRange.WorkingRange(WorkDayStart, WorkDayEnd, SlotDuration, ShowFullDay);
+            return Math.Max(SlotDuration, end - start);
+        }
+    }
+
+    private double RangeHours => RangeMinutes / 60.0;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
     private string SelectedColumnLabel(DateOnly date)
     {
         var header = SchedulerRange.FormatColumnHeader(date, CultureInfo.CurrentUICulture);
@@ -262,6 +374,22 @@
             catch (JSException) { }
         }
 
+        if (_jsRegistered && ScrollToTime != _scrolledTo)
+        {
+            _scrolledTo = ScrollToTime;
+            if (ScrollToTime is { } scrollTo)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("TempoBlazor.Scheduler.scrollToTime", _containerRef, scrollTo.TotalMinutes);
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+                {
+                    // A dropped circuit only skips the scroll.
+                }
+            }
+        }
+
         if (_focusAfterRender)
         {
             _focusAfterRender = false;
@@ -278,7 +406,11 @@
 
     protected override void OnParametersSet()
     {
-        _slotsPerDay = 24 * 60 / Math.Max(1, SlotDuration);
+        if (ShowNowIndicator)
+            _ticker ??= new SchedulerNowTicker(Clock, TickIndicators);
+        // Ceiling, so a range that is not a whole number of slots still ends on its last minute.
+        var slot = Math.Max(1, SlotDuration);
+        _slotsPerDay = (RangeMinutes + slot - 1) / slot;
         _hasResources = Resources is { Count: > 0 };
         if (_activeColumnIndex >= ColumnCount) _activeColumnIndex = 0;
         if (_activeSlotIndex >= _slotsPerDay) _activeSlotIndex = 0;
@@ -305,11 +437,25 @@
         return day * ResourceCount + resource;
     }
 
+    /// <summary>The gutter reads the same short time the events do, so a 12-hour culture shows "9:00 AM".</summary>
+    private string HourLabel(int hour)
+        => (hour == 24 ? DateTime.Today : DateTime.Today.AddHours(hour)).ToString("t", CultureInfo.CurrentUICulture);
+
     private string SlotAriaLabel(DateTime slotStart)
         => SchedulerA11y.SlotLabel(Loc, slotStart, slotStart.AddMinutes(SlotDuration), CultureInfo.CurrentUICulture);
 
     private string EventAriaLabel(TmScheduleEvent e)
-        => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
+    {
+        var label = SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
+        return ShowEventResource && ResourceName(e.ResourceId) is { } name ? $"{label}, {name}" : label;
+    }
+
+    private void TickIndicators() => _ = InvokeAsync(() =>
+    {
+        if (_disposed) return;
+        foreach (var indicator in _indicators.ToArray())
+            indicator.Tick();
+    });
 
     private string? EventStyle(TmScheduleEvent e)
     {
@@ -339,7 +485,7 @@
 
         if (SchedulerA11y.IsEnterActivation(e))
         {
-            var start = date.ToDateTime(TimeOnly.MinValue).AddMinutes(slotIndex * SlotDuration);
+            var start = date.ToDateTime(TimeOnly.MinValue).AddMinutes(RangeStartMinutes + slotIndex * SlotDuration);
             await OnSlotClick.InvokeAsync((start, start.AddMinutes(SlotDuration)));
         }
     }
@@ -364,14 +510,17 @@
     {
         {
             var si = slotIndex;
-            var slotStart = d.ToDateTime(TimeOnly.MinValue).AddMinutes(si * SlotDuration);
+            var slotStart = d.ToDateTime(TimeOnly.MinValue).AddMinutes(RangeStartMinutes + si * SlotDuration);
             var slotEnd = slotStart.AddMinutes(SlotDuration);
 
             var active = IsActiveSlot(d, si, resourceId);
             builder.OpenElement(0, "div");
             var half = slotEnd.Minute != 0;
-            builder.AddAttribute(1, "class", half ? "tm-scheduler-timegrid-slot tm-scheduler-timegrid-slot--half" : "tm-scheduler-timegrid-slot");
-            builder.AddAttribute(2, "style", $"top: {F(GetMinuteTopPercent(si * SlotDuration))}%; height: {F(GetSlotHeightPercent())}%;");
+            var offHours = IsOffHours(slotStart);
+            builder.AddAttribute(1, "class",
+                "tm-scheduler-timegrid-slot" + (half ? " tm-scheduler-timegrid-slot--half" : "") + (offHours ? " tm-scheduler-timegrid-slot--offhours" : ""));
+            builder.AddAttribute(2, "style",
+                $"--tm-scheduler-slot-start: {si * SlotDuration}; --tm-scheduler-slot-size: {SlotDuration};");
             builder.AddAttribute(3, "role", "button");
             builder.AddAttribute(4, "tabindex", active ? "0" : "-1");
             builder.AddAttribute(5, "aria-label", SlotAriaLabel(slotStart));
@@ -390,23 +539,22 @@
         }
     };
 
-    private RenderFragment RenderPositionedEvents(DateOnly d, List<PositionedEvent> positioned) => builder =>
+    private RenderFragment RenderPositionedEvents(DateOnly d, IReadOnlyList<SchedulerLayout.PositionedEvent> positioned) => builder =>
     {
         var sequence = 0;
         foreach (var pe in positioned)
         {
             var e = pe.Event;
-            var topPct = GetMinuteTopPercent(GetEventStartMinutes(e, d));
-            var heightPct = GetEventHeightPercent(e, d);
-            var widthPct = 100.0 / pe.TotalLanes;
-            var leftPct = widthPct * pe.Lane;
+            var startMin = GetEventStartMinutes(e, d);
+            var endMin = EventEndMinutes(e, d);
 
             builder.OpenElement(sequence++, "div");
             builder.SetKey(e.Id);
             var compact = (e.End - e.Start).TotalMinutes < 45 ? "tm-scheduler-event--compact" : "";
             builder.AddAttribute(sequence++, "class", $"tm-scheduler-timegrid-event tm-scheduler-event-surface {compact} {(IsSelectedEvent(e) ? "tm-scheduler-timegrid-event--selected" : "")} {e.CssClass}");
             if (IsSelectedEvent(e)) builder.AddAttribute(sequence++, "aria-current", "true");
-            builder.AddAttribute(sequence++, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%;{EventStyle(e)}");
+            builder.AddAttribute(sequence++, "style",
+                $"--tm-scheduler-event-start: {startMin - RangeStartMinutes}; --tm-scheduler-event-end: {endMin - RangeStartMinutes}; --tm-scheduler-lane: {pe.Lane}; --tm-scheduler-lanes: {pe.TotalLanes};{EventStyle(e)}");
             builder.AddAttribute(sequence++, "role", "button");
             builder.AddAttribute(sequence++, "tabindex", IsActiveColumn(d) ? "0" : "-1");
             builder.AddAttribute(sequence++, "data-tm-roving", _rovingId);
@@ -450,6 +598,18 @@
                 builder.AddAttribute(sequence++, "class", "tm-scheduler-timegrid-event-title");
                 builder.AddContent(sequence++, e.Title);
                 builder.CloseElement();
+
+                if (ShowEventResource && ResourceName(e.ResourceId) is { } resourceName)
+                {
+                    builder.OpenElement(sequence++, "span");
+                    builder.AddAttribute(sequence++, "class", "tm-scheduler-timegrid-event-resource");
+                    builder.OpenComponent<Tempo.Blazor.Components.Icons.TmIcon>(sequence++);
+                    builder.AddComponentParameter(sequence++, "Name", Tempo.Blazor.Components.Icons.IconNames.Users);
+                    builder.AddComponentParameter(sequence++, "Size", Tempo.Blazor.Components.Icons.IconSize.Xs);
+                    builder.CloseComponent();
+                    builder.AddContent(sequence++, resourceName);
+                    builder.CloseElement();
+                }
             }
 
             // Resize handles - JS handles the mousedown automatically
@@ -515,105 +675,64 @@
     }
 
     private List<TmScheduleEvent> GetTimedEventsForDate(DateOnly date)
-        => _timedMap.TryGetValue(date, out var list) ? list : [];
+        => _timedMap.TryGetValue(date, out var list) ? list.Where(IntersectsRange).ToList() : [];
+
+    /// <summary>
+    /// An event outside the clipped range is not rendered, so it is not a focus stop either. One that
+    /// straddles the edge stays and is clipped to the range by the geometry.
+    /// </summary>
+    private bool IntersectsRange(TmScheduleEvent evt)
+    {
+        var start = evt.StartLocal.Hour * 60 + evt.StartLocal.Minute;
+        var end = evt.EndLocal.Hour * 60 + evt.EndLocal.Minute;
+        if (evt.EndLocal.Date > evt.StartLocal.Date) end = 24 * 60;
+        return end > RangeStartMinutes && start < RangeStartMinutes + RangeMinutes;
+    }
 
     private List<TmScheduleEvent> GetTimedEventsForDateAndResource(DateOnly date, string resourceId)
     {
-        if (!_timedMap.TryGetValue(date, out var list)) return [];
-        return list.Where(e => string.Equals(e.ResourceId, resourceId, StringComparison.Ordinal)).ToList();
+        return GetTimedEventsForDate(date)
+            .Where(e => string.Equals(e.ResourceId, resourceId, StringComparison.Ordinal)).ToList();
     }
 
     private List<TmScheduleEvent> GetAllDayEventsForDate(DateOnly date)
         => _allDayMap.TryGetValue(date, out var list) ? list : [];
 
-    private static double GetHourTopPercent(int hour) => hour / 24.0 * 100;
-    private static double GetMinuteTopPercent(int minutes) => minutes / (24.0 * 60) * 100;
-    private double GetSlotHeightPercent() => SlotDuration / (24.0 * 60) * 100;
+    private double MinutePercent(int minutes) => (minutes - RangeStartMinutes) / (double)RangeMinutes * 100;
 
-    private static int GetEventStartMinutes(TmScheduleEvent evt, DateOnly date)
+    private double SlotHeightPercent() => SlotDuration / (double)RangeMinutes * 100;
+
+    private bool IsOffHours(DateTime slotStart)
+    {
+        if (!HighlightOffHours) return false;
+        var minute = slotStart.Hour * 60 + slotStart.Minute;
+        var end = WorkDayEnd.Hour * 60 + WorkDayEnd.Minute;
+        return minute < WorkDayStart.Hour * 60 + WorkDayStart.Minute || minute >= end;
+    }
+
+    private string? ResourceName(string? resourceId)
+        => Resources?.FirstOrDefault(r => r.Id == resourceId)?.Name;
+
+    private int GetEventStartMinutes(TmScheduleEvent evt, DateOnly date)
     {
         // Position by display wall-clock (StartLocal), not the offset-bearing instant.
         var dayStart = date.ToDateTime(TimeOnly.MinValue);
         var minutes = (int)(evt.StartLocal - dayStart).TotalMinutes;
-        return Math.Max(0, Math.Min(minutes, 24 * 60));
+        return Math.Clamp(minutes, RangeStartMinutes, RangeStartMinutes + RangeMinutes);
     }
 
-    private static double GetEventHeightPercent(TmScheduleEvent evt, DateOnly date)
+    private int EventEndMinutes(TmScheduleEvent evt, DateOnly date)
     {
         var startMin = GetEventStartMinutes(evt, date);
         var endMin = (int)(evt.EndLocal - date.ToDateTime(TimeOnly.MinValue)).TotalMinutes;
-        endMin = Math.Max(startMin + 1, Math.Min(endMin, 24 * 60));
-        return (endMin - startMin) / (24.0 * 60) * 100;
+        return Math.Clamp(Math.Max(startMin + 1, endMin), RangeStartMinutes, RangeStartMinutes + RangeMinutes);
     }
 
     private static string F(double value) => value.ToString("F4", CultureInfo.InvariantCulture);
 
-    // ── Overlap layout algorithm ──
+    private static IReadOnlyList<SchedulerLayout.PositionedEvent> LayoutOverlappingEvents(List<TmScheduleEvent> events)
+        => SchedulerLayout.Assign(events);
 
-    private record PositionedEvent(TmScheduleEvent Event, int Lane, int TotalLanes);
-
-    private static List<PositionedEvent> LayoutOverlappingEvents(List<TmScheduleEvent> events)
-    {
-        if (events.Count == 0) return [];
-
-        var sorted = events.OrderBy(e => e.StartLocal).ThenBy(e => e.EndLocal).ToList();
-        var result = new List<PositionedEvent>();
-
-        var groups = new List<List<TmScheduleEvent>>();
-        var currentGroup = new List<TmScheduleEvent> { sorted[0] };
-        var groupEnd = sorted[0].EndLocal;
-
-        for (var i = 1; i < sorted.Count; i++)
-        {
-            if (sorted[i].StartLocal < groupEnd)
-            {
-                currentGroup.Add(sorted[i]);
-                if (sorted[i].EndLocal > groupEnd) groupEnd = sorted[i].EndLocal;
-            }
-            else
-            {
-                groups.Add(currentGroup);
-                currentGroup = [sorted[i]];
-                groupEnd = sorted[i].EndLocal;
-            }
-        }
-        groups.Add(currentGroup);
-
-        foreach (var group in groups)
-        {
-            var lanes = new List<DateTime>();
-
-            foreach (var evt in group)
-            {
-                var lane = -1;
-                for (var l = 0; l < lanes.Count; l++)
-                {
-                    if (evt.StartLocal >= lanes[l])
-                    {
-                        lane = l;
-                        break;
-                    }
-                }
-
-                if (lane == -1)
-                {
-                    lane = lanes.Count;
-                    lanes.Add(DateTime.MinValue);
-                }
-
-                lanes[lane] = evt.EndLocal;
-                result.Add(new PositionedEvent(evt, lane, 0));
-            }
-
-            var totalLanes = lanes.Count;
-            for (var i = result.Count - group.Count; i < result.Count; i++)
-            {
-                result[i] = result[i] with { TotalLanes = totalLanes };
-            }
-        }
-
-        return result;
-    }
 
     // ── Drag & Drop ──
 
@@ -683,6 +802,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+        _ticker?.Dispose();
         if (_jsRegistered)
         {
             try

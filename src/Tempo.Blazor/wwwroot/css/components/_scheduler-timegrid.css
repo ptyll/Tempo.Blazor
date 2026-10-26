@@ -47,7 +47,7 @@
 }
 
 .tm-scheduler-timegrid-col-header-weekday {
-    font-size: var(--tm-font-size-xs);
+    font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
 }
@@ -73,6 +73,46 @@
 .tm-scheduler-timegrid-resource-labels {
     display: flex;
     border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-scheduler-timegrid-resource-label:has(> .tm-scheduler-resource-header) {
+    padding: 0;
+    text-align: start;
+}
+
+.tm-scheduler-resource-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-scheduler-resource-header-avatar {
+    flex: 0 0 auto;
+}
+
+.tm-scheduler-resource-header-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tm-scheduler-resource-header-name {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-scheduler-resource-header-type {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tm-scheduler-timegrid-resource-label {
@@ -177,8 +217,13 @@
     top: 0;
 }
 
+.tm-scheduler-timegrid-time-label--last {
+    transform: translateY(-100%);
+}
+
 .tm-scheduler-timegrid-time-label {
     position: absolute;
+    top: calc(var(--tm-scheduler-label-offset, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
     right: var(--tm-space-2, 0.5rem);
     font-size: var(--tm-font-size-xs, 0.75rem);
     color: var(--tm-text-secondary);
@@ -210,10 +255,10 @@
 .tm-scheduler-timegrid-body {
     display: flex;
     position: relative;
-    /* 24 hours * 3rem per hour = 72rem. The track stays this tall even when the
-       host is shorter: event geometry and resize math are percentages of it.
-       The wrapper above is what scrolls, so a bounded host shows the working day. */
-    height: 72rem;
+    /* One hour-height per visible hour (24 by default, the working range otherwise).
+       The track stays this tall even when the host is shorter: event geometry and
+       resize math are percentages of it. The wrapper above is what scrolls. */
+    height: calc(var(--tm-scheduler-visible-hours, 24) * var(--tm-scheduler-hour-height, 3rem));
 }
 
 /* ── Column ── */
@@ -256,6 +301,7 @@
     color: var(--tm-text-secondary);
     white-space: nowrap;
     display: inline-flex;
+    align-items: baseline;
     gap: var(--tm-space-1);
 }
 
@@ -264,6 +310,8 @@
     position: absolute;
     left: 0;
     right: 0;
+    top: calc(var(--tm-scheduler-slot-start, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
+    height: calc(var(--tm-scheduler-slot-size, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
     border-bottom: 1px solid var(--tm-border-color);
     cursor: pointer;
     transition: background-color 0.1s ease;
@@ -283,6 +331,10 @@
     z-index: 2;
 }
 
+.tm-scheduler-timegrid-slot--offhours {
+    background: var(--tm-scheduler-offhours-bg, color-mix(in srgb, var(--tm-text-secondary) 6%, transparent));
+}
+
 .tm-scheduler-timegrid-slot:hover {
     background: var(--tm-color-surface-hover);
 }
@@ -296,6 +348,10 @@
 .tm-scheduler-timegrid-event {
     container-type: inline-size;
     position: absolute;
+    top: calc(var(--tm-scheduler-event-start, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
+    height: calc((var(--tm-scheduler-event-end, 0) - var(--tm-scheduler-event-start, 0)) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
+    width: calc(100% / var(--tm-scheduler-lanes, 1));
+    left: calc(var(--tm-scheduler-lane, 0) * 100% / var(--tm-scheduler-lanes, 1));
     display: flex;
     flex-direction: column;
     border-radius: var(--tm-radius-sm);
@@ -350,6 +406,21 @@
     white-space: nowrap;
 }
 
+.tm-scheduler-timegrid-event-resource {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-scheduler--compact .tm-scheduler-timegrid-event-resource {
+    display: none;
+}
+
 .tm-scheduler-timegrid-event-title {
     font-size: var(--tm-font-size-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
@@ -362,12 +433,19 @@
 /* ── Current time indicator ── */
 .tm-scheduler-timegrid-now {
     position: absolute;
+    top: calc(var(--tm-scheduler-now, 0) / var(--tm-scheduler-visible-hours, 24) / 60 * 100%);
     left: 0;
     right: 0;
     height: 2px;
     background: var(--tm-color-danger);
     z-index: 3;
     pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-scheduler-timegrid-now {
+        transition: none;
+    }
 }
 
 .tm-scheduler-timegrid-now::before {
