@@ -155,6 +155,69 @@
     </div>
 </section>
 
+<!-- Composer Behavior (FZE-5) -->
+<section class="demo-section" data-testid="chat-composer-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Composer Behavior</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">UX</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Enter submits (with the IME composition guard in chat.js), Shift+Enter inserts a new line
+        and the textarea grows with its content up to the row cap; the composer is focused again
+        after each successful send (RefocusAfterSend).
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <strong>EnterToSend="false"</strong>: Enter is a native new line in the composer,
+                the thread reply and an open edit — Ctrl/⌘+Enter and the Send button send. This
+                demo chat keeps its own message list.
+            </p>
+            <TmChat CurrentUser="_currentUser"
+                    Messages="_enterToSendMessages"
+                    OnSendMessage="HandleEnterToSendDemo"
+                    EnterToSend="false" />
+        </div>
+
+        <div class="showcase-card" style="height: 440px;">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <strong>A custom composer</strong> (subscribe gate, owner note, …) keeps the same
+                behavior: the host registers its own input with
+                <code>composer.AttachAsync(input)</code> once mounted, and Enter/IME + refocus
+                work on it exactly as on the built-in composer. The demo's host handler throws for
+                texts ending with an exclamation mark. On the Enter path the exception surfaces
+                through the renderer and is caught by the <code>ErrorBoundary</code> around this
+                chat — press Recover to restore the composer. On the Send-button path the handler
+                is awaited by the card, the draft is kept and the error notice below shows up.
+                This demo chat keeps its own message list.
+            </p>
+            <ErrorBoundary @ref="_customBoundary">
+                <ChildContent>
+                    <TmChat CurrentUser="_currentUser"
+                            Messages="_customComposerMessages"
+                            OnSendMessage="HandleCustomSend"
+                            ComposerTemplate="CustomComposer" />
+                </ChildContent>
+                <ErrorContent>
+                    <div role="alert" class="mt-2 p-2 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2">
+                        <span>The composer handler threw on the Enter path — the exception surfaced through the renderer and this ErrorBoundary caught it.</span>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                                  OnClick="@(() => _customBoundary?.Recover())">Recover</TmButton>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
+            @if (_customSendFailed)
+            {
+                <div role="alert" class="mt-2 p-2 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-200 dark:border-rose-800">
+                    The handler threw — the text was kept so the draft is not lost. Press Send again.
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
 <!-- Interactive Demo -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -187,6 +250,10 @@
     // ── Basic demo ────────────────────────────────────────────────────────
     private List<ChatMessage> _basicMessages = default!;
     private List<ChatUser> _basicTyping = default!;
+
+    // ── Composer behavior demo (FZE-5) — own lists, not _basicMessages ────
+    private List<ChatMessage> _enterToSendMessages = default!;
+    private List<ChatMessage> _customComposerMessages = default!;
 
     // ── Typing demo ───────────────────────────────────────────────────────
     private List<ChatMessage> _typingMessages = default!;
@@ -227,6 +294,16 @@
             new("m4", "Yes — file cards with name, size, and click handler.", new ChatUser("u1", "Alice", "A"), ChatMessageType.Outgoing, new DateTimeOffset(2026, 5, 2, 9, 18, 0, TimeSpan.Zero)),
         };
         _basicTyping = new() { new ChatUser("u2", "Bob", "B") };
+
+        // ── Composer behavior demo (FZE-5): each demo chat owns its list ─────
+        _enterToSendMessages = new()
+        {
+            new("e1", "Enter is a new line here — press Ctrl+Enter or use the button.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 5, 2, 9, 20, 0, TimeSpan.Zero)),
+        };
+        _customComposerMessages = new()
+        {
+            new("k1", "The custom composer behaves like the built-in one.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 5, 2, 9, 21, 0, TimeSpan.Zero)),
+        };
 
         _typingMessages = new()
         {
@@ -272,6 +349,72 @@
     private void HandleBasicSend(string text)
     {
         _basicMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    // ── Composer behavior demo (FZE-5) ────────────────────────────────────
+    private ElementReference _customComposerInput;
+    private ChatComposerContext? _customComposerContext;
+    private string? _customComposerAttachedId;
+    private bool _customSendFailed;
+    private ErrorBoundary? _customBoundary;
+
+    private RenderFragment<ChatComposerContext> CustomComposer => context =>
+    {
+        _customComposerContext = context;
+        return @<div class="flex items-end gap-2">
+            <textarea class="w-full min-h-10 max-h-32 resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm px-3 py-2"
+                      rows="1"
+                      aria-label="Message"
+                      placeholder="Type a message…"
+                      value="@context.Text"
+                      @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"
+                      @ref="_customComposerInput"></textarea>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                      Disabled="@(!context.CanSend)"
+                      OnClick="@(async () => {
+                          _customSendFailed = false;
+                          try
+                          {
+                              await context.SendAsync();
+                          }
+                          catch (InvalidOperationException)
+                          {
+                              _customSendFailed = true; // the demo's failing host — the text stays
+                          }
+                      })">Send</TmButton>
+        </div>;
+    };
+
+    private async Task HandleCustomSend(string text)
+    {
+        if (text.EndsWith("!"))
+        {
+            // The demo's "failing host": a throw keeps the composer text (FZE-5). The render
+            // first so the card's own role="alert" error notice is visible, then the exception
+            // propagates — through the renderer (and the ErrorBoundary) on the Enter path, or
+            // back to the button handler's catch on the Send-button path.
+            _customSendFailed = true;
+            StateHasChanged();
+            throw new InvalidOperationException("demo host failure");
+        }
+
+        _customSendFailed = false;
+        _customComposerMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    private void HandleEnterToSendDemo(string text)
+    {
+        _enterToSendMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_customComposerContext is not null && !string.IsNullOrEmpty(_customComposerInput.Id)
+            && _customComposerInput.Id != _customComposerAttachedId)
+        {
+            _customComposerAttachedId = _customComposerInput.Id;
+            await _customComposerContext.AttachAsync(_customComposerInput);
+        }
     }
 
     // A fresh list instance opens a fresh TypingTimeout window — the same signal a real host

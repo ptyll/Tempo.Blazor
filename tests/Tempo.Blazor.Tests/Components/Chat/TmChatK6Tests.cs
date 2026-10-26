@@ -91,6 +91,25 @@ public class TmChatK6Tests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task EditCommit_ThrowsInHost_EditStaysOpenWithText()
+    {
+        var messages = new[] { new ChatMessage("m1", "Helo", Me, ChatMessageType.Outgoing) };
+        var cut = Render(messages, p => p.Add(c => c.OnEditMessage,
+            EventCallback.Factory.Create<ChatMessageEdit>(this, _ => throw new InvalidOperationException("host handler failed"))));
+
+        cut.Find("[data-testid='chat-edit-m1']").Click();
+        cut.Find("[data-testid='chat-edit-input']").Input("Hello");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => cut.InvokeAsync(
+            () => cut.Find("[data-testid='chat-edit-save']").Click()));
+
+        cut.Find("[data-testid='chat-edit-input']").GetAttribute("value").Should().Be("Hello",
+            "the editing id is cleared only after the handler completes — a failed edit keeps the text");
+        cut.FindAll("[data-testid='chat-edit-save']").Should().ContainSingle(
+            "the edit stays open so the failure can be retried");
+    }
+
+    [Fact]
     public void IncomingMessage_HasNoEditOrDeleteActions()
     {
         var cut = Render(new[] { new ChatMessage("m1", "Hi", Bob, ChatMessageType.Incoming) });

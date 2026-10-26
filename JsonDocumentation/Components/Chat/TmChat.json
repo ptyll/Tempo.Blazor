@@ -245,6 +245,20 @@
       "description": "Replaces the built-in empty state (the icon + \"no messages\" texts) when the conversation has no messages. The built-in empty state is fully dropped, so the host owns the empty-scenario copy. The content renders RAW at the top of the message list (no wrapper element); the built-in look fills the list and centers its content, so the host's slot root should use flex:1 plus vertical/horizontal centering. Only applies while Messages is empty; with messages present the slot is not rendered."
     },
     {
+      "name": "EnterToSend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether pressing Enter in a composer input submits. Default true (today's behavior: the built-in composer, the thread panel's reply input and an open message edit all submit on Enter). false makes Enter a NATIVE new line in all three inputs — nothing is sent from Enter itself, only from the send button, SendAsync or Ctrl/⌘+Enter (no Shift/Alt, outside an IME composition; handled by chat.js). Shift+Enter always inserts a new line and Alt/Ctrl/Meta+Enter always stay native (browser and host shortcuts). The keydown handling lives in the chat.js module once it is attached (it also owns the IME guard, which a net8 KeyboardEventArgs cannot express); this parameter is passed to the module as its enterToSend option and re-attaches the module when it changes."
+    },
+    {
+      "name": "RefocusAfterSend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, or the element a custom composer registered through AttachAsync) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
+    },
+    {
       "name": "ShowAvatars",
       "type": "bool",
       "isRequired": false,

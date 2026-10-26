@@ -202,7 +202,10 @@ public class TmChatSlotsTests : LocalizationTestBase
 
         received.IsSubmitting.Should().BeFalse(
             "the finally resets the submit flag even when the host handler throws");
-        received.CanSend.Should().BeFalse("the send attempt cleared the text");
+        // FZE-5: the composer text is cleared only AFTER a successful send — a failed send
+        // keeps the draft (pinned by TmChatComposerTests.Composer_SendFailsInHost_TextIsNotLost).
+        received.CanSend.Should().BeTrue("the text is preserved when the host handler throws");
+        received.Text.Should().Be("Hello", "a failed send must not swallow the user's text");
 
         await received.SetTextAsync("Again");
         received.CanSend.Should().BeTrue("CanSend recovers once text is present again");
@@ -213,23 +216,28 @@ public class TmChatSlotsTests : LocalizationTestBase
     [Fact]
     public async Task ComposerContext_FocusAsync_FocusesBuiltInTextarea()
     {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/chat.js");
         var cut = RenderChat([]);
 
         await cut.Instance.ComposerContext.FocusAsync();
 
-        JSInterop.Invocations.Should().Contain(i => i.Identifier == "Blazor._internal.domWrapper.focus",
-            "the built-in textarea is rendered, so the context focuses it through JS interop");
+        module.Invocations.Should().Contain(i => i.Identifier == "focusIfNeeded"
+            && i.Arguments.Count >= 1
+            && i.Arguments[0] is ElementReference,
+            "the built-in textarea is rendered, so the context focuses it through the module's focusIfNeeded");
     }
 
     [Fact]
     public async Task FocusAsync_NoOp_AfterShowComposerToggledOff()
     {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/chat.js");
         var cut = RenderChat([]);
         cut.Render(p => p.Add(c => c.ShowComposer, false));
 
         var act = async () => await cut.Instance.ComposerContext.FocusAsync();
 
         await act.Should().NotThrowAsync("the guard is a silent no-op without the built-in textarea");
+        module.Invocations.Should().NotContain(i => i.Identifier == "focusIfNeeded");
         JSInterop.Invocations.Should().NotContain(i => i.Identifier == "Blazor._internal.domWrapper.focus");
     }
 
@@ -322,11 +330,14 @@ public class TmChatSlotsTests : LocalizationTestBase
     {
         var cut = RenderChat([], p => p.Add(c => c.ComposerDescribedBy, "gate-hint gate-error"));
 
-        cut.Find(".tm-chat__input").GetAttribute("aria-describedby").Should().Be("gate-hint gate-error");
+        cut.Find(".tm-chat__input").GetAttribute("aria-describedby").Should()
+            .Be($"gate-hint gate-error {cut.Instance.ComposerInputId}-hint",
+                "the component's own submit hint id is merged after the host's ids");
 
         cut.Render(p => p.Add(c => c.ComposerDescribedBy, (string?)null));
-        cut.Find(".tm-chat__input").HasAttribute("aria-describedby").Should().BeFalse(
-            "no attribute is rendered when the parameter is null");
+        cut.Find(".tm-chat__input").GetAttribute("aria-describedby").Should()
+            .Be($"{cut.Instance.ComposerInputId}-hint",
+                "without host ids the hint id is the only aria-describedby target");
     }
 
     // ── Banner / Header / Empty slots ────────────────────────────────────────

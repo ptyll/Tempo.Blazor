@@ -320,19 +320,56 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// </summary>
     [Parameter] public bool ShowAvatars { get; set; } = true;
 
+    /// <summary>
+    /// Whether pressing Enter in a composer input submits. Default <see langword="true"/>
+    /// (today's behavior: the built-in composer, the thread panel's reply input and an open
+    /// message edit all submit on Enter). <see langword="false"/> makes Enter a NATIVE new line
+    /// in all three inputs — nothing is sent from Enter itself, only from the send button,
+    /// <see cref="ChatComposerContext.SendAsync"/> or Ctrl/⌘+Enter (the Ctrl/⌘+Enter submit is
+    /// handled by the <c>chat.js</c> module and requires no Shift/Alt and no IME composition;
+    /// Shift+Enter and Alt+Enter stay native). Shift+Enter always inserts a new line and
+    /// Alt/Ctrl/Meta+Enter always stay native when <see cref="EnterToSend"/> is
+    /// <see langword="true"/> (browser and host shortcuts).
+    /// <para>
+    /// The keydown handling lives in the <c>chat.js</c> module once it is attached (it also owns
+    /// the IME guard, which a net8 <see cref="Web.KeyboardEventArgs"/> cannot express); this
+    /// parameter is passed to the module as its <c>enterToSend</c> option and re-attaches the
+    /// module when it changes. The built-in inputs advertise the mode through
+    /// <c>enterkeyhint="send"|"enter"</c> and the composer hint
+    /// (<c>TmChat_ComposerHint_EnterToSend</c>/<c>TmChat_ComposerHint_EnterNewLine</c>).
+    /// </para>
+    /// </summary>
+    [Parameter] public bool EnterToSend { get; set; } = true;
+
+    /// <summary>
+    /// Whether the composer input is focused again after a SUCCESSFUL send. Default
+    /// <see langword="true"/> — after the send handlers complete and the composer clears, focus
+    /// returns to the input (the built-in textarea, or the element a custom composer registered
+    /// through <see cref="ChatComposerContext.AttachAsync"/>) so the user can type the next
+    /// message without reaching for the mouse. Set <see langword="false"/> for hosts that move
+    /// focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws)
+    /// does not refocus — the text is preserved and the user keeps their context.
+    /// </summary>
+    [Parameter] public bool RefocusAfterSend { get; set; } = true;
+
     private string _inputText = string.Empty;
     private ElementReference _messagesContainer;
     private ElementReference _composerInput;
+    private ElementReference _threadInputElement;
+    private ElementReference _editInputElement;
     private bool _isSubmitting;
+    private bool _isThreadSubmitting;
 
     // ── Composer slot state ──
     private static int _composerInputCounter;
     private readonly string _composerInputId = $"tm-chat-composer-{Interlocked.Increment(ref _composerInputCounter)}";
+    private readonly string _threadInputId = $"tm-chat-thread-{Interlocked.Increment(ref _composerInputCounter)}";
     private ChatComposerContext? _composerContext;
 
     // ── K6 interaction state ──
     private string? _activeThread;                       // internal fallback when not bound
     private string? _editingId;
+    private bool _isEditSubmitting;                      // a duplicate dispatch commits once
     private string _editText = string.Empty;
     private string? _pickerForId;
     private string _threadInput = string.Empty;
@@ -348,25 +385,9 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
     private TmChatDraftState _lastDraftState = new(false, false, null, false);
 
-    // ── Typing expiry state ──
+    /// <summary>JS runtime behind the composer module (<c>chat.js</c>); null only before initialization.</summary>
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
-    /// <summary>
-    /// Clock behind the typing-expiry timer. Resolved through <see cref="IServiceProvider"/> so a
-    /// consumer that never registers a <see cref="TimeProvider"/> still gets
-    /// <see cref="TimeProvider.System"/> — tests register a FakeTimeProvider (the same pattern as
-    /// <c>TmSearchInput</c>'s debounce clock).
-    /// </summary>
-    [Inject] private IServiceProvider Services { get; set; } = default!;
-
-    private TimeProvider Clock
-        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
-    private TimeProvider? _clock;
-
-    private ITimer? _typingTimer;
-    private IReadOnlyList<ChatUser>? _lastTypingUsers;
-    private ChatUser[] _lastTypingSnapshot = [];
-    private TimeSpan? _lastTypingTimeout;
-    private bool _typingExpired;
     private bool _disposed;
 
     /// <summary>Test-visible state: is a typing-expiry timer still armed?</summary>
@@ -390,6 +411,24 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     private string PlaceholderText => Placeholder ?? Loc["TmChat_Placeholder"];
 
     private bool IsSendDisabled => Disabled || string.IsNullOrWhiteSpace(_inputText) || _isSubmitting;
+
+    private bool IsThreadSendDisabled => Disabled || string.IsNullOrWhiteSpace(_threadInput) || _isThreadSubmitting;
+
+    /// <summary>Localized submit hint for the built-in composer, following <see cref="EnterToSend"/>.</summary>
+    private string ComposerHintText
+        => EnterToSend ? Loc["TmChat_ComposerHint_EnterToSend"] : Loc["TmChat_ComposerHint_EnterNewLine"];
+
+    /// <summary>
+    /// The <c>aria-describedby</c> of the built-in textarea: the host's
+    /// <see cref="ComposerDescribedBy"/> ids merged (space-separated) with the component's own
+    /// hidden submit hint; the hint id alone when no host ids are given.
+    /// </summary>
+    private string ComposerDescribedByAttribute
+        => string.IsNullOrWhiteSpace(ComposerDescribedBy)
+            ? $"{_composerInputId}-hint"
+            : $"{ComposerDescribedBy} {_composerInputId}-hint";
+
+    private string ComposerEnterKeyHint => EnterToSend ? "send" : "enter";
 
     // ── Composer slot surface: a live view over this component, handed to ComposerTemplate ──
 
@@ -421,31 +460,71 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         });
 
     /// <summary>
-    /// Focuses the built-in composer textarea; a no-op while it is not rendered (custom composer
-    /// or <see cref="ShowComposer"/>=<see langword="false"/>). Focus is best-effort: a failing or
-    /// disconnected JS call (the input unmounted between renders, the circuit dropped) is
-    /// swallowed rather than surfaced as an error.
+    /// Focuses the composer input — the shared logic behind <see cref="FocusComposerAsync"/>,
+    /// <see cref="ChatComposerContext.FocusAsync"/> and the post-send refocus
+    /// (<see cref="RefocusAfterSend"/>): the element a custom composer registered through
+    /// <see cref="ChatComposerContext.AttachAsync"/> if there is one, otherwise the built-in
+    /// textarea. Focus is best-effort: a failing or disconnected JS call (the input unmounted
+    /// between renders, the circuit dropped) is swallowed rather than surfaced as an error, and
+    /// an element that already holds focus is left untouched (the module's
+    /// <c>focusIfNeeded</c>) so the on-screen keyboard is not closed on touch devices.
     /// </summary>
     internal async ValueTask FocusComposerInputAsync()
     {
-        if (!ShowComposer || ComposerTemplate is not null || string.IsNullOrEmpty(_composerInput.Id))
+        if (ComposerTemplate is not null)
+        {
+            // A custom composer replaced the built-in textarea — the attached element is the
+            // focus target. Nothing to focus while nothing is attached yet (or the module is
+            // still importing): the host owns the input there.
+            if (_module is null) return;
+            var element = _customComposerElement;
+            if (element is not { } target || string.IsNullOrEmpty(target.Id)) return;
+            try
+            {
+                await _module.InvokeVoidAsync("focusIfNeeded", target);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+            {
+                // Focus is best-effort: a disconnected circuit or an unmounted input is not an error.
+            }
+
+            return;
+        }
+
+        if (!ShowComposer || string.IsNullOrEmpty(_composerInput.Id))
         {
             return;
         }
 
         try
         {
-            await _composerInput.FocusAsync();
+            if (_module is not null)
+            {
+                // The module is loaded — go through focusIfNeeded so an element that already
+                // holds focus is left untouched (the on-screen keyboard stays open on touch).
+                await _module.InvokeVoidAsync("focusIfNeeded", _composerInput);
+            }
+            else
+            {
+                await _composerInput.FocusAsync();
+            }
         }
-        catch (JSException)
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
         {
-            // The element is gone (or the focus call failed) — nothing to focus, nothing to report.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone (Server) — focus is meaningless, not an error.
+            // The element is gone, the circuit dropped or the renderer was disposed — nothing to
+            // focus, nothing to report (focus is best-effort; the same contract as in chat.js).
         }
     }
+
+    /// <summary>
+    /// Moves focus to the composer input — the public API for hosts that need to refocus the
+    /// chat from their own UI (e.g. after a "new messages" toast or a navigation back to the
+    /// conversation). With a custom composer the attached element is focused (register the
+    /// host's own input through <see cref="ChatComposerContext.AttachAsync"/>); otherwise the
+    /// built-in textarea is. An element that already holds focus is left untouched. A no-op
+    /// while no composer input is rendered (or the circuit is gone).
+    /// </summary>
+    public ValueTask FocusComposerAsync() => FocusComposerInputAsync();
 
     /// <summary>
     /// Whether the component currently holds an unsaved draft in ANY slot — main composer, open
@@ -542,97 +621,6 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         await NotifyDraftChangedAsync();
     }
 
-    // ── Typing expiry ──
-
-    /// <summary>
-    /// (Re)arms the typing-expiry window. A CHANGE of <see cref="TypingUsers"/> — a new list
-    /// instance, a different content OR an in-place mutation of the same list instance (see
-    /// <see cref="TypingTimeout"/>) — resets the expiry and opens a fresh window; a change of
-    /// <see cref="TypingTimeout"/> alone rearms the pending timer (e.g. null → a duration starts
-    /// measuring now) without reopening an already elapsed window. An unchanged list and timeout
-    /// keep the running deadline — re-arming on every parent re-render would extend the window
-    /// forever.
-    /// </summary>
-    private void ScheduleTypingExpiry()
-    {
-        // The list is stored BY REFERENCE, so an in-place mutation of the same instance is never
-        // visible through it — the content comparison runs against a value SNAPSHOT of the last
-        // seen list instead.
-        var usersChanged = !ReferenceEquals(TypingUsers, _lastTypingUsers)
-            || !TypingUsersContentEquals(TypingUsers, _lastTypingSnapshot);
-        var timeoutChanged = !Nullable.Equals(TypingTimeout, _lastTypingTimeout);
-        _lastTypingUsers = TypingUsers;
-        _lastTypingTimeout = TypingTimeout;
-        _lastTypingSnapshot = TypingUsers.ToArray();
-
-        if (usersChanged) _typingExpired = false;
-        if (!usersChanged && !timeoutChanged) return;
-        RearmTypingTimer();
-    }
-
-    /// <summary>Order-sensitive per-item value comparison of two typing-user lists.</summary>
-    private static bool TypingUsersContentEquals(IReadOnlyList<ChatUser> current, IReadOnlyList<ChatUser>? previous)
-    {
-        if (previous is null || current.Count != previous.Count) return false;
-        for (var i = 0; i < current.Count; i++)
-        {
-            if (!current[i].Equals(previous[i])) return false;
-        }
-        return true;
-    }
-
-    /// <summary>Disarms any pending timer and arms a fresh single-shot one when an expiry applies.</summary>
-    private void RearmTypingTimer()
-    {
-        CancelTypingTimer();
-        if (TypingTimeout is not { } timeout || TypingUsers.Count == 0 || _typingExpired) return;
-        if (timeout <= TimeSpan.Zero)
-        {
-            // A non-positive timeout expires IMMEDIATELY: no timer, the next render suppresses.
-            _typingExpired = true;
-            return;
-        }
-
-        // Single-shot timer on the injected clock. The callback closes over `timer` itself so the
-        // ReferenceEquals check inside can tell "the currently armed timer" apart from one that
-        // was already replaced or cancelled.
-        ITimer? timer = null;
-        timer = Clock.CreateTimer(_ => _ = OnTypingExpiredAsync(timer), null, timeout, Timeout.InfiniteTimeSpan);
-        _typingTimer = timer;
-    }
-
-    private void CancelTypingTimer()
-    {
-        _typingTimer?.Dispose();
-        _typingTimer = null;
-    }
-
-    private async Task OnTypingExpiredAsync(ITimer? timer)
-    {
-        if (timer is null || _disposed) return;
-        // The callback runs on a thread-pool thread (TimeProvider.System) or the test thread
-        // advancing a FakeTimeProvider; hop to the renderer before touching expiry state.
-        try
-        {
-            await InvokeAsync(() =>
-            {
-                if (_disposed || !ReferenceEquals(_typingTimer, timer)) return Task.CompletedTask;
-                // Single-shot: once fired it can never expire again — disarm so
-                // TypingTimerIsPending reports the truth instead of a spent timer.
-                _typingTimer = null;
-                timer.Dispose();
-                _typingExpired = true;
-                StateHasChanged();
-                return Task.CompletedTask;
-            });
-        }
-        catch (ObjectDisposedException)
-        {
-            // The renderer (or the whole component) was disposed between the timer firing and the
-            // dispatch — the expiry no longer has anything to render into, not an error.
-        }
-    }
-
     /// <summary>
     /// Cancels the pending typing-expiry timer by delegating to <see cref="DisposeAsyncCore"/>.
     /// TmChat previously held no unmanaged lifecycle, so it did not implement disposal; the timer
@@ -648,23 +636,33 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// The actual cleanup behind <see cref="DisposeAsync"/> — SUBCLASSES OVERRIDE THIS method (not
     /// <see cref="DisposeAsync"/> itself) to add their own teardown, ideally awaiting/calling
     /// <c>base.DisposeAsyncCore()</c>. Idempotent — the renderer may dispose the component again
-    /// after the host did.
+    /// after the host did. Disposes the typing timer and the <c>chat.js</c> composer module with
+    /// its per-input handles (a dropped circuit is swallowed — the JS side is unreachable anyway).
     /// </summary>
-    protected virtual ValueTask DisposeAsyncCore()
+    protected virtual async ValueTask DisposeAsyncCore()
     {
         _disposed = true;
         CancelTypingTimer();
-        return ValueTask.CompletedTask;
+        await DisposeComposerInteropAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // The module and the DotNetObjectReference are created unconditionally on the first
+            // render — phase 6 (scroll anchoring) hangs its own work off the same module.
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await EnsureModuleAsync();
+        }
+
         if (firstRender || Messages.Count > 0)
         {
             await ScrollToBottomAsync();
         }
 
         await ReportReadReceiptsAsync();
+        await SyncJsComposersAsync();
     }
 
     private async Task ReportReadReceiptsAsync()
@@ -788,18 +786,31 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     }
 
     /// <summary>
-    /// The single send path of the composer, shared by the built-in send button and
-    /// <see cref="ChatComposerContext.SendAsync"/>: the text is trimmed and cleared, both send
-    /// events fire, the submit state flips for the duration of the host handlers and the cleared
-    /// composer is reported through the draft guard. A no-op while the composer cannot send
-    /// (<see cref="IsSendDisabled"/>). Call on the component's dispatcher (an event handler or via
-    /// <c>InvokeAsync</c>) — like the built-in button, this mutates state directly.
+    /// The single send path of the composer, shared by the built-in send button,
+    /// <see cref="ChatComposerContext.SendAsync"/> and the <c>chat.js</c> Enter submit
+    /// (<see cref="OnComposerSubmit"/>): the text is trimmed, both send events fire, the submit
+    /// state flips for the duration of the host handlers and — only after BOTH handlers
+    /// completed without throwing — the composer is cleared, reported through the draft guard
+    /// and refocused (<see cref="RefocusAfterSend"/>). A host handler that throws keeps the
+    /// text in place (the draft is not lost) and the exception propagates to the caller.
+    /// <para>
+    /// Text typed while the send is in flight is KEPT: the clear compares against a snapshot
+    /// (<c>raw</c>) taken before the handlers ran — text equal to the snapshot is cleared, a
+    /// superset of it loses only the sent prefix (trimmed), and anything else (the user rewrote
+    /// the whole draft mid-send) is left untouched. The submit flag is reset in a
+    /// <c>finally</c> with a re-render, so a failed Enter-path send never leaves the send
+    /// button disabled.
+    /// </para>
+    /// A no-op while the composer cannot send (<see cref="IsSendDisabled"/>), which also makes
+    /// a duplicate dispatch (Enter plus a late fallback) a no-op rather than a second send.
+    /// Call on the component's dispatcher (an event handler or via <c>InvokeAsync</c>) — like
+    /// the built-in button, this mutates state directly.
     /// </summary>
     internal async Task SubmitComposerAsync()
     {
         if (IsSendDisabled) return;
         var text = _inputText.Trim();
-        _inputText = string.Empty;
+        var raw = _inputText;
         _isSubmitting = true;
         StateHasChanged();
         try
@@ -810,10 +821,30 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         finally
         {
             _isSubmitting = false;
+            StateHasChanged();
         }
+
+        // The send SUCCEEDED (both handlers completed): clear the composer and report it
+        // through the shared notify. The clear deliberately happens AFTER the handlers — a
+        // failing handler must not swallow the user's text (FZE-5 decision) — and keeps text
+        // typed while the send was in flight (only the sent prefix is removed).
+        if (_inputText == raw)
+        {
+            _inputText = string.Empty;
+        }
+        else if (_inputText.StartsWith(raw, StringComparison.Ordinal))
+        {
+            _inputText = _inputText[raw.Length..].TrimStart();
+        }
+
         StateHasChanged();
-        // The composer slot just cleared — report it exactly once through the shared notify.
         await NotifyDraftChangedAsync();
+        await ResizeComposerAfterClearAsync(_mainSlot);
+
+        if (RefocusAfterSend)
+        {
+            await RefocusComposerAfterSendAsync();
+        }
     }
 
     /// <summary>
@@ -825,12 +856,28 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// </summary>
     internal Task SendComposerViaDispatcherAsync() => InvokeAsync(SubmitComposerAsync);
 
+    /// <summary>
+    /// Whether this keydown is a submit-Enter: Enter without Shift (the documented new line),
+    /// Alt, Ctrl or Meta (browser and host shortcuts). The IME guard is applied by the
+    /// <c>chat.js</c> module; the C# fallback adds its own net9+ guard.
+    /// </summary>
+    private static bool IsSubmitEnter(KeyboardEventArgs e)
+        => e.Key == "Enter" && !e.ShiftKey && !e.AltKey && !e.CtrlKey && !e.MetaKey;
+
+    /// <summary>
+    /// Fallback Enter handler for the built-in composer — active only while the
+    /// <c>chat.js</c> module is not attached yet (prerender / before interactivity / a failed
+    /// import); once attached, the JS listener owns the submit (with <c>preventDefault</c>) and
+    /// this handler stays quiet so Enter activates exactly once.
+    /// </summary>
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await HandleSendAsync();
-        }
+        if (_mainSlot.JsOwnsEnter) return;
+        if (!EnterToSend || !IsSubmitEnter(e)) return;
+#if NET9_0_OR_GREATER
+        if (e.IsComposing) return; // net9+ fallback IME guard; the primary guard lives in chat.js
+#endif
+        await HandleSendAsync();
     }
 
     // ── K6: threads ──
@@ -876,19 +923,74 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     {
         var root = ActiveThreadRoot;
         if (root is null) return;
+        if (_isThreadSubmitting) return; // a duplicate dispatch (Enter + late fallback) sends once
         var text = _threadInput.Trim();
         if (string.IsNullOrEmpty(text)) return;
-        _threadInput = string.Empty;
-        await OnSend.InvokeAsync(new ChatSendRequest(text, replyToId: root.Id, threadRootId: root.Id));
+        var raw = _threadInput;
+        _isThreadSubmitting = true;
+        StateHasChanged();
+        try
+        {
+            await OnSend.InvokeAsync(new ChatSendRequest(text, replyToId: root.Id, threadRootId: root.Id));
+        }
+        finally
+        {
+            _isThreadSubmitting = false;
+            StateHasChanged();
+        }
+
+        // Cleared only after the host handler completed — a failed send keeps the reply text
+        // (the same FZE-5 decision as the main composer), and text typed while the send was in
+        // flight is kept (only the sent prefix is removed).
+        if (_threadInput == raw)
+        {
+            _threadInput = string.Empty;
+        }
+        else if (_threadInput.StartsWith(raw, StringComparison.Ordinal))
+        {
+            _threadInput = _threadInput[raw.Length..].TrimStart();
+        }
+
+        StateHasChanged();
         await NotifyDraftChangedAsync();
+        await ResizeComposerAfterClearAsync(_threadSlot);
+
+        if (RefocusAfterSend)
+        {
+            await RefocusThreadInputAfterSendAsync();
+        }
     }
 
+    /// <summary>
+    /// Refocuses the thread panel's reply input after a successful thread reply — the same
+    /// best-effort contract as the composer refocus: a failing or disconnected JS call (the
+    /// input unmounted between renders, the circuit dropped) is swallowed rather than surfaced.
+    /// </summary>
+    private async Task RefocusThreadInputAfterSendAsync()
+    {
+        if (string.IsNullOrEmpty(_threadInputElement.Id)) return;
+        try
+        {
+            await _threadInputElement.FocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+        {
+            // Focus is best-effort: a disconnected circuit or an unmounted input is not an error.
+        }
+    }
+
+    /// <summary>
+    /// Fallback Enter handler for the thread panel's reply input — same contract as
+    /// <see cref="HandleKeyDownAsync"/>: quiet once the <c>chat.js</c> module owns the input.
+    /// </summary>
     private async Task HandleThreadKeyDownAsync(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await SendThreadReplyAsync();
-        }
+        if (_threadSlot.JsOwnsEnter) return;
+        if (!EnterToSend || !IsSubmitEnter(e)) return;
+#if NET9_0_OR_GREATER
+        if (e.IsComposing) return; // net9+ fallback IME guard; the primary guard lives in chat.js
+#endif
+        await SendThreadReplyAsync();
     }
 
     // ── K6: edit / delete ──
@@ -926,28 +1028,50 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
 
     private async Task CommitEditAsync()
     {
-        if (_editingId is null) return;
+        if (_editingId is null || _isEditSubmitting) return; // a duplicate dispatch commits once
         var id = _editingId;
         var text = _editText.Trim();
-        _editingId = null;
-        if (!string.IsNullOrEmpty(text))
+        _isEditSubmitting = true;
+        try
         {
-            await OnEditMessage.InvokeAsync(new ChatMessageEdit(id, text));
+            if (!string.IsNullOrEmpty(text))
+            {
+                await OnEditMessage.InvokeAsync(new ChatMessageEdit(id, text));
+            }
+            // Cleared only after the awaited handler: a throwing handler keeps the edit open
+            // with its text (the same FZE-5 decision as the failed sends), and the id stays a
+            // valid dedup key for the window where Enter reaches both the JS listener and the
+            // C# fallback.
+            _editingId = null;
+        }
+        finally
+        {
+            _isEditSubmitting = false;
         }
         // The edit closed (committed or discarded as empty) — report the cleared editing state.
         await NotifyDraftChangedAsync();
     }
 
+    /// <summary>
+    /// Fallback keyboard handler for the message edit: Escape cancels, Enter commits. Enter is
+    /// quiet once the <c>chat.js</c> module owns the input (and honours <see cref="EnterToSend"/>
+    /// — <see langword="false"/> leaves Enter as a new line in the edit too, so multi-line edits
+    /// are possible; the Save button and <see cref="OnEditComposerSubmit"/> still commit).
+    /// </summary>
     private async Task HandleEditKeyDownAsync(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            await CommitEditAsync();
-        }
-        else if (e.Key == "Escape")
+        if (e.Key == "Escape")
         {
             await CancelEdit();
+            return;
         }
+
+        if (_editSlot.JsOwnsEnter) return;
+        if (!EnterToSend || !IsSubmitEnter(e)) return;
+#if NET9_0_OR_GREATER
+        if (e.IsComposing) return; // net9+ fallback IME guard; the primary guard lives in chat.js
+#endif
+        await CommitEditAsync();
     }
 
     private async Task DeleteAsync(ChatMessage m)

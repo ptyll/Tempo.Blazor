@@ -3827,6 +3827,13 @@
           "description": "When true, replies are grouped into a thread panel instead of shown inline. Default true."
         },
         {
+          "name": "EnterToSend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether pressing Enter in a composer input submits. Default true (today's behavior: the built-in composer, the thread panel's reply input and an open message edit all submit on Enter). false makes Enter a NATIVE new line in all three inputs — nothing is sent from Enter itself, only from the send button, SendAsync or Ctrl/⌘+Enter (no Shift/Alt, outside an IME composition; handled by chat.js). Shift+Enter always inserts a new line and Alt/Ctrl/Meta+Enter always stay native (browser and host shortcuts). The keydown handling lives in the chat.js module once it is attached (it also owns the IME guard, which a net8 KeyboardEventArgs cannot express); this parameter is passed to the module as its enterToSend option and re-attaches the module when it changes."
+        },
+        {
           "name": "HeaderContent",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -3911,6 +3918,13 @@
           "isRequired": false,
           "default": "[\"\uD83D\uDC4D\", \"❤️\", \"\uD83D\uDE02\", \"\uD83C\uDF89\", \"\uD83D\uDE2E\", \"\uD83D\uDE22\"]",
           "description": "Emoji offered by the reaction picker."
+        },
+        {
+          "name": "RefocusAfterSend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, or the element a custom composer registered through AttachAsync) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
         },
         {
           "name": "ShowAvatars",
@@ -4844,16 +4858,28 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "AttachAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Registers the host's own composer input element with the component, so a ComposerTemplate that renders its own <textarea> (or <input>) receives the SAME keyboard behavior as the built-in composer: Enter submits (with preventDefault), Shift+Enter and Alt/Ctrl/Meta+Enter stay native, an IME composition session never submits, and the input auto-resizes up to the component's row cap. The behavior is delivered by the same chat.js module the built-in composer uses, routed to the same submit path (OnSendMessage/OnSend via SendAsync's entry point). Call it once the host's input has mounted — typically from the host's OnAfterRenderAsync with the captured ElementReference — and again whenever the element is replaced; call it with default to detach. The registered element is also the refocus target of RefocusAfterSend: after a successful send the component focuses it back, so the user can type the next message immediately. Safe to call from any thread.",
+          "parameters": [
+            {
+              "name": "element",
+              "type": "ElementReference"
+            }
+          ]
+        },
+        {
           "name": "FocusAsync",
           "kind": "Method",
           "type": "ValueTask",
-          "description": "Moves focus to the built-in composer textarea. With a custom composer the built-in textarea is not rendered — focus the host's own input there instead (the template markup owns it)."
+          "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
         },
         {
           "name": "SendAsync",
           "kind": "Method",
           "type": "Task",
-          "description": "Sends the current Text through the SAME path as the built-in send button: the text is trimmed and cleared, TmChat's OnSendMessage and OnSend fire, the submit state flips (IsSubmitting) for the duration and the cleared composer is reported to the draft guard. A no-op when CanSend is false. The template re-renders with the cleared Text, so a controlled input clears itself after an awaited send. Safe to call from any thread — the send is dispatched onto the component's renderer synchronisation context."
+          "description": "Sends the current Text through the SAME path as the built-in send button: the text is trimmed, TmChat's OnSendMessage and OnSend fire, the submit state flips (IsSubmitting) for the duration and — only after BOTH handlers completed without throwing — the composer clears (the re-render propagates the empty Text into the bound input, so a controlled input clears itself) and, with RefocusAfterSend, the registered composer input is focused again. A host handler that throws KEEPS the text in place (the draft is not lost) and the exception propagates to the caller. A no-op when CanSend is false. Safe to call from any thread — the send is dispatched onto the component's renderer synchronisation context."
         },
         {
           "name": "SetTextAsync",
@@ -29283,6 +29309,10 @@
       "kind": "Asset"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/chat.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/code-editor.js",
       "kind": "JavaScript"
     },
@@ -29392,6 +29422,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/chat.test.mjs",
       "kind": "JavaScript"
     },
     {

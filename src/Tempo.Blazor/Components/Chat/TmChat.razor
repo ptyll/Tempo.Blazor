@@ -118,10 +118,13 @@
             </div>
             <div class="tm-chat__thread-input-area">
                 <textarea class="tm-chat__input tm-chat__thread-input"
+                          id="@_threadInputId"
                           rows="1"
+                          enterkeyhint="@ComposerEnterKeyHint"
                           data-testid="@TestId("chat-thread-input")"
                           placeholder="@Loc["TmChat_ReplyPlaceholder"]"
                           disabled="@Disabled"
+                          @ref="_threadInputElement"
                           @bind="_threadInput"
                           @bind:event="oninput"
                           @bind:after="NotifyDraftChangedAsync"
@@ -129,9 +132,10 @@
                 <button type="button"
                         class="tm-chat__send-btn"
                         data-testid="@TestId("chat-thread-send")"
-                        disabled="@(Disabled || string.IsNullOrWhiteSpace(_threadInput))"
+                        disabled="@IsThreadSendDisabled"
                         aria-label="@Loc["TmChat_Send"]"
-                        @onclick="SendThreadReplyAsync">
+                        @onclick="SendThreadReplyAsync"
+                        @onmousedown:preventDefault>
                     <TmIcon Name="send" Size="IconSize.Sm" />
                 </button>
             </div>
@@ -152,14 +156,16 @@
             : stacked ? "tm-chat__input-area tm-chat__input-area--stacked" : "tm-chat__input-area";
 
     // The built-in composer input row (textarea + send button), shared by the flat and the stacked
-    // composer layout. A ComposerTemplate replaces it entirely.
+    // composer layout. A ComposerTemplate replaces it entirely. The visually-hidden hint span is
+    // the submit hint the textarea points at through aria-describedby (merged after any host ids).
     private RenderFragment BuiltInComposerInput => @<text>
         <textarea class="tm-chat__input"
                   id="@_composerInputId"
                   rows="1"
+                  enterkeyhint="@ComposerEnterKeyHint"
                   placeholder="@PlaceholderText"
                   disabled="@Disabled"
-                  aria-describedby="@ComposerDescribedBy"
+                  aria-describedby="@ComposerDescribedByAttribute"
                   @ref="_composerInput"
                   @bind="_inputText"
                   @bind:event="oninput"
@@ -169,9 +175,11 @@
                 class="tm-chat__send-btn"
                 disabled="@IsSendDisabled"
                 aria-label="@Loc["TmChat_Send"]"
-                @onclick="HandleSendAsync">
+                @onclick="HandleSendAsync"
+                @onmousedown:preventDefault>
             <TmIcon Name="send" Size="IconSize.Sm" />
         </button>
+        <span id="@($"{_composerInputId}-hint")" class="tm-sr-only">@ComposerHintText</span>
     </text>;
 
     // Every message renders inside a neutral wrapper carrying the data-message-id anchor
@@ -250,7 +258,9 @@
                     <div class="tm-chat__edit">
                         <textarea class="tm-chat__input tm-chat__edit-input"
                                   rows="1"
+                                  enterkeyhint="@ComposerEnterKeyHint"
                                   data-testid="@TestId("chat-edit-input")"
+                                  @ref="_editInputElement"
                                   @bind="_editText"
                                   @bind:event="oninput"
                                   @bind:after="NotifyDraftChangedAsync"

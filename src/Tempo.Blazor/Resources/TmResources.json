@@ -763,6 +763,8 @@
   "TmChat_ReplyCount_Other": "{0} replies",
   "TmChat_ReplyPlaceholder": "Reply in thread…",
   "TmChat_ReadBy": "Read by {0}",
+  "TmChat_ComposerHint_EnterToSend": "Press Enter to send, Shift+Enter for a new line",
+  "TmChat_ComposerHint_EnterNewLine": "Enter adds a new line; press Ctrl+Enter (⌘+Enter on Mac) or use the Send button to send",
   "TmChat_TypingMany": "{0} and {1} others are typing…",
   "TmChat_TypingSingle": "{0} is typing…",
   "TmChat_TypingTwo": "{0} and {1} are typing…",

@@ -765,6 +765,8 @@
   "TmChat_ReplyCount_Other": "{0} réponses",
   "TmChat_ReplyPlaceholder": "Répondre dans le fil…",
   "TmChat_ReadBy": "Lu par {0}",
+  "TmChat_ComposerHint_EnterToSend": "Appuyez sur Entrée pour envoyer, Maj+Entrée pour un retour à la ligne",
+  "TmChat_ComposerHint_EnterNewLine": "Entrée ajoute un retour à la ligne ; envoyez avec Ctrl+Entrée (⌘+Entrée sur Mac) ou le bouton Envoyer",
   "TmChat_TypingMany": "{0} et {1} autres sont en train d'écrire…",
   "TmChat_TypingSingle": "{0} est en train d'écrire…",
   "TmChat_TypingTwo": "{0} et {1} sont en train d'écrire…",

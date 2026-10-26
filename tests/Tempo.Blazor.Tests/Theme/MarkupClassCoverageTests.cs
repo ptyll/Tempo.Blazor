@@ -414,7 +414,9 @@ public sealed class MarkupClassCoverageTests
             // FZE-2 (TmChat slots): the composer textarea id is per component instance
             // ("tm-chat-composer-{counter}" in TmChat.razor.cs), so its prefix joined the scanned
             // population — 50 → 51.
-            ExpectedUnmeasurableStems: 51),
+            // FZE-5 (composer review): the thread panel's reply input gained its own per-instance
+            // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 51 → 52.
+            ExpectedUnmeasurableStems: 52),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

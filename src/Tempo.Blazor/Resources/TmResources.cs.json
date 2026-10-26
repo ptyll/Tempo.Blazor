@@ -767,6 +767,8 @@
   "TmChat_ReplyCount_Other": "{0} odpovědí",
   "TmChat_ReplyPlaceholder": "Odpovědět ve vlákně…",
   "TmChat_ReadBy": "Přečetl(a): {0}",
+  "TmChat_ComposerHint_EnterToSend": "Enter odešle zprávu, Shift+Enter vloží nový řádek",
+  "TmChat_ComposerHint_EnterNewLine": "Enter vkládá nový řádek; odeslat lze přes Ctrl+Enter (⌘+Enter na Macu) nebo tlačítkem Odeslat",
   "TmChat_TypingMany": "{0} a {1} další píší…",
   "TmChat_TypingSingle": "{0} píše…",
   "TmChat_TypingTwo": "{0} a {1} píší…",

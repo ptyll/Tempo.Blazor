@@ -2421,6 +2421,8 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmChat
         ["TmChat_Placeholder"] = "Type a message…",
+        ["TmChat_ComposerHint_EnterToSend"] = "Press Enter to send, Shift+Enter for a new line",
+        ["TmChat_ComposerHint_EnterNewLine"] = "Enter adds a new line; press Ctrl+Enter (⌘+Enter on Mac) or use the Send button to send",
         ["TmColorGradient_Area"] = "Saturation and brightness",
         ["TmColorGradient_AreaValue"] = "Saturation {0}%, brightness {1}%",
         ["TmColorGradient_Hue"] = "Hue",
@@ -6321,6 +6323,8 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmChat
         ["TmChat_Placeholder"] = "Napište zprávu…",
+        ["TmChat_ComposerHint_EnterToSend"] = "Enter odešle zprávu, Shift+Enter vloží nový řádek",
+        ["TmChat_ComposerHint_EnterNewLine"] = "Enter vkládá nový řádek; odeslat lze přes Ctrl+Enter (⌘+Enter na Macu) nebo tlačítkem Odeslat",
         ["TmColorGradient_Area"] = "Sytost a jas",
         ["TmColorGradient_AreaValue"] = "Sytost {0} %, jas {1} %",
         ["TmColorGradient_Hue"] = "Odstín",
