@@ -65,3 +65,5 @@ src/Tempo.Blazor/wwwroot/js/document-editor.dist.js.map
 /output.zip
 /output/
 /tmp/
+
+/scheduler-*.log
