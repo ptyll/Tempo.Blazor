@@ -2,9 +2,12 @@
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Pickers
 @using System.Globalization
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
 @inject IJSRuntime JS
 
-<div class="tm-scheduler-month" @ref="_gridRef">
+<div class="tm-scheduler-month" @ref="_gridRef" data-time-culture="@CultureInfo.CurrentUICulture.Name">
+    <span id="@_moveHintId" class="tm-sr-only">@Loc["TmScheduler_MoveHint_Month"]</span>
     <div class="tm-scheduler-month-grid" role="grid" aria-label="@Loc["TmScheduler_CalendarGrid"]"
          aria-describedby="@_hintId" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End PageUp PageDown">
         <span id="@_hintId" class="tm-sr-only">@Loc["TmScheduler_GridKeyboardHint"]</span>
@@ -63,9 +66,12 @@
                         <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(!e.AllDay || AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface" : "") @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @(e.AllDay && AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event--tinted" : "") @(IsSelectedEvent(e) ? "tm-scheduler-month-event--selected" : "") @e.CssClass"
                              role="button"
                              aria-current="@(IsSelectedEvent(e) ? "true" : null)"
-                             tabindex="@(d == ActiveDate ? "0" : "-1")"
+                             tabindex="@(IsEventStop(e, d) ? "0" : "-1")"
                              aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
+                              aria-describedby="@(!ReadOnly && !e.IsReadOnly ? _moveHintId : null)"
+                              aria-keyshortcuts="@(!ReadOnly && !e.IsReadOnly ? "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown" : null)"
                              data-tm-roving="@_rovingId"
+                              data-event-id="@e.Id"
                              style="@EventStyle(e)"
                              title="@e.Title"
                              draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
@@ -124,8 +130,13 @@
     private bool _focusAfterRender;
     private readonly string _hintId = "tm-scheduler-hint-" + Guid.NewGuid().ToString("N");
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
+    private readonly string _moveHintId = "tm-scheduler-move-hint-" + Guid.NewGuid().ToString("N");
+    private string? _focusEventId;
     private Dictionary<DateOnly, List<TmScheduleEvent>> _eventMap = new();
     private TmScheduleEvent? _draggedEvent;
+    private DotNetObjectReference<TmSchedulerMonthView>? _dotNetRef;
+    private bool _jsRegistered;
+    private bool _disposed;
 
     /// <summary>Currently displayed date (determines which month to show).</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
@@ -154,6 +165,9 @@
     /// <summary>Whether drag/drop is disabled.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>Display zone a move writes its offset in. Null uses the machine zone.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
     /// <summary>Fires when a day cell is clicked.</summary>
     [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
 
@@ -162,6 +176,9 @@
 
     /// <summary>Fires when an event is moved via drag and drop.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires with the sentence a move should announce. The scheduler owns the one live region.</summary>
+    [Parameter] public EventCallback<string> OnAnnounced { get; set; }
 
     /// <summary>Fires when right-clicking on an empty day slot.</summary>
     [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
@@ -199,13 +216,19 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+            await RegisterMoveAsync();
         // Spent only once the grid contains the date the key asked for, so a PageUp/PageDown that
         // is still waiting on the host does not focus a stale cell.
         if (!_focusAfterRender || !_days.Contains(_activeDate)) return;
         _focusAfterRender = false;
+        var focusEventId = _focusEventId;
+        _focusEventId = null;
         try
         {
-            if (_cellRefs.TryGetValue(ActiveDate, out var cell))
+            if (focusEventId is not null)
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusRovingStop", _gridRef, $"[data-event-id=\"{focusEventId}\"]");
+            else if (_cellRefs.TryGetValue(ActiveDate, out var cell))
                 await cell.FocusAsync(preventScroll: true);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
@@ -334,6 +357,10 @@
 
     private bool IsSelectedEvent(TmScheduleEvent evt) => SelectedEvent is not null && SelectedEvent.Id == evt.Id;
 
+    /// <summary>The moved event is the one roving stop, on whichever day it landed.</summary>
+    private bool IsEventStop(TmScheduleEvent evt, DateOnly date)
+        => _focusEventId == evt.Id || (_focusEventId is null && date == ActiveDate);
+
     private async Task HandleEventClick(TmScheduleEvent evt)
     {
         await SelectedEventChanged.InvokeAsync(evt);
@@ -346,16 +373,76 @@
 
     private async Task HandleDrop(DateOnly targetDate)
     {
-        if (_draggedEvent is null || ReadOnly) return;
+        if (_draggedEvent is null) return;
+        if (await CommitMoveAsync(_draggedEvent, targetDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), -1, null))
+            _draggedEvent = null;
+    }
 
-        var duration = _draggedEvent.End - _draggedEvent.Start;
-        var offset = _draggedEvent.Start.Offset;
-        var newStart = targetDate.ToDateTime(TimeOnly.FromDateTime(_draggedEvent.StartLocal));
-        _draggedEvent.Start = new DateTimeOffset(newStart, offset);
-        _draggedEvent.End = _draggedEvent.Start + duration;
+    /// <summary>The one move commit: HTML5 drop, the touch gesture and the keyboard alternative.</summary>
+    private async Task<bool> CommitMoveAsync(TmScheduleEvent evt, string date, int minuteOfDay, string? resourceId)
+    {
+        if (!SchedulerMove.Move(evt, date, minuteOfDay, resourceId, ReadOnly, TimeZone)) return false;
+        _focusEventId = evt.Id;
+        _activeDate = DateOnly.FromDateTime(evt.StartLocal);
+        _focusAfterRender = true;
+        await OnEventChanged.InvokeAsync(evt);
+        await OnAnnounced.InvokeAsync(SchedulerMove.MovedText(Loc, evt, dateOnly: true));
+        return true;
+    }
 
-        await OnEventChanged.InvokeAsync(_draggedEvent);
-        _draggedEvent = null;
+    /// <summary>Called by the touch move when the finger releases over a day. A month keeps the time of day.</summary>
+    [JSInvokable]
+    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId)
+    {
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        return evt is null ? Task.CompletedTask : CommitMoveAsync(evt, date, -1, resourceId);
+    }
+
+    /// <summary>Called by the Alt+Arrow keyboard alternative. A month moves by a day; it has no resize axis.</summary>
+    [JSInvokable]
+    public Task NotifyKeyboardStep(string eventId, int x, int y, bool shift)
+    {
+        if (shift) return Task.CompletedTask;
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        if (evt is null) return Task.CompletedTask;
+        var date = DateOnly.FromDateTime(evt.StartLocal).AddDays(x + y * 7)
+            .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return CommitMoveAsync(evt, date, -1, null);
+    }
+
+    private async Task RegisterMoveAsync()
+    {
+        _dotNetRef = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.registerInstance", _gridRef, _dotNetRef);
+            if (_disposed)
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.unregisterInstance", _gridRef);
+                return;
+            }
+            _jsRegistered = true;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException or TaskCanceledException)
+        {
+            // A prerender or a dropped circuit only skips the gesture; the grid still renders.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (_jsRegistered)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.unregisterInstance", _gridRef);
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or TaskCanceledException)
+            {
+            }
+        }
+        _dotNetRef?.Dispose();
     }
 
     private async Task HandleDayContextMenu(MouseEventArgs e, DateOnly date)

@@ -27,6 +27,7 @@
                          SelectedEventChanged="@SelectedEventChanged"
                          OnEventClick="@OnEventClick"
                          OnEventChanged="@OnEventChanged"
+                          OnAnnounced="@OnAnnounced"
                          OnSlotContextMenu="@OnSlotContextMenu"
                          OnEventContextMenu="@OnEventContextMenu"
                          EventTemplate="@EventTemplate" />
@@ -64,6 +65,9 @@
 
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires with the sentence a move or a resize should announce.</summary>
+    [Parameter] public EventCallback<string> OnAnnounced { get; set; }
 
     /// <summary>Fires when right-clicking on a time slot.</summary>
     [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }

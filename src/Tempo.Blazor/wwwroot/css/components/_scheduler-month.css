@@ -201,4 +201,6 @@
 
 .tm-scheduler-month-day--drop-target {
     background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
 }

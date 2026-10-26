@@ -4494,6 +4494,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_GoToDate"] = "Go to date",
         ["TmScheduler_GoToDateLabel"] = "{0}, go to date",
         ["TmScheduler_SelectedDay"] = "Selected day",
+        ["TmScheduler_MoveHint_Grid"] = "Hold and drag to move. Alt+Left or Alt+Right moves a day, Alt+Up or Alt+Down moves a slot, Alt+Shift+Up or Alt+Shift+Down resizes the end.",
+        ["TmScheduler_MoveHint_Timeline"] = "Hold and drag to move. Alt+Left or Alt+Right moves a slot, Alt+Up or Alt+Down moves to another resource, Alt+Shift+Left or Alt+Shift+Right resizes the end.",
+        ["TmScheduler_MoveHint_Month"] = "Hold and drag to move. Alt+Left or Alt+Right moves a day, Alt+Up or Alt+Down moves a week.",
+        ["TmScheduler_TouchHint"] = "Hold an event, then drag it. Alt with an arrow key moves it.",
+        ["TmScheduler_EventMoved"] = "{0} moved to {1}",
+        ["TmScheduler_EventMovedToResource"] = "{0} moved to {1}, {2}",
+        ["TmScheduler_EventResized"] = "Resized to {0} – {1}",
     });
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -8284,6 +8291,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_GoToDate"] = "Přejít na datum",
         ["TmScheduler_GoToDateLabel"] = "{0}, přejít na datum",
         ["TmScheduler_SelectedDay"] = "Vybraný den",
+        ["TmScheduler_MoveHint_Grid"] = "Podržte a táhněte pro přesun. Alt+vlevo nebo Alt+vpravo posune o den, Alt+nahoru nebo Alt+dolů o jeden slot, Alt+Shift+nahoru nebo Alt+Shift+dolů změní konec.",
+        ["TmScheduler_MoveHint_Timeline"] = "Podržte a táhněte pro přesun. Alt+vlevo nebo Alt+vpravo posune o jeden slot, Alt+nahoru nebo Alt+dolů na jiný zdroj, Alt+Shift+vlevo nebo Alt+Shift+vpravo změní konec.",
+        ["TmScheduler_MoveHint_Month"] = "Podržte a táhněte pro přesun. Alt+vlevo nebo Alt+vpravo posune o den, Alt+nahoru nebo Alt+dolů o týden.",
+        ["TmScheduler_TouchHint"] = "Podržte událost a táhněte. Alt se šipkou ji posune.",
+        ["TmScheduler_EventMoved"] = "{0} přesunuto na {1}",
+        ["TmScheduler_EventMovedToResource"] = "{0} přesunuto na {1}, {2}",
+        ["TmScheduler_EventResized"] = "Čas změněn na {0} – {1}",
     }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 

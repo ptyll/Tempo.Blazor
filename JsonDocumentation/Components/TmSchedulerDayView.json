@@ -69,6 +69,12 @@
       "description": "Fires when an event is moved or resized."
     },
     {
+      "name": "OnAnnounced",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
+    },
+    {
       "name": "OnSlotContextMenu",
       "type": "EventCallback<SchedulerSlotContext>",
       "isRequired": false,

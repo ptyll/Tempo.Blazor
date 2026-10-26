@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop) and the title heading is a polite live region.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -169,6 +169,13 @@
       "isRequired": false,
       "default": "FullWeek",
       "description": "Which days the week renders. WorkWeek keeps the first five; the title and the data load use the same range."
+    },
+    {
+      "name": "ShowTouchHint",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, a localized touch hint renders under the toolbar. CSS shows it only for a coarse pointer with no hover."
     },
     {
       "name": "MonthWeeks",

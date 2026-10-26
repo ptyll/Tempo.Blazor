@@ -23753,7 +23753,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop) and the title heading is a polite live region.",
+          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmScheduler.razor",
           "documentationStatus": "merged",
@@ -23995,6 +23995,13 @@
               "isRequired": false,
               "default": "true",
               "description": "When true, today's column draws the current-time indicator. Default true; set false to restore the previous look."
+            },
+            {
+              "name": "ShowTouchHint",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, a localized touch hint renders under the toolbar. CSS shows it only for a coarse pointer with no hover.",
+              "default": "false"
             },
             {
               "name": "SlotDuration",
@@ -24311,6 +24318,12 @@
               "default": "false"
             },
             {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
+            },
+            {
               "name": "OnEventChanged",
               "type": "EventCallback<TmScheduleEvent>",
               "isRequired": false,
@@ -24569,6 +24582,12 @@
               "description": "How many weeks the grid renders. Auto drops an empty trailing week."
             },
             {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move should announce. The scheduler owns the one live region."
+            },
+            {
               "name": "OnEventChanged",
               "type": "EventCallback<TmScheduleEvent>",
               "isRequired": false,
@@ -24640,6 +24659,13 @@
               "isRequired": false,
               "default": "true",
               "description": "When true, events are also rendered in adjacent-month day cells visible in the grid."
+            },
+            {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone used when a move writes the new local time. Null uses the machine zone.",
+              "default": "null"
             },
             {
               "name": "Today",
@@ -24743,6 +24769,12 @@
               "isRequired": false,
               "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -24958,6 +24990,12 @@
               "isRequired": false,
               "description": "When true, hours outside the working day are tinted. Default false.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -25301,6 +25339,12 @@
               "isRequired": false,
               "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",

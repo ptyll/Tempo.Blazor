@@ -25,6 +25,11 @@
                         OnPrint="@PrintAsync"
                         InstanceId="@_instanceId" />
 
+    @if (ShowTouchHint)
+    {
+        <p class="tm-scheduler-touch-hint">@Loc["TmScheduler_TouchHint"]</p>
+    }
+
     <div class="tm-scheduler-body"
          role="@(ShowHeader ? "tabpanel" : null)"
          id="@(ShowHeader ? $"tabpanel-{ToolbarTabId}" : null)"
@@ -42,12 +47,14 @@
                                       ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
                                       HighlightWeekends="@HighlightWeekends"
                                       AllDayEventStyle="@AllDayEventStyle"
+                                      TimeZone="@ResolveTimeZone()"
                                       OnSlotClick="@HandleSlotClickAsync"
                                       SelectedDate="@SelectedDate"
                                       SelectedEvent="@SelectedEvent"
                                       SelectedEventChanged="@HandleSelectedEventAsync"
                                       OnEventClick="@OnEventClick"
                                       OnEventChanged="@HandleEventChangedAsync"
+                                          OnAnnounced="@AnnounceAsync"
                                       OnSlotContextMenu="@OnSlotContextMenu"
                                       OnEventContextMenu="@OnEventContextMenu"
                                       OnMoreClick="@HandleMoreClickAsync"
@@ -80,6 +87,7 @@
                                     SelectedEventChanged="@HandleSelectedEventAsync"
                                     OnEventClick="@OnEventClick"
                                     OnEventChanged="@HandleEventChangedAsync"
+                                          OnAnnounced="@AnnounceAsync"
                                     OnSlotContextMenu="@OnSlotContextMenu"
                                     OnEventContextMenu="@OnEventContextMenu"
                                     EventTemplate="@EventTemplate" />
@@ -112,6 +120,7 @@
                                      SelectedEventChanged="@HandleSelectedEventAsync"
                                      OnEventClick="@OnEventClick"
                                      OnEventChanged="@HandleEventChangedAsync"
+                                          OnAnnounced="@AnnounceAsync"
                                      OnSlotContextMenu="@OnSlotContextMenu"
                                      OnEventContextMenu="@OnEventContextMenu"
                                      EventTemplate="@EventTemplate" />
@@ -146,16 +155,19 @@
                                          SelectedEventChanged="@HandleSelectedEventAsync"
                                          OnEventClick="@OnEventClick"
                                          OnEventChanged="@HandleEventChangedAsync"
+                                          OnAnnounced="@AnnounceAsync"
                                          OnSlotContextMenu="@OnSlotContextMenu"
                                          OnEventContextMenu="@OnEventContextMenu"
                                          EventTemplate="@EventTemplate" />
                 break;
         }
     </div>
+    <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
 </div>
 
 @code {
     private IReadOnlyList<TmScheduleEvent> _loadedEvents = [];
+    private string? _announcement;
 
     /// <summary>Service provider for the optional user-zone lookups (never a required dependency).</summary>
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -318,6 +330,12 @@
 
     /// <summary>When true, a timed event names its resource under the title.</summary>
     [Parameter] public bool ShowEventResource { get; set; }
+
+    /// <summary>
+    /// When true, a touch hint renders under the toolbar. It is visible only on a coarse pointer
+    /// with no hover (<c>(hover: none) and (pointer: coarse)</c>). Default false: a host opts in.
+    /// </summary>
+    [Parameter] public bool ShowTouchHint { get; set; }
 
     /// <summary>Opens the browser print dialog; the scheduler's print stylesheet lays out the current view for paper.</summary>
     public async Task PrintAsync()
@@ -531,6 +549,19 @@
         Description = item.Description,
         Color = item.Color ?? item.StatusColor
     };
+
+    private async Task AnnounceAsync(string text)
+    {
+        // Clear first, so the same sentence announced twice is a new text node and is read again.
+        if (!string.IsNullOrEmpty(_announcement))
+        {
+            _announcement = null;
+            StateHasChanged();
+            await Task.Yield();
+        }
+        _announcement = text;
+        StateHasChanged();
+    }
 
     private async Task HandleEventChangedAsync(TmScheduleEvent e)
     {

@@ -22,8 +22,25 @@
             return '_content/Tempo.Blazor/js/pointer-drag.js';
         }
     })();
+    var gestureUrl = helperUrl.replace('pointer-drag.js', 'pointer-gesture.js');
 
     var HANDLE_SELECTOR = '.tm-scheduler-event-resize-handle';
+    // The event body. A touch long-press moves it; a mouse or a pen press is HTML5 drag-and-drop.
+    // The keyboard alternative is restricted to a draggable event, so a read-only one does not swallow
+    // Alt+Left/Right (the browser's Back/Forward).
+    var MOVE_SELECTOR = '.tm-scheduler-timegrid-event[data-event-id][draggable="true"], .tm-scheduler-timeline-event[data-event-id][draggable="true"], .tm-scheduler-month-event[data-event-id][draggable="true"]';
+    var DROP_TARGET = 'tm-scheduler-month-day--drop-target tm-scheduler-timegrid-slot--drop-target tm-scheduler-timeline-slot--drop-target';
+    /** A culture-aware time. Falls back to HH:mm when Intl is missing (the node tests). */
+    function clock(minute, culture) {
+        var wrapped = ((minute % (24 * 60)) + 24 * 60) % (24 * 60);
+        var hours = Math.floor(wrapped / 60);
+        var minutes = Math.round(wrapped % 60);
+        if (culture && typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+            return new Intl.DateTimeFormat(culture, { hour: 'numeric', minute: '2-digit' })
+                .format(new Date(2026, 0, 1, hours, minutes));
+        }
+        return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+    }
 
     var ROVING_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
 
@@ -71,6 +88,8 @@
 
         _dotNetRefs: new Map(),
         _drag: null,
+        _move: null,
+        _keyboard: null,
         _generation: 0,
 
         /** Resolves when the pointer helper is attached (or failed to load). */
@@ -153,7 +172,9 @@
             this._detachDrag();
             var generation = ++this._generation;
 
-            this.ready = import(helperUrl).then(function (helper) {
+            this.ready = Promise.all([import(helperUrl), import(gestureUrl).catch(function () { return {}; })]).then(function (modules) {
+                var helper = modules[0];
+                self._gesture = modules[1];
                 // init/destroy was called again while the module was loading.
                 if (generation !== self._generation) return;
                 self._drag = helper.attach(document, {
@@ -166,10 +187,31 @@
                     // The handle keeps its click inert after a resize; HTML5 drag-and-drop of the
                     // event body is untouched because only the handle selector starts a gesture.
                     onPress: function (info) { return self._press(info); },
-                    onMove: function (info) { self._move(info); },
+                    onMove: function (info) { self._resize(info); },
                     onEnd: function () { self._end(); },
                     onCancel: function () { self._rollback(); },
                     onRelease: function () { self._release(); }
+                });
+                // A finger holds the event body, then drags it. Mouse and pen stay on HTML5
+                // drag-and-drop (pointerTypes), so the desktop behaviour is unchanged.
+                self._move = helper.attach(document, {
+                    selector: MOVE_SELECTOR,
+                    pointerTypes: ['touch'],
+                    longPressMs: LONG_PRESS_MS,
+                    threshold: 4,
+                    onPress: function (info) { return self._movePress(info); },
+                    onStart: function (info) { self._moveStart(info); },
+                    onMove: function (info) { self._moveDrag(info); },
+                    onEnd: function () { self._moveEnd(); },
+                    onCancel: function () { self._moveRollback(); },
+                    onRelease: function () { self._moveRelease(); }
+                });
+                // Alt+Arrow moves, Alt+Shift+Arrow resizes. The helper cancels only that chord, so a
+                // plain arrow stays the roving key and Tab is never swallowed.
+                self._keyboard = helper.attachKeyboardMove(document, {
+                    selector: MOVE_SELECTOR,
+                    shift: true,
+                    onStep: function (step) { self._keyboardStep(step); }
                 });
             }).catch(function (err) {
                 console.warn('Scheduler: pointer-drag.js could not be loaded; event resize is unavailable', err);
@@ -388,6 +430,7 @@
                 slotMinutes: slotMinutes,
                 eventId: eventElement.dataset.eventId,
                 dotNetRef: schedulerContainer ? this._dotNetRefs.get(schedulerContainer) : null,
+                container: schedulerContainer,
                 originalDraggable: eventElement.draggable,
                 // Blazor renders the geometry inline (percentages of the day). A cancel must put THOSE back:
                 // clearing the properties would let the event collapse to its CSS min-height.
@@ -402,6 +445,10 @@
                 originalTop: !isTimeline ? eventRect.top - containerRect.top : 0,
                 // Minutes per pixel of the VISIBLE range (1440 for a full day, less when clipped).
                 minutesPerPixel: rangeMinutes / containerSize,
+                rangeStart: parseInt(schedulerContainer && schedulerContainer.dataset.rangeStart) || 0,
+                startMinute: Math.round((!isTimeline ? eventRect.top - containerRect.top : eventRect.left - containerRect.left) / containerSize * rangeMinutes)
+                    + (parseInt(schedulerContainer && schedulerContainer.dataset.rangeStart) || 0),
+                durationMinutes: Math.max(slotMinutes, Math.round((isTimeline ? eventRect.width : eventRect.height) / containerSize * rangeMinutes)),
                 delta: 0
             };
 
@@ -412,7 +459,16 @@
         },
 
         /** Live size of the event while the pointer moves. */
-        _move: function (info) {
+        _resize: function (info) {
+            var session = this._session;
+            if (session && !session.scroller) {
+                var factory = this._gesture && this._gesture.createAutoScroller;
+                var scroller = session.container && typeof session.container.querySelector === 'function'
+                    ? (session.isTimeline ? session.container : session.container.querySelector('.tm-scheduler-timegrid-scroll'))
+                    : null;
+                if (factory && scroller) session.scroller = factory(scroller, { axis: session.isTimeline ? 'x' : 'y' });
+            }
+            if (session && session.scroller) session.scroller.update(info.x, info.y);
             var s = this._session;
             if (!s) return;
 
@@ -422,6 +478,9 @@
 
             var style = s.eventElement.style;
             var newSize;
+            var startMinute = s.resizeEdge === 'top' || s.resizeEdge === 'left' ? s.startMinute + deltaMinutes : s.startMinute;
+            var endMinute = s.resizeEdge === 'top' || s.resizeEdge === 'left' ? s.startMinute + s.durationMinutes : s.startMinute + s.durationMinutes + deltaMinutes;
+            this._showTime(s, startMinute, endMinute - startMinute);
             if (s.isTimeline) {
                 if (s.resizeEdge === 'left') {
                     newSize = s.originalSize - deltaPos;
@@ -472,6 +531,7 @@
             var s = this._session;
             this._session = null;
             if (!s) return;
+            if (s.scroller) s.scroller.stop();
 
             s.eventElement.draggable = s.originalDraggable;
             s.eventElement.removeAttribute('data-resizing');
@@ -511,10 +571,337 @@
             if (this._drag) this._drag.cancel('cancelled');
         },
 
+        // ── Touch move ──────────────────────────────────────────────────────
+        // The finger holds the event body, then drags it. The live position is a translate (the
+        // rendered geometry stays inline, so a cancel clears the translate and the event is back);
+        // the commit is one NotifyMoveComplete with the day, the snapped minute and the resource
+        // resolved from the element under the finger.
+
+        /** A press on the event body. A handle or a non-draggable event vetoes it. */
+        _movePress: function (info) {
+            var eventElement = info.target;
+            if (!eventElement) return false;
+            // closest(MOVE_SELECTOR) walks up from a handle to the event, so the matched target is the
+            // event either way. The finger's own target is what says "this press is a resize".
+            var pressed = info.event && info.event.target;
+            if (pressed && typeof pressed.closest === 'function' && pressed.closest('.tm-scheduler-event-resize-handle')) return false;
+            if (eventElement.getAttribute('draggable') !== 'true') return false;
+
+            var isMonth = eventElement.classList.contains('tm-scheduler-month-event');
+            var isTimeline = eventElement.classList.contains('tm-scheduler-timeline-event');
+            var container = isMonth
+                ? eventElement.closest('.tm-scheduler-month')
+                : isTimeline
+                    ? eventElement.closest('.tm-scheduler-timeline')
+                    : eventElement.closest('.tm-scheduler-timegrid');
+            if (!container) return false;
+
+            var column = isTimeline
+                ? eventElement.closest('.tm-scheduler-timeline-row-body')
+                : eventElement.closest('.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col');
+            var startCell = eventElement.closest('[data-date]');
+            var startRow = eventElement.closest('[data-resource]');
+
+            this._moveSession = {
+                eventElement: eventElement,
+                isMonth: isMonth,
+                isTimeline: isTimeline,
+                container: container,
+                column: column,
+                eventId: eventElement.dataset.eventId,
+                dotNetRef: this._dotNetRefs.get(container) || null,
+                slotMinutes: parseInt(container.dataset.slotDuration) || 30,
+                rangeStart: parseInt(container.dataset.rangeStart) || 0,
+                rangeMinutes: parseInt(container.dataset.rangeMinutes) || 24 * 60,
+                startDate: startCell ? startCell.dataset.date : (container.dataset.date || null),
+                startResource: startRow ? startRow.dataset.resource : null,
+                grabOffset: this._grabOffset(eventElement, isTimeline, info),
+                // Measured before any translate. A later rect already includes the preview, so
+                // re-reading it would make the snap oscillate.
+                originOffset: this._originOffset(eventElement, column, isTimeline),
+                originalDraggable: eventElement.draggable,
+                targetDate: null,
+                targetMinute: null,
+                targetResource: null
+            };
+            eventElement.draggable = false;
+            return true;
+        },
+
+        _moveStart: function (info) {
+            var session = this._moveSession;
+            if (!session) return;
+            session.eventElement.classList.add('tm-scheduler-event--moving');
+            this._armContextMenu();
+            var x = info && (info.x || (info.event && info.event.clientX));
+            var y = info && (info.y || (info.event && info.event.clientY));
+            this._showTime(session, this._minuteAt(session, session.column, x, y), this._eventDuration(session));
+            this._startScroller(session);
+        },
+
+        /** The event's offset inside its column, measured before any translate. */
+        _originOffset: function (eventElement, column, isTimeline) {
+            if (!eventElement || !column || typeof eventElement.getBoundingClientRect !== 'function') return 0;
+            var eventBox = eventElement.getBoundingClientRect();
+            var columnBox = column.getBoundingClientRect();
+            return isTimeline ? eventBox.left - columnBox.left : eventBox.top - columnBox.top;
+        },
+
+        /** How far into the event the finger landed, so the drop keeps the grabbed point. */
+        _grabOffset: function (eventElement, isTimeline, info) {
+            var box = typeof eventElement.getBoundingClientRect === 'function' ? eventElement.getBoundingClientRect() : null;
+            var point = info && info.event ? info.event : info;
+            if (!box || !point) return { x: 0, y: 0 };
+            return { x: (point.clientX || 0) - box.left, y: (point.clientY || 0) - box.top };
+        },
+
+        /** The scroll container of the view. A month scrolls the page, so it has none. */
+        _scrollerOf: function (session) {
+            var root = session.container;
+            if (!root || typeof root.querySelector !== 'function') return null;
+            return session.isTimeline ? root : root.querySelector('.tm-scheduler-timegrid-scroll');
+        },
+
+        _startScroller: function (session) {
+            var factory = this._gesture && this._gesture.createAutoScroller;
+            var container = this._scrollerOf(session);
+            if (!factory || !container) return;
+            var scheduler = this;
+            session.scroller = factory(container, {
+                axis: session.isTimeline ? 'x' : 'y',
+                onScroll: function () { scheduler._moveDrag(scheduler._lastMove || { x: 0, y: 0, dx: 0, dy: 0 }); }
+            });
+        },
+
+        /** The column, day cell or row under the finger. The event itself is ignored (it follows). */
+        _elementUnder: function (x, y) {
+            if (typeof document === 'undefined' || typeof document.elementFromPoint !== 'function') return null;
+            var hit = document.elementFromPoint(x, y);
+            if (!hit || typeof hit.closest !== 'function') return null;
+            return hit.closest(
+                '.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col, .tm-scheduler-month-day, .tm-scheduler-timeline-row-body');
+        },
+
+        /** Minutes of the grabbed point, snapped to the slot, or -1 for a month. */
+        _minuteAt: function (session, target, x, y) {
+            if (session.isMonth || !target || typeof target.getBoundingClientRect !== 'function') return -1;
+            var box = target.getBoundingClientRect();
+            var size = session.isTimeline ? box.width : box.height;
+            if (!(size > 0)) return -1;
+            var grab = session.grabOffset || { x: 0, y: 0 };
+            var along = session.isTimeline ? x - grab.x - box.left : y - grab.y - box.top;
+            var offset = session.rangeStart + along / size * session.rangeMinutes;
+            var slot = session.slotMinutes;
+            var snapped = Math.round(offset / slot) * slot;
+            var end = session.rangeStart + session.rangeMinutes;
+            if (snapped < session.rangeStart) snapped = session.rangeStart;
+            if (snapped > end - slot) snapped = end - slot;
+            return snapped;
+        },
+
+        _moveDrag: function (info) {
+            var session = this._moveSession;
+            if (!session) return;
+            this._lastMove = info;
+            var eventElement = session.eventElement;
+            if (session.scroller) session.scroller.update(info.x, info.y);
+
+            var target = this._elementUnder(info.x, info.y);
+            if (target) {
+                var cell = target.closest('[data-date]');
+                session.targetDate = cell ? cell.dataset.date : (session.container.dataset.date || session.startDate);
+                var row = target.closest('[data-resource]');
+                session.targetResource = row ? row.dataset.resource : session.startResource;
+                session.targetMinute = this._minuteAt(session, session.isTimeline ? target : (session.column || target), info.x, info.y);
+            }
+            this._markDropTarget(session, target);
+            this._snapTranslate(session, info);
+            this._showTime(session, session.targetMinute, this._eventDuration(session));
+        },
+
+        /** The day, column or row under the finger. The previous one loses the class. */
+        _markDropTarget: function (session, target) {
+            if (session.dropTarget && session.dropTarget !== target && session.dropTarget.classList) {
+                DROP_TARGET.split(' ').forEach(function (name) { session.dropTarget.classList.remove(name); });
+            }
+            session.dropTarget = target;
+            if (target && target.classList) {
+                var name = session.isMonth
+                    ? 'tm-scheduler-month-day--drop-target'
+                    : session.isTimeline ? 'tm-scheduler-timeline-slot--drop-target' : 'tm-scheduler-timegrid-slot--drop-target';
+                target.classList.add(name);
+            }
+        },
+
+        /** The preview lands on the same snapped minute the release commits, not on the raw finger. */
+        _snapTranslate: function (session, info) {
+            var eventElement = session.eventElement;
+            if (session.targetMinute === null || session.targetMinute < 0 || !session.column) {
+                eventElement.style.transform = 'translate(' + info.dx + 'px, ' + info.dy + 'px)';
+                return;
+            }
+            var box = session.column.getBoundingClientRect();
+            var size = session.isTimeline ? box.width : box.height;
+            if (!(size > 0)) return;
+            var origin = (session.isTimeline ? box.left : box.top) + (session.originOffset || 0);
+            var snapped = (session.isTimeline ? box.left : box.top) + (session.targetMinute - session.rangeStart) / session.rangeMinutes * size;
+            var delta = snapped - origin;
+            eventElement.style.transform = session.isTimeline
+                ? 'translate(' + delta + 'px, ' + info.dy + 'px)'
+                : 'translate(' + info.dx + 'px, ' + delta + 'px)';
+        },
+
+        /** The live range label. A month has no minute axis, so it shows nothing. */
+        _showTime: function (session, minute, duration) {
+            var eventElement = session.eventElement;
+            if (minute === null || minute < 0 || !eventElement || typeof eventElement.querySelector !== 'function') return;
+            var label = eventElement.querySelector('.tm-scheduler-event-drag-time');
+            if (!label) {
+                label = document.createElement('span');
+                label.className = 'tm-scheduler-event-drag-time';
+                eventElement.appendChild(label);
+            }
+            var culture = session.container && session.container.dataset ? session.container.dataset.timeCulture : null;
+            label.textContent = clock(minute, culture) + ' \u2013 ' + clock(minute + duration, culture);
+            // The flip needs the painted height. A label created this call has none until the
+            // browser lays it out, so the placement reads it after the text is set.
+            this._placeLabel(session, label);
+        },
+
+        /** The label flips below the event when the sticky head, or the scroll top, would clip it. */
+        _placeLabel: function (session, label) {
+            var scroller = this._scrollerOf(session);
+            var box = session.eventElement.getBoundingClientRect();
+            var limit = scroller && typeof scroller.getBoundingClientRect === 'function' ? scroller.getBoundingClientRect().top : 0;
+            var root = session.container;
+            if (root && typeof root.querySelectorAll === 'function') {
+                var heads = root.querySelectorAll('.tm-scheduler-timegrid-head, .tm-scheduler-timeline-header');
+                for (var i = 0; i < heads.length; i++) {
+                    var candidate = heads[i].getBoundingClientRect();
+                    // A header of another scheduler, or one scrolled off the page, is not a clip.
+                    if (candidate.bottom > box.top && candidate.top < box.bottom && candidate.bottom > 0 && candidate.bottom > limit) {
+                        limit = candidate.bottom;
+                    }
+                }
+            }
+            var gap = 4;
+            var height = label && typeof label.getBoundingClientRect === 'function'
+                ? label.getBoundingClientRect().height
+                : 0;
+            if (height < 1) height = 24;
+            if (box.top - height - gap < limit) label.classList.add('tm-scheduler-event-drag-time--below');
+            else label.classList.remove('tm-scheduler-event-drag-time--below');
+            this._keepLabelInColumn(session, label);
+        },
+
+        /** A timeline label that starts under the sticky resource column shifts right until it is readable. */
+        _keepLabelInColumn: function (session, label) {
+            if (!session.isTimeline || !label || typeof label.getBoundingClientRect !== 'function') return;
+            var edge = 0;
+            var eventBox = session.eventElement.getBoundingClientRect();
+            var covers = session.container && typeof session.container.querySelectorAll === 'function'
+                ? session.container.querySelectorAll('.tm-scheduler-timeline-resource-label--sticky, .tm-scheduler-timeline-resource-header')
+                : [];
+            for (var i = 0; i < covers.length; i++) {
+                var cover = covers[i].getBoundingClientRect();
+                var eventTop = eventBox.top || 0;
+                var eventBottom = eventBox.bottom || (eventTop + (eventBox.height || 0));
+                var coverTop = cover.top || 0;
+                var coverBottom = cover.bottom || (coverTop + (cover.height || 0));
+                if (coverBottom > eventTop && coverTop < eventBottom && cover.right > edge) edge = cover.right;
+            }
+            if (edge === 0 && session.column && typeof session.column.getBoundingClientRect === 'function') edge = session.column.getBoundingClientRect().left;
+            var painted = label.getBoundingClientRect();
+            if (painted.left < edge) label.style.marginLeft = (edge - painted.left + 4) + 'px';
+        },
+
+        /** A move owns the finger, so the OS context menu that a long-press raises is swallowed. */
+        _armContextMenu: function () {
+            if (this._contextMenu) return;
+            var scheduler = this;
+            this._contextMenu = function (event) {
+                if (!scheduler._moveSession) return;
+                if (event && typeof event.preventDefault === 'function') event.preventDefault();
+            };
+            document.addEventListener('contextmenu', this._contextMenu, true);
+        },
+
+        _disarmContextMenu: function () {
+            if (!this._contextMenu) return;
+            document.removeEventListener('contextmenu', this._contextMenu, true);
+            this._contextMenu = null;
+        },
+
+        /** The event's own length in minutes, read from its box against the container. */
+        _eventDuration: function (session) {
+            var box = session.eventElement.getBoundingClientRect();
+            var column = session.column;
+            var size = column && typeof column.getBoundingClientRect === 'function'
+                ? (session.isTimeline ? column.getBoundingClientRect().width : column.getBoundingClientRect().height)
+                : 0;
+            if (!(size > 0)) return session.slotMinutes;
+            var minutes = (session.isTimeline ? box.width : box.height) / size * session.rangeMinutes;
+            var slot = session.slotMinutes;
+            return Math.max(slot, Math.round(minutes / slot) * slot);
+        },
+
+        _moveEnd: function () {
+            var session = this._moveSession;
+            if (!session || !session.dotNetRef || !session.targetDate) return;
+            var generation = this._generation;
+            var self = this;
+            session.dotNetRef.invokeMethodAsync('NotifyMoveComplete',
+                session.eventId, session.targetDate, session.targetMinute, session.targetResource)
+                .catch(function (err) {
+                    if (self._generation === generation)
+                        console.warn('Scheduler: the move could not be committed', err);
+                });
+        },
+
+        _moveRollback: function () {
+            var session = this._moveSession;
+            if (!session) return;
+            session.eventElement.style.transform = '';
+            session.targetDate = null;
+        },
+
+        _moveRelease: function () {
+            var session = this._moveSession;
+            this._moveSession = null;
+            this._disarmContextMenu();
+            if (!session) return;
+            if (session.scroller) session.scroller.stop();
+            this._markDropTarget(session, null);
+            var eventElement = session.eventElement;
+            eventElement.classList.remove('tm-scheduler-event--moving');
+            eventElement.style.transform = '';
+            eventElement.draggable = session.originalDraggable;
+            var label = eventElement.querySelector && eventElement.querySelector('.tm-scheduler-event-drag-time');
+            if (label) label.remove();
+        },
+
+        /** Alt+Arrow moves, Alt+Shift+Arrow resizes. One step, one call; .NET owns the maths. */
+        _keyboardStep: function (step) {
+            var target = step.event && step.event.target;
+            var eventElement = target && typeof target.closest === 'function' ? target.closest(MOVE_SELECTOR) : null;
+            if (!eventElement || eventElement.getAttribute('draggable') !== 'true') return;
+            var container = eventElement.closest('.tm-scheduler-timegrid, .tm-scheduler-timeline, .tm-scheduler-month');
+            var dotNetRef = container ? this._dotNetRefs.get(container) : null;
+            if (!dotNetRef) return;
+            dotNetRef.invokeMethodAsync('NotifyKeyboardStep', eventElement.dataset.eventId, step.x, step.y, step.shift === true)
+                .catch(function (err) { console.warn('Scheduler: the keyboard step could not be committed', err); });
+        },
+
         _detachDrag: function () {
             var drag = this._drag;
+            var move = this._move;
+            var keyboard = this._keyboard;
             this._drag = null;
+            this._move = null;
+            this._keyboard = null;
             if (drag) drag.detach();
+            if (move) move.detach();
+            if (keyboard) keyboard.detach();
         },
 
         /**

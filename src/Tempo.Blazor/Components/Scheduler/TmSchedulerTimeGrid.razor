@@ -14,7 +14,9 @@
 <CascadingValue Value="_ticker" IsFixed="true">
 <div class="tm-scheduler-timegrid" @ref="_containerRef" data-slot-duration="@SlotDuration"
      data-range-start="@RangeStartMinutes" data-range-minutes="@RangeMinutes"
+     data-time-culture="@CultureInfo.CurrentUICulture.Name"
      style="--tm-scheduler-visible-hours: @RangeHours.ToString(CultureInfo.InvariantCulture);">
+    <span id="@_moveHintId" class="tm-sr-only">@Loc["TmScheduler_MoveHint_Grid"]</span>
     <div class="tm-scheduler-timegrid-scroll" data-tm-scroll="timegrid">
     @* One sticky head, so the all-day row follows the header without a hard-coded offset. *@
     <div class="tm-scheduler-timegrid-head">
@@ -143,7 +145,8 @@
                     var positioned = LayoutOverlappingEvents(resEvents);
 
                     <div class="tm-scheduler-timegrid-resource-col" role="group"
-                         aria-label="@($"{d.ToString("D", CultureInfo.CurrentUICulture)}, {r.Name}")" data-resource="@r.Id">
+                         aria-label="@($"{d.ToString("D", CultureInfo.CurrentUICulture)}, {r.Name}")" data-resource="@r.Id"
+                         data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">
                         @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
                         {
                             @Slot(d, slotIndex, r.Id)
@@ -161,7 +164,8 @@
                 var dayEvents = GetTimedEventsForDate(d);
                 var positioned = LayoutOverlappingEvents(dayEvents);
 
-                <div class="tm-scheduler-timegrid-col @ColumnClass(d)" role="group" aria-label="@d.ToString("D", CultureInfo.CurrentUICulture)">
+                <div class="tm-scheduler-timegrid-col @ColumnClass(d)" role="group" aria-label="@d.ToString("D", CultureInfo.CurrentUICulture)"
+                     data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">
                     @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
                     {
                         @Slot(d, slotIndex, null)
@@ -225,6 +229,8 @@
 
     private void ReleaseIndicator(SchedulerNowIndicator indicator) => _indicators.Remove(indicator);
     private bool _focusAfterRender;
+    private string? _focusEventId;
+    private readonly string _moveHintId = "tm-scheduler-move-hint-" + Guid.NewGuid().ToString("N");
     private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
     // Flat column index over Dates x Resources, so arrows cross a resource before the next day.
     private int _activeColumnIndex;
@@ -262,6 +268,9 @@
 
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires with the sentence a move or a resize should announce. The scheduler owns the one live region.</summary>
+    [Parameter] public EventCallback<string> OnAnnounced { get; set; }
 
     /// <summary>Fires when right-clicking on a time slot.</summary>
     [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
@@ -393,14 +402,18 @@
         if (_focusAfterRender)
         {
             _focusAfterRender = false;
+            var selector = _focusEventId is { } id
+                ? $"[data-event-id=\"{id}\"]"
+                : ".tm-scheduler-timegrid-slot[tabindex='0']";
             try
             {
-                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusRovingStop", _containerRef, ".tm-scheduler-timegrid-slot[tabindex='0']");
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusRovingStop", _containerRef, selector);
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
             {
                 // The tabindex already moved; a missing circuit only skips the focus.
             }
+            _focusEventId = null;
         }
     }
 
@@ -426,6 +439,10 @@
 
     private bool IsActiveColumn(DateOnly date)
         => DayIndex(date) == Math.Clamp(_activeColumnIndex, 0, Math.Max(0, ColumnCount - 1)) / ResourceCount;
+
+    /// <summary>The moved event is the one roving stop, even when it landed in another column.</summary>
+    private bool IsEventStop(TmScheduleEvent evt, DateOnly date)
+        => _focusEventId == evt.Id || (_focusEventId is null && IsActiveColumn(date));
 
     private int ColumnIndex(DateOnly date, string? resourceId)
     {
@@ -556,13 +573,18 @@
             builder.AddAttribute(sequence++, "style",
                 $"--tm-scheduler-event-start: {startMin - RangeStartMinutes}; --tm-scheduler-event-end: {endMin - RangeStartMinutes}; --tm-scheduler-lane: {pe.Lane}; --tm-scheduler-lanes: {pe.TotalLanes};{EventStyle(e)}");
             builder.AddAttribute(sequence++, "role", "button");
-            builder.AddAttribute(sequence++, "tabindex", IsActiveColumn(d) ? "0" : "-1");
+            builder.AddAttribute(sequence++, "tabindex", IsEventStop(e, d) ? "0" : "-1");
             builder.AddAttribute(sequence++, "data-tm-roving", _rovingId);
             if (EventTemplate is null)
                 builder.AddAttribute(sequence++, "aria-label", EventAriaLabel(e));
             builder.AddAttribute(sequence++, "title", e.Title);
             builder.AddAttribute(sequence++, "data-event-id", e.Id);
             builder.AddAttribute(sequence++, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
+            if (!ReadOnly && !e.IsReadOnly)
+            {
+                builder.AddAttribute(sequence++, "aria-describedby", _moveHintId);
+                builder.AddAttribute(sequence++, "aria-keyshortcuts", "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown Alt+Shift+ArrowUp Alt+Shift+ArrowDown");
+            }
             builder.AddAttribute(sequence++, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
             builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, () => HandleEventClick(e)));
             builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
@@ -740,15 +762,75 @@
 
     private async Task HandleSlotDrop(DateTime slotStart, DateTime slotEnd)
     {
-        if (_draggedEvent is null || ReadOnly) return;
-
-        var duration = _draggedEvent.End - _draggedEvent.Start;
-        _draggedEvent.Start = slotStart;
-        _draggedEvent.End = slotStart + duration;
-
-        await OnEventChanged.InvokeAsync(_draggedEvent);
-        _draggedEvent = null;
+        if (_draggedEvent is null) return;
+        var date = DateOnly.FromDateTime(slotStart).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var minute = (int)slotStart.TimeOfDay.TotalMinutes;
+        if (await CommitMoveAsync(_draggedEvent, date, minute, null))
+            _draggedEvent = null;
     }
+
+    /// <summary>The one move commit: HTML5 drop, the touch gesture and the keyboard alternative.</summary>
+    private async Task<bool> CommitMoveAsync(TmScheduleEvent evt, string date, int minuteOfDay, string? resourceId)
+    {
+        if (!SchedulerMove.Move(evt, date, minuteOfDay, resourceId, ReadOnly, TimeZone, RangeStartMinutes, RangeMinutes))
+            return false;
+        RememberMovedEvent(evt);
+        await OnEventChanged.InvokeAsync(evt);
+        await AnnounceAsync(SchedulerMove.MovedText(Loc, evt, ResourceName(evt.ResourceId)));
+        return true;
+    }
+
+    /// <summary>The moved event becomes the roving stop, so the next key still lands on it.</summary>
+    private void RememberMovedEvent(TmScheduleEvent evt)
+    {
+        _focusEventId = evt.Id;
+        _activeColumnIndex = ColumnIndex(DateOnly.FromDateTime(evt.StartLocal), evt.ResourceId);
+        _activeSlotIndex = Math.Clamp(
+            ((int)evt.StartLocal.TimeOfDay.TotalMinutes - RangeStartMinutes) / Math.Max(1, SlotDuration),
+            0, Math.Max(0, _slotsPerDay - 1));
+        _focusAfterRender = true;
+        BuildEventMaps();
+        StateHasChanged();
+    }
+
+    /// <summary>Called by the touch move when the finger releases over a column.</summary>
+    [JSInvokable]
+    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId)
+        => MoveByIdAsync(eventId, date, minuteOfDay, resourceId);
+
+    /// <summary>Called by the Alt+Arrow keyboard alternative. A shifted chord resizes instead.</summary>
+    [JSInvokable]
+    public async Task NotifyKeyboardStep(string eventId, int x, int y, bool shift)
+    {
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        if (evt is null) return;
+        if (shift)
+        {
+            if (x != 0 || y == 0) return;
+            if (!SchedulerMove.Step(evt, x, y, true, SlotDuration, ReadOnly, true, TimeZone, RangeStartMinutes, RangeMinutes))
+                return;
+            await OnEventChanged.InvokeAsync(evt);
+            await AnnounceAsync(SchedulerMove.ResizedText(Loc, evt));
+            return;
+        }
+        var date = DateOnly.FromDateTime(evt.StartLocal.AddDays(x)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var current = (int)evt.StartLocal.TimeOfDay.TotalMinutes;
+        var minute = current + y * SlotDuration;
+        // A step that would leave the day is not a move. The clamp would otherwise pull a
+        // midnight-crossing event an hour earlier to keep its length inside the day.
+        if (minute < 0 || minute >= 24 * 60)
+            minute = current;
+        if (minute == current && x == 0) return;
+        await MoveByIdAsync(eventId, date, minute, null);
+    }
+
+    private Task MoveByIdAsync(string eventId, string date, int minuteOfDay, string? resourceId)
+    {
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        return evt is null ? Task.CompletedTask : CommitMoveAsync(evt, date, minuteOfDay, resourceId);
+    }
+
+    private Task AnnounceAsync(string text) => OnAnnounced.InvokeAsync(text);
 
     /// <summary>
     /// Handles the completion of a resize operation from JavaScript.
@@ -789,6 +871,7 @@
 
         // Notify parent about the change
         await OnEventChanged.InvokeAsync(evt);
+        await AnnounceAsync(SchedulerMove.ResizedText(Loc, evt));
     }
 
     /// <summary>

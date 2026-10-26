@@ -1,5 +1,6 @@
 /* ═══════════════ TmScheduler ═══════════════ */
 .tm-scheduler {
+    --tm-scheduler-z-moving: 6;
     --tm-scheduler-hour-height: 3rem;
     --tm-scheduler-offhours-bg: color-mix(in srgb, var(--tm-text-secondary) 6%, transparent);
     --tm-scheduler-lane-height: 3.5rem;
@@ -15,6 +16,86 @@
     border-radius: var(--tm-radius-card);
     box-shadow: var(--tm-shadow-sm);
     overflow: hidden;
+}
+
+/* A touch move lifts the event off the grid. The compound selector outranks the view rules, which
+   set their own z-index later. pointer-events: none lets the finger's hit-test reach the column
+   underneath; the translate itself is inline, so a cancel clears it and the event is back. */
+.tm-scheduler-timegrid-event.tm-scheduler-event--moving,
+.tm-scheduler-timeline-event.tm-scheduler-event--moving,
+.tm-scheduler-month-event.tm-scheduler-event--moving {
+    z-index: var(--tm-scheduler-z-moving);
+    pointer-events: none;
+    opacity: 0.85;
+    box-shadow: var(--tm-shadow-md);
+}
+
+/* The view rules set overflow:hidden later, at the same specificity, which clips the live time
+   label that sticks out above the event. The compound selector wins that cascade. */
+.tm-scheduler-timegrid-event.tm-scheduler-event--moving,
+.tm-scheduler-timeline-event.tm-scheduler-event--moving,
+.tm-scheduler-month-event.tm-scheduler-event--moving {
+    overflow: visible;
+}
+
+.tm-scheduler-event--moving .tm-scheduler-timegrid-event-time,
+.tm-scheduler-event--moving .tm-scheduler-timeline-event-time {
+    visibility: hidden;
+}
+
+.tm-scheduler-event-drag-time {
+    position: absolute;
+    top: calc(var(--tm-space-2) * -1);
+    left: var(--tm-space-1);
+    transform: translateY(-100%);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-text-primary);
+    color: var(--tm-text-inverse);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* The label flips under the event when the scroll container would clip it above. */
+.tm-scheduler-event-drag-time--below {
+    top: auto;
+    bottom: calc(var(--tm-space-1) * -1);
+    transform: translateY(100%);
+}
+
+@media (pointer: coarse) {
+    .tm-scheduler-event-drag-time {
+        font-size: var(--tm-font-size-sm);
+        font-weight: var(--tm-font-weight-medium);
+        box-shadow: var(--tm-shadow-md);
+    }
+}
+
+.tm-scheduler-touch-hint {
+    display: none;
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* A long-press is the move, so the OS callout and the text selection must not win it. */
+@media (pointer: coarse) {
+    .tm-scheduler-timegrid-event[draggable="true"],
+    .tm-scheduler-timeline-event[draggable="true"],
+    .tm-scheduler-month-event[draggable="true"] {
+        -webkit-touch-callout: none;
+        user-select: none;
+    }
+}
+
+/* A phone has no hover and a coarse pointer. A desktop, even a narrow one, keeps the hint hidden. */
+@media (hover: none) and (pointer: coarse) {
+    .tm-scheduler-touch-hint {
+        display: block;
+    }
 }
 
 /* The one event surface. A view rule may set geometry, never a second color-mix of --event-color. */
