@@ -155,6 +155,18 @@ public class TmCalendarViewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void CalendarView_Today_MarksTheGivenDay_NotTheMachineToday()
+    {
+        var cut = Render<TmCalendarView>(p => p
+            .Add(x => x.SelectedDate, new DateOnly(2025, 6, 1))
+            .Add(x => x.Today, new DateOnly(2025, 6, 15)));
+
+        var today = cut.Find(".tm-cal-day--today");
+        today.GetAttribute("data-date").Should().Be("2025-06-15");
+        cut.FindAll(".tm-cal-day--today").Should().ContainSingle();
+    }
+
+    [Fact]
     public void CalendarView_CustomClass()
     {
         var cut = Render<TmCalendarView>(p => p

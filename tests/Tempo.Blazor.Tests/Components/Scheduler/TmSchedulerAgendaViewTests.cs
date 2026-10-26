@@ -245,4 +245,24 @@ public class TmSchedulerAgendaViewTests : LocalizationTestBase
         cut.FindAll("[role='list']").Should().BeEmpty();
         cut.Find(".tm-scheduler-agenda-empty").Should().NotBeNull();
     }
+
+    /// <summary>The selected event is aria-selected and carries the selected class.</summary>
+    [Fact]
+    public void SelectedEvent_Marks_The_Agenda_Row()
+    {
+        var standup = Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0));
+        standup.Id = "standup";
+        TmScheduleEvent? selected = null;
+
+        var cut = Render<TmSchedulerAgendaView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 1))
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup })
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => selected = e)));
+
+        var row = cut.Find(".tm-scheduler-agenda-event--selected");
+        row.GetAttribute("aria-current").Should().Be("true");
+        row.Click();
+        selected!.Id.Should().Be("standup");
+    }
 }

@@ -67,6 +67,30 @@
       "description": "Fires when a day cell is clicked."
     },
     {
+      "name": "SelectedDate",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "The selected day. The matching cell gets aria-selected and tm-scheduler-month-day--selected."
+    },
+    {
+      "name": "SelectedDateChanged",
+      "type": "EventCallback<DateTime?>",
+      "isRequired": false,
+      "description": "Fires when the user selects a day. The click still raises OnSlotClick."
+    },
+    {
+      "name": "SelectedEvent",
+      "type": "TmScheduleEvent?",
+      "isRequired": false,
+      "description": "The selected event. The matching event gets aria-current and tm-scheduler-month-event--selected."
+    },
+    {
+      "name": "SelectedEventChanged",
+      "type": "EventCallback<TmScheduleEvent?>",
+      "isRequired": false,
+      "description": "Fires when the user selects an event."
+    },
+    {
       "name": "OnEventClick",
       "type": "EventCallback<TmScheduleEvent>",
       "isRequired": false,

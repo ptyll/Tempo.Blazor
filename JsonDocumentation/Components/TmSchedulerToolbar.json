@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerToolbar",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Navigation toolbar for the scheduler with previous/next/today buttons, a date title, and view switcher tabs (Day, Week, Month, Agenda, Timeline). Typically used internally by TmScheduler. Accessibility: the title is aria-live=polite and the view switcher is a radiogroup of radios with one roving tab stop.",
+  "description": "Navigation toolbar for the scheduler. Named groups, in order: header-start (only with content), navigation (Today, Previous, Next), title, view, header-actions (only with content), primary (only when OnAddClick has a delegate) and overflow (the More menu, only when it has an entry). The title is the date popover's trigger (role=button, aria-haspopup=dialog, not a nested button) and the visible title lives in a div; a sibling sr-only span carries aria-live=polite. The view switcher is the core TmTabs Variant=Pill, and the scheduler body is the matching tabpanel. Typically used internally by TmScheduler.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -56,10 +56,59 @@
       "description": "Fires when the user clicks Today."
     },
     {
+      "name": "Views",
+      "type": "IReadOnlyList<TmScheduleViewType>?",
+      "isRequired": false,
+      "description": "Views the switcher offers, in the given order. Null offers every view. A View that is not offered is inserted at its canonical position so one tab stays active."
+    },
+    {
+      "name": "OnAddClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks the add button. The button renders only when this has a delegate."
+    },
+    {
+      "name": "OnDatePicked",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false,
+      "description": "Fires when the user picks a day in the title popover."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered before the navigation group."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered after the view switcher, before the add button."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false, the toolbar renders nothing. For TmScheduler this row is the header."
+    },
+    {
+      "name": "Today",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "The day the calendar marks as today. TmScheduler passes its display-zone today."
+    },
+    {
+      "name": "InstanceId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab. A standalone toolbar generates its own."
+    },
+    {
       "name": "ShowPrint",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to show the Print button."
+      "description": "Whether to show the Print entry. The More menu renders only when this is true."
     },
     {
       "name": "OnPrint",
@@ -75,8 +124,8 @@
     "tm-scheduler-toolbar-today-btn",
     "tm-scheduler-toolbar-title",
     "tm-scheduler-toolbar-views",
-    "tm-scheduler-toolbar-view-btn",
-    "tm-scheduler-toolbar-view-btn--active"
+    "tm-scheduler-toolbar-primary",
+    "tm-scheduler-toolbar-overflow"
   ],
   "examples": [
     {

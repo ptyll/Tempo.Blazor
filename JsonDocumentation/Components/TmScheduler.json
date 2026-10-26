@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar uses chevron icons for previous and next and a printer icon for print, and the view switcher is a segmented control. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a radiogroup and the title is a polite live region.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop) and the title heading is a polite live region.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -61,7 +61,50 @@
       "name": "SelectedDateChanged",
       "type": "EventCallback<DateTime?>",
       "isRequired": false,
-      "description": "Fires when a date is selected."
+      "description": "Fires when a day is selected. A day click selects the day and does not navigate."
+    },
+    {
+      "name": "SelectedEvent",
+      "type": "TmScheduleEvent?",
+      "isRequired": false,
+      "description": "The selected event, matched by Id. The matching event carries aria-current=true (it is a button, so aria-selected is not allowed) and a --selected class. A day or slot click selects the day and does not clear this."
+    },
+    {
+      "name": "SelectedEventChanged",
+      "type": "EventCallback<TmScheduleEvent?>",
+      "isRequired": false,
+      "description": "Fires when the user selects an event."
+    },
+    {
+      "name": "Views",
+      "type": "IReadOnlyList<TmScheduleViewType>?",
+      "isRequired": false,
+      "description": "Views the toolbar switcher offers, in the given order. Null offers every view. A View that is not offered is inserted at its canonical position."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false, the toolbar row — which is this component's header — is not rendered."
+    },
+    {
+      "name": "OnAddClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks the add button. The button renders only when a delegate is bound."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered before the navigation group."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered after the view switcher, before the overflow menu."
     },
     {
       "name": "OnEventClick",
@@ -215,8 +258,7 @@
     "tm-scheduler-toolbar-today-btn",
     "tm-scheduler-toolbar-title",
     "tm-scheduler-toolbar-views",
-    "tm-scheduler-toolbar-view-btn",
-    "tm-scheduler-toolbar-view-btn--active",
+
     "tm-scheduler-toolbar-print",
     "tm-scheduler-event-content",
     "tm-scheduler-context-menu",

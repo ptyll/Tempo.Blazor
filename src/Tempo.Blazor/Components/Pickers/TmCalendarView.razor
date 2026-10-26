@@ -24,7 +24,7 @@
             {
                 var d = day;
                 var isOther = d.Month != _month;
-                var isToday = DateTimeHelpers.IsToday(d);
+                var isToday = Today.HasValue ? d == Today.Value : DateTimeHelpers.IsToday(d);
                 var isSelected = SelectedDate.HasValue && d == SelectedDate.Value;
                 var disabled = (MinDate.HasValue && d < MinDate.Value) ||
                                (MaxDate.HasValue && d > MaxDate.Value);
@@ -83,6 +83,9 @@
     /// <summary>Currently selected date.</summary>
     [Parameter] public DateOnly? SelectedDate { get; set; }
 
+    /// <summary>The day marked as today. Falls back to the machine-local today when unset.</summary>
+    [Parameter] public DateOnly? Today { get; set; }
+
     /// <summary>Fires when a date is clicked.</summary>
     [Parameter] public EventCallback<DateOnly> OnDateClick { get; set; }
 
@@ -113,8 +116,9 @@
         }
         else
         {
-            _year = DateTime.Today.Year;
-            _month = DateTime.Today.Month;
+            var today = Today ?? DateOnly.FromDateTime(DateTime.Today);
+            _year = today.Year;
+            _month = today.Month;
         }
     }
 

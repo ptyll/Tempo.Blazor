@@ -4488,6 +4488,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_MoreAria_One"] = "{0} more event on {1} – open day view",
         ["TmScheduler_MoreAria_Other"] = "{0} more events on {1} – open day view",
         ["TmScheduler_ViewSwitcher"] = "View",
+        ["TmScheduler_AddEvent"] = "New event",
+        ["TmScheduler_GoToDate"] = "Go to date",
+        ["TmScheduler_GoToDateLabel"] = "{0}, go to date",
+        ["TmScheduler_SelectedDay"] = "Selected day",
     });
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -8272,6 +8276,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_MoreAria_Many"] = "{0} další události dne {1} – otevřít denní pohled",
         ["TmScheduler_MoreAria_Other"] = "{0} dalších událostí dne {1} – otevřít denní pohled",
         ["TmScheduler_ViewSwitcher"] = "Zobrazení",
+        ["TmScheduler_AddEvent"] = "Nová událost",
+        ["TmScheduler_GoToDate"] = "Přejít na datum",
+        ["TmScheduler_GoToDateLabel"] = "{0}, přejít na datum",
+        ["TmScheduler_SelectedDay"] = "Vybraný den",
     }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 

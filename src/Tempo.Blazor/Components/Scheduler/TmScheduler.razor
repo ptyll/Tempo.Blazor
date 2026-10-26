@@ -7,17 +7,28 @@
 
 <div class="tm-scheduler @Class" @ref="_rootRef">
     <TmSchedulerToolbar View="@View"
+                        Views="@Views"
                         CurrentDate="@CurrentDate"
                         RangeStart="@VisibleRange.Start"
                         RangeEnd="@VisibleRange.End"
+                        ShowHeader="@ShowHeader"
+                        OnAddClick="@OnAddClick"
+                        Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                        HeaderStart="@HeaderStart"
+                        HeaderActions="@HeaderActions"
                         OnViewChange="@HandleViewChange"
                         OnPrev="@NavigatePrev"
                         OnNext="@NavigateNext"
                         OnToday="@NavigateToday"
+                        OnDatePicked="@NavigateToPickedDate"
                         ShowPrint="@AllowPrint"
-                        OnPrint="@PrintAsync" />
+                        OnPrint="@PrintAsync"
+                        InstanceId="@_instanceId" />
 
-    <div class="tm-scheduler-body">
+    <div class="tm-scheduler-body"
+         role="@(ShowHeader ? "tabpanel" : null)"
+         id="@(ShowHeader ? $"tabpanel-{ToolbarTabId}" : null)"
+         aria-labelledby="@(ShowHeader ? $"tab-{ToolbarTabId}" : null)">
         @switch (View)
         {
             case TmScheduleViewType.Month:
@@ -30,7 +41,10 @@
                                       ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
                                       HighlightWeekends="@HighlightWeekends"
                                       AllDayEventStyle="@AllDayEventStyle"
-                                      OnSlotClick="@OnSlotClick"
+                                      OnSlotClick="@HandleSlotClickAsync"
+                                      SelectedDate="@SelectedDate"
+                                      SelectedEvent="@SelectedEvent"
+                                      SelectedEventChanged="@HandleSelectedEventAsync"
                                       OnEventClick="@OnEventClick"
                                       OnEventChanged="@HandleEventChangedAsync"
                                       OnSlotContextMenu="@OnSlotContextMenu"
@@ -50,7 +64,10 @@
                                     Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
                                     HighlightWeekends="@HighlightWeekends"
                                     AllDayEventStyle="@AllDayEventStyle"
-                                    OnSlotClick="@OnSlotClick"
+                                    OnSlotClick="@HandleSlotClickAsync"
+                                    SelectedDate="@SelectedDate"
+                                    SelectedEvent="@SelectedEvent"
+                                    SelectedEventChanged="@HandleSelectedEventAsync"
                                     OnEventClick="@OnEventClick"
                                     OnEventChanged="@HandleEventChangedAsync"
                                     OnSlotContextMenu="@OnSlotContextMenu"
@@ -69,7 +86,10 @@
                                      Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
                                      HighlightWeekends="@HighlightWeekends"
                                      AllDayEventStyle="@AllDayEventStyle"
-                                     OnSlotClick="@OnSlotClick"
+                                     OnSlotClick="@HandleSlotClickAsync"
+                                     SelectedDate="@SelectedDate"
+                                     SelectedEvent="@SelectedEvent"
+                                     SelectedEventChanged="@HandleSelectedEventAsync"
                                      OnEventClick="@OnEventClick"
                                      OnEventChanged="@HandleEventChangedAsync"
                                      OnSlotContextMenu="@OnSlotContextMenu"
@@ -81,6 +101,8 @@
                 <TmSchedulerAgendaView CurrentDate="@CurrentDate"
                                        AgendaDays="@NormalizedAgendaDays"
                                        Events="@_loadedEvents"
+                                       SelectedEvent="@SelectedEvent"
+                                       SelectedEventChanged="@HandleSelectedEventAsync"
                                        OnEventClick="@OnEventClick"
                                        EventTemplate="@EventTemplate" />
                 break;
@@ -91,7 +113,9 @@
                                          Resources="@Resources"
                                          SlotDuration="@SlotDuration"
                                          ReadOnly="@ReadOnly"
-                                         OnSlotClick="@OnSlotClick"
+                                         OnSlotClick="@HandleSlotClickAsync"
+                                         SelectedEvent="@SelectedEvent"
+                                         SelectedEventChanged="@HandleSelectedEventAsync"
                                          OnEventClick="@OnEventClick"
                                          OnEventChanged="@HandleEventChangedAsync"
                                          OnSlotContextMenu="@OnSlotContextMenu"
@@ -142,6 +166,16 @@
 
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>
+    /// The selected event, matched by <see cref="TmScheduleEvent.Id"/>. The matching event gets
+    /// <c>aria-current="true"</c> and a <c>--selected</c> class. A day or slot click selects the day
+    /// and does not clear this.
+    /// </summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
 
     /// <summary>Fires when an empty time slot is clicked.</summary>
     [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
@@ -217,6 +251,21 @@
 
     /// <summary>Whether the toolbar shows a Print button (uses the browser print dialog with print CSS). Default: true.</summary>
     [Parameter] public bool AllowPrint { get; set; } = true;
+
+    /// <summary>Views offered in the toolbar switcher. Null offers every view.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleViewType>? Views { get; set; }
+
+    /// <summary>Host content rendered before the navigation group.</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host content rendered after the view switcher, before the overflow menu.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>When false, the toolbar row — which is this component's header — is not rendered. Default true.</summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>Fires when the user clicks the add button. The button renders only when a delegate is bound.</summary>
+    [Parameter] public EventCallback OnAddClick { get; set; }
 
     /// <summary>Opens the browser print dialog; the scheduler's print stylesheet lays out the current view for paper.</summary>
     public async Task PrintAsync()
@@ -328,6 +377,8 @@
         }
     }
 
+    private readonly string _instanceId = "tm-sched-" + Guid.NewGuid().ToString("N");
+    private string ToolbarTabId => $"{_instanceId}-{View}";
     private ElementReference _rootRef;
     private bool _scrollGuardAttached;
 
@@ -469,6 +520,18 @@
 
     private Task HandleMonthKeyboardNavigateAsync(DateTime date)
         => CurrentDateChanged.InvokeAsync(date.Date);
+
+    private Task NavigateToPickedDate(DateTime day) => CurrentDateChanged.InvokeAsync(day.Date);
+
+    /// <summary>A slot click also selects its day, then raises the host's slot callback.</summary>
+    private async Task HandleSlotClickAsync((DateTime Start, DateTime End) slot)
+    {
+        await SelectedDateChanged.InvokeAsync(slot.Start.Date);
+        await OnSlotClick.InvokeAsync(slot);
+    }
+
+    /// <summary>An event click selects it. The view already raised OnEventClick.</summary>
+    private Task HandleSelectedEventAsync(TmScheduleEvent? evt) => SelectedEventChanged.InvokeAsync(evt);
 
     private async Task NavigateToday()
     {

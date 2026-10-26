@@ -1,0 +1,22 @@
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+  Neúspěšné Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller [14 s]
+  Chybová zpráva:
+   Assert.AreEqual selhalo. Očekáván rozdíl, který není větší jak <1> mezi očekávanou hodnotou <1757> a aktuální hodnotou <2100>. ArrowDown must scroll the grid, not the page. probe {"scrollY":1590,"slotTop":3149,"frameTop":3073,"frameBottom":3542,"innerHeight":1100} ancestors SECTION.demo-section sh=664 ch=664 oy=visible | DIV.max-w-7xl mx-auto animate-fade-in sh=12962 ch=12962 oy=visible | DIV.px-4 sm:px-6 lg:px-8 py-8 [--demo-main-p sh=13074 ch=13074 oy=visible | MAIN.flex-1 min-w-0 lg:ml-[18.5rem] lg:w-[cal sh=13143 ch=13143 oy=visible | DIV.flex min-h-screen pt-[calc(4rem+env(safe sh=13143 ch=13143 oy=visible | DIV.demo-shell min-h-screen transition-color sh=13143 ch=13143 oy=visible | DIV.tm-layout tm-layout--desktop tm-layout-- sh=13143 ch=13143 oy=visible | DIV. sh=13143 ch=13143 oy=visible | BODY.bg-slate-50 dark:bg-slate-950 text-slate sh=13143 ch=13143 oy=visible | HTML. sh=13143 ch=1100 oy=visible
+  Trasování zásobníku:
+     at Tempo.Blazor.E2E.Accessibility.SchedulerAccessibilityE2ETests.Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Accessibility\SchedulerAccessibilityE2ETests.cs:line 179
+
+  Zprávy standardního výstupu:
+ 
+ 
+ Zprávy pro TestContext:
+ [baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+
+
+
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 16,1862 Sekundy
+Testovací běh nebyl úspěšný.

@@ -169,6 +169,31 @@ test('escape dismiss restores focus to the anchor when focus sat INSIDE the pane
     await new Promise(r => setTimeout(r, 0));
 });
 
+test('escape dismiss restores the anchor when hidePopover already detached the focused node', async () => {
+    // hidePopover() runs before dismiss() and moves document.activeElement onto a detached node,
+    // so reading it again at restore time would see nothing and drop the focus.
+    const focusCalls = [];
+    const detached = { isConnected: false };
+    installDomStubs({ activeElement: detached });
+    const anchor = {
+        isConnected: true,
+        focus: () => focusCalls.push('anchor'),
+    };
+    const entry = {
+        key: 'cf-focus-detached',
+        panel: { ...stubPanel(), contains: () => false },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => true },
+        options: { closeOnEscape: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    assert.deepEqual(focusCalls, ['anchor'],
+        'a node hidePopover already detached still counts as focus that went nowhere');
+    await new Promise(r => setTimeout(r, 0));
+});
+
 test('escape dismiss restores focus to the anchor when focus is on <body>', async () => {
     const focusCalls = [];
     installDomStubs();
@@ -190,6 +215,52 @@ test('escape dismiss restores focus to the anchor when focus is on <body>', asyn
     assert.deepEqual(focusCalls, ['anchor'],
         'focus on <body> means it went nowhere — the anchor takes it (N168 contract)');
     await new Promise(r => setTimeout(r, 0));
+});
+
+test('escape on a focus trap defers the anchor restore until the panel hides', async () => {
+    const focusCalls = [];
+    let onKeyDown;
+    const insidePanel = { isConnected: true };
+    installDomStubs({
+        activeElement: insidePanel,
+        captureKeydown: fn => { onKeyDown = fn; },
+    });
+    const anchor = {
+        ...stubAnchor(),
+        focus: () => focusCalls.push('anchor'),
+    };
+    const panel = { ...stubPanel(), contains: el => el === insidePanel };
+    open('trap-defer', panel, anchor, { invokeMethodAsync: async () => true }, { trapFocus: true });
+
+    onKeyDown({ key: 'Escape', preventDefault() {}, stopImmediatePropagation() {} });
+    assert.deepEqual(focusCalls, [],
+        'the trap keeps the page inert, so the anchor cannot take focus until the panel hides');
+
+    close('trap-defer');
+    assert.deepEqual(focusCalls, ['anchor'],
+        'hiding the trap panel is what restores the anchor');
+    await new Promise(r => setTimeout(r, 0));
+});
+
+test('a vetoed trap dismissal drops the deferred anchor restore', async () => {
+    const insidePanel = { isConnected: true };
+    installDomStubs({ activeElement: insidePanel });
+    const anchor = { ...stubAnchor(), focus() {} };
+    const entry = {
+        key: 'trap-veto',
+        panel: { ...stubPanel(), contains: el => el === insidePanel },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => false },
+        options: { closeOnEscape: true, trapFocus: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    assert.equal(entry.restoreAnchorOnClose, anchor, 'the restore is armed while the callback runs');
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(entry.restoreAnchorOnClose, null,
+        'a veto keeps the panel open, so a later close must not yank focus back');
+    assert.equal(entry.dismissed, false);
 });
 
 test('an accepted dismissal (dotNetRef resolves true) keeps entry.dismissed', async () => {

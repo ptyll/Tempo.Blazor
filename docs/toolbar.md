@@ -299,6 +299,10 @@ frozen and may only grow.
 | `navigation` | The PDF viewer's prev / page-input / next group |
 | `rotate` | The PDF viewer's rotation group |
 | `comments` | The PDF viewer's annotations/comments toggle |
+| `title` | TmScheduler toolbar title (the date popover trigger) |
+| `primary` | TmScheduler toolbar primary action (the add button, only with an `OnAddClick` delegate) |
+| `header-actions` | TmScheduler toolbar host actions, after the view switcher |
+| `overflow` | TmScheduler toolbar More menu (only when it has an entry) |
 
 ## Labels
 

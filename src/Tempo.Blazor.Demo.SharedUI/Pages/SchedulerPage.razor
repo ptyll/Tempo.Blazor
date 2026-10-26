@@ -61,6 +61,7 @@
     <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
         <TmScheduler @bind-View="_monthView"
                      @bind-CurrentDate="_currentDate"
+                     @bind-SelectedEvent="_monthSelected"
                      Events="_sampleEvents"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick" />
@@ -149,6 +150,7 @@
     <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Week"
                      @bind-CurrentDate="_weekDate"
+                     @bind-SelectedEvent="_weekSelected"
                      Events="_weekEvents"
                      SlotDuration="30"
                      OnEventClick="HandleEventClick"
@@ -189,6 +191,7 @@
     <div class="showcase-card" style="min-height: 400px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Agenda"
                      @bind-CurrentDate="_agendaDate"
+                     @bind-SelectedEvent="_agendaSelected"
                      Events="_agendaEvents"
                      OnEventClick="HandleEventClick" />
     </div>
@@ -236,6 +239,41 @@
                      Events="_highlightEvents"
                      HighlightWeekends="_highlightWeekends"
                      AllDayEventStyle="_allDayStyle" />
+    </div>
+</section>
+
+<!-- Toolbar 2.0: a view subset, host slots, the add button and two-way selection -->
+<section class="demo-section" data-testid="scheduler-toolbar-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Toolbar</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">A view subset, host slots, the add button and two-way selection</p>
+        </div>
+    </div>
+
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
+        <div class="mb-4 flex items-center gap-4">
+            <TmToggle @bind-Value="_toolbarAllowPrint" Label="Allow print" />
+            <TmToggle @bind-Value="_toolbarShowHeader" Label="Show header" />
+        </div>
+        <TmScheduler @bind-View="_toolbarView"
+                     @bind-CurrentDate="_toolbarDate"
+                     @bind-SelectedDate="_toolbarSelectedDate"
+                     @bind-SelectedEvent="_toolbarSelectedEvent"
+                     Views="_toolbarViews"
+                     Events="_toolbarEvents"
+                     AllowPrint="_toolbarAllowPrint"
+                     ShowHeader="_toolbarShowHeader"
+                     OnAddClick="HandleToolbarAdd">
+            <HeaderStart><span data-testid="toolbar-host-start">Rooms</span></HeaderStart>
+            <HeaderActions><span data-testid="toolbar-host-actions">Filter</span></HeaderActions>
+        </TmScheduler>
+        <div class="mt-4" data-testid="scheduler-toolbar-one-view">
+            <TmScheduler View="TmScheduleViewType.Week" CurrentDate="_toolbarDate" Views="_oneView" />
+        </div>
+        <div class="mt-4" data-testid="scheduler-toolbar-inserted-view">
+            <TmScheduler View="TmScheduleViewType.Week" CurrentDate="_toolbarDate" Views="_insertedViews" />
+        </div>
     </div>
 </section>
 
@@ -477,6 +515,37 @@
         new() { Id = "t4", Title = "Demo", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6", ResourceId = "room-c" },
         new() { Id = "t5", Title = "Training", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
     };
+
+    private TmScheduleViewType _toolbarView = TmScheduleViewType.Month;
+    private DateTime _toolbarDate = new(2026, 6, 15);
+    private DateTime? _toolbarSelectedDate = new(2026, 6, 15);
+    private bool _toolbarAllowPrint = true;
+    private bool _toolbarShowHeader = true;
+    private readonly TmScheduleViewType[] _toolbarViews = [TmScheduleViewType.Month, TmScheduleViewType.Day];
+    private readonly TmScheduleViewType[] _oneView = [TmScheduleViewType.Week];
+    private readonly TmScheduleViewType[] _insertedViews = [TmScheduleViewType.Month, TmScheduleViewType.Day];
+    private readonly List<TmScheduleEvent> _toolbarEvents =
+    [
+        new() { Id = "tb-standup", Title = "Standup", Start = new DateTime(2026, 6, 15, 9, 0, 0), End = new DateTime(2026, 6, 15, 9, 30, 0), Color = "#3b82f6" },
+        new() { Id = "tb-review", Title = "Review", Start = new DateTime(2026, 6, 16, 14, 0, 0), End = new DateTime(2026, 6, 16, 15, 0, 0), Color = "#10b981" },
+    ];
+    private TmScheduleEvent? _toolbarSelectedEvent;
+    private TmScheduleEvent? _monthSelected;
+    private TmScheduleEvent? _weekSelected;
+    private TmScheduleEvent? _agendaSelected;
+    private bool _toolbarSeeded;
+
+    protected override void OnInitialized()
+    {
+        if (_toolbarSeeded) return;
+        _toolbarSeeded = true;
+        _toolbarSelectedEvent = _toolbarEvents[0];
+        _monthSelected = _sampleEvents.FirstOrDefault();
+        _weekSelected = _weekEvents.FirstOrDefault();
+        _agendaSelected = _agendaEvents.FirstOrDefault();
+    }
+
+    private void HandleToolbarAdd() => Toast.ShowInfo("Add event");
 
     // Events for Interactive Demo - always ensure there's an event today for resize/drag testing
     private List<TmScheduleEvent> _interactiveEvents = new()

@@ -411,4 +411,26 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         var slot = cut.Find(".tm-scheduler-timegrid-slot[tabindex='0']");
         slot.GetAttribute("aria-label").Should().Contain(" to ");
     }
+
+    /// <summary>The selected column header and the selected event are both marked, and a click selects the event.</summary>
+    [Fact]
+    public void SelectedDate_And_SelectedEvent_Are_Marked()
+    {
+        var standup = Evt("Standup", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0));
+        standup.Id = "standup";
+        TmScheduleEvent? selected = null;
+
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 9), new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup })
+            .Add(c => c.SelectedDate, new DateTime(2025, 6, 10))
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => selected = e)));
+
+        cut.Find(".tm-scheduler-timegrid-col--selected").TextContent.Should().Contain("10");
+        var marked = cut.Find(".tm-scheduler-timegrid-event--selected");
+        marked.GetAttribute("aria-current").Should().Be("true");
+        marked.Click();
+        selected!.Id.Should().Be("standup");
+    }
 }

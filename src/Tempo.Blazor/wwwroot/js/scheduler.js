@@ -24,6 +24,7 @@
     })();
 
     var HANDLE_SELECTOR = '.tm-scheduler-event-resize-handle';
+
     var ROVING_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
 
     /**
@@ -45,6 +46,21 @@
         var role = stop.getAttribute && stop.getAttribute('role');
         return role === 'button' || role === 'gridcell';
     }
+    // Enter/Space that opened the title popover. A native day button focused while that key is still
+    // down takes the browser's default action for it and picks the day, which closes the popover
+    // the key just opened. Tracked from load so the opening keydown is not missed.
+    var openingKeys = new Set();
+    if (typeof window.addEventListener === 'function') {
+        window.addEventListener('keydown', function (e) {
+            if (e && (e.key === 'Enter' || e.key === ' ')) openingKeys.add(e.key);
+        }, true);
+        window.addEventListener('keyup', function (e) {
+            if (e) openingKeys.delete(e.key);
+        }, true);
+        // A keyup that never arrives (the window lost focus mid-press) must not pin the deferral.
+        window.addEventListener('blur', function () { openingKeys.clear(); });
+    }
+
     var MIN_SIZE = 10;       // px: an event is never dragged smaller than this
     var THRESHOLD = 2;       // px of movement before a mouse/pen press becomes a resize
     var LONG_PRESS_MS = 400; // touch only: a quick swipe scrolls; hold, then drag, resizes
@@ -59,6 +75,46 @@
 
         /** Resolves when the pointer helper is attached (or failed to load). */
         ready: Promise.resolve(),
+
+        /**
+         * Moves focus to the selected day in the title calendar owned by <paramref>root</paramref>,
+         * or to today. The root is the toolbar (or the open panel) passed from Blazor — a
+         * document-wide <c>:popover-open</c> query throws in engines that do not know the selector.
+         */
+        focusCalendarDay: function (root) {
+            if (!root || typeof root.querySelector !== 'function') return;
+            var open = root.querySelector('.tm-calendar-view');
+            var day = open && open.querySelector('.tm-cal-day--selected, .tm-cal-day--today');
+            if (!day || typeof day.focus !== 'function') return;
+            var focus = function () {
+                if (day.isConnected === false) return;
+                try { day.focus({ preventScroll: true }); }
+                catch (e) { day.focus(); }
+            };
+            // Defer past the opening keydown's default action. Focusing a native day button inside
+            // that action makes the browser activate it, which picks the day and closes the popover
+            // the key just opened. A key that is still down waits for its release so a repeat cannot
+            // do the same.
+            var arm = function () {
+                if (openingKeys.size === 0 || typeof window.addEventListener !== 'function') {
+                    focus();
+                    return;
+                }
+                var timer = setTimeout(finish, 1000);
+                function finish() {
+                    clearTimeout(timer);
+                    window.removeEventListener('keyup', onUp, true);
+                    focus();
+                }
+                function onUp(e) {
+                    if (e) openingKeys.delete(e.key);
+                    if (openingKeys.size > 0) return;
+                    finish();
+                }
+                window.addEventListener('keyup', onUp, true);
+            };
+            setTimeout(arm, 0);
+        },
 
         /**
          * Initialize resize handling for all schedulers on the page.
@@ -113,28 +169,94 @@
             // Capture on the root: the cell stops a bubbling keydown, so a bubble listener never sees it.
             root.addEventListener('keydown', handler, true);
             // preventDefault stops the key's own scroll. Moving the DOM focus afterwards still scrolls
-            // the page, so the page position is put back once the focus has landed.
-            var restore = function () {
-                if (window.scrollX !== root.__tmSchedulerScrollX || window.scrollY !== root.__tmSchedulerScrollY)
-                    window.scrollTo(root.__tmSchedulerScrollX, root.__tmSchedulerScrollY);
+            // the page, and scroll-behavior: smooth starts that scroll after focusin and keeps going
+            // after a one-shot scrollTo. Measure the page when the focus or the key happens, pin it
+            // until that scroll settles, then let go so a later scroll (bringing the grid into view)
+            // is kept. An unset position must not scroll the page to the top.
+            var releasePin = function () {
+                root.__tmSchedulerScrollHold = false;
+                if (root.__tmSchedulerScrollPin && typeof window.removeEventListener === 'function')
+                    window.removeEventListener('scroll', root.__tmSchedulerScrollPin);
+                root.__tmSchedulerScrollPin = null;
             };
-            var remember = function () {
-                root.__tmSchedulerScrollX = window.scrollX;
-                root.__tmSchedulerScrollY = window.scrollY;
+            var putBack = function () {
+                if (typeof root.__tmSchedulerScrollX !== 'number') return;
+                window.scrollTo({ left: root.__tmSchedulerScrollX, top: root.__tmSchedulerScrollY, behavior: 'auto' });
+            };
+            var watch = function () {
+                if (!root.__tmSchedulerScrollHold) return;
+                var moved = window.scrollX !== root.__tmSchedulerScrollX || window.scrollY !== root.__tmSchedulerScrollY;
+                if (moved) {
+                    root.__tmSchedulerScrollStable = 0;
+                    putBack();
+                } else if (++root.__tmSchedulerScrollStable >= 3) {
+                    releasePin();
+                    return;
+                }
+                if (typeof window.requestAnimationFrame === 'function')
+                    window.requestAnimationFrame(watch);
+            };
+            var arm = function () {
+                var fresh = !root.__tmSchedulerScrollHold;
+                if (fresh) {
+                    root.__tmSchedulerScrollX = window.scrollX;
+                    root.__tmSchedulerScrollY = window.scrollY;
+                    root.__tmSchedulerScrollHold = true;
+                    root.__tmSchedulerScrollStable = 0;
+                }
+                if (!root.__tmSchedulerScrollPin && typeof window.addEventListener === 'function') {
+                    root.__tmSchedulerScrollPin = function () {
+                        if (!root.__tmSchedulerScrollHold) return;
+                        if (window.scrollX === root.__tmSchedulerScrollX && window.scrollY === root.__tmSchedulerScrollY) return;
+                        root.__tmSchedulerScrollStable = 0;
+                        putBack();
+                    };
+                    window.addEventListener('scroll', root.__tmSchedulerScrollPin);
+                }
+                if (fresh && typeof window.requestAnimationFrame === 'function')
+                    window.requestAnimationFrame(watch);
+                clearTimeout(root.__tmSchedulerScrollHoldTimer);
+                root.__tmSchedulerScrollHoldTimer = setTimeout(releasePin, 1000);
+            };
+            var restore = function (event) {
+                // Focusing an off-screen slot scrolls the page after this handler, before any key.
+                if (!root.__tmSchedulerScrollHold) {
+                    var target = event && event.target;
+                    if (!target || typeof target.closest !== 'function' || !target.closest('[data-tm-roving]')) return;
+                    arm();
+                }
+                putBack();
+            };
+            var remember = function (event) {
+                if (!root.contains(event.target) || !shouldSuppressRovingScroll(event)) return;
+                // A key measures the page where it is now. Releasing first lets arm() capture a
+                // scroll that happened after the previous focus settled.
+                releasePin();
+                arm();
             };
             root.addEventListener('keydown', remember, true);
             root.addEventListener('focusin', restore);
             root.__tmSchedulerScrollGuard = handler;
             root.__tmSchedulerScrollRestore = restore;
+            root.__tmSchedulerScrollRemember = remember;
         },
 
         /** Removes the guard from the element it was added to, in the same phase. */
         detachScrollGuard: function (root) {
             if (!root || !root.__tmSchedulerScrollGuard) return;
             root.removeEventListener('keydown', root.__tmSchedulerScrollGuard, true);
+            root.removeEventListener('keydown', root.__tmSchedulerScrollRemember, true);
             root.removeEventListener('focusin', root.__tmSchedulerScrollRestore);
+            clearTimeout(root.__tmSchedulerScrollHoldTimer);
+            if (root.__tmSchedulerScrollPin && typeof window.removeEventListener === 'function')
+                window.removeEventListener('scroll', root.__tmSchedulerScrollPin);
             delete root.__tmSchedulerScrollGuard;
             delete root.__tmSchedulerScrollRestore;
+            delete root.__tmSchedulerScrollRemember;
+            delete root.__tmSchedulerScrollHold;
+            delete root.__tmSchedulerScrollHoldTimer;
+            delete root.__tmSchedulerScrollPin;
+            delete root.__tmSchedulerScrollStable;
         },
 
         /** The element's viewport box, so a keyboard context menu can open on the cell itself. */

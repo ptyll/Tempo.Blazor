@@ -2059,6 +2059,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("view",  "View",  PropType.Enum,   "week",     cat: "Appearance",
                     opts: ["day","week","month","agenda","timeline"]),
                 P("showPrint", "Show Print", PropType.Bool, true, cat: "Appearance"),
+                P("showAddButton", "Show Add Button", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 

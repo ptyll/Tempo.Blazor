@@ -45,7 +45,8 @@
                     var widthPct = GetEventWidthPercent(e);
                     var eventColor = e.Color ?? r.Color;
 
-                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event tm-scheduler-event-surface @e.CssClass"
+                    <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-timeline-event tm-scheduler-event-surface @(IsSelectedEvent(e) ? "tm-scheduler-timeline-event--selected" : "") @e.CssClass"
+                         aria-current="@(IsSelectedEvent(e) ? "true" : null)"
                          role="button" tabindex="@(ResourceIndex(r.Id) == _activeResourceIndex ? "0" : "-1")"
                          aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
                          data-tm-roving="@_rovingId"
@@ -54,7 +55,7 @@
                          data-event-id="@e.Id"
                          draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
                          @ondragstart="@(() => HandleDragStart(e, r.Id))"
-                         @onclick="@(() => OnEventClick.InvokeAsync(e))"
+                         @onclick="@(() => HandleEventClick(e))"
                          @onclick:stopPropagation="true"
                          @onkeydown="@(k => HandleEventKeyDown(k, e))"
                          @onkeydown:stopPropagation="true"
@@ -126,6 +127,12 @@
 
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>The selected event. The matching bar gets <c>aria-current</c> and <c>tm-scheduler-timeline-event--selected</c>.</summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
 
     /// <summary>
     /// Optional custom event renderer used inside each positioned timeline bar.
@@ -217,10 +224,18 @@
         => SchedulerA11y.IsSpaceActivation(e) ? OnSlotClick.InvokeAsync((slotStart, slotEnd)) : Task.CompletedTask;
 
     private Task HandleEventKeyDown(KeyboardEventArgs e, TmScheduleEvent evt)
-        => SchedulerA11y.IsEnterActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+        => SchedulerA11y.IsEnterActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
 
     private Task HandleEventKeyUp(KeyboardEventArgs e, TmScheduleEvent evt)
-        => SchedulerA11y.IsSpaceActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+        => SchedulerA11y.IsSpaceActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
+
+    private bool IsSelectedEvent(TmScheduleEvent evt) => SelectedEvent is not null && SelectedEvent.Id == evt.Id;
+
+    private async Task HandleEventClick(TmScheduleEvent evt)
+    {
+        await SelectedEventChanged.InvokeAsync(evt);
+        await OnEventClick.InvokeAsync(evt);
+    }
 
     private int ResourceIndex(string resourceId)
     {

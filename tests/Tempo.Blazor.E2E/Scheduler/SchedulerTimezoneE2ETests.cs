@@ -71,6 +71,10 @@ public class SchedulerTimezoneE2ETests : WasmTestBase
 
         var nav = section.Locator(".tm-scheduler-toolbar-nav").First;
         Assert.IsFalse(await nav.IsVisibleAsync(), "Print CSS should hide the scheduler toolbar navigation.");
+        Assert.IsFalse(await section.Locator(".tm-scheduler-toolbar-views").First.IsVisibleAsync(),
+            "Print CSS should hide the view switcher.");
+        Assert.IsFalse(await section.Locator(".tm-scheduler-toolbar-overflow").First.IsVisibleAsync(),
+            "Print CSS should hide the More menu.");
     }
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)

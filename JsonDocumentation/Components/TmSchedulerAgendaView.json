@@ -27,6 +27,18 @@
       "description": "Events to display."
     },
     {
+      "name": "SelectedEvent",
+      "type": "TmScheduleEvent?",
+      "isRequired": false,
+      "description": "The selected event. The matching row gets aria-current and tm-scheduler-agenda-event--selected."
+    },
+    {
+      "name": "SelectedEventChanged",
+      "type": "EventCallback<TmScheduleEvent?>",
+      "isRequired": false,
+      "description": "Fires when the user selects an event."
+    },
+    {
       "name": "OnEventClick",
       "type": "EventCallback<TmScheduleEvent>",
       "isRequired": false,

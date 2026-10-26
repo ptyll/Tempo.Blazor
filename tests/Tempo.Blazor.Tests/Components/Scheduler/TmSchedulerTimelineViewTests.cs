@@ -302,4 +302,29 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
         bar.GetAttribute("style").Should().Contain("left: 37.5000%");
         bar.GetAttribute("style").Should().Contain("width: 4.166");
     }
+
+    /// <summary>The selected timeline bar carries aria-selected and the selected class.</summary>
+    [Fact]
+    public void SelectedEvent_Marks_The_Bar()
+    {
+        var standup = new TmScheduleEvent
+        {
+            Id = "standup", Title = "Standup", ResourceId = "room-a",
+            Start = new DateTime(2025, 6, 10, 9, 0, 0),
+            End = new DateTime(2025, 6, 10, 10, 0, 0)
+        };
+        TmScheduleEvent? selected = null;
+
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, TestResources)
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup })
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => selected = e)));
+
+        var bar = cut.Find(".tm-scheduler-timeline-event--selected");
+        bar.GetAttribute("aria-current").Should().Be("true");
+        bar.Click();
+        selected!.Id.Should().Be("standup");
+    }
 }

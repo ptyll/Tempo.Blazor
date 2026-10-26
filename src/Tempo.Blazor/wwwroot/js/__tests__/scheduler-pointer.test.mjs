@@ -155,8 +155,10 @@ test('the scroll guard prevents default only for an unmodified roving key on a r
 
     scheduler.attachScrollGuard(root);
     scheduler.attachScrollGuard(root);
-    assert.equal(listeners.length, 1, 'a second attach on the same root adds nothing');
-    assert.equal(listeners[0].capture, true, 'capture on the root, because the cell stops the bubbling keydown');
+    const keydowns = listeners.filter(l => l.type === 'keydown');
+    assert.equal(keydowns.length, 2, 'one guard and one position memory, and a second attach adds neither');
+    assert.equal(listeners.filter(l => l.type === 'focusin').length, 1);
+    assert.equal(keydowns[0].capture, true, 'capture on the root, because the cell stops the bubbling keydown');
 
     assert.equal(press('ArrowDown', stop('gridcell')), true);
     assert.equal(press('PageDown', stop('gridcell')), true);
@@ -170,7 +172,8 @@ test('the scroll guard prevents default only for an unmodified roving key on a r
     assert.equal(press('a', stop('gridcell')), false);
 
     scheduler.detachScrollGuard(root);
-    assert.equal(listeners.length, 0, 'detach removes the listener from the element it was added to');
+    assert.equal(listeners.filter(l => l.type === 'keydown' || l.type === 'focusin').length, 0,
+        'detach removes the listeners from the element they were added to');
 });
 
 test('no mouse listener is registered any more - the gesture is Pointer Events on the document', () => {
@@ -556,4 +559,111 @@ test('slotPoint finds the slot by its start and resource', () => {
 
     assert.deepEqual(scheduler.slotPoint(grid, '2026-05-12T08:00', 'room-a'), [140, 260]);
     assert.deepEqual(scheduler.slotPoint(grid, '2026-05-12T08:00', 'room-b'), [0, 0]);
+});
+
+test('a guarded key puts the page position back on the frame the browser scrolls', () => {
+    const listeners = [];
+    const root = {
+        contains: () => true,
+        addEventListener: (type, handler) => listeners.push({ type, handler }),
+        removeEventListener() {},
+    };
+    const stop = { getAttribute: () => 'gridcell', closest: () => stop };
+    let y = 0;
+    const scrolls = [];
+    const frames = [];
+    const windowListeners = [];
+    globalThis.window.scrollX = 0;
+    Object.defineProperty(globalThis.window, 'scrollY', { configurable: true, get: () => y });
+    globalThis.window.scrollTo = options => { scrolls.push(options); y = options.top; };
+    globalThis.window.requestAnimationFrame = fn => frames.push(fn);
+    globalThis.window.addEventListener = (type, fn) => windowListeners.push({ type, fn });
+    globalThis.window.removeEventListener = (type, fn) => {
+        const at = windowListeners.findIndex(l => l.type === type && l.fn === fn);
+        if (at >= 0) windowListeners.splice(at, 1);
+    };
+
+    scheduler.attachScrollGuard(root);
+    const fire = (type, target = stop) => listeners.filter(l => l.type === type).forEach(l => l.handler(
+        type === 'keydown' ? { key: 'ArrowDown', target, preventDefault() {} } : { target }));
+    fire('focusin');
+    y = 40;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 0, 'focusing a roving stop pins the page before any key');
+
+    // The page has not moved yet: the smooth scroll-into-view starts after focusin.
+    assert.deepEqual(scrolls[0], { left: 0, top: 0, behavior: 'auto' },
+        'focus must re-apply the remembered position even though the page has not moved yet');
+
+    // A scroll between gestures is the new position. The next key must keep it, and the focus
+    // scroll that follows that key is pinned to it rather than to the earlier focus.
+    y = 18;
+    fire('keydown');
+    fire('focusin');
+    y = 40;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 18, 'a scroll the browser starts during the correction is pinned back');
+    for (const frame of frames) frame();
+    assert.equal(y, 18, 'a key re-measures, and the focus scroll that follows is pinned to that');
+    scheduler.detachScrollGuard(root);
+    assert.equal(windowListeners.length, 0, 'detach removes the window scroll pin');
+});
+
+test('a focus that lands before any guarded key does not scroll the page', () => {
+    const root = el(['tm-scheduler']);
+    let y = 420;
+    const scrolls = [];
+    globalThis.window.scrollX = 0;
+    Object.defineProperty(globalThis.window, 'scrollY', { configurable: true, get: () => y, set: value => { y = value; } });
+    globalThis.window.scrollTo = (x, next) => { scrolls.push(next); y = next; };
+
+    scheduler.attachScrollGuard(root);
+    root.dispatch('focusin', {});
+    assert.deepEqual(scrolls, [], 'an unset remembered position must not scroll the page to the top');
+    assert.equal(y, 420);
+    scheduler.detachScrollGuard(root);
+});
+
+test('focusCalendarDay waits out the opening key, clears it on blur, and never queries the document', async () => {
+    const listeners = bag();
+    const win = {
+        ...bag(),
+        TempoBlazor: undefined,
+        setTimeout,
+        clearTimeout,
+    };
+    win.addEventListener = listeners.addEventListener.bind(listeners);
+    win.removeEventListener = listeners.removeEventListener.bind(listeners);
+    globalThis.window = win;
+    globalThis.document = {
+        ...bag(),
+        readyState: 'complete',
+        currentScript: { src: helperUrl.replace('pointer-drag.js', 'scheduler.js') },
+        contains: () => true,
+        querySelector() { throw new Error('document query is not allowed'); },
+    };
+    await import(`../scheduler.js?focus-${Math.random()}`);
+    const api = globalThis.window.TempoBlazor.Scheduler;
+
+    const day = { isConnected: true, focused: 0, focus() { this.focused += 1; } };
+    const calendar = { querySelector: selector => selector.includes('tm-cal-day') ? day : null };
+    const root = { querySelector: selector => selector === '.tm-calendar-view' ? calendar : null };
+
+    listeners.dispatch('keydown', { key: 'Enter' });
+    api.focusCalendarDay(root);
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(day.focused, 0, 'Enter is still down, so the day must not take the opening key');
+
+    listeners.dispatch('keyup', { key: 'Enter' });
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(day.focused, 1, 'the day is focused once the opening key is released');
+
+    listeners.dispatch('keydown', { key: ' ' });
+    listeners.dispatch('blur');
+    api.focusCalendarDay(root);
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(day.focused, 2, 'losing the window clears a key whose keyup never arrives');
+
+    api.focusCalendarDay(null);
+    assert.equal(day.focused, 2, 'no root means no document-wide query, including :popover-open');
 });

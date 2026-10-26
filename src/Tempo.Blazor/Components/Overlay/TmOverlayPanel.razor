@@ -524,7 +524,7 @@
     private string OptionsSignature() => string.Join('|',
         Anchor.Id ?? "-",
         Placement.ToString(), Align.ToString(), Offset, ViewportMargin,
-        Flip, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown);
+        Flip, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown, TrapFocus);
 
     private object BuildOptions() => new
     {
@@ -538,6 +538,7 @@
         constrainHeight = ConstrainHeight,
         closeOnEscape = CloseOnEscape,
         closeOnOutsidePointerDown = CloseOnOutsidePointerDown,
+        trapFocus = TrapFocus,
     };
 
     /// <inheritdoc />

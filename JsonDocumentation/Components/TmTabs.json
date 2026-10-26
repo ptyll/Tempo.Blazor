@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the tablist. Null leaves the strip unnamed."
+    },
+    {
       "name": "ActiveTabId",
       "type": "string",
       "isRequired": false,

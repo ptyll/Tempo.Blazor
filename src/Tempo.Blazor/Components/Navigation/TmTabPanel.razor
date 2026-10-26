@@ -24,6 +24,12 @@
     /// <summary>Content rendered when this tab is active.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// Extra attributes splatted onto this panel's tab button. Null renders the pre-existing
+    /// button markup, so a strip that sets none of these stays byte-identical.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, object>? TabAttributes { get; set; }
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 

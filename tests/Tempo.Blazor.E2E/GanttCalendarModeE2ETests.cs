@@ -31,7 +31,7 @@ public class GanttCalendarModeE2ETests : WasmTestBase
         Assert.AreEqual(0, await card.Locator(".tm-scheduler-timegrid-body").CountAsync(),
             "the Gantt calendar mode hides the hourly time grid");
 
-        var title = card.Locator(".tm-scheduler-toolbar-title");
+        var title = card.Locator(".tm-scheduler-toolbar-title-text");
         var before = await title.InnerTextAsync();
         await card.Locator("[data-testid='scheduler-next']").ClickAsync();
         await Assertions.Expect(title).Not.ToHaveTextAsync(before);

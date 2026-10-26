@@ -1,0 +1,18 @@
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+  Neúspěšné Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller [14 s]
+  Chybová zpráva:
+   Assert.AreEqual selhalo. Očekáván rozdíl, který není větší jak <1> mezi očekávanou hodnotou <950> a aktuální hodnotou <1035>. ArrowDown must scroll the grid, not the page.
+  Trasování zásobníku:
+     at Tempo.Blazor.E2E.Accessibility.SchedulerAccessibilityE2ETests.Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Accessibility\SchedulerAccessibilityE2ETests.cs:line 161
+
+  Zprávy standardního výstupu:
+ 
+ 
+ Zprávy pro TestContext:
+ [baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+
+
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 15 s - Tempo.Blazor.E2E.dll (net10.0)

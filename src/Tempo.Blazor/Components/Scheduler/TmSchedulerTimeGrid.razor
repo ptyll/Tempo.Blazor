@@ -24,7 +24,8 @@
             @if (_hasResources)
             {
                 <div class="tm-scheduler-timegrid-col-header-group">
-                    <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)">
+                    <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)"
+                         aria-label="@(IsSelectedDate(d) ? SelectedColumnLabel(d) : null)">
                         <span class="tm-scheduler-timegrid-col-header-label">
                             <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
                             <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
@@ -43,7 +44,8 @@
             }
             else
             {
-                <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)">
+                <div class="tm-scheduler-timegrid-col-header @ColumnClass(d)"
+                     aria-label="@(IsSelectedDate(d) ? SelectedColumnLabel(d) : null)">
                     <span class="tm-scheduler-timegrid-col-header-label">
                         <span class="tm-scheduler-timegrid-col-header-weekday">@SchedulerRange.FormatColumnHeader(d, culture).Weekday</span>
                         <span class="tm-scheduler-timegrid-col-header-date">@SchedulerRange.FormatColumnHeader(d, culture).Date</span>
@@ -66,12 +68,13 @@
                 @foreach (var evt in allDayEvents)
                 {
                     var e = evt;
-                    <div @key="e.Id" class="tm-scheduler-timegrid-allday-event @(AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface tm-scheduler-event--tinted" : "")"
+                    <div @key="e.Id" class="tm-scheduler-timegrid-allday-event @(AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface tm-scheduler-event--tinted" : "") @(IsSelectedEvent(e) ? "tm-scheduler-timegrid-event--selected" : "")"
+                         aria-current="@(IsSelectedEvent(e) ? "true" : null)"
                          role="button" tabindex="@(IsActiveColumn(d) ? "0" : "-1")"
                          aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
                          data-tm-roving="@_rovingId"
                          style="@EventStyle(e)"
-                         @onclick="@(() => OnEventClick.InvokeAsync(e))"
+                         @onclick="@(() => HandleEventClick(e))"
                          @onclick:stopPropagation="true"
                          @onkeydown="@(k => HandleEventKeyDown(k, e))"
                          @onkeydown:stopPropagation="true"
@@ -185,6 +188,15 @@
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
 
+    /// <summary>The selected day. The matching column gets <c>tm-scheduler-timegrid-col--selected</c>.</summary>
+    [Parameter] public DateTime? SelectedDate { get; set; }
+
+    /// <summary>The selected event. The matching event gets <c>aria-current</c> and the selected class.</summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
+
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
 
@@ -209,13 +221,31 @@
     /// <summary>Paint of an all-day event. Tinted adds <c>tm-scheduler-event--tinted</c>.</summary>
     [Parameter] public TmAllDayEventStyle AllDayEventStyle { get; set; } = TmAllDayEventStyle.Solid;
 
+    private string SelectedColumnLabel(DateOnly date)
+    {
+        var header = SchedulerRange.FormatColumnHeader(date, CultureInfo.CurrentUICulture);
+        return $"{header.Weekday} {header.Date}, {Loc["TmScheduler_SelectedDay"]}";
+    }
+
     private string ColumnClass(DateOnly date)
     {
         var css = "";
         if (date == Today) css = "tm-scheduler-timegrid-col--today";
         if (HighlightWeekends && date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
             css += " tm-scheduler-timegrid-col--weekend";
+        if (IsSelectedDate(date)) css += " tm-scheduler-timegrid-col--selected";
         return css;
+    }
+
+    private bool IsSelectedDate(DateOnly date)
+        => SelectedDate.HasValue && date == DateOnly.FromDateTime(SelectedDate.Value);
+
+    private bool IsSelectedEvent(TmScheduleEvent evt) => SelectedEvent is not null && SelectedEvent.Id == evt.Id;
+
+    private async Task HandleEventClick(TmScheduleEvent evt)
+    {
+        await SelectedEventChanged.InvokeAsync(evt);
+        await OnEventClick.InvokeAsync(evt);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -318,10 +348,10 @@
         => SchedulerA11y.IsSpaceActivation(e) ? OnSlotClick.InvokeAsync((slotStart, slotEnd)) : Task.CompletedTask;
 
     private Task HandleEventKeyDown(KeyboardEventArgs e, TmScheduleEvent evt)
-        => SchedulerA11y.IsEnterActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+        => SchedulerA11y.IsEnterActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
 
     private Task HandleEventKeyUp(KeyboardEventArgs e, TmScheduleEvent evt)
-        => SchedulerA11y.IsSpaceActivation(e) ? OnEventClick.InvokeAsync(evt) : Task.CompletedTask;
+        => SchedulerA11y.IsSpaceActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
 
     private int DayIndex(DateOnly date)
     {
@@ -374,7 +404,8 @@
             builder.OpenElement(sequence++, "div");
             builder.SetKey(e.Id);
             var compact = (e.End - e.Start).TotalMinutes < 45 ? "tm-scheduler-event--compact" : "";
-            builder.AddAttribute(sequence++, "class", $"tm-scheduler-timegrid-event tm-scheduler-event-surface {compact} {e.CssClass}");
+            builder.AddAttribute(sequence++, "class", $"tm-scheduler-timegrid-event tm-scheduler-event-surface {compact} {(IsSelectedEvent(e) ? "tm-scheduler-timegrid-event--selected" : "")} {e.CssClass}");
+            if (IsSelectedEvent(e)) builder.AddAttribute(sequence++, "aria-current", "true");
             builder.AddAttribute(sequence++, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%;{EventStyle(e)}");
             builder.AddAttribute(sequence++, "role", "button");
             builder.AddAttribute(sequence++, "tabindex", IsActiveColumn(d) ? "0" : "-1");
@@ -385,7 +416,7 @@
             builder.AddAttribute(sequence++, "data-event-id", e.Id);
             builder.AddAttribute(sequence++, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
             builder.AddAttribute(sequence++, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
-            builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
+            builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, () => HandleEventClick(e)));
             builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
             builder.AddAttribute(sequence++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, k => HandleEventKeyDown(k, e)));
             builder.AddEventStopPropagationAttribute(sequence++, "onkeydown", true);

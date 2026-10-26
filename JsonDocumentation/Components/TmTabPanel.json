@@ -40,6 +40,12 @@
       "description": "When true, the tab cannot be selected."
     },
     {
+      "name": "TabAttributes",
+      "type": "IReadOnlyDictionary<string, object>?",
+      "isRequired": false,
+      "description": "Extra attributes splatted onto this panel's tab button. Null renders the pre-existing button markup."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,

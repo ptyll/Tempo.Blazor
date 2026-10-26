@@ -56,8 +56,8 @@ public sealed class TmSchedulerMonthTemplateE2ETests : WasmTestBase
 
     private static async Task AssertTemplateInViewAsync(ILocator card, string view, string title)
     {
-        await card.Locator($".tm-scheduler-toolbar-view-btn[data-view='{view}']").ClickAsync();
-        await Assertions.Expect(card.Locator(".tm-scheduler-toolbar-view-btn--active"))
+        await card.Locator($"[role='tab'][data-view='{view}']").ClickAsync();
+        await Assertions.Expect(card.Locator("[role='tab'][aria-selected='true']"))
             .ToHaveAttributeAsync("data-view", view);
         var templated = card.Locator("[data-testid='scheduler-month-template-event']",
             new LocatorLocatorOptions { HasText = title });

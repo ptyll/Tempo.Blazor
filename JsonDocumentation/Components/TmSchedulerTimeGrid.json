@@ -47,6 +47,24 @@
       "description": "Fires when a time slot is clicked."
     },
     {
+      "name": "SelectedDate",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "The selected day. The matching column gets tm-scheduler-timegrid-col--selected."
+    },
+    {
+      "name": "SelectedEvent",
+      "type": "TmScheduleEvent?",
+      "isRequired": false,
+      "description": "The selected event. The matching event gets aria-current and tm-scheduler-timegrid-event--selected."
+    },
+    {
+      "name": "SelectedEventChanged",
+      "type": "EventCallback<TmScheduleEvent?>",
+      "isRequired": false,
+      "description": "Fires when the user selects an event."
+    },
+    {
       "name": "OnEventClick",
       "type": "EventCallback<TmScheduleEvent>",
       "isRequired": false,

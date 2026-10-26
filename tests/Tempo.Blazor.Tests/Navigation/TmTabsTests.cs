@@ -399,7 +399,57 @@ public class TmTabsTests : LocalizationTestBase
         cut.Markup.Should().NotContain("Content Three");
     }
 
+    [Fact]
+    public void Tabs_AriaLabel_NamesTheTablist()
+    {
+        var cut = Render<TmTabs>(p => p
+            .Add(x => x.ActiveTabId, "tab1")
+            .Add(x => x.AriaLabel, "Schedule views")
+            .AddChildContent<TmTabPanel>(tp => tp
+                .Add(x => x.Id, "tab1")
+                .Add(x => x.Title, "First")
+                .AddChildContent("Content One")));
+
+        cut.Find("[role='tablist']").GetAttribute("aria-label").Should().Be("Schedule views");
+    }
+
+    [Fact]
+    public void Tabs_TabAttributes_SplatOntoTheTabButton()
+    {
+        var cut = Render<TmTabs>(p => p
+            .Add(x => x.ActiveTabId, "tab1")
+            .AddChildContent<TmTabPanel>(tp => tp
+                .Add(x => x.Id, "tab1")
+                .Add(x => x.Title, "First")
+                .Add(x => x.TabAttributes, new Dictionary<string, object> { ["data-view"] = "Month" })
+                .AddChildContent("Content One")));
+
+        cut.Find("[role='tab']").GetAttribute("data-view").Should().Be("Month");
+    }
+
+    [Fact]
+    public void Tabs_NullTabAttributes_LeaveTheButtonByteIdentical()
+    {
+        var withNull = Render<TmTabs>(p => p
+            .Add(x => x.ActiveTabId, "tab1")
+            .AddChildContent<TmTabPanel>(tp => tp
+                .Add(x => x.Id, "tab1")
+                .Add(x => x.Title, "First")
+                .Add(x => x.TabAttributes, null)
+                .AddChildContent("Content One")));
+        var without = RenderTabs("tab1");
+
+        // A null splat must not add, remove or rewrite an attribute. bUnit's handler id differs
+        // per render, so the comparison is the attribute map with that id removed.
+        AttributesOf(withNull.Find("[role='tab']")).Should().Equal(AttributesOf(without.FindAll("[role='tab']")[0]));
+    }
+
     // ── Helper ─────────────────────────────────────────────
+
+    private static Dictionary<string, string?> AttributesOf(AngleSharp.Dom.IElement element)
+        => element.Attributes
+            .Where(attribute => !attribute.Name.StartsWith("blazor:", StringComparison.Ordinal))
+            .ToDictionary(attribute => attribute.Name, attribute => attribute.Value);
 
     private IRenderedComponent<TmTabs> RenderTabs(string activeId)
     {

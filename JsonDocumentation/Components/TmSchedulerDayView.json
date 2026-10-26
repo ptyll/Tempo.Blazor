@@ -33,6 +33,24 @@
       "description": "Fires when a time slot is clicked."
     },
     {
+      "name": "SelectedDate",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "The selected day, forwarded to the time grid."
+    },
+    {
+      "name": "SelectedEvent",
+      "type": "TmScheduleEvent?",
+      "isRequired": false,
+      "description": "The selected event, forwarded to the time grid."
+    },
+    {
+      "name": "SelectedEventChanged",
+      "type": "EventCallback<TmScheduleEvent?>",
+      "isRequired": false,
+      "description": "Fires when the user selects an event."
+    },
+    {
       "name": "OnEventClick",
       "type": "EventCallback<TmScheduleEvent>",
       "isRequired": false,

@@ -189,6 +189,26 @@ public class StencilPackRegistryParityTests
     }
 
     [Fact]
+    public void SchedulerStencil_OffersTheAddButtonAndDrawsIt()
+    {
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmScheduler");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "showAddButton" &&
+            prop.Type == PropType.Bool &&
+            Equals(prop.Default, false));
+
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmScheduler\""));
+
+        entry.Should().Contain("showAddButton");
+        entry.Should().Contain("\\u25be");
+    }
+
+    [Fact]
     public void DataTableStencil_ExposesRedesignPropsAndBranchesOnThem()
     {
         // Fáze 12: the wireframe stencil must offer the redesign opt-ins and actually draw them, so a

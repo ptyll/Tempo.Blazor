@@ -1,0 +1,16 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  Tempo.Reporting.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Abstractions\bin\Debug\net10.0\Tempo.Reporting.Abstractions.dll
+  Tempo.Blazor.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Abstractions\bin\Debug\net10.0\Tempo.Blazor.Abstractions.dll
+  Tempo.Reporting.Engine -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Engine\bin\Debug\net10.0\Tempo.Reporting.Engine.dll
+  Tempo.Blazor.DataTableXlsx -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DataTableXlsx\bin\Debug\net10.0\Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Blazor.DocumentFormats -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DocumentFormats\bin\Debug\net10.0\Tempo.Blazor.DocumentFormats.dll
+  Tempo.Blazor -> C:\work\Tempo.Blazor\src\Tempo.Blazor\bin\Debug\net10.0\Tempo.Blazor.dll
+  Tempo.Blazor.Wireframe -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Wireframe\bin\Debug\net10.0\Tempo.Blazor.Wireframe.dll
+  Tempo.ReportServer.Api -> C:\work\Tempo.Blazor\src\Tempo.ReportServer.Api\bin\Debug\net10.0\Tempo.ReportServer.Api.dll
+  Tempo.Blazor.E2E -> C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 27 s - Tempo.Blazor.E2E.dll (net10.0)

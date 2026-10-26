@@ -56,7 +56,7 @@ public class UserTimeZoneSchedulerGanttServerE2ETests : ServerTestBase
         await todayButton.ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
-        var title = await scheduler.Locator(".tm-scheduler-toolbar-title").TextContentAsync();
+        var title = await scheduler.Locator(".tm-scheduler-toolbar-title-text").TextContentAsync();
 
         var expected = await page.EvaluateAsync<string>(
             @"() => new Intl.DateTimeFormat('en-US', { timeZone: 'Pacific/Auckland', month: 'long', year: 'numeric' }).format(new Date())");

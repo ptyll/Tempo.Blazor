@@ -1,0 +1,24 @@
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+  Neúspěšné Scheduler_Toolbar_DatePopover_Views_More_And_Selection [13 s]
+  Chybová zpráva:
+   V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_DatePopover_Views_More_And_Selection došlo k výjimce: 
+Microsoft.Playwright.PlaywrightException: Locator expected to be visible 
+Call log:
+  -   - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms
+  -   - waiting for Locator("[data-testid='scheduler-toolbar-section']").Locator("[data-testid='scheduler-print']")
+  Trasování zásobníku:
+     at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, FrameExpectOptions expectOptions, Object expected, String message) in /_/src/Playwright/Core/AssertionsBase.cs:line 85
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue[] expectedText, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 65
+   at Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_DatePopover_Views_More_And_Selection() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Scheduler\SchedulerNavigationE2ETests.cs:line 150
+
+  Zprávy standardního výstupu:
+ 
+ 
+ Zprávy pro TestContext:
+ [baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+
+
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:     0, Přeskočeno:     0, Celkem:     1, Doba trvání: 14 s - Tempo.Blazor.E2E.dll (net10.0)

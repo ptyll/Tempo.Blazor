@@ -8,6 +8,8 @@
          role="button"
          tabindex="0"
          aria-expanded="@(IsVisible ? "true" : "false")"
+         aria-haspopup="@(Role is not null ? Role : null)"
+         aria-label="@TriggerAriaLabel"
          @onclick="Toggle"
          @onkeydown="HandleTriggerKeyDown"
          @onkeyup="HandleTriggerKeyUp">
@@ -32,6 +34,9 @@
                     Align="OverlayAlign.Center"
                     Offset="8"
                     CloseOnOutsidePointerDown="CloseOnClickOutside"
+                    Role="@Role"
+                    TrapFocus="@TrapFocus"
+                    OnOpened="@OnOpened"
                     Title="@Title"
                     MobilePresentation="MobilePresentation"
                     LayoutMode="LayoutMode"
@@ -52,6 +57,18 @@
 
     /// <summary>Trigger content.</summary>
     [Parameter, EditorRequired] public RenderFragment TriggerContent { get; set; } = default!;
+
+    /// <summary>Accessible name for the trigger when its content has no name of its own.</summary>
+    [Parameter] public string? TriggerAriaLabel { get; set; }
+
+    /// <summary>ARIA role of the panel, forwarded to <c>TmOverlayPanel</c>. Also sets <c>aria-haspopup</c> on the trigger.</summary>
+    [Parameter] public string? Role { get; set; }
+
+    /// <summary>Trap Tab inside the panel while it is open. Forwarded to <c>TmOverlayPanel</c>.</summary>
+    [Parameter] public bool TrapFocus { get; set; }
+
+    /// <summary>Raised after the panel has finished opening. Forwarded to <c>TmOverlayPanel</c>.</summary>
+    [Parameter] public EventCallback OnOpened { get; set; }
 
     /// <summary>Popover body content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -146,6 +163,9 @@
     {
         await SetOpenAsync(false);
     }
+
+    /// <summary>Moves focus back to the trigger. A consumer calls it after an action that closes the panel.</summary>
+    public async Task FocusTriggerAsync() => await _triggerRef.FocusAsync();
 
     // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is a div[role=button],
     // not a native <button>, so the browser never produces a click for Enter/Space on its own.

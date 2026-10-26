@@ -85,6 +85,61 @@
     min-width: 0;
 }
 
+/* The title is a button that opens the date popover. The heading keeps the live region. */
+.tm-scheduler-toolbar-title-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    max-width: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tm-scheduler-toolbar-title-btn:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-scheduler-toolbar-title-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-scheduler-toolbar-slot,
+.tm-scheduler-toolbar-primary,
+.tm-scheduler-toolbar-overflow {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-scheduler-toolbar-add {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    height: var(--tm-space-9);
+    padding: 0 var(--tm-space-3);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-scheduler-toolbar-add:hover {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-scheduler-toolbar-add:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
 .tm-scheduler-toolbar-views {
     display: flex;
     align-items: center;
@@ -97,42 +152,80 @@
     overflow: hidden;
 }
 
-.tm-scheduler-toolbar-view-btn {
-    padding: var(--tm-space-1) var(--tm-space-3);
-    border: none;
-    border-radius: var(--tm-radius-sm);
-    background: transparent;
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-medium);
-    min-height: 1.75rem;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+/* The switcher is the core pill tablist. Its active tab reads as selected: a primary-subtle
+   fill, primary text, and a 1px primary inset. --tm-color-primary-text already flips per theme. */
+.tm-scheduler-toolbar-views .tm-tabs--pill [role="tab"][aria-selected="true"] {
+    background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
+    color: var(--tm-color-primary-text);
+    box-shadow: inset 0 0 0 1px var(--tm-color-primary);
+}
+
+.tm-scheduler-toolbar-views .tm-tabs--pill [role="tab"][aria-selected="true"]:hover {
+    background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-scheduler-toolbar-title-text {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.tm-scheduler-toolbar-view-btn:hover {
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-}
-
-.tm-scheduler-toolbar-view-btn--active {
-    background: var(--tm-bg-surface);
-    color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-xs);
-}
-
-.tm-scheduler-toolbar-view-btn--active:hover {
-    background: var(--tm-bg-surface);
-    color: var(--tm-color-primary-hover);
-}
-
 .tm-scheduler-toolbar-nav-btn:focus-visible,
-.tm-scheduler-toolbar-print:focus-visible,
 .tm-scheduler-event:focus-visible {
     outline: 2px solid transparent;
     box-shadow: var(--tm-focus-ring);
 }
+
+/* A selected event keeps its own colour and stays readable over a hover. */
+.tm-scheduler-event-surface[aria-current="true"],
+.tm-scheduler-agenda-event[aria-current="true"] {
+    border-color: var(--event-color, var(--tm-color-primary));
+    box-shadow: 0 0 0 1px var(--event-color, var(--tm-color-primary)), var(--tm-shadow-md);
+    z-index: 2;
+}
+
+.tm-scheduler-event-surface[aria-current="true"]:hover,
+.tm-scheduler-agenda-event[aria-current="true"]:hover {
+    border-color: var(--event-color, var(--tm-color-primary));
+    box-shadow: 0 0 0 1px var(--event-color, var(--tm-color-primary)), var(--tm-shadow-md);
+}
+
+.tm-scheduler-event-surface[aria-current="true"]:focus-visible,
+.tm-scheduler-agenda-event[aria-current="true"]:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 1px var(--event-color, var(--tm-color-primary)), var(--tm-focus-ring);
+}
+
+.tm-scheduler-month-day--selected:focus-visible,
+.tm-scheduler-timegrid-col--selected:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 40%, transparent), var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-scheduler-month-day--selected,
+    .tm-scheduler-timegrid-col--selected,
+    .tm-scheduler-event-surface[aria-current="true"],
+    .tm-scheduler-agenda-event[aria-current="true"] {
+        outline: 2px solid Highlight;
+    }
+}
+
+.tm-scheduler-toolbar-date .tm-popover__trigger:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-scheduler-toolbar-date .tm-popover__trigger[aria-expanded="true"] {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-scheduler-toolbar-title { text-align: start; }
+.tm-scheduler-toolbar { justify-content: flex-start; }
 
 /* The view group clips with overflow:hidden, so an outset ring is cut off. */
 .tm-scheduler-toolbar-view-btn:focus-visible {
@@ -195,23 +288,6 @@
 /* Dark mode comes from the token files: every colour above reads a --tm-* token. */
 
 /* ── Print ─────────────────────────────────────────────────────────── */
-.tm-scheduler-toolbar-print {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 2rem;
-    height: var(--tm-space-9);
-    margin-left: var(--tm-space-2);
-    padding: 0 var(--tm-space-2);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-sm);
-    cursor: pointer;
-}
-.tm-scheduler-toolbar-print:hover { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
-
 @media print {
     .tm-scheduler,
     .tm-scheduler-body {
@@ -220,7 +296,12 @@
         overflow: visible;
     }
     .tm-scheduler-toolbar-nav,
-    .tm-scheduler-toolbar-views { display: none !important; }
+    .tm-scheduler-toolbar-views,
+    .tm-scheduler-toolbar-primary,
+    .tm-scheduler-toolbar-overflow,
+    .tm-scheduler-toolbar-slot,
+    .tm-scheduler-toolbar-title-chevron,
+    .tm-scheduler-toolbar-title svg { display: none !important; }
     .tm-scheduler { border: none; box-shadow: none; }
     .tm-scheduler-toolbar { border-bottom: 1px solid var(--tm-color-border); }
     .tm-scheduler-toolbar-title { width: 100%; text-align: center; }

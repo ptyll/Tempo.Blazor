@@ -80,6 +80,16 @@
     color: var(--tm-text-secondary);
 }
 
+.tm-scheduler-month-day--selected {
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 40%, transparent);
+}
+
+.tm-scheduler-month-day--selected .tm-scheduler-month-day-number {
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
 .tm-scheduler-month-day--today {
     background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }

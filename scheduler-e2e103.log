@@ -1,0 +1,22 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  Tempo.Reporting.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Abstractions\bin\Debug\net10.0\Tempo.Reporting.Abstractions.dll
+  Tempo.Blazor.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Abstractions\bin\Debug\net10.0\Tempo.Blazor.Abstractions.dll
+  Tempo.Reporting.Engine -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Engine\bin\Debug\net10.0\Tempo.Reporting.Engine.dll
+  Tempo.Blazor.DocumentFormats -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DocumentFormats\bin\Debug\net10.0\Tempo.Blazor.DocumentFormats.dll
+  Tempo.Blazor.DataTableXlsx -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DataTableXlsx\bin\Debug\net10.0\Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Blazor -> C:\work\Tempo.Blazor\src\Tempo.Blazor\bin\Debug\net10.0\Tempo.Blazor.dll
+  Tempo.Blazor.Wireframe -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Wireframe\bin\Debug\net10.0\Tempo.Blazor.Wireframe.dll
+  Tempo.ReportServer.Api -> C:\work\Tempo.Blazor\src\Tempo.ReportServer.Api\bin\Debug\net10.0\Tempo.ReportServer.Api.dll
+  Tempo.Blazor.E2E -> C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller [13 s]
+  Chybová zpráva:
+   Assert.AreEqual selhalo. Očekáván rozdíl, který není větší jak <1> mezi očekávanou hodnotou <352> a aktuální hodnotou <404>. ArrowDown must scroll the grid, not the page.
+  Trasování zásobníku:
+     at Tempo.Blazor.E2E.Accessibility.SchedulerAccessibilityE2ETests.Week_ArrowDown_Keeps_The_Focused_Slot_Inside_The_Scroller() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Accessibility\SchedulerAccessibilityE2ETests.cs:line 161
+
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:   109, Přeskočeno:     0, Celkem:   110, Doba trvání: 7 m 40 s - Tempo.Blazor.E2E.dll (net10.0)

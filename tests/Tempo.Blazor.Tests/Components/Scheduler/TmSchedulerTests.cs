@@ -46,7 +46,7 @@ public class TmSchedulerTests : LocalizationTestBase
     {
         var cut = Render<TmScheduler>();
 
-        cut.FindAll(".tm-scheduler-toolbar-view-btn").Count.Should().BeGreaterThanOrEqualTo(4);
+        cut.FindAll("[role='tab']").Count.Should().BeGreaterThanOrEqualTo(4);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class TmSchedulerTests : LocalizationTestBase
             .Add(c => c.ViewChanged, EventCallback.Factory.Create<TmScheduleViewType>(this, v => view = v)));
 
         // Click "Agenda" button
-        var agendaBtn = cut.FindAll(".tm-scheduler-toolbar-view-btn")
+        var agendaBtn = cut.FindAll("[role='tab']")
             .First(b => b.GetAttribute("data-view") == "Agenda");
         agendaBtn.Click();
 
@@ -71,9 +71,9 @@ public class TmSchedulerTests : LocalizationTestBase
         var cut = Render<TmScheduler>(p => p
             .Add(c => c.View, TmScheduleViewType.Month));
 
-        var monthBtn = cut.FindAll(".tm-scheduler-toolbar-view-btn")
+        var monthBtn = cut.FindAll("[role='tab']")
             .First(b => b.GetAttribute("data-view") == "Month");
-        monthBtn.ClassList.Should().Contain("tm-scheduler-toolbar-view-btn--active");
+        monthBtn.GetAttribute("aria-selected").Should().Be("true");
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public class TmSchedulerTests : LocalizationTestBase
                 q.RangeStart == new DateTime(2025, 6, 15) && q.RangeEnd == new DateTime(2025, 6, 16)),
             Arg.Any<CancellationToken>());
         cut.FindComponent<TmSchedulerAgendaView>().Instance.AgendaDays.Should().Be(1);
-        cut.Find(".tm-scheduler-toolbar-title").TextContent.Should().Be("15. června 2025");
+        cut.Find(".tm-scheduler-toolbar-title [aria-live]").TextContent.Trim().Should().Be("15. června 2025");
     }
 
     /// <summary>
@@ -550,5 +550,167 @@ public class TmSchedulerTests : LocalizationTestBase
             .Add(c => c.MaxVisibleEvents, 5));
 
         cut.FindComponent<TmSchedulerMonthView>().Instance.MaxVisibleEvents.Should().Be(5);
+    }
+
+    /// <summary>
+    /// Selecting a day is two-way and independent of navigation: the click raises SelectedDateChanged
+    /// and the cell is marked, while CurrentDate stays put.
+    /// </summary>
+    [Fact]
+    public void Selecting_A_Day_Is_Two_Way()
+    {
+        DateTime? selected = null;
+        var navigated = false;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDateChanged, EventCallback.Factory.Create<DateTime?>(this, d => selected = d))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, _ => navigated = true)));
+
+        cut.Find("[data-date='2025-06-15']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-date='2025-06-18']").Click();
+
+        selected.Should().Be(new DateTime(2025, 6, 18));
+        navigated.Should().BeFalse("selecting a day does not navigate");
+    }
+
+    /// <summary>The selected day is forwarded to the week and day column headers.</summary>
+    [Fact]
+    public void SelectedDate_Is_Forwarded_To_Views()
+    {
+        foreach (var view in new[] { TmScheduleViewType.Week, TmScheduleViewType.Day })
+        {
+            var cut = Render<TmScheduler>(p => p
+                .Add(c => c.View, view)
+                .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+                .Add(c => c.SelectedDate, new DateTime(2025, 6, 15)));
+
+            cut.Find(".tm-scheduler-timegrid-col--selected").TextContent.Should().Contain("15");
+        }
+    }
+
+    /// <summary>A selected week or day column announces the selected day in its accessible name.</summary>
+    [Fact]
+    public void Week_Day_Header_Reflects_SelectedDate()
+    {
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Week)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDate, new DateTime(2025, 6, 15)));
+
+        cut.Find(".tm-scheduler-timegrid-col--selected").GetAttribute("aria-label")
+            .Should().Contain("Selected day");
+    }
+
+    /// <summary>A day click selects the day and does not clear the selected event.</summary>
+    [Fact]
+    public void Day_Click_Does_Not_Clear_SelectedEvent()
+    {
+        var standup = new TmScheduleEvent { Id = "standup", Title = "Standup", Start = new DateTime(2025, 6, 15, 9, 0, 0), End = new DateTime(2025, 6, 15, 10, 0, 0) };
+        TmScheduleEvent? cleared = standup;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup })
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => cleared = e)));
+
+        cut.Find("[data-date='2025-06-18']").Click();
+
+        cleared.Should().BeSameAs(standup, "a day click selects the day and leaves the selected event alone");
+    }
+
+    /// <summary>Clicking an event raises OnEventClick and SelectedEventChanged with the same event.</summary>
+    [Fact]
+    public void Selecting_An_Event_Is_Two_Way()
+    {
+        var standup = new TmScheduleEvent
+        {
+            Id = "standup", Title = "Standup",
+            Start = new DateTime(2025, 6, 15, 9, 0, 0),
+            End = new DateTime(2025, 6, 15, 10, 0, 0)
+        };
+        var review = new TmScheduleEvent
+        {
+            Id = "review", Title = "Review",
+            Start = new DateTime(2025, 6, 16, 11, 0, 0),
+            End = new DateTime(2025, 6, 16, 12, 0, 0)
+        };
+        TmScheduleEvent? clicked = null;
+        TmScheduleEvent? selected = null;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup, review })
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.OnEventClick, EventCallback.Factory.Create<TmScheduleEvent>(this, e => clicked = e))
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => selected = e)));
+
+        cut.Find(".tm-scheduler-month-event--selected").GetAttribute("aria-current").Should().Be("true");
+        cut.FindAll(".tm-scheduler-month-event").Single(e => e.TextContent.Contains("Review")).Click();
+        clicked!.Id.Should().Be("review");
+        selected!.Id.Should().Be("review");
+    }
+
+    /// <summary>A day click raises SelectedDateChanged exactly once: the host owns it, the view does not.</summary>
+    [Fact]
+    public void Day_Click_Raises_SelectedDateChanged_Exactly_Once()
+    {
+        var raised = 0;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDateChanged, EventCallback.Factory.Create<DateTime?>(this, _ => raised++)));
+
+        cut.Find("[data-date='2025-06-18']").Click();
+
+        raised.Should().Be(1);
+    }
+
+    /// <summary>A Timeline slot click selects its day through the same slot handler as the other views.</summary>
+    [Fact]
+    public void Timeline_Slot_Click_Selects_The_Day()
+    {
+        DateTime? selected = null;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Timeline)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDateChanged, EventCallback.Factory.Create<DateTime?>(this, d => selected = d)));
+
+        cut.Find(".tm-scheduler-timeline-slot").Click();
+
+        selected.Should().Be(new DateTime(2025, 6, 15));
+    }
+
+    /// <summary>Views, the add button and the host slots are forwarded to the toolbar.</summary>
+    [Fact]
+    public void Toolbar_Options_Are_Forwarded()
+    {
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Week)
+            .Add(c => c.Views, new[] { TmScheduleViewType.Week, TmScheduleViewType.Day })
+            .Add(c => c.OnAddClick, EventCallback.Factory.Create(this, () => { }))
+            .Add(c => c.HeaderStart, (RenderFragment)(b => b.AddMarkupContent(0, "<span data-testid='host-start'>S</span>"))));
+
+        cut.FindAll("[role='tab']").Select(t => t.GetAttribute("data-view")).Should().Equal("Week", "Day");
+        cut.Find("[data-testid='scheduler-add']").Should().NotBeNull();
+        cut.Find("[data-testid='host-start']").Should().NotBeNull();
+    }
+
+    /// <summary>The title popover navigates: the picked day becomes CurrentDate.</summary>
+    [Fact]
+    public void Title_Popover_Navigates_To_The_Picked_Day()
+    {
+        DateTime? navigated = null;
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.View, TmScheduleViewType.Month)
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.CurrentDateChanged, EventCallback.Factory.Create<DateTime>(this, d => navigated = d)));
+
+        cut.Find(".tm-scheduler-toolbar-title [role='button']").Click();
+        cut.Find(".tm-calendar-view [data-date='2025-06-20']").Click();
+
+        navigated.Should().Be(new DateTime(2025, 6, 20));
     }
 }

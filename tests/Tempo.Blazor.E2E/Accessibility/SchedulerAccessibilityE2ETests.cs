@@ -211,9 +211,9 @@ public sealed class SchedulerAccessibilityE2ETests : WasmTestBase
             await SetLightAsync(page);
         }
 
-        var radio = page.Locator("[data-testid='scheduler-month-section'] [role='radio'][tabindex='0']");
-        await radio.FocusAsync();
-        await SaveElementAsync(page, "[data-testid='scheduler-month-section'] .tm-scheduler-toolbar", "scheduler-view-radio-focus");
+        var tab = page.Locator("[data-testid='scheduler-month-section'] [data-tm-group='view'] [role='tab'][aria-selected='true']");
+        await tab.FocusAsync();
+        await SaveElementAsync(page, "[data-testid='scheduler-month-section'] .tm-scheduler-toolbar", "scheduler-view-tab-focus");
     }
 
     private static async Task<string[]> AxeAsync(IPage page, string section)

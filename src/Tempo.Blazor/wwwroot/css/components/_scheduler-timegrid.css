@@ -231,6 +231,16 @@
     background: var(--tm-scheduler-weekend-bg);
 }
 
+.tm-scheduler-timegrid-col--selected {
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-color-primary) 40%, transparent);
+}
+
+.tm-scheduler-timegrid-col--selected .tm-scheduler-timegrid-col-header-date {
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
 .tm-scheduler-timegrid-col--today {
     background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
 }

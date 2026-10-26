@@ -302,4 +302,55 @@ public class TmPopoverTests : LocalizationTestBase
         cut.Find(".tm-popover__trigger").GetAttribute("aria-expanded").Should().Be("false");
         cut.FindAll(".tm-drawer").Should().BeEmpty();
     }
+
+    [Fact]
+    public void Popover_Role_SetsAriaHasPopup_AndTriggerAriaLabel()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.Role, "dialog")
+            .Add(x => x.TriggerAriaLabel, "June 2026, go to date")
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<span>June 2026</span>"))
+            .AddChildContent("Calendar"));
+
+        var trigger = cut.Find(".tm-popover__trigger");
+        trigger.GetAttribute("aria-haspopup").Should().Be("dialog");
+        trigger.GetAttribute("aria-label").Should().Be("June 2026, go to date");
+    }
+
+    [Fact]
+    public void Popover_WithoutRole_OmitsAriaHasPopup()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Body"));
+
+        cut.Find(".tm-popover__trigger").HasAttribute("aria-haspopup").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Popover_RoleAndTrapFocus_ForwardToTheOverlay()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.Role, "dialog")
+            .Add(x => x.TrapFocus, true)
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Calendar"));
+
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        overlay.Instance.Role.Should().Be("dialog");
+        overlay.Instance.TrapFocus.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Popover_FocusTriggerAsync_TargetsTheTrigger()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Body"));
+
+        await cut.InvokeAsync(() => cut.Instance.FocusTriggerAsync());
+
+        JSInterop.Invocations.Should().Contain(i =>
+            i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+    }
 }

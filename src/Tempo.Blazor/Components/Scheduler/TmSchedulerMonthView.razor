@@ -24,16 +24,19 @@
             var isOther = d.Month != CurrentDate.Month;
             var isToday = d == DateOnly.FromDateTime(Today);
             var isWeekend = HighlightWeekends && d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            var isSelected = SelectedDate.HasValue && d == DateOnly.FromDateTime(SelectedDate.Value);
             var css = "tm-scheduler-month-day"
                 + (isOther ? " tm-scheduler-month-day--other" : "")
                 + (isToday ? " tm-scheduler-month-day--today" : "")
-                + (isWeekend ? " tm-scheduler-month-day--weekend" : "");
+                + (isWeekend ? " tm-scheduler-month-day--weekend" : "")
+                + (isSelected ? " tm-scheduler-month-day--selected" : "");
 
             @* The cell is a non-native focusable: Enter activates on keydown, Space on keyup. *@
             <div @key="d" class="@css"
                  role="gridcell"
                  tabindex="@(d == ActiveDate ? "0" : "-1")"
                  aria-current="@(isToday ? "date" : null)"
+                 aria-selected="@(isSelected ? "true" : "false")"
                  aria-label="@DayLabel(d)"
                  data-tm-roving="@_rovingId"
                  data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
@@ -57,8 +60,9 @@
                         var e = evt;
                         @* The event is a non-native focusable nested in the emulating cell, so its
                            keys are fenced off the cell's handler. *@
-                        <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(!e.AllDay || AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface" : "") @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @(e.AllDay && AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event--tinted" : "") @e.CssClass"
+                        <div @key="e.Id" @ref="_eventRefs[e.Id]" class="tm-scheduler-month-event @(!e.AllDay || AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event-surface" : "") @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @(e.AllDay && AllDayEventStyle == TmAllDayEventStyle.Tinted ? "tm-scheduler-event--tinted" : "") @(IsSelectedEvent(e) ? "tm-scheduler-month-event--selected" : "") @e.CssClass"
                              role="button"
+                             aria-current="@(IsSelectedEvent(e) ? "true" : null)"
                              tabindex="@(d == ActiveDate ? "0" : "-1")"
                              aria-label="@(EventTemplate is null ? EventAriaLabel(e) : null)"
                              data-tm-roving="@_rovingId"
@@ -170,6 +174,18 @@
 
     /// <summary>Fires when the "+N more" button of a day cell is activated, with that day's date.</summary>
     [Parameter] public EventCallback<DateTime> OnMoreClick { get; set; }
+
+    /// <summary>The selected day. The matching cell gets <c>aria-selected</c> and <c>tm-scheduler-month-day--selected</c>.</summary>
+    [Parameter] public DateTime? SelectedDate { get; set; }
+
+    /// <summary>Fires when the user selects a day.</summary>
+    [Parameter] public EventCallback<DateTime?> SelectedDateChanged { get; set; }
+
+    /// <summary>The selected event. The matching event gets <c>aria-current</c> and the selected class.</summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
 
     /// <summary>
     /// Fires when PageUp/PageDown moves the roving stop into another month, with that month's date.
@@ -305,14 +321,21 @@
     private Task HandleEventKeyUp(KeyboardEventArgs e, TmScheduleEvent evt)
         => SchedulerA11y.IsSpaceActivation(e) ? HandleEventClick(evt) : Task.CompletedTask;
 
-    private Task HandleDayClick(DateOnly date)
+    private async Task HandleDayClick(DateOnly date)
     {
         var start = date.ToDateTime(TimeOnly.MinValue);
         var end = date.ToDateTime(new TimeOnly(23, 59, 59));
-        return OnSlotClick.InvokeAsync((start, end));
+        await SelectedDateChanged.InvokeAsync(start);
+        await OnSlotClick.InvokeAsync((start, end));
     }
 
-    private Task HandleEventClick(TmScheduleEvent evt) => OnEventClick.InvokeAsync(evt);
+    private bool IsSelectedEvent(TmScheduleEvent evt) => SelectedEvent is not null && SelectedEvent.Id == evt.Id;
+
+    private async Task HandleEventClick(TmScheduleEvent evt)
+    {
+        await SelectedEventChanged.InvokeAsync(evt);
+        await OnEventClick.InvokeAsync(evt);
+    }
 
     private Task HandleMoreClick(DateOnly date) => OnMoreClick.InvokeAsync(date.ToDateTime(TimeOnly.MinValue));
 

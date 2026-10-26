@@ -8,6 +8,31 @@
   ],
   "parameters": [
     {
+      "name": "Role",
+      "type": "string?",
+      "isRequired": false,
+      "description": "ARIA role of the panel, forwarded to TmOverlayPanel. Also sets aria-haspopup on the trigger."
+    },
+    {
+      "name": "TrapFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Trap Tab inside the panel while it is open. Forwarded to TmOverlayPanel."
+    },
+    {
+      "name": "OnOpened",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the panel has finished opening. Forwarded to TmOverlayPanel."
+    },
+    {
+      "name": "TriggerAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name for the trigger when its content has no name of its own."
+    },
+    {
       "name": "TriggerContent",
       "type": "RenderFragment",
       "isRequired": true,

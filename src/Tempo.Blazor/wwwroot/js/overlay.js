@@ -502,8 +502,15 @@ export function dismiss(entry, reason) {
         // that input: Escape there means "close the popup", not "leave the field" (20B
         // carry-forward).
         const anchorEl = resolveAnchor(entry);
-        if (anchorEl && typeof anchorEl.focus === 'function') {
-            if (focusWentNowhere(entry, document.activeElement) && anchorEl.isConnected) {
+        // Snapshot now: hidePopover() detaches the focused node before close() runs, and a
+        // detached node would fail the restore check.
+        if (anchorEl && focusWentNowhere(entry, document.activeElement)) {
+            // A focus trap keeps the page inert until the panel hides, so the anchor cannot take
+            // focus yet. Every other panel restores now, as before: waiting for hidePanel drops
+            // the restore when close() never reaches a still-connected panel.
+            if (entry.options?.trapFocus) {
+                entry.restoreAnchorOnClose = anchorEl;
+            } else if (typeof anchorEl.focus === 'function') {
                 anchorEl.focus({ preventScroll: true });
             }
         }
@@ -517,9 +524,14 @@ export function dismiss(entry, reason) {
         .then(accepted => {
             if (!accepted) {
                 entry.dismissed = false;
+                // The panel stays open, so the deferred restore must not fire on a later close.
+                entry.restoreAnchorOnClose = null;
             }
         })
-        .catch(() => { entry.dismissed = false; });
+        .catch(() => {
+            entry.dismissed = false;
+            entry.restoreAnchorOnClose = null;
+        });
     return true;
 }
 
@@ -622,6 +634,7 @@ function normalizeOptions(options) {
         constrainHeight: options?.constrainHeight === true,
         closeOnEscape: options?.closeOnEscape !== false,
         closeOnOutsidePointerDown: options?.closeOnOutsidePointerDown !== false,
+        trapFocus: options?.trapFocus === true,
     };
 }
 
@@ -650,6 +663,10 @@ function showPanel(entry) {
 
 function hidePanel(entry) {
     const { panel } = entry;
+    // The focus trap keeps the page inert while the panel is open, so the anchor cannot take
+    // focus until the panel is actually hidden. Escape asked for the restore; do it here.
+    const restore = entry.restoreAnchorOnClose;
+    entry.restoreAnchorOnClose = null;
     if (entry.usesPopover) {
         try {
             if (panel.matches(':popover-open')) {
@@ -664,6 +681,10 @@ function hidePanel(entry) {
     panel.style.cssText = '';
     panel.removeAttribute(PLACEMENT_ATTR);
     panel.removeAttribute(FALLBACK_ATTR);
+    if (restore && restore.isConnected && typeof restore.focus === 'function'
+        && focusWentNowhere(entry, document.activeElement)) {
+        restore.focus({ preventScroll: true });
+    }
 }
 
 // ── Public API (called from TmOverlayPanel) ─────────────────────────────────
@@ -754,6 +775,14 @@ function release(key) {
     resizeObserver?.unobserve(entry.panel);
     if (entry.panel.isConnected) {
         hidePanel(entry);
+    } else if (entry.restoreAnchorOnClose && entry.restoreAnchorOnClose.isConnected
+        && typeof entry.restoreAnchorOnClose.focus === 'function'
+        && focusWentNowhere(entry, document.activeElement)) {
+        // The panel node was already replaced, so hidePanel never runs — the restore it owns
+        // still has to happen or Escape leaves focus on the body. Same guard as hidePanel:
+        // a focus that already landed somewhere stays there.
+        entry.restoreAnchorOnClose.focus({ preventScroll: true });
+        entry.restoreAnchorOnClose = null;
     }
     unbindListeners();
 }

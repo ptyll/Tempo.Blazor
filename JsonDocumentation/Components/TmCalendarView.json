@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "Today",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The day marked as today. Falls back to the machine-local today when unset."
+    },
+    {
       "name": "SelectedDate",
       "type": "DateOnly?",
       "isRequired": false,

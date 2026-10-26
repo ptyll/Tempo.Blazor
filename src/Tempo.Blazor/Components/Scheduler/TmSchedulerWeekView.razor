@@ -12,6 +12,9 @@
                          HighlightWeekends="@HighlightWeekends"
                          AllDayEventStyle="@AllDayEventStyle"
                          OnSlotClick="@OnSlotClick"
+                         SelectedDate="@SelectedDate"
+                         SelectedEvent="@SelectedEvent"
+                         SelectedEventChanged="@SelectedEventChanged"
                          OnEventClick="@OnEventClick"
                          OnEventChanged="@OnEventChanged"
                          OnSlotContextMenu="@OnSlotContextMenu"
@@ -39,6 +42,15 @@
 
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>The selected day, forwarded to the time grid.</summary>
+    [Parameter] public DateTime? SelectedDate { get; set; }
+
+    /// <summary>The selected event, forwarded to the time grid.</summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
 
     /// <summary>Whether events are read-only.</summary>
     [Parameter] public bool ReadOnly { get; set; }

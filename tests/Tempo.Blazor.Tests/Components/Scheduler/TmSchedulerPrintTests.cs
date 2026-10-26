@@ -14,6 +14,7 @@ public class TmSchedulerPrintTests : LocalizationTestBase
     public void Scheduler_ShowsPrintButton_ByDefault()
     {
         var cut = Render<TmScheduler>();
+        cut.Find("[data-testid='scheduler-more'] button").Click();
         cut.FindAll("[data-testid='scheduler-print']").Should().ContainSingle();
     }
 
@@ -25,14 +26,15 @@ public class TmSchedulerPrintTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Toolbar_PrintClick_FiresOnPrint()
+    public async Task Toolbar_PrintClick_FiresOnPrint()
     {
         var clicked = false;
         var cut = Render<TmSchedulerToolbar>(p => p
             .Add(c => c.ShowPrint, true)
             .Add(c => c.OnPrint, EventCallback.Factory.Create(this, () => clicked = true)));
 
-        cut.Find("[data-testid='scheduler-print']").Click();
+        cut.Find("[data-testid='scheduler-more'] button").Click();
+        await cut.Find("[data-testid='scheduler-print']").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 
         clicked.Should().BeTrue();
     }

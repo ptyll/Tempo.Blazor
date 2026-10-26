@@ -571,6 +571,56 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
         item.InnerHtml.Should().Contain("Standup");
     }
 
+    /// <summary>
+    /// The selected day is a state, not the roving stop: aria-selected plus the selected class, and
+    /// clicking the day raises SelectedDateChanged with that day.
+    /// </summary>
+    [Fact]
+    public void SelectedDate_Marks_The_Day_And_A_Click_Selects_It()
+    {
+        DateTime? selected = null;
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDate, new DateTime(2025, 6, 15))
+            .Add(c => c.SelectedDateChanged, EventCallback.Factory.Create<DateTime?>(this, d => selected = d)));
+
+        var day = cut.Find("[data-date='2025-06-15']");
+        day.GetAttribute("aria-selected").Should().Be("true");
+        day.ClassList.Should().Contain("tm-scheduler-month-day--selected");
+        cut.FindAll("[aria-selected='true']").Should().ContainSingle();
+
+        cut.Find("[data-date='2025-06-18']").Click();
+        selected.Should().Be(new DateTime(2025, 6, 18));
+    }
+
+    /// <summary>The selected event carries aria-selected and the selected class; a click raises both callbacks.</summary>
+    [Fact]
+    public void SelectedEvent_Marks_The_Event()
+    {
+        var standup = Evt("Standup", new DateTime(2025, 6, 15, 9, 0, 0), new DateTime(2025, 6, 15, 10, 0, 0));
+        standup.Id = "standup";
+        var review = Evt("Review", new DateTime(2025, 6, 15, 11, 0, 0), new DateTime(2025, 6, 15, 12, 0, 0));
+        review.Id = "review";
+        TmScheduleEvent? clicked = null;
+        TmScheduleEvent? selected = null;
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, new List<TmScheduleEvent> { standup, review })
+            .Add(c => c.SelectedEvent, standup)
+            .Add(c => c.OnEventClick, EventCallback.Factory.Create<TmScheduleEvent>(this, e => clicked = e))
+            .Add(c => c.SelectedEventChanged, EventCallback.Factory.Create<TmScheduleEvent?>(this, e => selected = e)));
+
+        var marked = cut.Find(".tm-scheduler-month-event--selected");
+        marked.GetAttribute("aria-current").Should().Be("true");
+        marked.TextContent.Should().Contain("Standup");
+        cut.FindAll("[aria-current='true'].tm-scheduler-month-event").Should().ContainSingle();
+
+        cut.FindAll(".tm-scheduler-month-event").Single(e => e.TextContent.Contains("Review")).Click();
+        clicked!.Id.Should().Be("review");
+        selected!.Id.Should().Be("review");
+    }
+
     private static AngleSharp.Dom.IElement ActiveCell(IRenderedComponent<TmSchedulerMonthView> cut)
         => cut.Find("[role='gridcell'][tabindex='0']");
 

@@ -1,0 +1,62 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  Tempo.Blazor.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Abstractions\bin\Debug\net10.0\Tempo.Blazor.Abstractions.dll
+  Tempo.Blazor.DataTableXlsx -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DataTableXlsx\bin\Debug\net10.0\Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Reporting.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Abstractions\bin\Debug\net10.0\Tempo.Reporting.Abstractions.dll
+  Tempo.Reporting.Engine -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Engine\bin\Debug\net10.0\Tempo.Reporting.Engine.dll
+  Tempo.Blazor.DocumentFormats -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DocumentFormats\bin\Debug\net10.0\Tempo.Blazor.DocumentFormats.dll
+  Tempo.Blazor -> C:\work\Tempo.Blazor\src\Tempo.Blazor\bin\Debug\net10.0\Tempo.Blazor.dll
+  Tempo.Blazor.Wireframe -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Wireframe\bin\Debug\net10.0\Tempo.Blazor.Wireframe.dll
+  Tempo.ReportServer.Api -> C:\work\Tempo.Blazor\src\Tempo.ReportServer.Api\bin\Debug\net10.0\Tempo.ReportServer.Api.dll
+  Tempo.Blazor.E2E -> C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll
+Testovací běh pro C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\bin\Debug\net10.0\Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné Scheduler_Toolbar_DatePopover_Keyboard_And_Axe [39 s]
+  Chybová zpráva:
+   V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_DatePopover_Keyboard_And_Axe došlo k výjimce: 
+System.TimeoutException: Timeout 15000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-overlay-panel .tm-calendar-view") to be visible
+  -     34 × locator resolved to hidden <div class="tm-calendar-view ">…</div>
+  Trasování zásobníku:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_DatePopover_Keyboard_And_Axe() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Scheduler\SchedulerNavigationE2ETests.cs:line 182
+
+  Zprávy standardního výstupu:
+ 
+ 
+ Zprávy pro TestContext:
+ [baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+
+
+  Neúspěšné Scheduler_Toolbar_OneView_And_InsertedView_Are_One_Tab_Stop [21 s]
+  Chybová zpráva:
+   V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_OneView_And_InsertedView_Are_One_Tab_Stop došlo k výjimce: 
+Microsoft.Playwright.PlaywrightException: Locator expected to have attribute 'data-view' 'Week'
+But was: 'Month' 
+Call log:
+  -   - LocatorAssertions.ToHaveAttributeAsync with timeout 5000ms
+  -   - waiting for Locator("[data-testid='scheduler-toolbar-inserted-view']").Locator("[role='tab']").Nth(1)
+  -     9 × locator resolved to <button role="tab" _bl_418="" type="button" tabindex="-1" class="tm-tab" data-view="Month" aria-selected="false" id="tab-tm-sched-ad16f248b4fb4729bc2c55a4da09c9a8-Month" aria-controls="tabpanel-tm-sched-ad16f248b4fb4729bc2c55a4da09c9a8-Month">…</button>
+  -       - unexpected value "Month"
+  Trasování zásobníku:
+     at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, FrameExpectOptions expectOptions, Object expected, String message) in /_/src/Playwright/Core/AssertionsBase.cs:line 87
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue[] expectedText, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 65
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue textValue, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 57
+   at Tempo.Blazor.E2E.Scheduler.SchedulerNavigationE2ETests.Scheduler_Toolbar_OneView_And_InsertedView_Are_One_Tab_Stop() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Scheduler\SchedulerNavigationE2ETests.cs:line 217
+
+Zpráva kolekce dat Blame: Všechny testy se dokončily. Soubor sekvence se nevygeneruje.
+  Neúspěšné Scheduler_Toolbar_And_Selection_LightAndDark [29 s]
+  Chybová zpráva:
+   V testovací metodě Tempo.Blazor.E2E.Scheduler.SchedulerVisualE2ETests.Scheduler_Toolbar_And_Selection_LightAndDark došlo k výjimce: 
+System.TimeoutException: Timeout 15000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-overlay-panel .tm-calendar-view") to be visible
+  Trasování zásobníku:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.Scheduler.SchedulerVisualE2ETests.Scheduler_Toolbar_And_Selection_LightAndDark() in C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Scheduler\SchedulerVisualE2ETests.cs:line 108
+
+
+Neúspěšné!  - Neúspěšné:     3, Úspěšné:     0, Přeskočeno:     0, Celkem:     3, Doba trvání: 1 m 42 s - Tempo.Blazor.E2E.dll (net10.0)

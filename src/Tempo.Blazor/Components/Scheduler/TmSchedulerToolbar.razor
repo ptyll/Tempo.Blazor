@@ -1,60 +1,132 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Models
 @using System.Globalization
 @inject IJSRuntime JS
 
+@if (ShowHeader)
+{
 <div class="tm-scheduler-toolbar">
-    <div class="tm-scheduler-toolbar-nav">
-        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-prev")"
-                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev"><TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" /></button>
+    @if (HeaderStart is not null)
+    {
+        <div class="tm-scheduler-toolbar-slot" data-tm-group="header-start">@HeaderStart</div>
+    }
+
+    <div class="tm-scheduler-toolbar-nav" data-tm-group="navigation">
         <button type="button" class="tm-scheduler-toolbar-nav-btn tm-scheduler-toolbar-today-btn"
                 data-testid="@TestId("scheduler-today")"
                 @onclick="OnToday">@Loc["TmScheduler_Today"]</button>
+        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-prev")"
+                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev"><TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" /></button>
         <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-next")"
                 aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext"><TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" /></button>
     </div>
 
-    <h2 class="tm-scheduler-toolbar-title" aria-live="polite" aria-atomic="true">@DisplayTitle</h2>
+    <div class="tm-scheduler-toolbar-title" data-tm-group="title" @ref="_titleRef">
+        <span class="tm-sr-only" aria-live="polite" aria-atomic="true">@DisplayTitle</span>
+        <TmPopover @ref="_datePopover" @bind-IsOpen="_dateOpen" ShowArrow="false"
+                   Title="@Loc["TmScheduler_GoToDate"]" Role="dialog" TrapFocus="true"
+                   TriggerAriaLabel="@GoToDateLabel" OnOpened="FocusCalendarDayAsync"
+                   Class="tm-scheduler-toolbar-date">
+            <TriggerContent>
+                <span class="tm-scheduler-toolbar-title-btn">
+                    <span aria-hidden="true"><TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" /></span>
+                    <span class="tm-scheduler-toolbar-title-text">@DisplayTitle</span>
+                    <span aria-hidden="true" class="tm-scheduler-toolbar-title-chevron"><TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" /></span>
+                </span>
+            </TriggerContent>
+            <ChildContent>
+                <TmCalendarView SelectedDate="@DisplayedDay"
+                                Today="@Today"
+                                OnDateClick="PickDateAsync" />
+            </ChildContent>
+        </TmPopover>
+    </div>
 
-    <div class="tm-scheduler-toolbar-views">
-        <div role="radiogroup" aria-label="@Loc["TmScheduler_ViewSwitcher"]"
-             aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End">
-            @foreach (var view in _availableViews)
+    <div class="tm-scheduler-toolbar-views" data-tm-group="view">
+        <TmTabs Variant="TabVariant.Pill" ActiveTabId="@ActiveTabId" ActiveTabIdChanged="SelectViewAsync"
+                AriaLabel="@Loc["TmScheduler_ViewSwitcher"]">
+            @foreach (var view in OfferedViews)
             {
                 var v = view;
-                var selected = v == View;
-                <button @key="v" type="button"
-                        role="radio"
-                        aria-checked="@selected.ToString().ToLowerInvariant()"
-                        tabindex="@(selected ? "0" : "-1")"
-                        data-tm-roving="@_rovingId"
-                        class="tm-scheduler-toolbar-view-btn @(selected ? "tm-scheduler-toolbar-view-btn--active" : "")"
-                        data-view="@v"
-                        @ref="_radioRefs[v]"
-                        @onclick="@(() => OnViewChange.InvokeAsync(v))"
-                        @onkeydown="@(e => HandleViewKey(e, v))">@GetViewLabel(v)</button>
+                <TmTabPanel Id="@TabId(v)" Title="@GetViewLabel(v)"
+                            TabAttributes="@(new Dictionary<string, object> { ["data-view"] = v.ToString() })" />
             }
-        </div>
-        @if (ShowPrint)
-        {
-            <button type="button" class="tm-scheduler-toolbar-print"
-                    data-testid="@TestId("scheduler-print")"
-                    aria-label="@Loc["TmScheduler_Print"]"
-                    title="@Loc["TmScheduler_Print"]"
-                    @onclick="OnPrint"><TmIcon Name="@IconNames.Printer" Size="IconSize.Sm" /></button>
-        }
+        </TmTabs>
     </div>
+
+    @if (HeaderActions is not null)
+    {
+        <div class="tm-scheduler-toolbar-slot" data-tm-group="header-actions">@HeaderActions</div>
+    }
+
+    @if (OnAddClick.HasDelegate)
+    {
+        <div class="tm-scheduler-toolbar-primary" data-tm-group="primary">
+            <button type="button" class="tm-scheduler-toolbar-add" data-testid="@TestId("scheduler-add")"
+                    @onclick="OnAddClick">
+                <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                <span>@Loc["TmScheduler_AddEvent"]</span>
+            </button>
+        </div>
+    }
+
+    @if (ShowPrint)
+    {
+        <div class="tm-scheduler-toolbar-overflow" data-tm-group="overflow">
+            <TmDropdown Icon="@IconNames.MoreHorizontal" Text="@Loc["Tm_More"]" AriaLabel="@Loc["Tm_More"]"
+                        ShowChevron="false" OutlineTrigger="true" data-testid="@TestId("scheduler-more")"
+                        OnSelect="HandleMoreAsync">
+                <TmDropdownItem Value="print" Icon="@IconNames.Printer" aria-label="@Loc["TmScheduler_Print"]" data-testid="@TestId("scheduler-print")">@Loc["TmScheduler_Print"]</TmDropdownItem>
+            </TmDropdown>
+        </div>
+    }
 </div>
+}
 
 @code {
-    private readonly Dictionary<TmScheduleViewType, ElementReference> _radioRefs = new();
-    private readonly string _rovingId = "tm-scheduler-roving-" + Guid.NewGuid().ToString("N");
-    private bool _moveFocus;
+    private string Instance => string.IsNullOrEmpty(InstanceId) ? _fallbackId : InstanceId;
+    private readonly string _fallbackId = "tm-sched-" + Guid.NewGuid().ToString("N");
+    private TmPopover? _datePopover;
+    private bool _dateOpen;
+    private ElementReference _titleRef;
 
-    private static readonly TmScheduleViewType[] _availableViews =
+    private static readonly TmScheduleViewType[] _canonical =
         [TmScheduleViewType.Day, TmScheduleViewType.Week, TmScheduleViewType.Month, TmScheduleViewType.Agenda, TmScheduleViewType.Timeline];
+
+    /// <summary>
+    /// The offered views in the host's order. A view that is not offered is inserted at its
+    /// canonical position, so the active view is always one of the tabs.
+    /// </summary>
+    private IReadOnlyList<TmScheduleViewType> OfferedViews
+    {
+        get
+        {
+            var offered = Views is { Count: > 0 }
+                ? Views.Where(Enum.IsDefined).Distinct().ToList()
+                : _canonical.ToList();
+            if (!offered.Contains(View))
+            {
+                var at = offered.FindIndex(v => Array.IndexOf(_canonical, v) > Array.IndexOf(_canonical, View));
+                offered.Insert(at < 0 ? offered.Count : at, View);
+            }
+            return offered;
+        }
+    }
+
+    private string ActiveTabId => TabId(View);
+
+    private string TabId(TmScheduleViewType view) => $"{Instance}-{view}";
+
+    private DateOnly DisplayedDay
+        => DateOnly.FromDateTime(CurrentDate == default ? Today.ToDateTime(TimeOnly.MinValue) : CurrentDate);
+
+    private string GoToDateLabel => string.Format(Loc["TmScheduler_GoToDateLabel"], DisplayTitle);
 
     /// <summary>Current view type.</summary>
     [Parameter] public TmScheduleViewType View { get; set; }
@@ -92,6 +164,30 @@
     /// <summary>Fires when the user clicks Print.</summary>
     [Parameter] public EventCallback OnPrint { get; set; }
 
+    /// <summary>Views offered in the switcher, in the given order. Null offers every view.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleViewType>? Views { get; set; }
+
+    /// <summary>Fires when the user clicks the add button. The button renders only when this has a delegate.</summary>
+    [Parameter] public EventCallback OnAddClick { get; set; }
+
+    /// <summary>Fires when the user picks a day in the title popover.</summary>
+    [Parameter] public EventCallback<DateTime> OnDatePicked { get; set; }
+
+    /// <summary>Host content rendered before the navigation group.</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host content rendered after the view switcher, before the add button.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>When false, the toolbar renders nothing. Default true. For <c>TmScheduler</c> this row is the header.</summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>The day the calendar marks as today. The scheduler passes its display-zone today.</summary>
+    [Parameter] public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab.</summary>
+    [Parameter] public string? InstanceId { get; set; }
+
     private string DisplayTitle
     {
         get
@@ -111,35 +207,34 @@
         }
     }
 
-    // Roving tabindex over the radios: arrows move the checked view, Home/End jump to the ends.
-    private Task HandleViewKey(KeyboardEventArgs e, TmScheduleViewType current)
+    private Task SelectViewAsync(string tabId)
     {
-        if (SchedulerA11y.HasModifier(e)) return Task.CompletedTask;
-        var index = Array.IndexOf(_availableViews, current);
-        var next = e.Key switch
-        {
-            "ArrowRight" or "ArrowDown" => (index + 1) % _availableViews.Length,
-            "ArrowLeft" or "ArrowUp" => (index - 1 + _availableViews.Length) % _availableViews.Length,
-            "Home" => 0,
-            "End" => _availableViews.Length - 1,
-            _ => -1
-        };
-        if (next < 0) return Task.CompletedTask;
-        _moveFocus = true;
-        return OnViewChange.InvokeAsync(_availableViews[next]);
+        var view = OfferedViews.FirstOrDefault(v => TabId(v) == tabId);
+        return OnViewChange.InvokeAsync(view);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task PickDateAsync(DateOnly day)
     {
-        if (!_moveFocus) return;
-        _moveFocus = false;
-        if (!_radioRefs.TryGetValue(View, out var radio)) return;
+        _dateOpen = false;
+        await OnDatePicked.InvokeAsync(day.ToDateTime(TimeOnly.MinValue));
+        if (_datePopover is not null)
+        {
+            try { await _datePopover.FocusTriggerAsync(); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+        }
+    }
+
+    private async Task FocusCalendarDayAsync()
+    {
         try
         {
-            await radio.FocusAsync();
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusCalendarDay", _titleRef);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
     }
+
+    private Task HandleMoreAsync(string value)
+        => value == "print" ? OnPrint.InvokeAsync() : Task.CompletedTask;
 
     private string GetViewLabel(TmScheduleViewType view) => view switch
     {

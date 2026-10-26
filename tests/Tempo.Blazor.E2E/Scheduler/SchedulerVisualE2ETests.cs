@@ -89,6 +89,192 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
         }
     }
 
+    /// <summary>
+    /// Toolbar 2.0 review shots. The date popover and the More menu paint in the top layer, so those
+    /// two are page clips; the rest are the component. Light and dark.
+    /// </summary>
+    [TestMethod]
+    public async Task Scheduler_Toolbar_And_Selection_LightAndDark()
+    {
+        var page = await OpenAsync(false);
+        foreach (var dark in new[] { false, true })
+        {
+            if (dark) await SetDarkAsync(page);
+            var theme = dark ? "dark" : "light";
+
+            var section = page.Locator("[data-testid='scheduler-toolbar-section']");
+            var toolbar = section.Locator(".tm-scheduler").First;
+            // Park the card just under the sticky app bar. A toolbar left at the viewport top is
+            // covered by that bar, and one left low makes the date popover flip above it.
+            await ParkBelowHeaderAsync(page, toolbar.Locator(".tm-scheduler-toolbar"));
+            await toolbar.Locator(".tm-scheduler-toolbar-title [role='button']").ClickAsync();
+            await toolbar.Locator(".tm-calendar-view").WaitForAsync(
+                new LocatorWaitForOptions { Timeout = 15000 });
+            await page.WaitForTimeoutAsync(300);
+            await FrameFromRowAsync(page, toolbar.Locator(".tm-scheduler-toolbar"), $"toolbar-popover-open--{theme}");
+            await page.Keyboard.PressAsync("Escape");
+            await Assertions.Expect(toolbar.Locator(".tm-calendar-view")).ToBeHiddenAsync();
+
+            var more = toolbar.Locator("[data-testid='scheduler-more'] button");
+            await ParkBelowHeaderAsync(page, toolbar.Locator(".tm-scheduler-toolbar"));
+            await more.ClickAsync();
+            await page.WaitForTimeoutAsync(400);
+            await FrameFromRowAsync(page, toolbar.Locator(".tm-scheduler-toolbar"), $"toolbar-more-open--{theme}");
+            await page.Keyboard.PressAsync("Escape");
+
+            foreach (var (sectionId, file) in new[]
+            {
+                ("scheduler-month-section", "selected-month"),
+                ("scheduler-week-section", "selected-week"),
+                ("scheduler-agenda-section", "selected-agenda"),
+            })
+                await SaveAsync(page, sectionId, $"{file}--{theme}");
+        }
+
+        await page.GotoAsync($"{BaseUrl}/gantt",
+            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
+        await WaitForAppReadyAsync(page);
+        await page.Locator("button", new PageLocatorOptions { HasText = "Calendar" }).First.ClickAsync();
+        var gantt = page.Locator("[data-testid='gantt-calendar-view'] .tm-scheduler");
+        await gantt.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await SaveSchedulerAsync(page, gantt, "gantt-calendar-toolbar--light");
+        await SetDarkAsync(page);
+        await SaveSchedulerAsync(page, gantt, "gantt-calendar-toolbar--dark");
+    }
+
+    /// <summary>
+    /// Scrolls so the toolbar sits just under the sticky demo bar. The page scrolls the window,
+    /// and the window is what the clip is measured against.
+    /// </summary>
+    private static async Task ParkBelowHeaderAsync(IPage page, ILocator toolbar)
+    {
+        // Align the toolbar to the top, then move it just under the sticky bar. High enough that
+        // the date popover opens downward, low enough that the bar does not cover the row.
+        await toolbar.EvaluateAsync("el => el.scrollIntoView({ block: 'start' })");
+        await page.EvaluateAsync("() => window.scrollBy(0, -140)");
+    }
+
+    /// <summary>
+    /// Puts the toolbar row just under the sticky bar, then frames that row plus the open panel.
+    /// The row is the one that owns the panel, so a second scheduler in the same section is not
+    /// what gets clipped.
+    /// </summary>
+    private static async Task FrameFromRowAsync(IPage page, ILocator row, string file)
+    {
+        await row.EvaluateAsync("el => window.scrollBy(0, el.getBoundingClientRect().top - 150)");
+        await page.WaitForTimeoutAsync(200);
+        var box = (await row.BoundingBoxAsync())!;
+        var panel = page.Locator(".tm-overlay-panel:popover-open").Last;
+        var panelBox = await panel.CountAsync() > 0 ? await panel.BoundingBoxAsync() : null;
+        var viewport = page.ViewportSize!;
+        var top = panelBox is null ? box.Y : Math.Min(box.Y, panelBox.Y);
+        // A menu that has just opened can report a box shorter than its items. Keep the Print row.
+        var panelBottom = panelBox is null ? 0 : panelBox.Y + Math.Max(panelBox.Height, 72);
+        var bottom = Math.Max(box.Y + box.Height, panelBottom);
+        var left = panelBox is null ? box.X : Math.Min(box.X, panelBox.X);
+        var right = panelBox is null ? box.X + box.Width : Math.Max(box.X + box.Width, panelBox.X + panelBox.Width);
+        var x = Math.Max(0, left - 8);
+        var y = Math.Max(0, top - 8);
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = ShotPath(file),
+            Clip = new Clip
+            {
+                X = x,
+                Y = y,
+                Width = Math.Max(1, Math.Min(right - left + 16, viewport.Width - x)),
+                Height = Math.Max(1, Math.Min(bottom - top + 16, viewport.Height - y))
+            }
+        });
+    }
+
+    /// <summary>
+    /// Frames the section plus the open panel. A toolbar clip misses a panel that flipped above
+    /// it, and a full page frame includes the sticky bar.
+    /// </summary>
+    private static async Task FrameAsync(IPage page, ILocator section, string file)
+    {
+        var row = section.Locator(".tm-scheduler-toolbar").First;
+        var rowBox = (await row.BoundingBoxAsync())!;
+        var box = (await section.BoundingBoxAsync())!;
+        box = new Microsoft.Playwright.LocatorBoundingBoxResult
+        {
+            X = box.X,
+            Y = rowBox.Y,
+            Width = box.Width,
+            Height = box.Y + box.Height - rowBox.Y
+        };
+        var panel = page.Locator(".tm-overlay-panel:popover-open").Last;
+        var panelBox = await panel.CountAsync() > 0 ? await panel.BoundingBoxAsync() : null;
+        var viewport = page.ViewportSize!;
+        var top = panelBox is null ? box.Y : Math.Min(box.Y, panelBox.Y);
+        var bottom = panelBox is null ? box.Y + box.Height : Math.Max(box.Y + box.Height, panelBox.Y + panelBox.Height);
+        var left = panelBox is null ? box.X : Math.Min(box.X, panelBox.X);
+        var right = panelBox is null ? box.X + box.Width : Math.Max(box.X + box.Width, panelBox.X + panelBox.Width);
+        var x = Math.Max(0, left - 8);
+        var y = Math.Max(0, top - 8);
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = ShotPath(file),
+            Clip = new Clip
+            {
+                X = x,
+                Y = y,
+                Width = Math.Max(1, Math.Min(right - left + 16, viewport.Width - x)),
+                Height = Math.Max(1, Math.Min(bottom - top + 16, viewport.Height - y))
+            }
+        });
+    }
+
+    private static async Task ClipAsync(IPage page, ILocator anchor, string file)
+    {
+        var toolbar = anchor.Locator(".tm-scheduler-toolbar").First;
+        var box = (await toolbar.BoundingBoxAsync())!;
+        var panel = anchor.Locator(".tm-overlay-panel:popover-open").First;
+        if (await panel.CountAsync() > 0)
+            await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        var panelBox = await panel.CountAsync() > 0 ? await panel.BoundingBoxAsync() : null;
+        var viewport = page.ViewportSize!;
+        var left = panelBox is null ? box.X : Math.Min(box.X, panelBox.X);
+        var right = panelBox is null ? box.X + box.Width : Math.Max(box.X + box.Width, panelBox.X + panelBox.Width);
+        // Keep the toolbar at the top of the clip and extend downward over the open panel. A panel
+        // that flipped above the toolbar is included only while that still leaves the toolbar in frame.
+        var top = box.Y;
+        var bottom = box.Y + box.Height;
+        if (panelBox is not null)
+        {
+            bottom = Math.Max(bottom, panelBox.Y + panelBox.Height);
+            if (panelBox.Y < top && top - panelBox.Y < 80) top = panelBox.Y;
+        }
+        var x = Math.Max(0, left - 16);
+        var y = Math.Max(0, top - 8);
+        var width = Math.Max(1, Math.Min(right - left + 32, viewport.Width - x));
+        var height = Math.Max(1, Math.Min(bottom - top + 24, viewport.Height - y));
+
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = ShotPath(file),
+            Clip = new Clip { X = x, Y = y, Width = width, Height = height }
+        });
+    }
+
+    private static async Task SaveSchedulerAsync(IPage page, ILocator scheduler, string file)
+    {
+        await scheduler.ScrollIntoViewIfNeededAsync();
+        await scheduler.Locator(".tm-scheduler-toolbar").ScreenshotAsync(
+            new LocatorScreenshotOptions { Path = ShotPath(file) });
+    }
+
+    private static string ShotPath(string file)
+    {
+        var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E",
+            UpdateBaseline
+                ? Path.Combine("__screenshots__", "scheduler", "toolbar")
+                : Path.Combine("TestResults", "scheduler", "toolbar"));
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, $"{file}.png");
+    }
+
     private async Task<IPage> OpenAsync(bool indigo)
     {
         var context = await CreateContextAsync();

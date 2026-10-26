@@ -30,9 +30,10 @@
                     @foreach (var evt in group.Value)
                     {
                         var e = evt;
-                        <button type="button" class="tm-scheduler-agenda-event @e.CssClass"
+                        <button type="button" class="tm-scheduler-agenda-event @(IsSelected(e) ? "tm-scheduler-agenda-event--selected" : "") @e.CssClass"
+                                aria-current="@(IsSelected(e) ? "true" : null)"
                                 aria-label="@(EventTemplate is null ? AgendaEventLabel(e) : null)"
-                                @onclick="@(() => OnEventClick.InvokeAsync(e))">
+                                @onclick="@(() => HandleEventClick(e))">
                             <span class="tm-scheduler-agenda-event-dot"
                                   style="@(e.Color is not null ? $"background-color: {e.Color};" : "")"></span>
                             @if (EventTemplate is not null)
@@ -83,6 +84,12 @@
     /// <summary>Fires when an event is clicked.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
 
+    /// <summary>The selected event. The matching row gets <c>aria-current</c> and <c>tm-scheduler-agenda-event--selected</c>.</summary>
+    [Parameter] public TmScheduleEvent? SelectedEvent { get; set; }
+
+    /// <summary>Fires when the user selects an event.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
+
     /// <summary>
     /// Optional custom event renderer used inside each agenda row.
     /// The row chrome (the colour dot) stays; the time, title and description are replaced.
@@ -96,6 +103,14 @@
 
     private string AgendaEventLabel(TmScheduleEvent e)
         => SchedulerA11y.EventLabel(Loc, e, CultureInfo.CurrentUICulture);
+
+    private bool IsSelected(TmScheduleEvent e) => SelectedEvent is not null && SelectedEvent.Id == e.Id;
+
+    private async Task HandleEventClick(TmScheduleEvent e)
+    {
+        await SelectedEventChanged.InvokeAsync(e);
+        await OnEventClick.InvokeAsync(e);
+    }
 
     private void BuildGroupedEvents()
     {

@@ -83,7 +83,7 @@
         }
     </div>;
 
-    private RenderFragment HeaderStrip => @<div class="tm-tabs__header" role="tablist" @onkeydown="HandleKeyDown">
+    private RenderFragment HeaderStrip => @<div class="tm-tabs__header" role="tablist" aria-label="@AriaLabel" @onkeydown="HandleKeyDown">
         @foreach (var panel in _panels)
         {
             var isActive = panel.Id == ActiveTabId;
@@ -100,6 +100,7 @@
                     aria-disabled="@(panel.Disabled ? "true" : null)"
                     aria-controls="@($"tabpanel-{panel.Id}")"
                     tabindex="@(isActive ? 0 : -1)"
+                    @attributes="panel.TabAttributes"
                     @onclick="@(() => SelectTab(panel))">
                 @if (!string.IsNullOrEmpty(panel.Icon))
                 {
@@ -172,6 +173,9 @@
 
     /// <summary>Tab panel children.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Accessible name of the tablist. Null leaves the strip unnamed, as before.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }

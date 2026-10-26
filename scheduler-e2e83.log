@@ -1,0 +1,11 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  Tempo.Reporting.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Abstractions\bin\Debug\net10.0\Tempo.Reporting.Abstractions.dll
+  Tempo.Blazor.Abstractions -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Abstractions\bin\Debug\net10.0\Tempo.Blazor.Abstractions.dll
+  Tempo.Reporting.Engine -> C:\work\Tempo.Blazor\src\Tempo.Reporting.Engine\bin\Debug\net10.0\Tempo.Reporting.Engine.dll
+  Tempo.Blazor.DocumentFormats -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DocumentFormats\bin\Debug\net10.0\Tempo.Blazor.DocumentFormats.dll
+  Tempo.Blazor.DataTableXlsx -> C:\work\Tempo.Blazor\src\Tempo.Blazor.DataTableXlsx\bin\Debug\net10.0\Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Blazor -> C:\work\Tempo.Blazor\src\Tempo.Blazor\bin\Debug\net10.0\Tempo.Blazor.dll
+  Tempo.Blazor.Wireframe -> C:\work\Tempo.Blazor\src\Tempo.Blazor.Wireframe\bin\Debug\net10.0\Tempo.Blazor.Wireframe.dll
+  Tempo.ReportServer.Api -> C:\work\Tempo.Blazor\src\Tempo.ReportServer.Api\bin\Debug\net10.0\Tempo.ReportServer.Api.dll
+C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Scheduler\SchedulerVisualE2ETests.cs(195,9): error CS0120: Pro nestatické pole, metodu nebo vlastnost PlaywrightTestBase.TestContext se vyžaduje odkaz na objekt. [C:\work\Tempo.Blazor\tests\Tempo.Blazor.E2E\Tempo.Blazor.E2E.csproj]
