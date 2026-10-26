@@ -46,7 +46,7 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
 
         var timeline = page.Locator("[data-testid='scheduler-timeline-section'] .tm-scheduler");
         await timeline.ScrollIntoViewIfNeededAsync();
-        var eight = timeline.Locator(".tm-scheduler-timeline-time-header", new() { HasText = "09:00" }).First;
+        var eight = timeline.Locator(".tm-scheduler-timeline-time-header", new() { HasText = "9:00 AM" }).First;
         var bar = timeline.Locator(".tm-scheduler-timeline-event").First;
         var row = timeline.Locator(".tm-scheduler-timeline-row").First;
         var eightBox = (await eight.BoundingBoxAsync())!;
