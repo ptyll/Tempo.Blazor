@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Models;
@@ -147,9 +148,125 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     /// </summary>
     [Parameter] public EventCallback<TmChatDraftState> OnDraftChanged { get; set; }
 
+    // ── Slots: composer, banner, empty state, header ──
+
+    /// <summary>
+    /// Replaces the built-in composer (the input textarea + send button) with host markup — a
+    /// subscribe gate, a PPV field, an owner note + hint, anything the consumer domain needs. The
+    /// template receives a live <see cref="ChatComposerContext"/>: drive the typed text through
+    /// <see cref="ChatComposerContext.SetTextAsync"/> and send with
+    /// <see cref="ChatComposerContext.SendAsync"/> so the draft guard (<c>HasUnsavedDraft</c>,
+    /// <c>OnDraftChanged</c>) and the send path (<c>OnSendMessage</c> / <c>OnSend</c>, submit
+    /// state) keep working exactly as for the built-in composer; mirror
+    /// <see cref="ChatComposerContext.CanSend"/> on a custom send button.
+    /// <para>
+    /// When set, the built-in composer does NOT render (<c>.tm-chat__input</c> and
+    /// <c>.tm-chat__send-btn</c> disappear from the DOM) and neither <see cref="ComposerAddon"/>
+    /// nor <see cref="ComposerFooter"/> render — the template owns the whole composer area, and
+    /// markup passed into the template carries the HOST's CSS scope, not
+    /// <c>TmChat.razor.css</c>. The <c>.tm-chat__input-area</c> wrapper itself STAYS (its padding
+    /// and border-top), carrying <c>tm-chat__input-area--custom</c> so the template's markup
+    /// stacks vertically instead of the textarea + send flex row. Ignored when
+    /// <see cref="ShowComposer"/> is <see langword="false"/>.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment<ChatComposerContext>? ComposerTemplate { get; set; }
+
+    /// <summary>
+    /// Content rendered ABOVE the built-in composer input, inside the composer area — an owner
+    /// note, a hint or a short status line. Only rendered with the built-in composer (a
+    /// <see cref="ComposerTemplate"/> replaces the whole area and renders its own chrome).
+    /// </summary>
+    [Parameter] public RenderFragment? ComposerAddon { get; set; }
+
+    /// <summary>
+    /// Content rendered BELOW the built-in composer input row — a footnote, a remaining-character
+    /// count or a secondary action. Only rendered with the built-in composer (a
+    /// <see cref="ComposerTemplate"/> replaces the whole area and renders its own chrome).
+    /// </summary>
+    [Parameter] public RenderFragment? ComposerFooter { get; set; }
+
+    /// <summary>
+    /// Ids of host elements, e.g. inside <see cref="ComposerAddon"/>/<see cref="ComposerFooter"/>,
+    /// describing the composer input. Rendered as <c>aria-describedby</c> on the built-in
+    /// textarea; omitted from the DOM while <see langword="null"/> (the default). With a
+    /// <see cref="ComposerTemplate"/> the built-in textarea does not render — describe the
+    /// host-owned input there instead.
+    /// </summary>
+    [Parameter] public string? ComposerDescribedBy { get; set; }
+
+    /// <summary>
+    /// Whether the composer renders at all. <see langword="false"/> drops the composer area from
+    /// the DOM — the read-only / viewing variant of a chat (e.g. a subscribe gate rendered through
+    /// other markup, or a conversation the user may only read). Default <see langword="true"/>
+    /// (today's behavior). When <see langword="false"/>, <see cref="ComposerTemplate"/> is ignored
+    /// too.
+    /// <para>
+    /// Note that this covers only the MAIN composer: the thread panel's reply input is separate.
+    /// A truly read-only chat also needs <see cref="EnableThreads"/>=<see langword="false"/> and
+    /// <see cref="AllowEditDelete"/>=<see langword="false"/> so no reply input, edit or delete
+    /// affordance renders.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool ShowComposer { get; set; } = true;
+
+    /// <summary>
+    /// Content rendered ABOVE the message list — a connection banner (offline / reconnecting) or
+    /// any conversation-level callout. Rendered raw: TmChat adds NO wrapper element and
+    /// deliberately does NOT turn the banner into an aria-live region.
+    /// <para>
+    /// IMPORTANT: TmChat may own exactly one live region (rule enforced by the a11y phase). If the
+    /// banner content should be announced, put the <c>role="status"</c> (or an explicit
+    /// <c>aria-live</c>) on an element INSIDE this slot and keep the text short and
+    /// host-controlled — the slot content itself must carry the announcing role, never a wrapper
+    /// TmChat would add around it.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment? BannerContent { get; set; }
+
+    /// <summary>
+    /// Content rendered at the VERY TOP of the component, above <see cref="BannerContent"/> and the
+    /// message list — a conversation title bar or header controls. Rendered raw (no wrapper), so
+    /// the host markup owns its layout.
+    /// <para>
+    /// Note that an OPEN THREAD PANEL OVERLAYS it: the thread panel is absolutely positioned over
+    /// the component (top/right/bottom), so while a thread is open the panel covers the header
+    /// area on the panel's side.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+
+    /// <summary>
+    /// Replaces the built-in empty state (the icon + "no messages" texts) when the conversation has
+    /// no messages. The built-in empty state is fully dropped, so the host owns the empty-scenario
+    /// copy (e.g. a "start the conversation" call to action). Only applies while
+    /// <c>Messages</c> is empty; with messages present the slot is not rendered.
+    /// <para>
+    /// The content renders RAW at the top of the message list (no wrapper element). The built-in
+    /// empty state fills the message list and centers its content — for the built-in look the
+    /// host's slot root should use <c>flex:1</c> plus vertical/horizontal centering, since it sits
+    /// in the message list's flex column.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment? EmptyContent { get; set; }
+
+    /// <summary>
+    /// Whether the built-in message rows show the author avatar. Default <see langword="true"/>
+    /// (today's behavior); set <see langword="false"/> for consumers whose bubbles carry no
+    /// avatars. The switch applies to the BUILT-IN rows only — a <see cref="MessageTemplate"/>
+    /// renders its own markup and decides about avatars itself.
+    /// </summary>
+    [Parameter] public bool ShowAvatars { get; set; } = true;
+
     private string _inputText = string.Empty;
     private ElementReference _messagesContainer;
+    private ElementReference _composerInput;
     private bool _isSubmitting;
+
+    // ── Composer slot state ──
+    private static int _composerInputCounter;
+    private readonly string _composerInputId = $"tm-chat-composer-{Interlocked.Increment(ref _composerInputCounter)}";
+    private ChatComposerContext? _composerContext;
 
     // ── K6 interaction state ──
     private string? _activeThread;                       // internal fallback when not bound
@@ -174,6 +291,62 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     private string PlaceholderText => Placeholder ?? Loc["TmChat_Placeholder"];
 
     private bool IsSendDisabled => Disabled || string.IsNullOrWhiteSpace(_inputText) || _isSubmitting;
+
+    // ── Composer slot surface: a live view over this component, handed to ComposerTemplate ──
+
+    /// <summary>Current composer text — what the built-in textarea holds, or the last <see cref="SetComposerTextAsync"/> push.</summary>
+    internal string ComposerText => _inputText;
+
+    /// <summary>Whether a composer send is currently in flight.</summary>
+    internal bool ComposerIsSubmitting => _isSubmitting;
+
+    /// <summary>Whether sending is currently allowed (not disabled, not submitting, non-empty text).</summary>
+    internal bool ComposerCanSend => !Disabled && !ComposerIsSubmitting && !string.IsNullOrWhiteSpace(_inputText);
+
+    /// <summary>DOM id assigned to the built-in composer textarea; the attribute is present in the DOM only while that textarea renders.</summary>
+    internal string ComposerInputId => _composerInputId;
+
+    /// <summary>The per-component <see cref="ChatComposerContext"/>; the context is a live view, so one instance is reused.</summary>
+    internal ChatComposerContext ComposerContext => _composerContext ??= new(this);
+
+    /// <summary>
+    /// Pushes custom-composer text into the component so the draft guard keeps covering a replaced
+    /// composer. Dispatched like <see cref="DiscardDraftAsync"/> so it is safe from any thread.
+    /// </summary>
+    internal Task SetComposerTextAsync(string text)
+        => InvokeAsync(async () =>
+        {
+            _inputText = text ?? string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>
+    /// Focuses the built-in composer textarea; a no-op while it is not rendered (custom composer
+    /// or <see cref="ShowComposer"/>=<see langword="false"/>). Focus is best-effort: a failing or
+    /// disconnected JS call (the input unmounted between renders, the circuit dropped) is
+    /// swallowed rather than surfaced as an error.
+    /// </summary>
+    internal async ValueTask FocusComposerInputAsync()
+    {
+        if (!ShowComposer || ComposerTemplate is not null || string.IsNullOrEmpty(_composerInput.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            await _composerInput.FocusAsync();
+        }
+        catch (JSException)
+        {
+            // The element is gone (or the focus call failed) — nothing to focus, nothing to report.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone (Server) — focus is meaningless, not an error.
+        }
+    }
 
     /// <summary>
     /// Whether the component currently holds an unsaved draft in ANY slot — main composer, open
@@ -396,16 +569,46 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
 
     private async Task HandleSendAsync()
     {
+        await SubmitComposerAsync();
+    }
+
+    /// <summary>
+    /// The single send path of the composer, shared by the built-in send button and
+    /// <see cref="ChatComposerContext.SendAsync"/>: the text is trimmed and cleared, both send
+    /// events fire, the submit state flips for the duration of the host handlers and the cleared
+    /// composer is reported through the draft guard. A no-op while the composer cannot send
+    /// (<see cref="IsSendDisabled"/>). Call on the component's dispatcher (an event handler or via
+    /// <c>InvokeAsync</c>) — like the built-in button, this mutates state directly.
+    /// </summary>
+    internal async Task SubmitComposerAsync()
+    {
         if (IsSendDisabled) return;
         var text = _inputText.Trim();
         _inputText = string.Empty;
         _isSubmitting = true;
-        await OnSendMessage.InvokeAsync(text);
-        await OnSend.InvokeAsync(new ChatSendRequest(text));
-        _isSubmitting = false;
+        StateHasChanged();
+        try
+        {
+            await OnSendMessage.InvokeAsync(text);
+            await OnSend.InvokeAsync(new ChatSendRequest(text));
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+        StateHasChanged();
         // The composer slot just cleared — report it exactly once through the shared notify.
         await NotifyDraftChangedAsync();
     }
+
+    /// <summary>
+    /// Dispatches <see cref="SubmitComposerAsync"/> through <see cref="InvokeAsync"/> so a host
+    /// may call <see cref="ChatComposerContext.SendAsync"/> from any thread (a custom composer's
+    /// handler is not guaranteed to run on the renderer's synchronisation context, and the direct
+    /// path mutates state). The built-in button stays on the direct path — it always runs on the
+    /// dispatcher already.
+    /// </summary>
+    internal Task SendComposerViaDispatcherAsync() => InvokeAsync(SubmitComposerAsync);
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {

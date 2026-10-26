@@ -602,6 +602,22 @@
   the actions wrap into a grid at a narrow width and the icon controls are at least 32 px
   (`--tm-touch-target` on a coarse pointer).
 
+- **`TmChat` slots: composer, banner, header, empty state and the built-in avatars.** Hosts can
+  replace the built-in composer with `<ComposerTemplate Context="composer">` (a subscribe gate, a
+  PPV field, an owner note) while keeping the component's send path and draft guard: the template
+  receives a live `ChatComposerContext` (`Text`, `SetTextAsync`, `SendAsync` — the same path as the
+  built-in send button, including `OnSendMessage`/`OnSend` and the submitting state — plus
+  `CanSend`, `Disabled`, `IsSubmitting`, `FocusAsync()` and `InputId`), so pushing the typed text
+  through `SetTextAsync` keeps `HasUnsavedDraft` / `OnDraftChanged` covering a replaced composer.
+  Around the built-in composer, `ComposerAddon` renders an owner note above the input and
+  `ComposerFooter` a footnote below it (both only with the built-in composer — a
+  `ComposerTemplate` owns the whole area). `ShowComposer="false"` drops the composer area from the
+  DOM entirely (and ignores `ComposerTemplate`). `BannerContent` renders a connection banner above
+  the messages — deliberately NOT a live region: put `role="status"` on content INSIDE the slot if
+  it should announce, so TmChat keeps exactly one live region. `HeaderContent` renders at the very
+  top, `EmptyContent` replaces the built-in empty state while the conversation is empty, and
+  `ShowAvatars="false"` hides the built-in author avatars (default `true` = today's look). A host
+  that sets none of the new parameters compiles and renders exactly as before.
 
 ### Fixed
 

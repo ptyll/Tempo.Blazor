@@ -181,6 +181,26 @@
   background: var(--tm-bg-surface);
 }
 
+/* FZE-2: composer slots — ComposerAddon (above the input row) and ComposerFooter (below it)
+   stack the area vertically; the input row itself keeps the horizontal textarea + send layout. */
+.tm-chat__input-area--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* FZE-2: a ComposerTemplate replaces the whole composer — the wrapper (padding, border) stays,
+   but the host's markup stacks vertically instead of the textarea + send flex row. */
+.tm-chat__input-area--custom {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tm-chat__input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--tm-space-2);
+}
+
 .tm-chat__input {
   flex: 1;
   resize: none;

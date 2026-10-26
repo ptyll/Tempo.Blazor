@@ -1,0 +1,62 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Chat",
+  "description": "Live view over the TmChat composer, handed to the TmChat.ComposerTemplate render fragment. A host that fully replaces the built-in composer (subscribe gate, PPV field, owner note + hint, …) keeps the component's send path, submit state and draft guard working by driving its own input through this context: bind the input to Text, push each keystroke with SetTextAsync and send with SendAsync. Text is the source of truth — the template is re-rendered from it, so a controlled input bound to composer.Text clears itself after a send. The context is a live view over the owning TmChat, not a snapshot — every member reads the component's current state, so a context instance captured from an earlier render stays usable after the component re-renders.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatComposerContext.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Text",
+      "kind": "Property",
+      "type": "string",
+      "description": "The current composer text as the component sees it — the source of truth the template is rendered from: what the built-in textarea holds, or whatever the custom composer last pushed through SetTextAsync. Bind a controlled input to it; empty again after SendAsync (the re-render propagates the cleared text into the bound input)."
+    },
+    {
+      "name": "CanSend",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether sending is currently allowed — the composer is not disabled, not already submitting and holds text that is not whitespace-only. Mirror it on a custom send button's disabled state; SendAsync ignores the request when it is false."
+    },
+    {
+      "name": "Disabled",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the component's Disabled parameter is set (a gate such as a closed subscription typically drives it)."
+    },
+    {
+      "name": "IsSubmitting",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether a send is currently in flight (the host handler has not completed yet). While it is true, CanSend is false and further SendAsync calls are ignored."
+    },
+    {
+      "name": "InputId",
+      "kind": "Property",
+      "type": "string",
+      "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at."
+    }
+  ],
+  "methods": [
+    {
+      "name": "SetTextAsync",
+      "kind": "Method",
+      "description": "Pushes the text typed in a custom composer into the component, so the draft guard (HasUnsavedDraft / OnDraftChanged's HasComposerDraft) keeps covering a replaced composer exactly as it covers the built-in one. Call it from the custom input's oninput; does not trim — trimming happens on send."
+    },
+    {
+      "name": "SendAsync",
+      "kind": "Method",
+      "description": "Sends the current Text through the SAME path as the built-in send button: the text is trimmed and cleared, TmChat's OnSendMessage and OnSend fire, the submit state flips for the duration and the cleared composer is reported to the draft guard. A no-op when CanSend is false. The template re-renders with the cleared Text, so a controlled input clears itself after an awaited send. Safe to call from any thread — the send is dispatched onto the component's renderer synchronisation context."
+    },
+    {
+      "name": "FocusAsync",
+      "kind": "Method",
+      "description": "Moves focus to the built-in composer textarea. With a custom composer the built-in textarea is not rendered — focus the host's own input there instead (the template markup owns it)."
+    }
+  ],
+  "examples": [
+    "<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"@HandleSend\">\n    <ComposerTemplate Context=\"composer\">\n        <!-- controlled input: Text is the source of truth -->\n        <textarea value=\"@composer.Text\" disabled=\"@composer.Disabled\"\n                  @oninput=\"@(e => composer.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n        <button disabled=\"@(!composer.CanSend)\" @onclick=\"composer.SendAsync\">Send</button>\n    </ComposerTemplate>\n</TmChat>"
+  ],
+  "itemName": "ChatComposerContext"
+}

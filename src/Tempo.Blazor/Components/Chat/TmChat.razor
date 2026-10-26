@@ -4,15 +4,33 @@
 
 <div class="tm-chat @Class" @attributes="AdditionalAttributes">
 
+    @if (HeaderContent is not null)
+    {
+        @HeaderContent
+    }
+
+    @if (BannerContent is not null)
+    {
+        @* Deliberately NOT a live region — see the BannerContent XML doc. *@
+        @BannerContent
+    }
+
     <!-- Messages -->
     <div class="tm-chat__messages" @ref="_messagesContainer">
         @if (Messages.Count == 0)
         {
-            <div class="tm-chat__empty">
-                <TmIcon Name="message-circle" Size="IconSize.Xl" />
-                <p>@Loc["TmChat_EmptyTitle"]</p>
-                <span>@Loc["TmChat_EmptySubtitle"]</span>
-            </div>
+            @if (EmptyContent is not null)
+            {
+                @EmptyContent
+            }
+            else
+            {
+                <div class="tm-chat__empty">
+                    <TmIcon Name="message-circle" Size="IconSize.Xl" />
+                    <p>@Loc["TmChat_EmptyTitle"]</p>
+                    <span>@Loc["TmChat_EmptySubtitle"]</span>
+                </div>
+            }
         }
         else
         {
@@ -37,23 +55,33 @@
     </div>
 
     <!-- Input area -->
-    <div class="tm-chat__input-area">
-        <textarea class="tm-chat__input"
-                  rows="1"
-                  placeholder="@PlaceholderText"
-                  disabled="@Disabled"
-                  @bind="_inputText"
-                  @bind:event="oninput"
-                  @bind:after="NotifyDraftChangedAsync"
-                  @onkeydown="HandleKeyDownAsync"></textarea>
-        <button type="button"
-                class="tm-chat__send-btn"
-                disabled="@IsSendDisabled"
-                aria-label="@Loc["TmChat_Send"]"
-                @onclick="HandleSendAsync">
-            <TmIcon Name="send" Size="IconSize.Sm" />
-        </button>
-    </div>
+    @if (ShowComposer)
+    {
+        var custom = ComposerTemplate is not null;
+        var stacked = !custom && (ComposerAddon is not null || ComposerFooter is not null);
+        <div class="@ComposerAreaClass(stacked, custom)">
+            @if (ComposerTemplate is not null)
+            {
+                @ComposerTemplate(ComposerContext)
+            }
+            else if (stacked)
+            {
+                @if (ComposerAddon is not null)
+                {
+                    @ComposerAddon
+                }
+                <div class="tm-chat__input-row">@BuiltInComposerInput</div>
+                @if (ComposerFooter is not null)
+                {
+                    @ComposerFooter
+                }
+            }
+            else
+            {
+                @BuiltInComposerInput
+            }
+        </div>
+    }
 
     <!-- Thread panel -->
     @if (EnableThreads && ActiveThreadRoot is { } threadRoot)
@@ -106,6 +134,39 @@
 </div>
 
 @code {
+    // The composer area is a flex row by default; when a ComposerAddon (above) or ComposerFooter
+    // (below) surrounds the built-in input, the area stacks vertically and the input row keeps the
+    // horizontal textarea + send layout (see .tm-chat__input-area--stacked in TmChat.razor.css).
+    // A ComposerTemplate replaces the whole composer — the wrapper (padding, border) stays and
+    // stacks the host's markup vertically via .tm-chat__input-area--custom.
+    private static string ComposerAreaClass(bool stacked, bool custom)
+        => custom
+            ? "tm-chat__input-area tm-chat__input-area--custom"
+            : stacked ? "tm-chat__input-area tm-chat__input-area--stacked" : "tm-chat__input-area";
+
+    // The built-in composer input row (textarea + send button), shared by the flat and the stacked
+    // composer layout. A ComposerTemplate replaces it entirely.
+    private RenderFragment BuiltInComposerInput => @<text>
+        <textarea class="tm-chat__input"
+                  id="@_composerInputId"
+                  rows="1"
+                  placeholder="@PlaceholderText"
+                  disabled="@Disabled"
+                  aria-describedby="@ComposerDescribedBy"
+                  @ref="_composerInput"
+                  @bind="_inputText"
+                  @bind:event="oninput"
+                  @bind:after="NotifyDraftChangedAsync"
+                  @onkeydown="HandleKeyDownAsync"></textarea>
+        <button type="button"
+                class="tm-chat__send-btn"
+                disabled="@IsSendDisabled"
+                aria-label="@Loc["TmChat_Send"]"
+                @onclick="HandleSendAsync">
+            <TmIcon Name="send" Size="IconSize.Sm" />
+        </button>
+    </text>;
+
     // Every message renders inside a neutral wrapper carrying the data-message-id anchor
     // (scroll positioning + read receipts) and data-kind when the message carries a Kind.
     // Inside the wrapper, either the host's MessageTemplate or the built-in message row.
@@ -130,31 +191,34 @@
         }
         else
         {
-            @if (message.Type == ChatMessageType.Incoming || !IsCurrentUser(message.Author))
+            @if (ShowAvatars)
             {
-                <div class="tm-chat__avatar tm-chat__avatar--incoming">
-                    @if (!string.IsNullOrEmpty(message.Author?.Avatar))
-                    {
-                        <span>@message.Author.Avatar</span>
-                    }
-                    else
-                    {
-                        <TmIcon Name="user" Size="IconSize.Sm" />
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="tm-chat__avatar tm-chat__avatar--outgoing">
-                    @if (!string.IsNullOrEmpty(CurrentUser.Avatar))
-                    {
-                        <span>@CurrentUser.Avatar</span>
-                    }
-                    else
-                    {
-                        <TmIcon Name="user" Size="IconSize.Sm" />
-                    }
-                </div>
+                @if (message.Type == ChatMessageType.Incoming || !IsCurrentUser(message.Author))
+                {
+                    <div class="tm-chat__avatar tm-chat__avatar--incoming">
+                        @if (!string.IsNullOrEmpty(message.Author?.Avatar))
+                        {
+                            <span>@message.Author.Avatar</span>
+                        }
+                        else
+                        {
+                            <TmIcon Name="user" Size="IconSize.Sm" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="tm-chat__avatar tm-chat__avatar--outgoing">
+                        @if (!string.IsNullOrEmpty(CurrentUser.Avatar))
+                        {
+                            <span>@CurrentUser.Avatar</span>
+                        }
+                        else
+                        {
+                            <TmIcon Name="user" Size="IconSize.Sm" />
+                        }
+                    </div>
+                }
             }
 
             <div class="tm-chat__bubble">

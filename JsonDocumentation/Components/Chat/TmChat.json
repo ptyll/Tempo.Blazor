@@ -168,6 +168,62 @@
       "type": "EventCallback<TmChatDraftState>",
       "isRequired": false,
       "description": "Fires whenever the TmChatDraftState value changes — a composer or thread-reply slot gained/lost text, or a message edit opened/changed/closed. Value-equality deduped, so it does NOT fire on every keystroke. The composer, the thread panel's reply input and the inline message edit hold text the host cannot observe through any parameter; use TmChatDraftState to build a dirty-guard before a reload or navigation that would silently discard an in-progress message. Opening an edit reports EditingMessageId immediately while HasUnsavedContent stays false until the text differs from the message as it was when the edit started."
+    },
+    {
+      "name": "ComposerTemplate",
+      "type": "RenderFragment<ChatComposerContext>?",
+      "isRequired": false,
+      "description": "Replaces the built-in composer (the input textarea + send button) with host markup — a subscribe gate, a PPV field, an owner note + hint, anything the consumer domain needs. The template receives a live ChatComposerContext: bind the host input to Text (the source of truth), push each keystroke with SetTextAsync and send with SendAsync so the draft guard (HasUnsavedDraft, OnDraftChanged) and the send path (OnSendMessage / OnSend, submit state) keep working exactly as for the built-in composer; mirror CanSend on a custom send button. When set, the built-in composer does NOT render (.tm-chat__input and .tm-chat__send-btn disappear from the DOM) and neither ComposerAddon nor ComposerFooter render — the template owns the whole composer area, and markup passed into the template carries the HOST's CSS scope, not TmChat.razor.css. The .tm-chat__input-area wrapper itself STAYS (its padding and border-top), carrying tm-chat__input-area--custom so the template's markup stacks vertically instead of the textarea + send flex row. Ignored when ShowComposer is false."
+    },
+    {
+      "name": "ComposerAddon",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered ABOVE the built-in composer input, inside the composer area — an owner note, a hint or a short status line. Only rendered with the built-in composer (a ComposerTemplate replaces the whole area and renders its own chrome)."
+    },
+    {
+      "name": "ComposerFooter",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered BELOW the built-in composer input row — a footnote, a remaining-character count or a secondary action. Only rendered with the built-in composer (a ComposerTemplate replaces the whole area and renders its own chrome)."
+    },
+    {
+      "name": "ComposerDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Ids of host elements, e.g. inside ComposerAddon/ComposerFooter, describing the composer input. Rendered as aria-describedby on the built-in textarea; omitted from the DOM while null (the default). With a ComposerTemplate the built-in textarea does not render — describe the host-owned input there instead."
+    },
+    {
+      "name": "ShowComposer",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the composer renders at all. false drops the composer area from the DOM — the read-only / viewing variant of a chat. Default true (today's behavior). When false, ComposerTemplate is ignored too. Note this covers only the MAIN composer: the thread panel's reply input is separate — a truly read-only chat also needs EnableThreads=false and AllowEditDelete=false so no reply input, edit or delete affordance renders."
+    },
+    {
+      "name": "BannerContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered ABOVE the message list — a connection banner (offline / reconnecting) or any conversation-level callout. Rendered raw: TmChat adds NO wrapper element and deliberately does NOT turn the banner into an aria-live region. TmChat may own exactly one live region; if the banner content should be announced, put the role=\"status\" (or an explicit aria-live) on an element INSIDE this slot with short, host-controlled text."
+    },
+    {
+      "name": "HeaderContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered at the VERY TOP of the component, above BannerContent and the message list — a conversation title bar or header controls. Rendered raw (no wrapper), so the host markup owns its layout. Note that an OPEN THREAD PANEL OVERLAYS it: the thread panel is absolutely positioned over the component (top/right/bottom), so while a thread is open the panel covers the header area on the panel's side."
+    },
+    {
+      "name": "EmptyContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Replaces the built-in empty state (the icon + \"no messages\" texts) when the conversation has no messages. The built-in empty state is fully dropped, so the host owns the empty-scenario copy. The content renders RAW at the top of the message list (no wrapper element); the built-in look fills the list and centers its content, so the host's slot root should use flex:1 plus vertical/horizontal centering. Only applies while Messages is empty; with messages present the slot is not rendered."
+    },
+    {
+      "name": "ShowAvatars",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the built-in message rows show the author avatar. Default true (today's behavior); set false for consumers whose bubbles carry no avatars. The switch applies to the built-in rows only — a MessageTemplate renders its own markup and decides about avatars itself."
     }
   ]
 }
