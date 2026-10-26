@@ -1,0 +1,20 @@
+{
+  "itemName": "ChatBubbleVariant",
+  "kind": "Enum",
+  "category": "Chat",
+  "namespace": "Tempo.Blazor.Components.Chat",
+  "description": "Visual variant of a TmChatBubble. Each member maps to the tm-chat-bubble--{variant} modifier class and to one of the --tm-chat-bubble-* custom property sets: Incoming→in, Outgoing→out, System and Pill→system, Pending, Queued, Discarded and Locked. Discarded renders its body as a semantic <del> element; Locked never renders the body, so locked content cannot leak into the DOM.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatBubbleVariant.cs",
+  "documentationStatus": "merged",
+  "values": [
+    { "name": "Incoming", "description": "A message received from somebody else." },
+    { "name": "Outgoing", "description": "A message sent by the current user." },
+    { "name": "System", "description": "A system event row (joins, leaves, status changes)." },
+    { "name": "Pill", "description": "A compact inline pill (tips, short notices); shares the system colour set." },
+    { "name": "Pending", "description": "Content still being processed (an AI draft awaiting review); dashed border." },
+    { "name": "Queued", "description": "Content waiting to be delivered (a scheduled message); info tint." },
+    { "name": "Discarded", "description": "Withdrawn content struck through with a semantic <del> and a host-provided note." },
+    { "name": "Locked", "description": "Locked content — the body is never rendered, only badges/notes/actions (e.g. a PPV price)." }
+  ]
+}

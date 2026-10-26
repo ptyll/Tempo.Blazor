@@ -1,0 +1,80 @@
+@namespace Tempo.Blazor.Components.Chat
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+@* TmChatBubble — presentation bubble for host-built chat templates (FZE-3).
+   Owns its own scoped stylesheet (mirrored in wwwroot/css/components/_chat.css); every colour,
+   radius and width reads a --tm-chat-bubble-* knob whose fallback IS the default. The knobs are
+   deliberately NOT declared on .tm-chat — a host overrides them on a wrapper or :root and the
+   var() fallbacks still resolve. Knob contract (each read with a fallback, never declared by the
+   library): --tm-chat-bubble-in-bg: --tm-chat-bubble-in-fg: --tm-chat-bubble-in-border:
+   --tm-chat-bubble-out-bg: --tm-chat-bubble-out-fg: --tm-chat-bubble-out-border:
+   --tm-chat-bubble-system-bg: --tm-chat-bubble-system-fg: --tm-chat-bubble-system-border:
+   --tm-chat-bubble-pending-bg: --tm-chat-bubble-pending-fg: --tm-chat-bubble-pending-border:
+   --tm-chat-bubble-queued-bg: --tm-chat-bubble-queued-fg: --tm-chat-bubble-queued-border:
+   --tm-chat-bubble-discarded-bg: --tm-chat-bubble-discarded-fg: --tm-chat-bubble-discarded-border:
+   --tm-chat-bubble-locked-bg: --tm-chat-bubble-locked-fg: --tm-chat-bubble-locked-border:
+   --tm-chat-bubble-radius: --tm-chat-bubble-padding: --tm-chat-bubble-max-width: *@
+
+<div class="@RootClass" data-variant="@VariantAttribute" data-testid="@RootTestId("chat-bubble")" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrEmpty(StatusLabel))
+    {
+        @* Announced first, before everything the host renders — the state must lead the reading
+           order for screen-reader users (the variant surface alone does not carry it). *@
+        <span class="tm-sr-only">@StatusLabel</span>
+    }
+
+    @if (ShowMeta)
+    {
+        <div class="tm-chat-bubble__meta">
+            @if (!string.IsNullOrEmpty(ActorLabel))
+            {
+                <span class="tm-chat-bubble__actor">@ActorLabel</span>
+            }
+            @if (Timestamp is not null)
+            {
+                @if (!string.IsNullOrEmpty(ActorLabel))
+                {
+                    <span class="tm-chat-bubble__meta-separator" aria-hidden="true">@MetaSeparator</span>
+                }
+                <time class="tm-chat-bubble__time" datetime="@DatetimeAttribute">@TimeText</time>
+            }
+            @Meta
+        </div>
+    }
+
+    @if (ShowBadgeArea)
+    {
+        <div class="tm-chat-bubble__badge">
+            @if (ShowVariantIcon && VariantIconName is not null)
+            {
+                @* Decorative redundant cue — the svg already carries aria-hidden="true"; the
+                   state itself must come from a visible Badge or the StatusLabel. *@
+                <TmIcon Name="@VariantIconName" />
+            }
+            @Badge
+        </div>
+    }
+
+    @if (ShowBody)
+    {
+        if (Variant == ChatBubbleVariant.Discarded)
+        {
+            @* Semantic strikethrough — <del> carries the meaning, not a CSS decoration. *@
+            <del class="tm-chat-bubble__body">@ChildContent</del>
+        }
+        else
+        {
+            <div class="tm-chat-bubble__body">@ChildContent</div>
+        }
+    }
+
+    @if (Note is not null)
+    {
+        <div class="tm-chat-bubble__note">@Note</div>
+    }
+
+    @if (Actions is not null)
+    {
+        <div class="tm-chat-bubble__actions">@Actions</div>
+    }
+</div>

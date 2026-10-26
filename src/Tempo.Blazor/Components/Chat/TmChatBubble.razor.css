@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmChatBubble — Scoped Styles (FZE-3)
+   ═══════════════════════════════════════════════════════════════
+
+   Every visual property reads a --tm-chat-bubble-* knob with a fallback to the same semantic
+   token the default uses. The knobs are deliberately NOT DECLARED anywhere in the library — not
+   on .tm-chat, not on :root — so a host can override them on a wrapper, on :root or directly on
+   the bubble and the var() fallback below is what renders untouched. Because the fallbacks are
+   semantic tokens, dark mode resolves at the element: no [data-theme="dark"] block is needed
+   (and the strict CSS audit forbids new ones in component stylesheets). The 1px border is always
+   painted (transparent by default), so the padding defaults are compensated by --tm-border-width
+   and a borderless host override keeps the text exactly where it was. */
+
+.tm-chat-bubble {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  width: fit-content;
+  min-width: 0;
+  gap: var(--tm-space-1);
+  padding: var(--tm-chat-bubble-padding, calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width)));
+  border: 1px solid transparent;
+  border-radius: var(--tm-chat-bubble-radius, var(--tm-radius-xl));
+  max-width: var(--tm-chat-bubble-max-width, 80%);
+  font-size: var(--tm-font-size-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* ── Variant surfaces ───────────────────────────────────────── */
+
+.tm-chat-bubble--incoming {
+  background: var(--tm-chat-bubble-in-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-in-fg, var(--tm-color-text));
+  border-color: var(--tm-chat-bubble-in-border, transparent);
+  border-bottom-left-radius: var(--tm-radius-sm);
+}
+
+.tm-chat-bubble--outgoing {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-out-bg, var(--tm-color-primary));
+  color: var(--tm-chat-bubble-out-fg, var(--tm-color-primary-contrast));
+  border-color: var(--tm-chat-bubble-out-border, transparent);
+  border-bottom-right-radius: var(--tm-radius-sm);
+}
+
+.tm-chat-bubble--system {
+  align-self: center;
+  text-align: center;
+  background: var(--tm-chat-bubble-system-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-system-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-system-border, transparent);
+  font-size: var(--tm-font-size-xs);
+}
+
+/* The pill shares the system colours — it is the compact inline form of a system notice. */
+.tm-chat-bubble--pill {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  align-self: center;
+  max-width: 100%;
+  padding: calc(var(--tm-space-1) - var(--tm-border-width)) calc(var(--tm-space-3) - var(--tm-border-width));
+  background: var(--tm-chat-bubble-system-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-system-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-system-border, transparent);
+  border-radius: var(--tm-radius-full);
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-chat-bubble--pending {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-pending-bg, var(--tm-bg-surface-secondary));
+  color: var(--tm-chat-bubble-pending-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-pending-border, var(--tm-border-color-strong));
+  border-style: dashed;
+}
+
+.tm-chat-bubble--queued {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-queued-bg, var(--tm-color-info-subtle));
+  color: var(--tm-chat-bubble-queued-fg, var(--tm-color-info-text));
+  border-color: var(--tm-chat-bubble-queued-border, var(--tm-color-info-soft-border));
+}
+
+.tm-chat-bubble--discarded {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-discarded-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-discarded-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-discarded-border, var(--tm-border-color));
+}
+
+.tm-chat-bubble--locked {
+  background: var(--tm-chat-bubble-locked-bg, var(--tm-color-primary-subtle));
+  color: var(--tm-chat-bubble-locked-fg, var(--tm-color-primary-text));
+  border-color: var(--tm-chat-bubble-locked-border, var(--tm-color-primary-soft-border));
+}
+
+/* ── Slots ──────────────────────────────────────────────────── */
+
+.tm-chat-bubble__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  margin-bottom: var(--tm-space-0-5);
+}
+
+.tm-chat-bubble__actor {
+  font-weight: 600;
+}
+
+.tm-chat-bubble__meta-separator {
+  flex-shrink: 0;
+}
+
+.tm-chat-bubble__time {
+  color: inherit;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-chat-bubble__badge {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  margin-bottom: var(--tm-space-0-5);
+}
+
+.tm-chat-bubble__body {
+  min-width: 0;
+}
+
+.tm-chat-bubble__note {
+  font-size: var(--tm-font-size-xs);
+  /* Inherits the variant foreground: notes stay as readable as the bubble text itself
+     (no opacity, no secondary grey that could fail contrast on a dark or tinted surface). */
+  color: inherit;
+}
+
+.tm-chat-bubble__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  margin-top: var(--tm-space-1);
+}
