@@ -16,9 +16,9 @@
         }
         else
         {
-            @foreach (var message in RootMessages())
+            @foreach (var (message, index, isFirstInGroup) in RootEntries())
             {
-                @RenderMessage(message, inThread: false)
+                @RenderMessage(message, inThread: false, index, isFirstInGroup)
             }
         }
 
@@ -70,13 +70,15 @@
                 </button>
             </div>
             <div class="tm-chat__thread-messages">
-                @RenderMessage(threadRoot, inThread: true)
-                <div class="tm-chat__thread-divider">
-                    <span>@Loc.Plural("TmChat_ReplyCount", ReplyCountOf(threadRoot))</span>
-                </div>
-                @foreach (var reply in RepliesOf(threadRoot.Id))
+                @foreach (var (threadMessage, threadIndex, isFirstInGroup) in ThreadEntries(threadRoot))
                 {
-                    @RenderMessage(reply, inThread: true)
+                    @RenderMessage(threadMessage, inThread: true, threadIndex, isFirstInGroup)
+                    @if (threadIndex == 0)
+                    {
+                        <div class="tm-chat__thread-divider">
+                            <span>@Loc.Plural("TmChat_ReplyCount", ReplyCountOf(threadRoot))</span>
+                        </div>
+                    }
                 }
             </div>
             <div class="tm-chat__thread-input-area">
@@ -104,7 +106,24 @@
 </div>
 
 @code {
-    private RenderFragment RenderMessage(ChatMessage message, bool inThread) => @<div class="@GetMessageCssClass(message)" data-message-id="@message.Id">
+    // Every message renders inside a neutral wrapper carrying the data-message-id anchor
+    // (scroll positioning + read receipts) and data-kind when the message carries a Kind.
+    // Inside the wrapper, either the host's MessageTemplate or the built-in message row.
+    private RenderFragment RenderMessage(ChatMessage message, bool inThread, int index, bool isFirstInGroup) => @<div class="tm-chat__item" data-message-id="@message.Id" data-kind="@message.Kind">
+        @if (UsesTemplate(message))
+        {
+            @TemplateFor(message, inThread, index, isFirstInGroup)
+        }
+        else
+        {
+            @RenderBuiltInMessage(message, inThread)
+        }
+    </div>;
+
+    private RenderFragment TemplateFor(ChatMessage message, bool inThread, int index, bool isFirstInGroup)
+        => MessageTemplate!(CreateTemplateContext(message, inThread, index, isFirstInGroup));
+
+    private RenderFragment RenderBuiltInMessage(ChatMessage message, bool inThread) => @<div class="@GetMessageCssClass(message)">
         @if (message.Type == ChatMessageType.System)
         {
             <span class="tm-chat__system-text">@message.Text</span>

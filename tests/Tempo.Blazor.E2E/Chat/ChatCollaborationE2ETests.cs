@@ -51,7 +51,7 @@ public class ChatCollaborationE2ETests : WasmTestBase
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
 
         // ── Thread: Alice replies to Bob's message c1 in a thread ──
-        await alice.Locator("[data-message-id='c1']").First.HoverAsync();
+        await alice.Locator("[data-message-id='c1'] .tm-chat__bubble").First.HoverAsync();
         await alice.Locator("[data-testid='chat-reply-c1']").ClickAsync();
         await alice.Locator("[data-testid='chat-thread-input']").FillAsync("Let's do it after lunch.");
         await alice.Locator("[data-testid='chat-thread-send']").ClickAsync();
@@ -63,7 +63,7 @@ public class ChatCollaborationE2ETests : WasmTestBase
             .ToContainTextAsync("1", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
 
         // ── Reaction: Bob reacts to Alice's message c2 → Alice sees the chip ──
-        await bob.Locator("[data-message-id='c2']").First.HoverAsync();
+        await bob.Locator("[data-message-id='c2'] .tm-chat__bubble").First.HoverAsync();
         await bob.Locator("[data-testid='chat-react-c2']").ClickAsync();
         await bob.Locator("[data-testid='chat-emoji-c2-0']").ClickAsync();
 
@@ -83,7 +83,7 @@ public class ChatCollaborationE2ETests : WasmTestBase
         var bob = Pane(page, "bob");
 
         // Alice edits her own message c2.
-        await alice.Locator("[data-message-id='c2']").First.HoverAsync();
+        await alice.Locator("[data-message-id='c2'] .tm-chat__bubble").First.HoverAsync();
         await alice.Locator("[data-testid='chat-edit-c2']").ClickAsync();
         await alice.Locator("[data-testid='chat-edit-input']").FillAsync("Yes — threads, reactions and receipts all shipped.");
         await alice.Locator("[data-testid='chat-edit-save']").ClickAsync();

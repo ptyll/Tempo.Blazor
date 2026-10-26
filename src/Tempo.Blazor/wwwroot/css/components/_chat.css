@@ -34,6 +34,15 @@
   padding: var(--tm-space-8);
 }
 
+/* Neutral wrapper around every message (carries the data-message-id anchor and
+   data-kind). Column flex keeps the built-in .tm-chat__message row and its own
+   align-self / max-width resolution identical to the pre-wrapper markup; host
+   template content receives the full row width and positions itself. */
+.tm-chat__item {
+  display: flex;
+  flex-direction: column;
+}
+
 .tm-chat__message {
   display: flex;
   align-items: flex-end;

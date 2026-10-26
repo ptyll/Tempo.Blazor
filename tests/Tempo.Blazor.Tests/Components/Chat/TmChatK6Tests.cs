@@ -34,8 +34,10 @@ public class TmChatK6Tests : LocalizationTestBase
 
         var cut = Render(messages);
 
-        // Reply is not shown in the main list (only the root).
-        cut.FindAll(".tm-chat__messages > .tm-chat__message").Should().HaveCount(1);
+        // Reply is not shown in the main list (only the root). Descendant selector: since the
+        // custom-template phase every message is wrapped in a .tm-chat__item carrying the
+        // data-message-id anchor, so .tm-chat__message is no longer a DIRECT child.
+        cut.FindAll(".tm-chat__messages .tm-chat__message").Should().HaveCount(1);
         var badge = cut.Find("[data-testid='chat-thread-open-m1']");
         badge.TextContent.Should().Contain("1");
     }

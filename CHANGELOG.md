@@ -609,6 +609,12 @@
 
 ### Changed
 
+- **`TmChat` message DOM: a neutral wrapper around every message.** Each message (default row and
+  `MessageTemplate` output alike) is wrapped in `.tm-chat__item[data-message-id][data-kind]`, and
+  `data-message-id` moved off `.tm-chat__message`, so hosts that anchored on it must use
+  descendant selectors (e.g. `[data-message-id='id'] .tm-chat__bubble`). The wrapper carries
+  `data-kind` only when the message has a `Kind`. The wrapper adds no handlers or hover
+  behavior; hovering/focusing the bubble reveals the action bar as before.
 - **Closing of the editor-redesign follow-up plan (phase 9): committed visual baselines and lane documentation.** The Wireframe phase 5-7 sets
   (`__screenshots__/wireframe/phase5|6|7`), the `TmDocumentOpenDialog` mobile set (`__screenshots__/document-library/mobile`) and the dark 390 / 1024 e-mail
   import and validation dialogs (`f10-import-dark-*`, `f10-validation-dark-*`, test `F10_14_Dark_Dialogs_AtPhoneAndTablet_StayReadableAndInView`) are now

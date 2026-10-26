@@ -3970,6 +3970,7 @@ to{transform:translateY(0);}
 .tm-chat{display:flex;flex-direction:column;width:100%;height:100%;min-height:300px;background:var(--tm-bg-surface);border-radius:var(--tm-radius-lg);border:1px solid var(--tm-border-color);overflow:hidden;}
 .tm-chat__messages{flex:1;overflow-y:auto;padding:var(--tm-space-4);display:flex;flex-direction:column;gap:var(--tm-space-3);}
 .tm-chat__empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--tm-space-2);flex:1;color:var(--tm-text-secondary);padding:var(--tm-space-8);}
+.tm-chat__item{display:flex;flex-direction:column;}
 .tm-chat__message{display:flex;align-items:flex-end;gap:var(--tm-space-2);max-width:80%;}
 .tm-chat__message--incoming{align-self:flex-start;}
 .tm-chat__message--outgoing{align-self:flex-end;flex-direction:row-reverse;}

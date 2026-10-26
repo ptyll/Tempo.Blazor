@@ -83,6 +83,44 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     /// <summary>Emoji offered by the reaction picker.</summary>
     [Parameter] public IReadOnlyList<string> ReactionEmojis { get; set; } = ["👍", "❤️", "😂", "🎉", "😮", "😢"];
 
+    // ── Custom templates: host-owned message rendering ──
+
+    /// <summary>
+    /// Replaces the built-in message row with host markup for the messages selected by
+    /// <see cref="UseTemplateFor"/>. The template receives a <see cref="ChatMessageContext"/> per
+    /// rendered message: <see cref="ChatMessageContext.Message"/>,
+    /// <see cref="ChatMessageContext.IsOwn"/>, <see cref="ChatMessageContext.InThread"/>,
+    /// <see cref="ChatMessageContext.Index"/>, <see cref="ChatMessageContext.IsFirstInGroup"/>,
+    /// a typed payload accessor (<c>context.PayloadAs&lt;T&gt;()</c>), a metadata accessor
+    /// (<c>context.GetMetadata&lt;T&gt;(key, fallback)</c>) and
+    /// <see cref="ChatMessageContext.DefaultContent"/> — the built-in row, so ordinary messages
+    /// can fall back to the default look.
+    /// <para>
+    /// Precedence: when null, every message renders the built-in row (today's behavior). When
+    /// set and <see cref="UseTemplateFor"/> is null, the template renders for EVERY message
+    /// (including thread panel messages). When both are set, the template renders only for
+    /// messages where <see cref="UseTemplateFor"/> returns <see langword="true"/> — the host
+    /// thus overrides just its "special" kinds (e.g. <c>m => m.Kind == "ai-draft"</c>).
+    /// </para>
+    /// <para>
+    /// Regardless of the template, TmChat still owns everything around the message: each message
+    /// keeps a wrapper element with <c>data-message-id</c> (and <c>data-kind</c> when the
+    /// message carries a <see cref="ChatMessage.Kind"/>) used for scroll anchoring and read
+    /// receipts; the thread filter, draft guard and read-receipt reporting are unaffected.
+    /// Note that markup passed into the template carries the HOST's CSS scope — the
+    /// <c>TmChat.razor.css</c> scoped classes do not apply to it.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment<ChatMessageContext>? MessageTemplate { get; set; }
+
+    /// <summary>
+    /// Restricts <see cref="MessageTemplate"/> to the messages for which the predicate returns
+    /// <see langword="true"/>. Null (the default) means the template renders for every message.
+    /// Typical host usage: <c>m => m.Kind == "ai-draft"</c> to override only special kinds while
+    /// ordinary messages keep the built-in row.
+    /// </summary>
+    [Parameter] public Func<ChatMessage, bool>? UseTemplateFor { get; set; }
+
     /// <summary>
     /// Notifies the parent that the chat draft state changed. Fires ONLY when the
     /// <see cref="TmChatDraftState"/> value actually changes (value-equality dedup), never on
@@ -274,6 +312,61 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
             _ => IsCurrentUser(message.Author) ? "outgoing" : "incoming"
         };
         return $"{baseClass} {baseClass}--{suffix}";
+    }
+
+    // ── Custom templates ──
+
+    /// <summary>
+    /// Whether <paramref name="message"/> renders through <see cref="MessageTemplate"/>. The
+    /// template must be set, and — when <see cref="UseTemplateFor"/> is provided — the message
+    /// must match its predicate (see the precedence documented on <see cref="MessageTemplate"/>).
+    /// </summary>
+    private bool UsesTemplate(ChatMessage message)
+        => MessageTemplate is not null && (UseTemplateFor?.Invoke(message) ?? true);
+
+    /// <summary>Builds the <see cref="ChatMessageContext"/> for one rendered message row.</summary>
+    private ChatMessageContext CreateTemplateContext(
+        ChatMessage message, bool inThread, int index, bool isFirstInGroup)
+        => new(message,
+            isOwn: IsCurrentUser(message.Author),
+            inThread: inThread,
+            index: index,
+            isFirstInGroup: isFirstInGroup,
+            defaultContent: RenderBuiltInMessage(message, inThread));
+
+    /// <summary>
+    /// The root message sequence with the per-row template inputs: the zero-based
+    /// <c>Index</c> within the sequence and <c>IsFirstInGroup</c> (the previous rendered message
+    /// has a different author or a different <see cref="ChatMessage.Kind"/>).
+    /// </summary>
+    private IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> RootEntries()
+        => EntriesWithTemplateInputs(RootMessages());
+
+    /// <summary>
+    /// The thread panel sequence (root first, then replies ordered by timestamp) with the same
+    /// per-row template inputs as <see cref="RootEntries"/>.
+    /// </summary>
+    private IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> ThreadEntries(ChatMessage root)
+        => EntriesWithTemplateInputs(new[] { root }.Concat(RepliesOf(root.Id)));
+
+    private static IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> EntriesWithTemplateInputs(
+        IEnumerable<ChatMessage> sequence)
+    {
+        ChatMessage? previous = null;
+        var index = 0;
+        foreach (var message in sequence)
+        {
+            yield return (message, index, IsFirstInGroup(message, previous));
+            previous = message;
+            index++;
+        }
+    }
+
+    private static bool IsFirstInGroup(ChatMessage message, ChatMessage? previous)
+    {
+        if (previous is null) return true;
+        return !string.Equals(previous.Author?.Id, message.Author?.Id, StringComparison.Ordinal)
+            || !string.Equals(previous.Kind, message.Kind, StringComparison.Ordinal);
     }
 
     private bool IsCurrentUser(ChatUser? user)
