@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
+using System.Threading;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Models;
@@ -10,7 +12,7 @@ namespace Tempo.Blazor.Components.Chat;
 /// <summary>
 /// A chat conversation component with message rendering, typing indicators, attachments, and send input.
 /// </summary>
-public partial class TmChat : TmComponentBase, ITmDraftGuard
+public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
 {
     /// <summary>The currently authenticated user.</summary>
     [Parameter] public ChatUser CurrentUser { get; set; } = new();
@@ -20,6 +22,66 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
 
     /// <summary>Users currently typing.</summary>
     [Parameter] public IReadOnlyList<ChatUser> TypingUsers { get; set; } = [];
+
+    // ── Typing indicator: label, template, AT visibility, expiry ──
+
+    /// <summary>
+    /// Replaces the localized typing text with a host-computed label. The built-in text comes from
+    /// the <c>TmChat_TypingSingle</c>/<c>TmChat_TypingTwo</c>/<c>TmChat_TypingMany</c> resources
+    /// ("{0} is typing…"); a set label receives the current <see cref="TypingUsers"/> list and its
+    /// result is rendered instead — e.g. <c>users =&gt; $"{users[0].Name} píše…"</c>. Null (the
+    /// default) keeps the localized text. <see cref="TypingTemplate"/> takes precedence: the
+    /// template replaces the WHOLE indicator, the label only its text span.
+    /// </summary>
+    [Parameter] public Func<IReadOnlyList<ChatUser>, string>? TypingLabel { get; set; }
+
+    /// <summary>
+    /// Replaces the WHOLE built-in typing indicator with host markup. The template receives the
+    /// current <see cref="TypingUsers"/> list; the built-in
+    /// <c>.tm-chat__typing-indicator</c> element (dots + text) is not rendered at all. Null
+    /// (the default) renders the built-in indicator. Markup passed into the template carries the
+    /// HOST's CSS scope, not <c>TmChat.razor.css</c>.
+    /// <para>
+    /// The <see cref="TypingTimeout"/> expiry applies to the template TOO: an expired window
+    /// renders NEITHER the built-in indicator NOR the template (the next
+    /// <see cref="TypingUsers"/> change reopens the window). <see cref="TypingAriaHidden"/> by
+    /// contrast applies ONLY to the built-in indicator — a template sets its own AT visibility.
+    /// Do NOT put <c>aria-live</c> or <c>role="status"</c> into the template: <see cref="TmChat"/>
+    /// keeps one live region of its own and typing is never announced by the component, so an
+    /// extra live region inside the template would only risk double announcements.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment<IReadOnlyList<ChatUser>>? TypingTemplate { get; set; }
+
+    /// <summary>
+    /// Hides the WHOLE built-in typing indicator from assistive technology by rendering
+    /// <c>aria-hidden="true"</c> on its wrapper — not just the decorative dots, which always carry
+    /// their own <c>aria-hidden</c>. Default <see langword="false"/> (today's markup: the wrapper
+    /// has no <c>aria-hidden</c> and its text stays reachable). For a host that conveys typing
+    /// through its own live region, set this to <see langword="true"/> so the indicator is not
+    /// double-read; typing itself is NEVER announced by the component.
+    /// </summary>
+    [Parameter] public bool TypingAriaHidden { get; set; }
+
+    /// <summary>
+    /// Auto-hides the typing indicator when the host stops sending fresh
+    /// <see cref="TypingUsers"/>. The expiry applies to BOTH the built-in indicator and a
+    /// <see cref="TypingTemplate"/> — an expired window renders neither. The expiry window is
+    /// measured from the LAST CHANGE of
+    /// <see cref="TypingUsers"/>: a new list instance OR a different content (order-sensitive,
+    /// per-<see cref="ChatUser"/> value equality) opens a fresh window, an identical list
+    /// reference with unchanged content does not — pass a stable reference and re-assign the list
+    /// only on real typing signals, or every parent re-render extends the window forever. When
+    /// the window expires the indicator disappears but the host's <see cref="TypingUsers"/> list
+    /// is never mutated; the next change reopens it. <see langword="null"/> (the default) never
+    /// expires. A non-positive timeout (<see cref="TimeSpan.Zero"/> or negative) expires
+    /// IMMEDIATELY: the indicator is suppressed from the next render and no timer is armed.
+    /// The clock is the injected <see cref="TimeProvider"/> (fallback
+    /// <see cref="TimeProvider.System"/>), so tests drive expiry with a
+    /// <c>FakeTimeProvider</c>. A set timeout arms a single-shot timer that is cancelled in
+    /// <see cref="DisposeAsync"/> — no dangling timer after unmount.
+    /// </summary>
+    [Parameter] public TimeSpan? TypingTimeout { get; set; }
 
     /// <summary>Placeholder for the message input.</summary>
     [Parameter] public string? Placeholder { get; set; }
@@ -286,6 +348,43 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
     private TmChatDraftState _lastDraftState = new(false, false, null, false);
 
+    // ── Typing expiry state ──
+
+    /// <summary>
+    /// Clock behind the typing-expiry timer. Resolved through <see cref="IServiceProvider"/> so a
+    /// consumer that never registers a <see cref="TimeProvider"/> still gets
+    /// <see cref="TimeProvider.System"/> — tests register a FakeTimeProvider (the same pattern as
+    /// <c>TmSearchInput</c>'s debounce clock).
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
+    private ITimer? _typingTimer;
+    private IReadOnlyList<ChatUser>? _lastTypingUsers;
+    private ChatUser[] _lastTypingSnapshot = [];
+    private TimeSpan? _lastTypingTimeout;
+    private bool _typingExpired;
+    private bool _disposed;
+
+    /// <summary>Test-visible state: is a typing-expiry timer still armed?</summary>
+    internal bool TypingTimerIsPending => _typingTimer is not null;
+
+    /// <summary>Test-visible state: has the typing-expiry window already elapsed?</summary>
+    internal bool TypingIndicatorExpired => _typingExpired;
+
+    /// <summary>
+    /// Whether the typing indicator renders (the built-in markup OR a <see cref="TypingTemplate"/>):
+    /// there are typing users AND the expiry window has not elapsed (an elapsed window only
+    /// suppresses while a timeout is actually configured — a host clearing
+    /// <see cref="TypingTimeout"/> to null goes back to "never expires", so the indicator follows
+    /// <see cref="TypingUsers"/> directly again).
+    /// </summary>
+    private bool ShowTypingIndicator
+        => TypingUsers.Count > 0 && (!_typingExpired || TypingTimeout is null);
+
     private string? EffectiveActiveThread => ActiveThreadRootId ?? _activeThread;
 
     private string PlaceholderText => Placeholder ?? Loc["TmChat_Placeholder"];
@@ -437,9 +536,125 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
+        ScheduleTypingExpiry();
         // Parameter-driven transitions (e.g. the thread panel unmounting because its root message
         // left Messages) must be reported; the dedup keeps repeated parameter sets silent.
         await NotifyDraftChangedAsync();
+    }
+
+    // ── Typing expiry ──
+
+    /// <summary>
+    /// (Re)arms the typing-expiry window. A CHANGE of <see cref="TypingUsers"/> — a new list
+    /// instance, a different content OR an in-place mutation of the same list instance (see
+    /// <see cref="TypingTimeout"/>) — resets the expiry and opens a fresh window; a change of
+    /// <see cref="TypingTimeout"/> alone rearms the pending timer (e.g. null → a duration starts
+    /// measuring now) without reopening an already elapsed window. An unchanged list and timeout
+    /// keep the running deadline — re-arming on every parent re-render would extend the window
+    /// forever.
+    /// </summary>
+    private void ScheduleTypingExpiry()
+    {
+        // The list is stored BY REFERENCE, so an in-place mutation of the same instance is never
+        // visible through it — the content comparison runs against a value SNAPSHOT of the last
+        // seen list instead.
+        var usersChanged = !ReferenceEquals(TypingUsers, _lastTypingUsers)
+            || !TypingUsersContentEquals(TypingUsers, _lastTypingSnapshot);
+        var timeoutChanged = !Nullable.Equals(TypingTimeout, _lastTypingTimeout);
+        _lastTypingUsers = TypingUsers;
+        _lastTypingTimeout = TypingTimeout;
+        _lastTypingSnapshot = TypingUsers.ToArray();
+
+        if (usersChanged) _typingExpired = false;
+        if (!usersChanged && !timeoutChanged) return;
+        RearmTypingTimer();
+    }
+
+    /// <summary>Order-sensitive per-item value comparison of two typing-user lists.</summary>
+    private static bool TypingUsersContentEquals(IReadOnlyList<ChatUser> current, IReadOnlyList<ChatUser>? previous)
+    {
+        if (previous is null || current.Count != previous.Count) return false;
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (!current[i].Equals(previous[i])) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Disarms any pending timer and arms a fresh single-shot one when an expiry applies.</summary>
+    private void RearmTypingTimer()
+    {
+        CancelTypingTimer();
+        if (TypingTimeout is not { } timeout || TypingUsers.Count == 0 || _typingExpired) return;
+        if (timeout <= TimeSpan.Zero)
+        {
+            // A non-positive timeout expires IMMEDIATELY: no timer, the next render suppresses.
+            _typingExpired = true;
+            return;
+        }
+
+        // Single-shot timer on the injected clock. The callback closes over `timer` itself so the
+        // ReferenceEquals check inside can tell "the currently armed timer" apart from one that
+        // was already replaced or cancelled.
+        ITimer? timer = null;
+        timer = Clock.CreateTimer(_ => _ = OnTypingExpiredAsync(timer), null, timeout, Timeout.InfiniteTimeSpan);
+        _typingTimer = timer;
+    }
+
+    private void CancelTypingTimer()
+    {
+        _typingTimer?.Dispose();
+        _typingTimer = null;
+    }
+
+    private async Task OnTypingExpiredAsync(ITimer? timer)
+    {
+        if (timer is null || _disposed) return;
+        // The callback runs on a thread-pool thread (TimeProvider.System) or the test thread
+        // advancing a FakeTimeProvider; hop to the renderer before touching expiry state.
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed || !ReferenceEquals(_typingTimer, timer)) return Task.CompletedTask;
+                // Single-shot: once fired it can never expire again — disarm so
+                // TypingTimerIsPending reports the truth instead of a spent timer.
+                _typingTimer = null;
+                timer.Dispose();
+                _typingExpired = true;
+                StateHasChanged();
+                return Task.CompletedTask;
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The renderer (or the whole component) was disposed between the timer firing and the
+            // dispatch — the expiry no longer has anything to render into, not an error.
+        }
+    }
+
+    /// <summary>
+    /// Cancels the pending typing-expiry timer by delegating to <see cref="DisposeAsyncCore"/>.
+    /// TmChat previously held no unmanaged lifecycle, so it did not implement disposal; the timer
+    /// made an <see cref="IAsyncDisposable"/> implementation necessary.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// The actual cleanup behind <see cref="DisposeAsync"/> — SUBCLASSES OVERRIDE THIS method (not
+    /// <see cref="DisposeAsync"/> itself) to add their own teardown, ideally awaiting/calling
+    /// <c>base.DisposeAsyncCore()</c>. Idempotent — the renderer may dispose the component again
+    /// after the host did.
+    /// </summary>
+    protected virtual ValueTask DisposeAsyncCore()
+    {
+        _disposed = true;
+        CancelTypingTimer();
+        return ValueTask.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -779,6 +994,7 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard
     private string GetTypingText()
     {
         if (TypingUsers.Count == 0) return string.Empty;
+        if (TypingLabel is not null) return TypingLabel(TypingUsers);
         if (TypingUsers.Count == 1)
             return string.Format(Loc["TmChat_TypingSingle"], TypingUsers[0].Name);
         if (TypingUsers.Count == 2)

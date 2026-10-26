@@ -41,16 +41,23 @@
         }
 
         <!-- Typing indicator -->
-        @if (TypingUsers.Count > 0)
+        @if (ShowTypingIndicator)
         {
-            <div class="tm-chat__typing-indicator">
-                <div class="tm-chat__typing-dots" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            @if (TypingTemplate is not null)
+            {
+                @TypingTemplate(TypingUsers)
+            }
+            else
+            {
+                <div class="tm-chat__typing-indicator" aria-hidden="@(TypingAriaHidden ? "true" : null)">
+                    <div class="tm-chat__typing-dots" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="tm-chat__typing-text">@GetTypingText()</span>
                 </div>
-                <span class="tm-chat__typing-text">@GetTypingText()</span>
-            </div>
+            }
         }
     </div>
 

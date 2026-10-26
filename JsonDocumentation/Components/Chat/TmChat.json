@@ -68,6 +68,32 @@
       "description": "Users currently typing."
     },
     {
+      "name": "TypingLabel",
+      "type": "Func<IReadOnlyList<ChatUser>, string>?",
+      "isRequired": false,
+      "description": "Replaces the localized typing text with a host-computed label. The built-in text comes from the TmChat_TypingSingle/TmChat_TypingTwo/TmChat_TypingMany resources (\"{0} is typing…\"); a set label receives the current TypingUsers list and its result is rendered instead — e.g. users => $\"{users[0].Name} píše…\". Null (the default) keeps the localized text. TypingTemplate takes precedence: the template replaces the WHOLE indicator, the label only its text span."
+    },
+    {
+      "name": "TypingTemplate",
+      "type": "RenderFragment<IReadOnlyList<ChatUser>>?",
+      "isRequired": false,
+      "description": "Replaces the WHOLE built-in typing indicator with host markup. The template receives the current TypingUsers list; the built-in .tm-chat__typing-indicator element (dots + text) is not rendered at all. Null (the default) renders the built-in indicator. Markup passed into the template carries the HOST's CSS scope, not TmChat.razor.css. The TypingTimeout expiry applies to the template TOO: an expired window renders NEITHER the built-in indicator NOR the template (the next TypingUsers change reopens the window). TypingAriaHidden by contrast applies ONLY to the built-in indicator — a template sets its own AT visibility. Do NOT put aria-live or role=\"status\" into the template: TmChat keeps one live region of its own and typing is never announced by the component, so an extra live region inside the template would only risk double announcements."
+    },
+    {
+      "name": "TypingAriaHidden",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Hides the WHOLE built-in typing indicator from assistive technology by rendering aria-hidden=\"true\" on its wrapper — not just the decorative dots, which always carry their own aria-hidden. Default false (today's markup: the wrapper has no aria-hidden and its text stays reachable). For a host that conveys typing through its own live region, set this to true so the indicator is not double-read; typing itself is NEVER announced by the component."
+    },
+    {
+      "name": "TypingTimeout",
+      "type": "TimeSpan?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Auto-hides the typing indicator when the host stops sending fresh TypingUsers. The expiry applies to BOTH the built-in indicator and a TypingTemplate — an expired window renders neither. The expiry window is measured from the LAST CHANGE of TypingUsers: a new list instance OR a different content (order-sensitive, per-ChatUser value equality) opens a fresh window, an identical list reference with unchanged content does not — pass a stable reference and re-assign the list only on real typing signals, or every parent re-render extends the window forever. When the window expires the indicator disappears but the host's TypingUsers list is never mutated; the next change reopens it. Null (the default) never expires. A non-positive timeout (TimeSpan.Zero or negative) expires IMMEDIATELY: the indicator is suppressed from the next render and no timer is armed. The clock is the injected TimeProvider (fallback TimeProvider.System), so tests drive expiry with a FakeTimeProvider. A set timeout arms a single-shot timer that is cancelled in DisposeAsync — no dangling timer after unmount."
+    },
+    {
       "name": "OnEditMessage",
       "type": "EventCallback<ChatMessageEdit>",
       "isRequired": false,

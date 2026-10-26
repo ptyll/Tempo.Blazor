@@ -195,7 +195,7 @@
   height: 3px;
   border-radius: 50%;
   background: currentColor;
-  margin-left: 2px;
+  margin-left: var(--tm-space-0-5);
   animation: tm-chat-blink 1.4s infinite;
 }
 
@@ -705,5 +705,11 @@
   }
   .tm-chat__emoji:hover {
     transform: none;
+  }
+  /* The looping dot and blink animations stop entirely, not merely at 0.01ms. */
+  .tm-chat__typing-dots span,
+  .tm-chat__sending-dots,
+  .tm-chat__sending-dots::after {
+    animation: none;
   }
 }

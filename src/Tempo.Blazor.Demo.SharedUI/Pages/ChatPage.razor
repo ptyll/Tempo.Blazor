@@ -84,6 +84,35 @@
                 Messages="_typingMessages"
                 TypingUsers="_typingUsers" />
     </div>
+
+    <div class="showcase-card mt-6">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Custom TypingLabel (left; also hides the indicator from screen readers via TypingAriaHidden, for hosts that announce typing in their own live region), and a host TypingTemplate with a 6-second TypingTimeout (right). The expiring list starts EMPTY, so the right indicator stays hidden until you press <em>Send typing refresh</em>, which opens a fresh 6-second window — the window restarts whenever the host re-assigns the list.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <TmChat CurrentUser="_currentUser"
+                        Messages="_typingMessages"
+                        TypingUsers="_customTypingUsers"
+                        TypingLabel="@(users => $"{users[0].Name} is composing…")"
+                        TypingAriaHidden="true" />
+            </div>
+            <div class="flex flex-col">
+                <TmChat CurrentUser="_currentUser"
+                        Messages="_typingMessages"
+                        TypingUsers="_expiringTypingUsers"
+                        TypingTimeout="TimeSpan.FromSeconds(6)">
+                    <TypingTemplate Context="users">
+                        <div class="flex items-center gap-2 self-start px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-sm text-slate-600 dark:text-slate-300">
+                            <TmIcon Name="edit" Size="IconSize.Sm" />
+                            <span>@(users.Count == 1 ? $"{users[0].Name} is typing (host template)" : $"{users.Count} people are typing (host template)")</span>
+                        </div>
+                    </TypingTemplate>
+                </TmChat>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RefreshExpiringTyping" Class="mt-2 self-start">Send typing refresh</TmButton>
+            </div>
+        </div>
+    </div>
 </section>
 
 <!-- With Attachments -->
@@ -163,6 +192,10 @@
     private List<ChatMessage> _typingMessages = default!;
     private List<ChatUser> _typingUsers = default!;
 
+    // ── Typing label / template / expiry demo (FZE-4) ─────────────────────
+    private List<ChatUser> _customTypingUsers = default!;
+    private List<ChatUser> _expiringTypingUsers = default!;
+
     // ── Attachment demo ───────────────────────────────────────────────────
     private List<ChatMessage> _attachmentMessages = default!;
 
@@ -202,6 +235,11 @@
         };
         _typingUsers = new() { _bob, _carol };
 
+        _customTypingUsers = new() { _bob };
+        // Starts EMPTY: the 6-second window opens only when the button below assigns a list —
+        // the same signal a real host sends when a "still typing" event arrives over the wire.
+        _expiringTypingUsers = new();
+
         _attachmentMessages = new()
         {
             new("a1", "Here is the design mockup", _bob, ChatMessageType.Incoming)
@@ -234,6 +272,13 @@
     private void HandleBasicSend(string text)
     {
         _basicMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    // A fresh list instance opens a fresh TypingTimeout window — the same signal a real host
+    // sends when a "still typing" event arrives over the wire.
+    private void RefreshExpiringTyping()
+    {
+        _expiringTypingUsers = new List<ChatUser> { _bob, _carol };
     }
 
     // ── Collaboration handlers (shared store, mutated by either user) ─────

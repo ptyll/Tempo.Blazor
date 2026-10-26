@@ -308,6 +308,25 @@
 
 .tm-chat__typing-text { font-size: var(--tm-font-size-xs); color: var(--tm-text-secondary); }
 
+/* ── Sending dots ───────────────────────────────────────────── */
+/* Was missing from this global fallback (the scoped TmChat.razor.css had it); restored so the
+   fallback styles the same markup and the reduced-motion block below has its subject. */
+.tm-chat__sending-dots::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-left: var(--tm-space-0-5);
+  animation: tm-chat-blink 1.4s infinite;
+}
+
+@keyframes tm-chat-blink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
 .tm-chat__input-area {
   display: flex;
   align-items: flex-end;
@@ -388,3 +407,14 @@
 .tm-dark .tm-chat__attachment { background: rgba(255, 255, 255, 0.05); }
 [data-theme="dark"] .tm-chat__attachment:hover,
 .tm-dark .tm-chat__attachment:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+/* The looping typing/blink animations stop entirely (the transitions of the same file are
+   covered by the shared enumeration in animations.css). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-chat__typing-dots span,
+  .tm-chat__sending-dots,
+  .tm-chat__sending-dots::after {
+    animation: none;
+  }
+}
