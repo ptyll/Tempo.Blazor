@@ -3011,6 +3011,7 @@
   "TmModelingIssuePanel_EmptyTitle": "No issues found",
   "TmModelingIssuePanel_Error": "Error",
   "TmModelingIssuePanel_Info": "Info",
+  "TmModelingIssuePanel_NavigateHint": "Show in model",
   "TmModelingIssuePanel_Title": "Issues",
   "TmModelingIssuePanel_UnspecifiedMessage": "Issue message is not specified.",
   "TmModelingIssuePanel_Warning": "Warning",

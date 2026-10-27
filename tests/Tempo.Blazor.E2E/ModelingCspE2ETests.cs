@@ -54,7 +54,7 @@ public sealed class ModelingCspE2ETests : ServerTestBase
         await page.Locator("[data-testid='modeling-open-diagram-close']").ClickAsync();
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10000 });
 
-        // The trigger regains focus (the module's focusSelector path, not eval). Polled with
+        // The trigger regains focus (the module's root-scoped focusWithin path, not eval). Polled with
         // EvaluateAsync — an activeElement read cannot be expressed as a locator.
         for (var attempt = 0; ; attempt++)
         {

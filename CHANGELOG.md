@@ -772,7 +772,7 @@
 
 - **`Tempo.Blazor.Modeling` is CSP-safe: no more `eval` interop (Modeling redesign plan, phase 1).** `TmModelingEditor`'s focus restoration (overlay open / focus return after close) and `TmModelingModelTree`'s drag bridge, scroll-into-view and keyboard navigation called `InvokeVoidAsync("eval", …)` — which throws on any host shipping a Content-Security-Policy without `unsafe-eval`. All four paths now run through the package's new ES module `_content/Tempo.Blazor.Modeling/js/modeling-editor.js` (imported via `IJSObjectReference` — no `<script>` tag needed in the host; exports `registerTreeDragBridge`, `scrollTreeElementIntoView`, `focusTreeElement`, `focusSelector`), and a static guard test (`ModelingNoEvalInteropTests`) keeps `eval` out of the package. Behavior and the DOM are unchanged; the demo Server host serves `/modeling-editor?csp=1` with a strict CSP (no `unsafe-eval`) so E2E proves the module paths under it, and the shared demo layouts set the `data-blazor-ready` marker through the new `_content/Tempo.Blazor.Demo.SharedUI/js/demo-app-ready.js` module instead of `eval`, so the strict-CSP demo variant boots.
 - **`TmModelingEditor.razor.css`: the `.tm-modeling-editor__open-editor-header .tm-btn` rule now reaches `TmButton` (`::deep`, P21 / 00-cross-cutting §7.4).** The scoped selector targeted a class rendered by the child `TmButton`, so the narrow-viewport full-width rule silently never applied; the frozen `scoped-css-ownership-baseline` Modeling entry dropped to zero.
-- **`TmModelingIssuePanel` count header: neutral formulation (B16).** The `TmModelingIssuePanel_Count` plural family (`{0} nález` / `{0} nálezy` / `{0} nálezů`, …) is replaced by a single neutral template per language — en `Issues: {0}`, cs/sk `Nálezy: {0}`, fr `Problèmes : {0}` — rendered through `Loc.Plural`'s plain-key fall-through, so no language has to pick a grammatical form for a panel header. Hosts overriding `TmModelingIssuePanel_Count_One/_Few/_Many/_Other` must override the single `TmModelingIssuePanel_Count` instead.
+- **`TmModelingIssuePanel` count header: neutral formulation (B16).** The `TmModelingIssuePanel_Count` plural family is replaced by a single neutral template per language — en `Issues: {0}`, cs `Nálezy: {0}`, sk `Problémy: {0}`, fr `Problèmes : {0}` — rendered through `Loc.Plural`'s plain-key fall-through, so no language has to pick a grammatical form for a panel header. See **Breaking / Migration** above for the removal of the `_One`/`_Few`/`_Many`/`_Other` family keys and the before/after override snippet.
 - **overlay.js restores Escape focus immediately again, and waits only for a focus trap.** A non-trap panel (a dropdown, a picker popup) gets its anchor focus back inside `dismiss('escape')`, as before. A `TrapFocus` panel keeps the page inert until it hides, so that restore waits for `hidePanel` (or `release` when the panel node is already gone). A vetoed dismissal clears the pending restore, and the late path still refuses to move a focus that already landed somewhere.
 
 ### Changed
@@ -1445,6 +1445,32 @@
   import passes the server” holds for JSON sent by a client.
 
 ### Breaking / Migration
+
+- **`TmModelingIssuePanel_Count` is a plain neutral key — the `_One`/`_Few`/`_Many`/`_Other` family is removed (Modeling redesign plan, phase 1).** The issue panel header is a labelled count ("Issues: {0}" / "Nálezy: {0}" / "Problémy: {0}" / "Problèmes : {0}"), not a sentence, so no language has to pick a grammatical form and the plural family was deleted from all four resource tables. `Loc.Plural("TmModelingIssuePanel_Count", n)` now reads the plain key (the documented fall-through); every other plural family is untouched. A host whose delegating localizer still maps the removed family keys silently stops overriding anything — override the single `TmModelingIssuePanel_Count` key instead. The `/localization` demo page shows the `TmModelingModelTree_Count` family as its plural showcase instead.
+  ```csharp
+  // before — the family the lookup used to read (the keys no longer exist in 2.10.0):
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
+      public string this[string key] => key switch
+      {
+          "TmModelingIssuePanel_Count_One"   => "{0} nález",
+          "TmModelingIssuePanel_Count_Few"   => "{0} nálezy",
+          "TmModelingIssuePanel_Count_Many"  => "{0} nálezu",
+          "TmModelingIssuePanel_Count_Other" => "{0} nálezů",
+          _ => inner[key],
+      };
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
+
+  // after — the header is neutral now: override the single plain key it reads.
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
+      public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
+  ```
 
 - **`TmModelingIssuePanel`: issues WITHOUT a source element/relationship are no longer `<button>` (Modeling redesign plan, phase 1).** A sourceless issue has no navigation target, so presenting a button (screen-reader activatable, `cursor: pointer`, hover highlight) was a false affordance. Such issues now render a plain non-interactive `<div>` with the SAME `data-testid` (`modeling-issue-{index}`), `data-severity`, `data-source-*` attributes and the SAME visible text — only the interactive affordance is gone; navigable issues keep the `<button>` and additionally carry the class `tm-modeling-issue-panel__item--navigable` (the pointer cursor and hover styles moved to that class). Hosts that styled `.tm-modeling-issue-panel__item` as interactive, or that E2E-click EVERY issue row, must scope to the navigable rows (or read the text instead of clicking).
   ```razor

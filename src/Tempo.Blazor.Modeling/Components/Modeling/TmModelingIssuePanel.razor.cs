@@ -72,18 +72,4 @@ public partial class TmModelingIssuePanel
         => string.IsNullOrWhiteSpace(issue.Message)
             ? Loc["TmModelingIssuePanel_UnspecifiedMessage"]
             : issue.Message;
-
-    private string GetIssueAriaLabel(ModelingIssueDto issue)
-    {
-        var parts = new[]
-        {
-            GetSeverityLabel(issue),
-            issue.Category,
-            GetMessage(issue),
-            string.IsNullOrWhiteSpace(issue.SourceElementId) ? null : issue.SourceElementId,
-            string.IsNullOrWhiteSpace(issue.SourceRelationshipId) ? null : issue.SourceRelationshipId
-        };
-
-        return string.Join(", ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
-    }
 }

@@ -19,15 +19,22 @@ Polish (`pl`) is also supported (2–4 except 12–14 are `Few`, other integers 
 language uses the English rules. A region (`cs-CZ`, `fr-CA`) uses its language's rules.
 
 ```json
-"TmModelingIssuePanel_Count_One":   "{0} nález",
-"TmModelingIssuePanel_Count_Few":   "{0} nálezy",
-"TmModelingIssuePanel_Count_Many":  "{0} nálezu",
-"TmModelingIssuePanel_Count_Other": "{0} nálezů"
+"TmModelingModelTree_Count_One":   "{0} prvek",
+"TmModelingModelTree_Count_Few":   "{0} prvky",
+"TmModelingModelTree_Count_Many":  "{0} prvku",
+"TmModelingModelTree_Count_Other": "{0} prvků"
 ```
 
 ```razor
-<span>@Loc.Plural("TmModelingIssuePanel_Count", Issues.Count)</span>   @* 1 nález · 3 nálezy · 7 nálezů *@
+<span>@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>   @* 1 prvek · 3 prvky · 7 prvků *@
 ```
+
+> **Neutral keys are not families.** `TmModelingIssuePanel_Count` used to be a plural family and
+> was deliberately rewritten (Modeling redesign plan, phase 1) into a PLAIN neutral key — a single
+> template per language (`Issues: {0}` / `Nálezy: {0}` / `Problèmes : {0}`) with no `_One`/`_Few`/
+> `_Many`/`_Other` siblings, so a simple panel header never forces a language to pick a grammatical
+> form. `Loc.Plural` falls through to the plain key when no family exists, and a host overrides
+> exactly that one key. Do not "restore" the family: a count-labeled panel header does not need it.
 
 The count is always template argument `{0}`; further arguments follow it:
 `Loc.Plural("Found", n, folderName)` → `{0}` is `n`, `{1}` is `folderName`.
@@ -51,15 +58,15 @@ and that all four shipped languages provide every family.
 
 ```csharp
 // before — bypassed. Plural asks for Key_One, the indexer forwards it, the shipped family wins.
-public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
+public string this[string key] => key == "TmModelingModelTree_Count" ? "{0} prvky" : inner[key];
 
 // after — override the family the lookup actually reads.
 public string this[string key] => key switch
 {
-    "TmModelingIssuePanel_Count_One" => "{0} nález",
-    "TmModelingIssuePanel_Count_Few" => "{0} nálezy",
-    "TmModelingIssuePanel_Count_Many" => "{0} nálezu",
-    "TmModelingIssuePanel_Count_Other" => "{0} nálezů",
+    "TmModelingModelTree_Count_One" => "{0} prvek",
+    "TmModelingModelTree_Count_Few" => "{0} prvky",
+    "TmModelingModelTree_Count_Many" => "{0} prvku",
+    "TmModelingModelTree_Count_Other" => "{0} prvků",
     _ => inner[key],
 };
 ```

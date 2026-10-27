@@ -8,16 +8,23 @@ using Tempo.Blazor.Modeling;
 namespace Tempo.Blazor.Components.Modeling;
 
 /// <summary>Displays semantic modeling elements grouped by type with live filtering and selection.</summary>
-public partial class TmModelingModelTree
+public partial class TmModelingModelTree : IAsyncDisposable
 {
-    private const string InteropModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
-
     private string _filterText = string.Empty;
     private string? _lastScrolledElementId;
     private IReadOnlyList<ModelingElementDto>? _filteredGroupsSource;
     private IReadOnlyList<ModelingElementGroup> _filteredGroups = [];
     private string? _filteredGroupsFilterText;
     private string? _filteredGroupsCultureName;
+    private ModelingInteropModule? _interopModule;
+    private ElementReference _treeRoot;
+
+    /// <summary>Scoped accessor for the shared, disposed-guarded module wrapper (the [Inject]
+    /// runtime is only available after construction, so the wrapper is created lazily).</summary>
+    private ModelingInteropModule Interop => _interopModule ??= new ModelingInteropModule(JSRuntime);
+
+    /// <summary>Test seam (InternalsVisibleTo): the lazily created module wrapper, or null before first use.</summary>
+    internal ModelingInteropModule? TestInteropModule => _interopModule;
 
     /// <summary>JavaScript runtime used to reveal externally selected tree nodes inside the scrollable tree.</summary>
     [Inject] public IJSRuntime JSRuntime { get; set; } = default!;
@@ -154,62 +161,20 @@ public partial class TmModelingModelTree
         => OnElementDragEnded.InvokeAsync();
 
     private async Task RegisterDragDataTransferBridgeAsync()
-        => await TryInvokeModuleAsync("registerTreeDragBridge");
+        => await Interop.InvokeVoidSafeAsync("registerTreeDragBridge");
 
     private async Task ScrollSelectedElementIntoViewAsync(string elementId)
-        => await TryInvokeModuleAsync("scrollTreeElementIntoView", elementId);
+        => await Interop.InvokeVoidSafeAsync("scrollTreeElementIntoView", _treeRoot, elementId);
 
     private async Task FocusElementAsync(string elementId)
-        => await TryInvokeModuleAsync("focusTreeElement", elementId);
+        => await Interop.InvokeVoidSafeAsync("focusTreeElement", _treeRoot, elementId);
 
-    /// <summary>
-    /// Invokes an export of the CSP-safe <c>modeling-editor.js</c> ES module. The module is
-    /// imported once per component instance; a failed import (prerender, bUnit, torn-down
-    /// circuit) is swallowed — every interop here is progressive enhancement and the tree
-    /// keeps working without it. NEVER fall back to <c>eval</c>: hosts may ship a CSP
-    /// without <c>unsafe-eval</c>.
-    /// </summary>
-    private async Task TryInvokeModuleAsync(string identifier, params object?[] args)
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
     {
-        try
+        if (_interopModule is not null)
         {
-            var module = await GetInteropModuleAsync();
-            if (module is null)
-            {
-                return;
-            }
-
-            await module.InvokeVoidAsync(identifier, args);
-        }
-        catch (JSException)
-        {
-            // Progressive enhancement only — the tree itself must keep working.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; there is nothing left to enhance.
-        }
-        catch (ObjectDisposedException)
-        {
-            // The component or the runtime is being torn down.
-        }
-    }
-
-    private Task<IJSObjectReference>? _interopModuleTask;
-
-    private async Task<IJSObjectReference?> GetInteropModuleAsync()
-    {
-        _interopModuleTask ??= JSRuntime.InvokeAsync<IJSObjectReference>("import", InteropModulePath).AsTask();
-        try
-        {
-            return await _interopModuleTask;
-        }
-        catch (Exception)
-        {
-            // Do not cache a failed import — the next call retries (e.g. a module handler
-            // registered by a test after the first render).
-            _interopModuleTask = null;
-            throw;
+            await _interopModule.DisposeAsync();
         }
     }
 

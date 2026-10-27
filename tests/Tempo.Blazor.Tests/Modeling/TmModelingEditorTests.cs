@@ -172,10 +172,10 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Focus_return_after_closing_editor_does_not_use_eval()
+    public async Task Focus_return_after_closing_editor_is_root_scoped_and_test_id_free()
     {
         var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusSelector", _ => true).SetVoidResult();
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
 
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
@@ -195,10 +195,94 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             .Should().BeEmpty("focus restoration must stay CSP-safe — no eval");
 
         var moduleInvocations = module.Invocations.Select(invocation => invocation.Identifier).ToList();
-        moduleInvocations.Should().Contain("focusSelector",
+        moduleInvocations.Should().Contain("focusWithin",
             "the overlay focus move and the focus return go through the modeling-editor.js module");
-        moduleInvocations.Count(id => id == "focusSelector").Should().BeGreaterThanOrEqualTo(2,
+        moduleInvocations.Count(id => id == "focusWithin").Should().BeGreaterThanOrEqualTo(2,
             "one call focuses the close button when the overlay opens, the second restores the trigger");
+
+        // Every focusWithin call is scoped to the editor root ElementReference and never keys
+        // off data-testid (the stable data-modeling-focus hooks are the contract — a host
+        // renaming test ids through TestIdPrefix must not break focus return).
+        foreach (var invocation in module.Invocations.Where(i => i.Identifier == "focusWithin"))
+        {
+            invocation.Arguments.Should().HaveCount(2);
+            invocation.Arguments[0].Should().BeOfType<ElementReference>(
+                "the query is scoped to the editor root, not the document");
+            invocation.Arguments[1]!.ToString()!.Should().NotContain("data-testid");
+        }
+
+        var selectors = module.Invocations
+            .Where(i => i.Identifier == "focusWithin")
+            .Select(i => (string)i.Arguments[1]!)
+            .ToList();
+        selectors.Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenEditorCloseFocusSelector,
+            "opening the overlay focuses the close button through its data-modeling-focus hook");
+        selectors.Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
+            "closing the overlay returns focus to the trigger through its data-modeling-focus hook");
+    }
+
+    [Fact]
+    public async Task Focus_return_still_targets_the_data_modeling_focus_hooks_with_a_test_id_prefix()
+    {
+        // TestIdPrefix namespaces the editor-owned ids ("a-modeling-open-diagram-close", …) while
+        // the preview child's trigger keeps its bare id. The focus return must keep working across
+        // BOTH because it targets data-modeling-focus hooks, never data-testid.
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.TestIdPrefix, "a"));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='a-modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='a-modeling-open-diagram-editor']").Should().NotBeNull();
+            cut.Find("[data-testid='a-modeling-open-diagram-close']")
+                .Should().NotBeNull("the editor namespaced its own close button");
+        });
+
+        cut.Find("[data-testid='a-modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='a-modeling-open-diagram-editor']").Should().BeEmpty());
+
+        module.Invocations
+            .Where(i => i.Identifier == "focusWithin")
+            .Select(i => (string)i.Arguments[1]!)
+            .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenEditorCloseFocusSelector)
+            .And.Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
+                "the focus return is driven by the stable data-modeling-focus hooks, not data-testid");
+    }
+
+    [Fact]
+    public async Task Disposing_the_editor_disposes_the_imported_module()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        // The module wrapper is created on the first focus request: open + close the overlay.
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+
+        var wrapper = cut.Instance.TestInteropModule;
+        wrapper.Should().NotBeNull("the overlay focus path created the module wrapper");
+
+        await cut.Instance.DisposeAsync();
+
+        wrapper!.IsDisposed.Should().BeTrue(
+            "@implements IAsyncDisposable must dispose the imported ES module, or the module object leaks");
     }
 
     private sealed class SuccessfulModelingModelProvider : IModelingModelProvider

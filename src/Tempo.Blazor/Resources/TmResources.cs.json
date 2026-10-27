@@ -3039,6 +3039,7 @@
   "TmModelingIssuePanel_EmptyTitle": "Žádné problémy",
   "TmModelingIssuePanel_Error": "Chyba",
   "TmModelingIssuePanel_Info": "Informace",
+  "TmModelingIssuePanel_NavigateHint": "Zobrazit v modelu",
   "TmModelingIssuePanel_Title": "Nálezy",
   "TmModelingIssuePanel_UnspecifiedMessage": "Zpráva nálezu není určena.",
   "TmModelingIssuePanel_Warning": "Varování",

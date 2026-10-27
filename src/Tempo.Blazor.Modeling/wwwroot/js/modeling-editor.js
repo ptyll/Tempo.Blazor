@@ -6,12 +6,18 @@
  * ES module (imported by the components via IJSObjectReference — no <script> tag needed in
  * the host) or through plain Blazor `ElementReference` calls.
  *
+ * The DOM-scoped exports take the caller's own root ELEMENT (a Blazor ElementReference) as
+ * their first argument so a query can never reach outside the component instance that owns it.
+ *
  * Exports:
  *  - registerTreeDragBridge(): document-level dragstart/dragend listeners that expose the
  *    dragged tree element id through `dataTransfer` and `window.__tmModelingDraggedElementId`.
- *  - scrollTreeElementIntoView(elementId): reveals a tree node inside the tree scroll area.
- *  - focusTreeElement(elementId): scroll + focus a tree node (keyboard navigation).
- *  - focusSelector(selector): focus the first element matching the selector, without scrolling.
+ *  - scrollTreeElementIntoView(treeRoot, elementId): reveals a tree node inside the tree
+ *    scroll area, querying inside `treeRoot` only.
+ *  - focusTreeElement(treeRoot, elementId): scroll + focus a tree node (keyboard navigation),
+ *    querying inside `treeRoot` only.
+ *  - focusWithin(root, selector): focus the first element matching the selector inside `root`,
+ *    without scrolling.
  */
 
 let dragBridgeRegistered = false;
@@ -41,27 +47,37 @@ export function registerTreeDragBridge() {
   }, true);
 }
 
-export function scrollTreeElementIntoView(elementId) {
-  findTreeNode(elementId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+export function scrollTreeElementIntoView(treeRoot, elementId) {
+  findTreeNode(treeRoot, elementId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-export function focusTreeElement(elementId) {
-  const node = findTreeNode(elementId);
+export function focusTreeElement(treeRoot, elementId) {
+  const node = findTreeNode(treeRoot, elementId);
   node?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   node?.focus({ preventScroll: true });
 }
 
-export function focusSelector(selector) {
-  document.querySelector(selector)?.focus?.({ preventScroll: true });
+export function focusWithin(root, selector) {
+  const scope = queryRoot(root);
+  scope?.querySelector(selector)?.focus?.({ preventScroll: true });
 }
 
-function findTreeNode(elementId) {
-  if (typeof document === 'undefined') {
+/**
+ * A Blazor ElementReference arrives as the element itself; anything without querySelector
+ * (default reference, prerender placeholder) simply cannot be scoped and is a no-op.
+ */
+function queryRoot(root) {
+  return root && typeof root.querySelector === 'function' ? root : null;
+}
+
+function findTreeNode(treeRoot, elementId) {
+  const root = queryRoot(treeRoot);
+  if (!root) {
     return null;
   }
 
   const escapedElementId = window.CSS?.escape
     ? CSS.escape(elementId)
     : elementId.replace(/["\\]/g, '\\$&');
-  return document.querySelector(`[data-testid="modeling-model-tree"] [data-element-id="${escapedElementId}"]`);
+  return root.querySelector(`[data-element-id="${escapedElementId}"]`);
 }

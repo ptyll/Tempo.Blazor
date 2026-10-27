@@ -115,10 +115,63 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
         var button = cut.Find("button[data-testid='modeling-issue-0']");
         button.ClassList.Should().Contain("tm-modeling-issue-panel__item--navigable");
 
-        var accessibleName = button.GetAttribute("aria-label");
-        accessibleName.Should().NotBeNullOrWhiteSpace("a navigable issue is a button and needs an accessible name");
+        // The visible content IS the accessible name: no aria-label override that could
+        // drift out of sync with the row text (and duplicate what the row already says).
+        button.HasAttribute("aria-label").Should().BeFalse(
+            "a visible, self-describing button needs no aria-label override");
+
+        var accessibleName = button.TextContent.Replace("\n", " ", StringComparison.Ordinal);
+        accessibleName = System.Text.RegularExpressions.Regex.Replace(accessibleName, @"\s+", " ").Trim();
         accessibleName.Should().Contain("Error");
+        accessibleName.Should().Contain("Validation");
         accessibleName.Should().Contain("Broken mapping");
+
+        // The navigation affordance is announced by a visually-hidden hint span.
+        button.QuerySelector(".tm-sr-only")!.TextContent.Should().Be("Show in model");
+    }
+
+    [Fact]
+    public void Sourceless_issue_renders_no_navigation_hint()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, new[]
+            {
+                new ModelingIssueDto { Id = "orphan", Severity = ModelingIssueSeverity.Info, Message = "No source" }
+            }));
+
+        var item = cut.Find("[data-testid='modeling-issue-0']");
+        item.TagName.Should().NotBe("BUTTON");
+        item.QuerySelectorAll(".tm-sr-only").Should().BeEmpty(
+            "a non-interactive row is not navigable and must not promise navigation");
+    }
+
+    [Fact]
+    public void Button_and_div_wrappers_share_one_row_body()
+    {
+        // Both wrappers render from ONE RenderFragment — the visible content of a navigable
+        // button and a sourceless div must be identical apart from the hidden hint.
+        var navigable = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, new[]
+            {
+                new ModelingIssueDto { Id = "a", Severity = ModelingIssueSeverity.Warning, SourceElementId = "e1", Message = "Shared body" }
+            }));
+        var sourceless = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, new[]
+            {
+                new ModelingIssueDto { Id = "b", Severity = ModelingIssueSeverity.Warning, Message = "Shared body" }
+            }));
+
+        var navButton = navigable.Find("button[data-testid='modeling-issue-0']");
+        navButton.QuerySelector(".tm-modeling-issue-panel__message")!.TextContent.Should().Be("Shared body");
+        navButton.QuerySelectorAll(".tm-modeling-issue-panel__fix").Should().BeEmpty();
+
+        var staticItem = sourceless.Find("div[data-testid='modeling-issue-0']");
+        staticItem.QuerySelector(".tm-modeling-issue-panel__message")!.TextContent.Should().Be("Shared body");
+
+        navButton.QuerySelector(".tm-modeling-issue-panel__body")!.ClassList
+            .Should().BeEquivalentTo(staticItem.QuerySelector(".tm-modeling-issue-panel__body")!.ClassList);
+        navButton.QuerySelector(".tm-modeling-issue-panel__icon")!.ClassList
+            .Should().BeEquivalentTo(staticItem.QuerySelector(".tm-modeling-issue-panel__icon")!.ClassList);
     }
 
     [Fact]

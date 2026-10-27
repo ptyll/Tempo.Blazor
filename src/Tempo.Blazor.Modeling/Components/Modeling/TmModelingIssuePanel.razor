@@ -30,7 +30,10 @@
                 <li role="listitem">
                     @* Nálezy bez zdroje (no SourceElementId/SourceRelationshipId) have no navigation
                        target: they render as a non-interactive list item — no <button>, no pointer
-                       cursor, no hover affordance. Navigable issues keep the button + accessible name. *@
+                       cursor, no hover affordance. Navigable issues keep the button whose accessible
+                       name is its visible content (NO aria-label override) plus a visually-hidden
+                       navigation hint. Both wrappers share ONE body fragment below, so the row
+                       content can never drift between the two variants. *@
                     @if (IsNavigable(issue.value))
                     {
                         <button type="button"
@@ -39,25 +42,9 @@
                                 data-severity="@GetSeverityKey(issue.value)"
                                 data-source-element-id="@issue.value.SourceElementId"
                                 data-source-relationship-id="@issue.value.SourceRelationshipId"
-                                aria-label="@GetIssueAriaLabel(issue.value)"
                                 @onclick="() => SelectIssueAsync(issue.value)">
-                            <span class="@GetIconClass(issue.value)" aria-hidden="true">@GetSeverityIcon(issue.value)</span>
-                            <span class="tm-modeling-issue-panel__body">
-                                <span class="tm-modeling-issue-panel__meta">
-                                    <strong>@GetSeverityLabel(issue.value)</strong>
-                                    @if (!string.IsNullOrWhiteSpace(issue.value.Category))
-                                    {
-                                        <span>@issue.value.Category</span>
-                                    }
-                                </span>
-                                <span class="tm-modeling-issue-panel__message">@GetMessage(issue.value)</span>
-                                @if (!string.IsNullOrWhiteSpace(issue.value.SuggestedFix))
-                                {
-                                    <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{issue.index}")">
-                                        @issue.value.SuggestedFix
-                                    </span>
-                                }
-                            </span>
+                            @IssueBody(issue.value, issue.index)
+                            <span class="tm-sr-only">@Loc["TmModelingIssuePanel_NavigateHint"]</span>
                         </button>
                     }
                     else
@@ -67,23 +54,7 @@
                              data-severity="@GetSeverityKey(issue.value)"
                              data-source-element-id="@issue.value.SourceElementId"
                              data-source-relationship-id="@issue.value.SourceRelationshipId">
-                            <span class="@GetIconClass(issue.value)" aria-hidden="true">@GetSeverityIcon(issue.value)</span>
-                            <span class="tm-modeling-issue-panel__body">
-                                <span class="tm-modeling-issue-panel__meta">
-                                    <strong>@GetSeverityLabel(issue.value)</strong>
-                                    @if (!string.IsNullOrWhiteSpace(issue.value.Category))
-                                    {
-                                        <span>@issue.value.Category</span>
-                                    }
-                                </span>
-                                <span class="tm-modeling-issue-panel__message">@GetMessage(issue.value)</span>
-                                @if (!string.IsNullOrWhiteSpace(issue.value.SuggestedFix))
-                                {
-                                    <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{issue.index}")">
-                                        @issue.value.SuggestedFix
-                                    </span>
-                                }
-                            </span>
+                            @IssueBody(issue.value, issue.index)
                         </div>
                     }
                 </li>
@@ -91,3 +62,29 @@
         </ol>
     }
 </section>
+
+@code {
+    /// <summary>
+    /// The shared row body (severity icon, meta, message, suggested fix) rendered by BOTH the
+    /// navigable button and the sourceless div wrapper — one source of truth for the content.
+    /// </summary>
+    private RenderFragment IssueBody(ModelingIssueDto issue, int index) => @<text>
+        <span class="@GetIconClass(issue)" aria-hidden="true">@GetSeverityIcon(issue)</span>
+        <span class="tm-modeling-issue-panel__body">
+            <span class="tm-modeling-issue-panel__meta">
+                <strong>@GetSeverityLabel(issue)</strong>
+                @if (!string.IsNullOrWhiteSpace(issue.Category))
+                {
+                    <span>@issue.Category</span>
+                }
+            </span>
+            <span class="tm-modeling-issue-panel__message">@GetMessage(issue)</span>
+            @if (!string.IsNullOrWhiteSpace(issue.SuggestedFix))
+            {
+                <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{index}")">
+                    @issue.SuggestedFix
+                </span>
+            }
+        </span>
+    </text>;
+}

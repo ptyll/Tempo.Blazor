@@ -7,7 +7,7 @@ using Tempo.Blazor.Modeling;
 namespace Tempo.Blazor.Components.Modeling;
 
 /// <summary>Loads a semantic modeling source and presents an initial modeling editor shell.</summary>
-public partial class TmModelingEditor : IDisposable
+public partial class TmModelingEditor : IAsyncDisposable
 {
     private const int MinimumLoadingDelayMilliseconds = 150;
     private const int LongLoadingMessageDelayMilliseconds = 5_000;
@@ -39,6 +39,21 @@ public partial class TmModelingEditor : IDisposable
     private ModelingEditorPanel _activePanel = ModelingEditorPanel.Preview;
     private bool _shouldFocusOpenEditorCloseButton;
     private bool _shouldRestoreOpenButtonFocus;
+    private ModelingInteropModule? _interopModule;
+    private ElementReference _editorRoot;
+
+    /// <summary>Stable, test-id-independent focus hook of the open-editor overlay trigger.</summary>
+    internal const string OpenInEditorFocusSelector = "[data-modeling-focus='open-in-editor']";
+
+    /// <summary>Stable, test-id-independent focus hook of the open-editor overlay close button.</summary>
+    internal const string OpenEditorCloseFocusSelector = "[data-modeling-focus='open-editor-close']";
+
+    /// <summary>Scoped accessor for the shared, disposed-guarded module wrapper (the [Inject]
+    /// runtime is only available after construction, so the wrapper is created lazily).</summary>
+    private ModelingInteropModule Interop => _interopModule ??= new ModelingInteropModule(JSRuntime);
+
+    /// <summary>Test seam (InternalsVisibleTo): the lazily created module wrapper, or null before first use.</summary>
+    internal ModelingInteropModule? TestInteropModule => _interopModule;
 
     /// <summary>All registered semantic model providers available to the editor.</summary>
     [Inject] public IEnumerable<IModelingModelProvider> ModelProviders { get; set; } = [];
@@ -167,13 +182,13 @@ public partial class TmModelingEditor : IDisposable
         if (_shouldFocusOpenEditorCloseButton)
         {
             _shouldFocusOpenEditorCloseButton = false;
-            await FocusSelectorAsync("[data-testid='modeling-open-diagram-close']");
+            await FocusWithinAsync(OpenEditorCloseFocusSelector);
         }
 
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
-            await FocusSelectorAsync("[data-testid='modeling-open-in-editor-button']");
+            await FocusWithinAsync(OpenInEditorFocusSelector);
         }
     }
 
@@ -533,53 +548,14 @@ public partial class TmModelingEditor : IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task FocusSelectorAsync(string selector)
-    {
-        try
-        {
-            var module = await GetInteropModuleAsync();
-            if (module is null)
-            {
-                return;
-            }
-
-            await module.InvokeVoidAsync("focusSelector", selector);
-        }
-        catch (JSException)
-        {
-            // Focus restoration is progressive enhancement and should not break rendering.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; there is nothing left to focus.
-        }
-        catch (ObjectDisposedException)
-        {
-            // The component or the runtime is being torn down.
-        }
-    }
-
-    private const string InteropModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
-
-    private Task<IJSObjectReference>? _interopModuleTask;
-
     /// <summary>
-    /// Imports the CSP-safe <c>modeling-editor.js</c> ES module (no <c>&lt;script&gt;</c> tag
-    /// needed in the host). A failed import is not cached — the next focus request retries —
-    /// and never falls back to <c>eval</c>, which hosts with a strict CSP must not need.
+    /// Moves DOM focus to the element matching <paramref name="selector"/> INSIDE this editor's
+    /// root (the overlay close button, or the overlay trigger on focus return). Progressive
+    /// enhancement: every failure is swallowed and the editor keeps working without it.
     /// </summary>
-    private async Task<IJSObjectReference?> GetInteropModuleAsync()
+    private async Task FocusWithinAsync(string selector)
     {
-        _interopModuleTask ??= JSRuntime.InvokeAsync<IJSObjectReference>("import", InteropModulePath).AsTask();
-        try
-        {
-            return await _interopModuleTask;
-        }
-        catch (Exception)
-        {
-            _interopModuleTask = null;
-            throw;
-        }
+        await Interop.InvokeVoidSafeAsync("focusWithin", _editorRoot, selector);
     }
 
     private Task ActivatePanelAsync(ModelingEditorPanel panel)
@@ -680,15 +656,14 @@ public partial class TmModelingEditor : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
 
-        if (_interopModuleTask is { Status: TaskStatus.RanToCompletion } import && import.Result is not null)
+        if (_interopModule is not null)
         {
-            var module = import.Result;
-            _ = module.DisposeAsync().AsTask();
+            await _interopModule.DisposeAsync();
         }
     }
 

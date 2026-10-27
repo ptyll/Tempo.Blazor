@@ -5,6 +5,7 @@
 
 <section class="@RootClass"
          data-testid="@TestId("modeling-editor")"
+         @ref="_editorRoot"
          data-state="@StateName"
          data-load-count="@_completedLoadCount"
          data-generation-count="@_completedGenerationCount"
@@ -188,6 +189,7 @@
                               Size="ButtonSize.Sm"
                               Icon="@IconNames.X"
                               OnClick="CloseGeneratedDiagramAsync"
+                              data-modeling-focus="open-editor-close"
                               data-testid="@TestId("modeling-open-diagram-close")">
                         @Loc["Tm_Close"]
                     </TmButton>

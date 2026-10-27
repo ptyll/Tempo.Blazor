@@ -133,7 +133,7 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Keyboard_navigation_focuses_node_without_eval()
+    public async Task Keyboard_navigation_focuses_node_without_eval()
     {
         var module = JSInterop.SetupModule(ModelingModulePath);
         module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
@@ -152,9 +152,44 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             .Should().Contain("focusTreeElement",
                 "arrow navigation moves focus through the CSP-safe module"));
 
+        // The query is scoped to the tree root ElementReference — never the document.
+        foreach (var invocation in module.Invocations.Where(i =>
+                     i.Identifier is "focusTreeElement" or "scrollTreeElementIntoView"))
+        {
+            invocation.Arguments.Should().HaveCount(2);
+            invocation.Arguments[0].Should().BeOfType<ElementReference>(
+                "the node query is scoped to the tree root, not the document");
+        }
+
         JSInterop.Invocations
             .Where(invocation => invocation.Identifier == "eval")
             .Should().BeEmpty("keyboard navigation must not fall back to eval");
+
+        await cut.Instance.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Disposing_the_tree_disposes_the_imported_module()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("registerTreeDragBridge", _ => true).SetVoidResult();
+
+        var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        // The first render registers the drag bridge, which creates (and imports through)
+        // the module wrapper.
+        cut.WaitForAssertion(() => module.Invocations
+            .Select(invocation => invocation.Identifier)
+            .Should().Contain("registerTreeDragBridge"));
+
+        var wrapper = cut.Instance.TestInteropModule;
+        wrapper.Should().NotBeNull("the drag bridge created the module wrapper");
+
+        await cut.Instance.DisposeAsync();
+
+        wrapper!.IsDisposed.Should().BeTrue(
+            "@implements IAsyncDisposable must dispose the imported ES module, or the module object leaks");
     }
 
     [Fact]

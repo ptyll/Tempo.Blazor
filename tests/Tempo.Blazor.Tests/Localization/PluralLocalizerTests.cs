@@ -342,8 +342,8 @@ public class PluralLocalizerTests
     [InlineData("en", 2, "Issues: 2")]
     [InlineData("fr", 1, "Problèmes : 1")]
     [InlineData("fr", 2, "Problèmes : 2")]
-    [InlineData("sk", 1, "Nálezy: 1")]
-    [InlineData("sk", 7, "Nálezy: 7")]
+    [InlineData("sk", 1, "Problémy: 1")]
+    [InlineData("sk", 7, "Problémy: 7")]
     public void The_modeling_issue_count_is_neutral_in_every_language(string culture, int count, string expected)
     {
         using var _ = CultureScope.Use(culture);

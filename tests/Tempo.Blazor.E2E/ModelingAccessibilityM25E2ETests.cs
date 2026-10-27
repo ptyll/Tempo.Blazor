@@ -100,7 +100,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Issues expose screen-reader metadata: navigable issues are labeled buttons, sourceless issues keep accessible text")]
+    [Description("Issues expose screen-reader metadata: navigable issues are buttons whose accessible name is their visible content plus a hidden hint, sourceless issues keep accessible text")]
     public async Task IssuePanelAndStatusStrip_ExposeScreenReaderMetadata()
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
@@ -109,18 +109,27 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         await Assertions.Expect(issueItems).Not.ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         var itemCount = await issueItems.CountAsync();
 
-        // Only issues WITH a source element/relationship render as labeled buttons.
-        var navigableButtons = page.Locator("[data-testid='modeling-issue-list'] button[aria-label]");
+        // Only issues WITH a source element/relationship render as buttons. The button's
+        // accessible name is its visible content (there is deliberately NO aria-label
+        // override) plus a visually-hidden navigation hint.
+        var navigableButtons = page.Locator("[data-testid='modeling-issue-list'] button[data-severity]");
         var navigableCount = await navigableButtons.CountAsync();
-        Assert.IsTrue(navigableCount > 0, "Navigable issues should expose a labeled button target.");
+        Assert.IsTrue(navigableCount > 0, "Navigable issues should expose a button target.");
 
         var unlabeledIssues = await page.EvaluateAsync<string[]>(
             """
             () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] button'))
-                .filter(button => (button.getAttribute('aria-label') || '').trim().length < 12)
+                .filter(button => (button.textContent || '').replace(/\s+/g, ' ').trim().length < 12)
                 .map(button => button.textContent.trim())
             """);
-        Assert.AreEqual(0, unlabeledIssues.Length, "Issue buttons should have readable aria-labels.");
+        Assert.AreEqual(0, unlabeledIssues.Length, "Issue buttons should expose readable content as their accessible name.");
+
+        var hintSpans = await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] button .tm-sr-only'))
+                .map(span => (span.textContent || '').trim())
+            """);
+        Assert.AreEqual(navigableCount, hintSpans.Length, "Every navigable issue button carries the visually-hidden navigate hint.");
 
         // Sourceless issues are NOT buttons — they keep their accessible text in the reading order.
         var staticItems = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem'] > div[data-severity]");

@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Baseline ("before") screenshot capture for the Modeling redesign plan — phase 1. It freezes the
+/// Baseline ("before") screenshot GENERATOR for the Modeling redesign plan — phase 1. It freezes the
 /// CURRENT appearance of the modeling editor screens BEFORE any visual phase touches them, so the
 /// later phases can diff against it: the layout must not change in this phase (G3 fixes only).
 /// <para>
@@ -12,14 +12,24 @@ namespace Tempo.Blazor.E2E;
 /// the empty state and the error state. Viewports: 1440×900 (desktop), 1024×768 (tablet,
 /// <c>HasTouch</c>), 390×844 and 320×640 (mobile). Output:
 /// <c>tests/Tempo.Blazor.E2E/__screenshots__/modeling/</c> — committed as the "before" baseline.
-/// Not part of the Smoke lane.
+/// </para>
+/// <para>
+/// Every capture is deterministic: fonts ready, a double <c>requestAnimationFrame</c>, the
+/// diagram's <c>.tm-diagram-node</c> set present, and a style tag disabling ALL animations,
+/// transitions and the caret. Below 640 px the mixed-issue and stale-source shots switch to the
+/// mobile "Inspector" panel tab (the issue and source panels are only reachable through it
+/// there) and the mixed-issue runs additionally save an element screenshot of the issue panel
+/// at every viewport. The mixed-issue PNGs are the diff subject of the issue-panel phases.
+/// </para>
+/// <para>
+/// Off unless <c>TM_WRITE_BASELINES=1</c>. Not part of the Smoke lane.
 /// </para>
 /// </summary>
 [TestClass]
-[TestCategory("WASM")]
-public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
+public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestBase
 {
     private const string ModelingEditorUrl = "/modeling-editor";
+    private const string DisableMotionStyle = "*{animation:none!important;transition:none!important;caret-color:transparent!important}";
 
     private static string OutputDirectory
     {
@@ -43,14 +53,14 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
         => await CaptureAsync("default", string.Empty, requiresLoadedState: true);
 
     [TestMethod]
-    [Description("Captures the mixed-issue workspace (including a sourceless issue) at all four baseline viewports")]
+    [Description("Captures the mixed-issue workspace (including a sourceless issue) at all four baseline viewports plus the issue-panel element shots")]
     public async Task Capture_IssuesMixed()
-        => await CaptureAsync("issues-mixed", "?scenario=issues-mixed", requiresLoadedState: true);
+        => await CaptureAsync("issues-mixed", "?scenario=issues-mixed", requiresLoadedState: true, withIssuePanelShots: true);
 
     [TestMethod]
-    [Description("Captures the stale-source workspace at all four baseline viewports")]
+    [Description("Captures the stale-source workspace at all four baseline viewports (mobile opens the Inspector tab)")]
     public async Task Capture_StaleSource()
-        => await CaptureAsync("stale-source", "?fresh=false", requiresLoadedState: true);
+        => await CaptureAsync("stale-source", "?fresh=false", requiresLoadedState: true, inspectorTabOnMobile: true);
 
     [TestMethod]
     [Description("Captures the open 'Open in editor' dialog at desktop, tablet and phone viewports")]
@@ -61,10 +71,11 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
             var page = await OpenModelingPageAsync(string.Empty, width, height, touch);
             try
             {
+                await WaitForLoadedStateAsync(page);
                 await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
                 await page.Locator("[data-testid='modeling-open-diagram-editor']")
                     .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
-                await page.WaitForTimeoutAsync(500);
+                await SettleAsync(page);
                 await SaveViewportScreenshotAsync(page, $"open-editor-dialog-{width}x{height}");
             }
             finally
@@ -92,7 +103,7 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
         (320, 640, true),
     ];
 
-    private async Task CaptureAsync(string name, string query, bool requiresLoadedState, string? expectedState = null)
+    private async Task CaptureAsync(string name, string query, bool requiresLoadedState, string? expectedState = null, bool withIssuePanelShots = false, bool inspectorTabOnMobile = false)
     {
         foreach (var (width, height, touch) in BaselineViewports)
         {
@@ -106,12 +117,43 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
                 }
                 else if (requiresLoadedState)
                 {
-                    await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
-                        .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+                    await WaitForLoadedStateAsync(page);
                 }
 
-                await page.WaitForTimeoutAsync(400);
+                // Below 640 px the issue panel and the source panel live behind the mobile
+                // "Inspector" panel tab — the baseline must show the screen a user reaches them
+                // through (otherwise the mobile stale-source shot is indistinguishable from default).
+                if (inspectorTabOnMobile && width < 640)
+                {
+                    await OpenMobileInspectorTabAsync(page, waitForIssuePanel: false);
+                }
+
+                if (withIssuePanelShots)
+                {
+                    if (width < 640)
+                    {
+                        await OpenMobileInspectorTabAsync(page, waitForIssuePanel: true);
+                    }
+
+                    // Scroll the sourceless orphan row into view so the panel element shot and the
+                    // viewport shot both contain the non-interactive issue row (index 3).
+                    await page.Locator("[data-testid='modeling-issue-3']")
+                        .ScrollIntoViewIfNeededAsync(new LocatorScrollIntoViewIfNeededOptions { Timeout = 10000 });
+                }
+
+                await SettleAsync(page);
                 await SaveViewportScreenshotAsync(page, $"{name}-{width}x{height}");
+
+                if (withIssuePanelShots)
+                {
+                    await SettleAsync(page);
+                    await page.Locator("[data-testid='modeling-issue-panel']").ScreenshotAsync(
+                        new LocatorScreenshotOptions
+                        {
+                            Path = Path.Combine(OutputDirectory, $"issues-mixed-panel-{width}x{height}.png"),
+                            Timeout = 30_000
+                        });
+                }
             }
             finally
             {
@@ -119,6 +161,36 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
             }
         }
     }
+
+    /// <summary>
+    /// Opens the mobile-only "Inspector" panel tab. When <paramref name="waitForIssuePanel"/> is
+    /// set the issue panel must be visible afterwards, otherwise the source panel (stale badge).
+    /// </summary>
+    private static async Task OpenMobileInspectorTabAsync(IPage page, bool waitForIssuePanel)
+    {
+        await page.Locator("[data-testid='modeling-panel-tab-inspector']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await page.Locator(waitForIssuePanel ? "[data-testid='modeling-issue-panel']" : "[data-testid='modeling-source-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    /// <summary>Loaded editor AND at least one rendered diagram node — no fixed sleep.</summary>
+    private static async Task WaitForLoadedStateAsync(IPage page)
+    {
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('.tm-diagram-node').length > 0",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
+
+    /// <summary>
+    /// Deterministic settle: fonts loaded, then TWO animation frames (layout + paint commit) —
+    /// replaces the former fixed WaitForTimeout sleeps that flaked on slow CI machines.
+    /// </summary>
+    private static Task SettleAsync(IPage page) => page.EvaluateAsync(
+        "async () => { await document.fonts.ready; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }");
 
     private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch)
     {
@@ -135,6 +207,7 @@ public sealed class ModelingRedesignScreenshotsE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
         return page;
     }
 

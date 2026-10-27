@@ -3025,6 +3025,7 @@
   "TmModelingIssuePanel_EmptyTitle": "Aucun problème détecté",
   "TmModelingIssuePanel_Error": "Erreur",
   "TmModelingIssuePanel_Info": "Info",
+  "TmModelingIssuePanel_NavigateHint": "Afficher dans le modèle",
   "TmModelingIssuePanel_Title": "Problèmes",
   "TmModelingIssuePanel_UnspecifiedMessage": "Le message du problème n'est pas spécifié.",
   "TmModelingIssuePanel_Warning": "Avertissement",
