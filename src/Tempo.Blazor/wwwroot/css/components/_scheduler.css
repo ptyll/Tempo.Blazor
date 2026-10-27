@@ -48,6 +48,7 @@
     top: calc(var(--tm-space-2) * -1);
     left: var(--tm-space-1);
     transform: translateY(-100%);
+    z-index: 5;
     padding: var(--tm-space-1) var(--tm-space-2);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-text-primary);
@@ -63,6 +64,20 @@
     top: auto;
     bottom: calc(var(--tm-space-1) * -1);
     transform: translateY(100%);
+}
+
+/* The label is parked on the scheduler root, and the script sets its top and left against that
+   root. The offsets above are for a label that still lives inside the event. */
+.tm-scheduler > .tm-scheduler-event-drag-time {
+    top: 0;
+    left: 0;
+    transform: translateY(-100%);
+}
+
+.tm-scheduler > .tm-scheduler-event-drag-time.tm-scheduler-event-drag-time--below {
+    /* The script sets top to the event bottom. top: auto would throw that away and anchor the
+       label to the scheduler's bottom edge. */
+    transform: translateY(0);
 }
 
 @media (pointer: coarse) {
@@ -158,9 +173,7 @@
     border-color: var(--tm-color-primary);
 }
 
-.tm-scheduler-toolbar-today-btn {
-    font-weight: var(--tm-font-weight-medium, 500);
-}
+
 
 .tm-scheduler-toolbar-title {
     margin: 0;
@@ -187,6 +200,45 @@
     cursor: pointer;
 }
 
+/* A phone range label is wider than the row. The nav group yields, and the title trigger
+   ellipsizes, so the next button and the view trigger stay inside the scheduler. */
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-scheduler-toolbar--compact .tm-popover__trigger,
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-title-btn {
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* The date popover's root carries tm-scheduler-toolbar-date (Class on TmPopover). Claiming the
+   bare .tm-popover here fought _popover.css under UnconstrainedClassOwnershipTests. */
+.tm-scheduler-toolbar-date.tm-popover {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.tm-scheduler-toolbar-title-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-scheduler-toolbar-title-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--tm-text-tertiary);
+}
+
 .tm-scheduler-toolbar-title-btn:hover {
     background: var(--tm-color-surface-hover);
 }
@@ -201,30 +253,6 @@
 .tm-scheduler-toolbar-overflow {
     display: inline-flex;
     align-items: center;
-}
-
-.tm-scheduler-toolbar-add {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    height: var(--tm-space-9);
-    padding: 0 var(--tm-space-3);
-    border: none;
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-medium);
-    cursor: pointer;
-}
-
-.tm-scheduler-toolbar-add:hover {
-    background: var(--tm-color-primary-hover);
-}
-
-.tm-scheduler-toolbar-add:focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-scheduler-toolbar-views {
@@ -252,13 +280,7 @@
     color: var(--tm-color-primary-text);
 }
 
-.tm-scheduler-toolbar-title-text {
-    display: block;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+
 
 .tm-scheduler-toolbar-nav-btn:focus-visible,
 .tm-scheduler-event:focus-visible {
@@ -315,10 +337,7 @@
 .tm-scheduler-toolbar { justify-content: flex-start; }
 
 /* The view group clips with overflow:hidden, so an outset ring is cut off. */
-.tm-scheduler-toolbar-view-btn:focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: inset 0 0 0 2px var(--tm-color-primary), inset 0 0 0 4px var(--tm-bg-surface);
-}
+
 
 /* ── Context Menu ──────────────────────────────── */
 .tm-scheduler-context-menu {
@@ -382,13 +401,14 @@
         max-height: none;
         overflow: visible;
     }
+    /* Print keeps the title and drops the chrome: navigation, the view switcher and More. */
+    .tm-scheduler [data-tm-group="navigation"],
+    .tm-scheduler [data-tm-group="view"],
+    .tm-scheduler .tm-toolbar-more,
     .tm-scheduler-toolbar-nav,
-    .tm-scheduler-toolbar-views,
-    .tm-scheduler-toolbar-primary,
-    .tm-scheduler-toolbar-overflow,
-    .tm-scheduler-toolbar-slot,
-    .tm-scheduler-toolbar-title-chevron,
-    .tm-scheduler-toolbar-title svg { display: none !important; }
+    .tm-scheduler-toolbar--compact,
+    .tm-scheduler-date-strip,
+    .tm-scheduler-action-bar { display: none !important; }
     .tm-scheduler { border: none; box-shadow: none; }
     .tm-scheduler-toolbar { border-bottom: 1px solid var(--tm-color-border); }
     .tm-scheduler-toolbar-title { width: 100%; text-align: center; }
@@ -403,4 +423,99 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+    /* Print always shows the desktop layout, even from a phone (the component also pins it). */
+    .tm-scheduler { container-type: normal; }
+}
+
+/* The scheduler measures its own width. Descendants query tm-scheduler; the root never styles itself. */
+.tm-scheduler {
+    container-type: inline-size;
+    container-name: tm-scheduler;
+    /* The drag label is position:absolute against this root, not against a transformed event. */
+    position: relative;
+    /* A phone shows about three columns and scrolls the rest. A host that wants wider columns
+       overrides the variable; the mobile rule below is the floor. */
+    --tm-scheduler-day-col-min: 7rem;
+}
+
+.tm-scheduler-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.tm-scheduler-toolbar--compact {
+    flex-wrap: nowrap;
+}
+
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-nav-btn,
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-title [role="button"],
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-view .tm-dropdown-trigger,
+.tm-scheduler-date-strip-day {
+    min-width: var(--tm-touch-target, 2.75rem);
+    min-height: var(--tm-touch-target, 2.75rem);
+}
+
+.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-view {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.tm-scheduler-date-strip {
+    display: flex;
+    gap: var(--tm-space-1);
+    overflow-x: auto;
+    padding: var(--tm-space-2);
+}
+
+.tm-scheduler-date-strip-weekday,
+.tm-scheduler-date-strip-number {
+    display: block;
+}
+
+
+
+.tm-scheduler-date-strip-day {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    min-width: var(--tm-touch-target, 2.75rem);
+    min-height: var(--tm-touch-target, 2.75rem);
+    padding: var(--tm-space-1);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+}
+
+.tm-scheduler-date-strip-day[aria-pressed="true"] {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline-row {
+    min-height: var(--tm-touch-target, 2.75rem);
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-resource-col {
+    min-width: 8rem;
+}
+
+/* The core toolbar is a size container. A flex item with flex-basis:auto sizes against its
+   max-content, and a size container's max-content is 0, so the bar collapsed and More appeared
+   at every width (review: desktop ≥1024 showed the overflow button). width:100% gives the
+   container the row it actually has. Tablet (640–1023) is the same single row — More absorbs
+   what does not fit; there is no second toolbar row (decision SCH-TABLET-ONE-ROW). */
+.tm-scheduler-toolbar-bar {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border-bottom: none;
+    min-height: 0;
 }

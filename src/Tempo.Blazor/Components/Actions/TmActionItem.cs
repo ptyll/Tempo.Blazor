@@ -16,6 +16,21 @@ public sealed class TmActionItem
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Host test id copied onto the overflow entry as <c>data-testid</c>. Used when the action has
+    /// no copy on the bar (a toolbar button with <c>Priority == OverflowOnly</c>). Empty renders no
+    /// attribute.
+    /// </summary>
+    public string? TestId { get; set; }
+
+    /// <summary>
+    /// The same host test id, rendered as <c>data-menu-testid</c> on the More entry when the bar
+    /// button still owns <c>data-testid</c> (a collapsed Secondary, for example). Empty renders no
+    /// attribute. A test that must match exactly one <c>[data-testid]</c> with More open keys the
+    /// menu copy off this instead.
+    /// </summary>
+    public string? MenuTestId { get; set; }
+
     /// <summary>The user-visible label. Names the rendered button and stays fully in the DOM.</summary>
     public string Label { get; set; } = string.Empty;
 

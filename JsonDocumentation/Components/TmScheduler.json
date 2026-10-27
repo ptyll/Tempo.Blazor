@@ -267,7 +267,28 @@
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+      "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3. A mobile layout uses CompactMaxVisibleEvents instead."
+    },
+    {
+      "name": "CompactMaxVisibleEvents",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Maximum events shown in a month day cell on a mobile layout. Default: 1."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Pins the layout. Auto measures the scheduler's own container; a forced value renders that layout without a measurement."
+    },
+    {
+      "name": "MobileActionBar",
+      "type": "TmSchedulerMobileActionBar",
+      "isRequired": false,
+      "default": "None",
+      "description": "The mobile action bar. None (default) renders nothing. Auto renders the bar on a mobile layout only."
     },
     {
       "name": "OnMoreClick",
@@ -279,7 +300,7 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Additional CSS class(es)."
+      "description": "Additional CSS class(es). Give the scheduler a bounded height: the root is height 100%, which only resolves against a sized ancestor, and an unbounded host grows with the day. On a mobile layout the time-grid scroller is capped at 70dvh so the action bar stays reachable."
     },
     {
       "name": "AllowPrint",
@@ -315,7 +336,6 @@
     "tm-scheduler-toolbar",
     "tm-scheduler-toolbar-nav",
     "tm-scheduler-toolbar-nav-btn",
-    "tm-scheduler-toolbar-today-btn",
     "tm-scheduler-toolbar-title",
     "tm-scheduler-toolbar-views",
 
@@ -353,7 +373,7 @@
     { "name": "--tm-scheduler-event-tint", "description": "Amount of the event colour mixed into the shared surface. 14%." },
     { "name": "--tm-scheduler-event-border-tint", "description": "Amount of the event colour mixed into the shared surface border. 28%." },
     { "name": "--tm-scheduler-event-bar-width", "description": "Width of the shared surface left bar. Defaults to --tm-space-1." },
-    { "name": "--tm-scheduler-hour-height", "description": "Height of one hour in the time grid. Defaults to 3rem." },
+    { "name": "--tm-scheduler-hour-height", "description": "Height of one hour in the time grid. Defaults to 3rem on the root. A coarse pointer raises it to 3.5rem through :where(.tm-scheduler), so a host rule on .tm-scheduler wins over the coarse default and the mobile layout rule (also 3.5rem) wins over both." },
     { "name": "--tm-scheduler-visible-hours", "description": "Read-only. The component sets it to the visible range in hours, and the geometry reads it." },
     { "name": "--tm-scheduler-offhours-bg", "description": "Wash of a slot outside working hours when HighlightOffHours is true. A 6% mix of --tm-text-secondary." },
     { "name": "--tm-scheduler-lane-height", "description": "Height of one timeline lane. Defaults to 3.5rem." },

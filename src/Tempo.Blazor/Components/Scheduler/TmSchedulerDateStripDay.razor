@@ -1,0 +1,38 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using System.ComponentModel
+@using System.Globalization
+
+@* One day of the date strip. The strip owns it; a host never places it, so it stays out of the editor. *@
+
+<button @ref="_button" type="button" class="tm-scheduler-date-strip-day @(Day == Today ? "tm-scheduler-date-strip-day--today" : null)"
+        data-date="@Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+        tabindex="@(IsStop ? 0 : -1)"
+        aria-pressed="@(Day == Selected ? "true" : "false")"
+        aria-current="@(Day == Today ? "date" : null)"
+        aria-label="@Day.ToString("D", CultureInfo.CurrentUICulture)"
+        @onclick="@(() => OnClick.InvokeAsync(Day))">
+    <span class="tm-scheduler-date-strip-weekday">@Day.ToString("ddd", CultureInfo.CurrentUICulture)</span>
+    <span class="tm-scheduler-date-strip-number">@Day.Day</span>
+</button>
+
+@code {
+    /// <summary>The day this button represents.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public DateOnly Day { get; set; }
+
+    /// <summary>The selected day. The matching button is pressed.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public DateOnly? Selected { get; set; }
+
+    /// <summary>Today. The matching button is current.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public DateOnly Today { get; set; }
+
+    /// <summary>Whether this button is the roving tab stop.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public bool IsStop { get; set; }
+
+    /// <summary>Fires when the button is activated.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public EventCallback<DateOnly> OnClick { get; set; }
+
+    private ElementReference _button;
+
+    /// <summary>Moves DOM focus onto this day.</summary>
+    public ValueTask FocusAsync() => _button.FocusAsync();
+}

@@ -10,8 +10,34 @@
 > `docs/email-templates/MIGRATION-2.9-to-2.10.md` and the hosting contract is
 > `docs/email-templates/HOSTING.md`.
 
+### Breaking / Migration
+
+- **`TmScheduler` narrows its own container, and a container under 640px now renders the mobile layout.** Before, the scheduler always rendered the desktop toolbar and the desktop view markup, whatever the container measured. After, `LayoutMode="Auto"` (the default) classifies the scheduler's own container: under 640px it renders the compact toolbar (`‹ title ›`, a view dropdown, and a Today icon button only when `MobileActionBar` is `None` — with `Auto` the action bar owns Today), a week date strip and a day resource picker; 640–1023px is one toolbar row whose More menu absorbs what does not fit (decision SCH-TABLET-ONE-ROW — there is no second row). A host that must keep the desktop markup at every width pins it:
+
+  ```razor
+  <!-- before: the only markup, at every width -->
+  <TmScheduler View="TmScheduleViewType.Week" />
+
+  <!-- after: opt out of the container classification -->
+  <TmScheduler View="TmScheduleViewType.Week" LayoutMode="TmLayoutMode.Desktop" />
+  ```
+
+  The root gained a wrapper, `div.tm-layout.tm-scheduler-layout`, and the root itself carries `data-layout`. Print pins that layout back to desktop, so a phone prints the full week. **Give the scheduler a bounded height.** The root is `height: 100%`, which only resolves when an ancestor has a height; an unbounded host grows with the day. On a mobile layout the time-grid scroller is capped at `70dvh` so the action bar stays reachable, but a host that wants the grid to fill a panel should size the ancestor:
+
+  ```css
+  .scheduler-host { height: 640px; }
+  ```
+
+- **`TmScheduler` print from a phone is guaranteed through the toolbar, not through Ctrl+P.** The toolbar Print action calls `PrintAsync`, which awaits the desktop re-render before `window.print()`. A browser Ctrl+P raises `beforeprint`, and the component re-renders on it, but that re-render is async, so the browser may print the mobile markup (the focus day and its neighbours) before the seven columns arrive. A host that must print the full week from a phone calls `PrintAsync`.
+- **Scheduler toolbar class names.** The desktop toolbar is now the core `TmToolbar`, so the hand-rolled button classes are gone. `.tm-scheduler-toolbar-nav-btn` remains, but only on the compact (mobile) row. `.tm-scheduler-toolbar-today-btn` and `.tm-scheduler-toolbar-add` are removed; Today and New event are `button.tm-toolbar-btn`, and Print lives in the More menu (`button.tm-toolbar-more`, group `data-tm-group="export"`). A selector that matched `.tm-scheduler-toolbar-today-btn` or `.tm-scheduler-toolbar-add` matches nothing now — use `[data-testid="scheduler-today"]` and `[data-testid="scheduler-add"]`.
+
 ### Added
 
+- **`TmCalendarView.Compact`.** A mini-month for a popover: `Compact="true"` adds `tm-calendar-view--compact`, which drops the event area and shrinks the day cell. Default `false`, so an existing calendar is unchanged. The scheduler title popover uses it.
+- **Toolbar More test id.** A host `data-testid` is copied onto the More entry as `data-testid` only when the button has no bar copy (`TmToolbarButton.Priority == OverflowOnly`). A button that still renders on the bar — including a collapsed Secondary — keeps `data-testid` on that button and exposes the same value as `data-menu-testid` on the menu entry, so exactly one `[data-testid]` match exists with More open. New `TmActionItem.MenuTestId` carries that value; `TmActionItem.TestId` stays the overflow-only hook.
+
+- **`TmDropdown.OpenAsync` and `TmPopover.OpenAsync`.** Both are public. The scheduler action bar uses them: the view entry opens the compact-row dropdown, and Go to date opens the title popover after the More menu has closed.
+- **`TmScheduler`: responsive layouts for tablet and mobile.** `LayoutMode` (`Auto` by default) resolves the scheduler's own container; a forced value renders that layout without a measurement. Mobile collapses the toolbar to previous, the title and next, replaces the view tabs with a dropdown, caps a month cell at `CompactMaxVisibleEvents` (default 1), shows a date strip in the week view and a resource picker in a day view that has resources, and renders agenda events as cards. `MobileActionBar` (`None` by default, `Auto` opt-in) renders the core `TmMobileActionBar` on a mobile layout with New event (only with `OnAddClick`), Today, the view switcher and a More menu holding Print and Go to date. The title popover carries a compact month (`.tm-scheduler-date-calendar`). A timeline drag label is parked on the scheduler root, so the sticky resource column no longer paints over it. New resource keys, all four languages: `TmScheduler_GoToDateLabel`, `TmScheduler_SwitchView`, `TmScheduler_ShowResources`, `TmScheduler_DateStrip`, `TmScheduler_ActionBar`, `TmScheduler_Toolbar`.
 - **`TmScheduler`: the touch move keeps the grabbed point, and each view has its own keyboard hint.** A finger press records how far into the event it landed, and both the preview and the commit use that point, so the event does not jump to the fingertip. The day, column or row under the finger gets `tm-scheduler-month-day--drop-target` (the grid and timeline reuse the same tint under their own drop-target class) and loses it on release. `ShowTouchHint` (default `false`) renders a localized hint under the toolbar; CSS shows it only for `(hover: none) and (pointer: coarse)`. A draggable event points at its view hint (`TmScheduler_MoveHint_Grid`, `TmScheduler_MoveHint_Timeline`, `TmScheduler_MoveHint_Month`) and lists its Alt chords in `aria-keyshortcuts`. A read-only event is not a keyboard-move target, so it does not swallow Alt+Left/Right. The announcement names the event (`TmScheduler_EventMoved` is "{0} moved to {1}", and `TmScheduler_EventMovedToResource` adds the resource). A move across a daylight-saving boundary writes the display zone's offset for the new local time, not the machine offset.
 - **`TmScheduler`: a finger moves an event, and Alt+Arrow is the keyboard alternative.** A 400ms touch hold on an event in the month, time grid or timeline views starts a move through the shared `pointer-drag.js` (`pointerTypes: ['touch']`); a quick swipe still scrolls, and a mouse or a pen press on the event body stays HTML5 drag-and-drop. The drop snaps to `data-slot-duration` and resolves the day, minute and resource from `data-date`, `data-resource` and `data-range-*`. Escape or `pointercancel` restores the event and commits nothing. Alt+Arrow moves by one slot (or one day in the month), Alt+Shift+Arrow resizes, and a plain arrow stays the roving key. HTML5 drop, the touch release and the keyboard step share one commit path, so a read-only scheduler or a read-only event ignores all three. The scheduler announces the result on a single `role=status` live region (`TmScheduler_EventMoved`, `TmScheduler_EventResized`). While the finger moves, the event gets `tm-scheduler-event--moving` and a live time label (`.tm-scheduler-event-drag-time`). New resource keys, all four languages: `TmScheduler_MoveHint_Grid`, `TmScheduler_MoveHint_Timeline`, `TmScheduler_MoveHint_Month`, `TmScheduler_TouchHint`, `TmScheduler_EventMoved`, `TmScheduler_EventMovedToResource`, `TmScheduler_EventResized`.
 
@@ -1257,8 +1283,19 @@
   unhandled `500`. `ReportEmailTemplateGalleryStore` applies the same limits, so “what passes the
   import passes the server” holds for JSON sent by a client.
 
-### Breaking / Migration
+### Changed
 
+- **`TmScheduler` toolbar: Print moves into the core toolbar's More menu, and mobile drops Today and New event from the row.** Before, the toolbar was a hand-rolled row and Print lived in a `TmDropdown` under `[data-testid='scheduler-more']`, in a group named `overflow`. Now the desktop and tablet toolbar is the core `TmToolbar` (`Overflow=Menu`): navigation, the title, the view switcher and New event stay pinned, and Print is `OverflowOnly` in the group `export`. The More trigger is `button.tm-toolbar-more`, and the menu entry keeps `[data-testid='scheduler-print']`. On a mobile layout the row keeps only previous, the title and next; Today and New event return through `MobileActionBar="Auto"`.
+  ```razor
+  <!-- before -->
+  <TmScheduler View="View" />
+  <!-- a test opened print through the old trigger -->
+  cut.Find("[data-testid='scheduler-more'] button").Click();
+
+  <!-- after: opt in to the bar to keep Today and New event on a phone -->
+  <TmScheduler View="View" MobileActionBar="TmSchedulerMobileActionBar.Auto" />
+  cut.Find("button.tm-toolbar-more").Click();
+  ```
 - **`TmScheduler` month view now registers the pointer instance, and a drop writes the display-zone offset.** Before, the month view had no JS instance, a drop kept the event's old offset (or the machine offset when the host had none), and the live region was a visually hidden span. Now the month view calls `TempoBlazor.Scheduler.registerInstance` on first render and `unregisterInstance` on dispose, so a bUnit host in `JSRuntimeMode.Strict` must `SetupVoid` both. A move writes `(TimeZone ?? TimeZoneInfo.Local).GetUtcOffset(newLocal)`. The live region is `<div class="tm-sr-only" role="status" aria-live="polite">`.
   ```razor
   <!-- before: a Strict test rendered the month without a scheduler setup -->

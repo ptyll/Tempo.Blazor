@@ -93,6 +93,25 @@
       "description": "Resources for grouping columns."
     },
     {
+      "name": "VisibleResourceId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The resource whose column the mobile picker shows. Defaults to the first resource."
+    },
+    {
+      "name": "VisibleResourceIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires when the picker chooses another resource."
+    },
+    {
+      "name": "ShowResourcePicker",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the resource picker above the grid. The mobile layout sets it."
+    },
+    {
       "name": "EventTemplate",
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,

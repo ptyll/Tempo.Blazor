@@ -1,4 +1,5 @@
 @page "/scheduler"
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Buttons
@@ -48,6 +49,67 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="scheduler-tablet-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tablet layout</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Forced tablet layout: one toolbar row, at any viewport</p>
+        </div>
+    </div>
+    <div class="showcase-card" style="width: 1100px; max-width: 100%; min-height: 420px; position: relative;">
+        <TmScheduler @bind-View="_tabletView"
+                     @bind-CurrentDate="_tabletDate"
+                     Events="_sampleEvents"
+                     LayoutMode="TmLayoutMode.Tablet" />
+    </div>
+    @* Auto, so a viewport in the 640-1023 band resolves to tablet from the container itself. *@
+    <div class="showcase-card" data-testid="scheduler-tablet-auto" style="width: 100%; min-height: 240px; position: relative;">
+        <TmScheduler Events="_sampleEvents" View="TmScheduleViewType.Week" />
+    </div>
+</section>
+
+<section class="demo-section" data-testid="scheduler-mobile-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Mobile layout</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Forced mobile layout with the action bar, at any viewport</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Phone</span>
+    </div>
+    <div class="showcase-card" data-testid="scheduler-mobile-agenda" style="max-width: 390px; height: 640px; position: relative;">
+        <TmScheduler @bind-View="_mobileAgendaView"
+                     @bind-CurrentDate="_mobileDate"
+                     Events="_sampleEvents"
+                     LayoutMode="TmLayoutMode.Mobile"
+                     ScrollToTime="@_scrollToEight" />
+    </div>
+    <div class="showcase-card" data-testid="scheduler-mobile-plain" style="max-width: 390px; height: 640px; position: relative;">
+        <TmScheduler @bind-View="_plainMobileView"
+                     @bind-CurrentDate="_plainMobileDate"
+                     Events="_sampleEvents"
+                     LayoutMode="TmLayoutMode.Mobile"
+                     ScrollToTime="@_scrollToEight" />
+    </div>
+    <div class="showcase-card" style="max-width: 390px; height: 640px; position: relative;">
+        <TmScheduler @bind-View="_mobileView"
+                     @bind-CurrentDate="_mobileDate"
+                     Events="_sampleEvents"
+                     LayoutMode="TmLayoutMode.Mobile"
+                     MobileActionBar="TmSchedulerMobileActionBar.Auto"
+                     ScrollToTime="@_scrollToEight"
+                     OnAddClick="HandleAddClick"
+                     OnEventClick="HandleEventClick" />
+    </div>
+    @* No height of its own: the 70dvh cap on the grid is what keeps the action bar in view. *@
+    <div class="showcase-card" data-testid="scheduler-mobile-unbounded" style="max-width: 390px; position: relative;">
+        <TmScheduler Events="_sampleEvents"
+                     View="TmScheduleViewType.Week"
+                     LayoutMode="TmLayoutMode.Mobile"
+                     ScrollToTime="@_scrollToEight"
+                     MobileActionBar="TmSchedulerMobileActionBar.Auto" />
+    </div>
+</section>
+
 <!-- Basic Scheduler -->
 <section class="demo-section" data-testid="scheduler-month-section">
     <div class="flex items-center justify-between mb-4">
@@ -63,6 +125,7 @@
                      @bind-CurrentDate="_currentDate"
                      @bind-SelectedEvent="_monthSelected"
                      Events="_sampleEvents"
+                     LayoutMode="TmLayoutMode.Desktop"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick" />
     </div>
@@ -149,6 +212,7 @@
     
     <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Week"
+                     LayoutMode="TmLayoutMode.Desktop"
                      @bind-CurrentDate="_weekDate"
                      @bind-SelectedEvent="_weekSelected"
                      Events="_weekEvents"
@@ -171,6 +235,7 @@
     
     <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Day"
+                     LayoutMode="TmLayoutMode.Desktop"
                      @bind-CurrentDate="_dayDate"
                      Events="_dayEvents"
                      ScrollToTime="@_scrollToEight"
@@ -195,6 +260,7 @@
                      @bind-CurrentDate="_agendaDate"
                      @bind-SelectedEvent="_agendaSelected"
                      Events="_agendaEvents"
+                     LayoutMode="TmLayoutMode.Desktop"
                      OnEventClick="HandleEventClick" />
     </div>
 </section>
@@ -304,6 +370,7 @@
     
     <div class="showcase-card" style="height: 500px; position: relative;">
         <TmScheduler View="TmScheduleViewType.Timeline"
+                     LayoutMode="TmLayoutMode.Desktop"
                      @bind-CurrentDate="_timelineDate"
                      Events="_timelineEvents"
                      Resources="_resources"
@@ -407,6 +474,7 @@
         <TmScheduler @bind-View="_interactiveView"
                      @bind-CurrentDate="_interactiveDate"
                      Events="_interactiveEvents"
+                     LayoutMode="TmLayoutMode.Desktop"
                      OnEventClick="HandleEventClick"
                      OnSlotClick="HandleSlotClick"
                      OnEventChanged="HandleEventChanged"
@@ -464,6 +532,17 @@
     </div>
 }
 
+<TmModal @bind-IsOpen="_detailOpen" Title="@(_detail?.Title ?? "Event")" Size="ModalSize.Small">
+    @if (_detail is not null)
+    {
+        <p>@_detail.Start.ToString("g") – @_detail.End.ToString("g")</p>
+        @if (!string.IsNullOrEmpty(_detail.Description))
+        {
+            <p>@_detail.Description</p>
+        }
+    }
+</TmModal>
+
 @code {
     // ── K3: timezone + ICS demo ──
     private TmScheduleViewType _tzView = TmScheduleViewType.Week;
@@ -501,6 +580,15 @@
     }
 
     private TmScheduleViewType _monthView = TmScheduleViewType.Month;
+    private TmScheduleViewType _tabletView = TmScheduleViewType.Week;
+    private DateTime _tabletDate = DateTime.Today;
+    private TmScheduleViewType _plainMobileView = TmScheduleViewType.Week;
+    private TmScheduleViewType _mobileAgendaView = TmScheduleViewType.Agenda;
+    private DateTime _plainMobileDate = DateTime.Today;
+    private TmScheduleViewType _mobileView = TmScheduleViewType.Week;
+    private DateTime _mobileDate = DateTime.Today;
+
+    private void HandleAddClick() { }
     private TmScheduleViewType _interactiveView = TmScheduleViewType.Month;
     private DateTime _currentDate = DateTime.Today;
     private DateTime _templateDate = new(2026, 7, 2);
@@ -682,10 +770,15 @@
         new() { Id = "i5", Title = "Short Event", Start = DateTime.Today.AddHours(16), End = DateTime.Today.AddHours(16).AddMinutes(30), Color = "#0ea5e9" }
     };
 
+    private bool _detailOpen;
+    private TmScheduleEvent? _detail;
+
     private void HandleEventClick(TmScheduleEvent evt)
     {
         _lastAction = $"Clicked event: '{evt.Title}' at {evt.Start:g}";
         Toast.ShowInfo($"Event: {evt.Title}");
+        _detail = evt;
+        _detailOpen = true;
     }
 
     private void HandleSlotClick((DateTime Start, DateTime End) slot)

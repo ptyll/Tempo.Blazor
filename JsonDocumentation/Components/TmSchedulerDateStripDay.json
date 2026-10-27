@@ -1,0 +1,41 @@
+{
+  "itemName": "TmSchedulerDateStripDay",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "One day button of the mobile week strip. TmSchedulerDateStrip renders one per day and moves DOM focus onto the roving stop through FocusAsync.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Day",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "The day this button represents."
+    },
+    {
+      "name": "Selected",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The selected day. The matching button is aria-pressed."
+    },
+    {
+      "name": "Today",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "Today. The matching button gets aria-current=date."
+    },
+    {
+      "name": "IsStop",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this button is the roving tab stop."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires with the day when the button is activated."
+    }
+  ]
+}

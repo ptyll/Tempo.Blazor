@@ -6706,6 +6706,12 @@
           "description": "The user-visible label. Names the rendered button and stays fully in the DOM."
         },
         {
+          "name": "MenuTestId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The same host test id, rendered as data-menu-testid on the More entry when the bar button still owns data-testid (a collapsed Secondary, for example). Empty renders no attribute. A test that must match exactly one [data-testid] with More open keys the menu copy off this instead."
+        },
+        {
           "name": "OnClick",
           "kind": "Property",
           "type": "EventCallback",
@@ -6722,6 +6728,12 @@
           "kind": "Property",
           "type": "int",
           "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
+        },
+        {
+          "name": "TestId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Host test id copied onto the overflow entry as data-testid. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute."
         }
       ],
       "properties": [
@@ -6956,6 +6968,16 @@
           "description": "Whether the search found results (Ok), found none (Empty), or failed transiently (Transient)."
         }
       ]
+    },
+    {
+      "itemName": "TmSchedulerMobileActionBar",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "Whether TmScheduler renders the mobile action bar. None (the default) renders nothing, so an existing host is unchanged. Auto renders the bar on a mobile layout only.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerMobileActionBar.cs",
+      "documentationStatus": "merged"
     },
     {
       "itemName": "TmSignatureCaptureChangedEventArgs",
@@ -21818,6 +21840,12 @@
           "description": "Additional CSS class."
         },
         {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders a mini-month (tm-calendar-view--compact): no event area, a smaller day cell. Default false. A scheduler title popover sets it."
+        },
+        {
           "name": "Events",
           "type": "IReadOnlyList<CalendarEvent>?",
           "isRequired": false,
@@ -23784,7 +23812,14 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Additional CSS class(es)."
+          "description": "Additional CSS class(es). Give the scheduler a bounded height: the root is height 100%, which only resolves against a sized ancestor, and an unbounded host grows with the day. On a mobile layout the time-grid scroller is capped at 70dvh so the action bar stays reachable."
+        },
+        {
+          "name": "CompactMaxVisibleEvents",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Maximum events shown in a month day cell on a mobile layout. Default: 1."
         },
         {
           "name": "CurrentDate",
@@ -23857,11 +23892,25 @@
           "default": "false"
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Pins the layout. Auto measures the scheduler's own container; a forced value renders that layout without a measurement."
+        },
+        {
           "name": "MaxVisibleEvents",
           "type": "int",
           "isRequired": false,
           "default": "3",
-          "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+          "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3. A mobile layout uses CompactMaxVisibleEvents instead."
+        },
+        {
+          "name": "MobileActionBar",
+          "type": "TmSchedulerMobileActionBar",
+          "isRequired": false,
+          "default": "TmSchedulerMobileActionBar.None",
+          "description": "The mobile action bar. None (default) renders nothing. Auto renders the bar on a mobile layout only."
         },
         {
           "name": "MonthWeeks",
@@ -24067,7 +24116,6 @@
         "tm-scheduler-toolbar",
         "tm-scheduler-toolbar-nav",
         "tm-scheduler-toolbar-nav-btn",
-        "tm-scheduler-toolbar-today-btn",
         "tm-scheduler-toolbar-title",
         "tm-scheduler-toolbar-views",
         "tm-scheduler-toolbar-print",
@@ -24133,7 +24181,7 @@
         },
         {
           "name": "--tm-scheduler-hour-height",
-          "description": "Height of one hour in the time grid. Defaults to 3rem."
+          "description": "Height of one hour in the time grid. Defaults to 3rem on the root. A coarse pointer raises it to 3.5rem through :where(.tm-scheduler), so a host rule on .tm-scheduler wins over the coarse default and the mobile layout rule (also 3.5rem) wins over both."
         },
         {
           "name": "--tm-scheduler-visible-hours",
@@ -24199,6 +24247,13 @@
           "description": "Number of days to show in the agenda. Values below 1 are treated as 1."
         },
         {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders each event as a card with a chevron and sticks the day header. The mobile layout sets it.",
+          "default": "false"
+        },
+        {
           "name": "CurrentDate",
           "type": "DateTime",
           "isRequired": false,
@@ -24254,6 +24309,90 @@
         {
           "title": "Agenda view with click handler",
           "code": "<TmSchedulerAgendaView CurrentDate=\"DateTime.Today\" Events=\"@_events\" AgendaDays=\"14\" OnEventClick=\"@HandleEventClick\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmSchedulerDateStrip",
+      "kind": "Component",
+      "category": "Scheduler",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "The mobile week strip. It offers the week's days as buttons; the selected day is aria-pressed and today carries aria-current=date. TmScheduler renders it in the week view on a mobile layout.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerDateStrip.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Scheduler"
+      ],
+      "parameters": [
+        {
+          "name": "Dates",
+          "type": "IReadOnlyList<DateOnly>?",
+          "isRequired": false,
+          "description": "The days the strip offers, in order."
+        },
+        {
+          "name": "OnDateSelected",
+          "type": "EventCallback<DateOnly>",
+          "isRequired": false,
+          "description": "Fires with the day the user picked."
+        },
+        {
+          "name": "SelectedDate",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "The selected day. The matching button is aria-pressed."
+        },
+        {
+          "name": "Today",
+          "type": "DateOnly",
+          "isRequired": false,
+          "description": "Today. The matching button gets aria-current=date."
+        }
+      ]
+    },
+    {
+      "itemName": "TmSchedulerDateStripDay",
+      "kind": "Component",
+      "category": "Scheduler",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "One day button of the mobile week strip. TmSchedulerDateStrip renders one per day and moves DOM focus onto the roving stop through FocusAsync.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerDateStripDay.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Scheduler"
+      ],
+      "parameters": [
+        {
+          "name": "Day",
+          "type": "DateOnly",
+          "isRequired": false,
+          "description": "The day this button represents."
+        },
+        {
+          "name": "IsStop",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether this button is the roving tab stop."
+        },
+        {
+          "name": "OnClick",
+          "type": "EventCallback<DateOnly>",
+          "isRequired": false,
+          "description": "Fires with the day when the button is activated."
+        },
+        {
+          "name": "Selected",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "The selected day. The matching button is aria-pressed."
+        },
+        {
+          "name": "Today",
+          "type": "DateOnly",
+          "isRequired": false,
+          "description": "Today. The matching button gets aria-current=date."
         }
       ]
     },
@@ -24414,6 +24553,13 @@
           "description": "When true today's column draws the current-time indicator, forwarded to the time grid."
         },
         {
+          "name": "ShowResourcePicker",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the resource picker above the grid. The mobile layout sets it.",
+          "default": "false"
+        },
+        {
           "name": "SlotDuration",
           "type": "int",
           "isRequired": false,
@@ -24431,6 +24577,18 @@
           "type": "DateOnly",
           "isRequired": false,
           "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+        },
+        {
+          "name": "VisibleResourceId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The resource whose column the mobile picker shows. Defaults to the first resource."
+        },
+        {
+          "name": "VisibleResourceIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Fires when the picker chooses another resource."
         },
         {
           "name": "WorkDayEnd",
@@ -25153,6 +25311,13 @@
           "description": "Currently displayed date. The Month title is this date's month."
         },
         {
+          "name": "HasActionBar",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The mobile action bar carries Today, so the compact row omits its own Today button.",
+          "default": "false"
+        },
+        {
           "name": "HeaderActions",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -25169,6 +25334,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab. A standalone toolbar generates its own."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The layout the scheduler resolved. Mobile renders the compact row; desktop and tablet render the core toolbar."
         },
         {
           "name": "OnAddClick",
@@ -25260,7 +25432,6 @@
         "tm-scheduler-toolbar",
         "tm-scheduler-toolbar-nav",
         "tm-scheduler-toolbar-nav-btn",
-        "tm-scheduler-toolbar-today-btn",
         "tm-scheduler-toolbar-title",
         "tm-scheduler-toolbar-views",
         "tm-scheduler-toolbar-primary",
@@ -25317,6 +25488,18 @@
           "isRequired": false,
           "default": "1",
           "description": "First day of week (0=Sunday, 1=Monday, ...)."
+        },
+        {
+          "name": "FocusedDay",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "The day the strip focuses. Defaults to CurrentDate."
+        },
+        {
+          "name": "FocusedDayChanged",
+          "type": "EventCallback<DateOnly>",
+          "isRequired": false,
+          "description": "Fires when the strip picks a day."
         },
         {
           "name": "HideTimeGrid",
@@ -25415,6 +25598,13 @@
           "type": "EventCallback<TmScheduleEvent?>",
           "isRequired": false,
           "description": "Fires when the user selects an event."
+        },
+        {
+          "name": "ShowDateStrip",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the date strip and shows the focused day with its neighbours. The mobile layout sets it.",
+          "default": "false"
         },
         {
           "name": "ShowEventResource",
@@ -29045,11 +29235,11 @@
     }
   ],
   "summary": {
-    "itemCount": 387,
-    "manualItemCount": 387,
-    "generatedItemCount": 379,
+    "itemCount": 390,
+    "manualItemCount": 390,
+    "generatedItemCount": 382,
     "generatedOnlyItemCount": 0,
-    "componentCount": 204,
-    "publicApiTypeCount": 175
+    "componentCount": 206,
+    "publicApiTypeCount": 176
   }
 }

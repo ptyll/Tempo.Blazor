@@ -12,6 +12,42 @@ public class SchedulerTouchE2ETests : WasmTestBase
 {
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task Phone_QuickSwipe_OnAnEvent_Scrolls_AndDoesNotMoveIt()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        // The plain card is a bounded week with no vertical overflow. The action-bar card is an
+        // unbounded host, so its grid scrolls and a quick swipe has somewhere to go.
+        var card = page.Locator("[data-testid='scheduler-mobile-section'] .showcase-card").Last.Locator(".tm-scheduler");
+        await card.ScrollIntoViewIfNeededAsync();
+        var evt = card.Locator("[data-event-id]").First;
+        await evt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // A touch below the viewport is delivered nowhere. Scroll the event into the window first.
+        await evt.EvaluateAsync("node => node.scrollIntoView({ block: 'center' })");
+        var scroller = card.Locator(".tm-scheduler-timegrid-scroll, .tm-scheduler-timeline-scroll").First;
+        var before = await scroller.EvaluateAsync<double>("node => node.scrollTop + node.scrollLeft");
+        var action = await LastActionAsync(page);
+        var box = (await evt.BoundingBoxAsync())!;
+        var session = await page.Context.NewCDPSessionAsync(page);
+        var x = box.X + box.Width / 2;
+        var y = box.Y + Math.Min(box.Height / 2, 20);
+
+        // Inside the 400ms hold, and far enough that a scroll is unambiguous. A move before the
+        // hold completes is a scroll, never a drag.
+        await TouchAsync(session, "touchStart", x, y);
+        for (var i = 1; i <= 5; i++)
+        {
+            await TouchAsync(session, "touchMove", x, y + 150.0 * i / 5);
+            await page.WaitForTimeoutAsync(25);
+        }
+        await TouchAsync(session, "touchEnd", x, y + 150);
+
+        var after = await scroller.EvaluateAsync<double>("node => node.scrollTop + node.scrollLeft");
+        Assert.AreNotEqual(before, after, $"a quick swipe scrolls the grid ({before} -> {after})");
+        Assert.AreEqual(action, await LastActionAsync(page), "a quick swipe does not move the event");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task Tablet_TouchHold_MovesEvent_AndReportsTheNewTime()
     {
         var page = await OpenAsync(1024, 800, touch: true);
@@ -74,23 +110,34 @@ public class SchedulerTouchE2ETests : WasmTestBase
         await ScrollGridToAsync(page, 8.0 / 24);
 
         var evt = EventAsync(page, "i4");
+        // A coarse handle is display:none until the event is selected. Focus first, as the
+        // PointerDrag specs do, then click so the selection survives a render between the two.
+        await evt.ScrollIntoViewIfNeededAsync();
+        await evt.FocusAsync();
         await evt.ClickAsync();
         var before = await evt.EvaluateAsync<double>("el => el.getBoundingClientRect().height");
-        var handle = (await evt.Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;
-        Assert.IsTrue(handle.Height >= 44, $"the selected coarse handle is a 44px target ({handle.Height}px)");
+        var handle = evt.Locator(".tm-scheduler-event-resize-handle--bottom");
+        await handle.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var box = (await handle.BoundingBoxAsync())!;
+        Assert.IsTrue(box.Height >= 44, $"the selected coarse handle is a 44px target ({box.Height}px)");
         var session = await page.Context.NewCDPSessionAsync(page);
-        var x = handle.X + handle.Width / 2;
-        var y = handle.Y + handle.Height / 2;
+        var x = box.X + box.Width / 2;
+        var y = box.Y + box.Height / 2;
 
         await TouchAsync(session, "touchStart", x, y);
         await page.WaitForTimeoutAsync(450);
         for (var i = 1; i <= 6; i++)
             await TouchAsync(session, "touchMove", x, y + 50.0 * i / 6);
+
+        // Assert the live resize BEFORE the screenshot. A full-page shot scrolls the page, and a
+        // scroll between the measurement and the gesture is what made this assertion see 56 -> 56.
+        var live = await evt.EvaluateAsync<double>("el => el.getBoundingClientRect().height");
+        Assert.IsTrue(live > before + 10, await ResizeDiagAsync(page, evt, before, live, x, y));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Shot("tablet-week-resizing") });
         await TouchAsync(session, "touchEnd", x, y + 50);
 
         var after = await evt.EvaluateAsync<double>("el => el.getBoundingClientRect().height");
-        Assert.IsTrue(after > before + 10, $"the handle grew the event ({before} -> {after})");
+        Assert.IsTrue(after > before + 10, await ResizeDiagAsync(page, evt, before, after, x, y));
     }
 
     [TestMethod]
@@ -320,6 +367,26 @@ public class SchedulerTouchE2ETests : WasmTestBase
             directory = directory.Parent;
         }
         throw new InvalidOperationException("Repository root was not found.");
+    }
+
+    private static async Task<string> ResizeDiagAsync(IPage page, ILocator evt, double before, double after, double x, double y)
+    {
+        var rects = await page.EvaluateAsync<string>(@"() => {
+            const pick = el => {
+                if (!el) return 'missing';
+                const r = el.getBoundingClientRect();
+                return `${el.className.toString().split(' ')[0]} ${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}`;
+            };
+            const event = document.querySelector(""[data-testid='scheduler-interactive'] [data-event-id='i4']"");
+            const root = document.querySelector(""[data-testid='scheduler-interactive'] .tm-scheduler-timegrid-scroll"");
+            return [
+                pick(event),
+                pick(event && event.querySelector('.tm-scheduler-event-resize-handle--bottom')),
+                pick(root) + (root ? ` scroll ${Math.round(root.scrollTop)}/${Math.round(root.scrollHeight)}` : ''),
+                `resizing=${event ? event.getAttribute('data-resizing') : 'n/a'}`
+            ].join(' | ');
+        }");
+        return $"the handle grew the event ({before} -> {after}); touch {Math.Round(x)},{Math.Round(y)}; {rects}";
     }
 
     private static Task TouchAsync(ICDPSession session, string type, double x, double y)

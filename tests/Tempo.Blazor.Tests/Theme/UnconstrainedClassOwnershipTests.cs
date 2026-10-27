@@ -218,6 +218,11 @@ public class UnconstrainedClassOwnershipTests
         ".tm-chart__axis-label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
         ".tm-chart__label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
         ".tm-chart__value Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
+
+        // Print: the scheduler hides the toolbar's More button inside its own root only
+        // (.tm-scheduler .tm-toolbar-more, @media print). The toolbar's bare display stays the
+        // winner everywhere else; the print rule is the strictly narrower context.
+        ".tm-toolbar-more Tempo.Blazor/_scheduler.css|Tempo.Blazor/_toolbar.css",
     ];
 
     [Fact]

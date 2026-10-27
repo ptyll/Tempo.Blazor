@@ -35,11 +35,12 @@ function el(classes = [], parent = null, rect = { left: 0, top: 0, width: 0, hei
         getBoundingClientRect: () => node.rect,
         setPointerCapture(id) { node.captured.add(id); },
         releasePointerCapture(id) { node.captured.delete(id); node.released.push(id); },
-        appendChild(child) { node.children.push(child); child.parent = node; return child; },
+        appendChild(child) { node.children.push(child); child.parent = node; child.parentElement = node; return child; },
         remove() { if (node.parent) node.parent.children = node.parent.children.filter(c => c !== node); },
         children: [],
         querySelector(selector) {
-            const wanted = selector.startsWith('.') ? selector.slice(1) : null;
+            const scoped = selector.startsWith(':scope > ') ? selector.slice(':scope > '.length) : selector;
+            const wanted = scoped.startsWith('.') ? scoped.slice(1) : null;
             const walk = list => {
                 for (const child of list) {
                     if (wanted && child.classList.contains(wanted)) return child;
@@ -87,7 +88,8 @@ function el(classes = [], parent = null, rect = { left: 0, top: 0, width: 0, hei
 
 /** A timegrid with one event (top 100, height 60 of a 1440px-tall body) and both resize handles. */
 function timegrid({ eventId = 'e1', slot = 30 } = {}) {
-    const grid = el(['tm-scheduler-timegrid']);
+    const schedulerRoot = el(['tm-scheduler']);
+    const grid = el(['tm-scheduler-timegrid'], schedulerRoot);
     grid.dataset.slotDuration = String(slot);
     const body = el(['tm-scheduler-timegrid-body'], grid, { left: 0, top: 0, width: 700, height: 1440 });
     const event = el(['tm-scheduler-timegrid-event'], body, { left: 10, top: 100, width: 100, height: 60 });
@@ -96,7 +98,7 @@ function timegrid({ eventId = 'e1', slot = 30 } = {}) {
     top.dataset.resizeEdge = 'top';
     const bottom = el(['tm-scheduler-event-resize-handle', 'tm-scheduler-event-resize-handle--bottom'], event);
     bottom.dataset.resizeEdge = 'bottom';
-    return { grid, body, event, top, bottom };
+    return { schedulerRoot, grid, body, event, top, bottom };
 }
 
 /** A timeline row (1440px wide = one minute per pixel) with one event. */
@@ -659,6 +661,55 @@ test('a guarded key puts the page position back on the frame the browser scrolls
     assert.equal(windowListeners.length, 0, 'detach removes the window scroll pin');
 });
 
+test('a wheel, a touch or a non-roving key releases the pin at once', () => {
+    const listeners = [];
+    const root = {
+        contains: () => true,
+        addEventListener: (type, handler) => listeners.push({ type, handler }),
+        removeEventListener() {},
+    };
+    const stop = { getAttribute: () => 'gridcell', closest: () => stop };
+    let y = 0;
+    const windowListeners = [];
+    globalThis.window.scrollX = 0;
+    Object.defineProperty(globalThis.window, 'scrollY', { configurable: true, get: () => y, set: value => { y = value; } });
+    globalThis.window.scrollTo = options => { y = options.top; };
+    globalThis.window.requestAnimationFrame = () => 1;
+    globalThis.window.addEventListener = (type, fn) => windowListeners.push({ type, fn });
+    globalThis.window.removeEventListener = (type, fn) => {
+        const at = windowListeners.findIndex(l => l.type === type && l.fn === fn);
+        if (at >= 0) windowListeners.splice(at, 1);
+    };
+
+    scheduler.attachScrollGuard(root);
+    const fire = (type, event) => listeners.filter(l => l.type === type).forEach(l => l.handler(event));
+    fire('focusin', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, true, 'focusing a roving stop arms the pin');
+
+    // A scroll that starts before the first stable frame is the focus scroll, and is corrected.
+    y = 40;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 0, 'a scroll before the first stable frame is the focus scroll and is put back');
+
+    // The user takes the wheel. The pin must let go immediately, not a second later.
+    fire('wheel', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a wheel releases the pin at once');
+    y = 80;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 80, 'a scroll after the wheel is the user and is kept');
+
+    // A touch and a plain key do the same.
+    fire('focusin', { target: stop });
+    fire('touchstart', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a touch releases the pin');
+
+    fire('keydown', { key: 'ArrowDown', target: stop, preventDefault() {} });
+    assert.equal(root.__tmSchedulerScrollHold, true, 'a roving key arms the pin again');
+    fire('keydown', { key: 'a', target: stop, preventDefault() {} });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a key that is not a roving key releases the pin');
+    scheduler.detachScrollGuard(root);
+});
+
 test('a focus that lands before any guarded key does not scroll the page', () => {
     const root = el(['tm-scheduler']);
     let y = 420;
@@ -763,7 +814,8 @@ test('scrollToTime scrolls the grid scroller by the visible range, under the sti
 
 /** Two day columns (1440px tall = one minute per pixel) and one draggable event in the first. */
 function moveGrid({ eventId = 'e1', slot = 30, draggable = true } = {}) {
-    const grid = el(['tm-scheduler-timegrid']);
+    const schedulerRoot = el(['tm-scheduler']);
+    const grid = el(['tm-scheduler-timegrid'], schedulerRoot);
     grid.dataset.slotDuration = String(slot);
     grid.dataset.rangeStart = '0';
     grid.dataset.rangeMinutes = '1440';
@@ -785,12 +837,13 @@ function moveGrid({ eventId = 'e1', slot = 30, draggable = true } = {}) {
     event.dataset.eventId = eventId;
     event.draggable = draggable;
     event.attrs.set('draggable', draggable ? 'true' : 'false');
-    return { grid, body, col1, col2, event };
+    return { schedulerRoot, grid, body, col1, col2, event };
 }
 
 /** A month grid with two day cells and one draggable event in the first. */
 function monthGrid({ eventId = 'm1' } = {}) {
-    const root = el(['tm-scheduler-month']);
+    const schedulerRoot = el(['tm-scheduler']);
+    const root = el(['tm-scheduler-month'], schedulerRoot);
     const day1 = el(['tm-scheduler-month-day'], root, { left: 0, top: 0, width: 100, height: 80 });
     day1.dataset.date = '2026-10-13';
     const event = el(['tm-scheduler-month-event'], day1, { left: 4, top: 20, width: 90, height: 20 });
@@ -798,7 +851,7 @@ function monthGrid({ eventId = 'm1' } = {}) {
     event.attrs.set('draggable', 'true');
     const day2 = el(['tm-scheduler-month-day'], root, { left: 100, top: 0, width: 100, height: 80 });
     day2.dataset.date = '2026-10-20';
-    return { root, day1, day2, event };
+    return { schedulerRoot, root, day1, day2, event };
 }
 
 /** Two timeline rows (1440px wide = one minute per pixel) and one draggable event in the first. */
@@ -942,12 +995,17 @@ test('a hold without a move shows the grabbed minute, not the offset as a coordi
     try { t.mock.timers.enable({ apis: ['setTimeout'] }); } catch { /* already on */ }
     doc.dispatch('pointerdown', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 630 }));
     t.mock.timers.tick(400);
-    assert.equal(g.event.querySelector('.tm-scheduler-event-drag-time')?.textContent, '10:00 – 11:00',
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent, '10:00 – 11:00',
         'the press is 30px into a 10:00 event, so the label stays 10:00 until the finger moves');
 });
 
-test('a timeline label that starts under the resource column shifts into the row', async (t) => {
+test('a timeline label that starts under the resource column parks on the scheduler root', async (t) => {
     const tl = moveTimeline({ slot: 30 });
+    // Production wraps the timeline in .tm-scheduler. The label parks there, outside the row's
+    // stacking context, so the sticky resource column cannot paint over it.
+    const schedulerRoot = el(['tm-scheduler']);
+    tl.root.parent = schedulerRoot;
+    schedulerRoot.appendChild = child => { schedulerRoot.children.push(child); child.parentElement = schedulerRoot; return child; };
     const resource = el(['tm-scheduler-timeline-resource-label--sticky'], tl.root, { left: 0, top: 0, width: 48, height: 40, right: 48, bottom: 40 });
     tl.root.querySelectorAll = () => [resource];
     scheduler.registerInstance(tl.root, dotnet());
@@ -963,6 +1021,8 @@ test('a timeline label that starts under the resource column shifts into the row
     doc.dispatch('pointerdown', ev(tl.event, { pointerType: 'touch', pointerId: 7, clientX: 630, clientY: 10 }));
     t.mock.timers.tick(400);
     assert.equal(created[0]?.style.marginLeft, '42px', 'the label moves right of the resource column');
+    assert.equal(created[0]?.parentElement, schedulerRoot,
+        'the timeline label parks on the scheduler root so the sticky resource column cannot paint over it');
 });
 
 test('the visual translate snaps to the same minute the release commits, honouring the grab offset', async (t) => {
@@ -999,6 +1059,78 @@ test('a month day and a grid column under the finger get the drop-target class, 
     assert.equal(g.col2.classList.contains('tm-scheduler-timegrid-slot--drop-target'), false);
 });
 
+test('a pointer resize removes the live time label from the scheduler root', async (t) => {
+    const g = timegrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 220 }));
+    assert.equal(g.schedulerRoot.querySelector(':scope > .tm-scheduler-event-drag-time') !== null, true,
+        'a resize parks the live label on the scheduler root');
+
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 220 }));
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null,
+        'releasing the resize removes the label from the root');
+
+    // A move first, then a resize. The resize session must not inherit the move's delta, or the
+    // label jumps by the earlier drag instead of sitting on the event being resized.
+    const moved = moveGrid({ slot: 30 });
+    scheduler.registerInstance(moved.grid, dotnet());
+    doc.elementFromPoint = () => moved.col1;
+    const up = longPressDrag(t, moved.event, { x: 40, y: 630 }, { x: 40, y: 690 });
+    moved.event.dispatch('pointerup', up);
+
+    const resized = timegrid({ slot: 30 });
+    scheduler.registerInstance(resized.grid, dotnet());
+    doc.dispatch('pointerdown', ev(resized.bottom, { clientY: 160 }));
+    resized.bottom.dispatch('pointermove', ev(resized.bottom, { clientY: 190 }));
+    const label = resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
+    const box = resized.event.getBoundingClientRect();
+    assert.equal(Math.abs(parseFloat(label.style.top) - box.top) <= 4, true,
+        `a resize label sits on the event (top ${label.style.top} vs event ${box.top})`);
+    resized.bottom.dispatch('pointerup', ev(resized.bottom, { clientY: 190 }));
+});
+
+test('a month drag after a timed drag does not reuse the stale label', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col1;
+    const up = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 690 });
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time') !== null, true);
+
+    const month = monthGrid();
+    scheduler.registerInstance(month.root, dotnet());
+    doc.elementFromPoint = () => month.day2;
+    longPressDrag(t, month.event, { x: 40, y: 30 }, { x: 140, y: 30 });
+    assert.equal(month.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null,
+        'a month has no minute axis, so it shows no label of its own and none left by the grid');
+    month.event.dispatch('pointerup', ev(month.event, { pointerType: 'touch', pointerId: 7 }));
+    g.event.dispatch('pointerup', up);
+});
+
+test('the live time label follows the event while the scroller auto-scrolls', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    // The scroller wraps the grid. Reparenting the grid under it is what the lookup walks up to.
+    const scroller = el(['tm-scheduler-timegrid-scroll'], g.schedulerRoot, { left: 0, top: 0, width: 200, height: 600 });
+    scroller.scrollTop = 0;
+    scroller.scrollLeft = 0;
+    scroller.appendChild(g.grid);
+
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col1;
+    longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 630 });
+    const label = g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
+    const before = parseFloat(label.style.top);
+
+    // The auto-scroller moves the content 120px. The event's box moves with it; the label must too.
+    scroller.scrollTop = 120;
+    g.event.rect = { ...g.event.rect, top: g.event.rect.top - 120 };
+    doc.dispatch('pointermove', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 630 }));
+
+    assert.equal(Math.abs(parseFloat(label.style.top) - (before - 120)) <= 1, true,
+        `the label moves with the scrolled content (${label.style.top} vs ${before - 120})`);
+});
+
 test('the live time label follows the pointer and a resize shows it too', async (t) => {
     const g = moveGrid({ slot: 30 });
     scheduler.registerInstance(g.grid, dotnet());
@@ -1006,20 +1138,20 @@ test('the live time label follows the pointer and a resize shows it too', async 
 
     longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
 
-    const label = g.event.querySelector('.tm-scheduler-event-drag-time');
+    const label = g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
     // The press is 30px into the event, so the grabbed point at finger 690 is 11:00, and the label
     // joins the two times with a spaced en dash.
     assert.equal(label?.textContent, '11:00 – 12:00', 'the one hour event lands at 11:00');
     assert.equal(g.event.style.transform.includes('translate'), true, 'the event follows the finger');
     g.event.dispatch('pointerup', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 140, clientY: 690 }));
-    assert.equal(g.event.querySelector('.tm-scheduler-event-drag-time'), null, 'the label goes away with the gesture');
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null, 'the label goes away with the gesture');
 
     const resized = timegrid({ slot: 30 });
     scheduler.registerInstance(resized.grid, dotnet());
     doc.dispatch('pointerdown', ev(resized.bottom, { clientY: 160 }));
     resized.bottom.dispatch('pointermove', ev(resized.bottom, { clientY: 220 }));
-    assert.equal(resized.event.querySelector('.tm-scheduler-event-drag-time')?.textContent?.endsWith('–'), false);
-    assert.match(resized.event.querySelector('.tm-scheduler-event-drag-time')?.textContent ?? '', /^\d{2}:\d{2} – \d{2}:\d{2}$/);
+    assert.equal(resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent?.endsWith('–'), false);
+    assert.match(resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent ?? '', /^\d{2}:\d{2} – \d{2}:\d{2}$/);
 });
 
 test('Escape and pointercancel roll the move back and notify nothing', async (t) => {

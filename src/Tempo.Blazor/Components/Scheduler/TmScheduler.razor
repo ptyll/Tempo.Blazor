@@ -1,12 +1,17 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @implements IAsyncDisposable
 @using Microsoft.Extensions.DependencyInjection
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @inject Microsoft.JSInterop.IJSRuntime JS
 
-<div class="tm-scheduler @Class" @ref="_rootRef">
-    <TmSchedulerToolbar View="@View"
+<TmLayoutObserver LayoutMode="EffectiveLayoutMode" IsContainer="false" Class="tm-scheduler-layout">
+<LayoutContent Context="mode">
+<div class="tm-scheduler @(mode.IsMobile ? "tm-scheduler--mobile" : mode.IsTablet ? "tm-scheduler--tablet" : "tm-scheduler--desktop") @Class" data-layout="@mode.CssModifier" @ref="_rootRef">
+    <TmSchedulerToolbar @ref="_toolbar" View="@View"
                         Views="@Views"
                         CurrentDate="@EffectiveDate"
                         RangeStart="@VisibleRange.Start"
@@ -23,7 +28,9 @@
                         OnDatePicked="@NavigateToPickedDate"
                         ShowPrint="@AllowPrint"
                         OnPrint="@PrintAsync"
-                        InstanceId="@_instanceId" />
+                        InstanceId="@_instanceId"
+                        LayoutMode="@mode.Resolved"
+                        HasActionBar="@(MobileActionBar == TmSchedulerMobileActionBar.Auto && mode.IsMobile)" />
 
     @if (ShowTouchHint)
     {
@@ -31,16 +38,17 @@
     }
 
     <div class="tm-scheduler-body"
-         role="@(ShowHeader ? "tabpanel" : null)"
-         id="@(ShowHeader ? $"tabpanel-{ToolbarTabId}" : null)"
-         aria-labelledby="@(ShowHeader ? $"tab-{ToolbarTabId}" : null)">
+         role="@(ShowHeader && !mode.IsMobile ? "tabpanel" : null)"
+         id="@(ShowHeader && !mode.IsMobile ? $"tabpanel-{ToolbarTabId}" : null)"
+         aria-labelledby="@(ShowHeader && !mode.IsMobile ? $"tab-{ToolbarTabId}" : null)"
+         aria-label="@(mode.IsMobile ? BodyLabel : null)">
         @switch (View)
         {
             case TmScheduleViewType.Month:
                 <TmSchedulerMonthView CurrentDate="@EffectiveDate"
                                       Today="@TodayInDisplayZone()"
                                       Events="@_loadedEvents"
-                                      MaxVisibleEvents="@MaxVisibleEvents"
+                                      MaxVisibleEvents="@(mode.IsMobile ? EffectiveCompactCap : MaxVisibleEvents)"
                                       FirstDayOfWeek="@NormalizedFirstDay"
                                       MonthWeeks="@MonthWeeks"
                                       ReadOnly="@ReadOnly"
@@ -66,6 +74,9 @@
                 <TmSchedulerDayView CurrentDate="@EffectiveDate"
                                     Events="@_loadedEvents"
                                     Resources="@Resources"
+                                    VisibleResourceId="@_visibleResourceId"
+                                    VisibleResourceIdChanged="PickResourceAsync"
+                                    ShowResourcePicker="@mode.IsMobile"
                                     SlotDuration="@SlotDuration"
                                     ReadOnly="@ReadOnly"
                                     HideTimeGrid="@HideTimeGrid"
@@ -97,6 +108,9 @@
                 <TmSchedulerWeekView CurrentDate="@EffectiveDate"
                                      Events="@_loadedEvents"
                                      Resources="@Resources"
+                                     ShowDateStrip="@mode.IsMobile"
+                                     FocusedDay="@StripDay"
+                                     FocusedDayChanged="PickStripDayAsync"
                                      FirstDayOfWeek="@NormalizedFirstDay"
                                      WeekDays="@WeekDays"
                                      SlotDuration="@SlotDuration"
@@ -129,6 +143,7 @@
             case TmScheduleViewType.Agenda:
                 <TmSchedulerAgendaView CurrentDate="@EffectiveDate"
                                        AgendaDays="@NormalizedAgendaDays"
+                                       Compact="@mode.IsMobile"
                                        Events="@_loadedEvents"
                                        SelectedEvent="@SelectedEvent"
                                        SelectedEventChanged="@HandleSelectedEventAsync"
@@ -163,7 +178,16 @@
         }
     </div>
     <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
+    @if (MobileActionBar == TmSchedulerMobileActionBar.Auto && mode.IsMobile)
+    {
+        <TmMobileActionBar Items="@ActionBarItems(mode)"
+                           AriaLabel="@Loc["TmScheduler_ActionBar"]"
+                           Placement="ActionBarPlacement.StickyContainer"
+                           LayoutMode="TmLayoutMode.Mobile" />
+    }
 </div>
+</LayoutContent>
+</TmLayoutObserver>
 
 @code {
     private IReadOnlyList<TmScheduleEvent> _loadedEvents = [];
@@ -280,6 +304,28 @@
     [Parameter] public int MaxVisibleEvents { get; set; } = 3;
 
     /// <summary>
+    /// Maximum events shown in a month day cell on a mobile layout. Default: 1, so a phone cell keeps
+    /// one chip and the "+N more" link. Desktop and tablet keep <see cref="MaxVisibleEvents"/>.
+    /// </summary>
+    [Parameter] public int CompactMaxVisibleEvents { get; set; } = 1;
+
+    /// <summary>The cap a mobile month cell uses. A negative host value clamps to zero.</summary>
+    private int EffectiveCompactCap => Math.Max(0, CompactMaxVisibleEvents);
+
+    /// <summary>
+    /// Pins the scheduler's layout. <see cref="TmLayoutMode.Auto"/> measures the scheduler's own
+    /// container; a forced value renders that layout without a DOM measurement, which is what a test uses.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// The mobile action bar. <see cref="TmSchedulerMobileActionBar.None"/> (default) renders nothing,
+    /// so an existing host is unchanged. <see cref="TmSchedulerMobileActionBar.Auto"/> renders the bar
+    /// on a mobile layout only.
+    /// </summary>
+    [Parameter] public TmSchedulerMobileActionBar MobileActionBar { get; set; } = TmSchedulerMobileActionBar.None;
+
+    /// <summary>
     /// Fires when the "+N more" button of a month day cell is activated, with that day's date.
     /// Without a delegate the scheduler opens that day in the Day view, but only when the host binds
     /// both <c>@bind-View</c> and <c>@bind-CurrentDate</c>; with either binding missing the click is inert.
@@ -337,11 +383,55 @@
     /// </summary>
     [Parameter] public bool ShowTouchHint { get; set; }
 
-    /// <summary>Opens the browser print dialog; the scheduler's print stylesheet lays out the current view for paper.</summary>
+    /// <summary>
+    /// Opens the browser print dialog. Print always lays out the desktop view, even from a phone:
+    /// the observer is pinned to <see cref="TmLayoutMode.Desktop"/>, one render is awaited so the
+    /// desktop markup is in the DOM, then <c>window.print</c> runs and the pin is released.
+    /// </summary>
     public async Task PrintAsync()
     {
+        _printing = true;
+        var rendered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _printRendered = rendered;
+        StateHasChanged();
+        try
+        {
+            await rendered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        catch (TimeoutException)
+        {
+            // A test host, or a render that never reached OnAfterRender, must not hang the print.
+        }
+
         try { await JS.InvokeVoidAsync("window.print"); }
         catch { /* JS unavailable (e.g. tests) */ }
+        finally
+        {
+            _printing = false;
+            _printRendered = null;
+            StateHasChanged();
+        }
+    }
+
+    private bool _printing;
+    private TaskCompletionSource? _printRendered;
+    private TmSchedulerToolbar? _toolbar;
+    private DotNetObjectReference<TmScheduler>? _printRef;
+
+    /// <summary>The layout the observer measures, unless a print is forcing the desktop view.</summary>
+    private TmLayoutMode EffectiveLayoutMode => _printing ? TmLayoutMode.Desktop : LayoutMode;
+
+    /// <summary>
+    /// The browser's <c>beforeprint</c> / <c>afterprint</c> (wired by <c>scheduler.js</c>). Additive:
+    /// existing <c>[JSInvokable]</c> signatures on the views are unchanged. A host that calls
+    /// <see cref="PrintAsync"/> already pinned desktop, so this only covers Ctrl+P.
+    /// </summary>
+    [JSInvokable]
+    public Task OnPrintMediaAsync(bool printing)
+    {
+        _printing = printing;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -400,9 +490,20 @@
     /// <summary>Triggers the one-time browser zone probe after the first interactive render.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _printRendered?.TrySetResult();
+
         if (firstRender)
         {
             _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, RefreshAfterZoneChange);
+            try
+            {
+                _printRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.attachPrintListener", _rootRef, _printRef);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+            {
+                // Without the script Ctrl+P still prints; only the desktop pin is missing.
+            }
             if (_userZoneObserver is not null)
             {
                 await _userZoneObserver.ProbeAsync();
@@ -442,10 +543,14 @@
     public async ValueTask DisposeAsync()
     {
         _userZoneObserver?.Dispose();
-        if (!_scrollGuardAttached) return;
+        _printRef?.Dispose();
         try
         {
-            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachPrintListener", _rootRef);
+            if (_scrollGuardAttached)
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
+            }
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
         {
@@ -455,8 +560,85 @@
 
     private readonly string _instanceId = "tm-sched-" + Guid.NewGuid().ToString("N");
     private string ToolbarTabId => $"{_instanceId}-{View}";
+
+    private string BodyLabel => SchedulerViewLabel.Of(Loc, View);
     private ElementReference _rootRef;
     private bool _scrollGuardAttached;
+
+    private IReadOnlyList<TmActionItem> ActionBarItems(TmLayoutContext mode)
+    {
+        var items = new List<TmActionItem>();
+        if (OnAddClick.HasDelegate)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "scheduler-add",
+                Label = Loc["TmScheduler_AddEvent"],
+                Icon = IconNames.Plus,
+                OnClick = OnAddClick,
+            });
+        }
+
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-today",
+            Label = Loc["TmScheduler_Today"],
+            Icon = IconNames.Target,
+            OnClick = EventCallback.Factory.Create(this, NavigateToday),
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-view",
+            Label = Loc["TmScheduler_ViewSwitcher"],
+            Icon = IconNames.Layers,
+            KeepMenuOpen = true,
+            OnClick = EventCallback.Factory.Create(this, OpenViewMenuAsync),
+        });
+        if (AllowPrint)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "scheduler-print",
+                Label = Loc["TmScheduler_Print"],
+                Icon = IconNames.Printer,
+                Overflow = ActionOverflow.Always,
+                Group = "more",
+                OnClick = EventCallback.Factory.Create(this, PrintAsync),
+            });
+        }
+
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-go-to-date",
+            Label = Loc["TmScheduler_GoToDate"],
+            Icon = IconNames.MapPin,
+            Overflow = ActionOverflow.Always,
+            Group = "more",
+            OnClick = EventCallback.Factory.Create(this, OpenDatePickerAsync),
+        });
+        return items;
+    }
+
+    private DateOnly? _stripDay;
+    private string? _visibleResourceId;
+
+    private DateOnly StripDay => _stripDay ?? DateOnly.FromDateTime(EffectiveDate);
+
+    private Task OpenViewMenuAsync() => _toolbar?.OpenViewMenuAsync() ?? Task.CompletedTask;
+
+    private Task OpenDatePickerAsync() => _toolbar?.OpenDatePickerAsync() ?? Task.CompletedTask;
+
+    private Task PickResourceAsync(string? id)
+    {
+        _visibleResourceId = id;
+        return Task.CompletedTask;
+    }
+
+    private Task PickStripDayAsync(DateOnly day)
+    {
+        _stripDay = day;
+        return SelectedDateChanged.InvokeAsync(day.ToDateTime(TimeOnly.MinValue));
+    }
 
     private async Task LoadEventsAsync()
     {

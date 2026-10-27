@@ -167,6 +167,12 @@
     /// <summary>Moves focus back to the trigger. A consumer calls it after an action that closes the panel.</summary>
     public async Task FocusTriggerAsync() => await _triggerRef.FocusAsync();
 
+    /// <summary>
+    /// Opens the popover. A host action bar calls this so "Go to date" opens the same panel the
+    /// trigger does. Additive: the trigger still toggles on its own click.
+    /// </summary>
+    public Task OpenAsync() => SetOpenAsync(true);
+
     // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is a div[role=button],
     // not a native <button>, so the browser never produces a click for Enter/Space on its own.
     // Enter fires on KEYDOWN (native buttons do the same, including auto-repeat while held — the

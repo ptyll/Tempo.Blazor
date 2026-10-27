@@ -110,6 +110,10 @@ public sealed class SchedulerAccessibilityE2ETests : WasmTestBase
         Assert.IsTrue(focusedIsStop, "Tab from the toolbar should land on the grid's single tab stop.");
 
         await section.ScrollIntoViewIfNeededAsync();
+        // The scroll guard pins the page after the Tabs above. Wait until it has let go, so the
+        // measurement records the arrow and not the pin pulling the page back.
+        await page.WaitForFunctionAsync(
+            "() => !document.querySelector('[data-testid=\"scheduler-month-section\"] .tm-scheduler')?.__tmSchedulerScrollHold");
         var before = await page.EvaluateAsync<double>("() => window.scrollY");
         var guarded = await page.EvaluateAsync<string>(
             """

@@ -148,10 +148,10 @@ public class SchedulerNavigationE2ETests : WasmTestBase
         await Assertions.Expect(calendar).ToHaveCountAsync(0);
         await Assertions.Expect(scheduler.Locator(".tm-scheduler-toolbar-title-text")).ToContainTextAsync("June 2026");
 
-        await Assertions.Expect(scheduler.Locator("[data-testid='scheduler-more'] button")).ToBeVisibleAsync();
+        await Assertions.Expect(scheduler.Locator("button.tm-toolbar-more")).ToBeVisibleAsync();
 
         await card.Locator(".tm-toggle-track").Nth(0).ClickAsync();
-        await Assertions.Expect(scheduler.Locator("[data-testid='scheduler-more']")).ToHaveCountAsync(0);
+        await Assertions.Expect(scheduler.Locator("button.tm-toolbar-more")).ToHaveCountAsync(0);
 
         await card.Locator(".tm-toggle-track").Nth(1).ClickAsync();
         await Assertions.Expect(card.Locator(".tm-scheduler").First.Locator(".tm-scheduler-toolbar")).ToHaveCountAsync(0);
@@ -175,7 +175,9 @@ public class SchedulerNavigationE2ETests : WasmTestBase
         var trigger = scheduler.Locator(".tm-scheduler-toolbar-title [role='button']");
         await trigger.ScrollIntoViewIfNeededAsync();
         await scheduler.Locator("[data-testid='scheduler-next']").FocusAsync();
-        await page.Keyboard.PressAsync("Tab");
+        // The title sits inside a toolbar item, so it joins the toolbar's roving set: Tab leaves
+        // the toolbar, ArrowRight moves onto the date trigger.
+        await page.Keyboard.PressAsync("ArrowRight");
         await Assertions.Expect(trigger).ToBeFocusedAsync();
 
         var titleBefore = await scheduler.Locator(".tm-scheduler-toolbar-title-text").InnerTextAsync();

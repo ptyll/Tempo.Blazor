@@ -40,10 +40,10 @@ public class TmSchedulerVisualTests : LocalizationTestBase
         prev.TextContent.Should().NotContain("‹");
         next.TextContent.Should().NotContain("›");
 
-        cut.Find("[data-testid='scheduler-more'] button").Click();
+        cut.Find("button.tm-toolbar-more").Click();
         var print = cut.Find("[data-testid='scheduler-print']");
         print.InnerHtml.Should().Contain("svg", "print is an icon button; the label stays in the accessible name");
-        print.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        print.TextContent.Should().Contain("Print");
 
         cut.Find(".tm-scheduler-toolbar-views [role='tablist']").Should().NotBeNull();
     }

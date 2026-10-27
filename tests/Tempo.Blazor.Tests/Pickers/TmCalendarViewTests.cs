@@ -191,4 +191,14 @@ public class TmCalendarViewTests : LocalizationTestBase
         var style = eventEl.GetAttribute("style") ?? "";
         style.Should().Contain("#ef4444");
     }
+
+    [Fact]
+    public void CalendarView_Compact_Adds_The_Modifier_And_Default_Does_Not()
+    {
+        var compact = Render<TmCalendarView>(p => p.Add(x => x.Compact, true));
+        compact.Find(".tm-calendar-view").ClassList.Should().Contain("tm-calendar-view--compact");
+
+        var full = Render<TmCalendarView>();
+        full.Find(".tm-calendar-view").ClassList.Should().NotContain("tm-calendar-view--compact");
+    }
 }

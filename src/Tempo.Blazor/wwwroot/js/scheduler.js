@@ -125,8 +125,9 @@
 
         /**
          * Moves focus to the selected day in the title calendar owned by <paramref>root</paramref>,
-         * or to today. The root is the toolbar (or the open panel) passed from Blazor — a
-         * document-wide <c>:popover-open</c> query throws in engines that do not know the selector.
+         * or to today. The panel renders in place inside the title element the caller holds, so the
+         * lookup stays on that root — a document query, including <c>:popover-open</c>, throws in
+         * engines that do not know the selector and is forbidden here.
          */
         focusCalendarDay: function (root) {
             if (!root || typeof root.querySelector !== 'function') return;
@@ -294,11 +295,21 @@
                     var target = event && event.target;
                     if (!target || typeof target.closest !== 'function' || !target.closest('[data-tm-roving]')) return;
                     arm();
+                    // Only the scroll the focus itself starts is corrected. Once a frame has passed
+                    // without the page moving, a later scroll is the user and is kept.
+                    root.__tmSchedulerScrollCorrect = true;
+                    if (typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(function () { root.__tmSchedulerScrollCorrect = false; });
+                    }
                 }
-                putBack();
+                if (root.__tmSchedulerScrollCorrect) putBack();
             };
+            // A wheel, a touch or a pointer press is the user taking the page. The pin must let go
+            // at once, not a second later, or it undoes the scroll the user just started.
+            var releaseOnUser = function () { releasePin(); };
             var remember = function (event) {
-                if (!root.contains(event.target) || !shouldSuppressRovingScroll(event)) return;
+                if (!root.contains(event.target)) return;
+                if (!shouldSuppressRovingScroll(event)) { releasePin(); return; }
                 // A key measures the page where it is now. Releasing first lets arm() capture a
                 // scroll that happened after the previous focus settled.
                 releasePin();
@@ -306,6 +317,10 @@
             };
             root.addEventListener('keydown', remember, true);
             root.addEventListener('focusin', restore);
+            root.addEventListener('wheel', releaseOnUser, true);
+            root.addEventListener('touchstart', releaseOnUser, true);
+            root.addEventListener('pointerdown', releaseOnUser, true);
+            root.__tmSchedulerScrollRelease = releaseOnUser;
             root.__tmSchedulerScrollGuard = handler;
             root.__tmSchedulerScrollRestore = restore;
             root.__tmSchedulerScrollRemember = remember;
@@ -317,12 +332,17 @@
             root.removeEventListener('keydown', root.__tmSchedulerScrollGuard, true);
             root.removeEventListener('keydown', root.__tmSchedulerScrollRemember, true);
             root.removeEventListener('focusin', root.__tmSchedulerScrollRestore);
+            root.removeEventListener('wheel', root.__tmSchedulerScrollRelease, true);
+            root.removeEventListener('touchstart', root.__tmSchedulerScrollRelease, true);
+            root.removeEventListener('pointerdown', root.__tmSchedulerScrollRelease, true);
             clearTimeout(root.__tmSchedulerScrollHoldTimer);
             if (root.__tmSchedulerScrollPin && typeof window.removeEventListener === 'function')
                 window.removeEventListener('scroll', root.__tmSchedulerScrollPin);
             delete root.__tmSchedulerScrollGuard;
             delete root.__tmSchedulerScrollRestore;
             delete root.__tmSchedulerScrollRemember;
+            delete root.__tmSchedulerScrollRelease;
+            delete root.__tmSchedulerScrollCorrect;
             delete root.__tmSchedulerScrollHold;
             delete root.__tmSchedulerScrollHoldTimer;
             delete root.__tmSchedulerScrollPin;
@@ -334,6 +354,29 @@
             if (!element || typeof element.getBoundingClientRect !== 'function') return [0, 0];
             var box = element.getBoundingClientRect();
             return [box.left, box.top];
+        },
+
+        /**
+         * Wires the browser's beforeprint/afterprint to a [JSInvokable] OnPrintMediaAsync(bool) so a
+         * Ctrl+P pins the desktop layout too. Additive: registerInstance's signature is unchanged.
+         * One listener pair per root; a second attach replaces the previous pair.
+         */
+        attachPrintListener: function (root, dotNetRef) {
+            if (!root || typeof window.addEventListener !== 'function') return;
+            this.detachPrintListener(root);
+            var before = function () { dotNetRef.invokeMethodAsync('OnPrintMediaAsync', true); };
+            var after = function () { dotNetRef.invokeMethodAsync('OnPrintMediaAsync', false); };
+            window.addEventListener('beforeprint', before);
+            window.addEventListener('afterprint', after);
+            root.__tmSchedulerPrint = { before: before, after: after };
+        },
+
+        detachPrintListener: function (root) {
+            var pair = root && root.__tmSchedulerPrint;
+            if (!pair || typeof window.removeEventListener !== 'function') return;
+            window.removeEventListener('beforeprint', pair.before);
+            window.removeEventListener('afterprint', pair.after);
+            delete root.__tmSchedulerPrint;
         },
 
         registerInstance: function (element, dotNetRef) {
@@ -536,6 +579,7 @@
             s.eventElement.draggable = s.originalDraggable;
             s.eventElement.removeAttribute('data-resizing');
             this._restoreGeometry(s);
+            this._removeLabel(s.eventElement);
         },
 
         /** Puts back the inline geometry Blazor rendered; once per session (after a commit Blazor re-renders the new one). */
@@ -655,11 +699,16 @@
             return { x: (point.clientX || 0) - box.left, y: (point.clientY || 0) - box.top };
         },
 
-        /** The scroll container of the view. A month scrolls the page, so it has none. */
+        /**
+         * The scroll container of the view. The time-grid scroller wraps the grid, so a descendant
+         * query from the grid never finds it; the walk starts at the event. A month scrolls the
+         * page, so it has none.
+         */
         _scrollerOf: function (session) {
-            var root = session.container;
-            if (!root || typeof root.querySelector !== 'function') return null;
-            return session.isTimeline ? root : root.querySelector('.tm-scheduler-timegrid-scroll');
+            var start = session.eventElement || session.container;
+            if (!start || typeof start.closest !== 'function') return null;
+            if (session.isTimeline) return start.closest('.tm-scheduler-timeline');
+            return start.closest('.tm-scheduler-timegrid-scroll');
         },
 
         _startScroller: function (session) {
@@ -717,6 +766,16 @@
             this._markDropTarget(session, target);
             this._snapTranslate(session, info);
             this._showTime(session, session.targetMinute, this._eventDuration(session));
+            // The snap translate is not in the layout until the next frame. Placing the parked
+            // label now reads the event where it was. One retry, and only while this drag lives.
+            var self = this;
+            if (typeof requestAnimationFrame === 'function') {
+                if (session.labelFrame) cancelAnimationFrame(session.labelFrame);
+                session.labelFrame = requestAnimationFrame(function () {
+                    session.labelFrame = 0;
+                    if (self._moveSession === session) self._showTime(session, session.targetMinute, self._eventDuration(session));
+                });
+            }
         },
 
         /** The day, column or row under the finger. The previous one loses the class. */
@@ -733,33 +792,61 @@
             }
         },
 
+        /**
+         * The delta the preview actually applied. A resize session has no move, so it contributes
+         * nothing: the label follows the event's own box, not a delta left by an earlier drag.
+         */
+        _snapDelta: function (session) {
+            if (!session || session.resizeEdge) return { x: 0, y: 0 };
+            return session.appliedDelta || { x: 0, y: 0 };
+        },
+
         /** The preview lands on the same snapped minute the release commits, not on the raw finger. */
         _snapTranslate: function (session, info) {
             var eventElement = session.eventElement;
-            if (session.targetMinute === null || session.targetMinute < 0 || !session.column) {
-                eventElement.style.transform = 'translate(' + info.dx + 'px, ' + info.dy + 'px)';
-                return;
+            var dx = info.dx || 0;
+            var dy = info.dy || 0;
+            if (session.targetMinute !== null && session.targetMinute >= 0 && session.column) {
+                var box = session.column.getBoundingClientRect();
+                var size = session.isTimeline ? box.width : box.height;
+                if (size > 0) {
+                    var origin = (session.isTimeline ? box.left : box.top) + (session.originOffset || 0);
+                    var snapped = (session.isTimeline ? box.left : box.top) + (session.targetMinute - session.rangeStart) / session.rangeMinutes * size;
+                    var delta = snapped - origin;
+                    if (session.isTimeline) dx = delta; else dy = delta;
+                }
             }
-            var box = session.column.getBoundingClientRect();
-            var size = session.isTimeline ? box.width : box.height;
-            if (!(size > 0)) return;
-            var origin = (session.isTimeline ? box.left : box.top) + (session.originOffset || 0);
-            var snapped = (session.isTimeline ? box.left : box.top) + (session.targetMinute - session.rangeStart) / session.rangeMinutes * size;
-            var delta = snapped - origin;
-            eventElement.style.transform = session.isTimeline
-                ? 'translate(' + delta + 'px, ' + info.dy + 'px)'
-                : 'translate(' + info.dx + 'px, ' + delta + 'px)';
+            session.appliedDelta = { x: dx, y: dy };
+            eventElement.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+            return session.appliedDelta;
         },
 
         /** The live range label. A month has no minute axis, so it shows nothing. */
         _showTime: function (session, minute, duration) {
             var eventElement = session.eventElement;
-            if (minute === null || minute < 0 || !eventElement || typeof eventElement.querySelector !== 'function') return;
-            var label = eventElement.querySelector('.tm-scheduler-event-drag-time');
+            if (!eventElement || typeof eventElement.querySelector !== 'function') return;
+            if (minute === null || minute < 0) {
+                // A month has no minute axis, so a label left by an earlier drag must not follow it.
+                // A timeline whose column has not resolved yet keeps the label it already shows.
+                if (session.isMonth) this._removeLabel(eventElement);
+                else {
+                    var kept = eventElement.closest ? eventElement.closest('.tm-scheduler') : null;
+                    var existing = kept && kept.querySelector ? kept.querySelector('.tm-scheduler-event-drag-time') : null;
+                    if (existing) this._placeLabel(session, existing);
+                }
+                return;
+            }
+            var parked = eventElement.closest ? eventElement.closest('.tm-scheduler') : null;
+            var label = (parked || eventElement).querySelector('.tm-scheduler-event-drag-time');
             if (!label) {
                 label = document.createElement('span');
                 label.className = 'tm-scheduler-event-drag-time';
-                eventElement.appendChild(label);
+                // Every view parks the label on the scheduler root. A row, a column and a
+                // transformed event each isolate a stacking context, so a label inside the event
+                // paints under a sticky head or a sticky resource column.
+                var host = eventElement.closest ? eventElement.closest('.tm-scheduler') : null;
+                if (!host || typeof host.appendChild !== 'function') host = eventElement;
+                host.appendChild(label);
             }
             var culture = session.container && session.container.dataset ? session.container.dataset.timeCulture : null;
             label.textContent = clock(minute, culture) + ' \u2013 ' + clock(minute + duration, culture);
@@ -772,6 +859,38 @@
         _placeLabel: function (session, label) {
             var scroller = this._scrollerOf(session);
             var box = session.eventElement.getBoundingClientRect();
+            var anchor = label.parentElement;
+            // The label is parked on the scheduler, so the in-event offsets do not apply. Its
+            // containing block can be a positioned ancestor of the scheduler (a demo card), so the
+            // anchor is the label's offset parent, not the scheduler.
+            if (anchor && anchor !== session.eventElement && typeof anchor.getBoundingClientRect === 'function') {
+                var origin = label.offsetParent && typeof label.offsetParent.getBoundingClientRect === 'function'
+                    ? label.offsetParent : anchor;
+                var rootBox = origin.getBoundingClientRect();
+                label.style.position = 'absolute';
+                // The event's live rect lags the snap translate by a frame, so the label follows
+                // the snap: the pre-drag origin plus the same delta the event was translated by.
+                var delta = this._snapDelta(session);
+                var scroller = this._scrollerOf(session);
+                var scrollTop = scroller ? scroller.scrollTop || 0 : 0;
+                var scrollLeft = scroller ? scroller.scrollLeft || 0 : 0;
+                var base = session.labelBase;
+                if (!base) {
+                    // The label is positioned against the scheduler, which does not scroll, while the
+                    // event's rect is in the viewport. Remember the scroll at capture so a later
+                    // auto-scroll, which moves the event's rect, moves the label by the same amount.
+                    base = session.labelBase = {
+                        top: box.top - rootBox.top,
+                        left: box.left - rootBox.left,
+                        scrollTop: scrollTop,
+                        scrollLeft: scrollLeft
+                    };
+                }
+                var scrolledX = scrollLeft - base.scrollLeft;
+                var scrolledY = scrollTop - base.scrollTop;
+                label.style.left = (base.left + delta.x - scrolledX) + 'px';
+                label.style.top = (base.top + delta.y - scrolledY) + 'px';
+            }
             var limit = scroller && typeof scroller.getBoundingClientRect === 'function' ? scroller.getBoundingClientRect().top : 0;
             var root = session.container;
             if (root && typeof root.querySelectorAll === 'function') {
@@ -788,6 +907,7 @@
             var height = label && typeof label.getBoundingClientRect === 'function'
                 ? label.getBoundingClientRect().height
                 : 0;
+            if (height < 1 && label) height = label.offsetHeight || 0;
             if (height < 1) height = 24;
             if (box.top - height - gap < limit) label.classList.add('tm-scheduler-event-drag-time--below');
             else label.classList.remove('tm-scheduler-event-drag-time--below');
@@ -876,7 +996,16 @@
             eventElement.classList.remove('tm-scheduler-event--moving');
             eventElement.style.transform = '';
             eventElement.draggable = session.originalDraggable;
-            var label = eventElement.querySelector && eventElement.querySelector('.tm-scheduler-event-drag-time');
+            this._lastMove = null;
+            this._removeLabel(eventElement);
+        },
+
+        /** The live label is parked on the scheduler root. Both gestures remove it on release. */
+        _removeLabel: function (eventElement) {
+            var host = eventElement && eventElement.closest ? eventElement.closest('.tm-scheduler') : null;
+            var label = host
+                ? host.querySelector(':scope > .tm-scheduler-event-drag-time')
+                : eventElement && eventElement.querySelector('.tm-scheduler-event-drag-time');
             if (label) label.remove();
         },
 

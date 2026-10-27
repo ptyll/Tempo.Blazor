@@ -133,6 +133,20 @@ else
     /// <summary>The More menu entry's label.</summary>
     internal string MenuLabel => !string.IsNullOrEmpty(Text) ? Text : Tooltip ?? string.Empty;
 
+    /// <summary>The host's <c>data-testid</c>, or null when the host wrote none.</summary>
+    private string? HostTestId => AdditionalAttributes is not null
+        && AdditionalAttributes.TryGetValue("data-testid", out var value)
+        ? value?.ToString()
+        : null;
+
+    /// <summary>
+    /// An overflow-only button never renders on the bar, so its More entry owns <c>data-testid</c>.
+    /// A button that still has a bar copy (including a collapsed Secondary) keeps <c>data-testid</c>
+    /// there and exposes the same value as <c>data-menu-testid</c>, so exactly one
+    /// <c>[data-testid]</c> match exists with More open.
+    /// </summary>
+    private bool CopyTestIdToMenu => Priority == ToolbarButtonPriority.OverflowOnly;
+
     /// <summary>Registered with a toolbar that collapses (Overflow=Menu). A button nested in a
     /// <see cref="TmToolbarItem"/> is part of that item and never registers on its own.</summary>
     private bool Registered => Toolbar is { CollapsesButtons: true } && ParentItem is null && _registeredWith is not null;
@@ -224,6 +238,8 @@ else
         // labelled role=group section per contiguous run, separated by role=separator.
         Group = OwnerGroup?.GroupKey,
         GroupLabel = OwnerGroup?.EffectiveLabel,
+        TestId = CopyTestIdToMenu ? HostTestId : null,
+        MenuTestId = CopyTestIdToMenu ? null : HostTestId,
         // The receiver is the BUTTON, so the button re-renders; the toolbar re-renders on Recompute.
         OnClick = EventCallback.Factory.Create(this, ClickAsync),
     });

@@ -250,6 +250,45 @@
     overflow-y: auto;
 }
 
+/* A phone cannot fit a week: the columns keep a readable width and the ONE scroller (head and
+   body together, so the head scrolls with the body) pans sideways and snaps to a column. The
+   gutter stays sticky, so its X does not move. */
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-scroll {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    /* A snapped column lands past the sticky gutter, not under it. */
+    scroll-padding-inline-start: 4rem;
+    /* A host that gives the scheduler no height otherwise gets a full day, which pushes the
+       action bar below the fold. A bounded host (height: 100% of a sized ancestor) wins. */
+    max-height: 70dvh;
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-header,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-body,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-resource-row {
+    width: max-content;
+    min-width: 100%;
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-col,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-col-header {
+    flex: 1 0 var(--tm-scheduler-day-col-min, 7rem);
+    min-width: var(--tm-scheduler-day-col-min, 7rem);
+    scroll-snap-align: start;
+}
+
+.tm-scheduler[data-layout="mobile"] {
+    --tm-scheduler-hour-height: 3.5rem;
+}
+
+/* The variable lives on the root, so a host override of .tm-scheduler wins. :where keeps this
+   rule at zero specificity, below both the mobile rule and any host rule. */
+@media (pointer: coarse) {
+    :where(.tm-scheduler) {
+        --tm-scheduler-hour-height: 3.5rem;
+    }
+}
+
 
 
 .tm-scheduler-timegrid-body {

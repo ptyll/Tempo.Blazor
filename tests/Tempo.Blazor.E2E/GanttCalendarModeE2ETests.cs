@@ -37,6 +37,11 @@ public class GanttCalendarModeE2ETests : WasmTestBase
         await Assertions.Expect(title).Not.ToHaveTextAsync(before);
 
         await SaveScreenshotAsync(page, "gantt-calendar-mode");
+
+        await page.SetViewportSizeAsync(1024, 900);
+        await card.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(card.Locator(".tm-scheduler")).ToBeVisibleAsync();
+        await SaveScreenshotAsync(page, "gantt-calendar-mode-1024");
     }
 
     private static bool UpdateBaseline =>

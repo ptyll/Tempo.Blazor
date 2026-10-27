@@ -158,6 +158,19 @@
         _isOpen = !_isOpen;
     }
 
+    /// <summary>
+    /// Opens the menu. A host action bar calls this so "View" opens the same dropdown the trigger
+    /// does, including its mobile sheet. A disabled dropdown stays closed. Additive: the trigger
+    /// still toggles on its own click.
+    /// </summary>
+    public Task OpenAsync()
+    {
+        if (Disabled) return Task.CompletedTask;
+        _isOpen = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private void SetOpen(bool open)
     {
         _isOpen = open;

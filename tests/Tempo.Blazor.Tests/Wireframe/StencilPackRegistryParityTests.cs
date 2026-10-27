@@ -206,6 +206,7 @@ public class StencilPackRegistryParityTests
 
         entry.Should().Contain("showAddButton");
         entry.Should().Contain("\\u25be");
+        entry.Should().Contain("layoutMode == \\\"mobile\\\"");
     }
 
     [Fact]

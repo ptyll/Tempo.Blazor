@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using System.Globalization
 
-<div class="tm-calendar-view @Class">
+<div class="tm-calendar-view @(Compact ? "tm-calendar-view--compact" : null) @Class">
     <div class="tm-calendar" role="grid">
         <div class="tm-cal-nav" role="row">
             <button class="tm-cal-nav-btn tm-cal-prev"
@@ -106,6 +106,13 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Renders the day cells as a compact mini-month (<c>tm-calendar-view--compact</c>): no event
+    /// area, a smaller cell. Default false, so an existing calendar is unchanged. A scheduler title
+    /// popover uses it.
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
 
     protected override void OnInitialized()
     {

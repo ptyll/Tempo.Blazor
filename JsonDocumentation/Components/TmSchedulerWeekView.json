@@ -100,6 +100,25 @@
       "description": "Resources for grouping columns."
     },
     {
+      "name": "ShowDateStrip",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the date strip and shows the focused day with its neighbours. The mobile layout sets it."
+    },
+    {
+      "name": "FocusedDay",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The day the strip focuses. Defaults to CurrentDate."
+    },
+    {
+      "name": "FocusedDayChanged",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires when the strip picks a day."
+    },
+    {
       "name": "EventTemplate",
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,

@@ -103,6 +103,13 @@ buttons can show their text next to or under the icon.
   cannot oscillate). The attribute is not observed, so marking never re-triggers a pass. A divider never flex-shrinks
   (.tm-toolbar-divider { flex-shrink: 0 }), and a divider squeezed to 0px is still counted by its CSS width and
   margins, so a narrowed row cannot over-commit.
+* **Test ids on More entries.** A host `data-testid` is copied onto the More entry as `data-testid`
+  only when the button has no bar copy (`Priority == OverflowOnly`). A button that still renders on
+  the bar — including a collapsed Secondary, which stays in the DOM `inert` so its width can be
+  measured — keeps `data-testid` on that button and exposes the same value as `data-menu-testid` on
+  the menu entry. With More open, exactly one `[data-testid]` match exists. A file button's input
+  keeps its `-input` suffix either way (`wd-import` stays on the bar button, `data-menu-testid="wd-import"`
+  on the entry, `wd-import-input` on the input).
 * **The More menu** is the shared overflow menu (`ActionOverflowMenu`, also the action bar's),
   so it honours the whole host contract of [overlays.md](overlays.md): close-before-invoke,
   first enabled item focused, `aria-expanded` accurate on every close path (a Tab out of an open

@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders a mini-month (tm-calendar-view--compact): no event area, a smaller day cell. Default false. A scheduler title popover sets it."
+    },
+    {
       "name": "Today",
       "type": "DateOnly?",
       "isRequired": false,
