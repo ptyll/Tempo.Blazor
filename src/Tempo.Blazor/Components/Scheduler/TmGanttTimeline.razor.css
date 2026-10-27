@@ -1,0 +1,537 @@
+/* TmGanttTimeline: header, grid, markers, dependency lines, task bars, tooltips, avatars. */
+
+/* ─── Timeline ─────────────────────────────────────────────────── */
+
+.tm-gantt__timeline {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    cursor: grab;
+    background: var(--tm-bg-surface);
+}
+
+.tm-gantt__timeline--panning {
+    cursor: grabbing !important;
+    user-select: none;
+}
+
+.tm-gantt__timeline-header {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tm-gantt__timeline-header-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-right: 1px solid var(--tm-border-color);
+    padding: 0 var(--tm-space-2, 0.5rem);
+}
+
+.tm-gantt__timeline-body {
+    flex: 1;
+    min-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+}
+
+.tm-gantt__timeline-content {
+    position: relative;
+}
+
+/* ─── Non-working overlay ──────────────────────────────────────── */
+
+.tm-gantt__nonworking-overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--tm-scheduler-weekend-bg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ─── Grid lines ───────────────────────────────────────────────── */
+
+.tm-gantt__grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tm-gantt__grid-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-right: 1px solid var(--tm-border-color);
+}
+
+/* ─── Today marker ─────────────────────────────────────────────── */
+
+.tm-gantt__today-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid var(--tm-color-danger);
+    pointer-events: none;
+    z-index: 3;
+}
+
+/* The pill sits in the timeline header and straddles its bottom edge, centred on the line. Inverse
+   ink on the danger fill holds AA in light and dark (pinned by TokenContrastTests). */
+.tm-gantt__today-label {
+    position: absolute;
+    bottom: 0;
+    transform: translate(-50%, 50%);
+    z-index: 9;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-danger);
+    color: var(--tm-text-inverse);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1.25rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* ─── Dependencies ─────────────────────────────────────────────── */
+
+.tm-gantt__dependencies {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.tm-gantt__dependency-line {
+    stroke: var(--tm-text-tertiary);
+    stroke-width: 1.5;
+}
+
+.tm-gantt__dependency-arrow {
+    fill: var(--tm-text-tertiary);
+}
+
+/* ─── Task bars ────────────────────────────────────────────────── */
+
+.tm-gantt__task-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    z-index: 2;
+}
+
+.tm-gantt__bar {
+    position: relative;
+    height: 20px;
+    background: var(--tm-gantt-task-color, var(--tm-color-primary-solid));
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    cursor: pointer;
+    overflow: visible;
+    box-shadow: var(--tm-shadow-sm);
+    transition: box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.tm-gantt__bar:hover {
+    filter: brightness(1.08);
+    box-shadow: var(--tm-shadow-md);
+}
+
+.tm-gantt__bar--selected {
+    box-shadow: 0 0 0 2px var(--tm-gantt-task-color, var(--tm-color-primary-solid)),
+                var(--tm-shadow-md);
+}
+
+.tm-gantt__bar--group {
+    filter: brightness(0.88);
+    border-radius: var(--tm-radius-sm, 0.25rem) var(--tm-radius-sm, 0.25rem) 0 0;
+}
+
+.tm-gantt__bar--completed {
+    opacity: 0.6;
+}
+
+.tm-gantt__bar--priority-highest{ border-left: 3px solid var(--tm-priority-highest); }
+
+.tm-gantt__bar--priority-high   { border-left: 3px solid var(--tm-priority-high); }
+
+.tm-gantt__bar--priority-medium { border-left: 3px solid var(--tm-priority-medium); }
+
+.tm-gantt__bar--priority-low    { border-left: 3px solid var(--tm-priority-low); }
+
+.tm-gantt__bar--priority-lowest { border-left: 3px solid var(--tm-priority-lowest); }
+
+.tm-gantt__bar-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    /* A darker tone of the bar's own colour: opaque, so the label keeps its contrast in every theme. */
+    background: color-mix(in srgb, var(--tm-gantt-task-color, var(--tm-color-primary-solid)) 60%, var(--tm-scheduler-event-fg-on-light));
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.tm-gantt__bar-label {
+    position: relative;
+    z-index: 1;
+    padding: 0 6px;
+    font-size: 0.75rem;
+    color: var(--tm-color-on-primary-fixed);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 20px;
+    display: block;
+}
+
+/* The percentage next to the bar (GanttViewSettings.ShowProgressLabel). A child of .tm-gantt__task-row
+   (a sibling of the bar, so the faded completed bar does not dim it); the inline `left` is the bar's right
+   edge, the margin is the gap. */
+.tm-gantt__bar-progress-label {
+    position: absolute;
+    margin-left: var(--tm-space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* The exceeded-deadline flame sits just right of the bar; the label steps past it
+   (class computed in C#, GetProgressLabelClass). */
+.tm-gantt__bar-progress-label--after-deadline {
+    margin-left: 1.5rem;
+}
+
+/* ─── Deadline marker ──────────────────────────────────────────── */
+
+.tm-gantt__bar-deadline {
+    position: absolute;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tm-color-danger);
+    z-index: 4;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* ─── Hover tooltip ────────────────────────────────────────────── */
+
+.tm-gantt__bar-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 160px;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    box-shadow: var(--tm-shadow-md);
+    padding: var(--tm-space-2, 0.5rem);
+    z-index: 20;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.12s ease, visibility 0.12s ease;
+    white-space: nowrap;
+}
+
+.tm-gantt__bar:hover .tm-gantt__bar-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tm-gantt__bar-tooltip-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--tm-text-primary);
+    margin-bottom: 4px;
+}
+
+.tm-gantt__bar-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--tm-space-3, 0.75rem);
+    font-size: 0.75rem;
+    color: var(--tm-text-secondary);
+}
+
+/* ─── Milestone ────────────────────────────────────────────────── */
+
+.tm-gantt__milestone {
+    width: 12px;
+    height: 12px;
+    background: var(--tm-color-warning);
+    transform: rotate(45deg);
+    cursor: pointer;
+    box-shadow: var(--tm-shadow-sm);
+}
+
+/* ─── Phase 2: Two-row timeline header ────────────────────────── */
+
+.tm-gantt__timeline-header {
+    position: relative;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.tm-gantt__timeline-header--upper,
+.tm-gantt__timeline-header--lower {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.tm-gantt__timeline-header--upper {
+    top: 0;
+    height: 28px;
+}
+
+.tm-gantt__timeline-header--lower {
+    top: 28px;
+    height: 32px;
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__timeline-header-cell--upper {
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--tm-space-2, 0.5rem);
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--tm-text-primary);
+    border-right: 1px solid var(--tm-border-color);
+    box-sizing: border-box;
+}
+
+.tm-gantt__timeline-header-cell--lower {
+    position: absolute;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--tm-text-secondary);
+    border-right: 1px solid var(--tm-border-color);
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.tm-gantt__bar--overdue {
+    --tm-gantt-task-color: var(--tm-color-danger);
+    box-shadow: 0 0 0 2px var(--tm-color-danger);
+    animation: tm-gantt-overdue-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tm-gantt-overdue-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 60%, transparent); }
+    50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tm-color-danger) 20%, transparent); }
+}
+
+/* ─── Phase 2: Dependency lines ────────────────────────────────── */
+
+.tm-gantt__dep-line {
+    stroke: var(--tm-text-secondary);
+    stroke-width: 1.5;
+    fill: none;
+    cursor: pointer;
+    transition: stroke 0.15s ease;
+}
+
+.tm-gantt__dep-line:hover {
+    stroke: var(--tm-color-primary);
+    stroke-width: 2.5;
+}
+
+.tm-gantt__dep-line--selected {
+    stroke: var(--tm-color-primary);
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
+}
+
+.tm-gantt__dep-line--fs { stroke: var(--tm-text-secondary); }
+
+.tm-gantt__dep-line--ss { stroke: var(--tm-color-info); }
+
+.tm-gantt__dep-line--ff { stroke: var(--tm-color-success); }
+
+.tm-gantt__dep-line--sf { stroke: var(--tm-color-warning); }
+
+.tm-gantt__dep-lag-label {
+    font-size: 10px;
+    fill: var(--tm-text-secondary);
+    font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+/* ─── Phase 2: Dep creation handles ───────────────────────────── */
+
+.tm-gantt__dep-handle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--tm-color-primary);
+    border: 2px solid var(--tm-bg-surface);
+    opacity: 0;
+    cursor: crosshair;
+    z-index: 5;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tm-gantt__bar:hover .tm-gantt__dep-handle {
+    opacity: 1;
+}
+
+.tm-gantt__dep-handle--start { left: -5px; }
+
+.tm-gantt__dep-handle--end   { right: -5px; }
+
+.tm-gantt__dep-handle:hover {
+    transform: translateY(-50%) scale(1.3);
+}
+
+/* ─── Phase 2: Assignee avatars ────────────────────────────────── */
+
+.tm-gantt__bar-avatars {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: -4px;
+}
+
+.tm-gantt__bar-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--tm-bg-surface);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--tm-color-on-primary-fixed);
+    background-size: cover;
+    background-position: center;
+    margin-left: -3px;
+    flex-shrink: 0;
+    box-shadow: var(--tm-shadow-xs);
+}
+
+.tm-gantt__bar-avatar:first-child { margin-left: 0; }
+
+.tm-gantt__bar-avatar-overflow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--tm-bg-surface);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--tm-color-on-primary-fixed);
+    background: color-mix(in srgb, var(--tm-scheduler-event-fg-on-light) 55%, transparent);
+    margin-left: -3px;
+}
+
+/* ─── Phase 2: Current time marker ─────────────────────────────── */
+
+.tm-gantt__current-time-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--tm-color-danger);
+    opacity: 0.8;
+    z-index: 8;
+    pointer-events: none;
+}
+
+.tm-gantt__current-time-marker::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--tm-color-danger);
+}
+
+/* ─── Phase 3: Critical Path ────────────────────────────────────── */
+
+.tm-gantt__bar--critical-path {
+    background: var(--tm-color-danger) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 30%, transparent);
+}
+
+/* ─── Phase 3: Baseline ghost bars ──────────────────────────────── */
+
+.tm-gantt__bar--baseline {
+    background: color-mix(in srgb, var(--tm-text-primary) 12%, transparent) !important;
+    pointer-events: none;
+    z-index: 0;
+    border: 1px dashed color-mix(in srgb, var(--tm-text-primary) 25%, transparent);
+    position: absolute;
+    height: 20px;
+    border-radius: 3px;
+    opacity: 0.6;
+}
+
+/* ── Virtual Resource Avatar (F5.11) ───────────────────── */
+.tm-gantt__bar-avatar--virtual {
+    background: var(--tm-bg-surface-secondary) !important;
+    color: var(--tm-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+/* ── Timer pulse animation (F5.12) ─────────────────────── */
+@keyframes tm-timer-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+.tm-gantt__bar--timer-active::after {
+    content: "⏱";
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    animation: tm-timer-pulse 1.2s ease-in-out infinite;
+}

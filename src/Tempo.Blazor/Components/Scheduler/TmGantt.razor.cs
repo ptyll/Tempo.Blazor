@@ -16,54 +16,54 @@ namespace Tempo.Blazor.Components.Scheduler;
 
 public partial class TmGantt : IDisposable
 {
-    private ElementReference _timelineContainerRef;
-    private ElementReference _timelineBodyRef;
-    private ElementReference _treeBodyRef;
+    internal ElementReference _timelineContainerRef;
+    internal ElementReference _timelineBodyRef;
+    internal ElementReference _treeBodyRef;
     private List<GanttTaskNode> _treeRoots = [];
-    private List<GanttTaskNode> _visibleNodes = [];
-    private List<TaskBarInfo> _taskBars = [];
-    private List<DependencyLineInfo> _visibleDependencies = [];
-    private List<TimelineHeader> _timelineHeaders = [];
-    private List<TimelineHeader> _upperHeaders = [];
-    private List<TimelineHeader> _lowerHeaders = [];
-    private List<NonWorkingRect> _nonWorkingRects = [];
-    private double _totalTimelineWidth;
-    private int _zoomLevel = 100;
-    private double _todayOffset;
+    internal List<GanttTaskNode> _visibleNodes = [];
+    internal List<TaskBarInfo> _taskBars = [];
+    internal List<DependencyLineInfo> _visibleDependencies = [];
+    internal List<TimelineHeader> _timelineHeaders = [];
+    internal List<TimelineHeader> _upperHeaders = [];
+    internal List<TimelineHeader> _lowerHeaders = [];
+    internal List<NonWorkingRect> _nonWorkingRects = [];
+    internal double _totalTimelineWidth;
+    internal int _zoomLevel = 100;
+    internal double _todayOffset;
     /// <summary>Today in the display zone, recomputed once per <see cref="RefreshVisibleData"/>.</summary>
-    private DateTime _today = default;
-    private double _currentTimeOffset;
+    internal DateTime _today = default;
+    internal double _currentTimeOffset;
 
     // Phase 3 state
-    private HashSet<string> _criticalPathIds = [];
-    private Dictionary<string, (double Left, double Width)> _baselinePositions = [];
-    private bool _filterPanelOpen;
+    internal HashSet<string> _criticalPathIds = [];
+    internal Dictionary<string, (double Left, double Width)> _baselinePositions = [];
+    internal bool _filterPanelOpen;
     private IReadOnlyList<GanttFilter> _activeFilters = [];
 
     // Phase 4 state
     private bool _exportDialogOpen;
     private bool _importDialogOpen;
-    private bool _historyDrawerOpen;
+    internal bool _historyDrawerOpen;
 
     // Phase 5 state
-    private HashSet<string> _overloadedAssigneeIds = [];
-    private GanttSidebarPanel? _activeSidebarPanel;
+    internal HashSet<string> _overloadedAssigneeIds = [];
+    internal GanttSidebarPanel? _activeSidebarPanel;
     private IGanttRealtimeConnection? _subscribedConnection;
 
 
     // Inline edit state
-    private string? _inlineEditTaskId;
-    private GanttColumnKey? _inlineEditColumn;
-    private string? _inlineEditCustomFieldId;
-    private string _inlineEditValue = string.Empty;
+    internal string? _inlineEditTaskId;
+    internal GanttColumnKey? _inlineEditColumn;
+    internal string? _inlineEditCustomFieldId;
+    internal string _inlineEditValue = string.Empty;
 
     // Dependency drag state
     private string? _depDragFromId;
     private bool _depDragFromEnd;
-    private string? _selectedDependencyId;
+    internal string? _selectedDependencyId;
 
     // Bulk select state
-    private HashSet<string> _selectedTaskIds = [];
+    internal HashSet<string> _selectedTaskIds = [];
 
     private static readonly IReadOnlyList<GanttColumnDefinition> DefaultColumns = new List<GanttColumnDefinition>
     {
@@ -75,13 +75,13 @@ public partial class TmGantt : IDisposable
         new() { Key = GanttColumnKey.Progress, Visible = true,  Order = 5, Width = 80 },
     };
 
-    private bool _isPanning;
+    internal bool _isPanning;
     private double _panStartX;
     private double _panStartY;
     private double _panStartScrollLeft;
     private double _panStartScrollTop;
     private bool _isSyncingScroll;
-    private bool _viewSettingsOpen;
+    internal bool _viewSettingsOpen;
 
     // Context menu state
     private bool _contextMenuVisible;
@@ -90,16 +90,16 @@ public partial class TmGantt : IDisposable
     private TmWorkItem? _contextMenuTask;
 
     // Drag & drop state
-    private string? _draggedTaskId;
-    private string? _dropTargetId;
-    private GanttDropPosition _dropPosition;
+    internal string? _draggedTaskId;
+    internal string? _dropTargetId;
+    internal GanttDropPosition _dropPosition;
 
 
     private const int ComfortableRowHeight = 40;
     private const int CompactRowHeight = 28;
     private const int DayWidth = 40;
 
-    private int RowHeight => ViewSettings.ViewDensity == GanttViewDensity.Compact ? CompactRowHeight : ComfortableRowHeight;
+    internal int RowHeight => ViewSettings.ViewDensity == GanttViewDensity.Compact ? CompactRowHeight : ComfortableRowHeight;
 
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
@@ -126,10 +126,10 @@ public partial class TmGantt : IDisposable
     private ITmWorkItemProvider? _loadedSource;
 
     /// <summary>Effective task list: provider data when <see cref="WorkItemSource"/> is set, otherwise <see cref="Items"/>.</summary>
-    private IReadOnlyList<TmWorkItem> Data => WorkItemSource is null ? Items : _providerTasks;
+    internal IReadOnlyList<TmWorkItem> Data => WorkItemSource is null ? Items : _providerTasks;
 
     /// <summary>Effective dependency list: provider data when <see cref="WorkItemSource"/> is set, otherwise <see cref="DependencyItems"/>.</summary>
-    private IReadOnlyList<GanttDependency> Dependencies => WorkItemSource is null ? DependencyItems : _providerDeps;
+    internal IReadOnlyList<GanttDependency> Dependencies => WorkItemSource is null ? DependencyItems : _providerDeps;
     [Parameter] public GanttView View { get; set; } = GanttView.Week;
     [Parameter] public EventCallback<GanttView> ViewChanged { get; set; }
     [Parameter] public TmWorkItem? SelectedTask { get; set; }
@@ -336,7 +336,7 @@ public partial class TmGantt : IDisposable
     /// <see cref="IServiceProvider"/> so a consumer that never registers a <see cref="TimeProvider"/>
     /// still gets <see cref="TimeProvider.System"/>. Tests register a FakeTimeProvider.
     /// </summary>
-    private TimeProvider Clock
+    internal TimeProvider Clock
         => _clock ??= Services.GetService<TimeProvider>() ?? TimeProvider.System;
     private TimeProvider? _clock;
 
@@ -561,15 +561,13 @@ public partial class TmGantt : IDisposable
     private GanttZoomPreset _zoomPresetOverride = GanttZoomPreset.Weeks;
     private bool _zoomPresetOverrideSet;
 
-    private GanttZoomPreset GetEffectiveZoomPreset() =>
+    internal GanttZoomPreset GetEffectiveZoomPreset() =>
         _zoomPresetOverrideSet ? _zoomPresetOverride : ZoomPreset;
 
-    private bool IsViewActive(GanttView view) => View == view;
+    internal bool IsViewActive(GanttView view) => View == view;
 
-    /// <summary>The active view button is <c>Secondary</c> (visually distinct), the others stay <c>Ghost</c>.</summary>
-    private ButtonVariant ViewButtonVariant(GanttView view) => IsViewActive(view) ? ButtonVariant.Secondary : ButtonVariant.Ghost;
 
-    private async Task SetViewAsync(GanttView view)
+    internal async Task SetViewAsync(GanttView view)
     {
         View = view;
         if (view == GanttView.Day)   { _zoomPresetOverride = GanttZoomPreset.Days;   _zoomPresetOverrideSet = true; }
@@ -579,19 +577,19 @@ public partial class TmGantt : IDisposable
         RefreshVisibleData();
     }
 
-    private async Task ZoomInAsync()
+    internal async Task ZoomInAsync()
     {
         _zoomLevel = Math.Min(200, _zoomLevel + 25);
         RefreshVisibleData();
     }
 
-    private async Task ZoomOutAsync()
+    internal async Task ZoomOutAsync()
     {
         _zoomLevel = Math.Max(50, _zoomLevel - 25);
         RefreshVisibleData();
     }
 
-    private async Task FitToScreenAsync()
+    internal async Task FitToScreenAsync()
     {
         // ContainerWidth overrides the measurement; otherwise measure THIS Gantt's timeline through its
         // ElementReference (no eval, no global querySelector - several Gantts can share a page).
@@ -612,12 +610,12 @@ public partial class TmGantt : IDisposable
 
     // ── View Settings ────────────────────────────────────────────
 
-    private void ToggleViewSettings() => _viewSettingsOpen = !_viewSettingsOpen;
+    internal void ToggleViewSettings() => _viewSettingsOpen = !_viewSettingsOpen;
 
-    private void ToggleSidebarPanel(GanttSidebarPanel panel)
+    internal void ToggleSidebarPanel(GanttSidebarPanel panel)
         => _activeSidebarPanel = _activeSidebarPanel == panel ? null : panel;
 
-    private void UpdateNotification(Action<TmNotificationPreferences> apply)
+    internal void UpdateNotification(Action<TmNotificationPreferences> apply)
     {
         if (NotificationSettings is null) return;
         apply(NotificationSettings);
@@ -649,80 +647,179 @@ public partial class TmGantt : IDisposable
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetShowTodayMarker(bool value)
+    internal async Task SetShowTodayMarker(bool value)
     {
         ViewSettings.ShowTodayMarker = value;
         RefreshVisibleData();
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetShowProgressLabel(bool value)
+    internal async Task SetShowProgressLabel(bool value)
     {
         ViewSettings.ShowProgressLabel = value;
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetShowDaysOff(bool value)
+    internal async Task SetShowDaysOff(bool value)
     {
         ViewSettings.ShowDaysOff = value;
         RefreshVisibleData();
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetShowClosedTasks(bool value)
+    internal async Task SetShowClosedTasks(bool value)
     {
         ViewSettings.ShowClosedTasks = value;
         RefreshVisibleData();
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetTaskNameLocation(GanttTaskNameLocation loc)
+    internal async Task SetTaskNameLocation(GanttTaskNameLocation loc)
     {
         ViewSettings.TaskNameLocation = loc;
         RefreshVisibleData();
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetViewDensity(GanttViewDensity density)
+    internal async Task SetViewDensity(GanttViewDensity density)
     {
         ViewSettings.ViewDensity = density;
         RefreshVisibleData();
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
-    private async Task SetTheme(GanttTheme theme)
+    internal async Task SetTheme(GanttTheme theme)
     {
         ViewSettings.Theme = theme;
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
+    // ── Parts (TmGanttToolbar / TmGanttTree / TmGanttTimeline / TmGanttSidebar) ──────────
+
+    /// <summary>
+    /// Moves on every data refresh and on every in-place edit of a task. The tree and the timeline compare it
+    /// (among the rest of what they draw) to skip a render pass that cannot change their output.
+    /// </summary>
+    internal int DrawVersion { get; private set; }
+
+    /// <summary>
+    /// A hash of every task field the tree and the timeline paint. Tasks are mutated in place (the inline edit,
+    /// the task panel, a host, a realtime update) and the monolith read them at render time, so a render pass
+    /// always showed the current values. The parts skip a pass whose state is unchanged; this fingerprint is part
+    /// of that state, which keeps the skip from ever hiding an in-place edit. It walks the list once (a few field
+    /// reads per task) - far cheaper than rendering one element per row, bar and header cell.
+    /// </summary>
+    internal int TaskFingerprint()
+    {
+        var hash = new HashCode();
+        foreach (var task in Data)
+        {
+            hash.Add(task.Id);
+            hash.Add(task.Title);
+            hash.Add(task.ParentId);
+            hash.Add(task.Start);
+            hash.Add(task.End);
+            hash.Add(task.DueDate);
+            hash.Add(task.PercentComplete);
+            hash.Add(task.Status);
+            hash.Add(task.Priority);
+            hash.Add(task.Color);
+            hash.Add(task.IsMilestone);
+            hash.Add(task.IsExpanded);
+            hash.Add(task.UseManualDates);
+            hash.Add(task.Attachments.Count);
+            hash.Add(task.Comments.Count);
+            foreach (var assignee in task.Assignees)
+            {
+                hash.Add(assignee.Id);
+                hash.Add(assignee.Name);
+                hash.Add(assignee.AvatarUrl);
+                hash.Add(assignee.IsVirtual);
+            }
+
+            foreach (var (key, value) in task.CustomFields)
+            {
+                hash.Add(key);
+                hash.Add(value);
+            }
+        }
+
+        return hash.ToHashCode();
+    }
+    /// <summary>Resolves an internal test id; the parts call it so a <c>TestIdPrefix</c> reaches their markup.</summary>
+    internal string TestIdFor(string name) => TestId(name);
+
+    /// <summary>The display zone: the circuit's user zone, else the clock's local zone.</summary>
+    internal TimeZoneInfo DisplayZone => _userZone?.Zone ?? Clock.LocalTimeZone;
+
+    /// <summary>
+    /// Event hand-off of a part. Blazor re-renders the component that RECEIVES an event; a part's handler
+    /// mutates this component's state and this component's own markup (filter panel, task panel, context
+    /// menu, dialogs) follows it, so the part forwards the event here and this component renders exactly as
+    /// it did when the toolbar, tree and timeline were its own markup. Mirrors ComponentBase's own
+    /// <c>IHandleEvent</c>: render once now, and again when an asynchronous handler completes.
+    /// </summary>
+    internal Task HandlePartEventAsync(EventCallbackWorkItem callback, object? arg)
+    {
+        var task = callback.InvokeAsync(arg);
+        var awaitTask = task.Status is not (TaskStatus.RanToCompletion or TaskStatus.Canceled);
+        StateHasChanged();
+        return awaitTask ? RenderAfterAsync(task) : Task.CompletedTask;
+    }
+
+    private async Task RenderAfterAsync(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch when (task.IsCanceled)
+        {
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>Zoom slider (<c>change</c>): sets the level and re-lays out the timeline.</summary>
+    internal void SetZoomLevel(ChangeEventArgs e)
+    {
+        _zoomLevel = int.Parse(e.Value!.ToString()!);
+        RefreshVisibleData();
+    }
+
+    /// <summary>Toolbar: show / hide the task panel.</summary>
+    internal void ToggleTaskPanel() => ShowTaskPanel = !ShowTaskPanel;
+
+    /// <summary>Bulk bar: clear the checkbox selection.</summary>
+    internal void ClearBulkSelection() => _selectedTaskIds = [];
     // ── Interaction ──────────────────────────────────────────────
 
-    private async Task ToggleExpandAsync(TmWorkItem task)
+    internal async Task ToggleExpandAsync(TmWorkItem task)
     {
         task.IsExpanded = !task.IsExpanded;
         RefreshVisibleData();
     }
 
-    private async Task SelectTaskAsync(TmWorkItem task)
+    internal async Task SelectTaskAsync(TmWorkItem task)
     {
         SelectedTask = task;
         await OnTaskSelected.InvokeAsync(task);
     }
 
-    private async Task ExpandAllAsync()
+    internal async Task ExpandAllAsync()
     {
         GanttHelper.SetAllExpanded(_treeRoots, true);
         RefreshVisibleData();
     }
 
-    private async Task CollapseAllAsync()
+    internal async Task CollapseAllAsync()
     {
         GanttHelper.SetAllExpanded(_treeRoots, false);
         RefreshVisibleData();
     }
 
-    private async Task AddTaskAsync()
+    internal async Task AddTaskAsync()
     {
         string? parentId = null;
         if (SelectedTask is not null)
@@ -745,7 +842,7 @@ public partial class TmGantt : IDisposable
         await SelectTaskAsync(newTask);
     }
 
-    private void ShowContextMenu(MouseEventArgs e, TmWorkItem task)
+    internal void ShowContextMenu(MouseEventArgs e, TmWorkItem task)
     {
         _contextMenuX = e.ClientX;
         _contextMenuY = e.ClientY;
@@ -803,14 +900,14 @@ public partial class TmGantt : IDisposable
 
     // ── Drag & Drop ──────────────────────────────────────────────
 
-    private void OnDragStart(TmWorkItem task)
+    internal void OnDragStart(TmWorkItem task)
     {
         _draggedTaskId = task.Id;
         _dropTargetId = null;
         _dropPosition = GanttDropPosition.None;
     }
 
-    private void OnDragOver(TmWorkItem targetTask, DragEventArgs e)
+    internal void OnDragOver(TmWorkItem targetTask, DragEventArgs e)
     {
         if (_draggedTaskId == targetTask.Id) return;
         var offsetY = e.OffsetY;
@@ -823,13 +920,13 @@ public partial class TmGantt : IDisposable
         };
     }
 
-    private void OnDragLeave()
+    internal void OnDragLeave()
     {
         _dropTargetId = null;
         _dropPosition = GanttDropPosition.None;
     }
 
-    private async Task OnDropAsync(TmWorkItem targetTask)
+    internal async Task OnDropAsync(TmWorkItem targetTask)
     {
         if (string.IsNullOrEmpty(_draggedTaskId) || _draggedTaskId == targetTask.Id || _dropPosition == GanttDropPosition.None)
         {
@@ -920,14 +1017,14 @@ public partial class TmGantt : IDisposable
 
     // ── Inline Edit ──────────────────────────────────────────────
 
-    private void StartInlineEdit(string taskId, GanttColumnKey column, string currentValue)
+    internal void StartInlineEdit(string taskId, GanttColumnKey column, string currentValue)
     {
         _inlineEditTaskId = taskId;
         _inlineEditColumn = column;
         _inlineEditValue = currentValue;
     }
 
-    private async Task CommitInlineEditAsync()
+    internal async Task CommitInlineEditAsync()
     {
         if (_inlineEditTaskId is null || _inlineEditColumn is null) return;
 
@@ -935,13 +1032,14 @@ public partial class TmGantt : IDisposable
         if (task is not null && _inlineEditColumn == GanttColumnKey.Title)
         {
             task.Title = _inlineEditValue;
+            DrawVersion++;
             await RaiseTaskUpdatedAsync(task);
         }
 
         CancelInlineEdit();
     }
 
-    private void StartCustomFieldInlineEdit(string taskId, string fieldId, string currentValue)
+    internal void StartCustomFieldInlineEdit(string taskId, string fieldId, string currentValue)
     {
         _inlineEditTaskId = taskId;
         _inlineEditColumn = null;
@@ -957,7 +1055,7 @@ public partial class TmGantt : IDisposable
         _inlineEditValue = string.Empty;
     }
 
-    private async Task HandleInlineEditKeyDownAsync(KeyboardEventArgs e)
+    internal async Task HandleInlineEditKeyDownAsync(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
@@ -1002,13 +1100,13 @@ public partial class TmGantt : IDisposable
 
     // ── Bulk Select ──────────────────────────────────────────────
 
-    private void ToggleBulkSelect(string taskId, bool selected)
+    internal void ToggleBulkSelect(string taskId, bool selected)
     {
         if (selected) _selectedTaskIds.Add(taskId);
         else _selectedTaskIds.Remove(taskId);
     }
 
-    private async Task ExecuteBulkStatusUpdateAsync(TmWorkItemStatus status)
+    internal async Task ExecuteBulkStatusUpdateAsync(TmWorkItemStatus status)
     {
         if (_selectedTaskIds.Count == 0) return;
 
@@ -1024,7 +1122,7 @@ public partial class TmGantt : IDisposable
 
     // ── Cascade Sort ─────────────────────────────────────────────
 
-    private async Task CascadeSortAsync()
+    internal async Task CascadeSortAsync()
     {
         _treeRoots = GanttHelper.CascadeSort(_treeRoots);
         var flatSorted = GanttHelper.FlattenVisible(_treeRoots).Select(n => n.Task).ToList();
@@ -1034,7 +1132,7 @@ public partial class TmGantt : IDisposable
 
     // ── Column Toggle ─────────────────────────────────────────────
 
-    private async Task ToggleColumnVisibilityAsync(GanttColumnKey key, bool visible)
+    internal async Task ToggleColumnVisibilityAsync(GanttColumnKey key, bool visible)
     {
         var updated = EffectiveColumns.Select(c => c.Key == key
             ? new GanttColumnDefinition { Key = c.Key, Visible = visible, Width = c.Width, Order = c.Order }
@@ -1065,10 +1163,10 @@ public partial class TmGantt : IDisposable
         await OnFiltersChanged.InvokeAsync(_activeFilters);
     }
 
-    private void ToggleFilterPanel()    => _filterPanelOpen    = !_filterPanelOpen;
-    private void ToggleExportDialog()   => _exportDialogOpen   = !_exportDialogOpen;
-    private void ToggleImportDialog()   => _importDialogOpen   = !_importDialogOpen;
-    private void ToggleHistoryDrawer()  => _historyDrawerOpen  = !_historyDrawerOpen;
+    internal void ToggleFilterPanel()    => _filterPanelOpen    = !_filterPanelOpen;
+    internal void ToggleExportDialog()   => _exportDialogOpen   = !_exportDialogOpen;
+    internal void ToggleImportDialog()   => _importDialogOpen   = !_importDialogOpen;
+    internal void ToggleHistoryDrawer()  => _historyDrawerOpen  = !_historyDrawerOpen;
 
     private async Task HandleExportAsync(GanttExportOptions opts)
     {
@@ -1088,7 +1186,7 @@ public partial class TmGantt : IDisposable
         await OnImportError.InvokeAsync(error);
     }
 
-    private async Task CommitCustomFieldEditAsync()
+    internal async Task CommitCustomFieldEditAsync()
     {
         if (_inlineEditTaskId is null || _inlineEditCustomFieldId is null) return;
         var taskId  = _inlineEditTaskId;
@@ -1098,6 +1196,7 @@ public partial class TmGantt : IDisposable
         if (task is not null)
         {
             task.CustomFields[fieldId] = value;
+            DrawVersion++;
             await OnCustomFieldChanged.InvokeAsync((taskId, fieldId, value));
         }
         CancelInlineEdit();
@@ -1105,7 +1204,7 @@ public partial class TmGantt : IDisposable
 
     // ── Panning ──────────────────────────────────────────────────
 
-    private async Task OnTimelineMouseDown(MouseEventArgs e)
+    internal async Task OnTimelineMouseDown(MouseEventArgs e)
     {
         if (e.Button != 0) return;
         _isPanning = true;
@@ -1115,7 +1214,7 @@ public partial class TmGantt : IDisposable
         _panStartScrollTop = await GetTimelineBodyScrollTopAsync();
     }
 
-    private async Task OnTimelineMouseMove(MouseEventArgs e)
+    internal async Task OnTimelineMouseMove(MouseEventArgs e)
     {
         if (!_isPanning) return;
         var deltaX = _panStartX - e.ClientX;
@@ -1126,7 +1225,7 @@ public partial class TmGantt : IDisposable
         await SetTreeBodyScrollTopAsync(newTop);
     }
 
-    private void OnTimelineMouseUp(MouseEventArgs e) => _isPanning = false;
+    internal void OnTimelineMouseUp(MouseEventArgs e) => _isPanning = false;
 
     private async Task<double> GetTimelineScrollLeftAsync() =>
         await JSRuntime.InvokeAsync<double>("tmGantt.getScrollLeft", _timelineContainerRef);
@@ -1145,7 +1244,7 @@ public partial class TmGantt : IDisposable
 
     // ── Wheel ────────────────────────────────────────────────────
 
-    private async Task OnTimelineWheel(WheelEventArgs e)
+    internal async Task OnTimelineWheel(WheelEventArgs e)
     {
         if (e.ShiftKey)
         {
@@ -1163,7 +1262,7 @@ public partial class TmGantt : IDisposable
 
     // ── Scroll sync ──────────────────────────────────────────────
 
-    private async Task OnTreeScroll()
+    internal async Task OnTreeScroll()
     {
         if (_isSyncingScroll) return;
         _isSyncingScroll = true;
@@ -1172,7 +1271,7 @@ public partial class TmGantt : IDisposable
         _isSyncingScroll = false;
     }
 
-    private async Task OnTimelineBodyScroll()
+    internal async Task OnTimelineBodyScroll()
     {
         if (_isSyncingScroll) return;
         _isSyncingScroll = true;
@@ -1185,6 +1284,7 @@ public partial class TmGantt : IDisposable
 
     private void RefreshVisibleData()
     {
+        DrawVersion++;
         // Apply user-defined filters to tree roots first
         var filteredRoots = _activeFilters.Count > 0
             ? GanttHelper.ApplyFilters(_treeRoots, _activeFilters)
@@ -1240,7 +1340,7 @@ public partial class TmGantt : IDisposable
         }
     }
 
-    private double GetPixelPerDay()
+    internal double GetPixelPerDay()
     {
         var zoomFactor = _zoomLevel / 100.0;
         return GetEffectiveZoomPreset() switch
@@ -1391,143 +1491,15 @@ public partial class TmGantt : IDisposable
         _ => _themeService is { IsDark: true } ? "dark" : null
     };
 
-    private string GetRowClass(GanttTaskNode node)
-    {
-        var classes = new List<string>();
-        if (SelectedTask?.Id == node.Task.Id)
-            classes.Add("tm-gantt__tree-row--selected");
-        if (_draggedTaskId == node.Task.Id)
-            classes.Add("tm-gantt__tree-row--dragging");
-        if (ShowOverdueHighlight && IsOverdue(node.Task))
-            classes.Add("tm-gantt__tree-row--overdue");
-        return string.Join(" ", classes);
-    }
-
-    private bool IsOverdue(TmWorkItem task) =>
+    internal bool IsOverdue(TmWorkItem task) =>
         task.End < _today &&
         task.Status is not TmWorkItemStatus.Done and not TmWorkItemStatus.Closed;
 
-    private string GetDragClass(GanttTaskNode node)
-    {
-        if (_dropTargetId != node.Task.Id || _dropPosition == GanttDropPosition.None)
-            return "";
-        return _dropPosition switch
-        {
-            GanttDropPosition.Before => "tm-gantt__tree-row--drop-before",
-            GanttDropPosition.After => "tm-gantt__tree-row--drop-after",
-            GanttDropPosition.Child => "tm-gantt__tree-row--drop-child",
-            _ => ""
-        };
-    }
-
-    /// <summary>
-    /// Modifier of the percentage label: a bar that carries the exceeded-deadline flame (drawn just right
-    /// of the bar) pushes the label past it. Computed here so the stylesheet needs no <c>:has()</c>.
-    /// </summary>
-    private static string GetProgressLabelClass(TaskBarInfo bar) =>
-        bar.IsDeadlineExceeded ? "tm-gantt__bar-progress-label--after-deadline" : string.Empty;
-
-    private string GetBarClass(TaskBarInfo bar)
-    {
-        var classes = new List<string>();
-
-        if (SelectedTask?.Id == bar.Task.Id)
-            classes.Add("tm-gantt__bar--selected");
-
-        if (bar.IsGroup)
-            classes.Add("tm-gantt__bar--group");
-
-        if (bar.Task.Status is TmWorkItemStatus.Done or TmWorkItemStatus.Closed)
-            classes.Add("tm-gantt__bar--completed");
-
-        if (ShowOverdueHighlight && IsOverdue(bar.Task))
-            classes.Add("tm-gantt__bar--overdue");
-
-        if (ShowCriticalPath && _criticalPathIds.Contains(bar.Task.Id))
-            classes.Add("tm-gantt__bar--critical-path");
-
-        var priorityClass = bar.Task.Priority switch
-        {
-            TmWorkItemPriority.Highest => "tm-gantt__bar--priority-highest",
-            TmWorkItemPriority.High => "tm-gantt__bar--priority-high",
-            TmWorkItemPriority.Medium => "tm-gantt__bar--priority-medium",
-            TmWorkItemPriority.Low => "tm-gantt__bar--priority-low",
-            TmWorkItemPriority.Lowest => "tm-gantt__bar--priority-lowest",
-            _ => ""
-        };
-        if (!string.IsNullOrEmpty(priorityClass))
-            classes.Add(priorityClass);
-
-        if (ActiveTimerTaskId == bar.Task.Id)
-            classes.Add("tm-gantt__bar--timer-active");
-
-        return string.Join(" ", classes);
-    }
-
-    private string GetArrowPoints(double x, double y) =>
-        $"{F(x)},{F(y - 4)} {F(x + 6)},{F(y)} {F(x)},{F(y + 4)}";
-
     private static string F(double value) => value.ToString(CultureInfo.InvariantCulture);
 
-    private bool ShouldRenderBarLabel(TaskBarInfo bar) =>
-        ViewSettings.TaskNameLocation != GanttTaskNameLocation.Hidden && bar.Width > 60;
-
-    private string GetBarColorStyle(TaskBarInfo bar)
-    {
-        var color = string.IsNullOrEmpty(bar.Color) ? "var(--tm-color-primary-solid)" : bar.Color;
-        return $"--tm-gantt-task-color: {color};";
-    }
-
-    /// <summary>
-    /// Decorative glyph of a status chip. A status is never conveyed by colour alone (WCAG 1.4.1): the
-    /// chip is glyph + localized text, and the glyph is <c>aria-hidden</c> because the text names it.
-    /// </summary>
-    private static string GetStatusGlyph(TmWorkItemStatus status) => status switch
-    {
-        TmWorkItemStatus.Done => "✓",
-        TmWorkItemStatus.InProgress => "◉",
-        TmWorkItemStatus.Closed => "⊘",
-        _ => "○"
-    };
-
-    private string GetStatusBadgeClass(TmWorkItemStatus status) => status switch
-    {
-        TmWorkItemStatus.Open => "tm-gantt__status-badge--open",
-        TmWorkItemStatus.InProgress => "tm-gantt__status-badge--inprogress",
-        TmWorkItemStatus.Done => "tm-gantt__status-badge--done",
-        TmWorkItemStatus.Closed => "tm-gantt__status-badge--closed",
-        _ => ""
-    };
-
-    private string GetPriorityIconClass(TmWorkItemPriority priority) => priority switch
-    {
-        TmWorkItemPriority.Highest => "tm-gantt__priority-icon--highest",
-        TmWorkItemPriority.High => "tm-gantt__priority-icon--high",
-        TmWorkItemPriority.Medium => "tm-gantt__priority-icon--medium",
-        TmWorkItemPriority.Low => "tm-gantt__priority-icon--low",
-        TmWorkItemPriority.Lowest => "tm-gantt__priority-icon--lowest",
-        _ => ""
-    };
-
-    private string GetDepLineClass(DependencyLineInfo dep)
-    {
-        var classes = new List<string> { "tm-gantt__dependency-line", "tm-gantt__dep-line" };
-        if (_selectedDependencyId == dep.DependencyId)
-            classes.Add("tm-gantt__dep-line--selected");
-        classes.Add(dep.DepType switch
-        {
-            GanttDependencyType.StartToStart    => "tm-gantt__dep-line--ss",
-            GanttDependencyType.FinishToFinish  => "tm-gantt__dep-line--ff",
-            GanttDependencyType.StartToFinish   => "tm-gantt__dep-line--sf",
-            _                                   => "tm-gantt__dep-line--fs"
-        });
-        return string.Join(" ", classes);
-    }
-
-    private string GetAvatarInitial(TmWorkItemAssignee a) =>
+    internal static string GetAvatarInitial(TmWorkItemAssignee a) =>
         string.IsNullOrEmpty(a.Name) ? "?" : a.Name[0].ToString().ToUpperInvariant();
-
-    private string GetAvatarStyle(TmWorkItemAssignee a)
+    internal static string GetAvatarStyle(TmWorkItemAssignee a)
     {
         if (!string.IsNullOrEmpty(a.AvatarUrl))
             return $"background-image: url('{a.AvatarUrl}'); background-size: cover;";

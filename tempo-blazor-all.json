@@ -6885,6 +6885,24 @@
           ]
         },
         {
+          "itemName": "TmGanttPart",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal base of the pieces TmGantt is composed of (TmGanttToolbar, TmGanttTree, TmGanttTimeline, TmGanttSidebar), hidden from the editor. All Gantt state stays in TmGantt; a part reads it through Owner and draws its slice of the DOM. A part forwards its events to the owner, and the tree and the timeline skip a render pass in which nothing they draw changed. A host places TmGantt, never a part.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPart.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Owner",
+              "kind": "Property",
+              "type": "TmGantt",
+              "description": "The Gantt this part belongs to. Internal: TmGantt passes itself; a host never sets it."
+            }
+          ]
+        },
+        {
           "itemName": "TmPickerFetchState",
           "kind": "Enum",
           "category": "Components",
@@ -23729,6 +23747,54 @@
           ]
         },
         {
+          "itemName": "TmGanttSidebar",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the icon rail and the Tasks / Workload / History / Notifications / Reports drawer. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttSidebar.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttStatusChip",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the status chip (glyph plus localized text) shared by the tree, the Board column headers and the dashboard.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttStatusChip.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "ChipTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional data-testid of the chip, already resolved through the owning Gantt test-id prefix."
+            },
+            {
+              "name": "Status",
+              "type": "TmWorkItemStatus",
+              "isRequired": true,
+              "description": "The status the chip shows."
+            }
+          ]
+        },
+        {
           "itemName": "TmGanttTaskPanel",
           "kind": "Component",
           "category": "Scheduler",
@@ -23826,6 +23892,69 @@
               "type": "TmWorkItem?",
               "isRequired": false,
               "description": "The task being edited."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttTimeline",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the timeline - two-row header, grid, markers, dependency lines, baseline ghosts and task bars. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttTimeline.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttToolbar",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the command row - add / expand / collapse, the Day | Week | Month segment, zoom controls, panel toggles and the view-settings menu. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttToolbar.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttTree",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the task grid - header, rows, inline edit, drag-and-drop reorder and the bulk-action bar. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttTree.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
             }
           ]
         },
@@ -29394,12 +29523,12 @@
         }
       ],
       "summary": {
-        "itemCount": 390,
-        "manualItemCount": 390,
-        "generatedItemCount": 382,
+        "itemCount": 396,
+        "manualItemCount": 396,
+        "generatedItemCount": 388,
         "generatedOnlyItemCount": 0,
-        "componentCount": 206,
-        "publicApiTypeCount": 176
+        "componentCount": 211,
+        "publicApiTypeCount": 177
       }
     },
     {
@@ -122221,10 +122350,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3310,
-    "manualItemCount": 3310,
+    "itemCount": 3316,
+    "manualItemCount": 3316,
     "generatedOnlyItemCount": 0,
-    "componentCount": 489,
-    "publicApiTypeCount": 2768
+    "componentCount": 494,
+    "publicApiTypeCount": 2769
   }
 }

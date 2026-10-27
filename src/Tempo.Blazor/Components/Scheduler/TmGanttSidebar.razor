@@ -1,0 +1,166 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Abstractions.WorkItems
+
+@if (Owner.ShowSidebar)
+{
+    <nav class="tm-gantt__sidebar" data-testid="@TestId("gantt-sidebar")">
+        <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.Tasks ? "tm-gantt__sidebar-btn--active" : "")"
+                data-testid="@TestId("sidebar-btn-tasks")"
+                title="@Loc["TmGantt_SidebarTasks"]"
+                aria-label="@Loc["TmGantt_SidebarTasks"]"
+                aria-pressed="@(Owner._activeSidebarPanel == GanttSidebarPanel.Tasks ? "true" : "false")"
+                @onclick="() => Owner.ToggleSidebarPanel(GanttSidebarPanel.Tasks)">
+            <TmIcon Name="list" Size="IconSize.Sm" />
+        </button>
+        <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.Workload ? "tm-gantt__sidebar-btn--active" : "")"
+                data-testid="@TestId("sidebar-btn-workload")"
+                title="@Loc["TmGantt_SidebarWorkload"]"
+                aria-label="@Loc["TmGantt_SidebarWorkload"]"
+                aria-pressed="@(Owner._activeSidebarPanel == GanttSidebarPanel.Workload ? "true" : "false")"
+                @onclick="() => Owner.ToggleSidebarPanel(GanttSidebarPanel.Workload)">
+            <TmIcon Name="users" Size="IconSize.Sm" />
+        </button>
+        <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.History ? "tm-gantt__sidebar-btn--active" : "")"
+                data-testid="@TestId("sidebar-btn-history")"
+                title="@Loc["TmGantt_SidebarHistory"]"
+                aria-label="@Loc["TmGantt_SidebarHistory"]"
+                aria-pressed="@(Owner._activeSidebarPanel == GanttSidebarPanel.History ? "true" : "false")"
+                @onclick="() => Owner.ToggleSidebarPanel(GanttSidebarPanel.History)">
+            <TmIcon Name="clock" Size="IconSize.Sm" />
+        </button>
+        <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.Notifications ? "tm-gantt__sidebar-btn--active" : "")"
+                data-testid="@TestId("sidebar-btn-notifications")"
+                title="@Loc["TmGantt_SidebarNotifications"]"
+                aria-label="@Loc["TmGantt_SidebarNotifications"]"
+                aria-pressed="@(Owner._activeSidebarPanel == GanttSidebarPanel.Notifications ? "true" : "false")"
+                @onclick="() => Owner.ToggleSidebarPanel(GanttSidebarPanel.Notifications)">
+            <TmIcon Name="bell" Size="IconSize.Sm" />
+        </button>
+        <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.Reports ? "tm-gantt__sidebar-btn--active" : "")"
+                data-testid="@TestId("sidebar-btn-reports")"
+                title="@Loc["TmGantt_SidebarReports"]"
+                aria-label="@Loc["TmGantt_SidebarReports"]"
+                aria-pressed="@(Owner._activeSidebarPanel == GanttSidebarPanel.Reports ? "true" : "false")"
+                @onclick="() => Owner.ToggleSidebarPanel(GanttSidebarPanel.Reports)">
+            <TmIcon Name="bar-chart-2" Size="IconSize.Sm" />
+        </button>
+    </nav>
+}
+
+<!-- Sidebar drawers -->
+@if (Owner._activeSidebarPanel == GanttSidebarPanel.Reports)
+{
+    <TmGanttReportsPanel Reports="Owner.Reports"
+                         OnReportRun="Owner.OnReportRun"
+                         OnNewReportRequested="Owner.OnNewReportRequested" />
+}
+else if (Owner._activeSidebarPanel == GanttSidebarPanel.Tasks)
+{
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-tasks")">
+        <div class="tm-gantt__sidebar-drawer-header">
+            <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarTasks"]</span>
+        </div>
+        <div class="tm-gantt__sidebar-drawer-body">
+            @foreach (var task in Owner.Data)
+            {
+                <div class="tm-gantt__sidebar-task-row @(task.Status == TmWorkItemStatus.Done || task.Status == TmWorkItemStatus.Closed ? "tm-gantt__sidebar-task-row--done" : "")">
+                    <span class="tm-gantt__sidebar-task-dot" style="background: @(task.Color ?? "var(--tm-color-primary)")"></span>
+                    <span class="tm-gantt__sidebar-task-title">@task.Title</span>
+                    <span class="tm-gantt__sidebar-task-pct">@task.PercentComplete%</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Owner._activeSidebarPanel == GanttSidebarPanel.Workload)
+{
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-workload")">
+        <div class="tm-gantt__sidebar-drawer-header">
+            <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarWorkload"]</span>
+        </div>
+        <div class="tm-gantt__sidebar-drawer-body">
+            @{
+                var wlEntries = WorkloadCalculator.Calculate(Owner.Data, Owner.WorkingSchedule);
+                var wlAssignees = wlEntries.Select(e => e.AssigneeId).Distinct().OrderBy(x => x).ToList();
+            }
+            @foreach (var aId in wlAssignees)
+            {
+                var total = wlEntries.Where(e => e.AssigneeId == aId).Sum(e => e.AllocatedHours);
+                var capacity = wlEntries.Where(e => e.AssigneeId == aId).Sum(e => e.CapacityHours);
+                var name = Owner.Data.SelectMany(t => t.Assignees).FirstOrDefault(a => a.Id == aId)?.Name ?? aId;
+                var pct = capacity > 0 ? (int)(total / capacity * 100) : 0;
+                var over = total > capacity;
+                <div class="tm-gantt__sidebar-workload-row">
+                    <span class="tm-gantt__sidebar-workload-name">@name</span>
+                    <div class="tm-gantt__sidebar-workload-bar-wrap">
+                        <div class="tm-gantt__sidebar-workload-bar @(over ? "tm-gantt__sidebar-workload-bar--over" : "")"
+                             style="width: @(Math.Min(pct, 100))%"></div>
+                    </div>
+                    <span class="tm-gantt__sidebar-workload-pct @(over ? "tm-gantt__sidebar-workload-pct--over" : "")">@pct%</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Owner._activeSidebarPanel == GanttSidebarPanel.History)
+{
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-history")">
+        <div class="tm-gantt__sidebar-drawer-header">
+            <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarHistory"]</span>
+        </div>
+        <div class="tm-gantt__sidebar-drawer-body">
+            @if (!Owner.History.Any())
+            {
+                <div class="tm-gantt__sidebar-empty">@Loc["TmGantt_HistoryEmpty"]</div>
+            }
+            @foreach (var entry in Owner.History.OrderByDescending(h => h.Timestamp).Take(50))
+            {
+                <div class="tm-gantt__sidebar-history-row">
+                    <span class="tm-gantt__sidebar-history-action">@GanttLabels.ChangeType(Loc, entry.Action)</span>
+                    <span class="tm-gantt__sidebar-history-task">@(Owner.Data.FirstOrDefault(t => t.Id == entry.EntityRef.EntityId)?.Title ?? entry.EntityRef.EntityId)</span>
+                    <span class="tm-gantt__sidebar-history-date">@GanttLabels.Timestamp(entry.Timestamp, Loc.Culture, Owner.DisplayZone)</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Owner._activeSidebarPanel == GanttSidebarPanel.Notifications && Owner.NotificationSettings is not null)
+{
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-notifications")">
+        <div class="tm-gantt__sidebar-drawer-header">
+            <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarNotifications"]</span>
+        </div>
+        <div class="tm-gantt__sidebar-drawer-body">
+            <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" checked="@Owner.NotificationSettings.EmailOnAssign"
+                           @onchange="e => Owner.UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" checked="@Owner.NotificationSettings.EmailOnMention"
+                           @onchange="e => Owner.UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" checked="@Owner.NotificationSettings.PushOnAssign"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" checked="@Owner.NotificationSettings.PushOnMention"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" checked="@Owner.NotificationSettings.PushOnDeadline"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
+                </label>
+            </div>
+        </div>
+    </div>
+}

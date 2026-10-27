@@ -136,8 +136,8 @@ public sealed class GanttCssTokenTests
     public void StatusChip_PaintsWithTheStatusTokens(string status)
     {
         var selector = $".tm-gantt__status-badge--{status}";
-        GanttCss.Property("TmGantt.razor.css", selector, "background").Should().Be($"var(--tm-status-{status}-bg)");
-        GanttCss.Property("TmGantt.razor.css", selector, "color").Should().Be($"var(--tm-status-{status}-fg)");
+        GanttCss.Property("TmGanttStatusChip.razor.css", selector, "background").Should().Be($"var(--tm-status-{status}-bg)");
+        GanttCss.Property("TmGanttStatusChip.razor.css", selector, "color").Should().Be($"var(--tm-status-{status}-fg)");
     }
 
     [Theory]
@@ -148,32 +148,32 @@ public sealed class GanttCssTokenTests
     [InlineData("lowest")]
     public void Priority_PaintsWithThePriorityTokens(string priority)
     {
-        GanttCss.Property("TmGantt.razor.css", $".tm-gantt__priority-icon--{priority}", "background")
+        GanttCss.Property("TmGanttTree.razor.css", $".tm-gantt__priority-icon--{priority}", "background")
             .Should().Be($"var(--tm-priority-{priority})");
-        GanttCss.Property("TmGantt.razor.css", $".tm-gantt__bar--priority-{priority}", "border-left")
+        GanttCss.Property("TmGanttTimeline.razor.css", $".tm-gantt__bar--priority-{priority}", "border-left")
             .Should().Be($"3px solid var(--tm-priority-{priority})");
     }
 
     [Fact]
     public void TodayMarker_IsASolidLine_WithAPill()
     {
-        var line = GanttCss.Property("TmGantt.razor.css", ".tm-gantt__today-marker", "border-left");
+        var line = GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__today-marker", "border-left");
         line.Should().Contain("solid").And.NotContain("dashed", "the marker is a full line, not a dashed dot trail");
 
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__today-label", "background").Should().Be("var(--tm-color-danger)");
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__today-label", "color").Should().Be("var(--tm-text-inverse)");
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__today-label", "border-radius").Should().Be("var(--tm-radius-pill)");
-        GanttCss.TryProperty("TmGantt.razor.css", ".tm-gantt__today-marker::before", "content")
+        GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__today-label", "background").Should().Be("var(--tm-color-danger)");
+        GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__today-label", "color").Should().Be("var(--tm-text-inverse)");
+        GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__today-label", "border-radius").Should().Be("var(--tm-radius-pill)");
+        GanttCss.TryProperty("TmGanttTimeline.razor.css", ".tm-gantt__today-marker::before", "content")
             .Should().BeNull("the dashed marker's round dot is replaced by the pill");
     }
 
     [Fact]
     public void ActiveSegment_ReadsTheSegmentedConvention()
     {
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__segment", "background").Should().Be("var(--tm-bg-muted)");
+        GanttCss.Property("TmGanttToolbar.razor.css", ".tm-gantt__segment", "background").Should().Be("var(--tm-bg-muted)");
         var active = ".tm-gantt__segment-btn--active";
-        GanttCss.Property("TmGantt.razor.css", active, "background").Should().Be("var(--tm-bg-surface)");
-        GanttCss.Property("TmGantt.razor.css", active, "border-color").Should().Be("var(--tm-border-color-strong)",
+        GanttCss.Property("TmGanttToolbar.razor.css", active, "background").Should().Be("var(--tm-bg-surface)");
+        GanttCss.Property("TmGanttToolbar.razor.css", active, "border-color").Should().Be("var(--tm-border-color-strong)",
             "the checked segment needs a 3:1 boundary (see TokenContrastTests.SegmentedCheckedBorder)");
     }
 
@@ -217,30 +217,30 @@ public sealed class GanttCssTokenTests
     [Fact]
     public void GanttBar_DefaultFill_And_Label_Hold_In_BothThemes()
     {
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__bar", "background")
+        GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__bar", "background")
             .Should().Be("var(--tm-gantt-task-color, var(--tm-color-primary-solid))");
-        GanttCss.Property("TmGantt.razor.css", ".tm-gantt__bar-label", "color").Should().Be("var(--tm-color-on-primary-fixed)");
+        GanttCss.Property("TmGanttTimeline.razor.css", ".tm-gantt__bar-label", "color").Should().Be("var(--tm-color-on-primary-fixed)");
     }
 
     [Fact]
     public void ProgressLabel_IsPositionedFromTheBarGeometry_WithoutHas()
     {
         const string label = ".tm-gantt__bar-progress-label";
-        GanttCss.Property("TmGantt.razor.css", label, "position").Should().Be("absolute");
-        GanttCss.Property("TmGantt.razor.css", label, "margin-left").Should().Be("var(--tm-space-2)");
-        GanttCss.TryProperty("TmGantt.razor.css", $"{label}--after-deadline", "margin-left")
+        GanttCss.Property("TmGanttTimeline.razor.css", label, "position").Should().Be("absolute");
+        GanttCss.Property("TmGanttTimeline.razor.css", label, "margin-left").Should().Be("var(--tm-space-2)");
+        GanttCss.TryProperty("TmGanttTimeline.razor.css", $"{label}--after-deadline", "margin-left")
             .Should().NotBeNull("the C#-computed modifier steps the label past the deadline flame");
 
-        GanttCss.Files().Single(file => file.Name == "TmGantt.razor.css").Css
+        GanttCss.Files().Single(file => file.Name == "TmGanttTimeline.razor.css").Css
             .Should().NotContain(":has(", "the deadline offset is a computed modifier class, not a :has() rule");
     }
     [Fact]
     public void Gantt_CodeBehind_HasNoHexFallback()
     {
-        var code = File.ReadAllText(Path.Combine(GanttCss.SchedulerDir, "TmGantt.razor.cs"));
+        var code = string.Concat(Directory.EnumerateFiles(GanttCss.SchedulerDir, "TmGantt*.cs").Order(StringComparer.Ordinal).Select(File.ReadAllText));
 
         code.Should().NotContain("var(--tm-color-primary, #3b82f6)", "the default bar colour is a plain token");
-        File.ReadAllText(Path.Combine(GanttCss.SchedulerDir, "TmGantt.razor")).Should()
+        string.Concat(Directory.EnumerateFiles(GanttCss.SchedulerDir, "TmGantt*.razor").Order(StringComparer.Ordinal).Select(File.ReadAllText)).Should()
             .NotMatchRegex("\"#[0-9a-fA-F]{3,8}\"", "the Board columns take their colour from classes, not from Razor hex strings");
     }
 }

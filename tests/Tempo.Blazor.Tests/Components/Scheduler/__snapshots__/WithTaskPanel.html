@@ -1,0 +1,799 @@
+<div class="tm-gantt ">
+<div class="tm-gantt__toolbar">
+<div class="tm-gantt__toolbar-group">
+<button type="button" class="tm-btn tm-btn-primary tm-btn-sm" tabindex="0" aria-label="Add task" blazor:onclick="H" Title="Add task" data-testid="gantt-add-task">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='12' y1='5' x2='12' y2='19'/>
+<line x1='5' y1='12' x2='19' y2='12'/>
+</svg>Add task</span>
+</button>
+<span class="tm-gantt__toolbar-divider">
+</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Expand all" blazor:onclick="H" Title="Expand all" data-testid="gantt-expand-all">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='7 6 12 11 17 6'/>
+<polyline points='7 13 12 18 17 13'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Collapse all" blazor:onclick="H" Title="Collapse all" data-testid="gantt-collapse-all">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='17 11 12 6 7 11'/>
+<polyline points='17 18 12 13 7 18'/>
+</svg>
+</span>
+</button>
+<span class="tm-gantt__toolbar-divider">
+</span>
+<div class="tm-gantt__segment" role="group" aria-label="Task view">
+<button type="button" class="tm-gantt__segment-btn " aria-pressed="false" data-testid="gantt-view-day" blazor:onclick="H">Day</button>
+<button type="button" class="tm-gantt__segment-btn tm-gantt__segment-btn--active" aria-pressed="true" data-testid="gantt-view-week" blazor:onclick="H">Week</button>
+<button type="button" class="tm-gantt__segment-btn " aria-pressed="false" data-testid="gantt-view-month" blazor:onclick="H">Month</button>
+</div>
+</div>
+<div class="tm-gantt__toolbar-group">
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Sort by date" blazor:onclick="H" Title="Sort by date" data-testid="gantt-cascade-sort">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='10' y1='6' x2='21' y2='6'/>
+<line x1='10' y1='12' x2='21' y2='12'/>
+<line x1='10' y1='18' x2='21' y2='18'/>
+<path d='M4 6h1v4'/>
+<path d='M4 10h2'/>
+<path d='M6 18H4c0-1 2-2 2-3s-1-2-2-2'/>
+</svg>
+</span>
+</button>
+<span class="tm-gantt__toolbar-divider">
+</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Fit to screen" blazor:onclick="H" Title="Fit to screen" data-testid="gantt-fit-to-screen">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='15 3 21 3 21 9'/>
+<polyline points='9 21 3 21 3 15'/>
+<line x1='21' y1='3' x2='14' y2='10'/>
+<line x1='3' y1='21' x2='10' y2='14'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Zoom out" blazor:onclick="H" Title="Zoom out" data-testid="gantt-zoom-out">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='11' cy='11' r='8'/>
+<line x1='21' y1='21' x2='16.65' y2='16.65'/>
+<line x1='8' y1='11' x2='14' y2='11'/>
+</svg>
+</span>
+</button>
+<input type="range" class="tm-gantt__zoom-slider" data-testid="gantt-zoom-slider" aria-label="Zoom level" min="50" max="200" step="25" value="100" blazor:onchange="H" />
+<span class="tm-gantt__zoom-level">100%</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Zoom in" blazor:onclick="H" Title="Zoom in" data-testid="gantt-zoom-in">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='11' cy='11' r='8'/>
+<line x1='21' y1='21' x2='16.65' y2='16.65'/>
+<line x1='11' y1='8' x2='11' y2='14'/>
+<line x1='8' y1='11' x2='14' y2='11'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Toggle task panel" blazor:onclick="H" Title="Toggle task panel" aria-pressed="true" data-testid="gantt-toggle-task-panel">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/>
+<path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Filter" blazor:onclick="H" Title="Filter" aria-haspopup="true" aria-expanded="false" data-testid="gantt-filter-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Export" blazor:onclick="H" Title="Export" data-testid="gantt-export-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/>
+<polyline points='7 10 12 15 17 10'/>
+<line x1='12' y1='15' x2='12' y2='3'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Import" blazor:onclick="H" Title="Import" data-testid="gantt-import-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/>
+<polyline points='17 8 12 3 7 8'/>
+<line x1='12' y1='3' x2='12' y2='15'/>
+</svg>
+</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="History" blazor:onclick="H" Title="History" aria-haspopup="true" aria-expanded="false" data-testid="gantt-history-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='12' cy='12' r='10'/>
+<polyline points='12 6 12 12 16 14'/>
+</svg>
+</span>
+</button>
+<div class="tm-gantt__view-settings-wrapper">
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="View settings" blazor:onclick="H" Title="View settings" aria-haspopup="true" aria-expanded="false" data-testid="gantt-view-settings-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='12' cy='12' r='3'/>
+<path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>
+</svg>
+</span>
+</button>
+</div>
+</div>
+</div>
+<div class="tm-gantt__content">
+<nav class="tm-gantt__sidebar" data-testid="gantt-sidebar">
+<button type="button" class="tm-gantt__sidebar-btn " data-testid="sidebar-btn-tasks" title="Tasks" aria-label="Tasks" aria-pressed="false" blazor:onclick="H">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='8' y1='6' x2='21' y2='6'/>
+<line x1='8' y1='12' x2='21' y2='12'/>
+<line x1='8' y1='18' x2='21' y2='18'/>
+<line x1='3' y1='6' x2='3.01' y2='6'/>
+<line x1='3' y1='12' x2='3.01' y2='12'/>
+<line x1='3' y1='18' x2='3.01' y2='18'/>
+</svg>
+</button>
+<button type="button" class="tm-gantt__sidebar-btn " data-testid="sidebar-btn-workload" title="Workload" aria-label="Workload" aria-pressed="false" blazor:onclick="H">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/>
+<circle cx='9' cy='7' r='4'/>
+<path d='M23 21v-2a4 4 0 0 0-3-3.87'/>
+<path d='M16 3.13a4 4 0 0 1 0 7.75'/>
+</svg>
+</button>
+<button type="button" class="tm-gantt__sidebar-btn " data-testid="sidebar-btn-history" title="History" aria-label="History" aria-pressed="false" blazor:onclick="H">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='12' cy='12' r='10'/>
+<polyline points='12 6 12 12 16 14'/>
+</svg>
+</button>
+<button type="button" class="tm-gantt__sidebar-btn " data-testid="sidebar-btn-notifications" title="Notifications" aria-label="Notifications" aria-pressed="false" blazor:onclick="H">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/>
+<path d='M13.73 21a2 2 0 0 1-3.46 0'/>
+</svg>
+</button>
+<button type="button" class="tm-gantt__sidebar-btn " data-testid="sidebar-btn-reports" title="Reports" aria-label="Reports" aria-pressed="false" blazor:onclick="H">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='18' y1='20' x2='18' y2='10'/>
+<line x1='12' y1='20' x2='12' y2='4'/>
+<line x1='6' y1='20' x2='6' y2='14'/>
+</svg>
+</button>
+</nav>
+<div class="tm-gantt__main ">
+<div class="tm-gantt__tree" data-testid="gantt-tree">
+<div class="tm-gantt__tree-header">
+<span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--wbs">WBS</span>
+<span class="tm-gantt__tree-header-cell">Task</span>
+<span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--status">Status</span>
+<span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow">Start</span>
+<span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow">End</span>
+<span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow" data-testid="col-header-progress">%<input type="checkbox" class="tm-gantt__col-toggle" checked data-testid="col-toggle-progress" blazor:onchange="H" />
+</span>
+</div>
+<div class="tm-gantt__tree-body" blazor:onscroll="H" blazor:elementReference="R">
+<div class="tm-gantt__tree-row " data-testid="tree-row-1" draggable="true" blazor:onclick="H" blazor:oncontextmenu="H" blazor:oncontextmenu:preventDefault blazor:ondragstart="H" blazor:ondragover="H" blazor:ondragover:preventDefault blazor:ondragleave="H" blazor:ondrop="H">
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" data-testid="wbs-number">1</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" style="padding-left: 0px">
+<span class="tm-gantt__drag-handle">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='9' cy='5' r='1'/>
+<circle cx='9' cy='12' r='1'/>
+<circle cx='9' cy='19' r='1'/>
+<circle cx='15' cy='5' r='1'/>
+<circle cx='15' cy='12' r='1'/>
+<circle cx='15' cy='19' r='1'/>
+</svg>
+</span>
+<button type="button" class="tm-gantt__expand-btn" blazor:onclick:stopPropagation blazor:onclick="H" aria-label="Collapse Project" aria-expanded="true">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='6 9 12 15 18 9'/>
+</svg>
+</button>
+<span class="tm-gantt__priority-icon tm-gantt__priority-icon--high" data-testid="priority-icon" title="High">
+</span>
+<span class="tm-gantt__task-title" data-testid="tree-cell-title-1" blazor:ondblclick:stopPropagation blazor:ondblclick="H">Project</span>
+<span class="tm-gantt__inline-badge tm-gantt__inline-badge--attachment" data-testid="attachment-count-1" title="1 Attachments">
+<svg class="tm-icon tm-icon-xs tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48'/>
+</svg>1</span>
+<span class="tm-gantt__inline-badge tm-gantt__inline-badge--comment" data-testid="comment-count-1" title="1 Comments">
+<svg class="tm-icon tm-icon-xs tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z'/>
+</svg>1</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
+<span class="tm-gantt__status-badge tm-gantt__status-badge--inprogress" data-testid="status-badge">
+<span class="tm-gantt__status-icon" aria-hidden="true">◉</span>In Progress</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">01.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">30.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">
+<div class="tm-gantt__progress-mini">
+<div class="tm-gantt__progress-mini-fill" style="width: 40%">
+</div>
+</div>
+<span class="tm-gantt__progress-mini-label">40%</span>
+</span>
+</div>
+<div class="tm-gantt__tree-row tm-gantt__tree-row--selected " data-testid="tree-row-2" draggable="true" blazor:onclick="H" blazor:oncontextmenu="H" blazor:oncontextmenu:preventDefault blazor:ondragstart="H" blazor:ondragover="H" blazor:ondragover:preventDefault blazor:ondragleave="H" blazor:ondrop="H">
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" data-testid="wbs-number">1.1</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" style="padding-left: 20px">
+<span class="tm-gantt__drag-handle">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='9' cy='5' r='1'/>
+<circle cx='9' cy='12' r='1'/>
+<circle cx='9' cy='19' r='1'/>
+<circle cx='15' cy='5' r='1'/>
+<circle cx='15' cy='12' r='1'/>
+<circle cx='15' cy='19' r='1'/>
+</svg>
+</span>
+<span class="tm-gantt__expand-spacer">
+</span>
+<span class="tm-gantt__priority-icon tm-gantt__priority-icon--medium" data-testid="priority-icon" title="Medium">
+</span>
+<span class="tm-gantt__task-title" data-testid="tree-cell-title-2" blazor:ondblclick:stopPropagation blazor:ondblclick="H">Design</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
+<span class="tm-gantt__status-badge tm-gantt__status-badge--done" data-testid="status-badge">
+<span class="tm-gantt__status-icon" aria-hidden="true">✓</span>Done</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">01.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">10.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">
+<div class="tm-gantt__progress-mini">
+<div class="tm-gantt__progress-mini-fill" style="width: 100%">
+</div>
+</div>
+<span class="tm-gantt__progress-mini-label">100%</span>
+</span>
+</div>
+<div class="tm-gantt__tree-row " data-testid="tree-row-3" draggable="true" blazor:onclick="H" blazor:oncontextmenu="H" blazor:oncontextmenu:preventDefault blazor:ondragstart="H" blazor:ondragover="H" blazor:ondragover:preventDefault blazor:ondragleave="H" blazor:ondrop="H">
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" data-testid="wbs-number">1.2</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" style="padding-left: 20px">
+<span class="tm-gantt__drag-handle">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='9' cy='5' r='1'/>
+<circle cx='9' cy='12' r='1'/>
+<circle cx='9' cy='19' r='1'/>
+<circle cx='15' cy='5' r='1'/>
+<circle cx='15' cy='12' r='1'/>
+<circle cx='15' cy='19' r='1'/>
+</svg>
+</span>
+<span class="tm-gantt__expand-spacer">
+</span>
+<span class="tm-gantt__priority-icon tm-gantt__priority-icon--highest" data-testid="priority-icon" title="Highest">
+</span>
+<span class="tm-gantt__task-title" data-testid="tree-cell-title-3" blazor:ondblclick:stopPropagation blazor:ondblclick="H">Development</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
+<span class="tm-gantt__status-badge tm-gantt__status-badge--open" data-testid="status-badge">
+<span class="tm-gantt__status-icon" aria-hidden="true">○</span>Open</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">11.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">25.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">
+<div class="tm-gantt__progress-mini">
+<div class="tm-gantt__progress-mini-fill" style="width: 50%">
+</div>
+</div>
+<span class="tm-gantt__progress-mini-label">50%</span>
+</span>
+</div>
+<div class="tm-gantt__tree-row " data-testid="tree-row-4" draggable="true" blazor:onclick="H" blazor:oncontextmenu="H" blazor:oncontextmenu:preventDefault blazor:ondragstart="H" blazor:ondragover="H" blazor:ondragover:preventDefault blazor:ondragleave="H" blazor:ondrop="H">
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" data-testid="wbs-number">2</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" style="padding-left: 0px">
+<span class="tm-gantt__drag-handle">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='9' cy='5' r='1'/>
+<circle cx='9' cy='12' r='1'/>
+<circle cx='9' cy='19' r='1'/>
+<circle cx='15' cy='5' r='1'/>
+<circle cx='15' cy='12' r='1'/>
+<circle cx='15' cy='19' r='1'/>
+</svg>
+</span>
+<span class="tm-gantt__expand-spacer">
+</span>
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M12 2l10 10-10 10L2 12z'/>
+</svg>
+<span class="tm-gantt__priority-icon tm-gantt__priority-icon--medium" data-testid="priority-icon" title="Medium">
+</span>
+<span class="tm-gantt__task-title" data-testid="tree-cell-title-4" blazor:ondblclick:stopPropagation blazor:ondblclick="H">Launch</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
+<span class="tm-gantt__status-badge tm-gantt__status-badge--open" data-testid="status-badge">
+<span class="tm-gantt__status-icon" aria-hidden="true">○</span>Open</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">30.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">30.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">
+<div class="tm-gantt__progress-mini">
+<div class="tm-gantt__progress-mini-fill" style="width: 0%">
+</div>
+</div>
+<span class="tm-gantt__progress-mini-label">0%</span>
+</span>
+</div>
+<div class="tm-gantt__tree-row " data-testid="tree-row-5" draggable="true" blazor:onclick="H" blazor:oncontextmenu="H" blazor:oncontextmenu:preventDefault blazor:ondragstart="H" blazor:ondragover="H" blazor:ondragover:preventDefault blazor:ondragleave="H" blazor:ondrop="H">
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" data-testid="wbs-number">3</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" style="padding-left: 0px">
+<span class="tm-gantt__drag-handle">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='9' cy='5' r='1'/>
+<circle cx='9' cy='12' r='1'/>
+<circle cx='9' cy='19' r='1'/>
+<circle cx='15' cy='5' r='1'/>
+<circle cx='15' cy='12' r='1'/>
+<circle cx='15' cy='19' r='1'/>
+</svg>
+</span>
+<span class="tm-gantt__expand-spacer">
+</span>
+<span class="tm-gantt__priority-icon tm-gantt__priority-icon--low" data-testid="priority-icon" title="Low">
+</span>
+<span class="tm-gantt__task-title" data-testid="tree-cell-title-5" blazor:ondblclick:stopPropagation blazor:ondblclick="H">Overdue</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
+<span class="tm-gantt__status-badge tm-gantt__status-badge--open" data-testid="status-badge">
+<span class="tm-gantt__status-icon" aria-hidden="true">○</span>Open</span>
+</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">20.05.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">05.06.2024</span>
+<span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow">
+<div class="tm-gantt__progress-mini">
+<div class="tm-gantt__progress-mini-fill" style="width: 0%">
+</div>
+</div>
+<span class="tm-gantt__progress-mini-label">0%</span>
+</span>
+</div>
+</div>
+</div>
+<div class="tm-gantt__timeline " data-testid="gantt-timeline" blazor:onmousedown="H" blazor:onmousemove="H" blazor:onmouseup="H" blazor:onmouseleave="H" blazor:onwheel="H" blazor:elementReference="R">
+<div class="tm-gantt__timeline-header" style="width: 984px">
+<div class="tm-gantt__timeline-header--upper">
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--upper" style="left: 0px; width: 288px">May 2024</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--upper" style="left: 288px; width: 696px">June 2024</div>
+</div>
+<div class="tm-gantt__timeline-header--lower">
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 0px; width: 168px">W21</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 168px; width: 168px">W22</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 336px; width: 168px">W23</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 504px; width: 168px">W24</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 672px; width: 168px">W25</div>
+<div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower" style="left: 840px; width: 144px">W26</div>
+</div>
+<span class="tm-gantt__today-label" data-testid="today-label" style="left: 552px">Today</span>
+</div>
+<div class="tm-gantt__timeline-body" blazor:onscroll="H" blazor:elementReference="R">
+<div class="tm-gantt__timeline-content" style="height: 200px; width: 984px">
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 120px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 144px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 288px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 312px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 456px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 480px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 624px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 648px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 792px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 816px; width: 24px">
+</div>
+<div class="tm-gantt__nonworking-overlay" data-testid="nonworking-overlay" style="left: 960px; width: 24px">
+</div>
+<div class="tm-gantt__grid">
+<div class="tm-gantt__grid-line" style="left: 0px; width: 168px">
+</div>
+<div class="tm-gantt__grid-line" style="left: 168px; width: 168px">
+</div>
+<div class="tm-gantt__grid-line" style="left: 336px; width: 168px">
+</div>
+<div class="tm-gantt__grid-line" style="left: 504px; width: 168px">
+</div>
+<div class="tm-gantt__grid-line" style="left: 672px; width: 168px">
+</div>
+<div class="tm-gantt__grid-line" style="left: 840px; width: 144px">
+</div>
+</div>
+<div class="tm-gantt__today-marker" data-testid="today-marker" style="left: 552px" title="Today">
+</div>
+<svg class="tm-gantt__dependencies" style="width: 984px; height: 100%">
+<line x1="504" y1="60" x2="528" y2="100" class="tm-gantt__dependency-line tm-gantt__dep-line tm-gantt__dep-line--fs" data-testid="dep-line-d1" blazor:onclick:stopPropagation blazor:onclick="H">
+</line>
+<polygon points="528,96 534,100 528,104" class="tm-gantt__dependency-arrow">
+</polygon>
+<line x1="528" y1="100" x2="984" y2="140" class="tm-gantt__dependency-line tm-gantt__dep-line tm-gantt__dep-line--ss" data-testid="dep-line-d2" blazor:onclick:stopPropagation blazor:onclick="H">
+</line>
+<polygon points="984,136 990,140 984,144" class="tm-gantt__dependency-arrow">
+</polygon>
+<text x="756" y="116" class="tm-gantt__dep-lag-label" data-testid="dep-lag-d2" text-anchor="middle">+2 d</text>
+</svg>
+<div class="tm-gantt__task-row" style="top: 10px; height: 40px">
+<div class="tm-gantt__bar tm-gantt__bar--group tm-gantt__bar--priority-high" data-testid="task-bar-1" style="left: 288px; width: 576px; --tm-gantt-task-color: var(--tm-color-primary-solid);" title="Project (40%)" blazor:onclick="H" blazor:onmousedown:stopPropagation>
+<div class="tm-gantt__bar-progress" style="width: 40%">
+</div>
+<span class="tm-gantt__bar-label">Project</span>
+<div class="tm-gantt__bar-tooltip" data-testid="bar-tooltip">
+<div class="tm-gantt__bar-tooltip-title">Project</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Start:</span>
+<span>01.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>End:</span>
+<span>30.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Progress:</span>
+<span>40%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt__task-row" style="top: 50px; height: 40px">
+<div class="tm-gantt__bar tm-gantt__bar--selected tm-gantt__bar--completed tm-gantt__bar--priority-medium" data-testid="task-bar-2" style="left: 288px; width: 216px; --tm-gantt-task-color: #336699;" title="Design (100%)" blazor:onclick="H" blazor:onmousedown:stopPropagation>
+<div class="tm-gantt__bar-progress" style="width: 100%">
+</div>
+<span class="tm-gantt__bar-label">Design</span>
+<div class="tm-gantt__bar-avatars">
+<span class="tm-gantt__bar-avatar" style="background-color: hsl(H, 60%, 50%);" title="Alice">A</span>
+<span class="tm-gantt__bar-avatar tm-gantt__bar-avatar--virtual" data-testid="bar-avatar-virtual-v1" title="Dev pool">
+<svg class="tm-icon tm-icon-xs tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/>
+<circle cx='9' cy='7' r='4'/>
+<path d='M23 21v-2a4 4 0 0 0-3-3.87'/>
+<path d='M16 3.13a4 4 0 0 1 0 7.75'/>
+</svg>
+</span>
+</div>
+<div class="tm-gantt__bar-tooltip" data-testid="bar-tooltip">
+<div class="tm-gantt__bar-tooltip-title">Design</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Start:</span>
+<span>01.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>End:</span>
+<span>10.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Progress:</span>
+<span>100%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt__task-row" style="top: 90px; height: 40px">
+<div class="tm-gantt__bar tm-gantt__bar--priority-highest" data-testid="task-bar-3" style="left: 528px; width: 336px; --tm-gantt-task-color: var(--tm-color-primary-solid);" title="Development (50%)" blazor:onclick="H" blazor:onmousedown:stopPropagation>
+<div class="tm-gantt__bar-progress" style="width: 50%">
+</div>
+<span class="tm-gantt__bar-label">Development</span>
+<div class="tm-gantt__bar-avatars">
+<span class="tm-gantt__bar-avatar" style="background-color: hsl(H, 60%, 50%);" title="Bob">B</span>
+</div>
+<div class="tm-gantt__bar-tooltip" data-testid="bar-tooltip">
+<div class="tm-gantt__bar-tooltip-title">Development</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Start:</span>
+<span>11.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>End:</span>
+<span>25.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Progress:</span>
+<span>50%</span>
+</div>
+</div>
+<span class="tm-gantt__bar-deadline" data-testid="deadline-marker" title="Deadline exceeded">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<path d='M12 22c5.523 0 10-4.477 10-10 0-3.6-1.907-6.764-4.785-8.572C16.763 4.945 16 6.61 16 8.5c0 2.485 2 4 2 4s-1.5 1.5-4 1.5-4-1.5-4-1.5c-2-3 1-7 1-7C7.5 7 4 10 4 14.5c0 4.142 3.582 7.5 8 7.5z'/>
+</svg>
+</span>
+</div>
+</div>
+<div class="tm-gantt__task-row" style="top: 130px; height: 40px">
+<div class="tm-gantt__milestone" style="left: 978px" title="Launch" blazor:onclick="H" blazor:onmousedown:stopPropagation>
+</div>
+</div>
+<div class="tm-gantt__task-row" style="top: 170px; height: 40px">
+<div class="tm-gantt__bar tm-gantt__bar--priority-low" data-testid="task-bar-5" style="left: 0px; width: 384px; --tm-gantt-task-color: var(--tm-color-primary-solid);" title="Overdue (0%)" blazor:onclick="H" blazor:onmousedown:stopPropagation>
+<div class="tm-gantt__bar-progress" style="width: 0%">
+</div>
+<span class="tm-gantt__bar-label">Overdue</span>
+<div class="tm-gantt__bar-tooltip" data-testid="bar-tooltip">
+<div class="tm-gantt__bar-tooltip-title">Overdue</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Start:</span>
+<span>20.05.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>End:</span>
+<span>05.06.2024</span>
+</div>
+<div class="tm-gantt__bar-tooltip-row">
+<span>Progress:</span>
+<span>0%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt-task-panel">
+<div class="tm-gantt-task-panel__header">
+<span class="tm-gantt-task-panel__header-title">Design</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Close panel" blazor:onclick="H" data-testid="task-panel-close" Title="Close panel">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='18' y1='6' x2='6' y2='18'/>
+<line x1='6' y1='6' x2='18' y2='18'/>
+</svg>
+</span>
+</button>
+</div>
+<div class="tm-gantt-task-panel__scroll">
+<div class="tm-gantt-task-panel__grid">
+<div class="tm-form-field " data-testid="task-title">
+<label class="tm-form-field-label">Title</label>
+<div class="tm-form-field-control">
+<div class="tm-input-wrapper">
+<div class="tm-input-container">
+<input id="G" type="text" value="Design" placeholder="Enter task title..." tabindex="0" class="tm-input" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
+</input>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-start">
+<label class="tm-form-field-label">Start</label>
+<div class="tm-form-field-control">
+<div class="tm-input-wrapper">
+<div class="tm-input-container">
+<input id="G" type="date" value="2024-06-01" tabindex="0" class="tm-input" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
+</input>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-end">
+<label class="tm-form-field-label">End</label>
+<div class="tm-form-field-control">
+<div class="tm-input-wrapper">
+<div class="tm-input-container">
+<input id="G" type="date" value="2024-06-10" tabindex="0" class="tm-input" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
+</input>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-duration">
+<label class="tm-form-field-label">Duration</label>
+<div class="tm-form-field-control">
+<span class="tm-gantt-task-panel__duration-display">9 days</span>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-deadline">
+<label class="tm-form-field-label">Deadline</label>
+<div class="tm-form-field-control">
+<div class="tm-input-wrapper">
+<div class="tm-input-container">
+<input id="G" type="date" tabindex="0" class="tm-input" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
+</input>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-percent">
+<label class="tm-form-field-label">Percent complete</label>
+<div class="tm-form-field-control">
+<div class="tm-input-wrapper ">
+<div class="tm-number-input ">
+<button type="button" class="tm-number-input__decrement" aria-label="Decrease" blazor:onclick="H">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+<line x1="5" y1="12" x2="19" y2="12">
+</line>
+</svg>
+</button>
+<input type="number" id="G" value="100" min="0" max="100" step="1" class="tm-number-input__input" blazor:onchange="H" />
+<button type="button" class="tm-number-input__increment" disabled aria-label="Increase" blazor:onclick="H">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+<line x1="12" y1="5" x2="12" y2="19">
+</line>
+<line x1="5" y1="12" x2="19" y2="12">
+</line>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-estimation">
+<label class="tm-form-field-label">Estimation (h)</label>
+<div class="tm-form-field-control">
+<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-timelog">
+<label class="tm-form-field-label">Logged (h)</label>
+<div class="tm-form-field-control">
+<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-milestone">
+<label class="tm-form-field-label">Milestone</label>
+<div class="tm-form-field-control">
+<div class="tm-toggle-wrapper ">
+<label class="tm-toggle-label">
+<input type="checkbox" class="tm-toggle-input" role="switch" aria-checked="false" blazor:onchange="H" />
+<span class="tm-toggle-track">
+<span class="tm-toggle-slider ">
+</span>
+</span>
+</label>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-parent">
+<label class="tm-form-field-label">Parent task</label>
+<div class="tm-form-field-control">
+<div class="tm-select-wrapper ">
+<div class="tm-select-container">
+<select id="G" value="1" class="tm-select" aria-label="No parent" blazor:onchange="H">
+<option value disabled>No parent</option>
+<option value="1" selected selected>Project</option>
+<option value="3">Development</option>
+<option value="4">Launch</option>
+<option value="5">Overdue</option>
+</select>
+<div class="tm-select-arrow" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+<polyline points="6 9 12 15 18 9">
+</polyline>
+</svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__section" data-testid="task-color-picker">
+<span class="tm-gantt-task-panel__section-label">Color</span>
+<div class="tm-gantt-task-panel__color-swatches">
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #3b82f6" title="#3b82f6" aria-label="Color #3b82f6" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #6366f1" title="#6366f1" aria-label="Color #6366f1" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #8b5cf6" title="#8b5cf6" aria-label="Color #8b5cf6" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #ec4899" title="#ec4899" aria-label="Color #ec4899" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #ef4444" title="#ef4444" aria-label="Color #ef4444" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #f97316" title="#f97316" aria-label="Color #f97316" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #f59e0b" title="#f59e0b" aria-label="Color #f59e0b" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #eab308" title="#eab308" aria-label="Color #eab308" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #22c55e" title="#22c55e" aria-label="Color #22c55e" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #10b981" title="#10b981" aria-label="Color #10b981" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #14b8a6" title="#14b8a6" aria-label="Color #14b8a6" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+<button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #06b6d4" title="#06b6d4" aria-label="Color #06b6d4" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
+</button>
+</div>
+</div>
+<div class="tm-gantt-task-panel__section" data-testid="task-description">
+<span class="tm-gantt-task-panel__section-label">Description</span>
+<textarea class="tm-input tm-gantt-task-panel__description" rows="4" blazor:onchange="H" placeholder="Add a description...">
+</textarea>
+</div>
+<div class="tm-gantt-task-panel__section" data-testid="attachment-list">
+<span class="tm-gantt-task-panel__section-label">Attachments</span>
+<div class="tm-file-drop-zone " data-testid="attachment-upload">
+<div class="tm-file-drop-zone__area " blazor:ondragenter="H" blazor:ondragleave="H" blazor:ondragover:preventDefault blazor:ondrop="H">
+<div class="tm-file-drop-zone__content">
+<span class="tm-file-drop-zone__icon">📁</span>
+<span class="tm-file-drop-zone__hint">Drag and drop files here</span>
+<span class="tm-file-drop-zone__or">or</span>
+<span class="tm-file-drop-zone__browse">Browse files</span>
+</div>
+<input multiple class="tm-file-drop-zone__input" type="file" blazor:elementReference="R">
+</input>
+</div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__section" data-testid="comment-list">
+<span class="tm-gantt-task-panel__section-label">Comments</span>
+<div class="tm-comments">
+<div class="tm-comments-empty">
+<div class="tm-empty-state">
+<h3 class="tm-empty-state-title">[TmActivityComments_Empty]</h3>
+</div>
+</div>
+<button class="tm-btn tm-btn-outline tm-btn-sm tm-comments-add-btn" type="button" blazor:onclick="H">[TmActivityComments_AddComment]</button>
+</div>
+</div>
+<div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--budget" data-testid="task-budget-section">
+<span class="tm-gantt-task-panel__section-label">Budget &amp; Cost</span>
+<div class="tm-gantt-task-panel__budget-grid">
+<div class="tm-form-field " data-testid="task-budget">
+<label class="tm-form-field-label">Budget Hours</label>
+<div class="tm-form-field-control">
+<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-actual-cost">
+<label class="tm-form-field-label">Actual Cost</label>
+<div class="tm-form-field-control">
+<input type="number" class="tm-input" min="0" step="0.01" blazor:onchange="H" />
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--timelog" data-testid="task-timelog-section">
+<div class="tm-gantt-task-panel__timelog-header">
+<span class="tm-gantt-task-panel__section-label">Time Log</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="timer-start-btn">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<circle cx='12' cy='12' r='10'/>
+<polygon points='10 8 16 12 10 16 10 8'/>
+</svg>Start Timer</span>
+</button>
+</div>
+<div class="tm-gantt-task-panel__timelog-total" data-testid="task-timelog-total">Total Logged: 0.0 h</div>
+</div>
+<div class="tm-gantt-task-panel__deps" data-testid="task-dependencies">
+<span class="tm-gantt-task-panel__deps-label">Dependencies</span>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-add-dep">
+<span class="tm-btn-label">
+<svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='12' y1='5' x2='12' y2='19'/>
+<line x1='5' y1='12' x2='19' y2='12'/>
+</svg>Add dependency</span>
+</button>
+</div>
+<div class="tm-gantt-task-panel__actions">
+<button type="button" class="tm-btn tm-btn-primary tm-btn-md" tabindex="0" blazor:onclick="H" data-testid="task-save">
+<span class="tm-btn-label">Save</span>
+</button>
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-md" tabindex="0" blazor:onclick="H" data-testid="task-cancel">
+<span class="tm-btn-label">Cancel</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>

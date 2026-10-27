@@ -1,0 +1,211 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Abstractions.WorkItems
+
+<div class="tm-gantt__toolbar">
+    <div class="tm-gantt__toolbar-group">
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" OnClick="Owner.AddTaskAsync" Title="@Loc["TmGantt_AddTask"]" AriaLabel="@Loc["TmGantt_AddTask"]" data-testid="@TestId("gantt-add-task")">
+            <TmIcon Name="plus" Size="IconSize.Sm" />
+            @Loc["TmGantt_AddTask"]
+        </TmButton>
+        <span class="tm-gantt__toolbar-divider"></span>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.ExpandAllAsync" Title="@Loc["TmGantt_ExpandAll"]" AriaLabel="@Loc["TmGantt_ExpandAll"]" data-testid="@TestId("gantt-expand-all")">
+            <TmIcon Name="chevrons-down" Size="IconSize.Sm" />
+        </TmButton>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.CollapseAllAsync" Title="@Loc["TmGantt_CollapseAll"]" AriaLabel="@Loc["TmGantt_CollapseAll"]" data-testid="@TestId("gantt-collapse-all")">
+            <TmIcon Name="chevrons-up" Size="IconSize.Sm" />
+        </TmButton>
+        <span class="tm-gantt__toolbar-divider"></span>
+        <div class="tm-gantt__segment" role="group" aria-label="@Loc["TmGantt_ViewSwitcher"]">
+            <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Day) ? "tm-gantt__segment-btn--active" : "")"
+                    aria-pressed="@(Owner.IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")"
+                    @onclick="() => Owner.SetViewAsync(GanttView.Day)">@Loc["TmGantt_DayView"]</button>
+            <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Week) ? "tm-gantt__segment-btn--active" : "")"
+                    aria-pressed="@(Owner.IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")"
+                    @onclick="() => Owner.SetViewAsync(GanttView.Week)">@Loc["TmGantt_WeekView"]</button>
+            <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Month) ? "tm-gantt__segment-btn--active" : "")"
+                    aria-pressed="@(Owner.IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")"
+                    @onclick="() => Owner.SetViewAsync(GanttView.Month)">@Loc["TmGantt_MonthView"]</button>
+        </div>
+    </div>
+    <div class="tm-gantt__toolbar-group">
+        <!-- Cascade sort -->
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.CascadeSortAsync"
+                  Title="@Loc["TmGantt_CascadeSort"]" AriaLabel="@Loc["TmGantt_CascadeSort"]" data-testid="@TestId("gantt-cascade-sort")">
+            <TmIcon Name="list-ordered" Size="IconSize.Sm" />
+        </TmButton>
+        <span class="tm-gantt__toolbar-divider"></span>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.FitToScreenAsync" Title="@Loc["TmGantt_FitToScreen"]" AriaLabel="@Loc["TmGantt_FitToScreen"]" data-testid="@TestId("gantt-fit-to-screen")">
+            <TmIcon Name="maximize-2" />
+        </TmButton>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.ZoomOutAsync" Title="@Loc["TmGantt_ZoomOut"]" AriaLabel="@Loc["TmGantt_ZoomOut"]" data-testid="@TestId("gantt-zoom-out")">
+            <TmIcon Name="zoom-out" />
+        </TmButton>
+        <!-- Zoom slider -->
+        <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
+               aria-label="@Loc["TmGantt_ZoomLevel"]"
+               min="50" max="200" step="25" value="@Owner._zoomLevel"
+               @onchange="Owner.SetZoomLevel" />
+        <span class="tm-gantt__zoom-level">@(Owner._zoomLevel)%</span>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.ZoomInAsync" Title="@Loc["TmGantt_ZoomIn"]" AriaLabel="@Loc["TmGantt_ZoomIn"]" data-testid="@TestId("gantt-zoom-in")">
+            <TmIcon Name="zoom-in" />
+        </TmButton>
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.ToggleTaskPanel" Title="@Loc["TmGantt_ToggleTaskPanel"]" AriaLabel="@Loc["TmGantt_ToggleTaskPanel"]" aria-pressed="@(Owner.ShowTaskPanel ? "true" : "false")" data-testid="@TestId("gantt-toggle-task-panel")">
+            <TmIcon Name="edit" />
+        </TmButton>
+        <!-- Filter button -->
+        <TmButton Size="ButtonSize.Sm" Variant="@(Owner._filterPanelOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
+                  OnClick="Owner.ToggleFilterPanel" Title="@Loc["TmGantt_Filter"]" AriaLabel="@Loc["TmGantt_Filter"]" aria-haspopup="true" aria-expanded="@(Owner._filterPanelOpen ? "true" : "false")"
+                  data-testid="@TestId("gantt-filter-btn")">
+            <TmIcon Name="filter" Size="IconSize.Sm" />
+        </TmButton>
+        <!-- Export button -->
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                  OnClick="Owner.ToggleExportDialog" Title="@Loc["TmGantt_Export"]" AriaLabel="@Loc["TmGantt_Export"]"
+                  data-testid="@TestId("gantt-export-btn")">
+            <TmIcon Name="download" Size="IconSize.Sm" />
+        </TmButton>
+        <!-- Import button -->
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                  OnClick="Owner.ToggleImportDialog" Title="@Loc["TmGantt_Import"]" AriaLabel="@Loc["TmGantt_Import"]"
+                  data-testid="@TestId("gantt-import-btn")">
+            <TmIcon Name="upload" Size="IconSize.Sm" />
+        </TmButton>
+        <!-- History button -->
+        <TmButton Size="ButtonSize.Sm" Variant="@(Owner._historyDrawerOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
+                  OnClick="Owner.ToggleHistoryDrawer" Title="@Loc["TmGantt_History"]" AriaLabel="@Loc["TmGantt_History"]" aria-haspopup="true" aria-expanded="@(Owner._historyDrawerOpen ? "true" : "false")"
+                  data-testid="@TestId("gantt-history-btn")">
+            <TmIcon Name="clock" Size="IconSize.Sm" />
+        </TmButton>
+        <!-- View Settings -->
+        <div class="tm-gantt__view-settings-wrapper">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="Owner.ToggleViewSettings" Title="@Loc["TmGantt_ViewSettings"]" AriaLabel="@Loc["TmGantt_ViewSettings"]" aria-haspopup="true" aria-expanded="@(Owner._viewSettingsOpen ? "true" : "false")" data-testid="@TestId("gantt-view-settings-btn")">
+                <TmIcon Name="settings" Size="IconSize.Sm" />
+            </TmButton>
+            @if (Owner._viewSettingsOpen)
+            {
+                <div class="tm-gantt__view-settings-overlay" @onclick="Owner.ToggleViewSettings"></div>
+                <div class="tm-gantt__view-settings-menu" @onclick:stopPropagation>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox" data-testid="@TestId("vset-show-today")"
+                               checked="@Owner.ViewSettings.ShowTodayMarker"
+                               @onchange="e => Owner.SetShowTodayMarker((bool)e.Value!)" />
+                        <span>@Loc["TmGantt_ShowTodayMarker"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox" data-testid="@TestId("vset-show-daysoff")"
+                               checked="@Owner.ViewSettings.ShowDaysOff"
+                               @onchange="e => Owner.SetShowDaysOff((bool)e.Value!)" />
+                        <span>@Loc["TmGantt_ShowDaysOff"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox" data-testid="@TestId("vset-show-progress")"
+                               checked="@Owner.ViewSettings.ShowProgressLabel"
+                               @onchange="e => Owner.SetShowProgressLabel((bool)e.Value!)" />
+                        <span>@Loc["TmGantt_ShowProgressLabel"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox" data-testid="@TestId("vset-show-closed")"
+                               checked="@Owner.ViewSettings.ShowClosedTasks"
+                               @onchange="e => Owner.SetShowClosedTasks((bool)e.Value!)" />
+                        <span>@Loc["TmGantt_ShowClosedTasks"]</span>
+                    </label>
+                    <div class="tm-gantt__view-settings-divider"></div>
+                    <div class="tm-gantt__view-settings-label">@Loc["TmGantt_TaskNameLocation"]</div>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="taskloc-@Owner.GetHashCode()" value="InsideBar"
+                               checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.InsideBar)"
+                               @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.InsideBar)" />
+                        <span>@Loc["TmGantt_TaskNameInside"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="taskloc-@Owner.GetHashCode()" value="NextToBar"
+                               checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.NextToBar)"
+                               @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.NextToBar)" />
+                        <span>@Loc["TmGantt_TaskNameBeside"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="taskloc-@Owner.GetHashCode()" value="Hidden"
+                               checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.Hidden)"
+                               @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.Hidden)" />
+                        <span>@Loc["TmGantt_TaskNameHidden"]</span>
+                    </label>
+                    <div class="tm-gantt__view-settings-divider"></div>
+                    <div class="tm-gantt__view-settings-label">@Loc["TmGantt_ViewDensity"]</div>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="density-@Owner.GetHashCode()" value="Comfortable"
+                               checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Comfortable)"
+                               @onchange="() => Owner.SetViewDensity(GanttViewDensity.Comfortable)" />
+                        <span>@Loc["TmGantt_ViewComfortable"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="density-@Owner.GetHashCode()" value="Compact"
+                               checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Compact)"
+                               @onchange="() => Owner.SetViewDensity(GanttViewDensity.Compact)" />
+                        <span>@Loc["TmGantt_ViewCompact"]</span>
+                    </label>
+                    <div class="tm-gantt__view-settings-divider"></div>
+                    <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Theme"]</div>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="theme-@Owner.GetHashCode()" value="Auto"
+                               checked="@(Owner.ViewSettings.Theme == GanttTheme.Auto)"
+                               @onchange="() => Owner.SetTheme(GanttTheme.Auto)" />
+                        <span>@Loc["TmGantt_ThemeAuto"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="theme-@Owner.GetHashCode()" value="Light"
+                               checked="@(Owner.ViewSettings.Theme == GanttTheme.Light)"
+                               @onchange="() => Owner.SetTheme(GanttTheme.Light)" />
+                        <span>@Loc["TmGantt_ThemeLight"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="radio" name="theme-@Owner.GetHashCode()" value="Dark"
+                               checked="@(Owner.ViewSettings.Theme == GanttTheme.Dark)"
+                               @onchange="() => Owner.SetTheme(GanttTheme.Dark)" />
+                        <span>@Loc["TmGantt_ThemeDark"]</span>
+                    </label>
+
+                @if (Owner.NotificationSettings is not null)
+                {
+                    <div class="tm-gantt__view-settings-divider"></div>
+                    <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
+                    <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
+                        <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox"
+                                   checked="@Owner.NotificationSettings.EmailOnAssign"
+                                   @onchange="e => Owner.UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
+                            <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
+                        </label>
+                        <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox"
+                                   checked="@Owner.NotificationSettings.EmailOnMention"
+                                   @onchange="e => Owner.UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
+                            <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
+                        </label>
+                        <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox"
+                                   checked="@Owner.NotificationSettings.PushOnAssign"
+                                   @onchange="e => Owner.UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
+                            <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
+                        </label>
+                        <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox"
+                                   checked="@Owner.NotificationSettings.PushOnMention"
+                                   @onchange="e => Owner.UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
+                            <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
+                        </label>
+                        <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox"
+                                   checked="@Owner.NotificationSettings.PushOnDeadline"
+                                   @onchange="e => Owner.UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
+                            <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
+                        </label>
+                    </div>
+                }
+                </div>
+            }
+        </div>
+    </div>
+</div>

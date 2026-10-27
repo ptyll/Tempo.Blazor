@@ -1,3 +1,5 @@
+/* TmGantt (root, alternate views, context menu). The toolbar, tree, timeline and sidebar are TmGanttToolbar / TmGanttTree / TmGanttTimeline / TmGanttSidebar and own their rules (scoped CSS never reaches a child component's elements). */
+
 .tm-gantt {
     display: flex;
     flex-direction: column;
@@ -26,645 +28,12 @@
     color-scheme: light;
 }
 
-/* ─── Segmented Day | Week | Month ─────────────────────────────── */
-
-.tm-gantt__segment {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-1);
-    background: var(--tm-bg-muted);
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-gantt__segment-btn {
-    min-height: 1.75rem;
-    padding: 0 var(--tm-space-3);
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-control);
-    background: transparent;
-    color: var(--tm-text-secondary);
-    font: inherit;
-    font-size: var(--tm-font-size-sm);
-    cursor: pointer;
-}
-
-.tm-gantt__segment-btn:hover {
-    color: var(--tm-text-primary);
-}
-
-/* The fill alone is ~1.1:1 against the tray, under the 3:1 a control boundary needs (1.4.11): the
-   strong border is the boundary, the weight and the shadow carry the selection beyond it. */
-.tm-gantt__segment-btn--active {
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    border-color: var(--tm-border-color-strong);
-    font-weight: var(--tm-font-weight-semibold);
-    box-shadow: var(--tm-shadow-sm);
-}
-
-.tm-gantt__segment-btn:focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: var(--tm-focus-ring);
-}
-
-@media (forced-colors: active) {
-    .tm-gantt__segment-btn--active {
-        background: Highlight;
-        color: HighlightText;
-        forced-color-adjust: none;
-    }
-}
-
-@media (pointer: coarse) {
-    .tm-gantt__segment-btn {
-        min-height: var(--tm-touch-target);
-    }
-}
-
-/* ─── Toolbar ──────────────────────────────────────────────────── */
-
-.tm-gantt__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    border-bottom: 1px solid var(--tm-border-color);
-    background: var(--tm-bg-surface);
-    flex-shrink: 0;
-}
-
-.tm-gantt__toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
-}
-
-.tm-gantt__zoom-level {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--tm-text-secondary);
-    min-width: 40px;
-    text-align: center;
-}
-
-.tm-gantt__toolbar-divider {
-    width: 1px;
-    height: 20px;
-    background: var(--tm-border-color);
-    margin: 0 var(--tm-space-1, 0.25rem);
-}
-
-/* ─── View Settings dropdown ───────────────────────────────────── */
-
-.tm-gantt__view-settings-wrapper {
-    position: relative;
-}
-
-.tm-gantt__view-settings-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-}
-
-.tm-gantt__view-settings-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    z-index: 51;
-    min-width: 220px;
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: var(--tm-shadow-popover);
-    padding: var(--tm-space-2, 0.5rem) 0;
-}
-
-.tm-gantt__view-settings-label {
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--tm-text-tertiary);
-}
-
-.tm-gantt__view-settings-item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
-    font-size: 0.875rem;
-    color: var(--tm-text-primary);
-    cursor: pointer;
-    transition: background 0.1s ease;
-}
-
-.tm-gantt__view-settings-item:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-gantt__view-settings-item input {
-    margin: 0;
-    cursor: pointer;
-}
-
-.tm-gantt__view-settings-divider {
-    height: 1px;
-    background: var(--tm-border-color);
-    margin: var(--tm-space-1, 0.25rem) 0;
-}
-
 /* ─── Main layout ──────────────────────────────────────────────── */
 
 .tm-gantt__main {
     display: flex;
     flex: 1;
     overflow: hidden;
-}
-
-/* ─── Task Tree ────────────────────────────────────────────────── */
-
-.tm-gantt__tree {
-    width: 420px;
-    min-width: 300px;
-    border-right: 1px solid var(--tm-border-color);
-    display: flex;
-    flex-direction: column;
-    background: var(--tm-bg-surface);
-}
-
-.tm-gantt__tree-header {
-    display: flex;
-    align-items: center;
-    height: 40px;
-    padding: 0 var(--tm-space-3, 0.75rem);
-    background: var(--tm-bg-surface-secondary);
-    border-bottom: 1px solid var(--tm-border-color);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--tm-text-secondary);
-    flex-shrink: 0;
-}
-
-.tm-gantt__tree-header-cell {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tm-gantt__tree-header-cell--narrow {
-    flex: 0 0 80px;
-    text-align: center;
-}
-
-.tm-gantt__tree-header-cell--status {
-    flex: 0 0 90px;
-    text-align: center;
-}
-
-.tm-gantt__tree-body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.tm-gantt__tree-row {
-    display: flex;
-    align-items: center;
-    height: 40px;
-    padding: 0 var(--tm-space-3, 0.75rem);
-    border-bottom: 1px solid var(--tm-border-color);
-    cursor: pointer;
-    transition: background 0.1s ease;
-}
-
-.tm-gantt__tree-row:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-gantt__tree-row--selected {
-    background: var(--tm-color-primary-subtle);
-}
-
-.tm-gantt__tree-cell {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
-    font-size: 0.875rem;
-    color: var(--tm-text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tm-gantt__tree-cell--title {
-    min-width: 150px;
-}
-
-.tm-gantt__tree-cell--narrow {
-    flex: 0 0 80px;
-    justify-content: center;
-    font-size: 0.75rem;
-    color: var(--tm-text-secondary);
-}
-
-.tm-gantt__tree-cell--status {
-    flex: 0 0 90px;
-    justify-content: center;
-}
-
-/* ─── Drag handle ──────────────────────────────────────────────── */
-
-.tm-gantt__drag-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 20px;
-    color: var(--tm-text-tertiary);
-    cursor: grab;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    flex-shrink: 0;
-}
-
-.tm-gantt__tree-row:hover .tm-gantt__drag-handle {
-    opacity: 1;
-}
-
-.tm-gantt__tree-row--dragging { opacity: 0.4; }
-.tm-gantt__tree-row--drop-before { border-top: 2px solid var(--tm-color-primary); }
-.tm-gantt__tree-row--drop-after { border-bottom: 2px solid var(--tm-color-primary); }
-.tm-gantt__tree-row--drop-child {
-    background: var(--tm-color-primary-subtle);
-    outline: 2px dashed var(--tm-color-primary);
-    outline-offset: -2px;
-}
-
-/* ─── Expand button ────────────────────────────────────────────── */
-
-.tm-gantt__expand-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    color: var(--tm-text-tertiary);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.tm-gantt__expand-spacer {
-    display: inline-block;
-    width: 20px;
-    flex-shrink: 0;
-}
-
-/* ─── Status badge ─────────────────────────────────────────────── */
-
-.tm-gantt__status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    padding: 1px 6px;
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    font-size: 0.7rem;
-    font-weight: 600;
-    line-height: 1.4;
-    white-space: nowrap;
-}
-
-.tm-gantt__status-icon {
-    flex-shrink: 0;
-    line-height: 1;
-}
-
-.tm-gantt__status-badge--open       { background: var(--tm-status-open-bg);       color: var(--tm-status-open-fg); }
-.tm-gantt__status-badge--inprogress { background: var(--tm-status-inprogress-bg); color: var(--tm-status-inprogress-fg); }
-.tm-gantt__status-badge--done       { background: var(--tm-status-done-bg);       color: var(--tm-status-done-fg); }
-.tm-gantt__status-badge--closed     { background: var(--tm-status-closed-bg);     color: var(--tm-status-closed-fg); }
-
-/* ─── Priority dot ─────────────────────────────────────────────── */
-
-.tm-gantt__priority-icon {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.tm-gantt__priority-icon--highest{ background: var(--tm-priority-highest); }
-.tm-gantt__priority-icon--high   { background: var(--tm-priority-high); }
-.tm-gantt__priority-icon--medium { background: var(--tm-priority-medium); }
-.tm-gantt__priority-icon--low    { background: var(--tm-priority-low); }
-.tm-gantt__priority-icon--lowest { background: var(--tm-priority-lowest); }
-
-/* ─── Milestone icon ───────────────────────────────────────────── */
-
-.tm-gantt__milestone-icon {
-    color: var(--tm-color-warning);
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-}
-
-.tm-gantt__task-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ─── Timeline ─────────────────────────────────────────────────── */
-
-.tm-gantt__timeline {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-x: auto;
-    overflow-y: hidden;
-    position: relative;
-    cursor: grab;
-    background: var(--tm-bg-surface);
-}
-
-.tm-gantt__timeline--panning {
-    cursor: grabbing !important;
-    user-select: none;
-}
-
-.tm-gantt__timeline-header {
-    display: flex;
-    align-items: center;
-    height: 40px;
-    background: var(--tm-bg-surface-secondary);
-    border-bottom: 1px solid var(--tm-border-color);
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--tm-text-secondary);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.tm-gantt__timeline-header-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    border-right: 1px solid var(--tm-border-color);
-    padding: 0 var(--tm-space-2, 0.5rem);
-}
-
-.tm-gantt__timeline-body {
-    flex: 1;
-    min-height: 200px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    position: relative;
-}
-
-.tm-gantt__timeline-content {
-    position: relative;
-}
-
-/* ─── Non-working overlay ──────────────────────────────────────── */
-
-.tm-gantt__nonworking-overlay {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    background: var(--tm-scheduler-weekend-bg);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* ─── Grid lines ───────────────────────────────────────────────── */
-
-.tm-gantt__grid {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.tm-gantt__grid-line {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-right: 1px solid var(--tm-border-color);
-}
-
-/* ─── Today marker ─────────────────────────────────────────────── */
-
-.tm-gantt__today-marker {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-left: 2px solid var(--tm-color-danger);
-    pointer-events: none;
-    z-index: 3;
-}
-
-/* The pill sits in the timeline header and straddles its bottom edge, centred on the line. Inverse
-   ink on the danger fill holds AA in light and dark (pinned by TokenContrastTests). */
-.tm-gantt__today-label {
-    position: absolute;
-    bottom: 0;
-    transform: translate(-50%, 50%);
-    z-index: 9;
-    padding: 0 var(--tm-space-2);
-    border-radius: var(--tm-radius-pill);
-    background: var(--tm-color-danger);
-    color: var(--tm-text-inverse);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    line-height: 1.25rem;
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-/* ─── Dependencies ─────────────────────────────────────────────── */
-
-.tm-gantt__dependencies {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    pointer-events: none;
-    z-index: 2;
-}
-
-.tm-gantt__dependency-line {
-    stroke: var(--tm-text-tertiary);
-    stroke-width: 1.5;
-}
-
-.tm-gantt__dependency-arrow {
-    fill: var(--tm-text-tertiary);
-}
-
-/* ─── Task bars ────────────────────────────────────────────────── */
-
-.tm-gantt__task-row {
-    position: absolute;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
-    padding: 0 4px;
-    z-index: 2;
-}
-
-.tm-gantt__bar {
-    position: relative;
-    height: 20px;
-    background: var(--tm-gantt-task-color, var(--tm-color-primary-solid));
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    cursor: pointer;
-    overflow: visible;
-    box-shadow: var(--tm-shadow-sm);
-    transition: box-shadow 0.15s ease, filter 0.15s ease;
-}
-
-.tm-gantt__bar:hover {
-    filter: brightness(1.08);
-    box-shadow: var(--tm-shadow-md);
-}
-
-.tm-gantt__bar--selected {
-    box-shadow: 0 0 0 2px var(--tm-gantt-task-color, var(--tm-color-primary-solid)),
-                var(--tm-shadow-md);
-}
-
-.tm-gantt__bar--group {
-    filter: brightness(0.88);
-    border-radius: var(--tm-radius-sm, 0.25rem) var(--tm-radius-sm, 0.25rem) 0 0;
-}
-
-.tm-gantt__bar--completed {
-    opacity: 0.6;
-}
-
-.tm-gantt__bar--priority-highest{ border-left: 3px solid var(--tm-priority-highest); }
-.tm-gantt__bar--priority-high   { border-left: 3px solid var(--tm-priority-high); }
-.tm-gantt__bar--priority-medium { border-left: 3px solid var(--tm-priority-medium); }
-.tm-gantt__bar--priority-low    { border-left: 3px solid var(--tm-priority-low); }
-.tm-gantt__bar--priority-lowest { border-left: 3px solid var(--tm-priority-lowest); }
-
-.tm-gantt__bar-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    /* A darker tone of the bar's own colour: opaque, so the label keeps its contrast in every theme. */
-    background: color-mix(in srgb, var(--tm-gantt-task-color, var(--tm-color-primary-solid)) 60%, var(--tm-scheduler-event-fg-on-light));
-    pointer-events: none;
-    border-radius: inherit;
-}
-
-.tm-gantt__bar-label {
-    position: relative;
-    z-index: 1;
-    padding: 0 6px;
-    font-size: 0.75rem;
-    color: var(--tm-color-on-primary-fixed);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 20px;
-    display: block;
-}
-
-/* The percentage next to the bar (GanttViewSettings.ShowProgressLabel). A child of .tm-gantt__task-row
-   (a sibling of the bar, so the faded completed bar does not dim it); the inline `left` is the bar's right
-   edge, the margin is the gap. */
-.tm-gantt__bar-progress-label {
-    position: absolute;
-    margin-left: var(--tm-space-2);
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-text-secondary);
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-/* The exceeded-deadline flame sits just right of the bar; the label steps past it
-   (class computed in C#, GetProgressLabelClass). */
-.tm-gantt__bar-progress-label--after-deadline {
-    margin-left: 1.5rem;
-}
-
-/* ─── Deadline marker ──────────────────────────────────────────── */
-
-.tm-gantt__bar-deadline {
-    position: absolute;
-    right: -18px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--tm-color-danger);
-    z-index: 4;
-    line-height: 1;
-    pointer-events: none;
-}
-
-/* ─── Hover tooltip ────────────────────────────────────────────── */
-
-.tm-gantt__bar-tooltip {
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 160px;
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: var(--tm-shadow-md);
-    padding: var(--tm-space-2, 0.5rem);
-    z-index: 20;
-    pointer-events: none;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.12s ease, visibility 0.12s ease;
-    white-space: nowrap;
-}
-
-.tm-gantt__bar:hover .tm-gantt__bar-tooltip {
-    visibility: visible;
-    opacity: 1;
-}
-
-.tm-gantt__bar-tooltip-title {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--tm-text-primary);
-    margin-bottom: 4px;
-}
-
-.tm-gantt__bar-tooltip-row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--tm-space-3, 0.75rem);
-    font-size: 0.75rem;
-    color: var(--tm-text-secondary);
-}
-
-/* ─── Milestone ────────────────────────────────────────────────── */
-
-.tm-gantt__milestone {
-    width: 12px;
-    height: 12px;
-    background: var(--tm-color-warning);
-    transform: rotate(45deg);
-    cursor: pointer;
-    box-shadow: var(--tm-shadow-sm);
 }
 
 /* ─── Context Menu ─────────────────────────────────────────────── */
@@ -706,234 +75,13 @@
 }
 
 .tm-gantt__context-menu-item--danger { color: var(--tm-color-danger); }
+
 .tm-gantt__context-menu-item--danger:hover { background: var(--tm-color-danger-subtle); }
 
 .tm-gantt__context-menu-divider {
     height: 1px;
     background: var(--tm-border-color);
     margin: var(--tm-space-1, 0.25rem) 0;
-}
-
-/* ─── Phase 2: Two-row timeline header ────────────────────────── */
-
-.tm-gantt__timeline-header {
-    position: relative;
-    height: 60px;
-    flex-shrink: 0;
-}
-
-.tm-gantt__timeline-header--upper,
-.tm-gantt__timeline-header--lower {
-    position: absolute;
-    left: 0;
-    right: 0;
-    display: flex;
-    overflow: hidden;
-}
-
-.tm-gantt__timeline-header--upper {
-    top: 0;
-    height: 28px;
-}
-
-.tm-gantt__timeline-header--lower {
-    top: 28px;
-    height: 32px;
-    border-top: 1px solid var(--tm-border-color);
-}
-
-.tm-gantt__timeline-header-cell--upper {
-    position: absolute;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    padding: 0 var(--tm-space-2, 0.5rem);
-    font-weight: 600;
-    font-size: 0.75rem;
-    color: var(--tm-text-primary);
-    border-right: 1px solid var(--tm-border-color);
-    box-sizing: border-box;
-}
-
-.tm-gantt__timeline-header-cell--lower {
-    position: absolute;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    color: var(--tm-text-secondary);
-    border-right: 1px solid var(--tm-border-color);
-    box-sizing: border-box;
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-/* ─── Phase 2: WBS Column ──────────────────────────────────────── */
-
-.tm-gantt__tree-header-cell--wbs,
-.tm-gantt__tree-cell--wbs {
-    width: 50px;
-    flex-shrink: 0;
-    font-size: 0.7rem;
-    color: var(--tm-text-secondary);
-    text-align: center;
-}
-
-/* ─── Phase 2: Inline Edit ─────────────────────────────────────── */
-
-.tm-gantt__inline-edit {
-    flex: 1;
-    min-width: 60px;
-    padding: 0 var(--tm-space-1, 0.25rem);
-    border: 1px solid var(--tm-color-primary);
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font-size: inherit;
-    outline: none;
-    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
-}
-
-/* ─── Phase 2: Progress mini-bar ───────────────────────────────── */
-
-.tm-gantt__progress-mini {
-    display: inline-block;
-    width: 48px;
-    height: 6px;
-    background: var(--tm-bg-surface-secondary);
-    border-radius: 3px;
-    overflow: hidden;
-    vertical-align: middle;
-    margin-right: 4px;
-}
-
-.tm-gantt__progress-mini-fill {
-    height: 100%;
-    background: var(--tm-color-primary);
-    border-radius: 3px;
-    transition: width 0.2s ease;
-}
-
-.tm-gantt__progress-mini-label {
-    font-size: 0.75rem;
-    color: var(--tm-text-secondary);
-}
-
-/* ─── Phase 2: Bulk select ─────────────────────────────────────── */
-
-.tm-gantt__tree-header-cell--checkbox,
-.tm-gantt__tree-cell--checkbox {
-    width: 32px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tm-gantt__bulk-toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    background: var(--tm-color-primary-subtle);
-    border-top: 1px solid var(--tm-color-primary);
-    font-size: 0.875rem;
-}
-
-.tm-gantt__bulk-toolbar-count {
-    font-weight: 600;
-    color: var(--tm-color-primary);
-    margin-right: var(--tm-space-2, 0.5rem);
-}
-
-/* ─── Phase 2: Overdue highlight ───────────────────────────────── */
-
-.tm-gantt__tree-row--overdue {
-    background: var(--tm-color-danger-subtle) !important;
-}
-
-.tm-gantt__bar--overdue {
-    --tm-gantt-task-color: var(--tm-color-danger);
-    box-shadow: 0 0 0 2px var(--tm-color-danger);
-    animation: tm-gantt-overdue-pulse 2s ease-in-out infinite;
-}
-
-@keyframes tm-gantt-overdue-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 60%, transparent); }
-    50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tm-color-danger) 20%, transparent); }
-}
-
-/* ─── Phase 2: Dependency lines ────────────────────────────────── */
-
-.tm-gantt__dep-line {
-    stroke: var(--tm-text-secondary);
-    stroke-width: 1.5;
-    fill: none;
-    cursor: pointer;
-    transition: stroke 0.15s ease;
-}
-
-.tm-gantt__dep-line:hover {
-    stroke: var(--tm-color-primary);
-    stroke-width: 2.5;
-}
-
-.tm-gantt__dep-line--selected {
-    stroke: var(--tm-color-primary);
-    stroke-width: 2.5;
-    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
-}
-
-.tm-gantt__dep-line--fs { stroke: var(--tm-text-secondary); }
-.tm-gantt__dep-line--ss { stroke: var(--tm-color-info); }
-.tm-gantt__dep-line--ff { stroke: var(--tm-color-success); }
-.tm-gantt__dep-line--sf { stroke: var(--tm-color-warning); }
-
-.tm-gantt__dep-lag-label {
-    font-size: 10px;
-    fill: var(--tm-text-secondary);
-    font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
-}
-
-/* ─── Phase 2: Dep creation handles ───────────────────────────── */
-
-.tm-gantt__dep-handle {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--tm-color-primary);
-    border: 2px solid var(--tm-bg-surface);
-    opacity: 0;
-    cursor: crosshair;
-    z-index: 5;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.tm-gantt__bar:hover .tm-gantt__dep-handle {
-    opacity: 1;
-}
-
-.tm-gantt__dep-handle--start { left: -5px; }
-.tm-gantt__dep-handle--end   { right: -5px; }
-
-.tm-gantt__dep-handle:hover {
-    transform: translateY(-50%) scale(1.3);
-}
-
-/* ─── Phase 2: Assignee avatars ────────────────────────────────── */
-
-.tm-gantt__bar-avatars {
-    display: flex;
-    align-items: center;
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    gap: -4px;
 }
 
 .tm-gantt__bar-avatar {
@@ -955,116 +103,6 @@
 }
 
 .tm-gantt__bar-avatar:first-child { margin-left: 0; }
-
-.tm-gantt__bar-avatar-overflow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 1.5px solid var(--tm-bg-surface);
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--tm-color-on-primary-fixed);
-    background: color-mix(in srgb, var(--tm-scheduler-event-fg-on-light) 55%, transparent);
-    margin-left: -3px;
-}
-
-/* ─── Phase 2: Zoom slider ──────────────────────────────────────── */
-
-.tm-gantt__zoom-slider {
-    width: 80px;
-    height: 4px;
-    accent-color: var(--tm-color-primary);
-    cursor: pointer;
-    margin: 0 var(--tm-space-1, 0.25rem);
-}
-
-/* ─── Phase 2: Current time marker ─────────────────────────────── */
-
-.tm-gantt__current-time-marker {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--tm-color-danger);
-    opacity: 0.8;
-    z-index: 8;
-    pointer-events: none;
-}
-
-.tm-gantt__current-time-marker::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -4px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--tm-color-danger);
-}
-
-/* ─── Phase 2: Col toggle visibility ───────────────────────────── */
-
-.tm-gantt__col-toggle {
-    margin-left: 4px;
-    cursor: pointer;
-    accent-color: var(--tm-color-primary);
-}
-
-/* ─── Phase 3: Critical Path ────────────────────────────────────── */
-
-.tm-gantt__bar--critical-path {
-    background: var(--tm-color-danger) !important;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 30%, transparent);
-}
-
-/* ─── Phase 3: Baseline ghost bars ──────────────────────────────── */
-
-.tm-gantt__bar--baseline {
-    background: color-mix(in srgb, var(--tm-text-primary) 12%, transparent) !important;
-    pointer-events: none;
-    z-index: 0;
-    border: 1px dashed color-mix(in srgb, var(--tm-text-primary) 25%, transparent);
-    position: absolute;
-    height: 20px;
-    border-radius: 3px;
-    opacity: 0.6;
-}
-
-/* ─── Phase 3: Deviation badge ───────────────────────────────────── */
-
-.tm-gantt__deviation-badge {
-    display: inline-block;
-    margin-left: 4px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    padding: 1px 4px;
-    border-radius: 3px;
-    vertical-align: middle;
-}
-
-.tm-gantt__deviation-badge--late {
-    background: var(--tm-color-danger-subtle);
-    color: var(--tm-color-danger);
-}
-
-.tm-gantt__deviation-badge--early {
-    background: var(--tm-color-success-subtle);
-    color: var(--tm-color-success);
-}
-
-/* ─── Phase 3: Custom field columns ─────────────────────────────── */
-
-.tm-gantt__custom-field-header,
-.tm-gantt__custom-field-cell {
-    min-width: 80px;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 
 /* ─── Phase 3: Filter panel ──────────────────────────────────────── */
 
@@ -1090,39 +128,6 @@
     padding: 0 3px;
 }
 
-/* ─── Phase 4: Inline badges ────────────────────────────────────── */
-
-.tm-gantt__inline-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 1px 5px;
-    border-radius: 10px;
-    margin-left: 4px;
-    cursor: default;
-}
-
-.tm-gantt__inline-badge--attachment {
-    background: var(--tm-color-warning-subtle);
-    color: var(--tm-color-warning);
-}
-
-.tm-gantt__inline-badge--comment {
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
-}
-
-
-/* ── Phase 5: Alternate Views ── */
-
-/* List View */
-.tm-gantt__main--list-view .tm-gantt__tree {
-    flex: 1;
-    max-width: 100%;
-}
-
 /* Calendar View */
 .tm-gantt__calendar-view {
     flex: 1;
@@ -1145,8 +150,6 @@
     flex: 1;
 }
 
-
-
 /* Dashboard View */
 .tm-gantt__dashboard-view {
     display: grid;
@@ -1154,6 +157,7 @@
     gap: 16px;
     padding: 16px;
 }
+
 .tm-gantt__dashboard-widget {
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
@@ -1165,125 +169,6 @@
     gap: 8px;
 }
 
-/* ── Sidebar Drawers ────────────────────────────────────── */
-.tm-gantt__sidebar-drawer {
-    width: 240px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--tm-border-color);
-    background: var(--tm-bg-surface);
-    overflow: hidden;
-}
-.tm-gantt__sidebar-drawer-header {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--tm-border-color);
-    font-weight: 600;
-    font-size: 0.82rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--tm-text-secondary);
-    background: var(--tm-bg-surface-secondary);
-}
-.tm-gantt__sidebar-drawer-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
-}
-.tm-gantt__sidebar-empty {
-    padding: 16px 12px;
-    color: var(--tm-text-secondary);
-    font-size: 0.8rem;
-    text-align: center;
-}
-/* Tasks panel */
-.tm-gantt__sidebar-task-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    font-size: 0.8rem;
-    border-bottom: 1px solid var(--tm-color-border-subtle);
-    cursor: default;
-}
-.tm-gantt__sidebar-task-row--done .tm-gantt__sidebar-task-title {
-    text-decoration: line-through;
-    color: var(--tm-text-secondary);
-}
-.tm-gantt__sidebar-task-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.tm-gantt__sidebar-task-title {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.tm-gantt__sidebar-task-pct {
-    font-size: 0.7rem;
-    color: var(--tm-text-secondary);
-    flex-shrink: 0;
-}
-/* Workload panel */
-.tm-gantt__sidebar-workload-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    font-size: 0.8rem;
-    border-bottom: 1px solid var(--tm-color-border-subtle);
-}
-.tm-gantt__sidebar-workload-name {
-    width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex-shrink: 0;
-    font-size: 0.75rem;
-}
-.tm-gantt__sidebar-workload-bar-wrap {
-    flex: 1;
-    height: 6px;
-    background: var(--tm-color-border-subtle);
-    border-radius: 3px;
-    overflow: hidden;
-}
-.tm-gantt__sidebar-workload-bar {
-    height: 100%;
-    background: var(--tm-color-primary);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-.tm-gantt__sidebar-workload-bar--over { background: var(--tm-color-danger); }
-.tm-gantt__sidebar-workload-pct { font-size: 0.7rem; flex-shrink: 0; min-width: 28px; text-align: right; }
-.tm-gantt__sidebar-workload-pct--over { color: var(--tm-color-danger); font-weight: 600; }
-/* History panel */
-.tm-gantt__sidebar-history-row {
-    display: flex;
-    flex-direction: column;
-    padding: 5px 12px;
-    border-bottom: 1px solid var(--tm-color-border-subtle);
-    font-size: 0.75rem;
-    gap: 2px;
-}
-.tm-gantt__sidebar-history-action {
-    font-weight: 600;
-    color: var(--tm-text-primary);
-    text-transform: capitalize;
-}
-.tm-gantt__sidebar-history-task {
-    color: var(--tm-text-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.tm-gantt__sidebar-history-date {
-    color: var(--tm-text-secondary);
-    font-size: 0.68rem;
-}
-
 /* Board view improvements */
 .tm-gantt__board-view {
     display: flex;
@@ -1293,6 +178,7 @@
     height: 100%;
     align-items: flex-start;
 }
+
 .tm-gantt__board-column {
     min-width: 220px;
     flex-shrink: 0;
@@ -1304,6 +190,7 @@
     gap: 8px;
     max-height: calc(100% - 32px);
 }
+
 .tm-gantt__board-column-header {
     display: flex;
     align-items: center;
@@ -1311,6 +198,7 @@
     padding-bottom: 8px;
     border-bottom: 2px solid var(--tm-border-color);
 }
+
 .tm-gantt__board-column-count {
     font-size: 0.72rem;
     color: var(--tm-text-secondary);
@@ -1318,6 +206,7 @@
     border-radius: 10px;
     padding: 1px 7px;
 }
+
 .tm-gantt__board-column-body {
     display: flex;
     flex-direction: column;
@@ -1325,6 +214,7 @@
     overflow-y: auto;
     flex: 1;
 }
+
 .tm-gantt__board-card {
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
@@ -1333,35 +223,42 @@
     cursor: pointer;
     transition: box-shadow 0.15s ease, transform 0.1s ease;
 }
+
 .tm-gantt__board-card:hover {
     box-shadow: var(--tm-shadow-md);
     transform: translateY(-1px);
 }
+
 .tm-gantt__board-card-accent {
     height: 3px;
 }
+
 .tm-gantt__board-card-title {
     padding: 8px 10px 4px;
     font-size: 0.82rem;
     font-weight: 500;
     color: var(--tm-text-primary);
 }
+
 .tm-gantt__board-card-meta {
     padding: 0 10px 8px;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
+
 .tm-gantt__board-card-dates {
     font-size: 0.7rem;
     color: var(--tm-text-secondary);
 }
+
 .tm-gantt__board-card-progress {
     height: 3px;
     background: var(--tm-color-border-subtle);
     border-radius: 2px;
     overflow: hidden;
 }
+
 .tm-gantt__board-card-progress-fill {
     height: 100%;
     background: var(--tm-color-primary);
@@ -1378,40 +275,6 @@
     overflow: hidden;
 }
 
-/* ── Left Sidebar Navigation (F5.13) ──────────────────── */
-.tm-gantt__sidebar {
-    width: 48px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--tm-space-2, 8px) 0;
-    border-right: 1px solid var(--tm-border-color);
-    background: var(--tm-bg-surface-secondary);
-    gap: 4px;
-}
-.tm-gantt__sidebar-btn {
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: transparent;
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--tm-text-secondary);
-    transition: background 0.15s, color 0.15s;
-}
-.tm-gantt__sidebar-btn:hover {
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
-}
-.tm-gantt__sidebar-btn--active {
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
-}
-
 /* ── Dashboard widget grid (CSS-5.8.1) ─────────────────── */
 .tm-gantt__dashboard-view {
     display: grid;
@@ -1421,6 +284,7 @@
     flex: 1;
     overflow-y: auto;
 }
+
 .tm-gantt__dashboard-stat {
     display: flex;
     align-items: center;
@@ -1434,6 +298,7 @@
     overflow: auto;
     padding: 8px 0;
 }
+
 .tm-gantt__people-row {
     display: flex;
     flex-direction: row;
@@ -1441,6 +306,7 @@
     border-bottom: 1px solid var(--tm-border-color);
     min-height: 40px;
 }
+
 .tm-gantt__people-row-header {
     width: 180px;
     flex-shrink: 0;
@@ -1452,17 +318,20 @@
     font-weight: 500;
     border-right: 1px solid var(--tm-border-color);
 }
+
 .tm-gantt__people-row-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .tm-gantt__people-row-timeline {
     flex: 1;
     position: relative;
     overflow: hidden;
     height: 40px;
 }
+
 .tm-gantt__people-bar {
     position: absolute;
     top: 8px;
@@ -1477,6 +346,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .tm-gantt__resource-vacation {
     position: absolute;
     top: 0;
@@ -1491,39 +361,3 @@
     pointer-events: none;
     z-index: 1;
 }
-
-/* ── Virtual Resource Avatar (F5.11) ───────────────────── */
-.tm-gantt__bar-avatar--virtual {
-    background: var(--tm-bg-surface-secondary) !important;
-    color: var(--tm-text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-}
-
-/* ── Timer pulse animation (F5.12) ─────────────────────── */
-@keyframes tm-timer-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-}
-.tm-gantt__bar--timer-active::after {
-    content: "⏱";
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.75rem;
-    animation: tm-timer-pulse 1.2s ease-in-out infinite;
-}
-
-/* ── Overloaded assignee icon (F5.1.5) ─────────────────── */
-.tm-gantt__overload-icon {
-    display: inline-flex;
-    align-items: center;
-    color: var(--tm-color-danger);
-    font-size: 0.7rem;
-    margin-left: 2px;
-    vertical-align: middle;
-}
-

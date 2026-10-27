@@ -1,0 +1,350 @@
+/* TmGanttTree: task grid (header, rows, cells, inline edit, bulk bar). The status chip is TmGanttStatusChip. */
+
+/* ─── Task Tree ────────────────────────────────────────────────── */
+
+.tm-gantt__tree {
+    width: 420px;
+    min-width: 300px;
+    border-right: 1px solid var(--tm-border-color);
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-bg-surface);
+}
+
+.tm-gantt__tree-header {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--tm-space-3, 0.75rem);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tm-text-secondary);
+    flex-shrink: 0;
+}
+
+.tm-gantt__tree-header-cell {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-gantt__tree-header-cell--narrow {
+    flex: 0 0 80px;
+    text-align: center;
+}
+
+.tm-gantt__tree-header-cell--status {
+    flex: 0 0 90px;
+    text-align: center;
+}
+
+.tm-gantt__tree-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.tm-gantt__tree-row {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--tm-space-3, 0.75rem);
+    border-bottom: 1px solid var(--tm-border-color);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.tm-gantt__tree-row:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-gantt__tree-row--selected {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-gantt__tree-cell {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1, 0.25rem);
+    font-size: 0.875rem;
+    color: var(--tm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-gantt__tree-cell--title {
+    min-width: 150px;
+}
+
+.tm-gantt__tree-cell--narrow {
+    flex: 0 0 80px;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__tree-cell--status {
+    flex: 0 0 90px;
+    justify-content: center;
+}
+
+/* ─── Drag handle ──────────────────────────────────────────────── */
+
+.tm-gantt__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 20px;
+    color: var(--tm-text-tertiary);
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+}
+
+.tm-gantt__tree-row:hover .tm-gantt__drag-handle {
+    opacity: 1;
+}
+
+.tm-gantt__tree-row--dragging { opacity: 0.4; }
+
+.tm-gantt__tree-row--drop-before { border-top: 2px solid var(--tm-color-primary); }
+
+.tm-gantt__tree-row--drop-after { border-bottom: 2px solid var(--tm-color-primary); }
+
+.tm-gantt__tree-row--drop-child {
+    background: var(--tm-color-primary-subtle);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+/* ─── Expand button ────────────────────────────────────────────── */
+
+.tm-gantt__expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: var(--tm-text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tm-gantt__expand-spacer {
+    display: inline-block;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+/* ─── Priority dot ─────────────────────────────────────────────── */
+
+.tm-gantt__priority-icon {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tm-gantt__priority-icon--highest{ background: var(--tm-priority-highest); }
+
+.tm-gantt__priority-icon--high   { background: var(--tm-priority-high); }
+
+.tm-gantt__priority-icon--medium { background: var(--tm-priority-medium); }
+
+.tm-gantt__priority-icon--low    { background: var(--tm-priority-low); }
+
+.tm-gantt__priority-icon--lowest { background: var(--tm-priority-lowest); }
+
+/* ─── Milestone icon ───────────────────────────────────────────── */
+
+.tm-gantt__milestone-icon {
+    color: var(--tm-color-warning);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.tm-gantt__task-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Phase 2: WBS Column ──────────────────────────────────────── */
+
+.tm-gantt__tree-header-cell--wbs,
+.tm-gantt__tree-cell--wbs {
+    width: 50px;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ─── Phase 2: Inline Edit ─────────────────────────────────────── */
+
+.tm-gantt__inline-edit {
+    flex: 1;
+    min-width: 60px;
+    padding: 0 var(--tm-space-1, 0.25rem);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: inherit;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
+}
+
+/* ─── Phase 2: Progress mini-bar ───────────────────────────────── */
+
+.tm-gantt__progress-mini {
+    display: inline-block;
+    width: 48px;
+    height: 6px;
+    background: var(--tm-bg-surface-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.tm-gantt__progress-mini-fill {
+    height: 100%;
+    background: var(--tm-color-primary);
+    border-radius: 3px;
+    transition: width 0.2s ease;
+}
+
+.tm-gantt__progress-mini-label {
+    font-size: 0.75rem;
+    color: var(--tm-text-secondary);
+}
+
+/* ─── Phase 2: Bulk select ─────────────────────────────────────── */
+
+.tm-gantt__tree-header-cell--checkbox,
+.tm-gantt__tree-cell--checkbox {
+    width: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tm-gantt__bulk-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    background: var(--tm-color-primary-subtle);
+    border-top: 1px solid var(--tm-color-primary);
+    font-size: 0.875rem;
+}
+
+.tm-gantt__bulk-toolbar-count {
+    font-weight: 600;
+    color: var(--tm-color-primary);
+    margin-right: var(--tm-space-2, 0.5rem);
+}
+
+/* ─── Phase 2: Overdue highlight ───────────────────────────────── */
+
+.tm-gantt__tree-row--overdue {
+    background: var(--tm-color-danger-subtle) !important;
+}
+
+/* ─── Phase 2: Col toggle visibility ───────────────────────────── */
+
+.tm-gantt__col-toggle {
+    margin-left: 4px;
+    cursor: pointer;
+    accent-color: var(--tm-color-primary);
+}
+
+/* ─── Phase 3: Deviation badge ───────────────────────────────────── */
+
+.tm-gantt__deviation-badge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.tm-gantt__deviation-badge--late {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
+}
+
+.tm-gantt__deviation-badge--early {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success);
+}
+
+/* ─── Phase 3: Custom field columns ─────────────────────────────── */
+
+.tm-gantt__custom-field-header,
+.tm-gantt__custom-field-cell {
+    min-width: 80px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ─── Phase 4: Inline badges ────────────────────────────────────── */
+
+.tm-gantt__inline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 4px;
+    cursor: default;
+}
+
+.tm-gantt__inline-badge--attachment {
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning);
+}
+
+.tm-gantt__inline-badge--comment {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* ── Phase 5: Alternate Views ── */
+
+/* List View */
+.tm-gantt__main--list-view .tm-gantt__tree {
+    flex: 1;
+    max-width: 100%;
+}
+
+/* ── Overloaded assignee icon (F5.1.5) ─────────────────── */
+.tm-gantt__overload-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-danger);
+    font-size: 0.7rem;
+    margin-left: 2px;
+    vertical-align: middle;
+}
