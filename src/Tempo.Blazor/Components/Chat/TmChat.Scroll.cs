@@ -184,8 +184,8 @@ public partial class TmChat
     /// </summary>
     private int _pendingRootDelta;
 
-    /// <summary>The message-list change kinds the scroll logic distinguishes.</summary>
-    private enum ScrollChangeMode
+    /// <summary>The message-list change kinds the scroll logic distinguishes (internal for tests).</summary>
+    internal enum ScrollChangeMode
     {
         /// <summary>No message change (a typing-only or parameter-only re-render, or a middle-row edit): the scroller only refreshes its snapshot and re-pins a grown pinned viewport.</summary>
         None,
@@ -207,8 +207,14 @@ public partial class TmChat
             && _unreadCount > 0
             && !_atBottom;
 
-    /// <summary>Whether the built-in "load older" affordance renders (host wired the callback).</summary>
-    private bool ShowLoadOlder => HasMoreBefore && OnLoadOlder.HasDelegate;
+    /// <summary>
+    /// Whether the built-in "load older" affordance renders (host wired the callback). FZE-14:
+    /// with an active render window it also renders while the window start sits above zero —
+    /// the click then EXPANDS the window (a render prepend) instead of calling
+    /// <see cref="OnLoadOlder"/>, so the affordance reaches rows the window does not render yet.
+    /// </summary>
+    private bool ShowLoadOlder
+        => (_window is not null && _window.Start > 0) || (HasMoreBefore && OnLoadOlder.HasDelegate);
 
     /// <summary>
     /// Whether the message at the END of the RENDERED root sequence was sent by the current
@@ -346,12 +352,11 @@ public partial class TmChat
         // before a single after-render (a fast parameter set racing the dispatcher). Reset
         // wins over anything, a None keeps what was already pending, any real change replaces
         // a None — so Append-then-None still scrolls (and counts) on the single render.
-        _pendingMode = (_pendingMode, mode) switch
-        {
-            (_, ScrollChangeMode.Reset) or (ScrollChangeMode.Reset, _) => ScrollChangeMode.Reset,
-            (var pending, ScrollChangeMode.None) => pending,
-            _ => mode,
-        };
+        MergePendingMode(mode);
+
+        // FZE-14 hook: slide the render window over the new root sequence (a no-op while the
+        // opt-in RenderWindowSize is unset — the window stays null and every row renders).
+        SyncRenderWindow(roots, mode);
 
         // A stale focus anchor (a click-initiated load whose prepend never arrived, e.g. the
         // host ignored the request) must not steal focus on a LATER prepend: clear it unless
@@ -375,89 +380,167 @@ public partial class TmChat
     }
 
     /// <summary>
+    /// Merges a change classification into the pending mode (the FZE-14 render-window expansion
+    /// parks a Prepend here from OUTSIDE the parameter set too): Reset wins over anything, a
+    /// None keeps what was already pending, any real change replaces a None — EXCEPT the
+    /// Prepend/Append pair ABOVE the bottom, where the position restore wins and the appended
+    /// rows travel as the accumulated <see cref="_pendingRootDelta"/> (counted behind the jump
+    /// button by the after-render prepend branch).
+    /// </summary>
+    private void MergePendingMode(ScrollChangeMode mode)
+        => _pendingMode = MergeScrollChangeModes(_pendingMode, mode, _atBottom);
+
+    /// <summary>The pure merge decision (internal for tests): see <see cref="MergePendingMode"/>.</summary>
+    internal static ScrollChangeMode MergeScrollChangeModes(
+        ScrollChangeMode pending, ScrollChangeMode incoming, bool atBottom)
+    {
+        // A PREPEND and an APPEND arriving before ONE render merge by READING POSITION: above
+        // the bottom the prepend's anchor restore must win (an append classification would drop
+        // the position preservation for the older history) and the appended rows count as
+        // unread; at the bottom the append wins (the list pins to the tail anyway).
+        if (!atBottom
+            && (pending, incoming) is (ScrollChangeMode.Prepend, ScrollChangeMode.Append)
+                or (ScrollChangeMode.Append, ScrollChangeMode.Prepend))
+        {
+            return ScrollChangeMode.Prepend;
+        }
+
+        return (pending, incoming) switch
+        {
+            (_, ScrollChangeMode.Reset) or (ScrollChangeMode.Reset, _) => ScrollChangeMode.Reset,
+            (var keptPending, ScrollChangeMode.None) => keptPending,
+            _ => incoming,
+        };
+    }
+
+    /// <summary>
     /// Applies the pending scroll mode AFTER the render (the DOM now carries the new rows):
     /// a reset lands at the bottom, an append defers to the JS scroller — it scrolls when the
     /// viewport WAS at the bottom (the scroller's own <c>pinned</c> belief or a live
     /// measurement) and reports <c>unread</c> otherwise (then the user's own message still
     /// scrolls, anything else counts behind the jump button) — a prepend restores the position
     /// on the scroller's anchor, and a NO-CHANGE render only refreshes the scroller's snapshot
-    /// (which re-pins a pinned viewport whose content grew, e.g. the typing indicator).
-    /// Called from <c>OnAfterRenderAsync</c>; a no-op under <see cref="ChatAutoScroll.Never"/>.
+    /// (which re-pins a pinned viewport whose content grew, e.g. the typing indicator). Under
+    /// <see cref="ChatAutoScroll.Never"/> the classification is consumed without any scroll
+    /// call — except a parked render-window expansion's own
+    /// <c>afterUpdate("prepend")</c> anchor restore.
+    /// Called from <c>OnAfterRenderAsync</c>.
     /// </summary>
     private async Task ApplyScrollAfterRenderAsync(bool firstRender)
     {
-        if (AutoScroll == ChatAutoScroll.Never) return;
-
-        var mode = _pendingMode;
-        _pendingMode = ScrollChangeMode.None;
-        // The appended count travels WITH the mode: captured and cleared as the mode is
-        // consumed, so a merged (Append + None) classification counts exactly once and a
-        // later change starts from zero.
-        var pendingRootDelta = _pendingRootDelta;
-        _pendingRootDelta = 0;
-
-        // Instant for the first render and a replaced list: an animated initial scroll fires
-        // events along the whole track (a spurious near-top report would auto-load history)
-        // and a conversation opening should land at the bottom at once.
-        if (firstRender || mode == ScrollChangeMode.Reset)
+        try
         {
-            await ScrollToBottomCoreAsync(instant: true);
-            return;
-        }
+            // A parked FZE-14 window expansion asks for the scroller's prepend bookkeeping even
+            // under AutoScroll.Never (the expansion is a DOM prepend the component itself made);
+            // captured and cleared with the mode so it is consumed exactly once.
+            var windowPrepend = _pendingWindowPrepend;
+            _pendingWindowPrepend = false;
 
-        var scroller = _scroller;
-        if (scroller is null) return;
-
-        if (mode == ScrollChangeMode.None)
-        {
-            await InvokeAfterUpdateAsync(scroller, "none");
-            return;
-        }
-
-        // Always pins the list to the bottom on EVERY message change — no position bookkeeping
-        // (the scroller's snapshot is refreshed by its own scrollToBottom), the scroll decides,
-        // nothing counts as unread.
-        if (AutoScroll == ChatAutoScroll.Always)
-        {
-            await ScrollToBottomCoreAsync();
-        }
-        else
-        {
-            var status = await InvokeAfterUpdateAsync(
-                scroller, mode == ScrollChangeMode.Append ? "append" : "prepend");
-
-            if (mode == ScrollChangeMode.Append
-                && !string.Equals(status, "scrolled", StringComparison.Ordinal))
+            if (AutoScroll == ChatAutoScroll.Never)
             {
-                // The scroller did not scroll (the user was reading above the bottom, or it
-                // could not answer): the user's own message still lands at the bottom, every
-                // other append is counted behind the jump button.
-                if (IsLastRootMessageOwn)
+                // The component makes no scroll calls at all; the classification is still
+                // CONSUMED so a later change starts fresh (a parked FZE-14 window expansion
+                // must not leak into a later append's mode). The expansion's own anchor restore
+                // still runs: the DOM above the reading position grew, so the scroller's
+                // afterUpdate("prepend") preserves the position across it.
+                _pendingMode = ScrollChangeMode.None;
+                _pendingRootDelta = 0;
+                if (windowPrepend)
                 {
-                    await ScrollToBottomCoreAsync();
+                    var neverScroller = _scroller;
+                    if (neverScroller is not null) await InvokeAfterUpdateAsync(neverScroller, "prepend");
                 }
-                else
+
+                return;
+            }
+
+            var mode = _pendingMode;
+            _pendingMode = ScrollChangeMode.None;
+            // The appended count travels WITH the mode: captured and cleared as the mode is
+            // consumed, so a merged (Append + None) classification counts exactly once and a
+            // later change starts from zero.
+            var pendingRootDelta = _pendingRootDelta;
+            _pendingRootDelta = 0;
+
+            // Instant for the first render and a replaced list: an animated initial scroll fires
+            // events along the whole track (a spurious near-top report would auto-load history)
+            // and a conversation opening should land at the bottom at once.
+            if (firstRender || mode == ScrollChangeMode.Reset)
+            {
+                await ScrollToBottomCoreAsync(instant: true);
+                return;
+            }
+
+            var scroller = _scroller;
+            if (scroller is null) return;
+
+            if (mode == ScrollChangeMode.None)
+            {
+                await InvokeAfterUpdateAsync(scroller, "none");
+                return;
+            }
+
+            // Always pins the list to the bottom on EVERY message change — no position bookkeeping
+            // (the scroller's snapshot is refreshed by its own scrollToBottom), the scroll decides,
+            // nothing counts as unread.
+            if (AutoScroll == ChatAutoScroll.Always)
+            {
+                await ScrollToBottomCoreAsync();
+            }
+            else
+            {
+                var status = await InvokeAfterUpdateAsync(
+                    scroller, mode == ScrollChangeMode.Append ? "append" : "prepend");
+
+                // A MERGED Append+Prepend render (the user reads above the bottom): the PREPEND
+                // restore won the afterUpdate call, so the appended rows never got the append
+                // branch's unread treatment — count them behind the jump button here. A pure
+                // prepend has a zero delta and counts nothing.
+                if (mode == ScrollChangeMode.Prepend && pendingRootDelta > 0)
                 {
-                    _unreadCount += pendingRootDelta > 0 ? pendingRootDelta : 1;
-                    StateHasChanged();
+                    _unreadCount += pendingRootDelta;
+                    if (_unreadCount > 0) StateHasChanged();
+                }
+
+                if (mode == ScrollChangeMode.Append
+                    && !string.Equals(status, "scrolled", StringComparison.Ordinal))
+                {
+                    // The scroller did not scroll (the user was reading above the bottom, or it
+                    // could not answer): the user's own message still lands at the bottom, every
+                    // other append is counted behind the jump button.
+                    if (IsLastRootMessageOwn)
+                    {
+                        await ScrollToBottomCoreAsync();
+                    }
+                    else
+                    {
+                        _unreadCount += pendingRootDelta > 0 ? pendingRootDelta : 1;
+                        StateHasChanged();
+                    }
+                }
+            }
+
+            // A click-initiated prepend moves focus off the (relocated/aria-disabled) load-older
+            // button onto the previously-first row — never leave it on the body.
+            if (mode == ScrollChangeMode.Prepend && _loadOlderFocusAnchorId is not null)
+            {
+                var anchorId = _loadOlderFocusAnchorId;
+                _loadOlderFocusAnchorId = null;
+                try
+                {
+                    await scroller.InvokeVoidAsync("focusMessage", anchorId);
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+                {
+                    // The circuit dropped mid-load — focus is best-effort, the messages are safe.
                 }
             }
         }
-
-        // A click-initiated prepend moves focus off the (relocated/aria-disabled) load-older
-        // button onto the previously-first row — never leave it on the body.
-        if (mode == ScrollChangeMode.Prepend && _loadOlderFocusAnchorId is not null)
+        finally
         {
-            var anchorId = _loadOlderFocusAnchorId;
-            _loadOlderFocusAnchorId = null;
-            try
-            {
-                await scroller.InvokeVoidAsync("focusMessage", anchorId);
-            }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
-            {
-                // The circuit dropped mid-load — focus is best-effort, the messages are safe.
-            }
+            // FZE-14: a deep-link window expansion waits for THIS bookkeeping to run (its anchor
+            // row is mounted by now) — signal the waiter on every path, including the ones above.
+            SignalRenderWindowApplied();
         }
     }
 
@@ -494,7 +577,11 @@ public partial class TmChat
         _atBottom = atBottom;
         var hadUnread = _unreadCount;
         if (atBottom) _unreadCount = 0;
-        if (stateChanged || hadUnread != _unreadCount) StateHasChanged();
+        // FZE-14 rule (c): the return to the bottom is when the window finally trims the rows
+        // that arrived while the user read above the bottom (never before — the DOM above the
+        // viewport must not change while they read).
+        var trimmed = atBottom && TrimRenderWindowOnReturnToBottom();
+        if (stateChanged || hadUnread != _unreadCount || trimmed) StateHasChanged();
     });
 
     /// <summary>
@@ -523,10 +610,27 @@ public partial class TmChat
     /// Fires <see cref="OnLoadOlder"/> once per armed near-top visit. The
     /// <see cref="_loadOlderInFlight"/> guard covers the window before the host's
     /// <see cref="IsLoadingOlder"/> parameter arrives — a click racing the top-edge report
-    /// fires the load once.
+    /// fires the load once. FZE-14: with a render window the top edge EXPANDS the window —
+    /// but only after the near-top report is verified against the LIVE geometry TWICE,
+    /// <see cref="NearTopVerificationDelayMs"/> apart
+    /// (<see cref="IsScrollerNearTopAsync"/>): a transient scroll clamp or a mis-scoring
+    /// smooth scroll during a huge window render holds the viewport in the top band for a
+    /// fraction of a second, and that momentary report must not mount thousands of rows.
     /// </summary>
     private async Task TryLoadOlderAsync()
     {
+        // FZE-14 rule (d): with a render window, reaching the top edge first EXPANDS the window
+        // (a render prepend — no host round trip); the host page load fires only once the window
+        // already covers the whole sequence (Start == 0).
+        if (_window is not null && _window.Start > 0)
+        {
+            if (!await IsScrollerNearTopAsync()) return;
+            await Task.Delay(NearTopVerificationDelayMs);
+            if (_disposed || _window.Start <= 0 || !await IsScrollerNearTopAsync()) return;
+            ExpandRenderWindowUpward(focusAnchorId: null);
+            return;
+        }
+
         if (_loadOlderInFlight || !_loadOlderArmed || !HasMoreBefore || IsLoadingOlder || !OnLoadOlder.HasDelegate) return;
         _loadOlderArmed = false;
         _loadOlderInFlight = true;
@@ -540,6 +644,29 @@ public partial class TmChat
         }
     }
 
+    /// <summary>How long the near-top state must hold before the top-edge window expansion fires.</summary>
+    private const int NearTopVerificationDelayMs = 300;
+
+    /// <summary>
+    /// Re-checks the scroller's live near-top geometry before a top-edge window expansion.
+    /// Returns <see langword="true"/> when the scroller is unavailable (prerender, a dropped
+    /// circuit) so the trigger keeps today's behavior; a <see langword="false"/> answer vetoes
+    /// the expansion (the report was a transient, the viewport is not in the top band).
+    /// </summary>
+    private async Task<bool> IsScrollerNearTopAsync()
+    {
+        var scroller = _scroller;
+        if (scroller is null) return true;
+        try
+        {
+            return await scroller.InvokeAsync<bool>("isNearTop");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+        {
+            return true;
+        }
+    }
+
     /// <summary>
     /// Click on the built-in "load older" affordance (the in-flight guard and the
     /// <c>aria-disabled</c> state guard double fires). When the click left focus ON the button,
@@ -549,6 +676,15 @@ public partial class TmChat
     /// </summary>
     private async Task HandleLoadOlderClickAsync()
     {
+        // FZE-14 rule (h): with a render window the click above the window start EXPANDS the
+        // window one step (a render prepend with the same focus-anchor contract as a host
+        // prepend — the button is about to be aria-disabled); the host load fires at Start == 0.
+        if (_window is not null && _window.Start > 0)
+        {
+            ExpandRenderWindowUpward(_loadOlderFocused ? FirstRenderedRootId() : null);
+            return;
+        }
+
         if (_loadOlderInFlight || IsLoadingOlder || !HasMoreBefore) return;
         _loadOlderArmed = false;
         _loadOlderFocusAnchorId = _loadOlderFocused ? RootMessages().FirstOrDefault()?.Id : null;
@@ -572,6 +708,14 @@ public partial class TmChat
     /// activation (<c>e.Detail &gt; 0</c>) deliberately skips the composer — the user is
     /// pointing, not typing — and focuses the last message row (<c>preventScroll</c>, the
     /// smooth scroll of the click itself is not fought).
+    /// <para>
+    /// FZE-14 rule (c): the click IS a return to the bottom, so the render-window trims its
+    /// away-append excess RIGHT HERE (and refreshes the tracked keep-id through
+    /// <see cref="TrimRenderWindowOnReturnToBottom"/>) — the scroller's own at-bottom report may
+    /// be delayed by the smooth scroll (or land after a huge window render has churned the
+    /// DOM), and the trim must not depend on it. A window grown by a deep-link or top-edge
+    /// expansion holds no claim and is deliberately left mounted.
+    /// </para>
     /// </summary>
     private async Task HandleJumpToNewClickAsync(MouseEventArgs e)
     {
@@ -579,6 +723,10 @@ public partial class TmChat
         _atBottom = true;
         StateHasChanged();
         await ScrollToBottomCoreAsync();
+
+        // The click is a return to the bottom: reclaim the away-append excess immediately (the
+        // scroller's at-bottom report remains the backstop for a manual scroll down).
+        if (TrimRenderWindowOnReturnToBottom()) StateHasChanged();
 
         if (e.Detail == 0)
         {
@@ -666,6 +814,10 @@ public partial class TmChat
     private async Task<bool> ScrollToMessageCoreAsync(string? id)
     {
         if (string.IsNullOrWhiteSpace(id) || _disposed) return false;
+        // FZE-14: an anchor ABOVE the render window is mounted first (a render prepend with the
+        // anchor restore, awaited through the after-render bookkeeping); a thread reply or an
+        // unknown id changes nothing — the JS call below keeps today's semantics (not found).
+        await EnsureMessageInRenderWindowAsync(id);
         var scroller = _scroller;
         if (scroller is null) return false;
         try
@@ -771,6 +923,10 @@ public partial class TmChat
         var handle = _scroller;
         _scroller = null;
         await DisposeJsHandleAsync(handle);
+        // FZE-14: a deep-link waiter parked on the after-render signal must not hang on dispose.
+        // Dispose releases UNCONDITIONALLY (force) — after it no render is coming that could arm
+        // the release gate.
+        SignalRenderWindowApplied(force: true);
         await DisposeViewportTrackerAsync();
     }
 }

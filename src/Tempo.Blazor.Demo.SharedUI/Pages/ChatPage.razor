@@ -1,7 +1,9 @@
 @page "/chat"
 @using Tempo.Blazor.Components.Chat
 @using Tempo.Blazor.Models
+@using Microsoft.JSInterop
 @implements IDisposable
+@inject IJSRuntime JS
 <PageTitle>Chat – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -611,6 +613,55 @@
     </div>
 </section>
 
+<!-- Render window (FZE-14): the opt-in virtualization of very long conversations -->
+<section class="demo-section" data-testid="chat-render-window-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Render Window (Long Conversations)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">FZE-14</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        5 000 messages, <code>RenderWindowSize="100"</code>: only the last 100 rows render (the
+        window is the TAIL of the sequence). Reaching the top edge grows the window by 50 rows as
+        a render PREPEND — the reading position survives — and the built-in <em>Load older</em>
+        affordance reveals window rows until the start sits at zero. The jump buttons mount the
+        anchor row first (a deep link outside the window expands the window, waits for the render
+        and only then navigates). The thread panel is deliberately not windowed.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmChat @ref="_renderWindowChat"
+                        CurrentUser="_currentUser"
+                        Messages="_renderWindowMessages"
+                        OnSend="HandleRenderWindowOwnSend"
+                        RenderWindowSize="100"
+                        MessagesAriaLabel="Render window demo messages" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowJumpAsync">
+                Jump to message #10
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowFocusAsync">
+                Focus message #10
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowInjectAsync">
+                Inject window message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowCountAsync">
+                Count rendered rows
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Rendered rows: <strong data-testid="chat-render-window-count">@_renderWindowRowCount</strong>
+                of @_renderWindowMessages.Count — a deep link outside the window mounts the anchor
+                first, so the count grows by the expansion it needed.
+            </p>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -692,6 +743,18 @@
             new ChatMessage { Id = "c1", Text = "Can we ship the K6 chat update today?", Author = _bob, Timestamp = new DateTimeOffset(2026, 7, 12, 8, 10, 0, TimeSpan.Zero) },
             new ChatMessage { Id = "c2", Text = "Yes — threads, reactions and receipts are all in.", Author = _alice, Timestamp = new DateTimeOffset(2026, 7, 12, 8, 11, 0, TimeSpan.Zero) },
         };
+
+        // Render window (FZE-14): 5 000 generated rows — only the last RenderWindowSize render.
+        _renderWindowMessages = new List<ChatMessage>(5000);
+        for (var i = 1; i <= 5000; i++)
+        {
+            _renderWindowMessages.Add(new(
+                $"rw-{i}",
+                $"Message #{i} of 5000 — the render window keeps the DOM to the tail of the conversation.",
+                i % 2 == 0 ? _alice : _bob,
+                i % 2 == 0 ? ChatMessageType.Outgoing : ChatMessageType.Incoming,
+                new DateTimeOffset(2026, 7, 12, 6, 0, 0, TimeSpan.Zero).AddSeconds(i)));
+        }
 
         _basicMessages = new()
         {
@@ -1147,6 +1210,71 @@
         };
     }
 
+    // ── Render window demo (FZE-14) — 5 000 rows, only the tail renders ──
+    private TmChat? _renderWindowChat;
+    private List<ChatMessage> _renderWindowMessages = new();
+    private int _renderWindowRowCount;
+
+    private async Task HandleRenderWindowJumpAsync()
+    {
+        if (_renderWindowChat is null) return;
+        await _renderWindowChat.ScrollToMessageAsync("rw-10");
+        await CountRenderWindowRowsAsync();
+    }
+
+    private async Task HandleRenderWindowFocusAsync()
+    {
+        if (_renderWindowChat is null) return;
+        await _renderWindowChat.FocusMessageAsync("rw-10");
+        await CountRenderWindowRowsAsync();
+    }
+
+    private async Task HandleRenderWindowInjectAsync()
+    {
+        _renderWindowSeq++;
+        _renderWindowMessages.Add(new($"rw-live-{_renderWindowSeq}", $"Live message #{_renderWindowSeq} — the tail is always rendered.",
+            _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        await CountRenderWindowRowsAsync();
+    }
+
+    private Task HandleRenderWindowOwnSend(ChatSendRequest request)
+    {
+        _renderWindowSeq++;
+        _renderWindowMessages.Add(new($"rw-sent-{_renderWindowSeq}", request.Text,
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRenderWindowCountAsync() => CountRenderWindowRowsAsync();
+
+    // The demo-only ES module that counts the mounted rows — an exported countRows function
+    // instead of window.eval (strict-CSP safe, the selector stays testable). Lazily imported
+    // once per circuit and disposed with the page.
+    private Task<IJSObjectReference>? _renderWindowModuleTask;
+
+    private Task<IJSObjectReference> GetRenderWindowModuleTask() =>
+        _renderWindowModuleTask ??= JS.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/Tempo.Blazor.Demo.SharedUI/js/chat-render-window.js").AsTask();
+
+    private async Task CountRenderWindowRowsAsync()
+    {
+        try
+        {
+            var module = await GetRenderWindowModuleTask();
+            _renderWindowRowCount = await module.InvokeAsync<int>(
+                "countRows", "[data-testid='chat-render-window-section']");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException
+            or InvalidOperationException or TaskCanceledException)
+        {
+            // Prerender, a static host or a dropped circuit — the counter stays at its last value.
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private int _renderWindowSeq;
+
     // ── MessageTemplate: route every host-owned Kind to its bubble ────────
     private RenderFragment RenderCustomMessage(ChatMessageContext context) => context.Message.Kind switch
     {
@@ -1581,5 +1709,27 @@
         // pending Task.Delay would keep the circuit alive after the page is gone.
         _cts.Cancel();
         _cts.Dispose();
+
+        // Release the demo-only render-window module handle (fire-and-forget: Dispose is
+        // synchronous, a dropped circuit has already disposed the module server-side).
+        var moduleTask = _renderWindowModuleTask;
+        _renderWindowModuleTask = null;
+        if (moduleTask is not null)
+        {
+            _ = ReleaseRenderWindowModuleAsync(moduleTask);
+        }
+    }
+
+    private static async Task ReleaseRenderWindowModuleAsync(Task<IJSObjectReference> moduleTask)
+    {
+        try
+        {
+            var module = await moduleTask;
+            await module.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+        {
+            // Best-effort teardown of a demo helper.
+        }
     }
 }

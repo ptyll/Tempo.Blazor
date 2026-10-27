@@ -397,6 +397,7 @@ function scrollBehavior() {
  *   dispose: Function,
  *   isAtBottom: Function,
  *   isPinned: Function,
+ *   isNearTop: Function,
  *   scrollToBottom: Function,
  *   scrollLastMessageAboveBottom: Function,
  *   scrollToMessage: Function,
@@ -406,6 +407,10 @@ function scrollBehavior() {
  * }} `dispose` removes the listeners (idempotent); `isAtBottom()` reads the live state;
  *   `isPinned()` reads the sticky at-bottom belief (set by every programmatic scroll, cleared
  *   only by a user scroll upward) — the viewport tracker's preferred rescue signal;
+ *   `isNearTop()` reads the live near-top geometry (the top band the near-top report drives);
+ *   TmChat re-checks it before a top-edge render-window expansion, because a transient clamp
+ *   mid-churn (a deep-link restore, a huge window render) can fire a momentary near-top
+ *   report that must not mount thousands of rows;
  *   `scrollLastMessageAboveBottom(gap)` is the keyboard rescue landing;
  *   `scrollToBottom()` / `scrollToMessage(id)` are the programmatic scrolls TmChat exposes
  *   (`scrollToMessage` returns whether the anchor was found); `focusMessage(id)` focuses a
@@ -611,6 +616,7 @@ export function attachScroller(container, dotNetRef, options) {
         },
         isAtBottom,
         isPinned: () => pinned,
+        isNearTop,
         /**
          * @param {boolean} [instant] Skip the animation. TmChat passes true for the FIRST render
          *   and for a replaced list: an animated initial scroll would fire scroll events along the

@@ -427,6 +427,10 @@ public partial class TmChat
     private async Task<bool> FocusMessageCoreAsync(string? id)
     {
         if (_disposed || string.IsNullOrWhiteSpace(id)) return false;
+        // FZE-14: an anchor ABOVE the render window is mounted first (a render prepend with the
+        // anchor restore, awaited through the after-render bookkeeping); a thread reply or an
+        // unknown id changes nothing — the JS call below keeps today's semantics (not found).
+        await EnsureMessageInRenderWindowAsync(id);
         var scroller = _scroller;
         if (scroller is null) return false;
         try

@@ -327,6 +327,20 @@
       "description": "Replaces the CONTENT of the floating jump-to-new button (icon + localized count) with host markup. The template receives the current count of unseen messages; the <button> element itself stays built-in (its click — scroll to the bottom, count reset, composer refocus — and the TmChat_JumpToNew aria-label are the component's). Null (the default) renders the built-in content."
     },
     {
+      "name": "RenderWindowSize",
+      "type": "int?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Opt-in render window over very long conversations (FZE-14). Null (the default) renders EVERY root row - today's behavior, byte-identical markup. A positive value renders only the LAST N root rows (clamped to a minimum of 20) and grows upward by RenderWindowStep rows whenever the user reaches the top edge - the expansion is applied as a render PREPEND, so the chat.js anchor restore keeps the reading position and the whole scroll contract (pinned tail, jump-to-new count, announcements, read receipts, draft guard) keeps working, because all of those are driven by the DATA (Messages), never by the DOM. Rules: (a) the first render and a replaced list window the last N rows; (b) an append with the viewport pinned to the bottom slides the window with the tail (the top is trimmed to count - N); (c) an append while the user reads above the bottom trims NOTHING - the DOM above the viewport must not change - the trim happens when the scroller reports the return to the bottom (the jump-to-new click trims immediately, it does not wait for the report), reclaims only that AWAY-APPEND excess and refreshes the tracked keep-id onto the trimmed start (a deep-link or top-edge expansion mounts its rows deliberately and drops the claim, so it survives its own restore's at-bottom report and persists until the next pinned append); a row VANISHING from the list keeps the start (clamped) - only a pinned append falls back to the tail; the jump-to-new click trims the excess immediately (it IS a return to the bottom); (d) reaching the top edge expands the window one step - after the near-top report is verified against the live geometry twice, 300 ms apart (the chat.js isNearTop() handle getter), so a transient scroll clamp mid-churn cannot mount thousands of rows - WITHOUT calling OnLoadOlder - the host page load fires only once the window already covers the whole sequence (Start == 0) and HasMoreBefore is set; (e) a host prepend of older history keeps the previously-first rendered row and expands one step above it; (f) the row under edit and the opener of the active thread are never trimmed out of the window; (g) ChatMessageContext.Index and IsFirstInGroup are computed over the FULL sequence, so grouping does not change at the window edge; (h) the built-in \"load older\" affordance renders while Start > 0 or HasMoreBefore. The built-in ScrollToMessageAsync/FocusMessageAsync deep links expand the window (and wait for the render) when the anchor lies above it - CONCURRENT deep links share the one pending wait - so an anchor outside the window is still found. The thread panel is deliberately NOT windowed - threads are short and the panel renders the root message a second time."
+    },
+    {
+      "name": "RenderWindowStep",
+      "type": "int",
+      "isRequired": false,
+      "default": "50",
+      "description": "How many rows one upward expansion of the render window adds (clamped to a minimum of 10). Only meaningful together with RenderWindowSize; the expansion is a render prepend, so the scroller's anchor restore keeps the reading position across it."
+    },
+    {
       "name": "MessageAnnouncement",
       "type": "Func<ChatMessage, string?>?",
       "isRequired": false,
@@ -563,6 +577,10 @@
     {
       "title": "Auto-attach the custom composer by id (no AttachAsync in the host)",
       "code": "@* The whole registration is the id attribute — AutoAttachComposerInput resolves it *@\n<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"HandleSend\"\n        ComposerTemplate=\"AutoComposer\" AutoAttachComposerInput=\"true\" />\n\n@code {\n    private RenderFragment<ChatComposerContext> AutoComposer => context =>\n        @<div class=\"my-composer\">\n            <textarea id=\"@context.InputId\"\n                      value=\"@context.Text\"\n                      @oninput=\"@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button disabled=\"@(!context.CanSend)\" @onclick=\"@(async () => await context.SendAsync())\">Send</button>\n        </div>;\n}"
+    },
+    {
+      "title": "Long conversations: the render window (FZE-14)",
+      "code": "@* Only the last 100 rows render; the top edge grows the window by 50 rows as a render\n    prepend, so the reading position survives every expansion. The host page load fires\n    only once the window already covers the whole sequence. *@\n<TmChat Messages=\"@_history\" CurrentUser=\"@_user\"\n        RenderWindowSize=\"100\" RenderWindowStep=\"50\"\n        OnLoadOlder=\"LoadOlderPageAsync\" HasMoreBefore=\"_hasMore\"\n        IsLoadingOlder=\"_loadingOlder\" />"
     }
   ]
 }

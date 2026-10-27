@@ -15,12 +15,15 @@ public partial class TmChat
 {
     /// <summary>
     /// The root sequence with the per-row template inputs AND the row key — the markup loop over
-    /// this keeps the duplicate-Id fallback out of the .razor file.
+    /// this keeps the duplicate-Id fallback out of the .razor file. FZE-14: the rows come from
+    /// <see cref="WindowedRootEntries"/> — the opt-in render window slices the keyed rows while
+    /// the per-row inputs stay computed over the FULL sequence (grouping does not change at the
+    /// window edge).
     /// </summary>
     private IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup, string? Key)> RootEntriesWithKeys()
     {
         var duplicates = DuplicatedIds(RootMessages());
-        foreach (var (message, index, isFirstInGroup) in RootEntries())
+        foreach (var (message, index, isFirstInGroup) in WindowedRootEntries())
         {
             yield return (message, index, isFirstInGroup, MessageKey(message, duplicates));
         }

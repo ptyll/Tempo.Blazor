@@ -287,7 +287,75 @@ semantic-token references).
   like on iOS and the tracker lifts the composer too. Keep the meta regardless — it is the
   correct mobile viewport declaration.
 
+## Long conversations: the render window (FZE-14)
+
+A conversation with thousands of messages does not render thousands of `.tm-chat__item` rows —
+with **`RenderWindowSize="N"`** (default `null` = render everything, byte-identical markup) the
+component renders a contiguous `[Start, count)` slice of the root sequence: the TAIL. The window
+always runs to the tail and only ever **grows at the top**, by **`RenderWindowStep`** rows
+(default 50; the size clamps to a minimum of 20, the step to a minimum of 10):
+
+- **Top edge:** reaching the top of the DOM list (the scroller's near-top report, or the built-in
+  *Load older* affordance — visible while `Start > 0` **or** `HasMoreBefore`) grows the window by
+  one step. The near-top report is verified against the live geometry TWICE, 300 ms apart (the
+  `chat.js` scroller handle's `isNearTop()` getter): a transient scroll clamp or a mis-aimed
+  smooth scroll during a huge window render holds the viewport in the top band for a fraction of
+  a second, and that momentary report must not mount thousands of rows. Because rows are only
+  ever ADDED above the reading position, the expansion is for the
+  DOM exactly a *prepend* — the `chat.js` scroller restores the position on its snapshot anchor,
+  so the FZE-6 scroll contract keeps holding untouched. The built-in *Load older* click expands
+  the window the same way; the host's `OnLoadOlder` page load fires only once the window already
+  covers the whole sequence (`Start == 0`) and `HasMoreBefore` is set.
+- **Appends:** with the viewport pinned to the bottom the window slides with the tail (the top is
+  trimmed back to `count - N`); while the user reads ABOVE the bottom nothing is trimmed — the DOM
+  above the viewport must not change — and the trim happens when the scroller reports the return
+  to the bottom (including behind the jump-to-new button's click — the click trims immediately,
+  it does not wait for the report). The return-to-bottom trim
+  reclaims only that AWAY-APPEND excess and REFRESHES the tracked keep-id onto the trimmed start,
+  so a later parameter set cannot snap the window back; a deep-link or top-edge EXPANSION mounts
+  its rows deliberately and drops the claim, so it survives its own restore's at-bottom report
+  and persists until the next pinned append slides the window back to the tail. A row VANISHING
+  from the list (the tracked window head removed) keeps the start — only a PINNED append falls
+  back to the tail.
+- **Host prepends** (a loaded older page) keep the previously-first rendered row rendered and
+  expand one step above it.
+- **Protected rows:** the row under inline edit and the root of the open thread panel are never
+  trimmed out of the window.
+- **Deep links:** `ScrollToMessageAsync(id)` / `FocusMessageAsync(id)` for an anchor above the
+  window expand the window to include it (a render prepend), WAIT for that render to apply
+  (a `TaskCompletionSource` completed by the after-render bookkeeping of a render that actually
+  mounted rows; concurrent deep links SHARE that one wait, and dispose completes it too)
+  and only then run the JS navigation — an anchor outside the window is still found and focused,
+  and the expansion is not reclaimed by the restore's own return to the bottom.
+- **The thread panel is deliberately NOT windowed** — threads are short, and the panel renders
+  the root message a second time (page-wide `data-message-id` duplication is already the norm).
+
+Everything data-driven is untouched by the window: announcements and the jump-to-new count read
+`Messages`, read receipts and the draft guard run over the data, and
+`ChatMessageContext.Index` / `IsFirstInGroup` are computed over the FULL sequence before the
+slice — grouping does not change at the window edge.
+
+```razor
+@* A 100k-message inbox: the DOM holds the last 100 rows and grows by 50 per top-edge visit *@
+<TmChat Messages="@_history" CurrentUser="@_user"
+        RenderWindowSize="100" RenderWindowStep="50"
+        OnLoadOlder="LoadOlderPageAsync" HasMoreBefore="_hasMore" />
+```
+
+### ADR: why not `<Virtualize>`
+
+`<Virtualize>` was rejected (decision `TMCHAT-RENDER-WINDOW`) because its model fights this
+component's contract: it is top-anchored with fixed or ESTIMATED row heights, so its spacers
+guess where the content sits — and the chat list runs with `overflow-anchor: none` plus its own
+anchor restore, which the spacers would fight over the same pixels; rows OUTSIDE the virtualized
+window do not exist in the DOM, which breaks the `data-message-id` anchors
+(`ScrollToMessageAsync`/`FocusMessageAsync` could not find them without mounting), the
+`focusMessage` focus targets and any host reading rows from the DOM; and the chat needs
+`@key`ed row elements that SURVIVE a prepend (a host `MessageTemplate` keeps state in them),
+which a top-anchored spacer model does not promise. The render window keeps every row a real,
+keyed DOM element while it is in the slice and reuses the scroller's own prepend machinery for
+the growth — one mechanism, no competing layout heuristics.
+
 ## Future work (deliberately NOT implemented)
 
 - Generic `TmChat<TItem>` as a **separate** component over the same core.
-- Virtualization of very long conversations (`Virtualize` around the keyed rows).
