@@ -14,6 +14,13 @@ namespace Tempo.Blazor.Components.Spreadsheet;
 /// </summary>
 public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGridController
 {
+    /// <summary>
+    /// The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can
+    /// name the grid as its focus-restore target (<c>TmFocusScope.RestoreFocusTargetId</c>); null
+    /// renders no id, which keeps a standalone grid unchanged.
+    /// </summary>
+    [Parameter] public string? RootDomId { get; set; }
+
     private const int RowOverscanCount = 32;
     private const int ColumnOverscanCount = 10;
     private const int FormulaRefColorCount = 6;

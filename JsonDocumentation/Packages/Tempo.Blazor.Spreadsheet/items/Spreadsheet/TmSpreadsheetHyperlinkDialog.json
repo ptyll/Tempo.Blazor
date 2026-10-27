@@ -36,6 +36,12 @@
       "type": "EventCallback<SpreadsheetHyperlink>",
       "isRequired": false,
       "description": "Raised when the user saves the dialog."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
     }
   ],
   "subcategory": "Dialogs"

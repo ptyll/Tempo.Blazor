@@ -1,18 +1,28 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-<div class="tm-spreadsheet-hyperlink__backdrop" @onclick="OnCancelClick">
-    <div class="tm-spreadsheet-hyperlink"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_Hyperlink_Title"]"
+@* Modal overlay. The dialog contract (role, aria-modal, aria-labelledby, initial focus on the
+   address field, document-level Escape, focus restore) is the core TmFocusScope's; this interim
+   markup is replaced by the core TmModal in phase 3 of the redesign plan. *@
+<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-hyperlink__backdrop" @onclick="OnCancelClick">
+    <TmFocusScope Active="true"
+                  DialogRole="dialog"
+                  AriaLabelledBy="@TitleDomId"
+                  InitialFocusTargetId="@TargetInputDomId"
+                  CloseOnEscape="true"
+                  OnEscape="OnEscapeHandler"
+                  RestoreFocusTargetId="@RestoreFocusTargetId"
+                  Class="tm-spreadsheet-dialog-scope">
+    <div class="tm-spreadsheet-dialog tm-spreadsheet-hyperlink"
          @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
+         @onkeydown="OnKeyDown"
+         @onkeydown:stopPropagation="true">
         <div class="tm-spreadsheet-hyperlink__header">
-            <span class="tm-spreadsheet-hyperlink__title">@Loc["TmSpreadsheet_Hyperlink_Title"]</span>
+            <h2 class="tm-spreadsheet-hyperlink__title" id="@TitleDomId">@Loc["TmSpreadsheet_Hyperlink_Title"]</h2>
             @* Native <button>: its keydown must not reach the dialog's
                Ctrl+Enter -> save shortcut on top of the button's own click. *@
             <button type="button" class="tm-spreadsheet-hyperlink__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]"
-                    @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
+                    @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
                 <TmIcon Name="close" />
             </button>
         </div>
@@ -65,13 +75,14 @@
             </div>
         </div>
 
-        @* Native <button>s: their keydowns must not reach the dialog's
-           Ctrl+Enter -> save shortcut on top of each button's own click.
-           Escape is re-handled locally so it still cancels from the footer. *@
+        @* Native <button>s: the group bars their keydown so Ctrl+Enter on a button runs only that
+           button's own click instead of also firing the dialog's save shortcut. Escape is not
+           handled here — the focus scope's document-level listener dismisses the dialog. *@
         <div class="tm-spreadsheet-hyperlink__actions"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
+             @onkeydown:stopPropagation="true">
             <button type="button" class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--cancel" @onclick="OnCancelClick">@Loc["TmSpreadsheet_Hyperlink_Cancel"]</button>
             <button type="button" class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--ok" @onclick="OnSaveClick">@Loc["TmSpreadsheet_Hyperlink_Save"]</button>
         </div>
     </div>
+    </TmFocusScope>
 </div>

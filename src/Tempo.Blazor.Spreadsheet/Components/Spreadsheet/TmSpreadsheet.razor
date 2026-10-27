@@ -98,6 +98,7 @@
     }
 
         <TmSpreadsheetCanvasGrid @ref="_grid"
+                                 RootDomId="@GridRootDomId"
                                  Sheet="_workbook.ActiveSheet"
                                  RowHeight="RowHeight"
                                  ColumnWidth="ColumnWidth"
@@ -179,17 +180,19 @@
     {
         <TmSpreadsheetHyperlinkDialog Workbook="_workbook"
                                       Hyperlink="_editHyperlink"
+                                      RestoreFocusTargetId="@GridRootDomId"
                                       OnSave="OnHyperlinkSave"
-                                      OnCancel="() => _showHyperlinkDialog = false" />
+                                      OnCancel="CloseHyperlinkDialog" />
     }
 
     @if (_showNameManagerDialog)
     {
         <TmSpreadsheetNameManagerDialog Workbook="_workbook"
+                                        RestoreFocusTargetId="@GridRootDomId"
                                         OnNew="OnNameManagerNew"
                                         OnEdit="OnNameManagerEdit"
                                         OnDelete="OnNameManagerDelete"
-                                        OnClose="() => _showNameManagerDialog = false" />
+                                        OnClose="CloseNameManagerDialog" />
     }
 
     @if (_showNamedRangeEditDialog)
@@ -202,18 +205,38 @@
 
     @if (_showInsertImageDialog)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="() => _showInsertImageDialog = false">
-            <div class="tm-spreadsheet-dialog" @onclick:stopPropagation>
-                <h3 class="tm-spreadsheet-dialog__title">@Loc["TmSpreadsheet_InsertImage"]</h3>
-                <div class="tm-spreadsheet-dialog__body">
-                    <label class="tm-spreadsheet-dialog__label">@Loc["TmSpreadsheet_ImageUrl"]</label>
-                    <input class="tm-spreadsheet-dialog__input" value="@_insertImageUrl" @oninput="OnImageUrlInput" placeholder="https://..." />
+        <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-insert-image__backdrop" @onclick="CloseInsertImageDialog">
+            <TmFocusScope Active="true"
+                          DialogRole="dialog"
+                          AriaLabelledBy="@InsertImageTitleDomId"
+                          InitialFocusTarget="@_insertImageUrlRef"
+                          CloseOnEscape="true"
+                          OnEscape="CloseInsertImageDialog"
+                          RestoreFocusTargetId="@GridRootDomId"
+                          Class="tm-spreadsheet-dialog-scope">
+                <div class="tm-spreadsheet-dialog" @onclick:stopPropagation>
+                    <h2 class="tm-spreadsheet-dialog__title" id="@InsertImageTitleDomId">@Loc["TmSpreadsheet_InsertImage"]</h2>
+                    <div class="tm-spreadsheet-dialog__body">
+                        <label class="tm-spreadsheet-dialog__label" for="@InsertImageUrlInputDomId">@Loc["TmSpreadsheet_ImageUrl"]</label>
+                        @* Enter applies from the url field itself: the field owns the "confirm what was
+                           typed" contract (docs/keyboard-activation-convention.md — a container-level
+                           Enter handler would also answer bubbled keydowns from the footer buttons and
+                           double-activate on top of their click). Escape is the surface's own dismissal,
+                           handled by the focus scope's document-level listener. *@
+                        <input id="@InsertImageUrlInputDomId"
+                               class="tm-spreadsheet-dialog__input"
+                               @ref="_insertImageUrlRef"
+                               value="@_insertImageUrl"
+                               @oninput="OnImageUrlInput"
+                               @onkeydown="OnInsertImageUrlKeyDown"
+                               placeholder="https://..." />
+                    </div>
+                    <div class="tm-spreadsheet-dialog__actions">
+                        <TmButton Variant="ButtonVariant.Secondary" OnClick="CloseInsertImageDialog">@Loc["Tm_Cancel"]</TmButton>
+                        <TmButton OnClick="ApplyInsertImage">@Loc["Tm_Apply"]</TmButton>
+                    </div>
                 </div>
-                <div class="tm-spreadsheet-dialog__actions">
-                    <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _showInsertImageDialog = false">@Loc["Tm_Cancel"]</TmButton>
-                    <TmButton OnClick="ApplyInsertImage">@Loc["Tm_Apply"]</TmButton>
-                </div>
-            </div>
+            </TmFocusScope>
         </div>
     }
 
@@ -297,31 +320,32 @@
         </div>
     }
 
+    @* Both validation alerts are the shared TmSpreadsheetValidationAlert: a Stop-style error is a
+       hard block (only its primary action or Escape dismisses it, a backdrop click does nothing),
+       the Warning/Information confirm also cancels on a backdrop click. The alertdialog contract
+       (role, aria-modal, aria-labelledby/aria-describedby, initial focus, Escape, focus restore)
+       lives in the core TmFocusScope that component wraps. *@
     @if (_showValidationError)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="DismissValidationError">
-            <div class="tm-spreadsheet-alert" @onclick:stopPropagation>
-                <h4 class="tm-spreadsheet-alert__title">@_validationErrorTitle</h4>
-                <p class="tm-spreadsheet-alert__message">@_validationErrorMessage</p>
-                <div class="tm-spreadsheet-alert__actions">
-                    <TmButton OnClick="DismissValidationError">@Loc["Tm_Confirm"]</TmButton>
-                </div>
-            </div>
-        </div>
+        <TmSpreadsheetValidationAlert Title="@_validationErrorTitle"
+                                      Message="@_validationErrorMessage"
+                                      IsStop="true"
+                                      RestoreFocusTargetId="@GridRootDomId"
+                                      PrimaryText="@Loc["Tm_Confirm"]"
+                                      OnPrimary="DismissValidationError" />
     }
 
     @if (_showValidationConfirm)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="DismissValidationConfirm">
-            <div class="tm-spreadsheet-alert" @onclick:stopPropagation>
-                <h4 class="tm-spreadsheet-alert__title">@_validationConfirmTitle</h4>
-                <p class="tm-spreadsheet-alert__message">@_validationConfirmMessage</p>
-                <div class="tm-spreadsheet-alert__actions">
-                    <TmButton Variant="ButtonVariant.Secondary" OnClick="DismissValidationConfirm">@Loc["Tm_Cancel"]</TmButton>
-                    <TmButton OnClick="ConfirmValidationWarning">@Loc["Tm_Yes"]</TmButton>
-                </div>
-            </div>
-        </div>
+        <TmSpreadsheetValidationAlert Title="@_validationConfirmTitle"
+                                      Message="@_validationConfirmMessage"
+                                      IsStop="false"
+                                      RestoreFocusTargetId="@GridRootDomId"
+                                      ShowCancel="true"
+                                      CancelText="@Loc["Tm_Cancel"]"
+                                      PrimaryText="@Loc["Tm_Yes"]"
+                                      OnPrimary="ConfirmValidationWarning"
+                                      OnCancel="DismissValidationConfirm" />
     }
 
     @if (_dataToolMessage is not null)

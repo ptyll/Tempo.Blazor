@@ -75,12 +75,23 @@
     {
         <div class="tm-fcd__two-col">
             <div class="tm-fcd__col">
-                <div class="tm-fcd__field-label">@Loc["TmSpreadsheet_Category"]</div>
-                <div class="tm-fcd__listbox">
+                <div class="tm-fcd__field-label" id="@CategoryLabelDomId">@Loc["TmSpreadsheet_Category"]</div>
+                @* A real listbox with a roving tabindex: the selected option is the single tab stop
+                   and owns the DOM focus, so ↑/↓/Home/End walk the categories and a screen reader
+                   announces the option it lands on. No per-item activation is emulated — a div has
+                   no native one (docs/keyboard-activation-convention.md). *@
+                <div class="tm-fcd__listbox"
+                     role="listbox"
+                     aria-labelledby="@CategoryLabelDomId"
+                     @onkeydown="OnCategoryKeyDown">
                     @foreach (var cat in _numberCategories)
                     {
                         <div class="tm-fcd__listbox-item @(_selectedCategory == cat ? "tm-fcd__listbox-item--selected" : "")"
-                             @onclick="() => SelectCategory(cat)">
+                             role="option"
+                             tabindex="@(_selectedCategory == cat ? "0" : "-1")"
+                             aria-selected="@(_selectedCategory == cat ? "true" : "false")"
+                             @ref="_categoryElements[cat]"
+                             @onclick="() => OnCategoryClick(cat)">
                             @Loc[$"TmSpreadsheet_NumCat_{cat}"]
                         </div>
                     }

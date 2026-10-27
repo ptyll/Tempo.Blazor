@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "RootDomId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can name the grid as its focus-restore target (TmFocusScope.RestoreFocusTargetId); null renders no id, which keeps a standalone grid unchanged."
+    },
+    {
       "name": "Sheet",
       "type": "SpreadsheetSheet?",
       "isRequired": false,

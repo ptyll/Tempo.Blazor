@@ -1,4 +1,5 @@
 using Bunit;
+using Tempo.Blazor.Components.Feedback;
 using FluentAssertions;
 using Tempo.Blazor.Components.Spreadsheet.Dialogs;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -104,9 +105,9 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
 
         // keydown (native click would follow) — the actions group stops the
         // keydown before the root's Ctrl+Enter -> save case.
-        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
-        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok").Click();
+        var save = cut.Find(".tm-spreadsheet-named-range-edit__btn--ok");
+        Assert.Throws<MissingEventHandlerException>(() => save.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
+        save.Click();
 
         saves.Should().Be(1);
     }
@@ -126,16 +127,16 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
         cut.Find("#nr-name").Input("Total");
         cut.Find("#nr-refers").Input("B1:B10");
 
-        cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
-        cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel").Click();
+        var cancel = cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel");
+        Assert.Throws<MissingEventHandlerException>(() => cancel.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" }));
+        cancel.Click();
 
         cancels.Should().Be(1);
         saves.Should().Be(0);
     }
 
     [Fact]
-    public void Escape_OnSaveButton_CancelsOnce()
+    public async Task Escape_CancelsOnce_ThroughTheFocusScope()
     {
         var workbook = new SpreadsheetWorkbook();
         var saves = 0;
@@ -146,10 +147,12 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
                 .Add(p => p.OnSave, _ => saves++)
                 .Add(p => p.OnCancel, () => cancels++));
 
-        // Escape stays usable from the footer: the actions group handles it
-        // locally and stops it from also reaching the root's Escape case.
-        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+        // Escape is the dialog's own dismissal, wherever the focus sits: the focus scope's
+        // document-level listener routes it back here exactly once. The footer buttons only fence
+        // their keydown so Ctrl+Enter cannot double-fire the root's save shortcut.
+        var scope = cut.FindComponent<TmFocusScope>();
+        scope.Instance.CloseOnEscape.Should().BeTrue();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
 
         cancels.Should().Be(1);
         saves.Should().Be(0);
@@ -190,9 +193,9 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
         cut.Find("#nr-name").Input("Total");
         cut.Find("#nr-refers").Input("B1:B10");
 
-        cut.Find(".tm-spreadsheet-named-range-edit__close")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
-        cut.Find(".tm-spreadsheet-named-range-edit__close").Click();
+        var close = cut.Find(".tm-spreadsheet-named-range-edit__close");
+        Assert.Throws<MissingEventHandlerException>(() => close.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
+        close.Click();
 
         cancels.Should().Be(1);
         saves.Should().Be(0);

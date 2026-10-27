@@ -10,11 +10,21 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetHyperlinkDialog
 {
+    // Per-instance title id (never a selector); the form-field ids below predate this phase and stay
+    // constant because the published E2E lane keys off them (#hl-type, #hl-target, …).
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private string TitleDomId => $"spreadsheet-hyperlink-title-{_idSuffix}";
+
+    private string TargetInputDomId => "hl-target";
+
     private SpreadsheetHyperlinkKind _kind = SpreadsheetHyperlinkKind.Web;
     private string _target = string.Empty;
     private string? _display;
     private string? _tooltip;
     private string? _emailSubject;
+    private bool _seeded;
+    private SpreadsheetHyperlink? _seededFor;
 
     /// <summary>The workbook (used for named range choices).</summary>
     [Parameter, EditorRequired] public SpreadsheetWorkbook Workbook { get; set; } = null!;
@@ -28,8 +38,25 @@ public partial class TmSpreadsheetHyperlinkDialog
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     protected override void OnParametersSet()
     {
+        // Seed the form from the parameters ONCE per edit target: a Spreadsheet re-renders on its own
+        // and re-sets this dialog's parameters with it, and re-seeding would wipe the address the user
+        // is typing.
+        if (_seeded && ReferenceEquals(_seededFor, Hyperlink))
+        {
+            return;
+        }
+
+        _seeded = true;
+        _seededFor = Hyperlink;
+
         if (Hyperlink is not null)
         {
             _kind = Hyperlink.Kind;
@@ -66,21 +93,12 @@ public partial class TmSpreadsheetHyperlinkDialog
 
     private void OnCancelClick() => OnCancel.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
-        else if (e.Key == "Enter" && e.CtrlKey)
-            OnSaveClick();
-    }
+    /// <summary>Raised by the focus scope's document-level Escape listener.</summary>
+    private Task OnEscapeHandler() => OnCancel.InvokeAsync();
 
-    // The dialog's Ctrl+Enter -> save shortcut lives on the root; the chrome
-    // buttons isolate their keydowns (stopPropagation) so Enter/Ctrl+Enter on
-    // them runs only the button's native click. Escape is re-handled here so
-    // it still cancels while focus sits on a button.
-    private async Task OnChromeKeyDown(KeyboardEventArgs e)
+    private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
+        if (e.Key == "Enter" && e.CtrlKey)
+            OnSaveClick();
     }
 }

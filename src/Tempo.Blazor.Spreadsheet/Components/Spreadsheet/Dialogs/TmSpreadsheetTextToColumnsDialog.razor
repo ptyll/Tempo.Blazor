@@ -81,7 +81,7 @@
                     <p class="tm-spreadsheet-t2c__hint">@Loc["TmSpreadsheet_TextToColumns_FixedHint"]</p>
                     <label class="tm-spreadsheet-t2c__inline">
                         @Loc["TmSpreadsheet_TextToColumns_BreakPositions"]
-                        <input type="text" class="tm-spreadsheet-t2c__breaks-input" value="@_fixedBreaks" @oninput="e => _fixedBreaks = e.Value?.ToString() ?? string.Empty" placeholder="e.g. 5, 10" />
+                        <input type="text" class="tm-spreadsheet-t2c__breaks-input" value="@_fixedBreaks" @oninput="e => _fixedBreaks = e.Value?.ToString() ?? string.Empty" placeholder="@Loc["TmSpreadsheet_TextToColumns_BreakPositionsPlaceholder"]" />
                     </label>
                 }
 

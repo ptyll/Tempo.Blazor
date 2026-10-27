@@ -1,79 +1,103 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-<div class="tm-spreadsheet-named-range-edit__backdrop" @onclick="OnCancelClick">
-    <div class="tm-spreadsheet-named-range-edit"
-         role="dialog"
-         aria-label="@(_isNew ? Loc["TmSpreadsheet_NamesEdit_TitleNew"] : Loc["TmSpreadsheet_NamesEdit_Title"])"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-named-range-edit__header">
-            <span class="tm-spreadsheet-named-range-edit__title">@(_isNew ? Loc["TmSpreadsheet_NamesEdit_TitleNew"] : Loc["TmSpreadsheet_NamesEdit_Title"])</span>
-            @* Native <button>: its keydown must not reach the dialog's
-               Ctrl+Enter -> save shortcut on top of the button's own click. *@
-            <button type="button" class="tm-spreadsheet-named-range-edit__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]"
-                    @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
-        <div class="tm-spreadsheet-named-range-edit__body">
-            <div class="tm-spreadsheet-named-range-edit__field">
-                <label for="nr-name">@Loc["TmSpreadsheet_NamesEdit_Name"]</label>
-                <input id="nr-name" type="text" @bind="_name" @bind:event="oninput" class="tm-spreadsheet-named-range-edit__input" />
-                @if (_errors.Contains("name"))
-                {
-                    <span class="tm-spreadsheet-named-range-edit__error">@Loc["TmSpreadsheet_NamesEdit_NameRequired"]</span>
-                }
-                @if (_errors.Contains("invalid"))
-                {
-                    <span class="tm-spreadsheet-named-range-edit__error">@Loc["TmSpreadsheet_NamesEdit_InvalidName"]</span>
-                }
+@* Modal overlay. The dialog contract (role, aria-modal, aria-labelledby, initial focus on the name
+   field, document-level Escape, focus restore) is the core TmFocusScope's; this interim markup is
+   replaced by the core TmModal in phase 3 of the redesign plan. *@
+<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-named-range-edit__backdrop" @onclick="OnCancelClick">
+    <TmFocusScope Active="true"
+                  DialogRole="dialog"
+                  AriaLabelledBy="@TitleDomId"
+                  InitialFocusTargetId="@NameInputDomId"
+                  CloseOnEscape="true"
+                  OnEscape="OnEscapeHandler"
+                  Class="tm-spreadsheet-dialog-scope">
+        <div class="tm-spreadsheet-dialog tm-spreadsheet-named-range-edit"
+             @onclick:stopPropagation
+             @onkeydown="OnKeyDown"
+             @onkeydown:stopPropagation="true">
+            <div class="tm-spreadsheet-named-range-edit__header">
+                <h2 class="tm-spreadsheet-named-range-edit__title" id="@TitleDomId">@(_isNew ? Loc["TmSpreadsheet_NamesEdit_TitleNew"] : Loc["TmSpreadsheet_NamesEdit_Title"])</h2>
+                @* Native <button>: its keydown must not reach the dialog's
+                   Ctrl+Enter -> save shortcut on top of the button's own click. *@
+                <button type="button" class="tm-spreadsheet-named-range-edit__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]"
+                        @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
+                    <TmIcon Name="close" />
+                </button>
             </div>
 
-            <div class="tm-spreadsheet-named-range-edit__field">
-                <label for="nr-refers">@Loc["TmSpreadsheet_NamesEdit_RefersTo"]</label>
-                <input id="nr-refers" type="text" @bind="_refersTo" @bind:event="oninput" class="tm-spreadsheet-named-range-edit__input" />
-                @if (_errors.Contains("refersTo"))
-                {
-                    <span class="tm-spreadsheet-named-range-edit__error">@Loc["TmSpreadsheet_NamesEdit_RefersToRequired"]</span>
-                }
-            </div>
-
-            <div class="tm-spreadsheet-named-range-edit__field">
-                <label for="nr-scope">@Loc["TmSpreadsheet_NamesEdit_Scope"]</label>
-                <select id="nr-scope" @bind="_scope" class="tm-spreadsheet-named-range-edit__select">
-                    <option value="@NamedRangeScope.Workbook">@Loc["TmSpreadsheet_NamesEdit_ScopeWorkbook"]</option>
-                    <option value="@NamedRangeScope.Sheet">@Loc["TmSpreadsheet_NamesEdit_ScopeSheet"]</option>
-                </select>
-            </div>
-
-            @if (_scope == NamedRangeScope.Sheet)
-            {
+            <div class="tm-spreadsheet-named-range-edit__body">
                 <div class="tm-spreadsheet-named-range-edit__field">
-                    <label for="nr-sheet">@Loc["TmSpreadsheet_NamesEdit_Sheet"]</label>
-                    <select id="nr-sheet" @bind="_sheetIndex" class="tm-spreadsheet-named-range-edit__select">
-                        @for (var i = 0; i < Workbook.Sheets.Count; i++)
-                        {
-                            <option value="@i">@Workbook.Sheets[i].Name</option>
-                        }
+                    <label for="@NameInputDomId">@Loc["TmSpreadsheet_NamesEdit_Name"]</label>
+                    <input id="@NameInputDomId"
+                           type="text"
+                           @ref="_nameInputRef"
+                           @bind="_name"
+                           @bind:event="oninput"
+                           class="tm-spreadsheet-named-range-edit__input"
+                           aria-invalid="@(HasNameError ? "true" : null)"
+                           aria-describedby="@(HasNameError ? NameErrorDomId : null)" />
+                    @if (_errors.Contains("name"))
+                    {
+                        <span class="tm-spreadsheet-named-range-edit__error" id="@NameErrorDomId" role="alert">@Loc["TmSpreadsheet_NamesEdit_NameRequired"]</span>
+                    }
+                    else if (_errors.Contains("invalid"))
+                    {
+                        <span class="tm-spreadsheet-named-range-edit__error" id="@NameErrorDomId" role="alert">@Loc["TmSpreadsheet_NamesEdit_InvalidName"]</span>
+                    }
+                </div>
+
+                <div class="tm-spreadsheet-named-range-edit__field">
+                    <label for="@RefersToInputDomId">@Loc["TmSpreadsheet_NamesEdit_RefersTo"]</label>
+                    <input id="@RefersToInputDomId"
+                           type="text"
+                           @ref="_refersToInputRef"
+                           @bind="_refersTo"
+                           @bind:event="oninput"
+                           class="tm-spreadsheet-named-range-edit__input"
+                           aria-invalid="@(_errors.Contains("refersTo") ? "true" : null)"
+                           aria-describedby="@(_errors.Contains("refersTo") ? RefersToErrorDomId : null)" />
+                    @if (_errors.Contains("refersTo"))
+                    {
+                        <span class="tm-spreadsheet-named-range-edit__error" id="@RefersToErrorDomId" role="alert">@Loc["TmSpreadsheet_NamesEdit_RefersToRequired"]</span>
+                    }
+                </div>
+
+                <div class="tm-spreadsheet-named-range-edit__field">
+                    <label for="@ScopeSelectDomId">@Loc["TmSpreadsheet_NamesEdit_Scope"]</label>
+                    <select id="@ScopeSelectDomId" @bind="_scope" class="tm-spreadsheet-named-range-edit__select">
+                        <option value="@NamedRangeScope.Workbook">@Loc["TmSpreadsheet_NamesEdit_ScopeWorkbook"]</option>
+                        <option value="@NamedRangeScope.Sheet">@Loc["TmSpreadsheet_NamesEdit_ScopeSheet"]</option>
                     </select>
                 </div>
-            }
 
-            <div class="tm-spreadsheet-named-range-edit__field">
-                <label for="nr-comment">@Loc["TmSpreadsheet_NamesEdit_Comment"]</label>
-                <input id="nr-comment" type="text" @bind="_comment" class="tm-spreadsheet-named-range-edit__input" />
+                @if (_scope == NamedRangeScope.Sheet)
+                {
+                    <div class="tm-spreadsheet-named-range-edit__field">
+                        <label for="@SheetSelectDomId">@Loc["TmSpreadsheet_NamesEdit_Sheet"]</label>
+                        <select id="@SheetSelectDomId" @bind="_sheetIndex" class="tm-spreadsheet-named-range-edit__select">
+                            @for (var i = 0; i < Workbook.Sheets.Count; i++)
+                            {
+                                <option value="@i">@Workbook.Sheets[i].Name</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                <div class="tm-spreadsheet-named-range-edit__field">
+                    <label for="@CommentInputDomId">@Loc["TmSpreadsheet_NamesEdit_Comment"]</label>
+                    <input id="@CommentInputDomId" type="text" @bind="_comment" class="tm-spreadsheet-named-range-edit__input" />
+                </div>
+            </div>
+
+            @* Native <button>s: the group bars their keydown so Ctrl+Enter on a button runs only that
+               button's own click instead of also firing the dialog's save shortcut. Escape is not
+               handled here — the focus scope's document-level listener dismisses the dialog. *@
+            <div class="tm-spreadsheet-named-range-edit__actions"
+                 @onkeydown:stopPropagation="true">
+                <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--cancel" @onclick="OnCancelClick">@Loc["TmSpreadsheet_NamesEdit_Cancel"]</button>
+                <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--ok" @onclick="OnSaveClick">@Loc["TmSpreadsheet_NamesEdit_Save"]</button>
             </div>
         </div>
-
-        @* Native <button>s: their keydowns must not reach the dialog's
-           Ctrl+Enter -> save shortcut on top of each button's own click.
-           Escape is re-handled locally so it still cancels from the footer. *@
-        <div class="tm-spreadsheet-named-range-edit__actions"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
-            <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--cancel" @onclick="OnCancelClick">@Loc["TmSpreadsheet_NamesEdit_Cancel"]</button>
-            <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--ok" @onclick="OnSaveClick">@Loc["TmSpreadsheet_NamesEdit_Save"]</button>
-        </div>
-    </div>
+    </TmFocusScope>
 </div>

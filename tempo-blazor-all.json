@@ -44844,6 +44844,12 @@
               "description": "Called when the zoom should change by one step (+1 to zoom in, -1 to zoom out)."
             },
             {
+              "name": "RootDomId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can name the grid as its focus-restore target (TmFocusScope.RestoreFocusTargetId); null renders no id, which keeps a standalone grid unchanged."
+            },
+            {
               "name": "RowHeight",
               "type": "double",
               "isRequired": false,
@@ -45102,7 +45108,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle.",
+          "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle. The number-category picker is a WAI-ARIA listbox with a roving tabindex: the selected option is the tab stop and owns the focus, Up/Down/Home/End move the selection. Ctrl+Enter still applies the dialog.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor",
           "documentationStatus": "merged",
@@ -45245,6 +45251,12 @@
               "description": "Raised when the user saves the dialog."
             },
             {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+            },
+            {
               "name": "Workbook",
               "type": "SpreadsheetWorkbook",
               "isRequired": true,
@@ -45301,7 +45313,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete.",
+          "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete. The list is a WAI-ARIA grid with a roving tabindex: the selected row is the single tab stop and carries the DOM focus, Up/Down/Home/End move the selection, Enter edits the selected range, Delete deletes it (the neighbour takes the selection) and a double click edits. The dialog itself is a modal overlay whose role, aria-modal, accessible name, initial focus, Escape handling and focus restore come from the core TmFocusScope; all element ids are per instance and none is a selector contract.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNameManagerDialog.razor",
           "documentationStatus": "merged",
@@ -45333,6 +45345,12 @@
               "isRequired": false,
               "description": "Raised when the user wants to create a new named range.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Workbook",
@@ -46010,6 +46028,83 @@
               "description": "Current text color (CSS color value)."
             }
           ]
+        },
+        {
+          "itemName": "TmSpreadsheetValidationAlert",
+          "kind": "Component",
+          "category": "Spreadsheet",
+          "subcategory": "Dialogs",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
+          "description": "The Spreadsheet validation alert used for both the Stop-style error and the Warning/Information confirm. It is a modal alertdialog: the core TmFocusScope supplies the role, aria-modal, the accessible name (aria-labelledby) and description (aria-describedby), the initial focus on the primary action, the document-level Escape and the focus restore on close. A Stop alert is a hard block — the value is rejected and only the primary action or Escape dismisses it (a backdrop click does nothing); the confirm also cancels on the backdrop or the cancel action. Ids are per instance and not a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetValidationAlert.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
+          ],
+          "parameters": [
+            {
+              "name": "CancelText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Label of the cancel action. Only rendered when ShowCancel is true."
+            },
+            {
+              "name": "IsStop",
+              "type": "bool",
+              "isRequired": false,
+              "description": "True for the Stop style: the value is blocked, so a backdrop click does nothing and there is no cancel path."
+            },
+            {
+              "name": "Message",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The alert body text (the rule's own message, or the localized default)."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user cancels the alert (a backdrop click or the cancel action)."
+            },
+            {
+              "name": "OnPrimary",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user accepts the alert (the only close path of a Stop alert)."
+            },
+            {
+              "name": "PrimaryText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Label of the primary action (Confirm / Yes)."
+            },
+            {
+              "name": "RestoreFocus",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether closing the alert restores the focus it took. Defaults to true."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to when the alert closes — the host spreadsheet passes its grid root, so focus lands on the grid rather than the toolbar button that opened the alert. Null falls back to the element focused before the alert opened."
+            },
+            {
+              "name": "ShowCancel",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a cancel action exists. False for a Stop alert, true for the confirm."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The alert title (the rule's own title, or the localized default)."
+            }
+          ]
         }
       ],
       "libraryExamples": [],
@@ -46044,11 +46139,11 @@
         }
       ],
       "summary": {
-        "itemCount": 75,
-        "manualItemCount": 75,
-        "generatedItemCount": 74,
+        "itemCount": 76,
+        "manualItemCount": 76,
+        "generatedItemCount": 75,
         "generatedOnlyItemCount": 0,
-        "componentCount": 18,
+        "componentCount": 19,
         "publicApiTypeCount": 56
       }
     },
@@ -122165,10 +122260,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3310,
-    "manualItemCount": 3310,
+    "itemCount": 3311,
+    "manualItemCount": 3311,
     "generatedOnlyItemCount": 0,
-    "componentCount": 489,
+    "componentCount": 490,
     "publicApiTypeCount": 2768
   }
 }

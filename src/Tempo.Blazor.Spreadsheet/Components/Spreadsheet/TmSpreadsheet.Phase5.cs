@@ -1,4 +1,6 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Commands;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -219,6 +221,10 @@ public partial class TmSpreadsheet
             .FirstOrDefault(dv => dv.Range.Contains(row, col));
     }
 
+    // Closing an alert only flips the flag: the alert's focus scope carries the restore target (the
+    // grid root), so focus returns to the grid when the trap deactivates — after the inert background
+    // is released. An explicit FocusAsync here would run while the grid is still inert and be a no-op,
+    // and the trap would then restore to the opener instead.
     private void DismissValidationError()
     {
         _showValidationError = false;
@@ -228,13 +234,14 @@ public partial class TmSpreadsheet
     private async Task ConfirmValidationWarning()
     {
         _showValidationConfirm = false;
-        if (_pendingConfirmedCommit is not null)
+        var action = _pendingConfirmedCommit;
+        _pendingConfirmedCommit = null;
+        StateHasChanged();
+
+        if (action is not null)
         {
-            var action = _pendingConfirmedCommit;
-            _pendingConfirmedCommit = null;
             await action();
         }
-        StateHasChanged();
     }
 
     private void DismissValidationConfirm()

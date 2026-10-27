@@ -4,7 +4,7 @@
 
 @if (Sheet is null)
 {
-    <div class="tm-spreadsheet-canvas-grid tm-spreadsheet-grid--empty">
+    <div class="tm-spreadsheet-canvas-grid tm-spreadsheet-grid--empty" id="@RootDomId">
         @Loc["TmSpreadsheet_NoSheet"]
     </div>
 }
@@ -17,6 +17,7 @@ else
          aria-label="@Loc["TmSpreadsheet_Name"]"
          aria-describedby="@CanvasAccessibilityDescriptionDomId"
          aria-activedescendant="@ActiveCellDomId"
+         id="@RootDomId"
          tabindex="0"
          data-a11y-active-cell-id="@ActiveCellDomId"
          data-a11y-live-region-id="@LiveRegionDomId"

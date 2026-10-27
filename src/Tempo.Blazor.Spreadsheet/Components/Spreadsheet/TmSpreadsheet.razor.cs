@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using System.Globalization;
@@ -35,6 +36,20 @@ public partial class TmSpreadsheet
     private bool _formatPainterActive;
     private bool _formatPainterSticky;
     private string? _insertImageUrl;
+    private ElementReference _insertImageUrlRef;
+
+    // Per-instance id suffix: every id rendered by this instance is stamped with it, so two
+    // spreadsheets on one page (or two alerts) never collide and no id is a selector contract.
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private string InsertImageTitleDomId => $"spreadsheet-insert-image-title-{_idSuffix}";
+
+    /// <summary>
+    /// The focusable grid root's id: every overlay names it as its focus-restore target, so closing a
+    /// dialog (or a validation alert) puts focus back on the grid through the focus trap instead of
+    /// racing it while the grid is still inert.
+    /// </summary>
+    private string GridRootDomId => $"spreadsheet-grid-{_idSuffix}";
     private SpreadsheetHyperlink? _editHyperlink;
     private SpreadsheetNamedRange? _editNamedRange;
     [Inject] private IJSRuntime JS { get; set; } = null!;
@@ -1340,7 +1355,34 @@ public partial class TmSpreadsheet
         StateHasChanged();
     }
 
+    /// <summary>The id of the insert-image url field, targeted by its <c>&lt;label for&gt;</c>.</summary>
+    private string InsertImageUrlInputDomId => $"spreadsheet-insert-image-url-{_idSuffix}";
+
     private void OnImageUrlInput(ChangeEventArgs e) => _insertImageUrl = e.Value?.ToString();
+
+    /// <summary>
+    /// Enter applies the typed url. The handler sits on the url field itself: "confirm what was
+    /// typed" belongs to the owning input, not to the dialog container, whose Enter would otherwise
+    /// also answer bubbled keydowns from the footer buttons and activate them a second time on top
+    /// of their native click (docs/keyboard-activation-convention.md). Escape is the surface's own
+    /// dismissal and belongs to the dialog (the focus scope's document-level listener).
+    /// </summary>
+    private async Task OnInsertImageUrlKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await ApplyInsertImage();
+        }
+    }
+
+    /// <summary>
+    /// Dismisses the insert-image dialog. Every close path (Cancel, Escape, a backdrop click) goes
+    /// through here; the dialog's focus scope restores focus to the grid.
+    /// </summary>
+    private void CloseInsertImageDialog()
+    {
+        _showInsertImageDialog = false;
+    }
 
     private void ShowInsertImageDialog()
     {
@@ -1363,6 +1405,12 @@ public partial class TmSpreadsheet
 
     // ── Name Manager ──
     private void ShowNameManagerDialog() => _showNameManagerDialog = true;
+
+    /// <summary>Closes the Name Manager; its focus scope restores focus to the grid.</summary>
+    private void CloseNameManagerDialog() => _showNameManagerDialog = false;
+
+    /// <summary>Closes the hyperlink dialog; its focus scope restores focus to the grid.</summary>
+    private void CloseHyperlinkDialog() => _showHyperlinkDialog = false;
 
     private void OnNameManagerNew()
     {

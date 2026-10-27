@@ -1,79 +1,104 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-<div class="tm-spreadsheet-name-manager__backdrop" @onclick="OnCloseClick">
-    <div class="tm-spreadsheet-name-manager"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_Names_Title"]"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-name-manager__header">
-            <span class="tm-spreadsheet-name-manager__title">@Loc["TmSpreadsheet_Names_Title"]</span>
-            <button type="button" class="tm-spreadsheet-name-manager__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="OnCloseClick">
-                <TmIcon Name="close" />
-            </button>
-        </div>
+@* Modal overlay: the card paints on the --tm-z-modal band above the grid instead of falling into
+   the document flow under it. The dialog contract (role, aria-modal, aria-labelledby, initial
+   focus, document-level Escape, focus restore) is the core TmFocusScope's; this interim markup is
+   replaced by the core TmModal in phase 3 of the redesign plan. *@
+<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-name-manager__backdrop" @onclick="OnCloseClick">
+    <TmFocusScope Active="true"
+                  DialogRole="dialog"
+                  AriaLabelledBy="@TitleDomId"
+                  InitialFocusTargetId="@InitialFocusDomId"
+                  CloseOnEscape="true"
+                  OnEscape="OnEscapeHandler"
+                  RestoreFocusTargetId="@RestoreFocusTargetId"
+                  Class="tm-spreadsheet-dialog-scope">
+        <div class="tm-spreadsheet-dialog tm-spreadsheet-name-manager" @onclick:stopPropagation>
+            <div class="tm-spreadsheet-name-manager__header">
+                <h2 class="tm-spreadsheet-name-manager__title" id="@TitleDomId">@Loc["TmSpreadsheet_Names_Title"]</h2>
+                <button type="button" class="tm-spreadsheet-name-manager__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="OnCloseClick">
+                    <TmIcon Name="close" />
+                </button>
+            </div>
 
-        <div class="tm-spreadsheet-name-manager__toolbar">
-            <button type="button" class="tm-spreadsheet-name-manager__tool" @onclick="OnNewClick">
-                <TmIcon Name="add" /> @Loc["TmSpreadsheet_Names_New"]
-            </button>
-            <button type="button" class="tm-spreadsheet-name-manager__tool" @onclick="OnEditClick" disabled="@(_selectedRange is null)">
-                <TmIcon Name="edit" /> @Loc["TmSpreadsheet_Names_Edit"]
-            </button>
-            <button type="button" class="tm-spreadsheet-name-manager__tool" @onclick="OnDeleteClick" disabled="@(_selectedRange is null)">
-                <TmIcon Name="delete" /> @Loc["TmSpreadsheet_Names_Delete"]
-            </button>
-            <input type="text"
-                   class="tm-spreadsheet-name-manager__filter"
-                   placeholder="@Loc["TmSpreadsheet_Names_FilterPlaceholder"]"
-                   @bind="_filter"
-                   @bind:event="oninput" />
-        </div>
+            <div class="tm-spreadsheet-name-manager__toolbar">
+                <button type="button" class="tm-spreadsheet-name-manager__tool" id="@NewButtonDomId" @onclick="OnNewClick">
+                    <TmIcon Name="add" /> @Loc["TmSpreadsheet_Names_New"]
+                </button>
+                <button type="button" class="tm-spreadsheet-name-manager__tool" @onclick="OnEditClick" disabled="@(!HasVisibleSelection)">
+                    <TmIcon Name="edit" /> @Loc["TmSpreadsheet_Names_Edit"]
+                </button>
+                <button type="button" class="tm-spreadsheet-name-manager__tool" @onclick="OnDeleteClick" disabled="@(!HasVisibleSelection)">
+                    <TmIcon Name="delete" /> @Loc["TmSpreadsheet_Names_Delete"]
+                </button>
+                <input type="text"
+                       class="tm-spreadsheet-name-manager__filter"
+                       aria-label="@Loc["TmSpreadsheet_Names_FilterPlaceholder"]"
+                       placeholder="@Loc["TmSpreadsheet_Names_FilterPlaceholder"]"
+                       @bind="_filter"
+                       @bind:event="oninput"
+                       @bind:after="EnsureSelection" />
+            </div>
 
-        <div class="tm-spreadsheet-name-manager__table-wrap">
-            <table class="tm-spreadsheet-name-manager__table">
-                <thead>
-                    <tr>
-                        <th>@Loc["TmSpreadsheet_Names_Name"]</th>
-                        <th>@Loc["TmSpreadsheet_Names_Value"]</th>
-                        <th>@Loc["TmSpreadsheet_Names_RefersTo"]</th>
-                        <th>@Loc["TmSpreadsheet_Names_Scope"]</th>
-                        <th>@Loc["TmSpreadsheet_Names_Comment"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var range in FilteredRanges)
-                    {
-                        <tr class="@GetRowClass(range)"
-                            @onclick="() => SelectRange(range)">
-                            <td>@range.Name</td>
-                            <td>@GetPreviewValue(range)</td>
-                            <td>@range.RefersTo</td>
-                            <td>
-                                @if (range.Scope == NamedRangeScope.Workbook)
-                                {
-                                    @Loc["TmSpreadsheet_Names_ScopeWorkbook"]
-                                }
-                                else
-                                {
-                                    <text>@Loc["TmSpreadsheet_Names_ScopeSheet"] — @(range.SheetIndex.HasValue && range.SheetIndex.Value < Workbook.Sheets.Count ? Workbook.Sheets[range.SheetIndex.Value].Name : "?")</text>
-                                }
-                            </td>
-                            <td>@range.Comment</td>
+            <div class="tm-spreadsheet-name-manager__table-wrap">
+                @* WAI-ARIA grid with a roving tabindex: the selected row is the single tab stop and
+                   owns the DOM focus, ↑/↓/Home/End move it, Enter edits, Delete deletes. A <tr> has
+                   no native activation, so the handler emulates exactly one activation per press
+                   (docs/keyboard-activation-convention.md). *@
+                <table class="tm-spreadsheet-name-manager__table"
+                       role="grid"
+                       aria-label="@Loc["TmSpreadsheet_Names_Title"]"
+                       @onkeydown="OnTableKeyDown">
+                    <thead>
+                        <tr>
+                            <th>@Loc["TmSpreadsheet_Names_Name"]</th>
+                            <th>@Loc["TmSpreadsheet_Names_Value"]</th>
+                            <th>@Loc["TmSpreadsheet_Names_RefersTo"]</th>
+                            <th>@Loc["TmSpreadsheet_Names_Scope"]</th>
+                            <th>@Loc["TmSpreadsheet_Names_Comment"]</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < FilteredRanges.Count; i++)
+                        {
+                            var range = FilteredRanges[i];
+                            var index = i;
+                            <tr class="@GetRowClass(range)"
+                                id="@RowDomId(index)"
+                                tabindex="@(IsSelected(range) ? "0" : "-1")"
+                                aria-selected="@(IsSelected(range) ? "true" : "false")"
+                                @ref="_rowElements[range]"
+                                @onclick="() => OnRowClick(range)"
+                                @ondblclick="() => OnRowDoubleClick(range)">
+                                <td>@range.Name</td>
+                                <td>@GetPreviewValue(range)</td>
+                                <td>@range.RefersTo</td>
+                                <td>
+                                    @if (range.Scope == NamedRangeScope.Workbook)
+                                    {
+                                        @Loc["TmSpreadsheet_Names_ScopeWorkbook"]
+                                    }
+                                    else
+                                    {
+                                        <text>@Loc["TmSpreadsheet_Names_ScopeSheet"] — @(range.SheetIndex.HasValue && range.SheetIndex.Value < Workbook.Sheets.Count ? Workbook.Sheets[range.SheetIndex.Value].Name : "?")</text>
+                                    }
+                                </td>
+                                <td>@range.Comment</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
 
-            @if (FilteredRanges.Count == 0)
-            {
-                <div class="tm-spreadsheet-name-manager__empty">@Loc["TmSpreadsheet_Names_NoResults"]</div>
-            }
-        </div>
+                @if (FilteredRanges.Count == 0)
+                {
+                    <div class="tm-spreadsheet-name-manager__empty">@Loc["TmSpreadsheet_Names_NoResults"]</div>
+                }
+            </div>
 
-        <div class="tm-spreadsheet-name-manager__actions">
-            <button type="button" class="tm-spreadsheet-name-manager__btn tm-spreadsheet-name-manager__btn--close" @onclick="OnCloseClick">@Loc["Tm_Close"]</button>
+            <div class="tm-spreadsheet-name-manager__actions">
+                <button type="button" class="tm-spreadsheet-name-manager__btn tm-spreadsheet-name-manager__btn--close" @onclick="OnCloseClick">@Loc["Tm_Close"]</button>
+            </div>
         </div>
-    </div>
+    </TmFocusScope>
 </div>

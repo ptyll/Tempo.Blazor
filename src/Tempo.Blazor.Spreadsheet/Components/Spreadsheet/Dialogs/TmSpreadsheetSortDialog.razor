@@ -45,7 +45,7 @@
                     <tr>
                         <td class="tm-spreadsheet-sort__rowlabel">@(index == 0 ? Loc["TmSpreadsheet_Sort_SortBy"] : Loc["TmSpreadsheet_Sort_ThenBy"])</td>
                         <td>
-                            <select @bind="level.KeyIndex">
+                            <select aria-label="@Loc["TmSpreadsheet_Sort_ColumnLevelAria", index + 1]" @bind="level.KeyIndex">
                                 @foreach (var col in ColumnChoices)
                                 {
                                     <option value="@col.Index">@col.Label</option>
@@ -53,14 +53,14 @@
                             </select>
                         </td>
                         <td>
-                            <select @bind="level.SortOn">
+                            <select aria-label="@Loc["TmSpreadsheet_Sort_SortOnLevelAria", index + 1]" @bind="level.SortOn">
                                 <option value="@SpreadsheetSortOn.Value">@Loc["TmSpreadsheet_Sort_OnValue"]</option>
                                 <option value="@SpreadsheetSortOn.CellColor">@Loc["TmSpreadsheet_Sort_OnCellColor"]</option>
                                 <option value="@SpreadsheetSortOn.FontColor">@Loc["TmSpreadsheet_Sort_OnFontColor"]</option>
                             </select>
                         </td>
                         <td>
-                            <select @bind="level.Direction">
+                            <select aria-label="@Loc["TmSpreadsheet_Sort_OrderLevelAria", index + 1]" @bind="level.Direction">
                                 <option value="@SpreadsheetSortDirection.Ascending">@Loc["TmSpreadsheet_Sort_AtoZ"]</option>
                                 <option value="@SpreadsheetSortDirection.Descending">@Loc["TmSpreadsheet_Sort_ZtoA"]</option>
                             </select>

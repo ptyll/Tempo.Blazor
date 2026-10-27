@@ -1,0 +1,34 @@
+@namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
+
+@* The Spreadsheet validation alert (Stop-style error and Warning/Information confirm).
+   The surface is the core TmFocusScope, which owns the dialog role, aria-modal, the
+   aria-labelledby/aria-describedby wiring, the initial focus on the primary action, the
+   document-level Escape and the focus restore on close — a package does not re-implement
+   those. The card itself is interim: the redesign plan (phase 3) replaces the markup with
+   the core TmModal and keeps this component's public surface. *@
+<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-validation-alert__backdrop"
+     @onclick="OnBackdropClick"
+     @onclick:stopPropagation>
+    <TmFocusScope Active="true"
+                  DialogRole="alertdialog"
+                  AriaLabelledBy="@TitleDomId"
+                  aria-describedby="@MessageDomId"
+                  InitialFocusTargetId="@PrimaryActionDomId"
+                  CloseOnEscape="true"
+                  OnEscape="OnEscapeHandler"
+                  RestoreFocus="RestoreFocus"
+                  RestoreFocusTargetId="@RestoreFocusTargetId"
+                  Class="tm-spreadsheet-dialog-scope">
+        <div class="tm-spreadsheet-dialog tm-spreadsheet-alert">
+            <h2 class="tm-spreadsheet-alert__title" id="@TitleDomId">@Title</h2>
+            <p class="tm-spreadsheet-alert__message" id="@MessageDomId">@Message</p>
+            <div class="tm-spreadsheet-alert__actions">
+                @if (ShowCancel)
+                {
+                    <TmButton Variant="ButtonVariant.Secondary" id="@CancelActionDomId" OnClick="OnCancel">@CancelText</TmButton>
+                }
+                <TmButton id="@PrimaryActionDomId" OnClick="OnPrimary">@PrimaryText</TmButton>
+            </div>
+        </div>
+    </TmFocusScope>
+</div>

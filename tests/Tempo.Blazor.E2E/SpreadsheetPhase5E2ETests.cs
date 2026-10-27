@@ -65,7 +65,7 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
     }
 
-    private static async Task SetWholeNumberValidationAsync(
+    internal static async Task SetWholeNumberValidationAsync(
         IPage page,
         ILocator grid,
         string cellRef,

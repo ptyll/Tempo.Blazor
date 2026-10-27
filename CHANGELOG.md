@@ -81,6 +81,75 @@
 
 - **Scheduler toolbar class names.** The desktop toolbar is now the core `TmToolbar`, so the hand-rolled button classes are gone. `.tm-scheduler-toolbar-nav-btn` remains, but only on the compact (mobile) row. `.tm-scheduler-toolbar-today-btn` and `.tm-scheduler-toolbar-add` are removed; Today and New event are `button.tm-toolbar-btn`, and Print lives in the More menu (`button.tm-toolbar-more`, group `data-tm-group="export"`). A selector that matched `.tm-scheduler-toolbar-today-btn` or `.tm-scheduler-toolbar-add` matches nothing now — use `[data-testid="scheduler-today"]` and `[data-testid="scheduler-add"]`.
 
+- **The Spreadsheet Name Manager / Named Range Edit / Hyperlink dialogs are modal overlays, and the validation alerts are `alertdialog`s.** Before, the three dialogs rendered as an unstyled `<div>` in the document flow, *under* the grid (they had no stylesheet rule at all), and the validation alerts were anonymous `<div class="tm-spreadsheet-alert">` boxes with a backdrop click that dismissed even a Stop-style error. After, each dialog is an overlay card on the shared `.tm-spreadsheet-dialog-backdrop` / `.tm-spreadsheet-dialog` wrappers (plus a per-dialog hook class) inside `_spreadsheet.css`, wrapped in the core `TmFocusScope`, which supplies the dialog contract: `role="dialog"`, `aria-modal`, `aria-labelledby` (the card's `<h2>` title), the initial focus on a real control (the name field, the address field, the active name row or the New button, the URL field), the document-level Escape and the focus restore on close. The restore target is the grid root (`TmFocusScope.RestoreFocusTargetId`), not the toolbar button that opened the dialog, so closing any of them puts focus back into the spreadsheet; the Named Range Edit dialog keeps the default (back to whatever opened it inside the Name Manager). Both validation alerts moved into one component, `TmSpreadsheetValidationAlert`, which wraps the same primitive with `role="alertdialog"`, `aria-labelledby` (title) and `aria-describedby` (message): it focuses its primary action when it opens, Escape closes it, closing restores focus to the grid through the same scope-owned restore target, and a Stop-style error **ignores the backdrop click** — the value stays blocked and only the primary action (or Escape) dismisses it. The warning/information confirm keeps its backdrop-to-cancel. There is no host API for dismissing a Stop error: it is dismissed by the alert's own primary action. The E2E classes `__btn--ok`, `__btn--close` and `.tm-spreadsheet-name-manager__toolbar` are unchanged.
+
+  **Ids and the interim classes are not a contract.** Every element id these surfaces introduce is per instance (`spreadsheet-name-manager-title-{suffix}`, `spreadsheet-validation-alert-primary-{suffix}`, …) and may change between builds; the per-dialog `__backdrop` / card classes are interim as well, because phase 3 of the redesign plan replaces the markup with the core `TmModal`. Key off the roles instead — `[role='dialog']` / `[role='alertdialog']` inside `.tm-spreadsheet` — and the stable E2E hooks listed above.
+
+  ```html
+  <!-- before: in-flow block, no role/name, no overlay, backdrop click dismisses a Stop error -->
+  <div class="tm-spreadsheet-hyperlink">
+    <div class="tm-spreadsheet-hyperlink__header">…</div>
+  </div>
+  <div class="tm-spreadsheet-dialog-backdrop" onclick="dismiss">
+    <div class="tm-spreadsheet-alert">
+      <h4 class="tm-spreadsheet-alert__title">Invalid value</h4>
+      <button class="tm-btn tm-btn-primary tm-btn-md">OK</button>
+    </div>
+  </div>
+
+  <!-- after: shared overlay wrappers + core focus scope; the alert ignores the backdrop -->
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-hyperlink__backdrop">
+    <div class="tm-focus-scope" role="dialog" aria-modal="true"
+         aria-labelledby="spreadsheet-hyperlink-title-1a2b3c4d"
+         data-restore-target="spreadsheet-grid-1a2b3c4d">
+      <div class="tm-spreadsheet-dialog tm-spreadsheet-hyperlink">
+        <h2 class="tm-spreadsheet-hyperlink__title" id="spreadsheet-hyperlink-title-1a2b3c4d">Hyperlink</h2>
+      </div>
+    </div>
+  </div>
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-validation-alert__backdrop">
+    <div class="tm-focus-scope" role="alertdialog" aria-modal="true"
+         aria-labelledby="spreadsheet-validation-alert-title-1a2b3c4d"
+         aria-describedby="spreadsheet-validation-alert-message-1a2b3c4d"
+         data-restore-target="spreadsheet-grid-1a2b3c4d">
+      <div class="tm-spreadsheet-dialog tm-spreadsheet-alert">
+        <h2 class="tm-spreadsheet-alert__title" id="spreadsheet-validation-alert-title-1a2b3c4d">Invalid value</h2>
+        <div class="tm-spreadsheet-alert__actions"><button class="tm-btn tm-btn-primary tm-btn-md">Confirm</button></div>
+      </div>
+    </div>
+  </div>
+  ```
+
+- **The Spreadsheet Custom Filter's first operator select is named by its own role, not by the dialog title.** Before, that `<select>` carried `aria-label="Custom filter"` (the dialog title repeated on a control), so a screen-reader user heard the same name on the dialog and on the field. After, it reads `TmSpreadsheet_CustomFilter_FirstOperator` ("First condition operator"), and the four operand fields and the second operator carry their own names (`…_FirstValue`, `…_FirstValueTo`, `…_SecondOperator`, `…_SecondValue`, `…_SecondValueTo`). A host that overrode the visible dialog title to reword that select must override the new key instead; an automated check that asserted `aria-label="Custom filter"` on the select now matches the dialog container only.
+
+  ```html
+  <!-- before: the select repeated the dialog title -->
+  <div class="tm-spreadsheet-custom-filter" role="dialog" aria-label="Custom filter">
+    <select class="tm-spreadsheet-custom-filter__op" aria-label="Custom filter">…</select>
+
+  <!-- after: dialog and field each carry their own name -->
+  <div class="tm-spreadsheet-custom-filter" role="dialog" aria-label="Custom filter">
+    <select class="tm-spreadsheet-custom-filter__op" aria-label="First condition operator">…</select>
+  ```
+
+- **The Spreadsheet Format Cells category picker is an ARIA listbox with a roving tabindex.** Before, the eight number categories were `<div class="tm-fcd__listbox-item">` boxes with only `@onclick` — not reachable or operable from the keyboard. After, the container is `role="listbox"` named by `aria-labelledby` (the id it points at is per instance, so the label id is **not** a contract), and it carries no `tabindex` and no `aria-activedescendant`: the roving tabindex lives on the options, where the single tab stop is the **selected** one (`tabindex="0"`, all others `-1`). Each option is `role="option"` with `aria-selected="true|false"`. ↑/↓/Home/End move the selection and the DOM focus with it (so the option scrolls into view), a click selects the option and focuses it, and Ctrl+Enter still applies the dialog from it. Consumers key off `[role='listbox'] [role='option']` (or the unchanged `.tm-fcd__listbox-item` class); the removed `#tm-fcd-category-list` container id, its `aria-activedescendant` and the old fixed option ids match nothing now.
+
+  ```html
+  <!-- before -->
+  <div class="tm-fcd__listbox">
+    <div class="tm-fcd__listbox-item tm-fcd__listbox-item--selected">General</div>
+  </div>
+
+  <!-- after: the container is named but not focusable; the selected OPTION is the tab stop -->
+  <div class="tm-fcd__listbox" role="listbox" aria-labelledby="spreadsheet-fcd-category-label-1a2b3c4d">
+    <div class="tm-fcd__listbox-item tm-fcd__listbox-item--selected"
+         role="option" tabindex="0" aria-selected="true">General</div>
+    <div class="tm-fcd__listbox-item" role="option" tabindex="-1" aria-selected="false">Number</div>
+  </div>
+  ```
+
+- **The Spreadsheet dialogs' element ids are per instance — except the form fields the E2E lane keys off.** Every id this phase adds (dialog titles, the validation alert's title / message / primary / cancel, the listbox label, the Name Manager title / New button / rows, the insert-image title and URL field) is stamped with a per-instance suffix and may change between builds, so none of them is a selector contract; key off the roles (`[role='dialog']`, `[role='alertdialog']`, `[role='listbox'] [role='option']`) instead. The **pre-existing** form-field ids `#nr-name`, `#nr-refers`, `#nr-scope`, `#nr-sheet`, `#nr-comment`, `#hl-type`, `#hl-target`, `#hl-subject`, `#hl-display` and `#hl-tooltip` stay stable on purpose — the published E2E lane fills them — and at most one instance of each dialog is open at a time, so they cannot collide.
+
 ### Added
 
 - **`TmOverlayPanel.SheetTitle` and `TmOverlayPanel.SheetInitialFocusSelector`.** `SheetTitle` names the sheet header and the drawer only; it does not name the popover. Null falls back to `Title`, then `AriaLabel`, then the localized "Menu". `SheetInitialFocusSelector` is a CSS selector scoped to the sheet, the same contract as `TmDrawer.InitialFocusSelector`. When it is null, a `Role` of `menu` or `listbox` still derives the first-entry selector, so existing menu and listbox sheets are unchanged. A match that is not itself focusable falls through to the first focusable.
@@ -709,6 +778,13 @@
   This is a visual change, not an API change: no parameter or signature was removed. A template taller than the card is still cut at the card edge.
 - **`TmMultiSelect` sheet keyboard follows the panel's resolved layout.** With `MobilePresentation="Auto"` and `LayoutMode="Auto"` the listbox used to read the parameter, which stays `Auto`, so on a real phone the options had no `tabindex` and no `aria-activedescendant` even though the popup had opened as a sheet. The listbox now follows `TmOverlayPanel.IsSheet`. A forced `Sheet`, or `Auto` with `LayoutMode="Mobile"`, is unchanged.
 - **Calendar and multi-select accessible markup moved.** See Breaking / Migration. The classes `.tm-calendar`, `.tm-cal-nav`, `.tm-cal-day` and `.tm-multiselect__options` are unchanged, and the popup root still keeps `display: flex`.
+- **Three Spreadsheet dialogs no longer render as an unstyled block in the document flow under the grid.** The Name Manager, Named Range Edit and Hyperlink dialogs had no stylesheet rule in `Tempo.Blazor.Spreadsheet` at all, so they landed *below* the grid as raw markup. They now ship a fixed overlay on the `--tm-z-modal` band plus a card (sticky table header, `--tm-color-primary-subtle` selected row with a primary rail, header close button), and the overlay keeps the grid where it was. The card is a column capped to the viewport (`max-height` propagated from the backdrop through the focus-scope wrapper), so a long name list or a short window scrolls the middle instead of pushing the footer off screen. The DOM changes (`role="dialog"`, `aria-modal`, `aria-labelledby`) are listed under Breaking / Migration.
+- **The Spreadsheet validation alerts are `alertdialog`s with a focus contract.** A Stop-style error used to be a plain box that any backdrop click dismissed; it now ignores the backdrop click entirely — the value stays blocked and only its primary action (or Escape) dismisses it. Both alerts are one component, `TmSpreadsheetValidationAlert`, wrapped in the core `TmFocusScope`: it focuses the primary action when it opens, closes on Escape, and puts focus back on the grid when it closes. A warning/information confirm keeps its backdrop-to-cancel and its deferred-commit flow — confirming still commits the deferred value, cancelling still discards it. Screen readers announce the alert as a dialog and read the title (`aria-labelledby`) and the message (`aria-describedby`).
+
+- **The Spreadsheet Format Cells category list and the Name Manager rows are keyboard operable.** Both lists use a roving tabindex: the selected option / row is the single tab stop (`tabindex="0"`, every other `-1`) and owns the DOM focus, so ↑/↓ plus Home/End move the selection and the focus together (the item scrolls into view) and no `aria-activedescendant` is involved — the containers keep only `role` and their accessible name. The Name Manager table opens on its first row (and re-normalises the selection whenever a filter hides it, so exactly one row stays tabbable); Enter edits the selected name, Delete deletes it and selects the neighbour (the row that took its place, or the new last row), a double click edits, and Edit/Delete disable whenever no visible row is selected — per [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md). The rows are `<tr>` elements with no native activation, so nothing double-fires.
+
+- **The Spreadsheet Text to Columns fixed-width hint is localized.** The break-positions field carried the hardcoded English `placeholder="e.g. 5, 10"`; it now reads the new `TmSpreadsheet_TextToColumns_BreakPositionsPlaceholder` key ("e.g. 5, 10" / "např. 5, 10" / "napr. 5, 10" / "p. ex. 5, 10").
+- **The Spreadsheet dialogs' label-less controls got accessible names.** The Custom Filter's operator selects and its operand fields (including the `Between` upper bounds) now name themselves (`TmSpreadsheet_CustomFilter_FirstOperator` / `_FirstValue` / `_FirstValueTo` / `_SecondOperator` / `_SecondValue` / `_SecondValueTo`), a Sort level's three selects name their role **and** the level number (`TmSpreadsheet_Sort_ColumnLevelAria` / `_SortOnLevelAria` / `_OrderLevelAria`, `"Column, level {0}"` — a neutral form with no plural), and the Name Manager filter input repeats its placeholder as `aria-label`. The Insert Image url field is now associated with its label through `for`/`id` and answers Enter (apply) — the field owns the Enter contract, so a bubbled keydown from the footer buttons cannot activate them twice — while Escape is the dialog's own dismissal (the focus scope's document-level listener), and a backdrop click goes through the same close path as Cancel.
 
 - **overlay.js restores Escape focus immediately again, and waits only for a focus trap.** A non-trap panel (a dropdown, a picker popup) gets its anchor focus back inside `dismiss('escape')`, as before. A `TrapFocus` panel keeps the page inert until it hides, so that restore waits for `hidePanel` (or `release` when the panel node is already gone). A vetoed dismissal clears the pending restore, and the late path still refuses to move a focus that already landed somewhere.
 

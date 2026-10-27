@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
@@ -7,6 +8,11 @@ namespace Tempo.Blazor.Components.Spreadsheet;
 
 public partial class TmSpreadsheetFormatCellsDialog
 {
+    // Per-instance id suffix: the ids below are implementation detail, never a selector contract.
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private string CategoryLabelDomId => $"spreadsheet-fcd-category-label-{_idSuffix}";
+
     [Parameter, EditorRequired] public SpreadsheetCellStyle Style { get; set; } = new();
     [Parameter, EditorRequired] public EventCallback<SpreadsheetCellStyle> OnApply { get; set; }
     [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
@@ -95,10 +101,72 @@ public partial class TmSpreadsheetFormatCellsDialog
         }
     }
 
+    // Per-item element references: the roving tabindex needs the DOM focus on the option it just
+    // moved to, so the newly selected option's reference is focused after the render that moved it.
+    private readonly Dictionary<string, ElementReference> _categoryElements = [];
+    private string? _pendingCategoryFocus;
+
     private void SelectCategory(string cat)
     {
         _selectedCategory = cat;
         UpdateNumberFormat();
+        _pendingCategoryFocus = cat;
+    }
+
+    /// <summary>A click selects a category and hands it the DOM focus so the arrows work next.</summary>
+    private void OnCategoryClick(string cat) => SelectCategory(cat);
+
+    /// <summary>
+    /// Listbox keyboard contract: ↑/↓ step through the categories and Home/End jump to the ends.
+    /// The roving tabindex keeps exactly one tab stop, and the focus follows the selection after the
+    /// render. Space/Enter have nothing to emulate (the option is a div and the selection already
+    /// follows the arrows), and other keys fall through to the dialog's root shortcuts
+    /// (Ctrl+Enter = Apply).
+    /// </summary>
+    private void OnCategoryKeyDown(KeyboardEventArgs e)
+    {
+        var index = Array.IndexOf(_numberCategories, _selectedCategory);
+        if (index < 0)
+        {
+            index = 0;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                SelectCategory(_numberCategories[Math.Min(index + 1, _numberCategories.Length - 1)]);
+                break;
+            case "ArrowUp":
+                SelectCategory(_numberCategories[Math.Max(index - 1, 0)]);
+                break;
+            case "Home":
+                SelectCategory(_numberCategories[0]);
+                break;
+            case "End":
+                SelectCategory(_numberCategories[^1]);
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        var target = _pendingCategoryFocus;
+        _pendingCategoryFocus = null;
+        if (target is null || !_categoryElements.TryGetValue(target, out var element))
+        {
+            return;
+        }
+
+        try
+        {
+            await element.FocusAsync();
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException or TaskCanceledException)
+        {
+            // The tab can be switched away between the click and the render, or the circuit can be down.
+        }
     }
 
     private void OnCurrencySymbolChange(Microsoft.AspNetCore.Components.ChangeEventArgs e)

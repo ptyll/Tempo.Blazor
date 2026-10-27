@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetFormatCellsDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle.",
+  "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle. The number-category picker is a WAI-ARIA listbox with a roving tabindex: the selected option is the tab stop and owns the focus, Up/Down/Home/End move the selection. Ctrl+Enter still applies the dialog.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor",
