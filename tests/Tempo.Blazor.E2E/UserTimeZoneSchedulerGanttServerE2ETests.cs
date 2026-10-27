@@ -42,10 +42,10 @@ public class UserTimeZoneSchedulerGanttServerE2ETests : ServerTestBase
     {
         var page = await OpenAsync("/scheduler");
 
-        // The SECOND scheduler on the page is the plain month view WITHOUT a TimeZoneId (the first
-        // one carries the demo's explicit Europe/Prague TimeZoneId) — its display zone, and
-        // therefore its "Today", must come from the browser.
-        var scheduler = page.Locator(".tm-scheduler").Nth(1);
+        // The Month View section carries no TimeZoneId, so its display zone, and therefore its
+        // "Today", must come from the browser. The page now mounts tablet and mobile schedulers
+        // before it, so a positional .Nth() no longer lands here.
+        var scheduler = page.Locator("[data-testid='scheduler-month-section'] .tm-scheduler");
         await scheduler.ScrollIntoViewIfNeededAsync();
         var todayButton = scheduler.Locator("[data-testid='scheduler-today']");
         await todayButton.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

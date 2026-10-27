@@ -176,7 +176,7 @@ managed hosts instead, start the four apps above and set
 | Navigation | `TmTabs`, `TmTabPanel`, `TmContextMenu`, `TmContextMenuItem` |
 | Notifications | `TmNotificationBell` (extended, per-item read, severity) |
 | Pickers | `TmDatePicker`, `TmDateRangePicker`, `TmDateTimePicker`, `TmDateTimeRangePicker`, `TmTimePicker`, `TmTimeRangePicker`, `TmCalendarView` |
-| Scheduler | `TmScheduler` with multiple views (Month, Week, Day, Timeline, Agenda) |
+| Scheduler | `TmScheduler` (Month, Week, Day, Timeline, Agenda). `LayoutMode` classifies its own container; `MobileActionBar` is opt-in (`None` default). Side panel and event detail are host slots through `TmSidePanel`. Contract: [docs/scheduler.md](docs/scheduler.md) |
 | Tags | `TmTagPicker` |
 | Timeline | `TmTimeline` |
 | Toolbar | `TmToolbar`, `TmToolbarButton`, `TmToolbarFileButton`, `TmToolbarDivider` |
@@ -828,7 +828,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 - `dashboard.js` — required by `TmDashboard` (drag & resize grid; imports the shared `pointer-drag.js` from the same folder — no extra script tag)
 - `workflow-designer.js` — required by `TmWorkflowDesignerCanvas` (SVG drag, pan, zoom, transition creation)
 - `richEditor.js` — required by `TmRichEditorFull` / `TmRichEditorSimple` (contenteditable interop)
-- `scheduler.js` — required by `TmScheduler` (event resize; imports the shared `pointer-drag.js` from the same folder)
+- `scheduler.js` — required by `TmScheduler` (classic script, `window.TempoBlazor.Scheduler`). It owns the scheduler maths only: slot snapping, the live size of the event, the resize commit and the roving scroll guard. The gesture itself comes from the shared helpers, loaded by a dynamic `import()` resolved from `document.currentScript.src` (captured while the classic script evaluates — a bare `'_content/…'` specifier is not a module specifier and throws without an import map). `pointer-drag.js` drives the resize (`.tm-scheduler-event-resize-handle`: the time grid renders a top and a bottom handle, the timeline a left and a right handle, and the keyboard resize changes the end only; a compact selected event hides the start grip; `longPressMs: 400`) and the touch move (`.tm-scheduler-timegrid-event` / `.tm-scheduler-timeline-event` / `.tm-scheduler-month-event` with `[draggable="true"]`, `pointerTypes: ['touch']`, 400 ms long-press; mouse and pen stay on HTML5 drag-and-drop). `pointer-gesture.js` supplies `createAutoScroller` for the edge scroll during a drag. A host page needs only the `scheduler.js` script tag; both helpers must be served from the same `_content/Tempo.Blazor/js/` folder, and a per-file CSP hash must list them. Contract: [docs/scheduler.md](docs/scheduler.md) and [docs/touch-interaction.md](docs/touch-interaction.md)
 - `pointer-drag.js` — the shared ES-module pointer-drag helper (capture by pointerId, threshold, long-press, cancel paths); never write a second drag implementation, see [docs/touch-interaction.md](docs/touch-interaction.md)
 - `pointer-gesture.js` — the shared ES-module multi-pointer helper (`attachPinch` two-finger pinch/pan with ctrl+wheel zoom, `createAutoScroller` edge auto-scroll); never write a second pinch, a host cancels its drag from the pinch's `onStart`, see [docs/touch-interaction.md](docs/touch-interaction.md)
 - `signature-capture.js` — required by `TmSignatureCapture`

@@ -7,11 +7,16 @@ namespace Tempo.Blazor.E2E.Scheduler;
 /// E2E for the scheduler time-grid phase on the Scheduler demo page (WASM demo at 7106):
 /// a work week clipped to 08:00-17:00 scrolls to the requested time, and a resize inside that
 /// clipped range uses the visible minutes, not a hard-coded 24 hour day.
+/// Shots are rewritten into <c>__screenshots__/scheduler/</c> only with
+/// <c>TM_E2E_UPDATE_BASELINE=1</c>; otherwise they land in TestResults.
 /// </summary>
 [TestClass]
 public class SchedulerRangeE2ETests : WasmTestBase
 {
     private const string SchedulerPage = "/scheduler";
+
+    private static bool UpdateBaseline =>
+        string.Equals(Environment.GetEnvironmentVariable("TM_E2E_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
 
     private async Task<IPage> OpenAsync()
     {
@@ -94,8 +99,10 @@ public class SchedulerRangeE2ETests : WasmTestBase
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {
-        var dir = Path.Combine(FindRepoRoot().FullName,
-            "tests", "Tempo.Blazor.E2E", "__screenshots__", "scheduler");
+        var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E",
+            UpdateBaseline
+                ? Path.Combine("__screenshots__", "scheduler")
+                : Path.Combine("TestResults", "scheduler"));
         Directory.CreateDirectory(dir);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(dir, $"{fileName}.png"), FullPage = true });
     }

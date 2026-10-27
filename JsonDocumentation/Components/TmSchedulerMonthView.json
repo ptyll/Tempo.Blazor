@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerMonthView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler. A timed event renders as a tinted card (a light tint of the event colour, a coloured left stripe, a small radius and shadow); an all-day event keeps a solid fill so its text contrast holds. Weekday headers are sentence case. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
+  "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a plural '+N more' overflow indicator (Loc.Plural of TmScheduler_More, so Czech reads '+1 další / +2 další / +5 dalších'). Used internally by TmScheduler. A timed event renders as a tinted card (a light tint of the event colour, a coloured left stripe, a small radius and shadow); an all-day event keeps a solid fill so its text contrast holds. Weekday headers are sentence case. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -31,7 +31,7 @@
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "Max events visible per day cell before showing \"+N more\"."
+      "description": "Max events visible per day cell before showing the plural '+N more' label (Loc.Plural of TmScheduler_More)."
     },
     {
       "name": "ShowAdjacentMonthEvents",

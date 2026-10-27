@@ -109,7 +109,7 @@
                                 @onkeyup:stopPropagation="true"
                                 aria-label="@Loc.Plural("TmScheduler_MoreAria", remaining, SchedulerRange.FormatDayTitle(d.ToDateTime(TimeOnly.MinValue), CultureInfo.CurrentUICulture))"
                                 @onclick="@(() => HandleMoreClick(d))"
-                                @onclick:stopPropagation="true">@string.Format(Loc["TmScheduler_More"], remaining)</button>
+                                @onclick:stopPropagation="true">@Loc.Plural("TmScheduler_More", remaining)</button>
                     }
                 }
             </div>

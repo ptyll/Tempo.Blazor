@@ -456,7 +456,7 @@
 
     /// <summary>The gutter reads the same short time the events do, so a 12-hour culture shows "9:00 AM".</summary>
     private string HourLabel(int hour)
-        => (hour == 24 ? DateTime.Today : DateTime.Today.AddHours(hour)).ToString("t", CultureInfo.CurrentUICulture);
+        => TimeOnly.MinValue.AddHours(hour == 24 ? 0 : hour).ToString("t", CultureInfo.CurrentUICulture);
 
     private string SlotAriaLabel(DateTime slotStart)
         => SchedulerA11y.SlotLabel(Loc, slotStart, slotStart.AddMinutes(SlotDuration), CultureInfo.CurrentUICulture);

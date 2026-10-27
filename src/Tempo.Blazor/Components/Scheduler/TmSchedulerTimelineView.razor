@@ -19,7 +19,7 @@
         @for (var hour = RangeStartMinutes / 60; hour < (RangeStartMinutes + RangeMinutes) / 60; hour++)
         {
             var h = hour;
-            <div class="tm-scheduler-timeline-time-header">@DateTime.Today.AddHours(h).ToString("t", CultureInfo.CurrentUICulture)</div>
+            <div class="tm-scheduler-timeline-time-header">@TimeOnly.MinValue.AddHours(h).ToString("t", CultureInfo.CurrentUICulture)</div>
         }
     </div>
 
