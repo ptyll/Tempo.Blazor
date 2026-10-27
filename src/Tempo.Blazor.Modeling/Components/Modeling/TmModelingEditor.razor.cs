@@ -537,16 +537,48 @@ public partial class TmModelingEditor : IDisposable
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("eval", $$"""
-                (() => {
-                    const selector = {{System.Text.Json.JsonSerializer.Serialize(selector)}};
-                    document.querySelector(selector)?.focus?.({ preventScroll: true });
-                })();
-                """);
+            var module = await GetInteropModuleAsync();
+            if (module is null)
+            {
+                return;
+            }
+
+            await module.InvokeVoidAsync("focusSelector", selector);
         }
         catch (JSException)
         {
             // Focus restoration is progressive enhancement and should not break rendering.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing left to focus.
+        }
+        catch (ObjectDisposedException)
+        {
+            // The component or the runtime is being torn down.
+        }
+    }
+
+    private const string InteropModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
+
+    private Task<IJSObjectReference>? _interopModuleTask;
+
+    /// <summary>
+    /// Imports the CSP-safe <c>modeling-editor.js</c> ES module (no <c>&lt;script&gt;</c> tag
+    /// needed in the host). A failed import is not cached — the next focus request retries —
+    /// and never falls back to <c>eval</c>, which hosts with a strict CSP must not need.
+    /// </summary>
+    private async Task<IJSObjectReference?> GetInteropModuleAsync()
+    {
+        _interopModuleTask ??= JSRuntime.InvokeAsync<IJSObjectReference>("import", InteropModulePath).AsTask();
+        try
+        {
+            return await _interopModuleTask;
+        }
+        catch (Exception)
+        {
+            _interopModuleTask = null;
+            throw;
         }
     }
 
@@ -652,6 +684,12 @@ public partial class TmModelingEditor : IDisposable
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
+
+        if (_interopModuleTask is { Status: TaskStatus.RanToCompletion } import && import.Result is not null)
+        {
+            var module = import.Result;
+            _ = module.DisposeAsync().AsTask();
+        }
     }
 
     private enum ModelingEditorState

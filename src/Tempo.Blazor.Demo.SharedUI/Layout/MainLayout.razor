@@ -165,12 +165,27 @@
         // attribute lands exactly when an interactive runtime has actually rendered — WASM boot
         // finished or the server circuit is up. PlaywrightTestBase.WaitForAppReadyAsync waits on
         // it instead of a fixed sleep.
+        // CSP-safe: a module import (no eval) keeps the ?csp=1 demo variant working.
         if (firstRender)
         {
-            await JS.InvokeVoidAsync(
-                "eval", "document.body.setAttribute('data-blazor-ready', 'true')");
+            try
+            {
+                _appReadyModule ??= await JS.InvokeAsync<Microsoft.JSInterop.IJSObjectReference>(
+                    "import", "./_content/Tempo.Blazor.Demo.SharedUI/js/demo-app-ready.js");
+                await _appReadyModule.InvokeVoidAsync("markBodyReady");
+            }
+            catch (Microsoft.JSInterop.JSException)
+            {
+                // Progressive enhancement only.
+            }
+            catch (Microsoft.JSInterop.JSDisconnectedException)
+            {
+                // The circuit is gone; there is nothing left to mark.
+            }
         }
     }
+
+    private Microsoft.JSInterop.IJSObjectReference? _appReadyModule;
 
     private void ToggleMobileMenu()
     {

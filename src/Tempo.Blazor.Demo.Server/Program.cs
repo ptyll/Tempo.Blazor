@@ -180,6 +180,30 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Modeling redesign phase 1 (CSP guard): a document request for the modeling editor with
+// ?csp=1 ships a Content-Security-Policy WITHOUT 'unsafe-eval', so the E2E can prove the
+// Modeling package works on strict hosts — focus restoration and the tree drag bridge run
+// through the modeling-editor.js ES module, never through eval. The demo shell's own CDN
+// sources stay allowed; only eval is forbidden.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method)
+        && context.Request.Path == "/modeling-editor"
+        && context.Request.Query["csp"] == "1")
+    {
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; "
+            + "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            + "font-src 'self' data: https://fonts.gstatic.com; "
+            + "img-src 'self' data: blob: https:; "
+            + "connect-src 'self' wss://localhost:7107 ws://localhost:7107 https://localhost:5100 https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            + "object-src 'none'";
+    }
+
+    await next();
+});
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

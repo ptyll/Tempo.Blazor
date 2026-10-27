@@ -8,6 +8,8 @@ namespace Tempo.Blazor.Tests.Modeling;
 
 public sealed class TmModelingModelTreeTests : LocalizationTestBase
 {
+    private const string ModelingModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
+
     [Fact]
     public void Renders_node_for_each_model_element()
     {
@@ -96,15 +98,63 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         var node = cut.Find("[data-testid='modeling-tree-node-task-review']");
         node.GetAttribute("draggable").Should().Be("true");
         node.GetAttribute("data-modeling-drag-element-id").Should().Be("task-review");
-        JSInterop.Invocations.Any(invocation =>
-            invocation.Identifier == "eval"
-            && invocation.Arguments.Any(argument => argument?.ToString()?.Contains("dataTransfer.setData") == true))
-            .Should().BeTrue();
 
         node.TriggerEvent("ondragstart", new Microsoft.AspNetCore.Components.Web.DragEventArgs());
 
         dragged.Should().NotBeNull();
         dragged!.Id.Should().Be("task-review");
+    }
+
+    [Fact]
+    public void Drag_bridge_uses_module_import_not_eval()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("registerTreeDragBridge", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        cut.WaitForAssertion(() =>
+        {
+            JSInterop.Invocations
+                .Where(invocation => invocation.Identifier == "import")
+                .SelectMany(invocation => invocation.Arguments)
+                .Select(argument => argument?.ToString())
+                .Should().Contain(ModelingModulePath);
+        });
+
+        module.Invocations
+            .Select(invocation => invocation.Identifier)
+            .Should().Contain("registerTreeDragBridge");
+
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "eval")
+            .Should().BeEmpty("the drag bridge is registered by the ES module, not by eval");
+    }
+
+    [Fact]
+    public void Keyboard_navigation_focuses_node_without_eval()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+        module.SetupVoid("scrollTreeElementIntoView", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        // task-approve sorts first (ArrowDown has a next sibling); ArrowDown on the
+        // LAST node is a no-op by design (the boundary is clamped).
+        cut.Find("[data-testid='modeling-tree-node-task-approve']")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "ArrowDown" });
+
+        cut.WaitForAssertion(() => module.Invocations
+            .Select(invocation => invocation.Identifier)
+            .Should().Contain("focusTreeElement",
+                "arrow navigation moves focus through the CSP-safe module"));
+
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "eval")
+            .Should().BeEmpty("keyboard navigation must not fall back to eval");
     }
 
     [Fact]

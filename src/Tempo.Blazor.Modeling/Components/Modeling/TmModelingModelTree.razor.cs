@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -11,6 +10,8 @@ namespace Tempo.Blazor.Components.Modeling;
 /// <summary>Displays semantic modeling elements grouped by type with live filtering and selection.</summary>
 public partial class TmModelingModelTree
 {
+    private const string InteropModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
+
     private string _filterText = string.Empty;
     private string? _lastScrolledElementId;
     private IReadOnlyList<ModelingElementDto>? _filteredGroupsSource;
@@ -153,63 +154,63 @@ public partial class TmModelingModelTree
         => OnElementDragEnded.InvokeAsync();
 
     private async Task RegisterDragDataTransferBridgeAsync()
-    {
-        await JSRuntime.InvokeVoidAsync("eval", """
-            (() => {
-                if (window.__tmModelingTreeDragBridgeRegistered) {
-                    return;
-                }
-
-                window.__tmModelingTreeDragBridgeRegistered = true;
-                document.addEventListener('dragstart', event => {
-                    const node = event.target?.closest?.('[data-modeling-drag-element-id]');
-                    if (!node || !event.dataTransfer) {
-                        return;
-                    }
-
-                    const elementId = node.getAttribute('data-modeling-drag-element-id') || '';
-                    window.__tmModelingDraggedElementId = elementId;
-                    event.dataTransfer.effectAllowed = 'copy';
-                    event.dataTransfer.setData('text/plain', elementId);
-                    event.dataTransfer.setData('application/x-tempo-modeling-element-id', elementId);
-                }, true);
-
-                document.addEventListener('dragend', () => {
-                    window.__tmModelingDraggedElementId = '';
-                }, true);
-            })();
-            """);
-    }
+        => await TryInvokeModuleAsync("registerTreeDragBridge");
 
     private async Task ScrollSelectedElementIntoViewAsync(string elementId)
-    {
-        var serializedElementId = JsonSerializer.Serialize(elementId);
-        await JSRuntime.InvokeVoidAsync("eval", $$"""
-            (() => {
-                const elementId = {{serializedElementId}};
-                const escapedElementId = window.CSS?.escape
-                    ? CSS.escape(elementId)
-                    : elementId.replace(/["\\]/g, "\\$&");
-                const node = document.querySelector(`[data-testid="modeling-model-tree"] [data-element-id="${escapedElementId}"]`);
-                node?.scrollIntoView({ block: "nearest", inline: "nearest" });
-            })();
-            """);
-    }
+        => await TryInvokeModuleAsync("scrollTreeElementIntoView", elementId);
 
     private async Task FocusElementAsync(string elementId)
+        => await TryInvokeModuleAsync("focusTreeElement", elementId);
+
+    /// <summary>
+    /// Invokes an export of the CSP-safe <c>modeling-editor.js</c> ES module. The module is
+    /// imported once per component instance; a failed import (prerender, bUnit, torn-down
+    /// circuit) is swallowed — every interop here is progressive enhancement and the tree
+    /// keeps working without it. NEVER fall back to <c>eval</c>: hosts may ship a CSP
+    /// without <c>unsafe-eval</c>.
+    /// </summary>
+    private async Task TryInvokeModuleAsync(string identifier, params object?[] args)
     {
-        var serializedElementId = JsonSerializer.Serialize(elementId);
-        await JSRuntime.InvokeVoidAsync("eval", $$"""
-            (() => {
-                const elementId = {{serializedElementId}};
-                const escapedElementId = window.CSS?.escape
-                    ? CSS.escape(elementId)
-                    : elementId.replace(/["\\]/g, "\\$&");
-                const node = document.querySelector(`[data-testid="modeling-model-tree"] [data-element-id="${escapedElementId}"]`);
-                node?.scrollIntoView({ block: "nearest", inline: "nearest" });
-                node?.focus({ preventScroll: true });
-            })();
-            """);
+        try
+        {
+            var module = await GetInteropModuleAsync();
+            if (module is null)
+            {
+                return;
+            }
+
+            await module.InvokeVoidAsync(identifier, args);
+        }
+        catch (JSException)
+        {
+            // Progressive enhancement only — the tree itself must keep working.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing left to enhance.
+        }
+        catch (ObjectDisposedException)
+        {
+            // The component or the runtime is being torn down.
+        }
+    }
+
+    private Task<IJSObjectReference>? _interopModuleTask;
+
+    private async Task<IJSObjectReference?> GetInteropModuleAsync()
+    {
+        _interopModuleTask ??= JSRuntime.InvokeAsync<IJSObjectReference>("import", InteropModulePath).AsTask();
+        try
+        {
+            return await _interopModuleTask;
+        }
+        catch (Exception)
+        {
+            // Do not cache a failed import — the next call retries (e.g. a module handler
+            // registered by a test after the first render).
+            _interopModuleTask = null;
+            throw;
+        }
     }
 
     private bool IsSelected(ModelingElementDto element)

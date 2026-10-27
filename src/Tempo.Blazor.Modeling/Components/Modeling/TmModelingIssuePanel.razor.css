@@ -73,15 +73,20 @@
     color: var(--tm-color-text);
     font: inherit;
     text-align: left;
+}
+
+/* Navigable issues only: the pointer cursor and hover affordance signal that activating
+   the row selects its source element. Sourceless issues are plain list items. */
+button.tm-modeling-issue-panel__item--navigable {
     cursor: pointer;
 }
 
-.tm-modeling-issue-panel__item:hover {
+button.tm-modeling-issue-panel__item--navigable:hover {
     border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-primary-subtle);
 }
 
-.tm-modeling-issue-panel__item:focus-visible {
+button.tm-modeling-issue-panel__item--navigable:focus-visible {
     border-color: var(--tm-color-primary);
     outline: 2px solid var(--tm-color-primary-subtle);
     outline-offset: 1px;

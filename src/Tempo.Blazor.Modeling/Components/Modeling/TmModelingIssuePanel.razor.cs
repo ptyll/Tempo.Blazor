@@ -6,7 +6,10 @@ namespace Tempo.Blazor.Components.Modeling;
 /// <summary>Displays validation and generation issues for a modeling document.</summary>
 public partial class TmModelingIssuePanel
 {
-    /// <summary>Issues to render in severity-coded order.</summary>
+    /// <summary>
+    /// Issues to render, in input order. Severity only colors the rows — the panel never
+    /// re-sorts the list (severity filtering/sorting is backlog).
+    /// </summary>
     [Parameter] public IReadOnlyList<ModelingIssueDto> Issues { get; set; } = [];
 
     /// <summary>Raised when the user selects an issue that points to a model element or relationship.</summary>
@@ -17,10 +20,17 @@ public partial class TmModelingIssuePanel
 
     private string RootClass => string.Join(" ", new[] { "tm-modeling-issue-panel", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
+    /// <summary>
+    /// An issue is navigable only when it points at a model element or relationship —
+    /// sourceless issues render as non-interactive list items.
+    /// </summary>
+    private static bool IsNavigable(ModelingIssueDto issue)
+        => !string.IsNullOrWhiteSpace(issue.SourceElementId)
+            || !string.IsNullOrWhiteSpace(issue.SourceRelationshipId);
+
     private Task SelectIssueAsync(ModelingIssueDto issue)
     {
-        if (string.IsNullOrWhiteSpace(issue.SourceElementId)
-            && string.IsNullOrWhiteSpace(issue.SourceRelationshipId))
+        if (!IsNavigable(issue))
         {
             return Task.CompletedTask;
         }

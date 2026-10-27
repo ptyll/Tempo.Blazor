@@ -8,6 +8,9 @@
     <header class="tm-modeling-issue-panel__header">
         <div>
             <h3>@Loc["TmModelingIssuePanel_Title"]</h3>
+            @* Neutral count formulation (B16): "Nálezy: {0}" — the shipped tables provide a single
+               template instead of a plural family, so no language has to pick a form. Plural()
+               falls through to the plain key when no family exists. *@
             <span>@Loc.Plural("TmModelingIssuePanel_Count", Issues.Count)</span>
         </div>
     </header>
@@ -25,32 +28,64 @@
             @foreach (var issue in Issues.Select((value, index) => (value, index)))
             {
                 <li role="listitem">
-                    <button type="button"
-                            class="@GetIssueClass(issue.value)"
-                            data-testid="@($"modeling-issue-{issue.index}")"
-                            data-severity="@GetSeverityKey(issue.value)"
-                            data-source-element-id="@issue.value.SourceElementId"
-                            data-source-relationship-id="@issue.value.SourceRelationshipId"
-                            aria-label="@GetIssueAriaLabel(issue.value)"
-                            @onclick="() => SelectIssueAsync(issue.value)">
-                        <span class="@GetIconClass(issue.value)" aria-hidden="true">@GetSeverityIcon(issue.value)</span>
-                        <span class="tm-modeling-issue-panel__body">
-                            <span class="tm-modeling-issue-panel__meta">
-                                <strong>@GetSeverityLabel(issue.value)</strong>
-                                @if (!string.IsNullOrWhiteSpace(issue.value.Category))
+                    @* Nálezy bez zdroje (no SourceElementId/SourceRelationshipId) have no navigation
+                       target: they render as a non-interactive list item — no <button>, no pointer
+                       cursor, no hover affordance. Navigable issues keep the button + accessible name. *@
+                    @if (IsNavigable(issue.value))
+                    {
+                        <button type="button"
+                                class="@GetIssueClass(issue.value) tm-modeling-issue-panel__item--navigable"
+                                data-testid="@($"modeling-issue-{issue.index}")"
+                                data-severity="@GetSeverityKey(issue.value)"
+                                data-source-element-id="@issue.value.SourceElementId"
+                                data-source-relationship-id="@issue.value.SourceRelationshipId"
+                                aria-label="@GetIssueAriaLabel(issue.value)"
+                                @onclick="() => SelectIssueAsync(issue.value)">
+                            <span class="@GetIconClass(issue.value)" aria-hidden="true">@GetSeverityIcon(issue.value)</span>
+                            <span class="tm-modeling-issue-panel__body">
+                                <span class="tm-modeling-issue-panel__meta">
+                                    <strong>@GetSeverityLabel(issue.value)</strong>
+                                    @if (!string.IsNullOrWhiteSpace(issue.value.Category))
+                                    {
+                                        <span>@issue.value.Category</span>
+                                    }
+                                </span>
+                                <span class="tm-modeling-issue-panel__message">@GetMessage(issue.value)</span>
+                                @if (!string.IsNullOrWhiteSpace(issue.value.SuggestedFix))
                                 {
-                                    <span>@issue.value.Category</span>
+                                    <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{issue.index}")">
+                                        @issue.value.SuggestedFix
+                                    </span>
                                 }
                             </span>
-                            <span class="tm-modeling-issue-panel__message">@GetMessage(issue.value)</span>
-                            @if (!string.IsNullOrWhiteSpace(issue.value.SuggestedFix))
-                            {
-                                <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{issue.index}")">
-                                    @issue.value.SuggestedFix
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="@GetIssueClass(issue.value)"
+                             data-testid="@($"modeling-issue-{issue.index}")"
+                             data-severity="@GetSeverityKey(issue.value)"
+                             data-source-element-id="@issue.value.SourceElementId"
+                             data-source-relationship-id="@issue.value.SourceRelationshipId">
+                            <span class="@GetIconClass(issue.value)" aria-hidden="true">@GetSeverityIcon(issue.value)</span>
+                            <span class="tm-modeling-issue-panel__body">
+                                <span class="tm-modeling-issue-panel__meta">
+                                    <strong>@GetSeverityLabel(issue.value)</strong>
+                                    @if (!string.IsNullOrWhiteSpace(issue.value.Category))
+                                    {
+                                        <span>@issue.value.Category</span>
+                                    }
                                 </span>
-                            }
-                        </span>
-                    </button>
+                                <span class="tm-modeling-issue-panel__message">@GetMessage(issue.value)</span>
+                                @if (!string.IsNullOrWhiteSpace(issue.value.SuggestedFix))
+                                {
+                                    <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{issue.index}")">
+                                        @issue.value.SuggestedFix
+                                    </span>
+                                }
+                            </span>
+                        </div>
+                    }
                 </li>
             }
         </ol>

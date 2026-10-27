@@ -12,6 +12,8 @@ namespace Tempo.Blazor.Tests.Modeling;
 
 public sealed class TmModelingEditorTests : LocalizationTestBase
 {
+    private const string ModelingModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
+
     public TmModelingEditorTests()
     {
         Services.AddTempoBlazorModeling();
@@ -167,6 +169,36 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("empty");
         cut.Find("[data-testid='modeling-editor-empty']").Should().NotBeNull();
         callbackRaised.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Focus_return_after_closing_editor_does_not_use_eval()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusSelector", _ => true).SetVoidResult();
+
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "eval")
+            .Should().BeEmpty("focus restoration must stay CSP-safe — no eval");
+
+        var moduleInvocations = module.Invocations.Select(invocation => invocation.Identifier).ToList();
+        moduleInvocations.Should().Contain("focusSelector",
+            "the overlay focus move and the focus return go through the modeling-editor.js module");
+        moduleInvocations.Count(id => id == "focusSelector").Should().BeGreaterThanOrEqualTo(2,
+            "one call focuses the close button when the overlay opens, the second restores the trigger");
     }
 
     private sealed class SuccessfulModelingModelProvider : IModelingModelProvider

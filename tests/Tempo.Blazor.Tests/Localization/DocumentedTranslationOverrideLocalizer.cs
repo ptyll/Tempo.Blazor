@@ -15,7 +15,7 @@ public sealed class AppTranslationOverrideLocalizer(IStringLocalizer<TmResources
     {
         ["TmDataTable_SaveView"] = "Uložit pohled jako…",
         ["Tm_Search"] = "Hledat…",
-        ["TmModelingIssuePanel_Count_One"] = "Celkem {0} nález",
+        ["TmModelingIssuePanel_Count"] = "Celkem nálezů: {0}",
     };
 
     public CultureInfo Culture => CultureInfo.CurrentUICulture;

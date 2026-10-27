@@ -41,11 +41,12 @@ public class DocumentedTranslationOverrideLocalizerTests
             // Every other key falls through to the shipped Slovak table.
             localizer["TmFileDropZone_DragDrop"].Should().Be("Presuňte sem súbory");
 
-            // Plural resolves the family per the localizer's culture; the overridden _One form
-            // serves the count, the untouched forms keep the shipped Slovak text.
-            localizer.Plural("TmModelingIssuePanel_Count", 1).Should().Be("Celkem 1 nález");
-            localizer.Plural("TmModelingIssuePanel_Count", 3).Should().Be("3 nálezy");
-            localizer.Plural("TmModelingIssuePanel_Count", 7).Should().Be("7 nálezov");
+            // Plural resolves the family per the localizer's culture. The Modeling issue count is
+            // now a NEUTRAL single template (Modeling redesign plan, phase 1), so the override
+            // serves every count through the plain-key fall-through of Plural().
+            localizer.Plural("TmModelingIssuePanel_Count", 1).Should().Be("Celkem nálezů: 1");
+            localizer.Plural("TmModelingIssuePanel_Count", 3).Should().Be("Celkem nálezů: 3");
+            localizer.Plural("TmModelingIssuePanel_Count", 7).Should().Be("Celkem nálezů: 7");
         }
         finally
         {

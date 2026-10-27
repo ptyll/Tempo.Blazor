@@ -26,7 +26,9 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
 
-        await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--info");
+        // The issues-mixed scenario carries TWO info issues (a linked one and a sourceless
+        // orphan) — the icon selectors must not assume a single match.
+        await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--info", selectorMustBeUnique: false);
         await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--warning");
         await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--error");
 
@@ -107,6 +109,35 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(many, "issue-panel-many.png");
     }
 
+    [TestMethod]
+    [Description("A sourceless issue renders as a non-interactive list item without a pointer cursor")]
+    public async Task IssuePanel_SourcelessIssueIsNotInteractive()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+
+        // Index 3 is the demo's orphan issue (no SourceElementId / SourceRelationshipId).
+        var staticItem = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem'] > div[data-testid='modeling-issue-3']");
+        await staticItem.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        var state = await staticItem.EvaluateAsync<string>(
+            """
+            element => {
+                const style = getComputedStyle(element);
+                return [
+                    element.tagName,
+                    style.cursor,
+                    (element.textContent || '').replace(/\s+/g, ' ').trim()
+                ].join('|');
+            }
+            """);
+        var parts = state.Split('|');
+        Assert.AreNotEqual("BUTTON", parts[0], "A sourceless issue must not be a button.");
+        Assert.AreNotEqual("pointer", parts[1], "A sourceless issue must not promise navigation with a pointer cursor.");
+        StringAssert.Contains(parts[2], "does not map to any element", "The accessible text is preserved.");
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-issue-3'][blazor\\:onclick]").CountAsync(),
+            "The static item carries no click handler.");
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();
@@ -121,9 +152,15 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
         return page;
     }
 
-    private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000)
+    private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000, bool selectorMustBeUnique = true)
     {
-        await page.Locator(selector).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeout });
+        var locator = page.Locator(selector);
+        if (!selectorMustBeUnique)
+        {
+            locator = locator.First;
+        }
+
+        await locator.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeout });
     }
 
     private static Task WaitForIssueCountAtLeastAsync(IPage page, int minimumCount) =>

@@ -14,9 +14,11 @@ using Tempo.Blazor.Models;
 namespace Tempo.Blazor.Tests.Localization;
 
 /// <summary>
-/// B16: counts in the document-review summary and the modeling issue panel use the grammatical
-/// form of the count ("1 čekající změna", "2 čekající změny", "5 čekajících změn") instead of the
-/// neutral "Čekající změny: N" stop-gap.
+/// B16: counts in the document-review summary use the grammatical form of the count
+/// ("1 čekající změna", "2 čekající změny", "5 čekajících změn") instead of the neutral
+/// "Čekající změny: N" stop-gap. The modeling issue panel count was later rewritten the OTHER
+/// way (Modeling redesign plan, phase 1) — its header is neutral on purpose, and this class
+/// freezes that contract too.
 /// </summary>
 public class PluralAdoptionTests : LocalizationTestBase
 {
@@ -63,11 +65,13 @@ public class PluralAdoptionTests : LocalizationTestBase
     }
 
     [Theory]
-    [InlineData(1, "1 nález")]
-    [InlineData(4, "4 nálezy")]
-    [InlineData(6, "6 nálezů")]
-    public void Czech_modeling_issue_header_agrees_with_the_count(int count, string expected)
+    [InlineData(1, "Nálezy: 1")]
+    [InlineData(4, "Nálezy: 4")]
+    [InlineData(6, "Nálezy: 6")]
+    public void Czech_modeling_issue_header_uses_the_neutral_count_form(int count, string expected)
     {
+        // The Modeling issue count was rewritten (Modeling redesign plan, phase 1) to the neutral
+        // B16 formulation: the header states the count without forcing Czech to pick a plural form.
         UseCzechLocalization();
         var issues = Enumerable.Range(1, count)
             .Select(i => new ModelingIssueDto { Id = $"i{i}", Category = "Validation", Severity = ModelingIssueSeverity.Warning, Message = $"m{i}" })

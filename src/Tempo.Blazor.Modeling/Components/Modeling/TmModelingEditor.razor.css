@@ -485,7 +485,9 @@
         flex-direction: column;
     }
 
-    .tm-modeling-editor__open-editor-header .tm-btn {
+    /* ::deep is required: .tm-btn is rendered by the TmButton child component, so the owner
+       scope attribute does not sit on the element the selector targets (P21 / 00-cross-cutting §7.4). */
+    .tm-modeling-editor__open-editor-header ::deep .tm-btn {
         width: 100%;
     }
 }

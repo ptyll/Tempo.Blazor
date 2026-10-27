@@ -57,17 +57,117 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Issue_without_source_is_ignored_on_click()
+    public void Issue_without_source_renders_non_interactive_item()
     {
         var selectedCount = 0;
         using var cut = Render<TmModelingIssuePanel>(parameters => parameters
-            .Add(p => p.Issues, new[] { new ModelingIssueDto { Id = "orphan", Message = "No source" } })
+            .Add(p => p.Issues, new[]
+            {
+                new ModelingIssueDto
+                {
+                    Id = "orphan",
+                    Severity = ModelingIssueSeverity.Warning,
+                    Category = "Sync",
+                    Message = "No source",
+                    SuggestedFix = "Check the mapping."
+                }
+            })
             .Add(p => p.OnIssueSelected, EventCallback.Factory.Create<ModelingIssueDto>(this, _ => selectedCount++)));
 
-        cut.Find("[data-testid='modeling-issue-0']").Click();
+        var item = cut.Find("[data-testid='modeling-issue-0']");
 
+        // Not a button — a sourceless issue has no navigation target, so it must not
+        // present a button affordance (screen-reader activatable, pointer cursor).
+        item.TagName.Should().NotBe("BUTTON");
+        cut.FindAll("button[data-testid^='modeling-issue-']").Should().BeEmpty();
+        item.ClassList.Should().NotContain("tm-modeling-issue-panel__item--navigable");
+
+        // The accessible text is preserved (severity, category, message, fix) — the row
+        // only loses the interactive affordance, never its content.
+        item.TextContent.Should().Contain("Warning");
+        item.TextContent.Should().Contain("Sync");
+        item.TextContent.Should().Contain("No source");
+        item.TextContent.Should().Contain("Check the mapping.");
+
+        // The row is inert: no click handler is wired, so activating it can never
+        // raise OnIssueSelected (the sourceless guard in SelectIssueAsync stays as a
+        // defense for direct API callers).
+        item.HasAttribute("blazor:onclick").Should().BeFalse();
         selectedCount.Should().Be(0);
     }
+
+    [Fact]
+    public void Navigable_issue_renders_button_with_accessible_name()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, new[]
+            {
+                new ModelingIssueDto
+                {
+                    Id = "linked",
+                    Severity = ModelingIssueSeverity.Error,
+                    Category = "Validation",
+                    SourceElementId = "task-review",
+                    Message = "Broken mapping"
+                }
+            }));
+
+        var button = cut.Find("button[data-testid='modeling-issue-0']");
+        button.ClassList.Should().Contain("tm-modeling-issue-panel__item--navigable");
+
+        var accessibleName = button.GetAttribute("aria-label");
+        accessibleName.Should().NotBeNullOrWhiteSpace("a navigable issue is a button and needs an accessible name");
+        accessibleName.Should().Contain("Error");
+        accessibleName.Should().Contain("Broken mapping");
+    }
+
+    [Fact]
+    public void Pointer_cursor_is_bound_to_navigable_items_only()
+    {
+        var css = File.ReadAllText(FindComponentFile("TmModelingIssuePanel.razor.css"));
+
+        var cursorRules = CursorPointerRuleSelectors(css);
+
+        cursorRules.Should().NotBeEmpty("navigable issues keep the pointer affordance");
+        cursorRules.Should().AllSatisfy(selector => selector
+            .Should().Contain("tm-modeling-issue-panel__item--navigable",
+                "sourceless issues must not get a pointer cursor — it implies navigation that does not exist"));
+    }
+
+    private static string FindComponentFile(string fileName)
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var candidate = Path.Combine(
+                current.FullName, "src", "Tempo.Blazor.Modeling", "Components", "Modeling", fileName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            current = current.Parent!;
+        }
+
+        throw new FileNotFoundException($"Could not locate {fileName} under src/Tempo.Blazor.Modeling.");
+    }
+
+    private static string[] CursorPointerRuleSelectors(string css)
+    {
+        var selectors = new List<string>();
+        var index = css.IndexOf("cursor: pointer", StringComparison.Ordinal);
+        while (index >= 0)
+        {
+            var ruleStart = css.LastIndexOf('{', index);
+            var selectorStart = Math.Max(css.LastIndexOf('}', ruleStart), css.LastIndexOf('\n', ruleStart)) + 1;
+            selectors.Add(css[selectorStart..ruleStart].Trim());
+
+            index = css.IndexOf("cursor: pointer", index + 1, StringComparison.Ordinal);
+        }
+
+        return selectors.ToArray();
+    }
+
 
     [Fact]
     public void Renders_large_issue_list_without_failing()

@@ -923,6 +923,15 @@
                 SourceElementId = "bpmn-ship-order",
                 Message = "Ship Order is missing a required outbound path."
             });
+            // Modeling redesign phase 1: one issue WITHOUT a source element/relationship — it must
+            // render as a non-interactive list item (no <button>, no pointer cursor).
+            model.Issues.Add(new ModelingIssueDto
+            {
+                Id = "issue-orphan-demo",
+                Category = "Source",
+                Severity = ModelingIssueSeverity.Info,
+                Message = "The source model carries a note that does not map to any element or relationship."
+            });
             return;
         }
 

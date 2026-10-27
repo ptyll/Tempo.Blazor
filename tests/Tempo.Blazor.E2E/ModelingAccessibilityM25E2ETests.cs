@@ -100,7 +100,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Issues and status changes expose screen-reader metadata through listitem roles, aria-labels, and live status")]
+    [Description("Issues expose screen-reader metadata: navigable issues are labeled buttons, sourceless issues keep accessible text")]
     public async Task IssuePanelAndStatusStrip_ExposeScreenReaderMetadata()
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
@@ -108,8 +108,11 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         var issueItems = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem']");
         await Assertions.Expect(issueItems).Not.ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         var itemCount = await issueItems.CountAsync();
-        var buttonCount = await page.Locator("[data-testid='modeling-issue-list'] button[aria-label]").CountAsync();
-        Assert.AreEqual(itemCount, buttonCount, "Every issue list item should expose a labeled interactive target.");
+
+        // Only issues WITH a source element/relationship render as labeled buttons.
+        var navigableButtons = page.Locator("[data-testid='modeling-issue-list'] button[aria-label]");
+        var navigableCount = await navigableButtons.CountAsync();
+        Assert.IsTrue(navigableCount > 0, "Navigable issues should expose a labeled button target.");
 
         var unlabeledIssues = await page.EvaluateAsync<string[]>(
             """
@@ -118,6 +121,21 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
                 .map(button => button.textContent.trim())
             """);
         Assert.AreEqual(0, unlabeledIssues.Length, "Issue buttons should have readable aria-labels.");
+
+        // Sourceless issues are NOT buttons — they keep their accessible text in the reading order.
+        var staticItems = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem'] > div[data-severity]");
+        var staticCount = await staticItems.CountAsync();
+        Assert.AreEqual(itemCount, navigableCount + staticCount,
+            "Every issue item is either a labeled button (navigable) or a text-only item (sourceless).");
+        Assert.IsTrue(staticCount > 0, "The issues-mixed scenario carries a sourceless issue.");
+
+        var staticTexts = await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] > li[role="listitem"] > div[data-severity]'))
+                .map(item => (item.textContent || '').replace(/\s+/g, ' ').trim())
+            """);
+        Assert.IsTrue(staticTexts.All(text => text.Length >= 12),
+            "Sourceless issue items keep their accessible text: " + string.Join(" | ", staticTexts));
 
         var status = page.Locator("[data-testid='modeling-status-strip']");
         await Assertions.Expect(status).ToHaveAttributeAsync("role", "status");

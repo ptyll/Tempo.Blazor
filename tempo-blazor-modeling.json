@@ -415,7 +415,7 @@
           "type": "IReadOnlyList<ModelingIssueDto>",
           "isRequired": false,
           "default": "[]",
-          "description": "Issues to render in severity-coded order."
+          "description": "Issues to render, in input order. Severity only colors the rows — the panel never re-sorts the list (severity filtering/sorting is backlog). Issues without a SourceElementId/SourceRelationshipId render as non-interactive list items; navigable issues render as buttons."
         },
         {
           "name": "OnIssueSelected",
@@ -569,6 +569,12 @@
     }
   ],
   "libraryExamples": [],
+  "assets": [
+    {
+      "path": "src/Tempo.Blazor.Modeling/wwwroot/js/modeling-editor.js",
+      "kind": "JavaScript"
+    }
+  ],
   "summary": {
     "itemCount": 13,
     "manualItemCount": 13,
