@@ -9,6 +9,7 @@ public partial class TmGanttExportDialog
     private GanttExportFormat _format = GanttExportFormat.Pdf;
     private string? _paperSize = "A4";
     private bool _landscape;
+    private readonly string _titleId = $"gantt-export-title-{Guid.NewGuid():N}";
 
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }

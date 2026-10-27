@@ -40,6 +40,12 @@
       "type": "EventCallback<DateTime>",
       "isRequired": false,
       "description": "Fires when the user requests time-travel to a specific timestamp."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Zone the entry timestamps are shown in. Defaults to the machine's local zone; TmGantt passes the user's display zone."
     }
   ]
 }

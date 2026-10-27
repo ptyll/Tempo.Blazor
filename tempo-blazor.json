@@ -23127,7 +23127,7 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Fires when the user clicks \"Run\" on a report."
+          "description": "Additional CSS classes appended to the root element."
         },
         {
           "name": "Columns",
@@ -23139,7 +23139,8 @@
         {
           "name": "ContainerWidth",
           "type": "double?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser; set it to override the measurement (tests, prerendering)."
         },
         {
           "name": "CustomFields",
@@ -23181,6 +23182,18 @@
           "type": "TmNotificationPreferences?",
           "isRequired": false,
           "description": "Notification preferences for the current user."
+        },
+        {
+          "name": "OnAttachmentRemoved",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires when the user removes an attachment of the selected task in the task panel (argument = attachment id)."
+        },
+        {
+          "name": "OnAttachmentUpload",
+          "type": "EventCallback<IBrowserFile>",
+          "isRequired": false,
+          "description": "Fires when the user picks a file to attach to the selected task in the task panel. Persisting the file is the host's job."
         },
         {
           "name": "OnAutoScheduled",
@@ -23231,6 +23244,12 @@
           "description": "Fires when a new dependency is added."
         },
         {
+          "name": "OnDescriptionChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Fires when the user edits the description of the selected task in the task panel (live)."
+        },
+        {
           "name": "OnExportRequested",
           "type": "EventCallback<GanttExportOptions>",
           "isRequired": false,
@@ -23253,6 +23272,12 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Fires when an import operation fails (contains error message)."
+        },
+        {
+          "name": "OnNewReportRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fires when the user asks for a new report from the Reports panel. The \"New report\" button is only rendered when the host handles this callback."
         },
         {
           "name": "OnNotificationTriggered",
@@ -23551,6 +23576,12 @@
           "type": "EventCallback<DateTime>",
           "isRequired": false,
           "description": "Fires when the user requests time-travel to a specific timestamp."
+        },
+        {
+          "name": "TimeZone",
+          "type": "TimeZoneInfo?",
+          "isRequired": false,
+          "description": "Zone the entry timestamps are shown in. Defaults to the machine's local zone; TmGantt passes the user's display zone."
         }
       ]
     },
@@ -23638,7 +23669,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Portfolio overview that renders multiple projects, each shown as a summary TmGantt with its own tasks and dependencies, giving a roll-up view across several project schedules.",
+      "description": "Portfolio overview that renders multiple projects, each in its own card with an embedded TmGantt that draws the project's tasks and dependencies, giving an overview across several project schedules. Every nested Gantt gets its own test-id prefix (gantt-{project.Id}, after the portfolio's own prefix) so ids of tasks shared across projects stay unique.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPortfolio.razor",
       "documentationStatus": "merged",
@@ -23647,10 +23678,17 @@
       ],
       "parameters": [
         {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes appended to the root element."
+        },
+        {
           "name": "Projects",
           "type": "IReadOnlyList<GanttPortfolioProject>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Projects to show; each card draws the project's Tasks and Dependencies in its own Gantt."
         }
       ]
     },
@@ -23659,7 +23697,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Panel that lists saved Gantt reports and lets the user create a new report or run an existing one. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
+      "description": "Panel that lists saved Gantt reports and lets the user run an existing one; a \"New report\" button is shown only when the host handles OnNewReportRequested. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttReportsPanel.razor",
       "documentationStatus": "merged",
@@ -23668,15 +23706,23 @@
       ],
       "parameters": [
         {
+          "name": "OnNewReportRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fires when the user asks for a new report. The panel has no report editor of its own, so the \"New report\" button is only rendered when the host handles this callback."
+        },
+        {
           "name": "OnReportRun",
           "type": "EventCallback<GanttReport>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Fires when the user clicks \"Run\" on a report."
         },
         {
           "name": "Reports",
           "type": "IReadOnlyList<GanttReport>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Report definitions to list."
         }
       ]
     },
@@ -28754,6 +28800,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_form-validation-message.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_gantt-dialog.css",
       "kind": "Css"
     },
     {

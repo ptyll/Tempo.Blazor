@@ -2,7 +2,7 @@
   "itemName": "TmGanttPortfolio",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Portfolio overview that renders multiple projects, each shown as a summary TmGantt with its own tasks and dependencies, giving a roll-up view across several project schedules.",
+  "description": "Portfolio overview that renders multiple projects, each in its own card with an embedded TmGantt that draws the project's tasks and dependencies, giving an overview across several project schedules. Every nested Gantt gets its own test-id prefix (gantt-{project.Id}, after the portfolio's own prefix) so ids of tasks shared across projects stay unique.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPortfolio.razor",
@@ -15,7 +15,14 @@
       "name": "Projects",
       "type": "IReadOnlyList<GanttPortfolioProject>",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Projects to show; each card draws the project's Tasks and Dependencies in its own Gantt."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes appended to the root element."
     }
   ]
 }

@@ -3942,6 +3942,15 @@ to{transform:translateY(0);}
 .tm-scheduler-timeline-event:hover .tm-scheduler-event-resize-handle--right{border-right-color:color-mix(in srgb,var(--tm-bg-surface) 60%,transparent);}
 .tm-scheduler-timeline-row-body--drop-target,.tm-scheduler-timeline-row.tm-scheduler-timeline-slot--drop-target,.tm-scheduler-timeline-row-body.tm-scheduler-timeline-slot--drop-target{background:color-mix(in srgb,var(--tm-color-primary) 10%,transparent);outline:2px dashed var(--tm-color-primary);outline-offset:-2px;}
 .tm-scheduler-timeline-slot--drop-target{background:color-mix(in srgb,var(--tm-color-primary) 20%,transparent);}
+.tm-gantt__dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.tm-gantt__dialog-overlay{margin:0;border:none;padding:0;width:auto;height:auto;max-width:none;max-height:none;color:inherit;overflow:visible;}
+.tm-gantt__dialog{background:var(--tm-surface,#ffffff);border-radius:var(--tm-radius-lg,0.5rem);border:1px solid var(--tm-border-color,#d1d5db);box-shadow:0 20px 60px rgba(0,0,0,0.15);width:min(520px,95vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;}
+.tm-gantt__dialog-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--tm-border-color,#d1d5db);}
+.tm-gantt__dialog-title{font-weight:600;font-size:0.95rem;color:var(--tm-text-primary,#111827);}
+.tm-gantt__dialog-close{background:none;border:none;cursor:pointer;color:var(--tm-text-secondary,#6b7280);padding:4px;border-radius:var(--tm-radius-sm,0.25rem);display:flex;align-items:center;}
+.tm-gantt__dialog-close:hover{background:var(--tm-bg-muted,#f3f4f6);}
+.tm-gantt__dialog-body{padding:16px;overflow-y:auto;flex:1;}
+.tm-gantt__dialog-actions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--tm-border-color,#d1d5db);justify-content:flex-end;}
 .tm-splitter{display:flex;width:100%;height:100%;overflow:hidden;}
 .tm-splitter--horizontal{flex-direction:row;}
 .tm-splitter--vertical{flex-direction:column;}

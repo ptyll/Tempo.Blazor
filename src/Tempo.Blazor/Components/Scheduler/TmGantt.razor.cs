@@ -1,10 +1,12 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
@@ -272,7 +274,30 @@ public partial class TmGantt : IDisposable
     /// <summary>Fires when the user clicks "Run" on a report.</summary>
     [Parameter] public EventCallback<GanttReport> OnReportRun { get; set; }
 
+    /// <summary>
+    /// Fires when the user asks for a new report from the Reports panel. The Gantt has no report editor,
+    /// so the "New report" button is only rendered when the host handles this callback.
+    /// </summary>
+    [Parameter] public EventCallback OnNewReportRequested { get; set; }
+
+    /// <summary>Fires when the user edits the description of the selected task in the task panel (live).</summary>
+    [Parameter] public EventCallback<string?> OnDescriptionChanged { get; set; }
+
+    /// <summary>Fires when the user picks a file to attach to the selected task in the task panel. Persisting the file is the host's job.</summary>
+    [Parameter] public EventCallback<IBrowserFile> OnAttachmentUpload { get; set; }
+
+    /// <summary>Fires when the user removes an attachment of the selected task in the task panel (arg = attachment id).</summary>
+    [Parameter] public EventCallback<string> OnAttachmentRemoved { get; set; }
+
+    /// <summary>Additional CSS classes appended to the root element.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Width in pixels the <b>Fit to screen</b> action fits the timeline into. When <c>null</c> (default)
+    /// the width of the timeline element is measured in the browser; set it to override the measurement
+    /// (tests, server-side prerendering, a host that knows the width). A later release replaces this with
+    /// the container <c>LayoutMode</c>.
+    /// </summary>
     [Parameter] public double? ContainerWidth { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
@@ -522,6 +547,11 @@ public partial class TmGantt : IDisposable
     private GanttZoomPreset GetEffectiveZoomPreset() =>
         _zoomPresetOverrideSet ? _zoomPresetOverride : ZoomPreset;
 
+    private bool IsViewActive(GanttView view) => View == view;
+
+    /// <summary>The active view button is <c>Secondary</c> (visually distinct), the others stay <c>Ghost</c>.</summary>
+    private ButtonVariant ViewButtonVariant(GanttView view) => IsViewActive(view) ? ButtonVariant.Secondary : ButtonVariant.Ghost;
+
     private async Task SetViewAsync(GanttView view)
     {
         View = view;
@@ -546,15 +576,19 @@ public partial class TmGantt : IDisposable
 
     private async Task FitToScreenAsync()
     {
-        var containerWidth = await JSRuntime.InvokeAsync<double>("eval", "document.querySelector('.tm-gantt__timeline')?.clientWidth || 0");
+        // ContainerWidth overrides the measurement; otherwise measure THIS Gantt's timeline through its
+        // ElementReference (no eval, no global querySelector - several Gantts can share a page).
+        var containerWidth = ContainerWidth
+            ?? await JSRuntime.InvokeAsync<double>("tmGantt.getClientWidth", _timelineContainerRef);
         await ApplyFitToScreenAsync(containerWidth);
     }
 
     internal async Task ApplyFitToScreenAsync(double containerWidth)
     {
         if (containerWidth <= 0 || _totalTimelineWidth <= 0) return;
-        var newZoom = (containerWidth / _totalTimelineWidth) * 100.0;
-        _zoomLevel = (int)Math.Max(50, Math.Min(200, newZoom));
+        // _totalTimelineWidth already includes the current zoom, so scale the current level by the ratio.
+        var newZoom = _zoomLevel * containerWidth / _totalTimelineWidth;
+        _zoomLevel = (int)Math.Clamp(Math.Floor(newZoom / 25) * 25, 50, 200);
         RefreshVisibleData();
         StateHasChanged();
     }

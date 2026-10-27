@@ -196,6 +196,48 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
         left.Should().NotBeApproximately(expected - pixelPerHour, 0.5, "the marker is not an hour early");
     }
 
+    [Fact]
+    public void SidebarHistory_Timestamp_Is_Shown_In_The_User_Zone()
+    {
+        var prague = Prague();
+        var timestamp = new DateTimeOffset(2026, 7, 1, 22, 30, 0, TimeSpan.Zero);
+        Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(prague));
+        var history = new[]
+        {
+            new Tempo.Blazor.Abstractions.Shared.TmActivityEntry
+            {
+                Id = "e1",
+                Action = "StatusChanged",
+                Timestamp = timestamp,
+                EntityRef = new Tempo.Blazor.Abstractions.Shared.TmEntityRef { EntityType = "task", EntityId = "1" },
+            },
+        };
+
+        var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()).Add(c => c.History, history));
+        cut.Find("[data-testid='sidebar-btn-history']").Click();
+
+        cut.Find(".tm-gantt__sidebar-history-date").TextContent.Trim().Should().Be(
+            TimeZoneInfo.ConvertTime(timestamp, prague).ToString("g", CultureInfo.GetCultureInfo("en")),
+            "22:30 UTC is already the next day in Prague");
+    }
+
+    [Fact]
+    public void HistoryDrawer_Timestamp_Is_Shown_In_The_User_Zone()
+    {
+        var prague = Prague();
+        var timestamp = new DateTimeOffset(2026, 7, 1, 22, 30, 0, TimeSpan.Zero);
+        Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(prague));
+        var history = new[]
+        {
+            new Tempo.Blazor.Abstractions.Shared.TmActivityEntry { Id = "e1", Action = "TaskChanged", Timestamp = timestamp },
+        };
+
+        var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()).Add(c => c.History, history));
+        cut.Find("[data-testid='gantt-history-btn']").Click();
+
+        cut.Find(".tm-gantt__history-entry-time").TextContent.Trim().Should().Be(
+            TimeZoneInfo.ConvertTime(timestamp, prague).ToString("g", CultureInfo.GetCultureInfo("en")));
+    }
     /// <summary>A fake clock whose local zone is the one the test pins. FakeTimeProvider.LocalTimeZone is read-only.</summary>
     private sealed class ZonedClock(DateTimeOffset start, TimeZoneInfo zone) : FakeTimeProvider(start)
     {
@@ -230,7 +272,7 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
         var headers = cut.FindAll(".tm-gantt__workload-header-cell");
         headers.Count.Should().BeGreaterThan(1, "one assignee header plus one column per date");
         headers[1].TextContent.Trim().Should().Be(
-            today.AddDays(-7).ToString("dd.MM", CultureInfo.InvariantCulture),
+            GanttLabels.ShortDayMonth(today.AddDays(-7), CultureInfo.GetCultureInfo("en")),
             "the window is capped at (Today parameter − 7 days)");
     }
 
@@ -256,6 +298,6 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
 
         cut.Instance.Today.Should().Be(DateTime.Today);
         cut.FindAll(".tm-gantt__workload-header-cell")[1].TextContent.Trim().Should().Be(
-            today.AddDays(-7).ToString("dd.MM", CultureInfo.InvariantCulture));
+            GanttLabels.ShortDayMonth(today.AddDays(-7), CultureInfo.GetCultureInfo("en")));
     }
 }

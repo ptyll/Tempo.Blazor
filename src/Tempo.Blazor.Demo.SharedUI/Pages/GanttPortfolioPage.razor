@@ -1,0 +1,112 @@
+@page "/gantt-portfolio"
+@using Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Abstractions.Models
+@inject IHttpClientFactory HttpFactory
+@inject ToastService Toast
+
+<PageTitle>Gantt Portfolio – Tempo.Blazor</PageTitle>
+
+<div class="mb-4">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Gantt Portfolio</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">
+        One <code>TmGanttPortfolio</code> card per project, each drawing the project's own tasks and dependencies,
+        plus the standalone <code>TmGanttImportMappingDialog</code> host.
+    </p>
+</div>
+
+@if (_loading)
+{
+    <p class="text-slate-500 dark:text-slate-400">Loading project data…</p>
+}
+else
+{
+    <section class="demo-section" data-testid="gantt-demo-portfolio-section">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Projects</h2>
+            <button class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400"
+                    data-testid="gantt-demo-mapping-open"
+                    @onclick="() => _mappingOpen = true">
+                Column mapping dialog
+            </button>
+        </div>
+        <div data-testid="gantt-demo-portfolio">
+            <TmGanttPortfolio Projects="@PortfolioProjects" />
+        </div>
+        <TmGanttImportMappingDialog IsOpen="_mappingOpen"
+                                    SourceColumns="@_mappingColumns"
+                                    OnImport="@HandleMappingImport"
+                                    OnClose="() => _mappingOpen = false" />
+    </section>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _mappingOpen;
+    private HttpClient Http => HttpFactory.CreateClient("DemoApi");
+    private List<TmWorkItem> _tasks = [];
+    private List<GanttDependency> _dependencies = [];
+    private readonly IReadOnlyList<string> _mappingColumns = ["Task Name", "Begin", "Finish", "Done %", "Notes"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Http.PostAsync("/api/gantt/reset", null);
+        _tasks = await Http.GetFromJsonAsync<List<TmWorkItem>>("/api/gantt/tasks") ?? [];
+        _dependencies = await Http.GetFromJsonAsync<List<GanttDependency>>("/api/gantt/dependencies") ?? [];
+        _loading = false;
+    }
+
+    /// <summary>
+    /// Two projects built from the demo dataset: the first root's child subtrees are split between them
+    /// (a task whose parent is not in its project becomes that project's root).
+    /// </summary>
+    private IReadOnlyList<GanttPortfolioProject> PortfolioProjects
+    {
+        get
+        {
+            var firstRoot = _tasks.FirstOrDefault(t => t.ParentId is null);
+            if (firstRoot is null) return [];
+
+            var topLevel = _tasks.Where(t => t.ParentId == firstRoot.Id).Select(t => t.Id).ToList();
+            var alphaTops = topLevel.Take((topLevel.Count + 1) / 2).ToHashSet();
+            var byId = _tasks.ToDictionary(t => t.Id);
+
+            string TopOf(TmWorkItem t)
+            {
+                var current = t;
+                while (current.ParentId is not null && current.ParentId != firstRoot.Id && byId.TryGetValue(current.ParentId, out var parent))
+                {
+                    current = parent;
+                }
+                return current.Id;
+            }
+
+            GanttPortfolioProject Build(string id, string name, Func<TmWorkItem, bool> pick)
+            {
+                var picked = _tasks.Where(pick).ToList();
+                var ids = picked.Select(t => t.Id).ToHashSet();
+                var tasks = picked.Select(t => t.ParentId is not null && ids.Contains(t.ParentId) ? t : new TmWorkItem
+                {
+                    Id = t.Id, Title = t.Title, Start = t.Start, End = t.End, PercentComplete = t.PercentComplete,
+                    Status = t.Status, Priority = t.Priority, Color = t.Color, IsMilestone = t.IsMilestone,
+                    Assignees = t.Assignees, ParentId = null,
+                }).ToList();
+                return new GanttPortfolioProject
+                {
+                    Id = id,
+                    Name = name,
+                    Tasks = tasks,
+                    Dependencies = _dependencies.Where(d => ids.Contains(d.FromId) && ids.Contains(d.ToId)).ToList(),
+                };
+            }
+
+            return
+            [
+                Build("alpha", "Project Alpha", t => t.Id == firstRoot.Id || alphaTops.Contains(TopOf(t))),
+                Build("beta", "Project Beta", t => t.Id != firstRoot.Id && !alphaTops.Contains(TopOf(t))),
+            ];
+        }
+    }
+
+    private void HandleMappingImport(IReadOnlyList<GanttColumnMapping> mappings)
+        => Toast.ShowInfo($"Column mapping confirmed: {mappings.Count} columns.");
+}

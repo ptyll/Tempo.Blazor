@@ -1,0 +1,23 @@
+/* Portfolio View */
+.tm-gantt-portfolio {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px;
+}
+.tm-gantt-portfolio__project {
+    border: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+    border-radius: 8px;
+    overflow: hidden;
+}
+.tm-gantt-portfolio__project-header {
+    padding: 8px 12px;
+    background: var(--tm-surface-2, #f8fafc);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+}
+.tm-gantt-portfolio__project-summary {
+    overflow: hidden;
+    max-height: 240px;
+}

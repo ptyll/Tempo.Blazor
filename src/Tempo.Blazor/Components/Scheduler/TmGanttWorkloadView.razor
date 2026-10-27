@@ -31,7 +31,7 @@
             @foreach (var date in dates)
             {
                 <div class="tm-gantt__workload-header-cell @(date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "tm-gantt__workload-weekend" : "")">
-                    @date.ToString("dd.MM")
+                    @GanttLabels.ShortDayMonth(date, Loc.Culture)
                 </div>
             }
             @foreach (var assigneeId in assigneeIds)

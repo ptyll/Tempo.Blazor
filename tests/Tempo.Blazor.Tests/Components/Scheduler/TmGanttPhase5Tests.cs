@@ -338,6 +338,9 @@ public class TmGanttPhase5Tests : LocalizationTestBase
             p.Add(x => x.Projects, projects));
 
         cut.FindAll("[data-testid^='portfolio-project-']").Should().HaveCount(2);
+        // Rows from the project tasks are asserted in TmGanttPhase1FixesTests
+        // (TmGanttPortfolio_Renders_Task_Rows_From_Project_Tasks) - this test used empty task lists,
+        // which is how the always-empty portfolio (B22) went unnoticed.
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -815,7 +818,8 @@ public class TmGanttPhase5Tests : LocalizationTestBase
 
         var cut = Render<TmGanttReportsPanel>(p => p
             .Add(x => x.Reports, reports)
-            .Add(x => x.OnReportRun, EventCallback.Factory.Create<GanttReport>(this, _ => { })));
+            .Add(x => x.OnReportRun, EventCallback.Factory.Create<GanttReport>(this, _ => { }))
+            .Add(x => x.OnNewReportRequested, EventCallback.Factory.Create(this, () => { })));
 
         cut.FindAll("[data-testid^='report-item-']").Should().HaveCount(2);
         cut.Find("[data-testid='reports-new-btn']").Should().NotBeNull();

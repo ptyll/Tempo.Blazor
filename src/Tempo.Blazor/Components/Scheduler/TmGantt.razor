@@ -11,78 +11,82 @@
     <!-- Toolbar -->
     <div class="tm-gantt__toolbar">
         <div class="tm-gantt__toolbar-group">
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" OnClick="AddTaskAsync" Title="@Loc["TmGantt_AddTask"]" data-testid="@TestId("gantt-add-task")">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" OnClick="AddTaskAsync" Title="@Loc["TmGantt_AddTask"]" AriaLabel="@Loc["TmGantt_AddTask"]" data-testid="@TestId("gantt-add-task")">
                 <TmIcon Name="plus" />
             </TmButton>
             <span class="tm-gantt__toolbar-divider"></span>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ExpandAllAsync" Title="@Loc["TmGantt_ExpandAll"]" data-testid="@TestId("gantt-expand-all")">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ExpandAllAsync" Title="@Loc["TmGantt_ExpandAll"]" AriaLabel="@Loc["TmGantt_ExpandAll"]" data-testid="@TestId("gantt-expand-all")">
                 <TmIcon Name="chevrons-down" Size="IconSize.Sm" />
             </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="CollapseAllAsync" Title="@Loc["TmGantt_CollapseAll"]" data-testid="@TestId("gantt-collapse-all")">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="CollapseAllAsync" Title="@Loc["TmGantt_CollapseAll"]" AriaLabel="@Loc["TmGantt_CollapseAll"]" data-testid="@TestId("gantt-collapse-all")">
                 <TmIcon Name="chevrons-up" Size="IconSize.Sm" />
             </TmButton>
             <span class="tm-gantt__toolbar-divider"></span>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="() => SetViewAsync(GanttView.Day)">
+            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Day)" OnClick="() => SetViewAsync(GanttView.Day)"
+                      aria-pressed="@(IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")">
                 @Loc["TmGantt_DayView"]
             </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="() => SetViewAsync(GanttView.Week)">
+            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Week)" OnClick="() => SetViewAsync(GanttView.Week)"
+                      aria-pressed="@(IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")">
                 @Loc["TmGantt_WeekView"]
             </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="() => SetViewAsync(GanttView.Month)">
+            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Month)" OnClick="() => SetViewAsync(GanttView.Month)"
+                      aria-pressed="@(IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")">
                 @Loc["TmGantt_MonthView"]
             </TmButton>
         </div>
         <div class="tm-gantt__toolbar-group">
             <!-- Cascade sort -->
             <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="CascadeSortAsync"
-                      Title="@Loc["TmGantt_CascadeSort"]" data-testid="@TestId("gantt-cascade-sort")">
+                      Title="@Loc["TmGantt_CascadeSort"]" AriaLabel="@Loc["TmGantt_CascadeSort"]" data-testid="@TestId("gantt-cascade-sort")">
                 <TmIcon Name="list-ordered" Size="IconSize.Sm" />
             </TmButton>
             <span class="tm-gantt__toolbar-divider"></span>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="FitToScreenAsync" Title="@Loc["TmGantt_FitToScreen"]">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="FitToScreenAsync" Title="@Loc["TmGantt_FitToScreen"]" AriaLabel="@Loc["TmGantt_FitToScreen"]" data-testid="@TestId("gantt-fit-to-screen")">
                 <TmIcon Name="maximize-2" />
             </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ZoomOutAsync" data-testid="@TestId("gantt-zoom-out")">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ZoomOutAsync" Title="@Loc["TmGantt_ZoomOut"]" AriaLabel="@Loc["TmGantt_ZoomOut"]" data-testid="@TestId("gantt-zoom-out")">
                 <TmIcon Name="zoom-out" />
             </TmButton>
             <!-- Zoom slider -->
             <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
+                   aria-label="@Loc["TmGantt_ZoomLevel"]"
                    min="50" max="200" step="25" value="@_zoomLevel"
                    @onchange="e => { _zoomLevel = int.Parse(e.Value!.ToString()!); RefreshVisibleData(); }" />
             <span class="tm-gantt__zoom-level">@(_zoomLevel)%</span>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ZoomInAsync" data-testid="@TestId("gantt-zoom-in")">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ZoomInAsync" Title="@Loc["TmGantt_ZoomIn"]" AriaLabel="@Loc["TmGantt_ZoomIn"]" data-testid="@TestId("gantt-zoom-in")">
                 <TmIcon Name="zoom-in" />
             </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="() => ShowTaskPanel = !ShowTaskPanel" Title="@Loc["TmGantt_ToggleTaskPanel"]">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="() => ShowTaskPanel = !ShowTaskPanel" Title="@Loc["TmGantt_ToggleTaskPanel"]" AriaLabel="@Loc["TmGantt_ToggleTaskPanel"]" aria-pressed="@(ShowTaskPanel ? "true" : "false")" data-testid="@TestId("gantt-toggle-task-panel")">
                 <TmIcon Name="edit" />
             </TmButton>
             <!-- Filter button -->
             <TmButton Size="ButtonSize.Sm" Variant="@(_filterPanelOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
-                      OnClick="ToggleFilterPanel" Title="@Loc["TmGantt_Filter"]"
+                      OnClick="ToggleFilterPanel" Title="@Loc["TmGantt_Filter"]" AriaLabel="@Loc["TmGantt_Filter"]" aria-haspopup="true" aria-expanded="@(_filterPanelOpen ? "true" : "false")"
                       data-testid="@TestId("gantt-filter-btn")">
                 <TmIcon Name="filter" Size="IconSize.Sm" />
             </TmButton>
             <!-- Export button -->
             <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                      OnClick="ToggleExportDialog" Title="@Loc["TmGantt_Export"]"
+                      OnClick="ToggleExportDialog" Title="@Loc["TmGantt_Export"]" AriaLabel="@Loc["TmGantt_Export"]"
                       data-testid="@TestId("gantt-export-btn")">
                 <TmIcon Name="download" Size="IconSize.Sm" />
             </TmButton>
             <!-- Import button -->
             <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                      OnClick="ToggleImportDialog" Title="@Loc["TmGantt_Import"]"
+                      OnClick="ToggleImportDialog" Title="@Loc["TmGantt_Import"]" AriaLabel="@Loc["TmGantt_Import"]"
                       data-testid="@TestId("gantt-import-btn")">
                 <TmIcon Name="upload" Size="IconSize.Sm" />
             </TmButton>
             <!-- History button -->
             <TmButton Size="ButtonSize.Sm" Variant="@(_historyDrawerOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
-                      OnClick="ToggleHistoryDrawer" Title="@Loc["TmGantt_History"]"
+                      OnClick="ToggleHistoryDrawer" Title="@Loc["TmGantt_History"]" AriaLabel="@Loc["TmGantt_History"]" aria-haspopup="true" aria-expanded="@(_historyDrawerOpen ? "true" : "false")"
                       data-testid="@TestId("gantt-history-btn")">
                 <TmIcon Name="clock" Size="IconSize.Sm" />
             </TmButton>
             <!-- View Settings -->
             <div class="tm-gantt__view-settings-wrapper">
-                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ToggleViewSettings" Title="@Loc["TmGantt_ViewSettings"]" data-testid="@TestId("gantt-view-settings-btn")">
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ToggleViewSettings" Title="@Loc["TmGantt_ViewSettings"]" AriaLabel="@Loc["TmGantt_ViewSettings"]" aria-haspopup="true" aria-expanded="@(_viewSettingsOpen ? "true" : "false")" data-testid="@TestId("gantt-view-settings-btn")">
                     <TmIcon Name="settings" Size="IconSize.Sm" />
                 </TmButton>
                 @if (_viewSettingsOpen)
@@ -225,30 +229,40 @@
             <button type="button" class="tm-gantt__sidebar-btn @(_activeSidebarPanel == GanttSidebarPanel.Tasks ? "tm-gantt__sidebar-btn--active" : "")"
                     data-testid="@TestId("sidebar-btn-tasks")"
                     title="@Loc["TmGantt_SidebarTasks"]"
+                    aria-label="@Loc["TmGantt_SidebarTasks"]"
+                    aria-pressed="@(_activeSidebarPanel == GanttSidebarPanel.Tasks ? "true" : "false")"
                     @onclick="() => ToggleSidebarPanel(GanttSidebarPanel.Tasks)">
                 <TmIcon Name="list" Size="IconSize.Sm" />
             </button>
             <button type="button" class="tm-gantt__sidebar-btn @(_activeSidebarPanel == GanttSidebarPanel.Workload ? "tm-gantt__sidebar-btn--active" : "")"
                     data-testid="@TestId("sidebar-btn-workload")"
                     title="@Loc["TmGantt_SidebarWorkload"]"
+                    aria-label="@Loc["TmGantt_SidebarWorkload"]"
+                    aria-pressed="@(_activeSidebarPanel == GanttSidebarPanel.Workload ? "true" : "false")"
                     @onclick="() => ToggleSidebarPanel(GanttSidebarPanel.Workload)">
                 <TmIcon Name="users" Size="IconSize.Sm" />
             </button>
             <button type="button" class="tm-gantt__sidebar-btn @(_activeSidebarPanel == GanttSidebarPanel.History ? "tm-gantt__sidebar-btn--active" : "")"
                     data-testid="@TestId("sidebar-btn-history")"
                     title="@Loc["TmGantt_SidebarHistory"]"
+                    aria-label="@Loc["TmGantt_SidebarHistory"]"
+                    aria-pressed="@(_activeSidebarPanel == GanttSidebarPanel.History ? "true" : "false")"
                     @onclick="() => ToggleSidebarPanel(GanttSidebarPanel.History)">
                 <TmIcon Name="clock" Size="IconSize.Sm" />
             </button>
             <button type="button" class="tm-gantt__sidebar-btn @(_activeSidebarPanel == GanttSidebarPanel.Notifications ? "tm-gantt__sidebar-btn--active" : "")"
                     data-testid="@TestId("sidebar-btn-notifications")"
                     title="@Loc["TmGantt_SidebarNotifications"]"
+                    aria-label="@Loc["TmGantt_SidebarNotifications"]"
+                    aria-pressed="@(_activeSidebarPanel == GanttSidebarPanel.Notifications ? "true" : "false")"
                     @onclick="() => ToggleSidebarPanel(GanttSidebarPanel.Notifications)">
                 <TmIcon Name="bell" Size="IconSize.Sm" />
             </button>
             <button type="button" class="tm-gantt__sidebar-btn @(_activeSidebarPanel == GanttSidebarPanel.Reports ? "tm-gantt__sidebar-btn--active" : "")"
                     data-testid="@TestId("sidebar-btn-reports")"
                     title="@Loc["TmGantt_SidebarReports"]"
+                    aria-label="@Loc["TmGantt_SidebarReports"]"
+                    aria-pressed="@(_activeSidebarPanel == GanttSidebarPanel.Reports ? "true" : "false")"
                     @onclick="() => ToggleSidebarPanel(GanttSidebarPanel.Reports)">
                 <TmIcon Name="bar-chart-2" Size="IconSize.Sm" />
             </button>
@@ -259,7 +273,8 @@
     @if (_activeSidebarPanel == GanttSidebarPanel.Reports)
     {
         <TmGanttReportsPanel Reports="Reports"
-                             OnReportRun="OnReportRun" />
+                             OnReportRun="OnReportRun"
+                             OnNewReportRequested="OnNewReportRequested" />
     }
     else if (_activeSidebarPanel == GanttSidebarPanel.Tasks)
     {
@@ -323,9 +338,9 @@
                 @foreach (var entry in History.OrderByDescending(h => h.Timestamp).Take(50))
                 {
                     <div class="tm-gantt__sidebar-history-row">
-                        <span class="tm-gantt__sidebar-history-action">@entry.Action</span>
+                        <span class="tm-gantt__sidebar-history-action">@GanttLabels.ChangeType(Loc, entry.Action)</span>
                         <span class="tm-gantt__sidebar-history-task">@(Data.FirstOrDefault(t => t.Id == entry.EntityRef.EntityId)?.Title ?? entry.EntityRef.EntityId)</span>
-                        <span class="tm-gantt__sidebar-history-date">@entry.Timestamp.ToLocalTime().ToString("dd.MM HH:mm")</span>
+                        <span class="tm-gantt__sidebar-history-date">@GanttLabels.Timestamp(entry.Timestamp, Loc.Culture, _userZone?.Zone ?? Clock.LocalTimeZone)</span>
                     </div>
                 }
             </div>
@@ -619,7 +634,9 @@
                                     </span>
                                     @if (node.Children.Count > 0)
                                     {
-                                        <button type="button" class="tm-gantt__expand-btn" @onclick:stopPropagation="true" @onclick="() => ToggleExpandAsync(node.Task)">
+                                        <button type="button" class="tm-gantt__expand-btn" @onclick:stopPropagation="true" @onclick="() => ToggleExpandAsync(node.Task)"
+                                                aria-label="@(node.Task.IsExpanded ? Loc["TmGantt_CollapseTask", node.Task.Title] : Loc["TmGantt_ExpandTask", node.Task.Title])"
+                                                aria-expanded="@(node.Task.IsExpanded ? "true" : "false")">
                                             <TmIcon Name="@(node.Task.IsExpanded ? "chevron-down" : "chevron-right")" />
                                         </button>
                                     }
@@ -1005,6 +1022,12 @@
                           OnDependencyAdded="OnDependencyAdded"
                           OnDependencyRemoved="OnDependencyRemoved"
                           OnCommentAdded="HandleTaskCommentAddedAsync"
+                          ActiveTimerTaskId="@ActiveTimerTaskId"
+                          OnTimerStarted="OnTimerStarted"
+                          OnTimerStopped="OnTimerStopped"
+                          OnDescriptionChanged="OnDescriptionChanged"
+                          OnAttachmentUpload="OnAttachmentUpload"
+                          OnAttachmentRemoved="OnAttachmentRemoved"
                           OnClose="() => ShowTaskPanel = false" />
     }
 
@@ -1032,6 +1055,7 @@
     {
         <TmGanttHistoryDrawer History="History"
                               IsOpen="_historyDrawerOpen"
+                              TimeZone="@(_userZone?.Zone ?? Clock.LocalTimeZone)"
                               OnTimeTravelRequested="OnTimeTravelRequested"
                               OnRollbackRequested="OnRollbackRequested"
                               OnClose="ToggleHistoryDrawer" />

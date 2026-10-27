@@ -118,7 +118,7 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Fires when the user clicks \"Run\" on a report."
+      "description": "Additional CSS classes appended to the root element."
     },
     {
       "name": "Columns",
@@ -366,7 +366,32 @@
     {
       "name": "ContainerWidth",
       "type": "double?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser; set it to override the measurement (tests, prerendering)."
+    },
+    {
+      "name": "OnNewReportRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user asks for a new report from the Reports panel. The \"New report\" button is only rendered when the host handles this callback."
+    },
+    {
+      "name": "OnDescriptionChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires when the user edits the description of the selected task in the task panel (live)."
+    },
+    {
+      "name": "OnAttachmentUpload",
+      "type": "EventCallback<IBrowserFile>",
+      "isRequired": false,
+      "description": "Fires when the user picks a file to attach to the selected task in the task panel. Persisting the file is the host's job."
+    },
+    {
+      "name": "OnAttachmentRemoved",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the user removes an attachment of the selected task in the task panel (argument = attachment id)."
     }
   ]
 }
