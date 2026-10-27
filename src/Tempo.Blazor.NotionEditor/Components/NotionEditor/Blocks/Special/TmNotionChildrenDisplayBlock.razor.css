@@ -54,7 +54,7 @@
     padding: var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-children__field {
@@ -118,7 +118,7 @@
 .tm-children__empty {
     padding: var(--tm-space-2);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-tertiary);
     font-size: var(--tm-font-size-sm);
 }
@@ -181,7 +181,7 @@
 
 .tm-children__page:hover {
     border-color: var(--tm-border-color);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-children__page-icon {
@@ -253,7 +253,7 @@
 
 .tm-children ::deep .tm-children__page:hover {
     border-color: var(--tm-border-color);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-children ::deep .tm-children__page:focus-visible {

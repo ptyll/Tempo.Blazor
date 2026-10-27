@@ -264,7 +264,7 @@
     padding: var(--tm-space-2);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-primary);
     text-align: left;
     cursor: pointer;

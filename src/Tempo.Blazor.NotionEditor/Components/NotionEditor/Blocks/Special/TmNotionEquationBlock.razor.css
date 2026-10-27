@@ -91,7 +91,7 @@
     font-size:        var(--tm-font-size-sm);
     line-height:      1.6;
     color:            var(--tm-text-primary);
-    background:       var(--tm-bg-subtle);
+    background:       var(--tm-bg-muted);
     border:           1px solid var(--tm-notion-border, var(--tm-border-color));
     border-radius:    var(--tm-radius-md);
     resize:           vertical;
@@ -129,7 +129,7 @@
 .tm-notion-equation-block__preview {
     min-height:    52px;
     padding:       var(--tm-space-3) var(--tm-space-4);
-    background:    var(--tm-bg-subtle);
+    background:    var(--tm-bg-muted);
     border:        1px solid var(--tm-notion-border, var(--tm-border-color));
     border-radius: var(--tm-radius-md);
     display:       flex;
@@ -203,7 +203,7 @@
 }
 
 .tm-notion-equation-block__cancel-btn {
-    background:   var(--tm-bg-subtle);
+    background:   var(--tm-bg-muted);
     color:        var(--tm-text-secondary);
     border-color: var(--tm-notion-border, var(--tm-border-color));
 }
