@@ -92,6 +92,31 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// <summary>Additional CSS classes.</summary>
     [Parameter] public string? Class { get; set; }
 
+    // ── Layout (FZE-8) ──
+
+    /// <summary>
+    /// Lets the chat be a flex CHILD of the host layout. <see langword="false"/> (the default)
+    /// keeps today's behavior: the chat fills its host box (<c>height: 100%</c>) and never shrinks
+    /// below its <c>--tm-chat-min-height</c> floor (default 300px). <see langword="true"/> adds the
+    /// <c>tm-chat--fill</c> modifier — <c>flex: 1 1 auto; height: auto;
+    /// min-height: var(--tm-chat-min-height, 0)</c> — so the chat grows and shrinks with the
+    /// parent's free space and the internal message scroller (itself <c>min-height: 0</c>)
+    /// absorbs the difference. The modifier reads the knob with a ZERO fallback (rather than a
+    /// bare 0) so a floor declared on a wrapper or <c>:root</c> keeps applying in fill mode too;
+    /// a host that wants the parent to own the height entirely sets the knob to 0. Use it when
+    /// the chat sits in a flex row/column of an app shell (a sidebar pane, a split view); inside
+    /// a non-flex block keep the default.
+    /// </summary>
+    [Parameter] public bool FillParent { get; set; }
+
+    /// <summary>
+    /// The root class list. The FZE-8 modifier is emitted from here as a LITERAL (both variants
+    /// appear in this file verbatim) so MarkupClassCoverageTests measures it: an embedded ternary
+    /// inside the markup's class attribute would truncate the scan at the expression's quote and
+    /// demote <c>tm-chat</c> itself to an unmeasurable interpolated stem.
+    /// </summary>
+    private string RootCssClass => FillParent ? "tm-chat tm-chat--fill" : "tm-chat";
+
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }

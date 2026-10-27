@@ -63,6 +63,10 @@ public class ChatCollaborationE2ETests : WasmTestBase
             .ToContainTextAsync("1", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
 
         // ── Reaction: Bob reacts to Alice's message c2 → Alice sees the chip ──
+        // Alice's thread is still open: on this ~500px pane it is the full-width narrow overlay,
+        // which hides the covered body (the root messages) — close it before asserting
+        // root-level UI in Alice's pane.
+        await alice.Locator("[data-testid='chat-thread-close']").ClickAsync();
         await bob.Locator("[data-message-id='c2'] .tm-chat__bubble").First.HoverAsync();
         await bob.Locator("[data-testid='chat-react-c2']").ClickAsync();
         await bob.Locator("[data-testid='chat-emoji-c2-0']").ClickAsync();

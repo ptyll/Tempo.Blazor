@@ -326,6 +326,89 @@
     </div>
 </section>
 
+<!-- Layout & mobile (FZE-8) -->
+<section class="demo-section" data-testid="chat-mobile-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Layout &amp; Mobile</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">FZE-8</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The chat as a flex child (<code>FillParent</code>), the host-owned minimum height
+        (<code>--tm-chat-min-height</code>), the sticky composer above a bottom navigation
+        (<code>--tm-chat-composer-offset</code> + safe area) and the full-width thread overlay on a
+        narrow chat. All three panes branch on the CHAT's own width, so the narrow behaviors are
+        visible on a desktop window too.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div data-testid="chat-fill-pane" class="lg:col-span-3">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">FillParent</h3>
+            <div class="chat-demo-split">
+                <TmChat Class="chat-demo-fill"
+                        FillParent="true"
+                        CurrentUser="_currentUser"
+                        Messages="_mobileMessages"
+                        OnSendMessage="HandleMobileSend" />
+                <aside class="chat-demo-side">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        The chat is a flex child here: it grows and shrinks with the pane while the
+                        side panel keeps its width. FillParent releases the floor — the modifier
+                        reads <code>min-height: var(--tm-chat-min-height, 0)</code>, so the parent
+                        owns the height unless the host declares a floor of its own.
+                    </p>
+                </aside>
+            </div>
+        </div>
+
+        <div data-testid="chat-thread-overlay-pane">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">Narrow chat — full-width thread overlay</h3>
+            <div class="chat-demo-narrow">
+                <TmChat CurrentUser="_alice"
+                        Messages="_mobileMessages"
+                        OnSendMessage="HandleMobileSend" />
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                This chat is ~340px wide, i.e. below the 640px container breakpoint: open the
+                thread of the first message and the panel overlays the whole chat instead of
+                squeezing the composer.
+            </p>
+        </div>
+
+        <div data-testid="chat-mobile-phone">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">Sticky composer above a bottom navigation</h3>
+            <div class="chat-demo-phone">
+                <div class="chat-demo-phone__page">
+                    <div class="chat-demo-phone__content">
+                        <p class="chat-demo-phone__filler">
+                            Scroll the phone — the composer stays above the fake bottom navigation
+                            while the chat's box extends past the fold, and rests in its natural
+                            place once the end is reached.
+                        </p>
+                        <TmChat FillParent="true"
+                                CurrentUser="_alice"
+                                Messages="_mobileMessages"
+                                OnSendMessage="HandleMobileSend" />
+                        <p class="chat-demo-phone__filler">
+                            The host sets <code>--tm-chat-composer-offset</code> to the height of
+                            its bottom navigation; the composer also clears the home indicator via
+                            <code>env(safe-area-inset-bottom)</code> — set
+                            <code>--tm-chat-safe-area-bottom: 0</code> when your bottom navigation
+                            already pads the safe area. Keeping it above the iOS virtual keyboard
+                            (visualViewport) is a recorded carry-forward.
+                        </p>
+                    </div>
+                </div>
+                <nav class="chat-demo-phone__nav" aria-label="Fake bottom navigation (demo)">
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="home" Size="IconSize.Sm" /> Home</span>
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="message-circle" Size="IconSize.Sm" /> Chats</span>
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="settings" Size="IconSize.Sm" /> Settings</span>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -361,6 +444,9 @@
 
     // ── Live interactive demo ─────────────────────────────────────────────
     private List<ChatMessage> _liveMessages = default!;
+
+    // ── Layout & mobile demo (FZE-8) ──
+    private List<ChatMessage> _mobileMessages = default!;
     private List<ChatUser> _liveTyping = default!;
 
     // ── Accessibility demo (FZE-7) ────────────────────────────────────────
@@ -372,6 +458,16 @@
         _alice = _currentUser;
         _bob = new("u2", "Bob", avatar: "B", isOnline: true);
         _carol = new("u3", "Carol", avatar: "C", isOnline: true);
+
+        // Layout & mobile (FZE-8): a thread on the first message so the narrow-chat overlay pane
+        // has a badge to open.
+        _mobileMessages = new()
+        {
+            new ChatMessage { Id = "mob1", Text = "The mobile layout phase is up — sticky composer, 44px targets and the full-width thread overlay.", Author = _bob, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 10, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob2", Text = "Does the thread panel still squeeze the composer on a phone?", Author = _carol, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 11, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob3", Text = "No — below the 640px container breakpoint it overlays the whole chat instead.", Author = _alice, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 12, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob4", Text = "It overlays full width; its own reply input stays at the bottom.", Author = _bob, ThreadRootId = "mob1", Timestamp = new DateTimeOffset(2026, 7, 12, 9, 13, 0, TimeSpan.Zero) },
+        };
 
         // Enough history that the card overflows: the scroll behavior is only observable when
         // the list can actually scroll (and clear the 40px at-bottom threshold).
@@ -465,6 +561,12 @@
     private void HandleBasicSend(string text)
     {
         _basicMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    // ── Layout & mobile demo (FZE-8) ──────────────────────────────────────
+    private void HandleMobileSend(string text)
+    {
+        _mobileMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
     }
 
     // ── Composer behavior demo (FZE-5) ────────────────────────────────────

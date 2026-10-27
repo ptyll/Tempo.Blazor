@@ -24,6 +24,13 @@
       "description": "Additional CSS classes."
     },
     {
+      "name": "FillParent",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Lets the chat be a flex CHILD of the host layout. false (the default) keeps today's behavior: the chat fills its host box (height: 100%) and never shrinks below its --tm-chat-min-height floor (default 300px). true adds the tm-chat--fill modifier — flex: 1 1 auto; height: auto; min-height: var(--tm-chat-min-height, 0) — so the chat grows and shrinks with the parent's free space and the internal message scroller (itself min-height: 0) absorbs the difference. The modifier reads the knob with a ZERO fallback (rather than a bare 0) so a floor declared on a wrapper or :root keeps applying in fill mode too; a host that wants the parent to own the height entirely sets the knob to 0. Use it when the chat sits in a flex row/column of an app shell (a sidebar pane, a split view); inside a non-flex block keep the default."
+    },
+    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
@@ -343,5 +350,10 @@
       "isRequired": false,
       "description": "The accessible name of the built-in composer textarea. Default: the effective placeholder (the host's Placeholder or the localized TmChat_Placeholder) — until this parameter existed the textarea had only a placeholder, which is no accessible name. Ignored with a ComposerTemplate (the template owns its own input)."
     }
+  ],
+  "cssClasses": [
+    "tm-chat",
+    "tm-chat--fill",
+    "tm-chat--no-container"
   ]
 }

@@ -2,7 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Models
 
-<div class="tm-chat @Class" @attributes="AdditionalAttributes">
+<div class="@RootCssClass @Class" @attributes="AdditionalAttributes">
 
     @* The component's ONE live region (FZE-7): host-supplied announcement texts land here. The
        content is a span keyed by the announcement sequence — every announcement REPLACES the

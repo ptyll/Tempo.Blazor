@@ -3869,6 +3869,13 @@
               "description": "Whether pressing Enter in a composer input submits. Default true (today's behavior: the built-in composer, the thread panel's reply input and an open message edit all submit on Enter). false makes Enter a NATIVE new line in all three inputs — nothing is sent from Enter itself, only from the send button, SendAsync or Ctrl/⌘+Enter (no Shift/Alt, outside an IME composition; handled by chat.js). Shift+Enter always inserts a new line and Alt/Ctrl/Meta+Enter always stay native (browser and host shortcuts). The keydown handling lives in the chat.js module once it is attached (it also owns the IME guard, which a net8 KeyboardEventArgs cannot express); this parameter is passed to the module as its enterToSend option and re-attaches the module when it changes."
             },
             {
+              "name": "FillParent",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Lets the chat be a flex CHILD of the host layout. false (the default) keeps today's behavior: the chat fills its host box (height: 100%) and never shrinks below its --tm-chat-min-height floor (default 300px). true adds the tm-chat--fill modifier — flex: 1 1 auto; height: auto; min-height: var(--tm-chat-min-height, 0) — so the chat grows and shrinks with the parent's free space and the internal message scroller (itself min-height: 0) absorbs the difference. The modifier reads the knob with a ZERO fallback (rather than a bare 0) so a floor declared on a wrapper or :root keeps applying in fill mode too; a host that wants the parent to own the height entirely sets the knob to 0. Use it when the chat sits in a flex row/column of an app shell (a sidebar pane, a split view); inside a non-flex block keep the default.",
+              "default": "false"
+            },
+            {
               "name": "HasMoreBefore",
               "type": "bool",
               "isRequired": false,
@@ -4066,6 +4073,11 @@
               "isRequired": false,
               "description": "Restricts MessageTemplate to the messages for which the predicate returns true. Null (the default) means the template renders for every message. Typical host usage: m => m.Kind == \"ai-draft\" to override only special kinds while ordinary messages keep the built-in row."
             }
+          ],
+          "cssClasses": [
+            "tm-chat",
+            "tm-chat--fill",
+            "tm-chat--no-container"
           ]
         },
         {

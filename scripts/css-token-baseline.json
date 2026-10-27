@@ -1,5 +1,5 @@
 {
-  "count": 4658,
+  "count": 4662,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2810,6 +2810,7 @@
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChat.razor.css|--tm-chat-bubble-radius": 1,
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChat.razor.css|--tm-chat-bubble-system-bg": 1,
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChat.razor.css|--tm-chat-bubble-system-fg": 1,
+    "undefined-token|src/Tempo.Blazor/Components/Chat/TmChat.razor.css|--tm-chat-min-height": 2,
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChatBubble.razor.css|--tm-chat-bubble-discarded-bg": 1,
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChatBubble.razor.css|--tm-chat-bubble-discarded-border": 1,
     "undefined-token|src/Tempo.Blazor/Components/Chat/TmChatBubble.razor.css|--tm-chat-bubble-discarded-fg": 1,
@@ -2864,6 +2865,7 @@
     "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_chat.css|--tm-chat-bubble-system-bg": 3,
     "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_chat.css|--tm-chat-bubble-system-border": 2,
     "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_chat.css|--tm-chat-bubble-system-fg": 3,
+    "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_chat.css|--tm-chat-min-height": 2,
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg--show-blocks .tm-wysiwyg-block::before": 1,
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg-remote-cursor__label": 1,
     "white-on-primary|src/Tempo.Blazor.Maps/wwwroot/css/components/_map.css|.tm-map__cluster": 1,

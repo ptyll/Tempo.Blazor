@@ -1,0 +1,94 @@
+/* ChatPage — Layout & mobile section (FZE-8).
+   The knobs --tm-chat-composer-offset / --tm-chat-safe-area-bottom are deliberately NOT declared
+   by the library (a default on .tm-chat or :root would shadow a host override); the demo is a
+   consumer and declares them here, on the panes that consume them. FillParent needs no knob:
+   the tm-chat--fill modifier releases the floor itself. */
+
+/* FillParent pane: a flex row whose chat grows/shrinks beside a fixed side panel. ::deep because
+   the chat root is rendered by the TmChat component — a plain descendant selector would carry
+   ChatPage's scope and never match. */
+.chat-demo-split {
+  display: flex;
+  align-items: stretch;
+  gap: var(--tm-space-4);
+  height: 360px;
+}
+
+.chat-demo-side {
+  width: 160px;
+  flex-shrink: 0;
+  padding: var(--tm-space-3);
+  border: 1px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  display: flex;
+  align-items: center;
+}
+
+/* Narrow-chat pane: ~340px wide, i.e. below the 640px tm-chat container breakpoint, so the
+   full-width thread overlay is demonstrable on a desktop window. */
+.chat-demo-narrow {
+  width: 340px;
+  max-width: 100%;
+}
+
+/* Phone frame: a 375px-wide scrollport with a fake bottom navigation; the host offset knob is
+   the navigation's height, so the sticky composer stays above it while the page scrolls. */
+.chat-demo-phone {
+  position: relative;
+  width: 375px;
+  max-width: 100%;
+  height: 640px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-xl);
+  overflow: hidden;
+}
+
+.chat-demo-phone__page {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Taller than the scrollport on purpose: the chat's box extends past the fold, which is what
+   makes the sticky composer observable. */
+.chat-demo-phone__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-4);
+  padding: var(--tm-space-4) var(--tm-space-4) 0;
+  min-height: 1600px;
+}
+
+/* ::deep for the same scope reason as above — the chat root is TmChat's element. The chat is a
+   FillParent flex child (its modifier releases the min-height floor); the ONLY knob the demo
+   declares is the composer offset: the fake navigation below is 56px tall — the offset the
+   sticky composer has to clear. */
+.chat-demo-phone__content ::deep .tm-chat {
+  --tm-chat-composer-offset: 56px;
+}
+
+.chat-demo-phone__filler {
+  margin: 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+.chat-demo-phone__nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--tm-bg-surface);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+.chat-demo-phone__nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
