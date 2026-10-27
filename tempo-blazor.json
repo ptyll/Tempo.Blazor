@@ -4506,6 +4506,119 @@
       ]
     },
     {
+      "itemName": "TmTypedChat",
+      "kind": "Component",
+      "category": "Chat",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "The generic variant of the chat: TmTypedChat<TItem> composes an inner TmChat (which stays non-generic) over the host's own domain sequence. Items are mapped to ChatMessage through MessageSelector once per new item reference — the cache saves mapping work only: the selector must depend on nothing but the item, and replacing an item or the selector forces the affected rows to be re-mapped (the item becomes the message Payload unless the selector sets its own). ItemTemplate receives a typed ChatItemContext<TItem> and every other TmChat parameter is forwarded by attribute splatting — OnSend, ComposerTemplate, AutoAttachComposerInput, RenderWindowSize and the rest pass straight through, with no IntelliSense for the forwarded parameters. Messages/MessageTemplate/UseTemplateFor are owned by the wrapper: passing any of them through the splat throws an ArgumentException naming the conflicting attribute, and a forwarded value whose type cannot reach the TmChat parameter it names (a bare method group compiled to the handler's NAME as a string) throws a descriptive ArgumentException that shows the EventCallback.Factory.Create form to write instead.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/TmTypedChat.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Chat"
+      ],
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "parameters": [
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TItem>",
+          "isRequired": true,
+          "default": "[]",
+          "description": "The host's domain sequence the conversation renders. The order of Items is the order of the mapped ChatMessage sequence handed to the inner TmChat.",
+          "editorRequired": true
+        },
+        {
+          "name": "ItemTemplate",
+          "type": "RenderFragment<ChatItemContext<TItem>>?",
+          "isRequired": false,
+          "description": "Replaces the built-in message row with host markup that receives a ChatItemContext<TItem> — the item plus the mapped message's context. Null renders the built-in rows for every item. A message whose mapped payload is not a TItem — the selector supplied its own payload — renders the built-in row too and never reaches the typed template. The wrapper element carrying the data-message-id anchor is rendered by TmChat around the template output either way."
+        },
+        {
+          "name": "MessageSelector",
+          "type": "Func<TItem, ChatMessage>",
+          "isRequired": true,
+          "description": "Maps one TItem to the ChatMessage the inner TmChat renders. Called from OnParametersSet — once per NEW item reference (unchanged references reuse the previously mapped ChatMessage instance, so Blazor's keyed row matching keeps the row's component instances alive); value-type items are re-mapped on every parameter pass. The cache saves MAPPING WORK only — the selector must depend on nothing but the item handed to it, and REPLACING an item (a different reference for the same row) or REPLACING the selector forces the affected rows to be re-mapped. The comparison is Equals: a fresh delegate of the same instance/static method (the Razor compiler builds one per render for a method group like MessageSelector=\"ToChatMessage\") keeps the cache; a re-created lambda simply pays the re-map. When the returned message has a null Payload, the item is stored as the payload — so even a plain (non-generic) TmChat template can read the item back with PayloadAs<TItem>(). A payload the selector sets itself wins and is left untouched.",
+          "editorRequired": true
+        },
+        {
+          "name": "UseTemplateFor",
+          "type": "Func<TItem, bool>?",
+          "isRequired": false,
+          "description": "Restricts ItemTemplate to the items the typed predicate accepts — the same precedence TmChat.UseTemplateFor documents: null means the template renders for EVERY item, otherwise only for the items where it returns true. The predicate receives the item recovered from the mapped message's payload (exact type). A message whose payload is not a TItem — the selector supplied its own — never renders the typed template: it renders the built-in row, with or without a predicate."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Forwarded verbatim (splatted) onto the inner TmChat together with every other unmatched attribute — this is how OnSend, ComposerTemplate, AutoAttachComposerInput, RenderWindowSize and the rest of the 60+ TmChat parameters reach the chat without this component duplicating them. Because they are splatted, there is no IntelliSense and no compile-time checking for them; and because Messages, MessageTemplate and UseTemplateFor are owned by TmTypedChat, passing any of them here throws an ArgumentException with a message naming the conflicting attribute. TmTypedChat also checks every forwarded value against the TmChat parameter it names and throws a descriptive ArgumentException from OnParametersSet when the type cannot reach it. EventCallback pitfall: for an attribute that matches no parameter the Razor compiler has no target type, so a bare method group (OnSend=\"HandleSend\") compiles to the handler NAME as a plain string — without the check the inner chat would die on an InvalidCastException while rendering. Forward event handlers with an explicitly-typed factory: OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\". Values whose type already matches (bools, strings, ints, enums, render fragments) pass through unchanged."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Chat",
+          "type": "TmChat?",
+          "description": "The inner TmChat instance this component renders. Null before the first render."
+        },
+        {
+          "name": "HasUnsavedDraft",
+          "type": "bool",
+          "description": "Whether the composer (built-in or custom, driven through the composer context) holds an unsaved draft. false before the first render."
+        }
+      ],
+      "methods": [
+        {
+          "name": "ScrollToBottomAsync",
+          "signature": "ValueTask ScrollToBottomAsync()",
+          "description": "Scrolls the conversation to its end. No-op before the first render."
+        },
+        {
+          "name": "ScrollToItemAsync",
+          "signature": "ValueTask<bool> ScrollToItemAsync(TItem item)",
+          "description": "Scrolls to the row of item — resolved to the mapped message id through the selector cache first (the id the rows were rendered with; the host's selector does not re-run) and through MessageSelector only for an item that is not currently mapped. Returns whether the row was found and scrolled to; false before the first render."
+        },
+        {
+          "name": "ScrollToMessageAsync",
+          "signature": "ValueTask<bool> ScrollToMessageAsync(string id)",
+          "description": "Scrolls to the row of the message with the given id. Returns whether the row was found and scrolled to; false before the first render."
+        },
+        {
+          "name": "FocusItemAsync",
+          "signature": "ValueTask<bool> FocusItemAsync(TItem item)",
+          "description": "Moves keyboard focus to the row of item — resolved to the mapped message id through the selector cache first (the id the rows were rendered with; the host's selector does not re-run) and through MessageSelector only for an item that is not currently mapped. Returns whether the row was found and focused; false before the first render."
+        },
+        {
+          "name": "AnnounceAsync",
+          "signature": "Task AnnounceAsync(string text)",
+          "description": "Announces host text through the chat's single polite live region (with TmChat's trailing throttle). No-op before the first render."
+        },
+        {
+          "name": "FocusComposerAsync",
+          "signature": "ValueTask FocusComposerAsync()",
+          "description": "Moves keyboard focus to the composer. No-op before the first render."
+        },
+        {
+          "name": "DiscardDraftAsync",
+          "signature": "Task DiscardDraftAsync()",
+          "description": "Discards the composer draft. No-op before the first render."
+        }
+      ],
+      "examples": [
+        {
+          "title": "A ticket thread built from the host's own domain record",
+          "code": "<TmTypedChat Items=\"_ticketEvents\" MessageSelector=\"MapTicketEvent\"\n             OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\">\n    <ItemTemplate Context=\"ctx\">\n        <TmChatBubble Variant=\"ChatBubbleVariant.Pending\" ActorLabel=\"@ctx.Item!.Actor\">\n            <ChildContent><span>@ctx.Item.Message</span></ChildContent>\n        </TmChatBubble>\n    </ItemTemplate>\n</TmTypedChat>\n\n@code {\n    private sealed record SupportTicketEvent(int Id, string Actor, string Message, string State, DateTimeOffset Timestamp);\n\n    private ChatMessage MapTicketEvent(SupportTicketEvent e) => new(\n        $\"ticket-{e.Id}\", e.Message, _agents[e.Actor], ChatMessageType.Incoming, e.Timestamp);\n}"
+        },
+        {
+          "title": "Forwarded TmChat parameters through the splat",
+          "code": "@* OnSend, FillParent and Placeholder are NOT parameters of TmTypedChat — the splat forwards\n   them onto the inner TmChat. Messages/MessageTemplate/UseTemplateFor would throw. *@\n<TmTypedChat Items=\"_inbox\" MessageSelector=\"ToChatMessage\"\n             OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\" FillParent=\"true\" Placeholder=\"Reply…\"\n             AutoAttachComposerInput=\"true\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmKycWizard",
       "kind": "Component",
       "category": "Compliance",
@@ -5284,6 +5397,69 @@
       ],
       "examples": [
         "<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"@HandleSend\">\n    <ComposerTemplate Context=\"composer\">\n        <!-- controlled input: Text is the source of truth -->\n        <textarea value=\"@composer.Text\" disabled=\"@composer.Disabled\"\n                  @oninput=\"@(e => composer.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n        <button disabled=\"@(!composer.CanSend)\" @onclick=\"composer.SendAsync\">Send</button>\n    </ComposerTemplate>\n</TmChat>"
+      ]
+    },
+    {
+      "itemName": "ChatItemContext<TItem>",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Typed context handed to TmTypedChat<TItem>.ItemTemplate for every item it renders. It composes the host's TItem with the ChatMessageContext TmChat already builds around the mapped message — the item itself plus everything \"around\" it (the ChatMessage, own/thread/group position and the built-in row via DefaultContent). The item is recovered from the mapped message's ChatMessage.Payload (exact type), so it is the same instance the host passed in Items. The typed template renders only for messages whose payload IS a TItem — a selector-owned payload renders the built-in row instead and never reaches this context, so Item is always a real item.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatItemContext.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "members": [
+        {
+          "name": "DefaultContent",
+          "kind": "Property",
+          "type": "RenderFragment",
+          "description": "Render fragment with the built-in message row exactly as it renders without a template — returning it from the template keeps the default look. A shortcut for Message.DefaultContent."
+        },
+        {
+          "name": "Index",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based position of the mapped message within the sequence it renders in — the root conversation list, or the thread sequence when InThread is true. A shortcut for Message.Index."
+        },
+        {
+          "name": "InThread",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the mapped message renders inside the thread panel. A shortcut for Message.InThread."
+        },
+        {
+          "name": "IsFirstInGroup",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the previous rendered message had a different author or a different ChatMessage.Kind. The first message of a group can show its full metadata. A shortcut for Message.IsFirstInGroup."
+        },
+        {
+          "name": "IsOwn",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the mapped message was authored by TmChat.CurrentUser. A shortcut for Message.IsOwn."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "TItem",
+          "description": "The host's domain item this row renders — recovered from the mapped message's ChatMessage.Payload (exact type), the same instance the host passed in Items. Never null: the typed template renders only for messages whose payload IS a TItem (a selector-owned payload renders the built-in row instead)."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "ChatMessageContext",
+          "description": "The message context of the mapped ChatMessage: the message itself (Message.Message), IsOwn, InThread, Index, IsFirstInGroup and DefaultContent."
+        }
+      ],
+      "examples": [
+        "<TmTypedChat Items=\"_events\" MessageSelector=\"@(e => Map(e))\">\n    <ItemTemplate Context=\"ctx\">\n        <TmChatBubble Variant=\"ChatBubbleVariant.Pending\" ActorLabel=\"@ctx.Item.Actor\">\n            <Badge><span class=\"ticket-badge\">#@ctx.Item.Id</span></Badge>\n            <ChildContent><span>@ctx.Message.Message.Text</span></ChildContent>\n        </TmChatBubble>\n    </ItemTemplate>\n</TmTypedChat>"
       ]
     },
     {
@@ -29863,11 +30039,11 @@
     }
   ],
   "summary": {
-    "itemCount": 392,
-    "manualItemCount": 392,
-    "generatedItemCount": 384,
+    "itemCount": 394,
+    "manualItemCount": 394,
+    "generatedItemCount": 386,
     "generatedOnlyItemCount": 0,
-    "componentCount": 205,
-    "publicApiTypeCount": 179
+    "componentCount": 206,
+    "publicApiTypeCount": 180
   }
 }

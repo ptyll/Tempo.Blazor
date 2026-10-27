@@ -2,6 +2,15 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Models
 
+@* TmChat — host knob contract. The knobs below are deliberately NEVER declared by the library
+   (not here, not in _chat.css, not in tokens.css): every var() that reads them carries its
+   default as the fallback, so a host overrides them on a wrapper or :root and it cascades —
+   declaring a default would pin today's visuals against the host. Knob contract (each read
+   with a fallback, never declared by the library — the DesignTokenDefinitionTests HostKnobs
+   allowlist guards that every usage carries its fallback): --tm-chat-min-height,
+   --tm-chat-composer-offset, --tm-chat-safe-area-bottom, --tm-chat-keyboard-inset,
+   --tm-chat-composer-clearance *@
+
 @* The component ROOT carries the @ref of the FZE-12 auto-attach: chat.js attachComposerById
    looks the ComposerTemplate input (id="@composer.InputId") up INSIDE this element only —
    never page-wide, because the id is per-TmChat-instance. The ref costs nothing while the

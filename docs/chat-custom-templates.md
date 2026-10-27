@@ -29,7 +29,9 @@ Rationale:
 4. The rest of the library (`TmActivityComments`, the Notion comment blocks) is model-based too.
 
 A generic `TmChat<TItem>` remains possible **as a separate component** over the same core — it is
-a carry-forward, not part of this release.
+a carry-forward, not part of this release. **Delivered in FZE-15** as
+[`TmTypedChat<TItem>`](#the-typed-wrapper-tmtypedchartitem-fze-15): a separate component composed
+OVER the non-generic `TmChat` — see the section below for the contract and the ADR.
 
 ## Mapping the host DTO onto `ChatMessage`
 
@@ -356,6 +358,93 @@ which a top-anchored spacer model does not promise. The render window keeps ever
 keyed DOM element while it is in the slice and reuses the scroller's own prepend machinery for
 the growth — one mechanism, no competing layout heuristics.
 
-## Future work (deliberately NOT implemented)
+## The typed wrapper: `TmTypedChat<TItem>` (FZE-15)
 
-- Generic `TmChat<TItem>` as a **separate** component over the same core.
+**Decision (ADR):** the non-generic `TmChat` stays, and the generic variant is a SEPARATE
+component composed OVER it — `TmTypedChat<TItem>` renders an inner `<TmChat>` and owns nothing
+but the mapping. It does not duplicate the draft guard (the inner chat registers
+`ITmDraftGuard`), ships no JS of its own (the inner chat's `chat.js` handles it) and is not
+`IAsyncDisposable` (it holds no timers, modules or handles — the inner chat disposes itself).
+Making the CORE generic was rejected (the closed decision above); a generic WRAPPER costs
+nothing and keeps every existing `<TmChat>` compiling unchanged.
+
+The wrapper's whole API is three members plus the splat:
+
+- `Items` (`[EditorRequired] IReadOnlyList<TItem>`) — the host's domain sequence, rendered in
+  order.
+- `MessageSelector` (`[EditorRequired] Func<TItem, ChatMessage>`) — maps one item to the
+  message the inner chat renders. It runs in `OnParametersSet`, **once per new item reference**:
+  an unchanged reference reuses the previously mapped `ChatMessage` instance (a
+  `ReferenceEqualityComparer` cache keyed by the item, evicted when its item disappears), so
+  Blazor's `@key`ed row matching keeps the row's component instances alive across re-renders.
+  The cache saves MAPPING WORK only — the selector must depend on nothing but the item handed
+  to it, and replacing an item (a different reference for the same row) or replacing the
+  selector forces the affected rows to be re-mapped. The comparison is `Equals`, so a fresh
+  delegate of the same instance/static method (the Razor compiler builds one per render for a
+  method group like `MessageSelector="ToChatMessage"`) does not pay a re-map on every render.
+  Value-type items — and a null item — have no identity and are re-mapped on every parameter
+  pass. When the
+  selector returns a message with a null `Payload`, the wrapper stores the ITEM as the payload —
+  so even a plain (non-generic) `TmChat` `MessageTemplate` can read it back with
+  `context.PayloadAs<TItem>()`; a payload the selector sets itself wins.
+- `ItemTemplate` (`RenderFragment<ChatItemContext<TItem>>?`) — the typed message template.
+  `ChatItemContext<TItem>` carries the `Item` (recovered from the mapped message's payload,
+  exact type — no second lookup dictionary) plus the full `ChatMessageContext` and the
+  `IsOwn` / `InThread` / `Index` / `IsFirstInGroup` / `DefaultContent` shortcuts. Without an
+  `ItemTemplate` the built-in rows render for every item.
+- `UseTemplateFor` (`Func<TItem, bool>?`) — the typed predicate with exactly the precedence
+  `TmChat.UseTemplateFor` documents (null → template for every item). The predicate receives
+  the item recovered from the payload. A message whose mapped payload is NOT a `TItem` — the
+  selector supplied its own payload — never renders the typed template: it renders the
+  BUILT-IN row, with or without a predicate (the wrapper always passes the inner
+  `m => m.Payload is TItem i && (UseTemplateFor?.Invoke(i) ?? true)` when an `ItemTemplate`
+  exists), so a selector-owned payload can never reach the template as `default(TItem)`.
+- `AdditionalAttributes` (`[CaptureUnmatchedValues]`) — **every other `TmChat` parameter is
+  forwarded by splatting**: `OnSend`, `ComposerTemplate`, `AutoAttachComposerInput`,
+  `RenderWindowSize`, … pass them on `TmTypedChat` and they reach the inner chat. There is NO
+  IntelliSense for the forwarded parameters and the compiler cannot check them — a typo surfaces
+  as an unmatched attribute instead of a compile error. `Messages`, `MessageTemplate` and
+  `UseTemplateFor` are OWNED by the wrapper: passing any of them through the splat throws an
+  `ArgumentException` naming the conflicting attribute (they would silently fight the values
+  the wrapper derives from `Items` + `MessageSelector`).
+  `TmTypedChat` also validates every forwarded value against the `TmChat` parameter it names
+  and throws a descriptive `ArgumentException` from `OnParametersSet` when the type cannot
+  reach it — instead of letting the chat die on an `InvalidCastException` while rendering.
+  **EventCallback pitfall:** for an attribute that matches no parameter the Razor compiler has
+  no target type, so a bare method group (`OnSend="HandleSend"`) compiles to the handler's
+  NAME as a plain string — the error names the attribute, the expected type and the factory
+  form to write: `OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))"`.
+  Values whose type already matches (bools, strings, ints, enums, render fragments) pass
+  through unchanged.
+
+Public helpers delegate to the inner chat — `Chat` (the `TmChat?` instance),
+`ScrollToBottomAsync()`, `ScrollToItemAsync(TItem)` / `FocusItemAsync(TItem)` (the id resolved from the
+selector cache first — the host's selector does not re-run for an already-mapped item),
+`ScrollToMessageAsync(string)`, `AnnounceAsync(string)`,
+`FocusComposerAsync()`, `HasUnsavedDraft` and `DiscardDraftAsync()` — each a no-op (or `false`)
+before the first render, never a throw.
+
+```razor
+@* A support-ticket thread built from the host's own domain record *@
+<TmTypedChat Items="_ticketEvents" MessageSelector="MapTicketEvent"
+             OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))"
+             Placeholder="Reply to the ticket thread…">
+    <ItemTemplate Context="ctx">
+        <TmChatBubble Variant="@(ctx.Item!.State == "open" ? ChatBubbleVariant.Pending : ChatBubbleVariant.Pill)"
+                      ActorLabel="@ctx.Item.Actor"
+                      Timestamp="ctx.Message.Message.Timestamp">
+            <Badge><span class="ticket-badge">#@ctx.Item.Id · @ctx.Item.State</span></Badge>
+            <ChildContent><span>@ctx.Item.Message</span></ChildContent>
+        </TmChatBubble>
+    </ItemTemplate>
+</TmTypedChat>
+@code {
+    private sealed record SupportTicketEvent(int Id, string Actor, string Message, string State, DateTimeOffset Timestamp);
+
+    private ChatMessage MapTicketEvent(SupportTicketEvent e) => new(
+        $"ticket-{e.Id}", e.Message, _agents[e.Actor], ChatMessageType.Incoming, e.Timestamp);
+}
+```
+
+Demo: the `chat-typed-section` of the `/chat` demo page; bUnit coverage in
+`TmTypedChatTests`; E2E in `ChatTypedE2ETests`.

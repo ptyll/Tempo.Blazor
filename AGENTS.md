@@ -155,7 +155,7 @@ managed hosts instead, start the four apps above and set
 |----------|------------|
 | Activity | `TmActivityLog`, `TmActivityComments`, `TmActivityAttachments`, `TmActivityTimeline`, `TmRichEditorFull`, `TmRichEditorSimple` |
 | AITools | `TmAIPrompt` |
-| Chat | `TmChat` |
+| Chat | `TmChat`, `TmChatBubble`, `TmTypedChat` (generic wrapper composed over `TmChat`) |
 | Avatars | `TmAvatar`, `TmAvatarGroup` |
 | Buttons | `TmButton`, `TmSplitButton`, `TmCopyButton` |
 | Charts | `TmChart` (Bar, Line, Pie, Donut, HorizontalBar — pure SVG), `TmStockChart` (Candlestick, OHLC, Line), `TmSparkline` (Line, Bar, Area, Pie), `TmGauge` (Arc, Circular, Linear) |

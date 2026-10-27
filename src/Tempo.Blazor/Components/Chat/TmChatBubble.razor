@@ -6,14 +6,15 @@
    radius and width reads a --tm-chat-bubble-* knob whose fallback IS the default. The knobs are
    deliberately NOT declared on .tm-chat — a host overrides them on a wrapper or :root and the
    var() fallbacks still resolve. Knob contract (each read with a fallback, never declared by the
-   library): --tm-chat-bubble-in-bg: --tm-chat-bubble-in-fg: --tm-chat-bubble-in-border:
-   --tm-chat-bubble-out-bg: --tm-chat-bubble-out-fg: --tm-chat-bubble-out-border:
-   --tm-chat-bubble-system-bg: --tm-chat-bubble-system-fg: --tm-chat-bubble-system-border:
-   --tm-chat-bubble-pending-bg: --tm-chat-bubble-pending-fg: --tm-chat-bubble-pending-border:
-   --tm-chat-bubble-queued-bg: --tm-chat-bubble-queued-fg: --tm-chat-bubble-queued-border:
-   --tm-chat-bubble-discarded-bg: --tm-chat-bubble-discarded-fg: --tm-chat-bubble-discarded-border:
-   --tm-chat-bubble-locked-bg: --tm-chat-bubble-locked-fg: --tm-chat-bubble-locked-border:
-   --tm-chat-bubble-radius: --tm-chat-bubble-padding: --tm-chat-bubble-max-width: *@
+   library — the DesignTokenDefinitionTests HostKnobs allowlist guards that every usage carries
+   its fallback): --tm-chat-bubble-in-bg, --tm-chat-bubble-in-fg, --tm-chat-bubble-in-border,
+   --tm-chat-bubble-out-bg, --tm-chat-bubble-out-fg, --tm-chat-bubble-out-border,
+   --tm-chat-bubble-system-bg, --tm-chat-bubble-system-fg, --tm-chat-bubble-system-border,
+   --tm-chat-bubble-pending-bg, --tm-chat-bubble-pending-fg, --tm-chat-bubble-pending-border,
+   --tm-chat-bubble-queued-bg, --tm-chat-bubble-queued-fg, --tm-chat-bubble-queued-border,
+   --tm-chat-bubble-discarded-bg, --tm-chat-bubble-discarded-fg, --tm-chat-bubble-discarded-border,
+   --tm-chat-bubble-locked-bg, --tm-chat-bubble-locked-fg, --tm-chat-bubble-locked-border,
+   --tm-chat-bubble-radius, --tm-chat-bubble-padding, --tm-chat-bubble-max-width *@
 
 <div class="@RootClass" data-variant="@VariantAttribute" data-testid="@RootTestId("chat-bubble")" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(StatusLabel))

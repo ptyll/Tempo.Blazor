@@ -662,6 +662,51 @@
     </div>
 </section>
 
+<!-- Typed chat (FZE-15): the generic TmTypedChat<TItem> composed over the non-generic TmChat -->
+<section class="demo-section" data-testid="chat-typed-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Typed Chat (Domain Items)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-15</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The same chat contract over a HOST DOMAIN SEQUENCE: <code>TmTypedChat&lt;SupportTicketEvent&gt;</code>
+        maps every item through <code>MessageSelector</code> (the item becomes the message
+        <code>Payload</code> unless the selector sets its own) and hands an
+        <code>ItemTemplate</code> a typed <code>ChatItemContext&lt;TItem&gt;</code> — the item plus
+        everything TmChat knows around the message. Every other TmChat parameter is forwarded by
+        attribute splatting: the composer below sends through the forwarded <code>OnSend</code>,
+        which appends a new ticket event, and the chat scrolls to the bottom on its own.
+        <code>TmChat</code> itself stays non-generic.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmTypedChat Items="_typedEvents"
+                             MessageSelector="MapTicketEvent"
+                             ItemTemplate="RenderTicketEvent"
+                             OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleTypedSendAsync))"
+                             Placeholder="Reply to the ticket thread…"
+                             MessagesAriaLabel="Ticket thread events" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                The bubbles come from <code>ItemTemplate</code> + <code>TmChatBubble</code>; the
+                variant is derived from the item's <code>State</code>. The items count is host
+                state — the wrapper owns nothing but the mapping.
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-200">
+                Ticket events: <strong data-testid="chat-typed-count">@_typedEvents.Count</strong>
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleTypedEscalateAsync">
+                Append agent escalation event
+            </TmButton>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -755,6 +800,14 @@
                 i % 2 == 0 ? ChatMessageType.Outgoing : ChatMessageType.Incoming,
                 new DateTimeOffset(2026, 7, 12, 6, 0, 0, TimeSpan.Zero).AddSeconds(i)));
         }
+
+        // Typed chat (FZE-15): the domain record drives the conversation through the selector.
+        _typedEvents = new()
+        {
+            new SupportTicketEvent(1, "Bob", "Printer offline again — can you check the spooler?", "open"),
+            new SupportTicketEvent(2, "Carol", "Spooler restarted; the queue is draining now.", "waiting"),
+            new SupportTicketEvent(3, "Alice", "Queue drained and the test page printed fine.", "resolved"),
+        };
 
         _basicMessages = new()
         {
@@ -1274,6 +1327,55 @@
     }
 
     private int _renderWindowSeq;
+
+    // ── Typed chat demo (FZE-15) — TmTypedChat over a domain record ────
+    // Demo-local domain record: the HOST sequence the conversation is built from. The selector
+    // maps each event to a ChatMessage (the item becomes the Payload) and the ItemTemplate
+    // receives a ChatItemContext<SupportTicketEvent>.
+    private sealed record SupportTicketEvent(int Id, string Actor, string Message, string State);
+
+    private List<SupportTicketEvent> _typedEvents = new();
+    private int _typedSeq;
+
+    private ChatMessage MapTicketEvent(SupportTicketEvent e) => new(
+        $"typed-{e.Id}",
+        e.Message,
+        e.Actor switch
+        {
+            "Alice" => _currentUser,
+            "Bob" => _bob,
+            _ => _carol,
+        },
+        e.State == "resolved" ? ChatMessageType.Outgoing : ChatMessageType.Incoming,
+        _customBase.AddMinutes(e.Id));
+
+    private RenderFragment RenderTicketEvent(ChatItemContext<SupportTicketEvent> ctx) => @<TmChatBubble
+        Variant="@(ctx.Item!.State switch
+        {
+            "open" => ChatBubbleVariant.Pending,
+            "waiting" => ChatBubbleVariant.Queued,
+            _ => ChatBubbleVariant.Pill,
+        })"
+        data-testid="chat-typed-event"
+        ActorLabel="@ctx.Item.Actor"
+        Timestamp="ctx.Message.Message.Timestamp">
+        <Badge><span class="chat-demo-badge">Ticket #@ctx.Item.Id · @ctx.Item.State</span></Badge>
+        <ChildContent><span>@ctx.Item.Message</span></ChildContent>
+    </TmChatBubble>;
+
+    private Task HandleTypedSendAsync(ChatSendRequest request)
+    {
+        _typedSeq++;
+        _typedEvents.Add(new(1000 + _typedSeq, "Alice", request.Text, "resolved"));
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleTypedEscalateAsync()
+    {
+        _typedSeq++;
+        _typedEvents.Add(new(1000 + _typedSeq, "Carol", $"Escalation #{_typedSeq}: paging the on-call agent.", "open"));
+        await InvokeAsync(StateHasChanged);
+    }
 
     // ── MessageTemplate: route every host-owned Kind to its bubble ────────
     private RenderFragment RenderCustomMessage(ChatMessageContext context) => context.Message.Kind switch

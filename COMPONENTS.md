@@ -36,7 +36,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 26. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
 27. [AI Tools](#ai-tools) — TmAIPrompt
 28. [Podpisové komponenty](#podpisové-komponenty) — TmDocumentPageViewer, TmSigningFieldOverlay, TmSignatureCapture, TmConditionBuilder, TmFormulaBuilder, TmRecipientRoleEditor, TmSigningFieldEditorPanel, TmPdfTemplateDesigner, signing steps, TmSigningFormRunner, TmSigningCompletionPanel, TmSubmissionStatusTimeline, TmShareLinkPanel, TmPdfSignatureVerification, TmAuditTrailViewer
-29. [Chat](#chat) — TmChat
+29. [Chat](#chat) — TmChat, TmChatBubble, TmTypedChat
 30. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
 31. [Knihovna dokumentů](#knihovna-dokumentů-document-library) — ITempoDocumentLibraryProvider, TmDocumentOpenDialog, ITempoDocumentChangeNotifier, NotionEditor insert-existing, MCP
 32. [Reporting](#reporting) — TmReportViewer, TmReportParameterPanel, TmReportExplorer, TmReportDesigner
@@ -7246,6 +7246,29 @@ Prezentační bublina pro hostem stavěné řádky — stylingová protiváha `T
 | `Class` | `string?` | `null` | Dodatečné CSS třídy na kořeni `tm-chat-bubble` |
 
 Další atributy (`id`, `data-*`, `aria-*`) se splatují na kořen přes `AdditionalAttributes`.
+
+### TmTypedChat<TItem>
+
+Generická varianta chatu jako **samostatná komponenta nad negenerickým `TmChat`** (FZE-15, ADR: jádro zůstává negenerické, generická varianta = kompozice). Host drží vlastní doménovou sekvenci (`Items`) a přes `MessageSelector` mapuje každou položku na `ChatMessage` — pokud selector nenastaví vlastní `Payload`, stane se položka payloadem zprávy, takže i obyčejná `TmChat` šablona ji přečte přes `PayloadAs<TItem>()`. Mapování běží v `OnParametersSet` **jednou na novou referenci položky** (cache podle reference — `ReferenceEqualityComparer`, pro hodnotové typy i pro `null` položku se mapuje vždy; smazané položky se z cache evictují), takže `@key` řádky přežijí re-render a instance komponent v šablonách se zachovají. Cache šetří jen mapovací práci — selector nesmí záviset na ničem jiném než na položce a výměna položky nebo selectoru vynutí re-map dotčených řádků; porovnání je `Equals`, takže čerstvý delegát téže instanční metody (Razor ho pro metodu group staví při každém renderu) re-map nezaplatí. `ItemTemplate` dostává typované `ChatItemContext<TItem>` (položka čtená z payloadu exact-type + plné `ChatMessageContext` se zkratkami `IsOwn`, `InThread`, `Index`, `IsFirstInGroup`, `DefaultContent`). **Všechny ostatní parametry `TmChat` se přeposílají splatem** (`OnSend`, `ComposerTemplate`, `AutoAttachComposerInput`, `RenderWindowSize`, …) — bez IntelliSense; `Messages`/`MessageTemplate`/`UseTemplateFor` jsou ve vlastnictví wrapperu a jejich předání splatem vyhodí `ArgumentException` s jasnou zprávou. Wrapper navíc kontroluje typ každé přeposlané hodnoty proti pojmenovanému parametru `TmChat` a z `OnParametersSet` vyhodí popisnou `ArgumentException`, když ji tam nelze předat (místo aby chat při renderu spadl na `InvalidCastException`). Zpráva bez položky v payloadu (selector si nastavil vlastní) renderuje vestavěný řádek — s predikátem i bez něj. Veřejné metody delegují na vnitřní chat (`Chat`, `ScrollToBottomAsync`, `ScrollToItemAsync(TItem)`, `ScrollToMessageAsync`, `FocusItemAsync(TItem)`, `AnnounceAsync`, `FocusComposerAsync`, `HasUnsavedDraft`, `DiscardDraftAsync`) a před prvním renderem jsou no-op; draft guard registruje vnitřní `TmChat`, wrapper nemá vlastní JS ani `IAsyncDisposable`. **Past s EventCallback:** atributu bez cílového typu Razor nemá jak odvodit `EventCallback<T>`, takže holá metoda group (`OnSend="HandleSend"`) se zkompiluje jako ŘETĚZEC se jménem handleru — `TmTypedChat` to zastaví popisnou `ArgumentException`, která pojmenuje atribut, očekávaný typ i tvar zápisu; event handlery přeposílejte explicitně: `OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))"` (hodnoty, jejichž typ odpovídá, projdou beze změny). `ScrollToItemAsync`/`FocusItemAsync` řeší id nejdřív ze selector cache, takže selector hosta pro už zmapovanou položku neběží znovu.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Items` | `IReadOnlyList<TItem>` | `[]` (EditorRequired) | Doménová sekvence hosta; pořadí Items = pořadí mapovaných zpráv |
+| `MessageSelector` | `Func<TItem, ChatMessage>` | — (EditorRequired) | Mapování položky na zprávu; jednou na novou referenci, payload = položka když je null |
+| `ItemTemplate` | `RenderFragment<ChatItemContext<TItem>>?` | `null` | Typovaná šablona řádku; `null` = vestavěné řádky pro všechny položky |
+| `UseTemplateFor` | `Func<TItem, bool>?` | `null` | Typovaný predikát se stejnou precedencí jako `TmChat.UseTemplateFor` (null = šablona pro vše) |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Splat přeposlaný na vnitřní `TmChat`; konflikt `Messages`/`MessageTemplate`/`UseTemplateFor` → `ArgumentException` |
+
+```razor
+<TmTypedChat Items="_ticketEvents" MessageSelector="MapTicketEvent"
+             OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))">
+    <ItemTemplate Context="ctx">
+        <TmChatBubble Variant="ChatBubbleVariant.Pending" ActorLabel="@ctx.Item!.Actor">
+            <ChildContent><span>@ctx.Item.Message</span></ChildContent>
+        </TmChatBubble>
+    </ItemTemplate>
+</TmTypedChat>
+```
 
 ---
 
