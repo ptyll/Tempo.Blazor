@@ -3759,6 +3759,13 @@
           "description": "When true, incoming messages fire OnMessageRead as they render. Default true."
         },
         {
+          "name": "AutoScroll",
+          "type": "ChatAutoScroll",
+          "isRequired": false,
+          "default": "ChatAutoScroll.WhenAtBottom",
+          "description": "When the component scrolls the message list to the bottom on its own. Default WhenAtBottom — the ONLY documented change of TmChat's default behavior (scrolling used to be a no-op): the first render lands at the bottom and further messages scroll only while the user is at the bottom; messages arriving above the reading position are counted behind the jump-to-new button, the user's own messages always scroll and a prepend of older history preserves the visual position. Never restores the pre-2.10 behavior — the component itself makes no scroll calls at all (the explicit ScrollToBottomAsync / ScrollToMessageAsync helpers still work, the jump-to-new button does not render); Always pins the list to the bottom on every message change regardless of the reading position."
+        },
+        {
           "name": "BannerContent",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -3834,10 +3841,30 @@
           "description": "Whether pressing Enter in a composer input submits. Default true (today's behavior: the built-in composer, the thread panel's reply input and an open message edit all submit on Enter). false makes Enter a NATIVE new line in all three inputs — nothing is sent from Enter itself, only from the send button, SendAsync or Ctrl/⌘+Enter (no Shift/Alt, outside an IME composition; handled by chat.js). Shift+Enter always inserts a new line and Alt/Ctrl/Meta+Enter always stay native (browser and host shortcuts). The keydown handling lives in the chat.js module once it is attached (it also owns the IME guard, which a net8 KeyboardEventArgs cannot express); this parameter is passed to the module as its enterToSend option and re-attaches the module when it changes."
         },
         {
+          "name": "HasMoreBefore",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether older history exists above the current page (the host's \"has more\" cursor). Together with a wired OnLoadOlder it renders the built-in \"load older\" affordance at the top of the message list and arms the top-edge trigger. Default false (no pagination — today's DOM).",
+          "default": "false"
+        },
+        {
           "name": "HeaderContent",
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Content rendered at the VERY TOP of the component, above BannerContent and the message list — a conversation title bar or header controls. Rendered raw (no wrapper), so the host markup owns its layout. Note that an OPEN THREAD PANEL OVERLAYS it: the thread panel is absolutely positioned over the component (top/right/bottom), so while a thread is open the panel covers the header area on the panel's side."
+        },
+        {
+          "name": "IsLoadingOlder",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the host is currently loading the older page (its own loading state, mirrored into the component). While true the \"load older\" affordance is disabled and neither it nor the top-edge trigger fires OnLoadOlder again. Default false.",
+          "default": "false"
+        },
+        {
+          "name": "JumpToNewTemplate",
+          "type": "RenderFragment<int>?",
+          "isRequired": false,
+          "description": "Replaces the CONTENT of the floating jump-to-new button (icon + localized count) with host markup. The template receives the current count of unseen messages; the <button> element itself stays built-in (its click — scroll to the bottom, count reset, composer refocus — and the TmChat_JumpToNew aria-label are the component's). Null (the default) renders the built-in content."
         },
         {
           "name": "Messages",
@@ -3875,6 +3902,12 @@
           "type": "EventCallback<ChatMessageEdit>",
           "isRequired": false,
           "description": "Fired when the user commits an edit to one of their messages."
+        },
+        {
+          "name": "OnLoadOlder",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fired when the user reaches the top edge of the message list (through the built-in \"load older\" affordance or the scroller's near-top report) and older history should be PREPENDED to Messages. The host loads the page and updates the parameter — the component detects the prepend (the first message Id changed, the last stayed) and preserves the visual position instead of scrolling. Only consulted when HasMoreBefore is true and while IsLoadingOlder is false. Not wired → neither the built-in affordance nor the top-edge trigger render (additive — hosts without pagination keep today's DOM)."
         },
         {
           "name": "OnMessageRead",
@@ -3939,6 +3972,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether the composer renders at all. false drops the composer area from the DOM — the read-only / viewing variant of a chat. Default true (today's behavior). When false, ComposerTemplate is ignored too. Note this covers only the MAIN composer: the thread panel's reply input is separate — a truly read-only chat also needs EnableThreads=false and AllowEditDelete=false so no reply input, edit or delete affordance renders."
+        },
+        {
+          "name": "ShowJumpToNewButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the floating jump-to-new button renders when messages arrive while the user is reading above the bottom. Default true. The button shows the count of the unseen messages (TmChat_NewMessages plural family; replaced by JumpToNewTemplate) and scrolling back to the bottom — by the user or through the button — resets it. Never renders with AutoScroll=ChatAutoScroll.Never."
         },
         {
           "name": "ShowReadReceipts",
@@ -4802,6 +4842,30 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ChatAutoScroll",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Controls when TmChat scrolls the message list to the bottom on its own (FZE-6). The default is WhenAtBottom — the only documented change of TmChat's default behavior (the pre-2.10 ScrollToBottomAsync was a no-op); hosts that need the old behavior opt out with Never.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatAutoScroll.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Never",
+          "description": "Never scrolls on its own — the pre-2.10 behavior. No scrollToBottom, no position preservation and no unread counting: the host owns every scroll (the public ScrollToBottomAsync / ScrollToMessageAsync helpers still work when called explicitly, and the jump-to-new button does not render)."
+        },
+        {
+          "name": "WhenAtBottom",
+          "description": "Scrolls to the bottom on the first render and afterwards only while the user is actually reading at the bottom (the chat.js scroller reports the at-bottom state). Messages arriving while the user reads above the bottom are counted behind the jump-to-new button instead of stealing the reading position; the user's OWN messages always scroll. A prepend of older history never scrolls — the visual position is preserved."
+        },
+        {
+          "name": "Always",
+          "description": "Scrolls to the bottom on every message change, regardless of the reading position (pinned-bottom chats, e.g. a moderated Q&A wall). Older history is not preserved — a prepend scrolls to the bottom too."
+        }
+      ]
     },
     {
       "itemName": "ChatBubbleVariant",
@@ -29522,11 +29586,11 @@
     }
   ],
   "summary": {
-    "itemCount": 391,
-    "manualItemCount": 391,
-    "generatedItemCount": 383,
+    "itemCount": 392,
+    "manualItemCount": 392,
+    "generatedItemCount": 384,
     "generatedOnlyItemCount": 0,
     "componentCount": 205,
-    "publicApiTypeCount": 178
+    "publicApiTypeCount": 179
   }
 }

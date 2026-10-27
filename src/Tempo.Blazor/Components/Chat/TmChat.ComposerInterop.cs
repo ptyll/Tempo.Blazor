@@ -267,7 +267,7 @@ public partial class TmChat
             {
                 // The component went away while the attach was in flight — the handle would
                 // leak (and its listeners would outlive the element).
-                await DisposeComposerHandleAsync(handle);
+                await DisposeJsHandleAsync(handle);
                 return;
             }
 
@@ -296,10 +296,15 @@ public partial class TmChat
         slot.JsOwnsEnter = false;
         var handle = slot.Handle;
         slot.Handle = null;
-        await DisposeComposerHandleAsync(handle);
+        await DisposeJsHandleAsync(handle);
     }
 
-    private async ValueTask DisposeComposerHandleAsync(IJSObjectReference? handle)
+    /// <summary>
+    /// Disposes ANY chat.js handle (a composer slot's or the scroller's): invokes its
+    /// <c>dispose</c> (removing the JS-side listeners) and releases the reference. All failure
+    /// modes are swallowed — an unreachable circuit has no listeners to detach.
+    /// </summary>
+    private async ValueTask DisposeJsHandleAsync(IJSObjectReference? handle)
     {
         if (handle is null) return;
         try
@@ -321,7 +326,7 @@ public partial class TmChat
             slot.Handle = null;
             slot.ElementId = string.Empty;
             slot.JsOwnsEnter = false;
-            await DisposeComposerHandleAsync(handle);
+            await DisposeJsHandleAsync(handle);
         }
 
         _customComposerElement = null;

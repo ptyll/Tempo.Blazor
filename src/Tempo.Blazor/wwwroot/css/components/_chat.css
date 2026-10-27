@@ -19,13 +19,102 @@
   overflow: hidden;
 }
 
+/* ── Messages ───────────────────────────────────────────────── */
+/* The body wrapper owns the flex:1 and carries the floating jump-to-new button; the scroller
+   (its only scrolling child) fills it. Mirror of TmChat.razor.css. */
+.tm-chat__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .tm-chat__messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* overflow-anchor is disabled DELIBERATELY: the browser's native scroll anchoring fights the
+     scroller's own snapshot + afterUpdate anchor restore (chat.js) — native anchoring would
+     shift the viewport a second time. TmChat owns the math. */
+  overflow-anchor: none;
   padding: var(--tm-space-4);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-3);
+}
+
+/* ── Load older ─────────────────────────────────────────────── */
+/* aria-disabled (not the native disabled) + the component's own in-flight guard; busy reads
+   as the secondary text color with a progress cursor. */
+.tm-chat__load-older {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast),
+    border-color var(--tm-transition-fast);
+}
+
+.tm-chat__load-older:hover:not([aria-disabled="true"]) {
+  background: var(--tm-bg-muted);
+  border-color: var(--tm-border-color-strong);
+  color: var(--tm-text-primary);
+}
+
+.tm-chat__load-older[aria-disabled="true"] {
+  cursor: progress;
+  color: var(--tm-text-secondary);
+  border-color: var(--tm-border-color);
+  background: var(--tm-bg-surface);
+}
+
+/* A coarse pointer needs the 44px touch target and a wider hit area on the small pill. */
+@media (pointer: coarse) {
+  .tm-chat__load-older {
+    min-height: var(--tm-touch-target);
+    padding-inline: var(--tm-space-4);
+  }
+}
+
+/* ── Jump to new messages ───────────────────────────────────── */
+/* Centered horizontally with a 44px touch target; the transform is not transitioned. */
+.tm-chat__jump-new {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: var(--tm-space-4);
+  transform: translateX(-50%);
+  min-height: var(--tm-touch-target);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-color-primary);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-primary-contrast);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+  box-shadow: var(--tm-shadow-md);
+  z-index: 3;
+  transition: box-shadow var(--tm-transition-fast);
+}
+
+.tm-chat__jump-new:hover {
+  box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-chat__jump-new-count {
+  white-space: nowrap;
 }
 
 .tm-chat__empty {
@@ -412,6 +501,10 @@
 /* The looping typing/blink animations stop entirely (the transitions of the same file are
    covered by the shared enumeration in animations.css). */
 @media (prefers-reduced-motion: reduce) {
+  .tm-chat__load-older,
+  .tm-chat__jump-new {
+    transition: none;
+  }
   .tm-chat__typing-dots span,
   .tm-chat__sending-dots,
   .tm-chat__sending-dots::after {

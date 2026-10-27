@@ -236,6 +236,52 @@
     </div>
 </section>
 
+<!-- Scroll behavior -->
+<section class="demo-section" data-testid="chat-scroll-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Scroll Behavior</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Live</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The default <code>AutoScroll="ChatAutoScroll.WhenAtBottom"</code>: the conversation opens at the
+        bottom and new messages scroll it only while you keep up. Scroll up, then press
+        <em>Inject incoming message</em> — the reading position stays and a floating button counts what
+        you missed (your own messages always scroll). Press <em>Load older</em> (or scroll to the top) to
+        prepend a page of history without losing your place.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmChat @ref="_scrollChat"
+                        CurrentUser="_currentUser"
+                        Messages="_scrollMessages"
+                        OnSend="@(r => HandleScrollOwnSend(r))"
+                        OnLoadOlder="HandleScrollLoadOlderAsync"
+                        HasMoreBefore="_scrollHasMore"
+                        IsLoadingOlder="_scrollLoadingOlder" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollInjectAsync">
+                Inject incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollOwnAsync">
+                Send a message as Alice
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollLoadOlderAsync"
+                      Disabled="@( _scrollLoadingOlder || !_scrollHasMore )">
+                @(_scrollLoadingOlder ? "Loading older…" : "Load older")
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                IsAtBottom: <strong>@(_scrollChat?.IsAtBottom)</strong> — the jump button hides itself
+                once you are back at the bottom, and the count resets with it.
+            </p>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -279,6 +325,22 @@
         _alice = _currentUser;
         _bob = new("u2", "Bob", avatar: "B", isOnline: true);
         _carol = new("u3", "Carol", avatar: "C", isOnline: true);
+
+        // Enough history that the card overflows: the scroll behavior is only observable when
+        // the list can actually scroll (and clear the 40px at-bottom threshold).
+        _scrollMessages = new()
+        {
+            new("s1", "Morning! The scroll phase of the chat plan is ready.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 50, 0, TimeSpan.Zero)),
+            new("s2", "Nice — does it keep my place when older history loads?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 51, 0, TimeSpan.Zero)),
+            new("s3", "Yes: a prepend shifts scrollTop by the grown height.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 52, 0, TimeSpan.Zero)),
+            new("s4", "And messages arriving while I read up top?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 53, 0, TimeSpan.Zero)),
+            new("s5", "Counted behind the jump button — nothing moves until you ask for it.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 54, 0, TimeSpan.Zero)),
+            new("s6", "And your own messages?", _carol, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 55, 0, TimeSpan.Zero)),
+            new("s7", "Always scroll to the bottom, even from the middle of the history.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 56, 0, TimeSpan.Zero)),
+            new("s8", "What about the browser's own scroll anchoring?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 57, 0, TimeSpan.Zero)),
+            new("s9", "Disabled on the list — it would fight the component's own compensation.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 58, 0, TimeSpan.Zero)),
+            new("s10", "Try it: scroll up, inject a message, then load older.", _carol, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 59, 0, TimeSpan.Zero)),
+        };
 
         _sharedMessages = new()
         {
@@ -495,5 +557,56 @@
         _liveTyping = new List<ChatUser>();
         _liveMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), $"Echo: {text}", _bob, ChatMessageType.Incoming));
         StateHasChanged();
+    }
+
+    // ── Scroll behavior demo (FZE-6) — AutoScroll=WhenAtBottom is the default ──
+    private TmChat? _scrollChat;
+    private List<ChatMessage> _scrollMessages = default!;
+    private bool _scrollHasMore = true;
+    private bool _scrollLoadingOlder;
+    private int _scrollSeq;
+
+    private async Task HandleScrollInjectAsync()
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-in-{_scrollSeq}", $"Incoming message #{_scrollSeq}",
+            _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleScrollOwnAsync()
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-own-{_scrollSeq}", $"Alice's message #{_scrollSeq}",
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleScrollOwnSend(ChatSendRequest request)
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-sent-{_scrollSeq}", request.Text,
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleScrollLoadOlderAsync()
+    {
+        if (_scrollLoadingOlder || !_scrollHasMore) return;
+        _scrollLoadingOlder = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(600);
+        var page = new List<ChatMessage>();
+        for (var i = 0; i < 8; i++)
+        {
+            _scrollSeq++;
+            page.Add(new($"scroll-old-{_scrollSeq}", $"Older message #{_scrollSeq}",
+                _carol, ChatMessageType.Incoming, DateTimeOffset.Now.AddMinutes(-_scrollSeq)));
+        }
+        page.Reverse();
+        _scrollMessages.InsertRange(0, page);
+        if (_scrollMessages.Count > 60) _scrollHasMore = false; // a finite demo history
+        _scrollLoadingOlder = false;
+        await InvokeAsync(StateHasChanged);
     }
 }

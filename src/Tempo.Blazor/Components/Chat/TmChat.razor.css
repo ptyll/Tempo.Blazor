@@ -22,14 +22,111 @@
 }
 
 /* ── Messages ───────────────────────────────────────────────── */
+/* The body wrapper owns the flex:1 and carries the floating jump-to-new button; the scroller
+   (its only scrolling child) fills it. An absolutely positioned button inside the SCROLLER
+   would scroll away with the content, so the wrapper is the positioned ancestor. */
+.tm-chat__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .tm-chat__messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* overflow-anchor is disabled DELIBERATELY: the browser's native scroll anchoring fights the
+     scroller's own snapshot + afterUpdate anchor restore (chat.js) — native anchoring would
+     shift the viewport a second time. TmChat owns the math. */
+  overflow-anchor: none;
   padding: var(--tm-space-4);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-3);
   scrollbar-width: thin;
+}
+
+/* ── Load older ─────────────────────────────────────────────── */
+/* The built-in affordance at the top of the list (OnLoadOlder + HasMoreBefore); it is part of
+   the scroll content — the user reaches it by scrolling up, exactly like a host's own
+   pagination row. */
+/* Loading is conveyed with aria-disabled + aria-busy (NOT the native disabled: the button
+   must stay reachable for AT and the component keeps its own in-flight guard), styled with
+   the SECONDARY text color and a progress cursor — the affordance is busy, not dead. */
+.tm-chat__load-older {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast),
+    border-color var(--tm-transition-fast);
+}
+
+.tm-chat__load-older:hover:not([aria-disabled="true"]) {
+  background: var(--tm-bg-muted);
+  border-color: var(--tm-border-color-strong);
+  color: var(--tm-text-primary);
+}
+
+.tm-chat__load-older[aria-disabled="true"] {
+  cursor: progress;
+  color: var(--tm-text-secondary);
+  border-color: var(--tm-border-color);
+  background: var(--tm-bg-surface);
+}
+
+/* A coarse pointer needs the 44px touch target and a wider hit area on the small pill. */
+@media (pointer: coarse) {
+  .tm-chat__load-older {
+    min-height: var(--tm-touch-target);
+    padding-inline: var(--tm-space-4);
+  }
+}
+
+/* ── Jump to new messages ───────────────────────────────────── */
+/* Floating button over the bottom end of the message list (shown while unread messages sit
+   above the reading position); it overlaps the scroller without taking part in its layout. */
+/* Centered horizontally (left 50% + translate) with a 44px touch target so the floating
+   button is reachable on touch; the transform is deliberately NOT transitioned — only the
+   shadow animates, the centered position never moves. */
+.tm-chat__jump-new {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: var(--tm-space-4);
+  transform: translateX(-50%);
+  min-height: var(--tm-touch-target);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-color-primary);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-primary-contrast);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+  box-shadow: var(--tm-shadow-md);
+  z-index: 3;
+  transition: box-shadow var(--tm-transition-fast);
+}
+
+.tm-chat__jump-new:hover {
+  box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-chat__jump-new-count {
+  white-space: nowrap;
 }
 
 .tm-chat__messages::-webkit-scrollbar {
@@ -700,7 +797,9 @@
   .tm-chat__reaction,
   .tm-chat__emoji,
   .tm-chat__thread-close,
-  .tm-chat__send-btn {
+  .tm-chat__send-btn,
+  .tm-chat__load-older,
+  .tm-chat__jump-new {
     transition: none;
   }
   .tm-chat__emoji:hover {

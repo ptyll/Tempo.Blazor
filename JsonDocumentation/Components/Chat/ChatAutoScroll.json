@@ -1,0 +1,24 @@
+{
+ "itemName": "ChatAutoScroll",
+ "kind": "Enum",
+ "category": "Chat",
+ "namespace": "Tempo.Blazor.Components.Chat",
+ "description": "Controls when TmChat scrolls the message list to the bottom on its own (FZE-6). The default is WhenAtBottom — the only documented change of TmChat's default behavior (the pre-2.10 ScrollToBottomAsync was a no-op); hosts that need the old behavior opt out with Never.",
+ "packageId": "Tempo.Blazor",
+ "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatAutoScroll.cs",
+ "documentationStatus": "merged",
+ "values": [
+  {
+   "name": "Never",
+   "description": "Never scrolls on its own — the pre-2.10 behavior. No scrollToBottom, no position preservation and no unread counting: the host owns every scroll (the public ScrollToBottomAsync / ScrollToMessageAsync helpers still work when called explicitly, and the jump-to-new button does not render)."
+  },
+  {
+   "name": "WhenAtBottom",
+   "description": "Scrolls to the bottom on the first render and afterwards only while the user is actually reading at the bottom (the chat.js scroller reports the at-bottom state). Messages arriving while the user reads above the bottom are counted behind the jump-to-new button instead of stealing the reading position; the user's OWN messages always scroll. A prepend of older history never scrolls — the visual position is preserved."
+  },
+  {
+   "name": "Always",
+   "description": "Scrolls to the bottom on every message change, regardless of the reading position (pinned-bottom chats, e.g. a moderated Q&A wall). Older history is not preserved — a prepend scrolls to the bottom too."
+  }
+ ]
+}

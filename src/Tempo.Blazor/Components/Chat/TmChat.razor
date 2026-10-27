@@ -15,49 +15,96 @@
         @BannerContent
     }
 
-    <!-- Messages -->
-    <div class="tm-chat__messages" @ref="_messagesContainer">
-        @if (Messages.Count == 0)
-        {
-            @if (EmptyContent is not null)
+    <!-- Messages (the body wrapper carries the floating jump-to-new button, so it stays put
+         while its scroller scrolls — an absolutely positioned child of the scroller itself
+         would scroll away with the content) -->
+    <div class="tm-chat__body">
+        <div class="tm-chat__messages" tabindex="-1" aria-busy="@(IsLoadingOlder ? "true" : null)" @ref="_messagesContainer">
+            @if (ShowLoadOlder)
             {
-                @EmptyContent
+                <button type="button"
+                        class="tm-chat__load-older"
+                        data-testid="@TestId("chat-load-older")"
+                        aria-disabled="@(IsLoadingOlder ? "true" : null)"
+                        @onclick="HandleLoadOlderClickAsync"
+                        @onfocusin="@(() => _loadOlderFocused = true)"
+                        @onfocusout="@(() => _loadOlderFocused = false)">
+                    @(IsLoadingOlder ? Loc["TmChat_LoadingOlder"] : Loc["TmChat_LoadOlder"])
+                </button>
             }
-            else
+            @if (Messages.Count == 0)
             {
-                <div class="tm-chat__empty">
-                    <TmIcon Name="message-circle" Size="IconSize.Xl" />
-                    <p>@Loc["TmChat_EmptyTitle"]</p>
-                    <span>@Loc["TmChat_EmptySubtitle"]</span>
-                </div>
-            }
-        }
-        else
-        {
-            @foreach (var (message, index, isFirstInGroup) in RootEntries())
-            {
-                @RenderMessage(message, inThread: false, index, isFirstInGroup)
-            }
-        }
-
-        <!-- Typing indicator -->
-        @if (ShowTypingIndicator)
-        {
-            @if (TypingTemplate is not null)
-            {
-                @TypingTemplate(TypingUsers)
-            }
-            else
-            {
-                <div class="tm-chat__typing-indicator" aria-hidden="@(TypingAriaHidden ? "true" : null)">
-                    <div class="tm-chat__typing-dots" aria-hidden="true">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                @if (EmptyContent is not null)
+                {
+                    @EmptyContent
+                }
+                else
+                {
+                    <div class="tm-chat__empty">
+                        <TmIcon Name="message-circle" Size="IconSize.Xl" />
+                        <p>@Loc["TmChat_EmptyTitle"]</p>
+                        <span>@Loc["TmChat_EmptySubtitle"]</span>
                     </div>
-                    <span class="tm-chat__typing-text">@GetTypingText()</span>
-                </div>
+                }
             }
+            else
+            {
+                @foreach (var (message, index, isFirstInGroup, key) in RootEntriesWithKeys())
+                {
+                    @* The keyed wrapper is INLINE (the direct child of the loop): @key keeps the
+                       row's DOM element and component instances — a host MessageTemplate keeps
+                       its state across a prepend. The duplicate/empty Id fallback lives in
+                       TmChat.Rows.cs (the key is null there, i.e. unkeyed). *@
+                    <div class="tm-chat__item" data-message-id="@message.Id" data-kind="@message.Kind" @key="key">
+                        @RenderMessage(message, inThread: false, index, isFirstInGroup)
+                    </div>
+                }
+            }
+
+            <!-- Typing indicator -->
+            @if (ShowTypingIndicator)
+            {
+                @if (TypingTemplate is not null)
+                {
+                    @TypingTemplate(TypingUsers)
+                }
+                else
+                {
+                    <div class="tm-chat__typing-indicator" aria-hidden="@(TypingAriaHidden ? "true" : null)">
+                        <div class="tm-chat__typing-dots" aria-hidden="true">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="tm-chat__typing-text">@GetTypingText()</span>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Jump to new messages -->
+        @if (ShowJumpButton)
+        {
+            @* Built-in content: NO aria-label — the visible count plus the visually-hidden
+               action name IS the accessible name ("3 new messages, Jump to new messages").
+               With JumpToNewTemplate the content is host-owned and opaque, so the label is
+               composed from the same two localized strings instead. *@
+            <button type="button"
+                    class="tm-chat__jump-new"
+                    data-testid="@TestId("chat-jump-to-new")"
+                    aria-label="@(JumpToNewTemplate is not null ? $"{Loc.Plural("TmChat_NewMessages", _unreadCount)}, {Loc["TmChat_JumpToNew"]}" : null)"
+                    @onclick="HandleJumpToNewClickAsync">
+                @if (JumpToNewTemplate is not null)
+                {
+                    @JumpToNewTemplate(_unreadCount)
+                }
+                else
+                {
+                    <TmIcon Name="arrow-down" Size="IconSize.Sm" />
+                    <span class="tm-chat__jump-new-count">@Loc.Plural("TmChat_NewMessages", _unreadCount)</span>
+                    <span class="tm-sr-only">@Loc["TmChat_JumpToNew"]</span>
+                }
+            </button>
         }
     </div>
 
@@ -105,9 +152,11 @@
                 </button>
             </div>
             <div class="tm-chat__thread-messages">
-                @foreach (var (threadMessage, threadIndex, isFirstInGroup) in ThreadEntries(threadRoot))
+                @foreach (var (threadMessage, threadIndex, isFirstInGroup, threadKey) in ThreadEntriesWithKeys(threadRoot))
                 {
-                    @RenderMessage(threadMessage, inThread: true, threadIndex, isFirstInGroup)
+                    <div class="tm-chat__item" data-message-id="@threadMessage.Id" data-kind="@threadMessage.Kind" @key="threadKey">
+                        @RenderMessage(threadMessage, inThread: true, threadIndex, isFirstInGroup)
+                    </div>
                     @if (threadIndex == 0)
                     {
                         <div class="tm-chat__thread-divider">
@@ -182,19 +231,15 @@
         <span id="@($"{_composerInputId}-hint")" class="tm-sr-only">@ComposerHintText</span>
     </text>;
 
-    // Every message renders inside a neutral wrapper carrying the data-message-id anchor
-    // (scroll positioning + read receipts) and data-kind when the message carries a Kind.
-    // Inside the wrapper, either the host's MessageTemplate or the built-in message row.
-    private RenderFragment RenderMessage(ChatMessage message, bool inThread, int index, bool isFirstInGroup) => @<div class="tm-chat__item" data-message-id="@message.Id" data-kind="@message.Kind">
-        @if (UsesTemplate(message))
-        {
-            @TemplateFor(message, inThread, index, isFirstInGroup)
-        }
-        else
-        {
-            @RenderBuiltInMessage(message, inThread)
-        }
-    </div>;
+    // The message BODY only — the neutral keyed wrapper (data-message-id anchor + data-kind +
+    // @key) is written inline at the two @foreach loops (see TmChat.Rows.cs for the key rules):
+    // the wrapper is the direct loop child so Blazor matches rows across a prepend and keeps
+    // the row's component instances (a host MessageTemplate keeps its state). Inside the
+    // wrapper: either the host's MessageTemplate or the built-in message row.
+    private RenderFragment RenderMessage(ChatMessage message, bool inThread, int index, bool isFirstInGroup)
+        => UsesTemplate(message)
+            ? TemplateFor(message, inThread, index, isFirstInGroup)
+            : RenderBuiltInMessage(message, inThread);
 
     private RenderFragment TemplateFor(ChatMessage message, bool inThread, int index, bool isFirstInGroup)
         => MessageTemplate!(CreateTemplateContext(message, inThread, index, isFirstInGroup));

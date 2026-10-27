@@ -110,6 +110,8 @@
   .tm-chat__attachment,
   .tm-chat__emoji,
   .tm-chat__input,
+  .tm-chat__jump-new,
+  .tm-chat__load-older,
   .tm-chat__reaction,
   .tm-chat__send-btn,
   .tm-chat__sending-dots,

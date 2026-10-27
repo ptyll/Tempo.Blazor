@@ -264,6 +264,46 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether the built-in message rows show the author avatar. Default true (today's behavior); set false for consumers whose bubbles carry no avatars. The switch applies to the built-in rows only — a MessageTemplate renders its own markup and decides about avatars itself."
+    },
+    {
+      "name": "AutoScroll",
+      "type": "ChatAutoScroll",
+      "isRequired": false,
+      "default": "ChatAutoScroll.WhenAtBottom",
+      "description": "When the component scrolls the message list to the bottom on its own. Default WhenAtBottom — the ONLY documented change of TmChat's default behavior (scrolling used to be a no-op): the first render lands at the bottom and further messages scroll only while the user is at the bottom; messages arriving above the reading position are counted behind the jump-to-new button, the user's own messages always scroll and a prepend of older history preserves the visual position. Never restores the pre-2.10 behavior — the component itself makes no scroll calls at all (the explicit ScrollToBottomAsync / ScrollToMessageAsync helpers still work, the jump-to-new button does not render); Always pins the list to the bottom on every message change regardless of the reading position."
+    },
+    {
+      "name": "OnLoadOlder",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fired when the user reaches the top edge of the message list (through the built-in \"load older\" affordance or the scroller's near-top report) and older history should be PREPENDED to Messages. The host loads the page and updates the parameter — the component detects the prepend (the first message Id changed, the last stayed) and preserves the visual position instead of scrolling. Only consulted when HasMoreBefore is true and while IsLoadingOlder is false. Not wired → neither the built-in affordance nor the top-edge trigger render (additive — hosts without pagination keep today's DOM)."
+    },
+    {
+      "name": "HasMoreBefore",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether older history exists above the current page (the host's \"has more\" cursor). Together with a wired OnLoadOlder it renders the built-in \"load older\" affordance at the top of the message list and arms the top-edge trigger. Default false (no pagination — today's DOM)."
+    },
+    {
+      "name": "IsLoadingOlder",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the host is currently loading the older page (its own loading state, mirrored into the component). While true the \"load older\" affordance is disabled and neither it nor the top-edge trigger fires OnLoadOlder again. Default false."
+    },
+    {
+      "name": "ShowJumpToNewButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the floating jump-to-new button renders when messages arrive while the user is reading above the bottom. Default true. The button shows the count of the unseen messages (TmChat_NewMessages plural family; replaced by JumpToNewTemplate) and scrolling back to the bottom — by the user or through the button — resets it. Never renders with AutoScroll=ChatAutoScroll.Never."
+    },
+    {
+      "name": "JumpToNewTemplate",
+      "type": "RenderFragment<int>?",
+      "isRequired": false,
+      "description": "Replaces the CONTENT of the floating jump-to-new button (icon + localized count) with host markup. The template receives the current count of unseen messages; the <button> element itself stays built-in (its click — scroll to the bottom, count reset, composer refocus — and the TmChat_JumpToNew aria-label are the component's). Null (the default) renders the built-in content."
     }
   ]
 }

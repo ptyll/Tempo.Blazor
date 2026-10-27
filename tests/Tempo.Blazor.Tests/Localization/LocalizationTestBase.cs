@@ -2499,6 +2499,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmChat_TypingSingle"] = "{0} is typing…",
         ["TmChat_TypingTwo"] = "{0} and {1} are typing…",
         ["TmChat_TypingMany"] = "{0} and {1} others are typing…",
+        ["TmChat_NewMessages_One"] = "{0} new message",
+        ["TmChat_NewMessages_Other"] = "{0} new messages",
+        ["TmChat_JumpToNew"] = "Jump to new messages",
+        ["TmChat_LoadOlder"] = "Load older messages",
+        ["TmChat_LoadingOlder"] = "Loading older messages…",
 
         // Signing
         ["TmSigning_Field_Text"] = "Text",
@@ -6417,6 +6422,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmChat_TypingSingle"] = "{0} píše…",
         ["TmChat_TypingTwo"] = "{0} a {1} píší…",
         ["TmChat_TypingMany"] = "{0} a {1} další píší…",
+        ["TmChat_NewMessages_One"] = "{0} nová zpráva",
+        ["TmChat_NewMessages_Few"] = "{0} nové zprávy",
+        ["TmChat_NewMessages_Many"] = "{0} nové zprávy",
+        ["TmChat_NewMessages_Other"] = "{0} nových zpráv",
+        ["TmChat_JumpToNew"] = "Přejít na nové zprávy",
+        ["TmChat_LoadOlder"] = "Načíst starší zprávy",
+        ["TmChat_LoadingOlder"] = "Načítají se starší zprávy…",
 
         // Signing
         ["TmSigning_Field_Text"] = "Text",

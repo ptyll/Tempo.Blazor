@@ -616,6 +616,11 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     {
         await base.OnParametersSetAsync();
         ScheduleTypingExpiry();
+        // Classify the message-list change FIRST and BEFORE any await: ComponentBase renders as
+        // soon as OnParametersSetAsync yields an unfinished task, so OnAfterRenderAsync can run
+        // while this method is still pending (e.g. behind a slow OnDraftChanged handler) and
+        // must already see the mode of THIS parameter set, not a stale one.
+        DetectScrollChange();
         // Parameter-driven transitions (e.g. the thread panel unmounting because its root message
         // left Messages) must be reported; the dedup keeps repeated parameter sets silent.
         await NotifyDraftChangedAsync();
@@ -643,6 +648,7 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     {
         _disposed = true;
         CancelTypingTimer();
+        await DisposeScrollerAsync();
         await DisposeComposerInteropAsync();
     }
 
@@ -651,16 +657,13 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         if (firstRender)
         {
             // The module and the DotNetObjectReference are created unconditionally on the first
-            // render — phase 6 (scroll anchoring) hangs its own work off the same module.
+            // render — the composer and the scroller hang their work off the same module.
             _selfRef ??= DotNetObjectReference.Create(this);
             await EnsureModuleAsync();
         }
 
-        if (firstRender || Messages.Count > 0)
-        {
-            await ScrollToBottomAsync();
-        }
-
+        await SyncScrollerAsync();
+        await ApplyScrollAfterRenderAsync(firstRender);
         await ReportReadReceiptsAsync();
         await SyncJsComposersAsync();
     }
@@ -681,11 +684,6 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
             _reportedRead.Add(message.Id);
             await OnMessageRead.InvokeAsync(message.Id);
         }
-    }
-
-    private async Task ScrollToBottomAsync()
-    {
-        await Task.CompletedTask;
     }
 
     private string GetMessageCssClass(ChatMessage message)
@@ -727,13 +725,6 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// </summary>
     private IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> RootEntries()
         => EntriesWithTemplateInputs(RootMessages());
-
-    /// <summary>
-    /// The thread panel sequence (root first, then replies ordered by timestamp) with the same
-    /// per-row template inputs as <see cref="RootEntries"/>.
-    /// </summary>
-    private IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> ThreadEntries(ChatMessage root)
-        => EntriesWithTemplateInputs(new[] { root }.Concat(RepliesOf(root.Id)));
 
     private static IEnumerable<(ChatMessage Message, int Index, bool IsFirstInGroup)> EntriesWithTemplateInputs(
         IEnumerable<ChatMessage> sequence)
