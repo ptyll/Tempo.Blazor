@@ -6984,24 +6984,71 @@ adresací a concurrency kontraktem: `docs/document-mcp-tools.md` (hlídané drif
 
 ### TmChat
 
-Komponenta pro chatovací konverzaci — zobrazení zpráv (příchozí, odchozí, systémové), indikátor psaní, textový vstup a přílohy.
+Komponenta pro chatovací konverzaci — zobrazení zpráv (příchozí, odchozí, systémové), indikátor psaní, textový vstup a přílohy, vlákna, reakce, draft-guard a živý region. Je plně šablonovatelná: `MessageTemplate`, `ComposerTemplate`, `TypingTemplate`, `JumpToNewTemplate` a sloty (`BannerContent`, `HeaderContent`, `EmptyContent`, `ComposerAddon`, `ComposerFooter`) umožňují hostovi převzít libovolnou část UI; bublinu pro vlastní druh zprávy postavte z komponenty `TmChatBubble` (viz níže „Vlastní chaty“). Komponenta zůstává **negenerická** — host mapuje svá DTO na `ChatMessage` (Kind/Metadata/Payload), ne přes `TmChat<TItem>`.
+
+Kořen je CSS size container (`container-type: inline-size`, `container-name: tm-chat`, vnitřní šířka `auto 360px`) — responzivní pravidla se řeší podle šířky chatu samotného, takže **nepojmenované** `@container` pravidlo v hostově markupu se řeší vůči chatu. Opt-out přes `Class="tm-chat--no-container"`. Layout knoby: `--tm-chat-min-height`, `--tm-chat-composer-offset`, `--tm-chat-safe-area-bottom` a rodina `--tm-chat-bubble-*`; knoby knihovna nikdy nedeklaruje, takže přepsání na wrapperu nebo `:root` kaskáduje.
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Messages` | `IReadOnlyList<ChatMessage>` | `[]` | Seznam zpráv k zobrazení |
-| `CurrentUser` | `ChatUser?` | `null` | Aktuální uživatel — používá se pro odlišení odchozích zpráv |
-| `TypingUsers` | `IReadOnlyList<ChatUser>` | `[]` | Uživatelé, kteří právě píší — zobrazí se animovaný indikátor |
-| `Placeholder` | `string?` | `null` | Placeholder text pro vstupní pole |
-| `Disabled` | `bool` | `false` | Zakáže vstupní pole a tlačítko odeslat |
-| `Class` | `string?` | `null` | Dodatečné CSS třídy pro kořenový element |
-| `OnSendMessage` | `EventCallback<string>` | — | Vyvoláno při odeslání zprávy (Enter nebo tlačítko) |
-| `OnAttachmentClick` | `EventCallback<ChatAttachment>` | — | Vyvoláno při kliknutí na přílohu |
+| `CurrentUser` | `ChatUser` | `new()` | Aktuální uživatel — odlišuje odchozí zprávy, reakce, editaci a mazání |
+| `Messages` | `IReadOnlyList<ChatMessage>` | `[]` | Zprávy ke zobrazení (kořenový seznam + vlákna přes `ThreadRootId`) |
+| `TypingUsers` | `IReadOnlyList<ChatUser>` | `[]` | Uživatelé, kteří právě píší — mění jen text indikátoru, nikdy se neoznamuje |
+| `TypingLabel` | `Func<IReadOnlyList<ChatUser>, string>?` | `null` | Nahradí lokalizovaný text indikátoru psaní vlastní větou |
+| `TypingTemplate` | `RenderFragment<IReadOnlyList<ChatUser>>?` | `null` | Nahradí celý indikátor psaní; **nesmí obsahovat live region** (komponenta má právě jeden vlastní a psaní se nikdy neoznamuje) |
+| `TypingAriaHidden` | `bool` | `false` | `aria-hidden="true"` na wrapperu vestavěného indikátoru (pro hosty, kteří psaní ohlašují sami) |
+| `TypingTimeout` | `TimeSpan?` | `null` | Auto-schování indikátoru po zaniknutí signálu; měřeno přes injektovaný `TimeProvider` |
+| `Placeholder` | `string?` | `null` | Placeholder vstupního pole (zároveň výchozí accessible name composeru) |
+| `Disabled` | `bool` | `false` | Zakáže composer (a tím i odesílání) |
+| `Class` | `string?` | `null` | Dodatečné CSS třídy kořene (např. `tm-chat--no-container`) |
+| `OnSendMessage` | `EventCallback<string>` | — | Odeslání zprávy (jen text; zachováno kvůli zpětné kompatibilitě) |
+| `OnSend` | `EventCallback<ChatSendRequest>` | — | Odeslání s kontextem (thread/reply) |
+| `OnAttachmentClick` | `EventCallback<ChatAttachment>` | — | Klik na přílohu |
+| `OnEditMessage` | `EventCallback<ChatMessageEdit>` | — | Potvrzená editace vlastní zprávy; při výjimce handleru zůstává text v editoru |
+| `OnDeleteMessage` | `EventCallback<string>` | — | Smazání vlastní zprávy |
+| `OnToggleReaction` | `EventCallback<ChatReactionToggle>` | — | Přepnutí reakce |
+| `OnReply` | `EventCallback<ChatMessage>` | — | Otevření vlákna zprávy |
+| `OnMessageRead` | `EventCallback<string>` | — | První zviditelnění příchozí zprávy (read receipts) |
+| `ActiveThreadRootId` / `ActiveThreadRootIdChanged` | `string?` / `EventCallback<string?>` | `null` | Otevřený panel vlákna; two-way binding |
+| `EnableThreads` | `bool` | `true` | Skupinovat odpovědi do panelu vlákna |
+| `EnableReactions` | `bool` | `true` | Zobrazit reakce a emoji picker |
+| `AllowEditDelete` | `bool` | `true` | Umožnit editaci/mazání vlastních zpráv |
+| `ShowReadReceipts` | `bool` | `true` | Zobrazit read receipts u vlastních zpráv |
+| `AutoReadReceipts` | `bool` | `true` | Vyvolávat `OnMessageRead` automaticky při renderu |
+| `ReactionEmojis` | `IReadOnlyList<string>` | `👍 ❤️ 😂 🎉 😮 😢` | Emotikony nabízené pickerem |
+| `OnDraftChanged` | `EventCallback<TmChatDraftState>` | — | Změna draftu v jakémkoli slotu (composer, reply input, editace); deduplikováno hodnotovou rovností |
+| `MessageTemplate` | `RenderFragment<ChatMessageContext>?` | `null` | Nahradí řádek zprávy; dostává `ChatMessageContext` (Message, IsOwn, InThread, Index, IsFirstInGroup, `PayloadAs<T>()`, `GetMetadata<T>()`, `DefaultContent`) |
+| `UseTemplateFor` | `Func<ChatMessage, bool>?` | `null` | Omezí `MessageTemplate` jen na zprávy, kde predikát platí (typicky `m => m.Kind == "ai-draft"`) |
+| `ComposerTemplate` | `RenderFragment<ChatComposerContext>?` | `null` | Nahradí celý composer; kontext drží `Text`, `SetTextAsync`, `SendAsync`, `AttachAsync`, `CanSend`, `IsSubmitting`, `FocusAsync`, `InputId` |
+| `ComposerAddon` | `RenderFragment?` | `null` | Obsah NAD vestavěným inputem (poznámka, hint) |
+| `ComposerFooter` | `RenderFragment?` | `null` | Obsah POD vestavěným inputem (počet znaků, sekundární akce) |
+| `ComposerDescribedBy` | `string?` | `null` | Id prvků popisujících composer input (`aria-describedby`) |
+| `BannerContent` | `RenderFragment?` | `null` | Banner NAD seznamem zpráv (connection bar); renderuje se bez wrapperu a **bez** live regionu — vlastní `role="status"` si host vkládá do slotu |
+| `HeaderContent` | `RenderFragment?` | `null` | Hlavička na samém vršku; otevřený panel vlákna ji překrývá |
+| `EmptyContent` | `RenderFragment?` | `null` | Nahradí vestavěný prázdný stav |
+| `ShowComposer` | `bool` | `true` | Renderovat composer vůbec (read-only varianta; panel vlákna zvlášť vypíná `EnableThreads=false`, `AllowEditDelete=false`) |
+| `ShowAvatars` | `bool` | `true` | Zobrazit avatary ve vestavěných řádcích |
+| `EnterToSend` | `bool` | `true` | Enter odesílá (Shift+Enter nový řádek, IME kompozice nikdy neodesílá — řeší `chat.js`) |
+| `RefocusAfterSend` | `bool` | `true` | Po úspěšném odeslání vrátit focus do composeru; po výjimce handleru text zůstává a focus se nevrací |
+| `FillParent` | `bool` | `false` | Chat jako flex potomek host layoutu (`tm-chat--fill`; knoba `--tm-chat-min-height` čtená s nulovým fallbackem) |
+| `AutoScroll` | `ChatAutoScroll` | `WhenAtBottom` | Kdy komponenta scrolluje sama: `Never` (původní chování), `WhenAtBottom` (jen když je uživatel dole), `Always` |
+| `OnLoadOlder` | `EventCallback` | — | Dojetí na horní hranu — host prependne starší stránku; bez zapojení se affordance negeneruje |
+| `HasMoreBefore` | `bool` | `false` | Existuje starší historie (hostův kurzor) |
+| `IsLoadingOlder` | `bool` | `false` | Host právě načítá starší stránku (affordance disabled) |
+| `ShowJumpToNewButton` | `bool` | `true` | Plovoucí tlačítko „nové zprávy“ při čtení nad spodkem; negeneruje se s `AutoScroll=Never` |
+| `JumpToNewTemplate` | `RenderFragment<int>?` | `null` | Obsah tlačítka (dostává počet nepřečtených); samotné `button` zůstává vestavěné |
+| `MessageAnnouncement` | `Func<ChatMessage, string?>?` | `null` | Text oznámení jedné nové zprávy dodává host; `null`/prázdný výstup = žádné oznámení (výchozí tichý chat) |
+| `BatchAnnouncement` | `Func<IReadOnlyList<ChatMessage>, string?>?` | `null` | Souhrn pro dávku ve stejném throttle okně |
+| `AnnouncementThrottle` | `TimeSpan` | `00:00:01` | Trailing throttle okno živého regionu (0 = bez throttlingu) |
+| `AnnounceOwnMessages` | `bool` | `false` | Oznamovat i vlastní zprávy |
+| `MessagesAriaLabel` | `string?` | lokalizováno | Accessible name kontejneru zpráv (`role=region`, `tabindex=0`); na stránce s více chaty musí být **unikátní na stránku** |
+| `ComposerAriaLabel` | `string?` | placeholder | Accessible name vestavěného textarea |
 
 #### Modely
 
-**ChatMessage**
+**ChatMessage** — čistý datový záznam; host si na něj mapuje své DTO (viz níže). Kromě renderovacích polí nese hostem ovládaný kontrakt šablon: `Kind`, `Metadata`, `Payload`.
+
 ```csharp
 public sealed record ChatMessage
 {
@@ -7015,6 +7062,18 @@ public sealed record ChatMessage
     public bool IsSending { get; init; }
     public bool IsError { get; init; }
     public string? ErrorMessage { get; init; }
+    // K6: vlákna, editace/mazání, reakce, receipts
+    public string? ReplyToId { get; init; }
+    public string? ThreadRootId { get; init; }
+    public int ReplyCount { get; init; }
+    public IReadOnlyList<ChatReaction> Reactions { get; init; } = [];
+    public IReadOnlyList<ChatReadReceipt> ReadBy { get; init; } = [];
+    public DateTimeOffset? EditedAt { get; init; }
+    public bool IsDeleted { get; init; }
+    // Vlastní šablony: hostem ovládaný kontrakt (vše aditivní)
+    public string? Kind { get; init; }
+    public IReadOnlyDictionary<string, object?> Metadata { get; init; } = …; // výchozí prázdný read-only slovník
+    [JsonIgnore] public object? Payload { get; init; }
 }
 
 public enum ChatMessageType { Incoming, Outgoing, System }
@@ -7044,13 +7103,94 @@ public sealed record ChatAttachment
 }
 ```
 
+#### Vlastní chaty (šablony a sloty)
+
+Slotů a šablon má `TmChat` devět + predikát `UseTemplateFor`; každá funguje samostatně a všechno ostatní zůstává vestavěné. Markup vložený přes RenderFragment nese **CSS scope hosta**, ne `TmChat.razor.css` — proto vlastní bubliny stavte z komponenty `TmChatBubble` a stylujte je přes knoby `--tm-chat-bubble-*` (detaily v [docs/chat-custom-templates.md](docs/chat-custom-templates.md)).
+
+| Slot / šablona | Typ | Co přebírá |
+|----------------|-----|------------|
+| `MessageTemplate` + `UseTemplateFor` | `RenderFragment<ChatMessageContext>` | Řádek zprávy (wrapper s `data-message-id`/`data-kind` zůstává); `context.DefaultContent` propustí vestavěný vzhled |
+| `ComposerTemplate` | `RenderFragment<ChatComposerContext>` | Celý composer — vstup přes `composer.Text` + `SetTextAsync`, odeslání `SendAsync`, vlastní input registrujte `AttachAsync` |
+| `TypingTemplate` | `RenderFragment<IReadOnlyList<ChatUser>>` | Celý indikátor psaní; bez live regionu |
+| `JumpToNewTemplate` | `RenderFragment<int>` | Obsah tlačítka „nové zprávy“ (počet jako parametr) |
+| `BannerContent` | `RenderFragment` | Pásek nad seznamem zpráv (connection bar) |
+| `HeaderContent` | `RenderFragment` | Hlavička konverzace nad bannerem |
+| `EmptyContent` | `RenderFragment` | Prázdný stav |
+| `ComposerAddon` / `ComposerFooter` | `RenderFragment` | Obsah nad / pod vestavěným inputem |
+| `TmChatBubble` sloty | `Badge`, `Meta`, `Note`, `Actions`, tělo | Bublina pro vlastní druh zprávy; `Locked` tělo nikdy negeneruje |
+
+Mapování hostova DTO na `ChatMessage` (TmChat tři pole nikdy neinterpretuje — jen je nese do šablony):
+
+```csharp
+// Hostovsky mapper — jediné místo, kde se hostův model překládá na ChatMessage.
+private static ChatMessage ToChat(InboxMessageDto dto, ChatUser author) =>
+    new(dto.Id, dto.PreviewText, author, ToMessageType(dto.Direction), dto.CreatedAt)
+    {
+        Kind = dto.State switch
+        {
+            InboxState.AiDraft  => "ai-draft",
+            InboxState.Queued   => "queued",
+            InboxState.Locked   => "locked",
+            _ => null,                       // obyčejná zpráva → vestavěný vzhled
+        },
+        Metadata = new Dictionary<string, object?>
+        {
+            ["reason"] = dto.DraftReason,    // čte se context.GetMetadata<string>("reason", "…")
+            ["scheduledFor"] = dto.ScheduledFor,
+        },
+        Payload = dto,                       // typované zpětné čtení: context.PayloadAs<InboxMessageDto>()
+    };
+```
+
+```razor
+<TmChat Messages="@_chat" CurrentUser="@_me" UseTemplateFor="@(m => m.Kind is not null)">
+    <MessageTemplate Context="context">
+        @switch (context.Message.Kind)
+        {
+            case "ai-draft":
+                <TmChatBubble Variant="ChatBubbleVariant.Pending" StatusLabel="AI draft"
+                              ActorLabel="@context.Message.Author?.Name" Timestamp="context.Message.Timestamp">
+                    <Badge>@(context.GetMetadata<string>("reason", "AI suggestion"))</Badge>
+                    <ChildContent>@context.Message.Text</ChildContent>
+                    <Actions>
+                        <button class="tm-btn" @onclick="@(() => Approve(context))">Approve</button>
+                    </Actions>
+                </TmChatBubble>
+                break;
+            case "locked":
+                @* Locked tělo negeneruje — cena jde do Badge, unlock do Actions *@
+                <TmChatBubble Variant="ChatBubbleVariant.Locked" Badge="@Price(context)">
+                    <Actions><button class="tm-btn" @onclick="@(() => Unlock(context))">Unlock</button></Actions>
+                </TmChatBubble>
+                break;
+            default:
+                @context.DefaultContent
+                break;
+        }
+    </MessageTemplate>
+</TmChat>
+```
+
+#### Veřejné metody a vlastnosti
+
+| Člen | Signatura | Popis |
+|------|-----------|-------|
+| `AnnounceAsync` | `Task AnnounceAsync(string text)` | Ohlášení hostí akce skrz jediný live region a throttle („Draft approved“) |
+| `FocusMessageAsync` | `ValueTask<bool> FocusMessageAsync(string? id)` | Focus + scroll na zprávu podle `data-message-id`; vrací, zda se zpráva našla |
+| `FocusComposerAsync` | `ValueTask FocusComposerAsync()` | Focus do composeru (vlastního přes `AttachAsync` nebo vestavěného) |
+| `ScrollToBottomAsync` | `ValueTask ScrollToBottomAsync()` | Scroll dolů; funguje i s `AutoScroll=Never`, schovává jump tlačítko |
+| `ScrollToMessageAsync` | `ValueTask<bool> ScrollToMessageAsync(string? id)` | Scroll na kotvu zprávy; vrací, zda se kotva našla |
+| `DiscardDraftAsync` | `Task DiscardDraftAsync()` | Smaže všechny draft sloty (composer, reply input, editace) |
+| `HasUnsavedDraft` | `bool` | Probíhá neuložený draft v jakémkoli slotu (poll před reloadem) |
+| `IsAtBottom` | `bool` | Je seznam dole (poslední hlášení scrolleru) |
+
 #### Příklady použití
 
 ```razor
 <!-- Základní konverzace -->
 <TmChat Messages="_messages"
         CurrentUser="_currentUser"
-        OnSendMessage="HandleSend"
+        OnSend="HandleSend"
         TypingUsers="_typingUsers" />
 
 @code {
@@ -7062,20 +7202,50 @@ public sealed record ChatAttachment
     };
     private List<ChatUser> _typingUsers = new() { new ChatUser("u2", "Bob") };
 
-    private void HandleSend(string text) => _messages.Add(new(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    private Task HandleSend(ChatSendRequest request)
+    {
+        _messages.Add(new(Guid.NewGuid().ToString(), request.Text, _currentUser, ChatMessageType.Outgoing));
+        return Task.CompletedTask;
+    }
 }
 ```
 
 #### Vlastnosti
 
 - **Tři typy zpráv** — `Incoming` (levá strana), `Outgoing` (pravá strana), `System` (centrovaná, šedá)
-- **Avatary** — zobrazení přes `TmAvatar`, zelená tečka pro online stav
-- **Timestamp** — formátovaný čas u každé zprávy
-- **Indikátor psaní** — animované tři tečky + jméno uživatele
-- **Přílohy** — karta s názvem, velikostí a ikonou; kliknutí vyvolá callback
-- **Odeslání** — Enter odesílá, Shift+Enter nový řádek
+- **Avatary** — zobrazení přes `TmAvatar`, zelená tečka pro online stav; vypnutí `ShowAvatars=false`
+- **Vlákna** — `OnReply` otevírá překrývající se panel; `ActiveThreadRootId` two-way
+- **Reakce** — emoji picker, vlastní emotikony přes `ReactionEmojis`
+- **Read receipts** — `OnMessageRead` + `ReadBy`; auto režim přes `AutoReadReceipts`
+- **Draft guard** — `OnDraftChanged` + `HasUnsavedDraft`/`DiscardDraftAsync` (vzor `ITmDraftGuard`)
+- **Scroll** — `chat.js` scroller: lepení ke spodku jen když je uživatel dole (`AutoScroll=WhenAtBottom`), zachování pozice při prependu starší historie, jump-to-new tlačítko, `ScrollToMessageAsync`
+- **Přístupnost** — jediný polite live region s trailing throttlem; texty oznámení dodává host (`MessageAnnouncement`/`AnnounceAsync`), psaní se nikdy neoznamuje; kontejner zpráv je pojmenovaný `role=region` s `tabindex=0`
+- **Composer** — Enter odesílá, Shift+Enter nový řádek, IME guard v `chat.js` (net8 bezpečně), refokus po odeslání
+- **Layout** — chat je size container; sticky composer < 640 px, 44px cíle na coarse pointeru, `FillParent` pro flex hostitele
 - **Plně lokalizováno** — všechny texty přes `ITmLocalizer`
 - **Dark mode** — plná podpora přes CSS custom properties
+
+Detailní kontrakt vlastních šablon: [docs/chat-custom-templates.md](docs/chat-custom-templates.md).
+
+### TmChatBubble
+
+Prezentační bublina pro hostem stavěné řádky — stylingová protiváha `TmChat.MessageTemplate` (markup ve šabloně nese CSS scope hosta, takže scoped třídy `TmChat.razor.css` na něj neplatí; bublina má vlastní stylesheet, zrcadlený i v globálním fallbacku `wwwroot/css/components/_chat.css`). Nenese žádnou doménovou copy — všechny texty (badge, cena, důvod zamítnutí, stav) přicházejí od hosta. Kořen nese `data-variant="{variant}"`; barvy, radius i max šířku řídí knoby `--tm-chat-bubble-*` (knihovna žádné defaulty nedeklaruje — fallbacky jsou sémantické tokeny, takže dark mode funguje bez override).
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Variant` | `ChatBubbleVariant` | `Incoming` | Vizuální varianta: `Incoming`, `Outgoing`, `System`, `Pill`, `Pending` (přerušovaný rámeček), `Queued`, `Discarded` (tělo jako `<del>`), `Locked` (tělo nikdy) |
+| `ActorLabel` | `string?` | `null` | Jméno autora na začátku meta řádku; `null` negeneruje label |
+| `Timestamp` | `DateTimeOffset?` | `null` | Čas zprávy — `<time>` s UTC ISO-8601 atributem a lokálním `HH:mm` textem (oddělený dekorativní střední tečkou) |
+| `StatusLabel` | `string?` | `null` | Vizuálně skrytý (`tm-sr-only`) stav na začátku bubliny; pro `Pending`/`Queued`/`Discarded`/`Locked` musí host dodat viditelný `Badge` nebo `StatusLabel` |
+| `ShowVariantIcon` | `bool` | `true` | Dekorativní (`aria-hidden`) ikona varianty v badge oblasti — `lock` pro `Locked`, `clock` pro `Queued`; na ostatních variantách bez efektu |
+| `Badge` | `RenderFragment?` | `null` | Badge nad tělem (důvod, cena, stavový chip); renderuje se pro každou variantu, i `Locked` |
+| `Meta` | `RenderFragment?` | `null` | Doplňkový obsah uvnitř meta řádku (za autorem a časem — „edited“, countdown, receipt); meta řádek se generuje, když je nastaven kterýkoli z `ActorLabel`/`Timestamp`/`Meta` |
+| `Note` | `RenderFragment?` | `null` | Poznámka pod tělem (důvod zamítnutí, scheduling hint); renderuje se pro každou variantu, i `Locked` |
+| `Actions` | `RenderFragment?` | `null` | Řádek akcí dole bubliny (Approve/Unlock/…); tlačítka i jejich události vlastní host |
+| `ChildContent` | `RenderFragment?` | `null` | Tělo bubliny; `Locked` ho NIKDY negeneruje (obsah neteče do DOM), `Discarded` ho renderuje jako sémantický `<del>` |
+| `Class` | `string?` | `null` | Dodatečné CSS třídy na kořeni `tm-chat-bubble` |
+
+Další atributy (`id`, `data-*`, `aria-*`) se splatují na kořen přes `AdditionalAttributes`.
 
 ---
 

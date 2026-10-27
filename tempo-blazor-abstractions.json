@@ -12884,10 +12884,156 @@
       "kind": "Record",
       "category": "Models",
       "namespace": "Tempo.Blazor.Models",
-      "description": "Represents a single message in a chat conversation.",
+      "description": "Represents a single message in a chat conversation. A pure data record — TmChat renders it and never mutates it. Besides the rendering fields it carries a host-owned custom-template contract: Kind (a free-form routing string the host's MessageTemplate switches on), Metadata (a read-only dictionary, default empty, read via ChatMessageContext.GetMetadata<T>) and Payload (the original host DTO, read back via ChatMessageContext.PayloadAs<T>). TmChat does not interpret any of the three and never serializes them (Payload is JsonIgnore'd).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/ChatMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Unique identifier; also the data-message-id scroll/focus anchor TmChat renders on the message wrapper."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "Message text content."
+        },
+        {
+          "name": "Author",
+          "kind": "Property",
+          "type": "ChatUser?",
+          "description": "Author of the message."
+        },
+        {
+          "name": "Timestamp",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "Timestamp when the message was sent."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "ChatMessageType",
+          "description": "Message direction / type (Incoming, Outgoing, System)."
+        },
+        {
+          "name": "Attachments",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatAttachment>",
+          "description": "Optional attachments."
+        },
+        {
+          "name": "IsRead",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message has been read by the recipient."
+        },
+        {
+          "name": "IsSending",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message is currently being sent."
+        },
+        {
+          "name": "IsError",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message failed to send."
+        },
+        {
+          "name": "ErrorMessage",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional error text when sending failed."
+        },
+        {
+          "name": "ReplyToId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the specific message this one replies to, when it is a reply."
+        },
+        {
+          "name": "ThreadRootId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the root message of the thread this message belongs to (the root's own Id for a thread starter, the root id for its replies). Null for standalone messages."
+        },
+        {
+          "name": "ReplyCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of replies in this message's thread (meaningful on a thread root)."
+        },
+        {
+          "name": "Reactions",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatReaction>",
+          "description": "Emoji reactions on this message, grouped by emoji."
+        },
+        {
+          "name": "ReadBy",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatReadReceipt>",
+          "description": "Per-user read receipts for this message."
+        },
+        {
+          "name": "EditedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Timestamp of the last edit, or null when the message was never edited."
+        },
+        {
+          "name": "IsDeleted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message has been deleted (rendered as a tombstone)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Free-form kind of the message, e.g. \"ai-draft\", \"queued\", \"tip\". TmChat itself does NOT interpret the value — it only carries it into the message template (ChatMessageContext.Message) and mirrors it on the message wrapper's data-kind attribute. Hosts use it to route a RenderFragment<ChatMessageContext> MessageTemplate (typically paired with UseTemplateFor) or their own grouping logic. Null for plain messages."
+        },
+        {
+          "name": "Metadata",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, object?>",
+          "description": "Host-defined metadata entries. TmChat does NOT interpret them — they are handed to the message template untouched (read via ChatMessageContext.GetMetadata<T>(key, fallback)). Defaults to an empty read-only dictionary, never null. Values must be in-process CLR objects; after a host-side JSON round-trip they become JsonElement instances instead of the original CLR types."
+        },
+        {
+          "name": "Payload",
+          "kind": "Property",
+          "type": "object?",
+          "description": "The host's original DTO this message was mapped from. TmChat does NOT interpret it — the message template reads it back type-safely via ChatMessageContext.PayloadAs<T>(). Never serialized into any component event or log output (JsonIgnore)."
+        },
+        {
+          "name": "IsEdited",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the message carries an edit timestamp."
+        },
+        {
+          "name": "IsReply",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the message is a reply within a thread."
+        },
+        {
+          "name": "IsReadByUser",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Returns true when userId has read this message (its own IsRead flag or the ReadBy receipts).",
+          "parameters": [
+            {
+              "name": "userId",
+              "type": "string"
+            }
+          ]
+        }
+      ]
     },
     {
       "itemName": "ChatMessageEdit",

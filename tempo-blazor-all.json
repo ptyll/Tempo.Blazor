@@ -3726,7 +3726,7 @@
           "kind": "Component",
           "category": "Chat",
           "namespace": "Tempo.Blazor.Components.Chat",
-          "description": "A chat conversation component with message rendering, typing indicators, attachments, and send input.",
+          "description": "A chat conversation component with message rendering, typing indicators, attachments, and send input. Templates (MessageTemplate, ComposerTemplate, TypingTemplate, JumpToNewTemplate) and slots (BannerContent, HeaderContent, EmptyContent, ComposerAddon, ComposerFooter) let a host take over any part of the UI; a custom bubble inside MessageTemplate is best built from the TmChatBubble component. The root is a CSS size container (container-type: inline-size, container-name: tm-chat, contain-intrinsic-inline-size: auto 360px), so the responsive rules branch on the chat's own width — an UNNAMED @container rule in host markup therefore also resolves against the chat; opt out with the tm-chat--no-container modifier passed through Class. Layout knobs (never declared by the library, so an override on a wrapper or :root cascades): --tm-chat-min-height, --tm-chat-composer-offset, --tm-chat-safe-area-bottom and the --tm-chat-bubble-* family shared with TmChatBubble.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Chat/TmChat.razor",
           "documentationStatus": "merged",
@@ -4077,7 +4077,190 @@
           "cssClasses": [
             "tm-chat",
             "tm-chat--fill",
-            "tm-chat--no-container"
+            "tm-chat--no-container",
+            "tm-chat__messages",
+            "tm-chat__item",
+            "tm-chat__body",
+            "tm-chat__message",
+            "tm-chat__message--incoming",
+            "tm-chat__message--outgoing",
+            "tm-chat__message--system",
+            "tm-chat__bubble",
+            "tm-chat__avatar",
+            "tm-chat__avatar--incoming",
+            "tm-chat__avatar--outgoing",
+            "tm-chat__author",
+            "tm-chat__meta",
+            "tm-chat__message-time",
+            "tm-chat__text",
+            "tm-chat__text--deleted",
+            "tm-chat__system-text",
+            "tm-chat__actions",
+            "tm-chat__action",
+            "tm-chat__action--danger",
+            "tm-chat__reactions",
+            "tm-chat__reaction",
+            "tm-chat__reaction--mine",
+            "tm-chat__reaction-emoji",
+            "tm-chat__reaction-count",
+            "tm-chat__emoji",
+            "tm-chat__emoji-picker",
+            "tm-chat__receipts",
+            "tm-chat__receipts-text",
+            "tm-chat__edited",
+            "tm-chat__edit",
+            "tm-chat__edit-input",
+            "tm-chat__edit-actions",
+            "tm-chat__edit-save",
+            "tm-chat__edit-cancel",
+            "tm-chat__thread-panel",
+            "tm-chat__thread-header",
+            "tm-chat__thread-title",
+            "tm-chat__thread-close",
+            "tm-chat__thread-divider",
+            "tm-chat__thread-badge",
+            "tm-chat__thread-messages",
+            "tm-chat__thread-input-area",
+            "tm-chat__thread-input",
+            "tm-chat__typing-indicator",
+            "tm-chat__typing-dots",
+            "tm-chat__typing-text",
+            "tm-chat__empty",
+            "tm-chat__input-area",
+            "tm-chat__input-area--custom",
+            "tm-chat__input-area--stacked",
+            "tm-chat__input-row",
+            "tm-chat__input",
+            "tm-chat__send-btn",
+            "tm-chat__sending-dots",
+            "tm-chat__attachments",
+            "tm-chat__attachment",
+            "tm-chat__attachment-name",
+            "tm-chat__attachment-size",
+            "tm-chat__jump-new",
+            "tm-chat__jump-new-count",
+            "tm-chat__load-older",
+            "tm-chat__error-text"
+          ],
+          "cssVariables": [
+            {
+              "name": "--tm-chat-min-height",
+              "description": "Minimum-height floor of the chat. .tm-chat reads it with a 300px fallback; the tm-chat--fill modifier (FillParent=true) reads it with a ZERO fallback, so a floor declared on a wrapper or :root keeps applying in fill mode too. The library never declares the knob — set --tm-chat-min-height: 0 (or a floor) on a wrapper or :root and it cascades."
+            },
+            {
+              "name": "--tm-chat-composer-offset",
+              "description": "Space reserved BELOW the composer for host chrome — set it to the height of a bottom navigation bar and the narrow (<640px) sticky composer and sticky thread reply row rest above it (bottom: var(--tm-chat-composer-offset, 0px)). Never declared by the library; default 0px."
+            },
+            {
+              "name": "--tm-chat-safe-area-bottom",
+              "description": "Extra padding under the sticky composer and thread reply row for the device safe area. The narrow-chat rules read it with an env(safe-area-inset-bottom, 0px) fallback — a host on an already safe-area-aware layout can override it to 0px."
+            },
+            {
+              "name": "--tm-chat-bubble-in-bg",
+              "description": "Background of the built-in Incoming bubbles. Defaults to --tm-bg-muted."
+            },
+            {
+              "name": "--tm-chat-bubble-in-fg",
+              "description": "Text colour of the built-in Incoming bubbles. Defaults to --tm-color-text."
+            },
+            {
+              "name": "--tm-chat-bubble-in-border",
+              "description": "Border of the built-in Incoming bubbles (painted as a 1px inset ring). Defaults to transparent."
+            },
+            {
+              "name": "--tm-chat-bubble-out-bg",
+              "description": "Background of the built-in Outgoing bubbles. Defaults to --tm-color-primary."
+            },
+            {
+              "name": "--tm-chat-bubble-out-fg",
+              "description": "Text colour of the built-in Outgoing bubbles. Defaults to --tm-color-primary-contrast."
+            },
+            {
+              "name": "--tm-chat-bubble-out-border",
+              "description": "Border of the built-in Outgoing bubbles. Defaults to transparent."
+            },
+            {
+              "name": "--tm-chat-bubble-system-bg",
+              "description": "Background of built-in System message rows. Defaults to --tm-bg-muted."
+            },
+            {
+              "name": "--tm-chat-bubble-system-fg",
+              "description": "Text colour of built-in System message rows. Defaults to --tm-color-text-secondary."
+            },
+            {
+              "name": "--tm-chat-bubble-max-width",
+              "description": "Width cap of the built-in bubbles. Defaults to 80%; a value set on a wrapper or :root tightens the whole conversation. See the TmChatBubble page for the pending/queued/discarded/locked sets, the Pill cap and the radius/padding knobs."
+            },
+            {
+              "name": "--tm-chat-bubble-radius",
+              "description": "Corner radius of the built-in bubbles. Defaults to --tm-radius-xl."
+            },
+            {
+              "name": "--tm-chat-bubble-padding",
+              "description": "Padding of the built-in bubbles, compensated for the always-painted 1px border. Defaults to calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width))."
+            }
+          ],
+          "methods": [
+            {
+              "name": "AnnounceAsync",
+              "signature": "Task AnnounceAsync(string text)",
+              "description": "Announces a HOST action through the component's single polite live region and the shared trailing throttle — e.g. \"Draft approved\" after the host's own flow completes. A free window announces immediately and drops pending messages (they arrived in the now-spent window); a busy window keeps them and the trailing flush composes the action around the summary or last message text. Safe from any thread; whitespace is a no-op. The library announces nothing on its own — without MessageAnnouncement or this call the chat stays silent."
+            },
+            {
+              "name": "FocusMessageAsync",
+              "signature": "ValueTask<bool> FocusMessageAsync(string? id)",
+              "description": "Moves keyboard focus to the message wrapper with the given id (data-message-id) and scrolls it into view with block:'nearest', honouring reduced motion. Returns whether the message was found and focused — the query is scoped to the messages container (a thread panel renders the root message a second time), false for an unknown id, before interactivity, or with a dropped circuit."
+            },
+            {
+              "name": "FocusComposerAsync",
+              "signature": "ValueTask FocusComposerAsync()",
+              "description": "Moves focus to the composer input — the element a custom composer registered through ChatComposerContext.AttachAsync, otherwise the built-in textarea. An element already holding focus is left untouched (the on-screen keyboard is not closed). A no-op while no composer input is rendered or the circuit is gone."
+            },
+            {
+              "name": "ScrollToBottomAsync",
+              "signature": "ValueTask ScrollToBottomAsync()",
+              "description": "Scrolls the message list to the bottom — the public helper for hosts (after a \"new messages\" toast or an external navigation). Works with every AutoScroll value: an explicit host call is never suppressed. A no-op while the chat.js scroller is not attached (prerender, failed import). Arriving at the bottom clears the unseen count and hides the jump-to-new button."
+            },
+            {
+              "name": "ScrollToMessageAsync",
+              "signature": "ValueTask<bool> ScrollToMessageAsync(string? id)",
+              "description": "Scrolls the message list so the message with the given id (the data-message-id anchor) is in view — the helper for \"jump to message\" links and notification deep links. Returns whether the anchor was found: false for an unknown/empty id or while the scroller is not attached."
+            },
+            {
+              "name": "DiscardDraftAsync",
+              "signature": "Task DiscardDraftAsync()",
+              "description": "Clears every draft slot — the main composer, the open thread panel's reply input and any open message edit (the edit is cancelled). The thread panel itself stays open. Intended AFTER the user confirmed the discard in the consumer's OWN confirmation dialog; a no-op when no draft exists."
+            }
+          ],
+          "properties": [
+            {
+              "name": "HasUnsavedDraft",
+              "type": "bool",
+              "description": "Whether the component currently holds an unsaved draft in ANY slot — main composer, open thread panel's reply input, or a message edit whose text differs from the message as it was when the edit started. The same value OnDraftChanged's HasUnsavedContent carries. Read it on the component's dispatcher when called from a background thread."
+            },
+            {
+              "name": "IsAtBottom",
+              "type": "bool",
+              "description": "Whether the message list is currently scrolled to (or within the threshold of) the bottom — the last state the chat.js scroller reported. Read on the component's dispatcher when called off the render path."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Take over only special message kinds (MessageTemplate with Kind)",
+              "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <MessageTemplate Context=\"context\">\n        @if (context.Message.Kind == \"ai-draft\")\n        {\n            <TmChatBubble Variant=\"ChatBubbleVariant.Pending\"\n                          ActorLabel=\"@context.Message.Author?.Name\"\n                          Timestamp=\"context.Message.Timestamp\"\n                          StatusLabel=\"AI draft\">\n                <Badge>@(context.GetMetadata<string>(\"reason\", \"AI suggestion\"))</Badge>\n                <ChildContent>@context.Message.Text</ChildContent>\n                <Actions>\n                    <button class=\"tm-btn\" @onclick=\"@(() => Approve(context.Message))\">Approve</button>\n                    <button class=\"tm-btn\" @onclick=\"@(() => Discard(context.Message))\">Discard</button>\n                </Actions>\n            </TmChatBubble>\n        }\n        else\n        {\n            @context.DefaultContent\n        }\n    </MessageTemplate>\n</TmChat>"
+            },
+            {
+              "title": "Map the host DTO into ChatMessage (Kind, Metadata, Payload)",
+              "code": "// Host-side mapping — TmChat never interprets the three fields.\nprivate static ChatMessage ToChat(InboxMessageDto dto, ChatUser author) =>\n    new(dto.Id, dto.PreviewText, author, ToMessageType(dto.Direction), dto.CreatedAt)\n    {\n        Kind = dto.State switch\n        {\n            InboxState.AiDraft => \"ai-draft\",\n            InboxState.Queued => \"queued\",\n            _ => null,\n        },\n        Metadata = new Dictionary<string, object?>\n        {\n            [\"reason\"] = dto.DraftReason,\n            [\"scheduledFor\"] = dto.ScheduledFor,\n        },\n        Payload = dto, // typed read-back via context.PayloadAs<InboxMessageDto>()\n    };\n\n// In the template the original DTO comes back type-safely:\nvar draft = context.PayloadAs<InboxMessageDto>();"
+            },
+            {
+              "title": "Replace the whole composer (ComposerTemplate) and keep the send path",
+              "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\" Disabled=\"@_locked\">\n    <ComposerTemplate Context=\"composer\">\n        @if (_subscribed)\n        {\n            <textarea value=\"@composer.Text\" disabled=\"@composer.Disabled\"\n                      @oninput=\"@(e => composer.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button class=\"tm-btn tm-btn--primary\" disabled=\"@(!composer.CanSend)\"\n                    @onclick=\"@composer.SendAsync\">Send</button>\n        }\n        else\n        {\n            <p>Subscribe to join the conversation.</p>\n            <button class=\"tm-btn tm-btn--primary\" @onclick=\"@Subscribe\">Subscribe</button>\n        }\n    </ComposerTemplate>\n</TmChat>"
+            },
+            {
+              "title": "Conversation-level banner (BannerContent)",
+              "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <BannerContent>\n        @if (_offline)\n        {\n            @* TmChat adds no wrapper and no live region here — announce through\n               role=\"status\" on an element INSIDE the slot if it should be read. *@\n            <div class=\"tm-alert tm-alert--warning\" role=\"status\">\n                Offline — messages will send when you reconnect.\n            </div>\n        }\n    </BannerContent>\n</TmChat>"
+            }
           ]
         },
         {
@@ -80987,10 +81170,156 @@
           "kind": "Record",
           "category": "Models",
           "namespace": "Tempo.Blazor.Models",
-          "description": "Represents a single message in a chat conversation.",
+          "description": "Represents a single message in a chat conversation. A pure data record — TmChat renders it and never mutates it. Besides the rendering fields it carries a host-owned custom-template contract: Kind (a free-form routing string the host's MessageTemplate switches on), Metadata (a read-only dictionary, default empty, read via ChatMessageContext.GetMetadata<T>) and Payload (the original host DTO, read back via ChatMessageContext.PayloadAs<T>). TmChat does not interpret any of the three and never serializes them (Payload is JsonIgnore'd).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/ChatMessage.cs",
-          "documentationStatus": "merged"
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Unique identifier; also the data-message-id scroll/focus anchor TmChat renders on the message wrapper."
+            },
+            {
+              "name": "Text",
+              "kind": "Property",
+              "type": "string",
+              "description": "Message text content."
+            },
+            {
+              "name": "Author",
+              "kind": "Property",
+              "type": "ChatUser?",
+              "description": "Author of the message."
+            },
+            {
+              "name": "Timestamp",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "Timestamp when the message was sent."
+            },
+            {
+              "name": "Type",
+              "kind": "Property",
+              "type": "ChatMessageType",
+              "description": "Message direction / type (Incoming, Outgoing, System)."
+            },
+            {
+              "name": "Attachments",
+              "kind": "Property",
+              "type": "IReadOnlyList<ChatAttachment>",
+              "description": "Optional attachments."
+            },
+            {
+              "name": "IsRead",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the message has been read by the recipient."
+            },
+            {
+              "name": "IsSending",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the message is currently being sent."
+            },
+            {
+              "name": "IsError",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the message failed to send."
+            },
+            {
+              "name": "ErrorMessage",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional error text when sending failed."
+            },
+            {
+              "name": "ReplyToId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Id of the specific message this one replies to, when it is a reply."
+            },
+            {
+              "name": "ThreadRootId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Id of the root message of the thread this message belongs to (the root's own Id for a thread starter, the root id for its replies). Null for standalone messages."
+            },
+            {
+              "name": "ReplyCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "Number of replies in this message's thread (meaningful on a thread root)."
+            },
+            {
+              "name": "Reactions",
+              "kind": "Property",
+              "type": "IReadOnlyList<ChatReaction>",
+              "description": "Emoji reactions on this message, grouped by emoji."
+            },
+            {
+              "name": "ReadBy",
+              "kind": "Property",
+              "type": "IReadOnlyList<ChatReadReceipt>",
+              "description": "Per-user read receipts for this message."
+            },
+            {
+              "name": "EditedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "Timestamp of the last edit, or null when the message was never edited."
+            },
+            {
+              "name": "IsDeleted",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the message has been deleted (rendered as a tombstone)."
+            },
+            {
+              "name": "Kind",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Free-form kind of the message, e.g. \"ai-draft\", \"queued\", \"tip\". TmChat itself does NOT interpret the value — it only carries it into the message template (ChatMessageContext.Message) and mirrors it on the message wrapper's data-kind attribute. Hosts use it to route a RenderFragment<ChatMessageContext> MessageTemplate (typically paired with UseTemplateFor) or their own grouping logic. Null for plain messages."
+            },
+            {
+              "name": "Metadata",
+              "kind": "Property",
+              "type": "IReadOnlyDictionary<string, object?>",
+              "description": "Host-defined metadata entries. TmChat does NOT interpret them — they are handed to the message template untouched (read via ChatMessageContext.GetMetadata<T>(key, fallback)). Defaults to an empty read-only dictionary, never null. Values must be in-process CLR objects; after a host-side JSON round-trip they become JsonElement instances instead of the original CLR types."
+            },
+            {
+              "name": "Payload",
+              "kind": "Property",
+              "type": "object?",
+              "description": "The host's original DTO this message was mapped from. TmChat does NOT interpret it — the message template reads it back type-safely via ChatMessageContext.PayloadAs<T>(). Never serialized into any component event or log output (JsonIgnore)."
+            },
+            {
+              "name": "IsEdited",
+              "kind": "Property",
+              "type": "bool",
+              "description": "True when the message carries an edit timestamp."
+            },
+            {
+              "name": "IsReply",
+              "kind": "Property",
+              "type": "bool",
+              "description": "True when the message is a reply within a thread."
+            },
+            {
+              "name": "IsReadByUser",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Returns true when userId has read this message (its own IsRead flag or the ReadBy receipts).",
+              "parameters": [
+                {
+                  "name": "userId",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
         },
         {
           "itemName": "ChatMessageEdit",
