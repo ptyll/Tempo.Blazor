@@ -2,7 +2,11 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Models
 
-<div class="@RootCssClass @Class" @attributes="AdditionalAttributes">
+@* The component ROOT carries the @ref of the FZE-12 auto-attach: chat.js attachComposerById
+   looks the ComposerTemplate input (id="@composer.InputId") up INSIDE this element only —
+   never page-wide, because the id is per-TmChat-instance. The ref costs nothing while the
+   opt-in AutoAttachComposerInput parameter is off. *@
+<div class="@RootCssClass @Class" @attributes="AdditionalAttributes" @ref="_chatRoot">
 
     @* The component's ONE live region (FZE-7): host-supplied announcement texts land here. The
        content is a span keyed by the announcement sequence — every announcement REPLACES the

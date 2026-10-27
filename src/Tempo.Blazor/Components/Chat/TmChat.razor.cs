@@ -369,8 +369,9 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     /// <summary>
     /// Whether the composer input is focused again after a SUCCESSFUL send. Default
     /// <see langword="true"/> — after the send handlers complete and the composer clears, focus
-    /// returns to the input (the built-in textarea, or the element a custom composer registered
-    /// through <see cref="ChatComposerContext.AttachAsync"/>) so the user can type the next
+    /// returns to the input (the built-in textarea, the element a custom composer registered
+    /// through <see cref="ChatComposerContext.AttachAsync"/>, or the input auto-attached
+    /// through <c>AutoAttachComposerInput</c>) so the user can type the next
     /// message without reaching for the mouse. Set <see langword="false"/> for hosts that move
     /// focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws)
     /// does not refocus — the text is preserved and the user keeps their context.
@@ -505,6 +506,23 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
             // focus target. Nothing to focus while nothing is attached yet (or the module is
             // still importing): the host owns the input there.
             if (_module is null) return;
+
+            // FZE-12: with the opt-in auto-attach the AUTO-ATTACHED input is the focus target —
+            // the handle knows the element (it re-resolves it on the next render when the node
+            // was swapped), so the focus goes through handle.focusIfNeeded().
+            if (_autoAttachHandle is not null)
+            {
+                try
+                {
+                    await _autoAttachHandle.InvokeVoidAsync("focusIfNeeded");
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+                {
+                    // Focus is best-effort: a disconnected circuit or an unmounted input is not an error.
+                }
+                return;
+            }
+
             var element = _customComposerElement;
             if (element is not { } target || string.IsNullOrEmpty(target.Id)) return;
             try
@@ -872,6 +890,7 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         StateHasChanged();
         await NotifyDraftChangedAsync();
         await ResizeComposerAfterClearAsync(_mainSlot);
+        await ResizeAutoComposerAfterClearAsync(); // FZE-12: the auto-attached template input
 
         if (RefocusAfterSend)
         {

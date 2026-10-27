@@ -565,6 +565,50 @@
     </div>
 </section>
 
+<!-- Auto-Attach (FZE-12): the template input carries id=InputId and TmChat attaches it itself -->
+<section class="demo-section" data-testid="chat-autoattach-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Auto-Attached Composer</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-12</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The same <code>ComposerTemplate</code> contract WITHOUT the host-side
+        <code>OnAfterRenderAsync</code> + <code>AttachAsync</code> plumbing: the template's
+        textarea carries <code>id="@("@composer.InputId")"</code> and
+        <code>AutoAttachComposerInput="true"</code> makes TmChat resolve and attach it by id
+        (scoped to the chat root). Enter sends, Shift+Enter inserts a new line, an IME
+        composition never submits, the textarea auto-resizes and the focus returns to it after
+        every send — the JS module owns it all. An explicit <code>context.AttachAsync(element)</code>
+        would always win; calling it with <code>default</code> hands the control back.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <TmChat CurrentUser="_autoAttachFan"
+                    Messages="_autoAttachMessages"
+                    OnSendMessage="HandleAutoAttachSend"
+                    ComposerTemplate="AutoAttachComposer"
+                    AutoAttachComposerInput="true"
+                    MessagesAriaLabel="Auto-attach chat messages" />
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                This composer is plain host markup — the demo calls no AttachAsync anywhere: the
+                <code>id="@("@composer.InputId")"</code> attribute is the whole registration.
+                The counter is plain host state proving the sends flow through the shared
+                pipeline (the draft guard covers the host input too).
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-200">
+                Sends through the auto-attached composer: <strong data-testid="chat-autoattach-count">@_autoAttachCount</strong>
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleAutoAttachDeliverAsync">
+                Deliver incoming message
+            </TmButton>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -717,6 +761,7 @@
         InitializeCustomDemo(owner: new ChatUser("owner", "Dana (owner)", "D", isOnline: true),
                              fan: new ChatUser("fan-mia", "Mia", "M", isOnline: true));
         InitializeGateDemo(fan: new ChatUser("gate-fan", "Mia", "M", isOnline: true));
+        InitializeAutoAttachDemo(fan: new ChatUser("auto-fan", "Noah", "N", isOnline: true));
     }
 
     private void HandleBasicSend(string text)
@@ -1014,6 +1059,12 @@
     private string? _gateAttachedInputId;
     private int _gateSeq;
 
+    // ── Auto-attach demo (FZE-12) — id=InputId registration, NO AttachAsync ──
+    private ChatUser _autoAttachFan = default!;
+    private List<ChatMessage> _autoAttachMessages = default!;
+    private int _autoAttachCount;
+    private int _autoAttachSeq;
+
     // Seeded timestamps are relative to NOW so the demo conversation always looks fresh: the
     // seeds sit a quarter of an hour in the past, delivered messages get DateTimeOffset.Now.
     private DateTimeOffset _customBase;
@@ -1079,6 +1130,18 @@
             {
                 Kind = "locked",
             },
+        };
+    }
+
+    private void InitializeAutoAttachDemo(ChatUser fan)
+    {
+        _autoAttachFan = fan;
+        _autoAttachSeq = 0;
+        _autoAttachCount = 0;
+        _autoAttachMessages = new()
+        {
+            new ChatMessage("aa1", "This composer is attached by id — no AttachAsync in the host.", _autoAttachFan, ChatMessageType.Incoming, _customBase.AddMinutes(-2)),
+            new ChatMessage("aa2", "Type and press Enter: the JS module owns submit, IME and resize.", _autoAttachFan, ChatMessageType.Incoming, _customBase.AddMinutes(-1)),
         };
     }
 
@@ -1391,6 +1454,55 @@
     {
         InitializeGateDemo(_gateFan);
         StateHasChanged();
+    }
+
+    // ── Auto-Attach demo (FZE-12): id=InputId is the whole registration ───
+    private RenderFragment<ChatComposerContext> AutoAttachComposer => context =>
+        @<div class="chat-demo-gate-composer">
+            <textarea class="chat-demo-gate-composer__input" rows="1" aria-label="Reply to Noah"
+                      placeholder="Reply to Noah…"
+                      id="@context.InputId"
+                      value="@context.Text"
+                      @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"></textarea>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                      Disabled="@(!context.CanSend)"
+                      OnClick="@(async () => await context.SendAsync())">Send</TmButton>
+        </div>;
+
+    private void HandleAutoAttachSend(string text)
+    {
+        _autoAttachSeq++;
+        _autoAttachCount++;
+        _autoAttachMessages.Add(new ChatMessage(
+            $"aa-own-{_autoAttachSeq}", text, _autoAttachFan, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        StateHasChanged();
+        _ = AutoAttachAutoReplyAsync(text);
+    }
+
+    private async Task AutoAttachAutoReplyAsync(string text)
+    {
+        try
+        {
+            await Task.Delay(800, _cts.Token);
+            _autoAttachSeq++;
+            _autoAttachMessages.Add(new ChatMessage(
+                $"aa-in-{_autoAttachSeq}", $"Auto-attached composer heard: “{text}”", _autoAttachFan,
+                ChatMessageType.Incoming, DateTimeOffset.Now));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // The demo page went away during the simulated delay — nothing to answer anymore.
+        }
+    }
+
+    private async Task HandleAutoAttachDeliverAsync()
+    {
+        _autoAttachSeq++;
+        _autoAttachMessages.Add(new ChatMessage(
+            $"aa-in-{_autoAttachSeq}", "Delivered while you were reading — scroll contract intact.",
+            _autoAttachFan, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleGateSend(string text)

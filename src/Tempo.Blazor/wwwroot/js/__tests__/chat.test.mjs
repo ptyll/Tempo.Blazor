@@ -16,7 +16,7 @@
 // scrollToMessage(id), focusMessage(id), reduced-motion aware scrolling and dispose.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attachComposer, attachScroller, focus, focusIfNeeded, restoreFocus } from '../chat.js';
+import { attachComposer, attachComposerById, attachScroller, focus, focusIfNeeded, restoreFocus } from '../chat.js';
 
 // ── fakes ───────────────────────────────────────────────────────────────────────────────────
 
@@ -532,6 +532,245 @@ test('focusIfNeeded focuses only when the element does not already hold focus', 
     assert.doesNotThrow(() => focusIfNeeded(null));
     assert.doesNotThrow(() => focusIfNeeded({}));
     assert.doesNotThrow(() => focusIfNeeded({ ownerDocument: { activeElement: null } }));
+});
+
+// ── attachComposerById (FZE-12: auto-attach by id inside the chat root) ──────────────────────
+
+/** A chat root stub: `querySelector` resolves the id selector against the CURRENT input. */
+function fakeRoot(current) {
+    const root = {
+        queries: [],
+        querySelector(selector) {
+            root.queries.push(selector);
+            return typeof current === 'function' ? current(selector) : current;
+        },
+    };
+    return root;
+}
+
+/** A focusable input stub (records focus moves, exposes an ownerDocument for focusIfNeeded). */
+function fakeFocusableInput() {
+    const el = { ...listenerBag(), focusCount: 0, focus() { this.focusCount++; } };
+    el.ownerDocument = { activeElement: null };
+    return el;
+}
+
+test('attachComposerById requires a root, an input id and a dotnet reference', () => {
+    assert.throws(() => attachComposerById(null, 'composer', dotNet()), /root/i);
+    assert.throws(() => attachComposerById(fakeRoot(null), '', dotNet()), /input id/i);
+    assert.throws(() => attachComposerById(fakeRoot(null), 'composer', null), /DotNetObjectReference/i);
+});
+
+test('attachComposerById scopes the id lookup to the root and reuses attachComposer', () => {
+    const restore = installComputedStyle();
+    try {
+        const inside = fakeTextarea();
+        const outside = fakeTextarea(); // the SAME id on another element of the page
+        const root = fakeRoot((selector) => (selector === '#composer-id' ? inside : outside));
+        const dotnet = dotNet();
+
+        const handle = attachComposerById(root, 'composer-id', dotnet);
+
+        // The lookup is an id query ON THE ROOT — never a page-wide search.
+        assert.ok(root.queries.includes('#composer-id'),
+            'the input is resolved through root.querySelector(#id), not a global query');
+
+        // The behavior is attachComposer's (no second Enter/IME implementation): Enter on the
+        // element resolved INSIDE the root submits with preventDefault…
+        const event = inside.dispatch('keydown', keyEvent());
+        assert.equal(event.prevented, true);
+        assert.deepEqual(dotnet.calls, [{ name: 'OnComposerSubmit', args: [] }]);
+
+        // …and an element that merely shares the id OUTSIDE the root gets nothing.
+        const stray = outside.dispatch('keydown', keyEvent());
+        assert.equal(stray.prevented, false, 'the lookup must stay scoped to the chat root');
+        assert.deepEqual(dotnet.calls, [{ name: 'OnComposerSubmit', args: [] }],
+            'no second submit from outside the root');
+
+        assert.equal(typeof handle.sync, 'function');
+        assert.equal(typeof handle.focusIfNeeded, 'function');
+        assert.equal(typeof handle.resize, 'function');
+        assert.equal(typeof handle.dispose, 'function');
+    } finally {
+        restore();
+    }
+});
+
+test('attachComposerById falls back to an unescaped selector when CSS.escape is missing', () => {
+    const restore = installComputedStyle();
+    try {
+        const input = fakeTextarea();
+        const root = fakeRoot((selector) => (selector === '#tm-chat-composer-1' ? input : null));
+        attachComposerById(root, 'tm-chat-composer-1', dotNet());
+        assert.ok(root.queries.includes('#tm-chat-composer-1'),
+            'without CSS.escape (fake DOM) the plain #id selector is used');
+        assert.equal(input.count('keydown'), 1, 'the input is attached through the fallback too');
+    } finally {
+        restore();
+    }
+});
+
+test('sync(): the same node is a no-op, a replaced node re-attaches, a missing node detaches', () => {
+    const restore = installComputedStyle();
+    try {
+        let input = fakeTextarea();
+        const root = fakeRoot((selector) => (selector === '#composer-id' ? input : null));
+        const handle = attachComposerById(root, 'composer-id', dotNet());
+        assert.equal(input.count('keydown'), 1);
+
+        // Same node: sync() re-queries, finds the SAME element and does nothing.
+        assert.equal(handle.sync(), true, 'the input is still found');
+        assert.equal(input.count('keydown'), 1, 'the same node must not be attached twice');
+
+        // Replaced node: the old element is disposed (listeners gone), the new one attached.
+        const replaced = input;
+        input = fakeTextarea();
+        assert.equal(handle.sync(), true, 'the replaced node is found');
+        assert.equal(replaced.count('keydown'), 0, 'the old element was detached');
+        assert.equal(input.count('keydown'), 1, 'the new element was attached');
+
+        // Missing node: everything is detached and the sync reports not-found.
+        input = null;
+        assert.equal(handle.sync(), false, 'a missing input is reported as not found');
+        // (the replaced element was detached in this step — asserted via the next test's focus)
+    } finally {
+        restore();
+    }
+});
+
+test('focusIfNeeded() targets the current input and tolerates a missing one', () => {
+    let input = fakeFocusableInput();
+    const root = fakeRoot((selector) => (selector === '#composer-id' ? input : null));
+    const handle = attachComposerById(root, 'composer-id', dotNet());
+
+    handle.focusIfNeeded();
+    assert.equal(input.focusCount, 1, 'the auto-attached input is the focus target');
+
+    input.ownerDocument.activeElement = input;
+    handle.focusIfNeeded();
+    assert.equal(input.focusCount, 1, 'an input that already holds focus is left alone');
+
+    input = null; // the input disappeared from the DOM
+    handle.sync();
+    assert.doesNotThrow(() => handle.focusIfNeeded(), 'no attached input — a silent no-op');
+});
+
+test('focusIfNeeded() re-resolves first — a swapped node gets the focus', () => {
+    let input = fakeFocusableInput();
+    const root = fakeRoot((selector) => (selector === '#composer-id' ? input : null));
+    const handle = attachComposerById(root, 'composer-id', dotNet());
+
+    // The host swapped the element WITHOUT a TmChat render — no sync() has run yet, the
+    // handle still holds the old node.
+    const replaced = input;
+    input = fakeFocusableInput();
+
+    handle.focusIfNeeded();
+
+    assert.equal(replaced.focusCount, 0, 'the detached predecessor is never focused');
+    assert.equal(input.focusCount, 1, 'the NEW node is the focus target');
+});
+
+test('resize() re-measures the auto-attached input after a cleared value', () => {
+    const restore = installComputedStyle({ ...BROWSER_STYLE, maxHeight: '300px' });
+    try {
+        const input = fakeTextarea({ scrollHeight: 41 });
+        const handle = attachComposerById(fakeRoot(input), 'composer-id', dotNet(), { maxRows: 12 });
+
+        input.scrollHeight = 200; // a long draft grew the input
+        input.dispatch('input', {});
+        assert.equal(input.style.height, '202px', 'the draft grew the input');
+
+        input.scrollHeight = 41; // SendAsync cleared the value — no `input` event fires
+        handle.resize(); // TmChat's ResizeAutoComposerAfterClearAsync path
+
+        assert.equal(input.style.height, '43px', 'the cleared input shrinks back to one line');
+    } finally {
+        restore();
+    }
+});
+
+test('resize() is a silent no-op after dispose and while no input is found', () => {
+    const restore = installComputedStyle();
+    try {
+        const input = fakeTextarea({ scrollHeight: 41 });
+        const handle = attachComposerById(fakeRoot(input), 'composer-id', dotNet(), { maxRows: 5 });
+        assert.equal(input.style.height, '43px', 'the initial measure ran');
+
+        handle.dispose();
+        input.scrollHeight = 200; // nothing may re-measure this element anymore
+        assert.doesNotThrow(() => handle.resize());
+        assert.equal(input.style.height, '43px', 'a disposed handle must not re-measure');
+
+        // An input that is gone (never found, or detached by a sync() after removal).
+        let missing = fakeTextarea({ scrollHeight: 41 });
+        const root = fakeRoot((selector) => (selector === '#composer-id' ? missing : null));
+        const gone = attachComposerById(root, 'composer-id', dotNet(), { maxRows: 5 });
+        missing = null;
+        gone.sync(); // reports not-found and detaches
+        assert.doesNotThrow(() => gone.resize(), 'no attached input — a silent no-op');
+    } finally {
+        restore();
+    }
+});
+
+test('dispose() is idempotent and a disposed handle stops working', () => {
+    const input = fakeTextarea();
+    const root = fakeRoot(input);
+    const dotnet = dotNet();
+    const handle = attachComposerById(root, 'composer-id', dotnet);
+
+    handle.dispose();
+    handle.dispose(); // idempotent
+
+    assert.equal(input.count('keydown'), 0, 'the listeners are gone after dispose');
+    input.dispatch('keydown', keyEvent());
+    assert.deepEqual(dotnet.calls, [], 'a disposed handle no longer submits');
+    assert.equal(handle.sync(), false, 'a disposed handle no longer re-queries');
+    assert.doesNotThrow(() => handle.focusIfNeeded());
+});
+
+test('two auto-attached chats are independent (no module-level state)', () => {
+    const restore = installComputedStyle();
+    try {
+        const a = fakeTextarea();
+        const b = fakeTextarea();
+        const dotnet = dotNet();
+        const handleA = attachComposerById(fakeRoot(a), 'composer-a', dotnet);
+        const handleB = attachComposerById(fakeRoot(b), 'composer-b', dotnet);
+
+        handleA.dispose();
+
+        const event = b.dispatch('keydown', keyEvent());
+        assert.equal(event.prevented, true, 'the sibling chat is untouched by A\u2019s dispose');
+        assert.deepEqual(dotnet.calls, [{ name: 'OnComposerSubmit', args: [] }]);
+        handleB.dispose();
+    } finally {
+        restore();
+    }
+});
+
+test('attachComposerById forwards the options (enterToSend, submitMethod) to attachComposer', () => {
+    const restore = installComputedStyle();
+    try {
+        const input = fakeTextarea();
+        const dotnet = dotNet();
+        const handle = attachComposerById(fakeRoot(input), 'composer-id', dotnet,
+            { enterToSend: false, maxRows: 3, submitMethod: 'OnComposerSubmit' });
+
+        // With enterToSend:false the plain Enter stays native; Ctrl+Enter submits.
+        input.dispatch('keydown', keyEvent());
+        assert.deepEqual(dotnet.calls, [], 'plain Enter is a new line');
+        const ctrl = input.dispatch('keydown', keyEvent({ ctrlKey: true }));
+        assert.equal(ctrl.prevented, true);
+        assert.deepEqual(dotnet.calls, [{ name: 'OnComposerSubmit', args: [] }]);
+
+        handle.dispose();
+        assert.equal(input.style.height, '43px',
+            'maxRows was forwarded — the one-line content measures 41 + 2 border = 43px, under the 3-row cap');
+    } finally {
+        restore();
+    }
 });
 
 // ── restoreFocus (thread close) ──────────────────────────────────────────────────────────────

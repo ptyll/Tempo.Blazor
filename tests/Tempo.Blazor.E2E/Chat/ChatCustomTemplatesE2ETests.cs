@@ -607,4 +607,135 @@ public class ChatCustomTemplatesE2ETests : WasmTestBase
         await SaveElementScreenshotAsync(gate, "chat-subscribe-composer");
         AssertNoClientErrors();
     }
+
+    // ── (j) FZE-12: the AUTO-ATTACHED composer (id=InputId, NO AttachAsync) ──
+
+    private const string AutoAttachSection = "[data-testid='chat-autoattach-section']";
+    private const string AutoAttachInput = "[data-testid='chat-autoattach-section'] .chat-demo-gate-composer__input";
+    private const string AutoAttachCount = "[data-testid='chat-autoattach-count']";
+
+    /// <summary>
+    /// Opens /chat and settles the AUTO-ATTACH section's chat (its own gate — the default
+    /// <see cref="OpenAsync"/> waits on the custom-templates section's scroll state).
+    /// </summary>
+    private async Task<IPage> OpenAutoAttachAsync(int width = 1440, int height = 1100)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
+        page.Console += (_, m) =>
+        {
+            if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
+                lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
+        };
+        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var section = page.Locator(AutoAttachSection);
+        await section.ScrollIntoViewIfNeededAsync();
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        // The auto-attached composer is inert before the JS module lands: wait for the seeded
+        // rows AND the settled first-render scroll before driving the composer.
+        await page.WaitForFunctionAsync(
+            @"sel => { const s = document.querySelector(sel);
+                return !!s && !!s.querySelector('.tm-chat__messages .tm-chat__item') &&
+                    s.querySelector('.tm-chat__messages').scrollHeight -
+                    s.querySelector('.tm-chat__messages').scrollTop -
+                    s.querySelector('.tm-chat__messages').clientHeight < 40; }",
+            AutoAttachSection,
+            new PageWaitForFunctionOptions { Timeout = 30000, PollingInterval = 200 });
+        await page.WaitForTimeoutAsync(500);
+        return page;
+    }
+
+    private static ILocator AutoAttachItem(IPage page, string text) =>
+        page.Locator($"{AutoAttachSection} .tm-chat__item", new PageLocatorOptions { HasText = text });
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task AutoAttachComposer_EnterSends_ClearsAndRefocuses()
+    {
+        var page = await OpenAutoAttachAsync();
+        var input = page.Locator(AutoAttachInput);
+        var count = page.Locator(AutoAttachCount);
+        var before = await count.TextContentAsync() ?? "0";
+
+        await input.ClickAsync();
+        await input.FillAsync("Hello from the auto-attached composer");
+        await input.PressAsync("Enter");
+
+        // The send went through the SHARED pipeline (the host counter increments) …
+        await Assertions.Expect(page.Locator(AutoAttachCount))
+            .ToHaveTextAsync((int.Parse(before) + 1).ToString(),
+                new LocatorAssertionsToHaveTextOptions { Timeout = 10000 });
+        await Assertions.Expect(AutoAttachItem(page, "Hello from the auto-attached composer"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        // …the composer CLEARED (the controlled input follows composer.Text) …
+        await Assertions.Expect(input)
+            .ToHaveValueAsync(string.Empty, new LocatorAssertionsToHaveValueOptions { Timeout = 5000 });
+
+        // …and the FOCUS is back on the textarea (RefocusAfterSend via the auto handle).
+        await Assertions.Expect(input)
+            .ToBeFocusedAsync(new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
+
+        AssertNoClientErrors();
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task AutoAttachComposer_ShiftEnterNewline_ImeGuarded()
+    {
+        var page = await OpenAutoAttachAsync();
+        var input = page.Locator(AutoAttachInput);
+
+        // Shift+Enter is a new line, not a submit.
+        await input.ClickAsync();
+        await input.PressSequentiallyAsync("line one");
+        await input.PressAsync("Shift+Enter");
+        await input.PressSequentiallyAsync("line two");
+        Assert.IsTrue((await input.InputValueAsync()).Contains('\n'),
+            "Shift+Enter must insert a new line into the auto-attached composer");
+        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(AutoAttachItem(page, "line one"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 3000 });
+
+        // IME: a keydown inside a composition session (isComposing / keyCode 229) is IGNORED —
+        // the guard returns BEFORE preventDefault, so nothing is submitted.
+        await input.FillAsync("IME composition text");
+        var composingPrevented = await input.EvaluateAsync<bool>(
+            @"el => { const ev = new KeyboardEvent('keydown', {
+                key: 'Enter', code: 'Enter', keyCode: 229, bubbles: true, cancelable: true, isComposing: true });
+                el.dispatchEvent(ev);
+                return ev.defaultPrevented; }");
+        Assert.IsFalse(composingPrevented,
+            "the IME guard must return early — a composition keydown is never prevented");
+        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(AutoAttachItem(page, "IME composition text"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 3000 });
+
+        // The CONTROL — the same synthetic Enter WITHOUT the composition flags — submits: the
+        // guard prevents the default and the message goes through the shared pipeline.
+        var plainPrevented = await input.EvaluateAsync<bool>(
+            @"el => { const ev = new KeyboardEvent('keydown', {
+                key: 'Enter', code: 'Enter', bubbles: true, cancelable: true });
+                el.dispatchEvent(ev);
+                return ev.defaultPrevented; }");
+        Assert.IsTrue(plainPrevented,
+            "without the composition flags the auto-attached composer handles Enter (preventDefault)");
+        await Assertions.Expect(AutoAttachItem(page, "IME composition text"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        // UX screenshot of the whole auto-attach section (composer + host counter + chat).
+        await SaveElementScreenshotAsync(page.Locator($"{AutoAttachSection} .tm-chat").First,
+            "chat-autoattach-section");
+        AssertNoClientErrors();
+    }
 }

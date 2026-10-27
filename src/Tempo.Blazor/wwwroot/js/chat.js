@@ -185,6 +185,111 @@ export function focus(element) {
 }
 
 /**
+ * Attaches the composer behavior to the input found BY ID INSIDE the chat root — the
+ * AUTO-ATTACH path of <c>TmChat.AutoAttachComposerInput</c> (FZE-12). The host's
+ * <c>ComposerTemplate</c> input carries <c>id="@composer.InputId"</c> and the component finds
+ * and attaches it on its own; the host does not need an <c>OnAfterRenderAsync</c> +
+ * <c>AttachAsync</c> dance. The lookup is scoped to the given ROOT (the chat element), because
+ * the id is per-TmChat-instance — an element with the same id anywhere else on the page (a
+ * second chat fixture, a hidden copy) must never win.
+ *
+ * An input that lives inside a nested host component which re-renders INDEPENDENTLY of TmChat
+ * is (re-)captured on the next TmChat render through `handle.sync()`; for a host that swaps
+ * the element without TmChat re-rendering, the explicit
+ * `ChatComposerContext.AttachAsync` remains the tool.
+ *
+ * NO module-level state: like `attachComposer`, every call closes over its own elements and
+ * options, so several chats on one page (auto-attached or not) stay independent.
+ *
+ * @param {Element} root The chat root element (`.tm-chat`); all queries run inside it.
+ * @param {string} inputId The DOM id of the composer input (`ChatComposerContext.InputId`).
+ * @param {{ invokeMethodAsync: Function }} dotNetRef A DotNetObjectReference<TmChat>.
+ * @param {{ enterToSend?: boolean, maxRows?: number, submitMethod?: string }} [options]
+ *   Forwarded to {@link attachComposer} unchanged — the Enter/IME/resize behavior has exactly
+ *   one implementation.
+ * @returns {{
+ *   sync: Function,
+ *   focusIfNeeded: Function,
+ *   resize: Function,
+ *   dispose: Function,
+ * }} `sync()` re-queries the input: the SAME node is a no-op, a REPLACED node detaches the old
+ *   element and attaches the new one, a MISSING node detaches everything — returns whether an
+ *   input was found. `focusIfNeeded()` re-resolves the input first (so a node swapped without
+ *   a TmChat render is still captured) and focuses it — the refocus target of the auto mode; a
+ *   silent no-op while nothing is attached. `resize()` re-measures the attached input (the
+ *   programmatic-clear path of TmChat; a silent no-op while nothing is attached). `dispose()`
+ *   removes the behavior (idempotent).
+ */
+export function attachComposerById(root, inputId, dotNetRef, options) {
+    if (!root || typeof root.querySelector !== 'function') {
+        throw new TypeError('chat.js: a chat root element is required.');
+    }
+    if (typeof inputId !== 'string' || inputId.length === 0) {
+        throw new TypeError('chat.js: a composer input id is required.');
+    }
+    if (!dotNetRef || typeof dotNetRef.invokeMethodAsync !== 'function') {
+        throw new TypeError('chat.js: a DotNetObjectReference is required.');
+    }
+
+    let input = null;
+    let handle = null;
+    let disposed = false;
+
+    /** The input inside the root — `CSS.escape`d where the host provides it. */
+    function findInput() {
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            return root.querySelector(`#${CSS.escape(inputId)}`);
+        }
+        // The Node tests (and old hosts) have no CSS global — the component ids are generated
+        // (`tm-chat-composer-N`), so the unescaped form is safe there.
+        return root.querySelector(`#${inputId}`);
+    }
+
+    /** Attaches the current input; a changed node first detaches the old one. */
+    function attach() {
+        const found = findInput();
+        if (found !== null && found === input && handle !== null) return true;
+        if (handle !== null) {
+            handle.dispose();
+            handle = null;
+        }
+        input = found;
+        if (input === null) return false;
+        handle = attachComposer(input, dotNetRef, options);
+        return true;
+    }
+
+    attach();
+
+    return {
+        sync() {
+            if (disposed) return false;
+            return attach();
+        },
+        focusIfNeeded() {
+            if (disposed) return;
+            // Re-resolve FIRST: a host that swapped the node without a TmChat render (no
+            // sync() ran yet) would otherwise focus the detached predecessor.
+            attach();
+            focusIfNeeded(input);
+        },
+        resize() {
+            if (disposed || handle === null) return;
+            handle.resize();
+        },
+        dispose() {
+            if (disposed) return;
+            disposed = true;
+            if (handle !== null) {
+                handle.dispose();
+                handle = null;
+            }
+            input = null;
+        },
+    };
+}
+
+/**
  * Focuses an element unless it already has focus — the refocus path used after a send. Stealing
  * focus the element already owns would close the on-screen keyboard on touch devices and reset
  * IME state, so an already-focused element is left untouched.

@@ -263,7 +263,14 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, or the element a custom composer registered through AttachAsync) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
+      "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, the element a custom composer registered through AttachAsync, or the input auto-attached through AutoAttachComposerInput) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
+    },
+    {
+      "name": "AutoAttachComposerInput",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in AUTO-ATTACH of the ComposerTemplate input by id (FZE-12): when true and a ComposerTemplate renders, TmChat resolves the host input through chat.js attachComposerById(root, InputId, ...) — scoped to THIS chat instance's root element, so an element with the same id elsewhere on the page never wins — and gives it the built-in Enter/Shift+Enter + IME + auto-resize behavior without the host's OnAfterRenderAsync + AttachAsync dance. The input must carry id=\"@composer.InputId\" (ChatComposerContext.InputId). Precedence: an explicit AttachAsync ALWAYS wins (the auto handle is disposed while a host registration exists) and AttachAsync(default) hands the control back to the auto-attach; an EnterToSend change re-attaches; turning the parameter off, ShowComposer=false or removing the template disposes the handle. RefocusAfterSend / FocusComposerAsync / composer.FocusAsync target the auto-attached input. An input inside a nested host component that re-renders independently of TmChat is re-captured on the next TmChat render (the handle sync() re-queries per render); a host that swaps the element without TmChat re-rendering still uses AttachAsync. The auto-attach is a pure JS-module path and is inert before interactivity — the C# @onkeydown fallback cannot help a template input TmChat did not render. Cost: with the option on, EVERY render makes one interop round-trip — the first render issues the attachComposerById attach, every further render one synchronous sync() on the handle (a no-op in JS while the input node is unchanged); a host that re-renders TmChat at high frequency should weigh this against the explicit AttachAsync handshake. Default false keeps today's behavior; ignored without a ComposerTemplate (the built-in composer attaches by element as before)."
     },
     {
       "name": "ShowAvatars",
@@ -537,6 +544,10 @@
     {
       "title": "Conversation-level banner (BannerContent)",
       "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <BannerContent>\n        @if (_offline)\n        {\n            @* TmChat adds no wrapper and no live region here — announce through\n               role=\"status\" on an element INSIDE the slot if it should be read. *@\n            <div class=\"tm-alert tm-alert--warning\" role=\"status\">\n                Offline — messages will send when you reconnect.\n            </div>\n        }\n    </BannerContent>\n</TmChat>"
+    },
+    {
+      "title": "Auto-attach the custom composer by id (no AttachAsync in the host)",
+      "code": "@* The whole registration is the id attribute — AutoAttachComposerInput resolves it *@\n<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"HandleSend\"\n        ComposerTemplate=\"AutoComposer\" AutoAttachComposerInput=\"true\" />\n\n@code {\n    private RenderFragment<ChatComposerContext> AutoComposer => context =>\n        @<div class=\"my-composer\">\n            <textarea id=\"@context.InputId\"\n                      value=\"@context.Text\"\n                      @oninput=\"@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button disabled=\"@(!context.CanSend)\" @onclick=\"@(async () => await context.SendAsync())\">Send</button>\n        </div>;\n}"
     }
   ]
 }

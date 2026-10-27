@@ -3768,6 +3768,13 @@
               "default": "false"
             },
             {
+              "name": "AutoAttachComposerInput",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in AUTO-ATTACH of the ComposerTemplate input by id (FZE-12): when true and a ComposerTemplate renders, TmChat resolves the host input through chat.js attachComposerById(root, InputId, ...) — scoped to THIS chat instance's root element, so an element with the same id elsewhere on the page never wins — and gives it the built-in Enter/Shift+Enter + IME + auto-resize behavior without the host's OnAfterRenderAsync + AttachAsync dance. The input must carry id=\"@composer.InputId\" (ChatComposerContext.InputId). Precedence: an explicit AttachAsync ALWAYS wins (the auto handle is disposed while a host registration exists) and AttachAsync(default) hands the control back to the auto-attach; an EnterToSend change re-attaches; turning the parameter off, ShowComposer=false or removing the template disposes the handle. RefocusAfterSend / FocusComposerAsync / composer.FocusAsync target the auto-attached input. An input inside a nested host component that re-renders independently of TmChat is re-captured on the next TmChat render (the handle sync() re-queries per render); a host that swaps the element without TmChat re-rendering still uses AttachAsync. The auto-attach is a pure JS-module path and is inert before interactivity — the C# @onkeydown fallback cannot help a template input TmChat did not render. Cost: with the option on, EVERY render makes one interop round-trip — the first render issues the attachComposerById attach, every further render one synchronous sync() on the handle (a no-op in JS while the input node is unchanged); a host that re-renders TmChat at high frequency should weigh this against the explicit AttachAsync handshake. Default false keeps today's behavior; ignored without a ComposerTemplate (the built-in composer attaches by element as before).",
+              "default": "false"
+            },
+            {
               "name": "AutoReadReceipts",
               "type": "bool",
               "isRequired": false,
@@ -4004,7 +4011,7 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, or the element a custom composer registered through AttachAsync) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
+              "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, the element a custom composer registered through AttachAsync, or the input auto-attached through AutoAttachComposerInput) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
             },
             {
               "name": "ShowAvatars",
@@ -4260,6 +4267,10 @@
             {
               "title": "Conversation-level banner (BannerContent)",
               "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <BannerContent>\n        @if (_offline)\n        {\n            @* TmChat adds no wrapper and no live region here — announce through\n               role=\"status\" on an element INSIDE the slot if it should be read. *@\n            <div class=\"tm-alert tm-alert--warning\" role=\"status\">\n                Offline — messages will send when you reconnect.\n            </div>\n        }\n    </BannerContent>\n</TmChat>"
+            },
+            {
+              "title": "Auto-attach the custom composer by id (no AttachAsync in the host)",
+              "code": "@* The whole registration is the id attribute — AutoAttachComposerInput resolves it *@\n<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"HandleSend\"\n        ComposerTemplate=\"AutoComposer\" AutoAttachComposerInput=\"true\" />\n\n@code {\n    private RenderFragment<ChatComposerContext> AutoComposer => context =>\n        @<div class=\"my-composer\">\n            <textarea id=\"@context.InputId\"\n                      value=\"@context.Text\"\n                      @oninput=\"@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button disabled=\"@(!context.CanSend)\" @onclick=\"@(async () => await context.SendAsync())\">Send</button>\n        </div>;\n}"
             }
           ]
         },
@@ -5160,7 +5171,7 @@
               "name": "AttachAsync",
               "kind": "Method",
               "type": "Task",
-              "description": "Registers the host's own composer input element with the component, so a ComposerTemplate that renders its own <textarea> (or <input>) receives the SAME keyboard behavior as the built-in composer: Enter submits (with preventDefault), Shift+Enter and Alt/Ctrl/Meta+Enter stay native, an IME composition session never submits, and the input auto-resizes up to the component's row cap. The behavior is delivered by the same chat.js module the built-in composer uses, routed to the same submit path (OnSendMessage/OnSend via SendAsync's entry point). Call it once the host's input has mounted — typically from the host's OnAfterRenderAsync with the captured ElementReference — and again whenever the element is replaced; call it with default to detach. The registered element is also the refocus target of RefocusAfterSend: after a successful send the component focuses it back, so the user can type the next message immediately. Safe to call from any thread.",
+              "description": "Registers the host's own composer input element with the component, so a ComposerTemplate that renders its own <textarea> (or <input>) receives the SAME keyboard behavior as the built-in composer: Enter submits (with preventDefault), Shift+Enter and Alt/Ctrl/Meta+Enter stay native, an IME composition session never submits, and the input auto-resizes up to the component's row cap. The behavior is delivered by the same chat.js module the built-in composer uses, routed to the same submit path (OnSendMessage/OnSend via SendAsync's entry point). Call it once the host's input has mounted — typically from the host's OnAfterRenderAsync with the captured ElementReference — and again whenever the element is replaced; call it with default to detach. The registered element is also the refocus target of RefocusAfterSend: after a successful send the component focuses it back, so the user can type the next message immediately. (With TmChat.AutoAttachComposerInput the template input is attached by id automatically; an explicit AttachAsync always wins over that handle, and the refocus target is the explicit registration — or the input auto-attached through AutoAttachComposerInput once the registration is released with default.) Safe to call from any thread.",
               "parameters": [
                 {
                   "name": "element",
@@ -5172,7 +5183,7 @@
               "name": "FocusAsync",
               "kind": "Method",
               "type": "ValueTask",
-              "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
+              "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, or the input auto-attached through TmChat.AutoAttachComposerInput, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
             },
             {
               "name": "SendAsync",
@@ -5208,7 +5219,7 @@
               "name": "InputId",
               "kind": "Property",
               "type": "string",
-              "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at."
+              "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at. With TmChat.AutoAttachComposerInput, put this id on the ComposerTemplate input (id=\"@composer.InputId\"); TmChat then attaches that element by id within its own root."
             },
             {
               "name": "IsSubmitting",
@@ -5237,7 +5248,7 @@
             {
               "name": "FocusAsync",
               "kind": "Method",
-              "description": "Moves focus to the built-in composer textarea. With a custom composer the built-in textarea is not rendered — focus the host's own input there instead (the template markup owns it)."
+              "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, or the input auto-attached through TmChat.AutoAttachComposerInput, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
             }
           ],
           "examples": [

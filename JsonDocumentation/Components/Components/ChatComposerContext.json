@@ -35,7 +35,7 @@
       "name": "InputId",
       "kind": "Property",
       "type": "string",
-      "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at."
+      "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at. With TmChat.AutoAttachComposerInput, put this id on the ComposerTemplate input (id=\"@composer.InputId\"); TmChat then attaches that element by id within its own root."
     }
   ],
   "methods": [
@@ -52,7 +52,7 @@
     {
       "name": "FocusAsync",
       "kind": "Method",
-      "description": "Moves focus to the built-in composer textarea. With a custom composer the built-in textarea is not rendered — focus the host's own input there instead (the template markup owns it)."
+      "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, or the input auto-attached through TmChat.AutoAttachComposerInput, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
     }
   ],
   "examples": [

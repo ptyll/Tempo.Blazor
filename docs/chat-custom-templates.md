@@ -67,7 +67,7 @@ Notes:
 | Member | Type | Replaces |
 |--------|------|----------|
 | `MessageTemplate` (+ `UseTemplateFor`) | `RenderFragment<ChatMessageContext>` | The message row. `context.DefaultContent` renders the built-in row (fallback for ordinary kinds). The wrapper element with `data-message-id` / `data-kind` stays built-in — scroll anchoring and read receipts are unaffected. |
-| `ComposerTemplate` | `RenderFragment<ChatComposerContext>` | The whole composer. Drive it through `composer.Text` / `SetTextAsync` / `SendAsync`; register your own input with `composer.AttachAsync(element)` to get the built-in Enter/Shift+Enter + IME behavior and the post-send refocus. |
+| `ComposerTemplate` | `RenderFragment<ChatComposerContext>` | The whole composer. Drive it through `composer.Text` / `SetTextAsync` / `SendAsync`; register your own input with `composer.AttachAsync(element)` — or let TmChat resolve it by id with `AutoAttachComposerInput` (see below) — to get the built-in Enter/Shift+Enter + IME behavior and the post-send refocus. |
 | `TypingTemplate` | `RenderFragment<IReadOnlyList<ChatUser>>` | The whole typing indicator. Must **not** contain a live region (see a11y rules). |
 | `JumpToNewTemplate` | `RenderFragment<int>` | The *content* of the jump-to-new button (the count); the `<button>` and its behavior stay built-in. |
 | `BannerContent` | `RenderFragment` | A strip above the message list (connection bar). Rendered raw: **no wrapper, no live region** — put `role="status"` inside the slot if it should be announced. |
@@ -78,6 +78,51 @@ Notes:
 
 `UseTemplateFor` keeps the override surgical — e.g. `m => m.Kind is not null` lets ordinary
 messages keep the built-in row while the host's special kinds render `TmChatBubble`s.
+
+## The composer contract: `AttachAsync` vs. `AutoAttachComposerInput`
+
+A `ComposerTemplate` input gets the built-in keyboard behavior (Enter submits with
+`preventDefault`, Shift+Enter/Alt+Enter stay native, an IME composition session never submits,
+the textarea auto-resizes up to the row cap) and becomes the refocus target of
+`RefocusAfterSend` / `FocusComposerAsync` / `composer.FocusAsync()` in one of two ways:
+
+1. **Explicit registration** — the host captures its own `ElementReference` and calls
+   `composer.AttachAsync(input)` from its `OnAfterRenderAsync` once the input has mounted,
+   again whenever the element is replaced, and with `composer.AttachAsync(default)` to detach.
+2. **Auto-attach by id (opt-in, FZE-12)** — set `AutoAttachComposerInput="true"` and give the
+   template input `id="@composer.InputId"`; TmChat resolves and attaches it itself:
+
+   ```razor
+   <TmChat Messages="_messages" CurrentUser="_user" OnSend="HandleSend"
+           ComposerTemplate="AutoComposer" AutoAttachComposerInput="true" />
+
+   @code {
+       private RenderFragment<ChatComposerContext> AutoComposer => context =>
+           @<textarea id="@context.InputId"
+                      value="@context.Text"
+                      @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))" />;
+   }
+   ```
+
+Rules of the auto mode:
+
+- **Precedence: explicit > auto.** As long as a host registration exists, the auto-attached
+  handle is disposed; `AttachAsync(default)` hands the control back to the auto-attach. The
+  two modes never fight over Enter.
+- **The lookup is scoped to TmChat's own render.** `chat.js` resolves the input with
+  `root.querySelector('#' + id)` where `root` is THIS chat instance's root element — an element
+  with the same id elsewhere on the page (a second chat, a hidden copy) never wins. Because
+  `InputId` is per-TmChat-instance, an input inside a nested host component that re-renders
+  INDEPENDENTLY of TmChat is re-captured on the NEXT TmChat render (the handle `sync()`s on
+  every render: same node = no-op, replaced node = re-attach, missing node = detach). A host
+  that swaps the element without TmChat re-rendering still needs the explicit
+  `AttachAsync`.
+- **Nothing happens before interactivity.** The auto-attach is a pure JS-module path: during
+  prerender (and whenever the import failed) the template input has no keydown handling — the
+  C# `@onkeydown` fallback cannot help an input TmChat did not render. Turning
+  `ShowComposer` off, removing the template or the parameter disposes the handle.
+- `EnterToSend` re-attaches (the option is baked into the attach call); the post-send refocus
+  and the resize after a programmatic clear target the auto-attached input.
 
 ## The CSS scope pitfall
 
@@ -202,10 +247,6 @@ semantic-token references).
 
 ## Future work (deliberately NOT implemented)
 
-- **Auto-attach via `id=InputId`**: a `ComposerTemplate` input carrying `id="@composer.InputId"`
-  could be attached automatically (instead of the host calling `AttachAsync` from
-  `OnAfterRenderAsync`). `composer.InputId` is public today for labels / `aria-describedby` /
-  `aria-controls`; the auto-attach hook would be a future additive change.
 - Generic `TmChat<TItem>` as a **separate** component over the same core.
 - Virtualization of very long conversations (`Virtualize` around the keyed rows).
 - iOS `visualViewport` keyboard tracking inside the component (see Layout notes).

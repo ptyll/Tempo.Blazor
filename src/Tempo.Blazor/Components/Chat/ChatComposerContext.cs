@@ -105,6 +105,10 @@ public sealed class ChatComposerContext
     /// whenever the element is replaced; call it with <c>default</c> to detach. The registered
     /// element is also the refocus target of <c>RefocusAfterSend</c>: after a successful send
     /// the component focuses it back, so the user can type the next message immediately.
+    /// (With <c>TmChat.AutoAttachComposerInput</c> the template input is attached by id
+    /// automatically; an explicit <c>AttachAsync</c> always wins over that handle, and the
+    /// refocus target is the explicit registration — or the input auto-attached through
+    /// <c>AutoAttachComposerInput</c> once the registration is released with <c>default</c>.)
     /// Safe to call from any thread.
     /// </para>
     /// </summary>
@@ -131,7 +135,8 @@ public sealed class ChatComposerContext
 
     /// <summary>
     /// Moves focus to the composer input — the same logic as the post-send refocus: the element
-    /// registered through <see cref="AttachAsync"/> if there is one, otherwise the built-in
+    /// registered through <see cref="AttachAsync"/> if there is one, or the input
+    /// auto-attached through <c>TmChat.AutoAttachComposerInput</c>, otherwise the built-in
     /// composer textarea. An element that already holds focus is left untouched (the module's
     /// <c>focusIfNeeded</c>), so a call from a host button does not close the on-screen
     /// keyboard. A best-effort no-op while nothing is focusable (no attached element with a
@@ -144,6 +149,11 @@ public sealed class ChatComposerContext
     /// (<c>aria-describedby</c>, <c>&lt;label for&gt;</c>) or <c>aria-controls</c>. The attribute
     /// is present in the DOM only while the built-in textarea actually renders — with a custom
     /// composer (or <c>ShowComposer=false</c>) there is no built-in textarea to point at.
+    /// <para>
+    /// With <c>TmChat.AutoAttachComposerInput</c>, put this id on the <c>ComposerTemplate</c>
+    /// input (<c>id="@composer.InputId"</c>); TmChat then attaches that element by id within its
+    /// own root.
+    /// </para>
     /// </summary>
     public string InputId => _owner.ComposerInputId;
 }

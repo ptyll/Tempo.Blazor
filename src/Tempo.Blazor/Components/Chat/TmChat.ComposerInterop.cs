@@ -16,9 +16,11 @@ namespace Tempo.Blazor.Components.Chat;
 /// <para>
 /// The module is imported once per component (unconditionally on the first render) and attached
 /// to up to three inputs — the built-in composer textarea (or the element a custom composer
-/// registered through <see cref="ChatComposerContext.AttachAsync"/>), the open thread panel's
-/// reply input and the open message edit — re-attached whenever an input remounts or
-/// <see cref="TmChat.EnterToSend"/> changes, and disposed in <see cref="DisposeAsyncCore"/>.
+/// registered through <see cref="ChatComposerContext.AttachAsync"/>, or — FZE-12 — the template
+/// input resolved BY ID when <c>AutoAttachComposerInput</c> is on, see
+/// <c>TmChat.ComposerAutoAttach.cs</c>), the open thread panel's reply input and the open
+/// message edit — re-attached whenever an input remounts or <see cref="TmChat.EnterToSend"/>
+/// changes, and disposed in <see cref="DisposeAsyncCore"/>.
 /// </para>
 /// </summary>
 public partial class TmChat
@@ -202,20 +204,35 @@ public partial class TmChat
         if (_disposed) return;
         _selfRef ??= DotNetObjectReference.Create(this);
 
-        if (ShowComposer && ComposerTemplate is not null && _customComposerElement is { } custom)
+        if (ShowComposer && ComposerTemplate is not null && _customComposerElement is { } custom && !string.IsNullOrEmpty(custom.Id))
         {
+            // An EXPLICIT AttachAsync ALWAYS wins — the auto-attached handle (FZE-12) is
+            // dropped for as long as the host registration exists (AttachAsync(default)
+            // hands the control back to the auto-attach).
+            await DetachAutoAttachHandleAsync();
             await EnsureModuleAsync();
             await SyncComposerSlotAsync(_mainSlot, custom, ComposerSubmitMethods.Main);
         }
+        else if (ShowComposer && ComposerTemplate is not null && AutoAttachComposerInput)
+        {
+            // FZE-12: the template input carries id="@composer.InputId" — resolve and attach it
+            // by id inside the chat root; further renders only sync() the handle.
+            await DetachComposerSlotAsync(_mainSlot);
+            await EnsureModuleAsync();
+            await SyncAutoAttachHandleAsync();
+        }
         else if (ShowComposer && ComposerTemplate is null)
         {
+            await DetachAutoAttachHandleAsync();
             await EnsureModuleAsync();
             await SyncComposerSlotAsync(_mainSlot, _composerInput, ComposerSubmitMethods.Main);
         }
         else
         {
-            // No composer rendered (ShowComposer=false or a template with nothing attached
-            // yet) — drop the registration so a stale element cannot be re-attached later.
+            // No composer rendered (ShowComposer=false, a template with nothing attached and
+            // no auto-attach, …) — drop the registration so a stale element cannot be
+            // re-attached later.
+            await DetachAutoAttachHandleAsync();
             await DetachComposerSlotAsync(_mainSlot);
             _customComposerElement = null;
         }
@@ -320,6 +337,8 @@ public partial class TmChat
 
     private async ValueTask DisposeComposerInteropAsync()
     {
+        await DetachAutoAttachHandleAsync();
+
         foreach (var slot in new[] { _mainSlot, _threadSlot, _editSlot })
         {
             var handle = slot.Handle;
