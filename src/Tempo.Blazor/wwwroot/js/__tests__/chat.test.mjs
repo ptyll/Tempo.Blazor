@@ -14,9 +14,17 @@
 // `none` re-pins a pinned viewport whose content grew), the ANCHOR-based prepend restore
 // (falls back to scrollTop += deltaHeight when the anchor row is gone), scrollToBottom,
 // scrollToMessage(id), focusMessage(id), reduced-motion aware scrolling and dispose.
+//
+// The third half covers the VISUAL-VIEWPORT TRACKER (FZE-13): attachViewportTracker writes the
+// on-screen keyboard's height as the runtime `--tm-chat-keyboard-inset` knob into the chat
+// root's inline style (plus the `data-tm-keyboard-open` marker), writes ONLY on change,
+// coalesces the passive resize/scroll listeners through requestAnimationFrame, ignores shrinks
+// below the minInset threshold, rescues a pinned scroller on the keyboard-open transition, is a
+// no-op without visualViewport, disposes idempotently (listeners, pending frame, inline knob,
+// marker) and keeps two trackers on one page independent.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attachComposer, attachComposerById, attachScroller, focus, focusIfNeeded, restoreFocus } from '../chat.js';
+import { attachComposer, attachComposerById, attachScroller, attachViewportTracker, focus, focusIfNeeded, restoreFocus } from '../chat.js';
 
 // ── fakes ───────────────────────────────────────────────────────────────────────────────────
 
@@ -1356,4 +1364,652 @@ test('a rejected invokeMethodAsync does not throw out of the scroll handler', as
     assert.doesNotThrow(() => container.dispatch('scroll'));
     await Promise.resolve();
     handle.dispose();
+});
+
+// ── the visualViewport tracker (FZE-13) ─────────────────────────────────────────────────────
+
+/** A visualViewport double: a listener bag with mutable height/width/offsetTop/scale and a registration log. */
+function fakeViewport(initial = {}) {
+    const bag = listenerBag();
+    const registered = [];
+    const vv = {
+        height: 812,
+        width: 375,
+        offsetTop: 0,
+        scale: 1,
+        ...initial,
+        addEventListener(type, fn, options) {
+            bag.addEventListener(type, fn);
+            registered.push({ type, options });
+        },
+        removeEventListener(type, fn) { bag.removeEventListener(type, fn); },
+        dispatch(type, event = {}) { return bag.dispatch(type, event); },
+        count: bag.count,
+        registered,
+    };
+    return vv;
+}
+
+/** A chat root double carrying a real-ish inline style + attribute surface. */
+function fakeStyledRoot() {
+    const props = new Map();
+    const attrs = new Set();
+    const counts = { writes: 0, removes: 0 };
+    return {
+        props,
+        attrs,
+        counts,
+        style: {
+            setProperty(name, value) { counts.writes++; props.set(name, value); },
+            removeProperty(name) { counts.removes++; props.delete(name); },
+        },
+        setAttribute(name, value) { attrs.add(name); },
+        removeAttribute(name) { attrs.delete(name); },
+    };
+}
+
+/** Installs a controllable requestAnimationFrame pair; `flush()` runs the pending frame. */
+function installRaf() {
+    const previousRaf = globalThis.requestAnimationFrame;
+    const previousCancel = globalThis.cancelAnimationFrame;
+    const pending = new Map();
+    let nextId = 1;
+    globalThis.requestAnimationFrame = (fn) => {
+        const id = nextId++;
+        pending.set(id, fn);
+        return id;
+    };
+    globalThis.cancelAnimationFrame = (id) => { pending.delete(id); };
+    return {
+        flush() {
+            const fns = [...pending.values()];
+            pending.clear();
+            for (const fn of fns) fn();
+        },
+        pendingCount: () => pending.size,
+        restore() {
+            globalThis.requestAnimationFrame = previousRaf;
+            globalThis.cancelAnimationFrame = previousCancel;
+        },
+    };
+}
+
+function installWindow(innerHeight, viewport) {
+    const previous = globalThis.window;
+    globalThis.window = { innerHeight, visualViewport: viewport };
+    return () => { globalThis.window = previous; };
+}
+
+test('attachViewportTracker requires a chat root element', () => {
+    assert.throws(() => attachViewportTracker(null), /root/i);
+    assert.throws(() => attachViewportTracker({}), /root/i);
+});
+
+test('without visualViewport the tracker is a no-op handle', () => {
+    const restoreWindow = installWindow(812, null);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.deepEqual([...root.props.keys()], [], 'nothing is written without a visual viewport');
+        assert.doesNotThrow(() => handle.dispose());
+        assert.doesNotThrow(() => handle.dispose());
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('an open keyboard writes the runtime inset and the open marker', () => {
+    // A 812px layout viewport; the keyboard covers everything below 530px (500 + 30 shifted).
+    const vv = fakeViewport({ height: 500, offsetTop: 30 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px', '812 - (500 + 30)');
+        assert.ok(root.attrs.has('data-tm-keyboard-open'));
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('an inset below the threshold stays at zero', () => {
+    const restoreWindow = installWindow(812, fakeViewport({ height: 780, offsetTop: 0 }));
+    try {
+        // 32px is a browser toolbar shrink or a zoom, not a keyboard — the 80px default ignores it.
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.deepEqual([...root.props.keys()], [], 'below the 80px default no knob is written');
+        assert.equal(root.attrs.has('data-tm-keyboard-open'), false);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('a custom minInset threshold ignores a smaller keyboard', () => {
+    // 180px is a real keyboard, but below a host-raised minInset of 200 — the knob stays unwritten.
+    const restoreWindow = installWindow(812, fakeViewport({ height: 632, offsetTop: 0 }));
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root, { minInset: 200 });
+        assert.deepEqual([...root.props.keys()], []);
+        assert.equal(root.attrs.has('data-tm-keyboard-open'), false);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('the write happens only when the inset changes', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root); // closed at attach — no inline write
+        assert.equal(root.counts.writes, 0);
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        vv.dispatch('resize');                       // same frame — coalesced
+        assert.equal(raf.pendingCount(), 1, 'two events inside one frame schedule ONE write');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '312px');
+        assert.equal(root.counts.writes, 1);
+
+        vv.height = 480;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '332px');
+        assert.equal(root.counts.writes, 2);
+
+        vv.height = 480;                              // an event WITHOUT a geometry change
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.counts.writes, 2, 'an unchanged inset writes nothing');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('the visual viewport scroll updates the inset through the same frame gate', () => {
+    // iOS moves the visual viewport with offsetTop on SCROLL rather than resizing it.
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 500, offsetTop: 30 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px');
+
+        vv.offsetTop = 60;
+        vv.dispatch('scroll');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '252px');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('closing the keyboard removes the inline knob and the open marker', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 500, offsetTop: 30 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px');
+
+        vv.height = 812;
+        vv.offsetTop = 0;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual([...root.props.keys()], [], 'the cascade owns the closed state again');
+        assert.equal(root.attrs.has('data-tm-keyboard-open'), false);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('resize and scroll are registered passive on the visual viewport', () => {
+    const vv = fakeViewport();
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.deepEqual(vv.registered.map((r) => r.type).sort(), ['resize', 'scroll']);
+        assert.ok(
+            vv.registered.every((r) => !!r.options && r.options.passive === true),
+            'the visual viewport listeners must never block scrolling',
+        );
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('dispose removes the listeners, cancels a pending frame and cleans the root', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 500, offsetTop: 30 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px');
+
+        vv.height = 480;
+        vv.dispatch('resize');          // schedules a frame — deliberately NOT flushed
+        handle.dispose();
+        handle.dispose();               // idempotent
+        assert.equal(raf.pendingCount(), 0, 'the pending frame was cancelled');
+        raf.flush();                    // a stale frame must not resurrect the write
+        assert.deepEqual([...root.props.keys()], [], 'the inline knob is gone');
+        assert.equal(root.attrs.has('data-tm-keyboard-open'), false, 'the marker is gone');
+        assert.equal(vv.count('resize'), 0, 'the resize listener is detached');
+        assert.equal(vv.count('scroll'), 0, 'the scroll listener is detached');
+
+        vv.height = 300;
+        vv.dispatch('resize');          // after dispose: nothing re-writes
+        raf.flush();
+        assert.deepEqual([...root.props.keys()], []);
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('two trackers on one page stay independent', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const rootA = fakeStyledRoot();
+        const rootB = fakeStyledRoot();
+        const a = attachViewportTracker(rootA);
+        const b = attachViewportTracker(rootB);
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(rootA.props.get('--tm-chat-keyboard-inset'), '312px');
+        assert.equal(rootB.props.get('--tm-chat-keyboard-inset'), '312px');
+
+        b.dispose();
+        vv.height = 480;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(rootA.props.get('--tm-chat-keyboard-inset'), '332px', 'A keeps tracking');
+        assert.deepEqual([...rootB.props.keys()], [], 'B is cleaned up and stops');
+        a.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('an opening keyboard rescues a pinned scroller to the bottom, instantly', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const rescues = [];
+        const scroller = {
+            isAtBottom: () => true,
+            scrollToBottom: (instant) => rescues.push(instant),
+        };
+        const handle = attachViewportTracker(root, { scroller });
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [true], 'one instant rescue on the closed → open transition');
+
+        vv.height = 480;                 // the keyboard GREW — no second rescue
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [true]);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('a keyboard opening never rescues a scroller that is not at the bottom', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const rescues = [];
+        const scroller = {
+            isAtBottom: () => false,     // the user reads older history
+            scrollToBottom: (instant) => rescues.push(instant),
+        };
+        const handle = attachViewportTracker(root, { scroller });
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [], 'the reading position wins over the keyboard');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('a zoomed viewport keeps the current state instead of writing', () => {
+    // A pinch zoom reports scale ≠ 1 (and a scaled height delta that is not a keyboard):
+    // the tracker must keep whatever state the root already carries — here the keyboard-closed
+    // cascade — until the zoom settles back to scale 1.
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0, scale: 1 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.deepEqual([...root.props.keys()], [], 'closed and unzoomed — nothing written');
+
+        vv.scale = 1.6;                  // the user pinch-zooms …
+        vv.height = 300;                 // … and the scaled viewport reports a nonsense height
+        vv.offsetTop = 0;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual([...root.props.keys()], [], 'a zoomed viewport writes nothing');
+
+        vv.scale = 1;                    // the zoom ends — the real geometry is evaluated again
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '312px', 'scale 1 measures again');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('a zoomed viewport keeps an already-written keyboard inset', () => {
+    // The scale guard keeps the CURRENT state — an open keyboard that meets a mid-chat zoom
+    // must not lose its inset (and its marker) while the zoom is in flight.
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 500, offsetTop: 30, scale: 1 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px');
+
+        vv.scale = 0.8;                  // the user zooms while the keyboard is open
+        vv.height = 812;                 // a scaled frame reports closed-state geometry …
+        vv.offsetTop = 0;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '282px', 'the open state is kept');
+        assert.ok(root.attrs.has('data-tm-keyboard-open'), 'the marker is kept too');
+
+        vv.scale = 1;                    // the zoom ends — the real geometry is evaluated again
+        vv.height = 812;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual([...root.props.keys()], [], 'the real closed geometry lands after the zoom');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('a degenerate 1×1 viewport writes nothing', () => {
+    // A 1×1 visual viewport is an overlay/ad trick (or a transition frame), not a keyboard:
+    // the raw gap would read 811px and yank the composer up.
+    const restoreWindow = installWindow(812, fakeViewport({ height: 1, width: 1, offsetTop: 0 }));
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.deepEqual([...root.props.keys()], [], 'a degenerate viewport writes nothing');
+        assert.equal(root.attrs.has('data-tm-keyboard-open'), false);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
+});
+
+test('fractional viewport heights round once instead of re-writing every frame', () => {
+    // Device-pixel fractions (852.4px on a dpr≠1 phone) must not churn the inline style:
+    // the knob is written rounded, so sub-pixel jitter collapses to one write.
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 512.4, offsetTop: 0 });
+    const restoreWindow = installWindow(812.4, vv);
+    try {
+        const root = fakeStyledRoot();
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '300px', '812.4 - 512.4 → 300');
+
+        vv.height = 512.2;               // a sub-pixel jitter inside the same rounded bucket …
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '300px', '… rounds to the same inset');
+        assert.equal(root.counts.writes, 1, 'the jitter caused NO second write');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('the rescue prefers the scroller isPinned belief over the measured isAtBottom', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = fakeStyledRoot();
+        const rescues = [];
+        // isPinned (the sticky belief) wins even when the measured geometry disagrees …
+        const pinned = {
+            isPinned: () => true,
+            isAtBottom: () => false,
+            scrollToBottom: (instant) => rescues.push(instant),
+        };
+        const pinnedHandle = attachViewportTracker(root, { scroller: pinned });
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [true], 'isPinned === true rescues although isAtBottom is false');
+        pinnedHandle.dispose();
+
+        rescues.length = 0;
+        // … and the other way round: a handle that reports unpinned is left alone.
+        const unpinned = {
+            isPinned: () => false,
+            isAtBottom: () => true,
+            scrollToBottom: (instant) => rescues.push(instant),
+        };
+        const unpinnedHandle = attachViewportTracker(root, { scroller: unpinned });
+        vv.height = 480;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [], 'isPinned === false keeps the reader in place');
+        unpinnedHandle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('scrollLastMessageAboveBottom lands the last row gap px above the bottom', () => {
+    // 1000px of content in a 400px box; the last row ends at content 960.
+    // gap 100 → the row's bottom must rest at 400 - 100 = 300 box-relative
+    // → scrollTop = 960 - 300 = 660 (the exact-bottom 600 would hide it behind the composer).
+    const last = fakeMessage('m-9', { offsetTop: 820, offsetHeight: 140 });
+    const container = fakeContainer({ __messages: [fakeMessage('m-1', { offsetTop: 0 }), last] });
+    const handle = attachScroller(container, { invokeMethodAsync() {} });
+
+    handle.scrollLastMessageAboveBottom(100, true);
+    assert.equal(container.scrollToCalls.at(-1).top, 660, 'the last row rests 100px above the box bottom');
+    assert.equal(container.scrollToCalls.at(-1).behavior, 'auto', 'the rescue is instant');
+    handle.dispose();
+});
+
+test('scrollLastMessageAboveBottom clamps a non-positive gap to the box bottom', () => {
+    const container = fakeContainer({ __messages: [fakeMessage('m-1', { offsetTop: 500, offsetHeight: 100 })] });
+    const handle = attachScroller(container, { invokeMethodAsync() {} });
+
+    handle.scrollLastMessageAboveBottom(0, true);
+    assert.equal(container.scrollToCalls.at(-1).top, 200, 'gap 0 → the row bottom at the box bottom (600 - 400)');
+    handle.scrollLastMessageAboveBottom(-50, true);
+    assert.equal(container.scrollToCalls.at(-1).top, 200, 'a negative gap is clamped too');
+    handle.dispose();
+});
+
+test('scrollLastMessageAboveBottom keeps the pin and never reports unread', async () => {
+    const container = fakeContainer({ __messages: [fakeMessage('m-1', { offsetTop: 500, offsetHeight: 100 })] });
+    const reports = [];
+    const handle = attachScroller(container, {
+        invokeMethodAsync(method, value) { reports.push([method, value]); },
+    });
+    handle.scrollLastMessageAboveBottom(80, true);
+
+    // The programmatic move fires a scroll event: the pin must survive it (no unread report).
+    container.dispatch('scroll');
+    await Promise.resolve();
+    assert.equal(handle.isPinned(), true, 'the rescue move is programmatic — the pin holds');
+    assert.equal(reports.filter(([m]) => m === 'OnScrollStateChanged').length, 0,
+        'no away-from-bottom report for the rescue move');
+    handle.dispose();
+});
+
+test('the measured rescue lands the last row above the stuck composer', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        // The list's visible bottom is 758px below the stuck composer's top edge: the rescue
+        // must pass that gap to the scroller handle instead of the blind exact-bottom jump.
+        const root = {
+            ...fakeStyledRoot(),
+            querySelector(selector) {
+                if (selector === '.tm-chat__input-area') {
+                    return { getBoundingClientRect: () => ({ top: 368 }) };
+                }
+                if (selector === '.tm-chat__messages') {
+                    return { getBoundingClientRect: () => ({ bottom: 1126 }) };
+                }
+                return null;
+            },
+        };
+        const rescues = [];
+        const jumps = [];
+        const scroller = {
+            isPinned: () => true,
+            scrollLastMessageAboveBottom: (gap, instant) => rescues.push([gap, instant]),
+            scrollToBottom: (instant) => jumps.push(instant),
+        };
+        const handle = attachViewportTracker(root, { scroller });
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [[758, true]], 'the gap is the list-bottom minus the composer-top');
+        assert.deepEqual(jumps, [], 'the measurable geometry never degrades to the exact-bottom jump');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('the tracker degrades to the exact-bottom rescue without measurable geometry', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        const root = { ...fakeStyledRoot(), querySelector: () => null };
+        const rescues = [];
+        const jumps = [];
+        const scroller = {
+            isPinned: () => true,
+            scrollLastMessageAboveBottom: (gap, instant) => rescues.push([gap, instant]),
+            scrollToBottom: (instant) => jumps.push(instant),
+        };
+        const handle = attachViewportTracker(root, { scroller });
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual(rescues, [[0, true]], 'no measurable geometry → gap 0');
+        assert.deepEqual(jumps, []);
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('an open keyboard writes the measured composer-clearance knob and closes remove it', () => {
+    const raf = installRaf();
+    const vv = fakeViewport({ height: 812, offsetTop: 0 });
+    const restoreWindow = installWindow(812, vv);
+    try {
+        // The stuck composer covers 758px of the list's bottom (a chat box extending past the
+        // fold covers MORE than the keyboard inset): the knob carries the measured gap.
+        const root = {
+            ...fakeStyledRoot(),
+            querySelector(selector) {
+                if (selector === '.tm-chat__input-area') {
+                    return { getBoundingClientRect: () => ({ top: 368 }) };
+                }
+                if (selector === '.tm-chat__messages') {
+                    return { getBoundingClientRect: () => ({ bottom: 1126 }) };
+                }
+                return null;
+            },
+        };
+        const handle = attachViewportTracker(root);
+
+        vv.height = 500;
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-composer-clearance'), '758px',
+            'the measured list-bottom minus composer-top gap');
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '312px');
+
+        vv.height = 480;                 // the keyboard grew — the clearance is re-measured
+        vv.dispatch('resize');
+        raf.flush();
+        assert.equal(root.props.get('--tm-chat-composer-clearance'), '758px',
+            'the covered gap is unchanged (the composer rides the fold with the inset)');
+
+        vv.height = 812;                 // the keyboard closes — both knobs are removed
+        vv.dispatch('resize');
+        raf.flush();
+        assert.deepEqual([...root.props.keys()], [], 'the cascade owns the closed state again');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+        raf.restore();
+    }
+});
+
+test('the clearance knob is not written without measurable geometry', () => {
+    const restoreWindow = installWindow(812, fakeViewport({ height: 500, offsetTop: 0 }));
+    try {
+        const root = { ...fakeStyledRoot(), querySelector: () => null };
+        const handle = attachViewportTracker(root);
+        assert.equal(root.props.get('--tm-chat-keyboard-inset'), '312px', 'the inset is still written');
+        assert.equal(root.props.get('--tm-chat-composer-clearance'), undefined,
+            'no measurable geometry → no clearance knob');
+        handle.dispose();
+    } finally {
+        restoreWindow();
+    }
 });

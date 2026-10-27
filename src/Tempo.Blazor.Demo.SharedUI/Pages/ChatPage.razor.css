@@ -58,12 +58,14 @@
   min-height: 1600px;
 }
 
-/* ::deep for the same scope reason as above — the chat root is TmChat's element. The chat is a
-   FillParent flex child (its modifier releases the min-height floor); the ONLY knob the demo
-   declares is the composer offset: the fake navigation below is 56px tall — the offset the
-   sticky composer has to clear. */
+/* ::deep for the same scope reason as above — the chat root is TmChat's element. The chat gets
+   a DEFINITE height (like a real host's flex pane would): a content-sized chat would grow with
+   the keyboard-open scroll room the tracker reserves under its messages and the room would
+   never materialize. The ONLY knob the demo declares is the composer offset: the fake
+   navigation below is 56px tall — the offset the sticky composer has to clear. */
 .chat-demo-phone__content ::deep .tm-chat {
   --tm-chat-composer-offset: 56px;
+  height: 1300px;
 }
 
 .chat-demo-phone__filler {

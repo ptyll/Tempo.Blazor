@@ -7,7 +7,8 @@
    in TmChatBubble.razor.css and below carries its default as the fallback, so a host overrides
    a knob on a wrapper, on :root or directly on a bubble and it reaches every bubble — including
    the built-in rows. Mirror of TmChat.razor.css. The FZE-8 layout knobs
-   (--tm-chat-min-height, --tm-chat-composer-offset, --tm-chat-safe-area-bottom) follow the same
+   (--tm-chat-min-height, --tm-chat-composer-offset, --tm-chat-safe-area-bottom) and the FZE-13
+   runtime knobs --tm-chat-keyboard-inset and --tm-chat-composer-clearance follow the same
    rule. */
 .tm-chat {
   display: flex;
@@ -632,16 +633,30 @@
    Branches on the CHAT's own width (container tm-chat on the root), not the viewport; 640px is
    the shared TmBreakpoints.Sm literal. The composer sticks above the host's bottom navigation
    (the host sets --tm-chat-composer-offset to its height) and the thread panel covers the whole
-   chat instead of squeezing the composer. Mirror of TmChat.razor.css. */
+   chat instead of squeezing the composer. The iOS virtual keyboard (visualViewport) is tracked
+   by the OPT-IN TrackVirtualKeyboard parameter (FZE-13): the runtime knob
+   --tm-chat-keyboard-inset is written by chat.js into the root's inline style (never declared
+   here) and the sticky rows below add it to their offset. Mirror of TmChat.razor.css. */
 @container tm-chat (width < 640px) {
   /* The composer sticks above the host's bottom navigation (the host sets
      --tm-chat-composer-offset to its height) and clears the home indicator;
      --tm-chat-safe-area-bottom is the host's opt-out when its own chrome already pads the safe
-     area. Mirror of TmChat.razor.css. */
+     area. --tm-chat-keyboard-inset is the RUNTIME keyboard gap (FZE-13): 0px while the tracker
+     is off or the keyboard is closed, the covered height while an on-screen keyboard is open on
+     iOS. Mirror of TmChat.razor.css. */
   .tm-chat__input-area {
     position: sticky;
-    bottom: var(--tm-chat-composer-offset, 0px);
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
     padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* While the tracker reports an open keyboard the keyboard covers the home indicator — the
+     safe-area part of the padding is dropped, and the offset stops ADDING: the keyboard covers
+     the host's bottom navigation, so the composer rests on the LARGER of the two offsets (max)
+     instead of keyboard + navigation. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
   }
 
   .tm-chat__thread-panel {
@@ -661,9 +676,27 @@
 
   .tm-chat__thread-input-area {
     position: sticky;
-    bottom: var(--tm-chat-composer-offset, 0px);
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
     background: var(--tm-bg-surface);
     padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Same keyboard-open rule as the composer: the padding is dropped and the row rests on the
+     keyboard (max) instead of keyboard + navigation. The message list reserves the keyboard
+     gap as scroll room so the rescued last row can rest above the composer, and native
+     scrollIntoView paths keep rows clear of it. Mirror of TmChat.razor.css. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__thread-input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
+  }
+
+  /* While the keyboard is open the stuck composer covers the list's bottom: the tracker
+     MEASURES the covered gap into --tm-chat-composer-clearance and the list reserves it as
+     scroll room (the rescued last row rests above the composer); scroll-padding keeps native
+     scrollIntoView paths clear of the composer. Mirror of TmChat.razor.css. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__messages {
+    padding-bottom: calc(var(--tm-space-4) + var(--tm-chat-composer-clearance, 0px));
+    scroll-padding-bottom: var(--tm-chat-composer-clearance, 0px);
   }
 
   /* With the full-width overlay open the covered body and composer are dead weight — and a

@@ -118,7 +118,7 @@ public partial class TmChat
 
     // ── Scroll state ──
 
-    /// <summary>The <c>{ dispose, isAtBottom, … }</c> handle of the chat.js scroller.</summary>
+    /// <summary>The <c>{ dispose, isAtBottom, isPinned, … }</c> handle of the chat.js scroller.</summary>
     private IJSObjectReference? _scroller;
 
     /// <summary>The last at-bottom state the scroller reported (initially true — pinned).</summary>
@@ -720,41 +720,57 @@ public partial class TmChat
     /// retries. With the scroller attached the component receives the at-bottom and near-top
     /// reports even under <see cref="ChatAutoScroll.Never"/> (they drive the top-edge
     /// <see cref="OnLoadOlder"/> trigger); only the scroll ACTIONS are suppressed there.
+    /// <para>
+    /// The FZE-13 viewport tracker rides this per-render sync (its partial defines the
+    /// <see cref="TrackVirtualKeyboard"/> parameter): it hangs off the same <c>chat.js</c>
+    /// module and its pinned-scroller rescue option takes THIS handle, so the tail of this
+    /// method is its hook — <c>TmChat.razor.cs</c> stays untouched under its source ceiling.
+    /// </para>
     /// </summary>
     private async Task SyncScrollerAsync()
     {
-        if (_scroller is not null || _disposed) return;
-        if (_module is null || _selfRef is null) return;
-        if (string.IsNullOrEmpty(_messagesContainer.Id)) return;
-
-        try
+        if (_scroller is null && !_disposed && _module is not null && _selfRef is not null
+            && !string.IsNullOrEmpty(_messagesContainer.Id))
         {
-            var handle = await _module.InvokeAsync<IJSObjectReference>(
-                "attachScroller",
-                _messagesContainer,
-                _selfRef,
-                new { threshold = ScrollAtBottomThresholdPx, topThreshold = ScrollNearTopThresholdPx });
-            if (_disposed)
+            try
             {
-                // The component went away while the attach was in flight — the handle would leak.
-                await DisposeUnreachableAsync(handle);
-                return;
+                var handle = await _module.InvokeAsync<IJSObjectReference>(
+                    "attachScroller",
+                    _messagesContainer,
+                    _selfRef,
+                    new { threshold = ScrollAtBottomThresholdPx, topThreshold = ScrollNearTopThresholdPx });
+                if (_disposed)
+                {
+                    // The component went away while the attach was in flight — the handle would leak.
+                    await DisposeUnreachableAsync(handle);
+                }
+                else
+                {
+                    _scroller = handle;
+                }
             }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
+            {
+                // Attach failed (dropped circuit / prerender) — retry on the next render.
+                _scroller = null;
+            }
+        }
 
-            _scroller = handle;
-        }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or OperationCanceledException)
-        {
-            // Attach failed (dropped circuit / prerender) — retry on the next render.
-            _scroller = null;
-        }
+        // FZE-13 hook: after the scroller state is settled, sync the opt-in visualViewport
+        // tracker (it re-attaches when the parameter or the scroller handle changed).
+        await SyncViewportTrackerAsync();
     }
 
-    /// <summary>Detaches and disposes the scroller handle (part of <see cref="DisposeAsyncCore"/>).</summary>
+    /// <summary>
+    /// Detaches and disposes the scroller handle (part of <see cref="DisposeAsyncCore"/>).
+    /// The FZE-13 viewport tracker dies here too: it hangs off the same <c>chat.js</c> module
+    /// and its only extra dependency is the scroller handle — one cleanup path for both.
+    /// </summary>
     private async ValueTask DisposeScrollerAsync()
     {
         var handle = _scroller;
         _scroller = null;
         await DisposeJsHandleAsync(handle);
+        await DisposeViewportTrackerAsync();
     }
 }

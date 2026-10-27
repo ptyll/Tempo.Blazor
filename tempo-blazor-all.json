@@ -4042,6 +4042,13 @@
               "description": "When true, own messages display per-user read receipts. Default true."
             },
             {
+              "name": "TrackVirtualKeyboard",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in tracking of the on-screen keyboard for the narrow sticky composer (FZE-13). false (the default) keeps today's behavior: no visualViewport listeners and no inline knob. true attaches the chat.js attachViewportTracker(root, { scroller }) to the chat root after the first render: it listens to visualViewport resize AND scroll (iOS moves the viewport on scroll rather than resizing it), coalesces both through requestAnimationFrame and - only on a change - writes the covered gap round(max(0, innerHeight - (viewport.height + viewport.offsetTop))) as the RUNTIME knob --tm-chat-keyboard-inset into the root's inline style plus a data-tm-keyboard-open marker. A shrink below 80 px (a collapsing toolbar) writes nothing; a zoom keeps the current state too (while viewport.scale sits off 1 nothing new is written), a degenerate (< 2 px) viewport measures nothing, and the inset is rounded so device-pixel fractions cannot churn the inline style. While the keyboard is CLOSED the narrow-chat sticky composer and thread reply row rest at bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px)); while the marker is set they rest at bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px)) - the keyboard covers the host's bottom navigation, so the LARGER of the two offsets wins instead of their sum - and the safe-area padding is dropped (the keyboard covers the home indicator); closing the keyboard REMOVES the inline knobs and marker (back to the cascade, not zeroed). The stuck composer covers MORE of the message list than the inset whenever the chat's box extends past the fold, so the tracker also measures the covered list space into the RUNTIME knob --tm-chat-composer-clearance (see the css variable): while the marker is set the messages list reserves it as scroll room and the scroller handle's scrollLastMessageAboveBottom(gap) lands the last row's bottom exactly on the stuck composer's top edge (an older handle degrades to the instant scrollToBottom(true)); the rescue reads the scroller's isPinned() belief first (falling back to the measured isAtBottom()) and a reader of older history keeps their position - pure JS, no .NET round trip. iOS ignores interactive-widget - the tracker is what handles the keyboard there. On Android WITH the recommended interactive-widget=resizes-content viewport meta the LAYOUT viewport shrinks instead, the measured inset comes out ~0 and the tracker never writes; on Android WITHOUT it (Chrome's default resizes-visual) the visual viewport shrinks like on iOS and the tracker lifts the composer there too. Before the first render the sync is a no-op - the CSS knob falls back to 0px.",
+              "default": "false"
+            },
+            {
               "name": "TypingAriaHidden",
               "type": "bool",
               "isRequired": false,
@@ -4161,6 +4168,14 @@
             {
               "name": "--tm-chat-safe-area-bottom",
               "description": "Extra padding under the sticky composer and thread reply row for the device safe area. The narrow-chat rules read it with an env(safe-area-inset-bottom, 0px) fallback — a host on an already safe-area-aware layout can override it to 0px."
+            },
+            {
+              "name": "--tm-chat-keyboard-inset",
+              "description": "The on-screen keyboard's covered height - a RUNTIME-ONLY knob written into the chat root's inline style by the chat.js tracker while TrackVirtualKeyboard=\"true\" is on and a keyboard is open (removed again when it closes; default 0px in the var() fallback). On a narrow chat (< 640px) the sticky composer and thread reply row add it to their --tm-chat-composer-offset bottom offset while the keyboard is closed (calc) and rest on the LARGER of the two offsets while the data-tm-keyboard-open marker is set (max). Never declared by the library - a host override on a wrapper or :root keeps cascading."
+            },
+            {
+              "name": "--tm-chat-composer-clearance",
+              "description": "The list space the open-keyboard composer covers - a RUNTIME-ONLY knob measured by the chat.js tracker (list bottom minus stuck composer top; it exceeds --tm-chat-keyboard-inset whenever the chat's box extends past the fold) and written into the chat root's inline style while TrackVirtualKeyboard=\"true\" is on and a keyboard is open (removed again when it closes; default 0px in the var() fallback). While the data-tm-keyboard-open marker is set, the narrow-chat messages list reserves it as scroll room (padding-bottom) and scroll-padding-bottom so the rescued last row can rest above the stuck composer even when the messages do not overflow the list. Never declared by the library - a host override on a wrapper or :root keeps cascading."
             },
             {
               "name": "--tm-chat-bubble-in-bg",

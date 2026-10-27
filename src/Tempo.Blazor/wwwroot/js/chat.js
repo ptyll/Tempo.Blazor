@@ -396,12 +396,17 @@ function scrollBehavior() {
  * @returns {{
  *   dispose: Function,
  *   isAtBottom: Function,
+ *   isPinned: Function,
  *   scrollToBottom: Function,
+ *   scrollLastMessageAboveBottom: Function,
  *   scrollToMessage: Function,
  *   focusMessage: Function,
  *   focusMessageVisible: Function,
  *   afterUpdate: Function,
  * }} `dispose` removes the listeners (idempotent); `isAtBottom()` reads the live state;
+ *   `isPinned()` reads the sticky at-bottom belief (set by every programmatic scroll, cleared
+ *   only by a user scroll upward) — the viewport tracker's preferred rescue signal;
+ *   `scrollLastMessageAboveBottom(gap)` is the keyboard rescue landing;
  *   `scrollToBottom()` / `scrollToMessage(id)` are the programmatic scrolls TmChat exposes
  *   (`scrollToMessage` returns whether the anchor was found); `focusMessage(id)` focuses a
  *   row (`tabindex="-1"`, `preventScroll` — the focus mover after a load-older prepend or a
@@ -605,6 +610,7 @@ export function attachScroller(container, dotNetRef, options) {
             container.removeEventListener('keydown', onKeyDown);
         },
         isAtBottom,
+        isPinned: () => pinned,
         /**
          * @param {boolean} [instant] Skip the animation. TmChat passes true for the FIRST render
          *   and for a replaced list: an animated initial scroll would fire scroll events along the
@@ -626,6 +632,45 @@ export function attachScroller(container, dotNetRef, options) {
                 container.scrollTop = target;
             }
             refreshSnapshot();
+        },
+        /**
+         * Keyboard rescue (FZE-13): lands the list so the LAST message row's bottom edge rests
+         * `gap` px above the container's visible bottom — exactly where the sticky composer's
+         * top edge sits while an on-screen keyboard is open (the tracker measures the gap from
+         * the live rects). A non-positive `gap` lands the row's bottom at the container's own
+         * bottom edge — the exact bottom whenever the row is the last content. Same pinned
+         * bookkeeping as {@link scrollToBottom}: the move is programmatic — it never releases
+         * the pin and never counts as unread — and `instant` skips the animation. Rows without
+         * geometry (jsdom-style doubles) fall back to the plain bottom.
+         *
+         * @param {number} [gap] Room to leave above the container's bottom edge, in px.
+         * @param {boolean} [instant] Skip the animation (the tracker's rescue always does).
+         */
+        scrollLastMessageAboveBottom(gap, instant) {
+            if (disposed) return;
+            const clampedGap = Number.isFinite(gap) && gap > 0 ? gap : 0;
+            let target = container.scrollHeight || 0;
+            const rows = messageAnchors();
+            const lastRow = rows.length ? rows[rows.length - 1] : null;
+            if (lastRow && typeof lastRow.offsetTop === 'number' && container.clientHeight) {
+                const rowBottom = lastRow.offsetTop + (lastRow.offsetHeight || 0);
+                target = rowBottom - (container.clientHeight - clampedGap);
+            }
+            const behavior = instant || prefersReducedMotion() ? 'auto' : 'smooth';
+            pinned = true;
+            scrollTarget = target;
+            if (typeof container.scrollTo === 'function') {
+                container.scrollTo({ top: target, behavior });
+                programmaticScroll = behavior === 'smooth';
+            } else {
+                container.scrollTop = target;
+            }
+            refreshSnapshot();
+            // Sync the at-bottom belief SILENTLY: the landed position is geometrically `gap`
+            // short of the bottom, but the user is visually at the newest message — the async
+            // scroll event must not report a spurious away-from-bottom (it would pop the
+            // jump-to-new button and count the next append as unread).
+            lastAtBottom = isAtBottom();
         },
         scrollToMessage(id) {
             if (disposed) return false;
@@ -726,4 +771,195 @@ export function attachScroller(container, dotNetRef, options) {
         const delta = (container.scrollHeight || 0) - before.scrollHeight;
         container.scrollTop = before.scrollTop + Math.max(delta, 0);
     }
+}
+
+// ── The virtual keyboard (FZE-13) ────────────────────────────────────────────────────────────
+//
+// On iOS Safari an opening keyboard shrinks only the VISUAL viewport (the layout viewport, and
+// with it every `position: sticky` containing block, stays put) — so the narrow-chat sticky
+// composer's `bottom: var(--tm-chat-composer-offset, 0px)` alone leaves it under the keyboard.
+// The tracker measures the covered gap and writes it as the RUNTIME knob
+// `--tm-chat-keyboard-inset` into the CHAT ROOT's inline style; the narrow-chat CSS adds it to
+// the sticky `bottom` offsets. Knob convention: the library never DECLARES the knob — the
+// default lives in the `var()` fallback (`0px`) and the inline value is written/removed ONLY
+// here at runtime, so a host override on a wrapper or `:root` keeps cascading. The knob name is
+// spelled out in every setProperty/removeProperty call (a constant would hide it from
+// scripts/audit-css-tokens.mjs, which recognizes a runtime definition only from a literal
+// `setProperty('--tm-…')` — the tm-sheet.js precedent); the `data-tm-keyboard-open` marker
+// mirrors it for the keyboard-open CSS state.
+
+/** Shrinks below this many pixels are a browser toolbar or a zoom, not a keyboard. */
+const DEFAULT_MIN_INSET = 80;
+
+const KEYBOARD_OPEN_ATTR = 'data-tm-keyboard-open';
+
+/**
+ * Tracks the visual viewport of one chat root and keeps the on-screen keyboard's covered gap
+ * in the root's inline style. NO module-level state: like every other chat.js export, each
+ * call closes over its own root/options/listeners, so several chats on one page track
+ * independently and dispose on their own.
+ *
+ * @param {Element} root The chat root element (`.tm-chat`) that carries the inline knob and the
+ *   `data-tm-keyboard-open` marker.
+ * @param {{
+ *   minInset?: number,
+ *   scroller?: { isPinned?: Function, isAtBottom?: Function, scrollToBottom?: Function, scrollLastMessageAboveBottom?: Function },
+ * }} [options] `minInset` (default 80) — covered gaps below this are NOT a keyboard (a
+ *   collapsing browser toolbar, a zoom change) and write nothing; `scroller` — the
+ *   {@link attachScroller} handle: when the keyboard OPENS and the scroller is pinned (the user
+ *   was reading at the bottom — `isPinned()` preferred, `isAtBottom()` the fallback), the last
+ *   message row is re-landed above the stuck composer via `scrollLastMessageAboveBottom(gap)`
+ *   (an older handle degrades to an instant `scrollToBottom(true)`)
+ *   so the last message stays visible. A reader of older history is left where they are, and the rescue is
+ *   pure JS — no .NET round trip on a keystroke-hot path.
+ * @returns {{ dispose: Function }} `dispose()` detaches the listeners, cancels a pending frame,
+ *   removes the inline knobs and the marker and is idempotent. While the keyboard is open the
+ *   tracker ALSO writes the measured `--tm-chat-composer-clearance` knob (the list space the
+ *   stuck composer covers — the CSS reserves it as scroll room under the message list).
+ */
+export function attachViewportTracker(root, options) {
+    if (!root || !root.style || typeof root.style.setProperty !== 'function') {
+        throw new TypeError('chat.js: a chat root element is required.');
+    }
+
+    const opts = options || {};
+    const minInset = Number.isFinite(opts.minInset) && opts.minInset > 0 ? opts.minInset : DEFAULT_MIN_INSET;
+    const scroller = opts.scroller && typeof opts.scroller.scrollToBottom === 'function' ? opts.scroller : null;
+
+    let disposed = false;
+    let frame = null;   // the pending coalescing frame; `null` = none in flight
+    let written = null; // the inset the root's inline style carries; `null` = nothing written yet
+    let open = false;   // whether the root currently carries the open marker
+
+    const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
+
+    /**
+     * The room between the messages list's visible bottom and the stuck composer's top edge —
+     * exactly the list space the open-keyboard composer covers, or `null` when the geometry is
+     * not measurable (no composer rendered, no list, a doubles-only environment). The keyboard
+     * INSET alone under-measures it: a chat whose box extends past the fold covers MORE than
+     * the inset, so the rescue reserve is measured, not derived.
+     */
+    function measureClearance() {
+        if (typeof root.querySelector !== 'function') return null;
+        const composer = root.querySelector('.tm-chat__input-area');
+        const list = root.querySelector('.tm-chat__messages');
+        if (!composer || !list || typeof composer.getBoundingClientRect !== 'function'
+            || typeof list.getBoundingClientRect !== 'function') {
+            return null;
+        }
+
+        const composerTop = composer.getBoundingClientRect().top;
+        const listBottom = list.getBoundingClientRect().bottom;
+        if (!Number.isFinite(composerTop) || !Number.isFinite(listBottom)) return null;
+        return Math.max(0, listBottom - composerTop);
+    }
+
+    /**
+     * Writes the measured covered gap as the RUNTIME clearance knob on the chat root: the CSS
+     * reserves it as scroll room under the message list, so the rescued last row can land
+     * above the stuck composer even when the messages themselves do not overflow the list.
+     * Not written when the geometry is not measurable — the CSS then keeps the plain padding
+     * and the rescue degrades to the exact-bottom landing. The composer must ALREADY carry its
+     * open-keyboard position when this runs (apply() writes the marker first).
+     */
+    function writeClearance() {
+        const gap = measureClearance();
+        if (gap === null) return;
+        root.style.setProperty('--tm-chat-composer-clearance', `${Math.round(gap)}px`);
+    }
+
+    function currentInset() {
+        if (!viewport) return 0;
+        // A zoomed page (scale off 1) is the user resizing, not a keyboard: its height delta is
+        // pinch-zoom scaling, and writing it would shove the composer around mid-zoom. Keep the
+        // CURRENT state — the inset the root already carries — until the zoom settles back.
+        if (typeof viewport.scale === 'number' && Math.abs(viewport.scale - 1) > 0.01) return written ?? 0;
+        // A degenerate viewport (a 1×1 overlay trick, a transition frame) measures nothing.
+        if ((viewport.height || 0) < 2 || (viewport.width || 0) < 2) return 0;
+        const raw = Math.max(0, (window.innerHeight || 0) - ((viewport.height || 0) + (viewport.offsetTop || 0)));
+        // Below the threshold the shrink is browser chrome, not a keyboard — writing it would
+        // push the composer up while the keyboard is closed. Rounding keeps device-pixel
+        // fractions from re-writing the knob on every frame.
+        return raw >= minInset ? Math.round(raw) : 0;
+    }
+
+    function apply() {
+        if (disposed) return;
+        const inset = currentInset();
+        const nextOpen = inset > 0;
+        if (inset === written && nextOpen === open) return; // unchanged — no style churn
+        const opening = nextOpen && !open;
+        written = inset;
+        open = nextOpen;
+        if (inset > 0) {
+            root.style.setProperty('--tm-chat-keyboard-inset', `${inset}px`);
+            if (typeof root.setAttribute === 'function') root.setAttribute(KEYBOARD_OPEN_ATTR, '');
+            // The covered-gap reserve is measured with the marker ALREADY set — the composer's
+            // open-keyboard position is what the gap is measured against. The knob is
+            // re-measured on every tracked event: the covered space moves with the host
+            // scrollport (the stuck composer rides the fold).
+            writeClearance();
+            // The keyboard just OPENED: a viewport that was reading at the bottom is re-landed
+            // there (instantly) so the last message stays visible above the keyboard — the
+            // inset moved the sticky composer but not the scroll position under it. `isPinned`
+            // (the scroller's own belief, stable across intermediate scroll positions) is the
+            // preferred signal; a handle without it falls back to the measured `isAtBottom`.
+            // When the handle can land the last ROW above the stuck composer, the rescue clears
+            // it exactly; an older handle degrades to the classic jump to the exact bottom.
+            if (opening && scroller && (scroller.isPinned?.() ?? scroller.isAtBottom?.())) {
+                if (typeof scroller.scrollLastMessageAboveBottom === 'function') {
+                    scroller.scrollLastMessageAboveBottom(measureClearance() ?? 0, true);
+                } else {
+                    scroller.scrollToBottom(true);
+                }
+            }
+        } else {
+            root.style.removeProperty('--tm-chat-keyboard-inset');
+            root.style.removeProperty('--tm-chat-composer-clearance');
+            if (typeof root.removeAttribute === 'function') root.removeAttribute(KEYBOARD_OPEN_ATTR);
+        }
+    }
+
+    function run() {
+        frame = null;
+        apply();
+    }
+
+    // `resize` fires when the keyboard opens/closes; `scroll` matters because iOS MOVES the
+    // visual viewport (offsetTop) on scroll instead of resizing it. Both coalesce into ONE
+    // write per animation frame.
+    function schedule() {
+        if (disposed || frame !== null) return;
+        if (typeof requestAnimationFrame === 'function') {
+            frame = requestAnimationFrame(run);
+        } else {
+            run();
+        }
+    }
+
+    if (viewport && typeof viewport.addEventListener === 'function') {
+        viewport.addEventListener('resize', schedule, { passive: true });
+        viewport.addEventListener('scroll', schedule, { passive: true });
+    }
+    apply(); // the component may mount while the keyboard is already up (a re-attach mid-chat)
+
+    return {
+        dispose() {
+            if (disposed) return;
+            disposed = true;
+            if (frame !== null) {
+                if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
+                frame = null;
+            }
+            if (viewport && typeof viewport.removeEventListener === 'function') {
+                viewport.removeEventListener('resize', schedule);
+                viewport.removeEventListener('scroll', schedule);
+            }
+            // Back to the cascade: the inline knobs and the marker belong to the runtime.
+            root.style.removeProperty('--tm-chat-keyboard-inset');
+            root.style.removeProperty('--tm-chat-composer-clearance');
+            if (typeof root.removeAttribute === 'function') root.removeAttribute(KEYBOARD_OPEN_ATTR);
+        },
+    };
 }

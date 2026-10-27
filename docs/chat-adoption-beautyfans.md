@@ -529,10 +529,13 @@ Dnes: `!thread.CreatorIsActive` → `TmAlert Info` pod scrollerem; `!thread.CanW
 
 Co z `fitFanMessages` **zůstává hostovi** (carry-forward):
 
-- **iOS vizuální klávesnice:** `position: sticky; bottom: var(--tm-chat-composer-offset)`
-  sám nesleduje `visualViewport` — malý JS listener na `visualViewport.resize/scroll`,
-  který během otevřené klávesnice upraví `--tm-chat-composer-offset`, je stále hostova
-  záležitost (knihovna to nedělá, viz Layout notes a CHANGELOG 2.10.0).
+- **iOS vizuální klávesnice:** od FZE-13 řeší knihovna sama — na fanouškovském chatu
+  nastavte **`TrackVirtualKeyboard="true"`**; tracker v `chat.js` zapisuje za běhu knob
+  `--tm-chat-keyboard-inset` a sticky composer i thread řada vystoupou nad klávesnici
+  (pinned scroller se hned vrátí ke spodku, čtenář starších zpráv zůstane na místě).
+  Ponechte viewport meta `interactive-widget=resizes-content` — na Androidu pak měřený
+  inset vyjde ≈ 0 a tracker je neškodný; na iOS Safari je meta jen doporučení a tracker
+  dělá tu práci místo ní.
 - **Bottom navigation:** host nastaví `--tm-chat-composer-offset` na výšku spodní navigace
   fanouška (sticky composer i thread řada sedí nad ní) a **`--tm-chat-safe-area-bottom: 0`**,
   pokud fanouškovská navigace safe area (`env(safe-area-inset-bottom)`) už odsadí sama —
@@ -542,8 +545,9 @@ Co z `fitFanMessages` **zůstává hostovi** (carry-forward):
 - Shrnutí: `FillParent` + `--tm-chat-composer-offset` (+ volitelně `--tm-chat-safe-area-bottom: 0`)
   nahrazují `fitFanMessages` JEN tehdy, když ke chatu vede definitivní výšková flex/grid řada
   (`min-height: 0` v každém patře `.fan-messages__split` → `.fan-messages__chat`); jinak
-  nechte `fitFanMessages` na rootu sekce. Jediné, co po hostovi zůstává VŽDY, je iOS
-  visualViewport listener.
+  nechte `fitFanMessages` na rootu sekce. iOS visualViewport řeší od FZE-13 knihovna
+  (`TrackVirtualKeyboard="true"`) — hostovi zůstává jen viewport meta
+  `interactive-widget=resizes-content` pro Android.
 
 ### 2.4 Typing
 
@@ -746,8 +750,8 @@ starých CSS souborů a duplicitních live regionů). Výchozí stav je popsán 
 - [x] Fan chat: `ChatBubble` → `TmChatBubble` Locked/Pill/Incoming/Outgoing + „Přečteno“ jako
       `Meta`; gate/inactive → `ComposerTemplate`/`ShowComposer="false"`; JS `bindEnterSubmit`,
       `focusById`, `fitFanMessages`/`watchViewport` → `EnterToSend`, `FocusComposerAsync`,
-      `FillParent` + `--tm-chat-composer-offset`; host-side zbytky popsány (iOS
-      visualViewport, safe area 0).
+      `FillParent` + `--tm-chat-composer-offset`; iOS visualViewport řeší od FZE-13
+      `TrackVirtualKeyboard="true"` (host nechává jen viewport meta), safe area 0.
 - [x] Scroll a stránkování: `OnLoadOlder`/`HasMoreBefore` na `before` kurzor, delta append,
       `AutoScroll WhenAtBottom` + tlačítko nových zpráv, sliding window = Append.
 - [x] data-testid: kompletní seznam + `TestIdPrefix`.

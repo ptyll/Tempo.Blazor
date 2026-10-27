@@ -34,7 +34,7 @@ public sealed class TmChatLayoutTests : LocalizationTestBase
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     private static readonly Regex ChatKnobDeclaration =
-        new(@"--tm-chat-(min-height|composer-offset)\s*:", RegexOptions.Compiled, Timeout);
+        new(@"--tm-chat-(min-height|composer-offset|keyboard-inset|composer-clearance)\s*:", RegexOptions.Compiled, Timeout);
 
     private static string RepoFile(params string[] parts) =>
         Path.Combine(new[] { ThemeCss.RepositoryRoot().FullName }.Concat(parts).ToArray());
@@ -237,12 +237,98 @@ public sealed class TmChatLayoutTests : LocalizationTestBase
     public void LibraryStylesheets_NeverDeclareTheLayoutKnobs()
     {
         ChatKnobDeclaration.Matches(ChatRazorCss()).Should().BeEmpty(
-            "TmChat.razor.css must only READ --tm-chat-min-height / --tm-chat-composer-offset — a " +
-            "declaration would shadow a host override on a wrapper or :root");
+            "TmChat.razor.css must only READ --tm-chat-min-height / --tm-chat-composer-offset / " +
+            "--tm-chat-keyboard-inset / --tm-chat-composer-clearance — a declaration would shadow " +
+            "a host override on a wrapper or :root");
         ChatKnobDeclaration.Matches(FallbackCss()).Should().BeEmpty(
             "_chat.css mirrors the scoped stylesheet");
         ChatKnobDeclaration.Matches(BundledCss()).Should().BeEmpty(
             "the shipped bundle must not declare the layout knobs either");
+    }
+
+    // ── 2b. The FZE-13 runtime keyboard inset ─────────────────────────────────
+
+    [Theory]
+    [InlineData("scoped")]
+    [InlineData("fallback")]
+    public void StickyComposer_BottomAddsTheRuntimeKeyboardInset(string variant)
+    {
+        var css = variant == "scoped" ? ChatRazorCss() : FallbackCss();
+
+        PropIn(css, ".tm-chat__input-area", "bottom", NarrowChat).Should().Be(
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))",
+            "the FZE-13 tracker writes the runtime knob into the root's inline style while the " +
+            "keyboard is open — the sticky composer follows the visual viewport, not the layout one");
+    }
+
+    [Theory]
+    [InlineData("scoped")]
+    [InlineData("fallback")]
+    public void ThreadInputArea_BottomAddsTheRuntimeKeyboardInset(string variant)
+    {
+        var css = variant == "scoped" ? ChatRazorCss() : FallbackCss();
+
+        PropIn(css, ".tm-chat__thread-input-area", "bottom", NarrowChat).Should().Be(
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))",
+            "the overlay's reply row clears the keyboard exactly like the composer");
+    }
+
+    [Theory]
+    [InlineData("scoped")]
+    [InlineData("fallback")]
+    public void KeyboardOpenMarker_DropsTheSafeAreaPadding(string variant)
+    {
+        var css = variant == "scoped" ? ChatRazorCss() : FallbackCss();
+
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__input-area", "padding-bottom", NarrowChat)
+            .Should().Be("var(--tm-space-3)",
+                "the keyboard covers the home indicator — the safe-area padding would double-pad");
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__thread-input-area", "padding-bottom", NarrowChat)
+            .Should().Be("var(--tm-space-3)");
+    }
+
+    [Theory]
+    [InlineData("scoped")]
+    [InlineData("fallback")]
+    public void KeyboardOpenComposer_RestsOnTheLargerOffset(string variant)
+    {
+        var css = variant == "scoped" ? ChatRazorCss() : FallbackCss();
+
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__input-area", "bottom", NarrowChat).Should().Be(
+            "max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px))",
+            "while the keyboard is open it covers the host's bottom navigation — the composer rests " +
+            "on the LARGER of the two offsets instead of their SUM (keyboard + nav would push it " +
+            "above the visible viewport)");
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__thread-input-area", "bottom", NarrowChat).Should().Be(
+            "max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px))",
+            "the overlay's reply row rests on the keyboard exactly like the composer");
+        PropIn(css, ".tm-chat__input-area", "bottom", NarrowChat).Should().Be(
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))",
+            "the keyboard-CLOSED state keeps the additive calc — the knob's 0px fallback makes it " +
+            "collapse to the plain composer offset");
+        PropIn(css, ".tm-chat__thread-input-area", "bottom", NarrowChat).Should().Be(
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))");
+    }
+
+    [Theory]
+    [InlineData("scoped")]
+    [InlineData("fallback")]
+    public void KeyboardOpenMessages_ReserveTheKeyboardGap(string variant)
+    {
+        var css = variant == "scoped" ? ChatRazorCss() : FallbackCss();
+
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__messages", "padding-bottom", NarrowChat).Should().Be(
+            "calc(var(--tm-space-4) + var(--tm-chat-composer-clearance, 0px))",
+            "while the keyboard is open the stuck composer covers the list's bottom — the tracker " +
+            "MEASURES the covered gap into --tm-chat-composer-clearance and the list reserves it " +
+            "as scroll room, so the rescued last row can rest ABOVE the composer even when the " +
+            "messages themselves do not overflow");
+        PropIn(css, ".tm-chat[data-tm-keyboard-open] .tm-chat__messages", "scroll-padding-bottom", NarrowChat)
+            .Should().Be("var(--tm-chat-composer-clearance, 0px)",
+                "native scrollIntoView paths (deep links, focus moves) must keep rows clear of the " +
+                "stuck composer while the keyboard is open");
+        PropIn(css, ".tm-chat__messages", "padding").Should().Be(
+            "var(--tm-space-4)", "the keyboard-CLOSED list keeps the plain uniform padding");
     }
 
     // ── 2. Narrow chat: sticky composer + full-width thread overlay ──────────
@@ -260,8 +346,9 @@ public sealed class TmChatLayoutTests : LocalizationTestBase
         PropIn(css, ".tm-chat__input-area", "position", NarrowChat).Should().Be(
             "sticky", "on a narrow chat the composer sticks above the host's bottom navigation");
         PropIn(css, ".tm-chat__input-area", "bottom", NarrowChat).Should().Be(
-            "var(--tm-chat-composer-offset, 0px)",
-            "the host opts in by setting the knob to the height of its bottom navigation");
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))",
+            "the host opts in by setting the knob to the height of its bottom navigation; the " +
+            "FZE-13 runtime keyboard inset rides on top (0px while the tracker is off/closed)");
     }
 
     [Theory]
@@ -304,8 +391,9 @@ public sealed class TmChatLayoutTests : LocalizationTestBase
         PropIn(css, ".tm-chat__thread-input-area", "position", NarrowChat).Should().Be(
             "sticky", "the panel's reply row rests below the fold exactly like the composer");
         PropIn(css, ".tm-chat__thread-input-area", "bottom", NarrowChat).Should().Be(
-            "var(--tm-chat-composer-offset, 0px)",
-            "the SAME knob the composer reads — both rows clear the host's bottom chrome together");
+            "calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px))",
+            "the SAME knobs the composer reads — both rows clear the host's bottom chrome and " +
+            "the FZE-13 keyboard together");
         PropIn(css, ".tm-chat__thread-input-area", "padding-bottom", NarrowChat).Should().Be(
             "calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)))");
     }

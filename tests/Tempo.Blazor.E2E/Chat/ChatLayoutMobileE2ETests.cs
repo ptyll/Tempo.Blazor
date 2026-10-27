@@ -16,6 +16,9 @@ namespace Tempo.Blazor.E2E.Chat;
 /// <item><c>chat-mobile-phone</c> — a 375px phone frame with a fake 56px bottom navigation: the
 /// composer is sticky and rests 56px above the phone bottom while the page scrolls, and on a
 /// coarse pointer the send button reaches the 44px touch target.</item>
+/// <item>FZE-13 — a fake <c>window.visualViewport</c> (AddInitScriptAsync) emulates the iOS
+/// on-screen keyboard: the opt-in <c>TrackVirtualKeyboard</c> lifts the sticky composer above
+/// the shrunken visual viewport, rescues the pinned scroller and undoes everything on close.</item>
 /// </list>
 /// Screenshots (375×812 and 1440×900, the DoD viewports) land in <c>__screenshots__/chat/</c>
 /// as NEW files for the phase-9 UX review.
@@ -283,6 +286,173 @@ public class ChatLayoutMobileE2ETests : WasmTestBase
         Assert.AreEqual("sticky", position);
 
         await SaveScreenshotAsync(page, "chat-mobile-375x812");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── FZE-13: the virtual keyboard lifts the sticky composer above the visual viewport ──
+
+    /// <summary>
+    /// A fake <c>window.visualViewport</c> (an EventTarget with mutable height/offsetTop and the
+    /// remaining spec surface) injected before the app boots — the tracker and the rescue need
+    /// nothing else. The listeners receive real <c>Event</c> objects, the way the tracker would
+    /// see them from a browser.
+    /// </summary>
+    private const string FakeVisualViewportScript =
+        """
+        (() => {
+            const listeners = { resize: [], scroll: [] };
+            const vv = {
+                height: 812,
+                width: 375,
+                offsetTop: 0,
+                offsetLeft: 0,
+                pageTop: 0,
+                pageLeft: 0,
+                scale: 1,
+                addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+                removeEventListener(type, fn) {
+                    const list = listeners[type] ?? [];
+                    const index = list.indexOf(fn);
+                    if (index >= 0) list.splice(index, 1);
+                },
+                __dispatch(type) { for (const fn of [...(listeners[type] ?? [])]) fn(new Event(type)); },
+            };
+            Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+            window.__fakeVisualViewport = vv;
+        })();
+        """;
+
+    // WHY the emulation: Playwright cannot open a real iOS on-screen keyboard, and neither
+    // Chromium nor WebKit shrink the LAYOUT viewport for one — the keyboard is an OS overlay, so
+    // the sticky containing block never moves and the bug cannot reproduce natively. The test
+    // therefore injects a fake visualViewport BEFORE the app boots (AddInitScriptAsync), then
+    // shrinks its height by 300px and dispatches a resize — exactly the event pair iOS reports
+    // when the keyboard opens (and reverses both when it closes).
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task VirtualKeyboard_LiftsTheStickyComposerAboveTheVisualViewport()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 375, Height = 812 },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+            IsMobile = true,
+            HasTouch = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync(FakeVisualViewportScript);
+        var page = await context.NewPageAsync();
+        page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
+        page.Console += (_, m) =>
+        {
+            if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
+                lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
+        };
+        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var phone = page.Locator(Phone);
+        await phone.ScrollIntoViewIfNeededAsync();
+        var composer = page.Locator($"{Phone} .tm-chat__input-area");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        var root = page.Locator($"{Phone} .tm-chat").First;
+
+        // A four-message seed never overflows the demo chat's definite-height list, so the
+        // keyboard-open scroll room (and with it the rescue) would have nothing to move: send a
+        // few messages first — each append re-pins the scroller to the bottom. Every send is
+        // awaited individually (the submit rides an async .NET round trip).
+        var phoneInput = page.Locator($"{Phone} .tm-chat__input");
+        for (var i = 1; i <= 3; i++)
+        {
+            var before = await page.EvaluateAsync<int>(
+                "sel => document.querySelector(sel)?.querySelectorAll('.tm-chat__messages > [data-message-id]').length ?? 0",
+                Phone);
+            await phoneInput.FillAsync($"Keyboard demo message {i}");
+            await phoneInput.PressAsync("Enter");
+            await page.WaitForFunctionAsync(
+                $"sel => (document.querySelector(sel)?.querySelectorAll('.tm-chat__messages > [data-message-id]').length ?? 0) > {before}",
+                Phone);
+        }
+
+        // Pin the composer first (the chat's box extends past the phone fold at scrollTop 300).
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 300; }",
+            Phone);
+        await page.WaitForFunctionAsync(
+            "sel => { const el = document.querySelector(sel)?.querySelector('.tm-chat__input-area'); return !!el && Math.abs(Number.parseFloat(getComputedStyle(el).bottom) - 56) < 2; }",
+            Phone);
+        var pinnedBefore = (await composer.BoundingBoxAsync())!;
+
+        // The keyboard "opens": the visual viewport loses 300px …
+        await page.EvaluateAsync("() => { const vv = window.__fakeVisualViewport; vv.height = 812 - 300; vv.__dispatch('resize'); }");
+        // … the tracker coalesces through requestAnimationFrame — wait for the knob, not a timeout.
+        await page.WaitForFunctionAsync(
+            "sel => (document.querySelector(sel)?.querySelector('.tm-chat')?.style.getPropertyValue('--tm-chat-keyboard-inset') ?? '') === '300px'",
+            Phone);
+
+        // … the runtime knob and the marker land on the chat root …
+        var inset = await root.EvaluateAsync<string>("el => el.style.getPropertyValue('--tm-chat-keyboard-inset')");
+        Assert.AreEqual("300px", inset, "the tracker writes the covered gap as the runtime knob");
+        var marker = await root.EvaluateAsync<bool>("el => el.hasAttribute('data-tm-keyboard-open')");
+        Assert.IsTrue(marker, "the keyboard-open marker is set");
+
+        // … the sticky composer rests ON the keyboard — the keyboard covers the 56px nav, so the
+        // open-keyboard rule takes max(nav, keyboard) = 300, NOT nav + keyboard = 356 …
+        var computedBottom = await composer.EvaluateAsync<double>("el => Number.parseFloat(getComputedStyle(el).bottom)");
+        Assert.AreEqual(300.0, computedBottom, 2.0,
+            "the composer rests on the keyboard: the open-keyboard rule takes the LARGER of the nav offset and the runtime inset");
+
+        // … the composer itself sits 244px higher (300 − 56; its bottom edge is inside the
+        // shrunken visual viewport, tolerance 2px) …
+        var pinnedOpen = (await composer.BoundingBoxAsync())!;
+        Assert.AreEqual(pinnedBefore.Y - 244, pinnedOpen.Y, 2.0,
+            "the sticky composer must follow the visual viewport when the keyboard opens");
+        Assert.IsTrue(pinnedOpen.Y + pinnedOpen.Height <= 812 - 300 + 2,
+            "the composer's bottom edge must stay inside the visual viewport (512px) + 2px tolerance");
+
+        // … and the PINNED scroller was rescued to the bottom, so the last message stays visible:
+        // the last message row rests above the stuck composer and inside the phone's viewport.
+        var rescued = await page.EvaluateAsync<bool>(
+            """
+            sel => {
+                const c = document.querySelector(sel).querySelector('.tm-chat__messages');
+                return c.scrollHeight - c.scrollTop - c.clientHeight <= 40;
+            }
+            """, Phone);
+        Assert.IsTrue(rescued, "a pinned viewport is re-landed at the bottom so the last message is visible");
+        var lastMessageVisible = await page.EvaluateAsync<bool>(
+            """
+            sel => {
+                const scope = document.querySelector(sel);
+                const container = scope.querySelector('.tm-chat__messages');
+                if (!container) return false;
+                const items = container.querySelectorAll(':scope > .tm-chat__item');
+                const last = items[items.length - 1];
+                if (!last) return false;
+                const composer = scope.querySelector('.tm-chat__input-area').getBoundingClientRect();
+                const r = last.getBoundingClientRect();
+                return r.bottom <= composer.top + 2 && r.top >= 0;
+            }
+            """, Phone);
+        Assert.IsTrue(lastMessageVisible,
+            "the rescued last message must rest above the stuck composer (bottom <= composer.Y + 2) and inside the viewport (Y >= 0)");
+
+        // The keyboard "closes": the inline knob and marker are REMOVED (back to the cascade —
+        // not zeroed inline) and the composer returns to its pinned place.
+        await page.EvaluateAsync("() => { const vv = window.__fakeVisualViewport; vv.height = 812; vv.__dispatch('resize'); }");
+        await page.WaitForFunctionAsync(
+            "sel => (document.querySelector(sel)?.querySelector('.tm-chat')?.style.getPropertyValue('--tm-chat-keyboard-inset') ?? '') === ''",
+            Phone);
+
+        var insetAfter = await root.EvaluateAsync<string>("el => el.style.getPropertyValue('--tm-chat-keyboard-inset')");
+        Assert.AreEqual(string.Empty, insetAfter, "the inline knob is removed when the keyboard closes");
+        var markerAfter = await root.EvaluateAsync<bool>("el => el.hasAttribute('data-tm-keyboard-open')");
+        Assert.IsFalse(markerAfter, "the marker is removed when the keyboard closes");
+        var pinnedClosed = (await composer.BoundingBoxAsync())!;
+        Assert.AreEqual(pinnedBefore.Y, pinnedClosed.Y, 2.0, "the composer returns to its pinned place");
+
         await AssertNoClientErrorsAsync(_clientErrors);
     }
 

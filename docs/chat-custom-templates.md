@@ -171,8 +171,10 @@ semantic-token references).
 | Knob | Default (fallback) | What it controls |
 |------|--------------------|------------------|
 | `--tm-chat-min-height` | `300px` (`0` in `tm-chat--fill`) | The chat's height floor; set `0` to let the host own the height |
-| `--tm-chat-composer-offset` | `0px` | Space below the composer for host chrome (bottom navigation height); the narrow sticky composer and thread reply row rest at `bottom: var(--tm-chat-composer-offset)` |
+| `--tm-chat-composer-offset` | `0px` | Space below the composer for host chrome (bottom navigation height); the narrow sticky composer and thread reply row rest at `bottom: var(--tm-chat-composer-offset)`, and while the keyboard-open marker is set at `bottom: max(var(--tm-chat-composer-offset), var(--tm-chat-keyboard-inset))` |
 | `--tm-chat-safe-area-bottom` | `env(safe-area-inset-bottom, 0px)` | Extra padding under the sticky composer/thread row for the device safe area |
+| `--tm-chat-keyboard-inset` | `0px` (RUNTIME-ONLY) | The on-screen keyboard's covered height, written into the chat root's inline style by `chat.js` while `TrackVirtualKeyboard="true"` — never declared by the library, removed again when the keyboard closes; on a narrow chat it lifts the composer (added while closed, `max()` while the open marker is set) |
+| `--tm-chat-composer-clearance` | `0px` (RUNTIME-ONLY) | The list space the open-keyboard composer covers — measured by the tracker (list bottom minus stuck composer top; it exceeds the inset whenever the chat's box extends past the fold) — reserved as scroll room under the messages so the rescued last row can rest above the composer; removed again when the keyboard closes |
 | `--tm-chat-bubble-in-bg` / `-in-fg` / `-in-border` | `--tm-bg-muted` / `--tm-color-text` / `transparent` | Incoming bubbles (also the built-in rows) |
 | `--tm-chat-bubble-out-bg` / `-out-fg` / `-out-border` | `--tm-color-primary` / `--tm-color-primary-contrast` / `transparent` | Outgoing bubbles |
 | `--tm-chat-bubble-system-bg` / `-system-fg` | `--tm-bg-muted` / `--tm-color-text-secondary` | System rows and `Pill` |
@@ -242,11 +244,50 @@ semantic-token references).
   overlay. Hosts with bottom navigation set `--tm-chat-composer-offset` to the navigation height.
 - Coarse pointers get 44 px targets (send button, actions, jump button) and the composer input
   steps up to `--tm-font-size-md` (1rem) — 0.875rem body text is too small under a finger.
-- Keep the sticky composer above the iOS virtual keyboard (visualViewport) **host-side** — the
-  component does not listen to the visual viewport (carry-forward).
+- **The iOS virtual keyboard (visualViewport) is a component feature now — opt-in
+  `TrackVirtualKeyboard="true"` (FZE-13).** The lift applies ONLY to a narrow chat (< 640 px of
+  the chat's own width — the sticky-composer breakpoint above); a desktop/tablet chat has no
+  sticky composer to lift. iOS ignores `interactive-widget`: an opening keyboard there shrinks
+  only the VISUAL viewport, and `position: sticky` alone still pins to the layout viewport and
+  would leave the composer under the keyboard — the tracker is what handles the keyboard there.
+  When the parameter is on, the `chat.js`
+  `attachViewportTracker(root, { scroller })` listens to `visualViewport` `resize` **and**
+  `scroll` (iOS moves the viewport on scroll instead of resizing it), coalesces both through
+  `requestAnimationFrame` (one style write per frame) and — only on a CHANGE — writes the covered
+  gap `round(max(0, innerHeight - (viewport.height + viewport.offsetTop)))` as the RUNTIME knob
+  `--tm-chat-keyboard-inset` into the chat root's inline style, plus a
+  `data-tm-keyboard-open` marker. Shrinks below 80 px (a collapsing browser toolbar) are
+  ignored — `minInset` is adjustable through the JS option — and so is a ZOOM: while
+  `viewport.scale` sits off 1 the tracker keeps the current state (a pinch zoom is the user
+  resizing, not a keyboard), a degenerate (< 2 px) viewport measures nothing, and sub-pixel
+  fractions are rounded so they cannot churn the inline style. While the keyboard is CLOSED the
+  narrow-chat sticky composer and thread reply row rest at `bottom:
+  calc(var(--tm-chat-composer-offset) + var(--tm-chat-keyboard-inset))` (the knob's 0px
+  fallback collapses that to the plain composer offset); while the `data-tm-keyboard-open`
+  marker is set they rest at `bottom: max(var(--tm-chat-composer-offset),
+  var(--tm-chat-keyboard-inset))` — the keyboard covers the host's bottom navigation, so the
+  LARGER of the two offsets wins instead of their sum — and the safe-area padding is dropped
+  (the keyboard covers the home indicator). The knob is RUNTIME-ONLY: the library never declares
+  it, the inline value is removed (not zeroed) when the keyboard closes, and a host override on a
+  wrapper or `:root` keeps cascading. The stuck composer covers MORE of the message list than the
+  inset whenever the chat's box extends past the fold, so the tracker ALSO measures the covered
+  list space into a second runtime knob, `--tm-chat-composer-clearance` (list bottom minus stuck
+  composer top, re-measured per tracked event): while the marker is set the messages list
+  reserves it as scroll room (`padding-bottom`) and `scroll-padding-bottom`, so the rescued last
+  row can land ABOVE the composer even when the messages themselves do not overflow the list.
+  When the keyboard OPENS and the user was reading at the bottom (the scroller's `isPinned()`
+  belief first, the measured `isAtBottom()` as the fallback), the scroller is re-landed so the
+  last row's bottom rests exactly on the stuck composer's top edge — pure JS, no .NET round
+  trip; a reader of older history keeps their position. Android: iOS ignores `interactive-widget` — the tracker is what
+  handles the keyboard there. On Android WITH the recommended
+  `interactive-widget=resizes-content` viewport meta (`<meta name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">`)
+  the LAYOUT viewport shrinks instead, the measured inset comes out ≈ 0 and the tracker never
+  writes; on Android WITHOUT it (Chrome's default `resizes-visual`) the visual viewport shrinks
+  like on iOS and the tracker lifts the composer too. Keep the meta regardless — it is the
+  correct mobile viewport declaration.
 
 ## Future work (deliberately NOT implemented)
 
 - Generic `TmChat<TItem>` as a **separate** component over the same core.
 - Virtualization of very long conversations (`Virtualize` around the keyed rows).
-- iOS `visualViewport` keyboard tracking inside the component (see Layout notes).

@@ -386,7 +386,7 @@
                             while the chat's box extends past the fold, and rests in its natural
                             place once the end is reached.
                         </p>
-                        <TmChat FillParent="true"
+                        <TmChat TrackVirtualKeyboard="true"
                                 CurrentUser="_alice"
                                 Messages="_mobileMessages"
                                 OnSendMessage="HandleMobileSend" />
@@ -395,8 +395,10 @@
                             its bottom navigation; the composer also clears the home indicator via
                             <code>env(safe-area-inset-bottom)</code> — set
                             <code>--tm-chat-safe-area-bottom: 0</code> when your bottom navigation
-                            already pads the safe area. Keeping it above the iOS virtual keyboard
-                            (visualViewport) is a recorded carry-forward.
+                            already pads the safe area. This chat opts into
+                            <code>TrackVirtualKeyboard</code> (FZE-13): while an on-screen keyboard
+                            is open, the runtime <code>--tm-chat-keyboard-inset</code> knob lifts
+                            the sticky composer above the iOS visual viewport.
                         </p>
                     </div>
                 </div>

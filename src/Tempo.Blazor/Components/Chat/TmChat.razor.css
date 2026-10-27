@@ -8,7 +8,9 @@
    a knob on a wrapper, on :root or directly on a bubble and it reaches every bubble — including
    the built-in rows. Declaring defaults here would shadow a host's :root/wrapper override and
    pin today's visuals. The FZE-8 layout knobs (--tm-chat-min-height, --tm-chat-composer-offset,
-   --tm-chat-safe-area-bottom) follow the same rule. */
+   --tm-chat-safe-area-bottom) and the FZE-13 runtime knobs --tm-chat-keyboard-inset and
+   --tm-chat-composer-clearance (written by the chat.js tracker into the root's inline style,
+   default 0px) follow the same rule. */
 
 .tm-chat {
   display: flex;
@@ -884,18 +886,32 @@
    Branches on the CHAT's own width (container tm-chat on the root), not the viewport: a chat in
    a narrow column behaves mobile even on a desktop window. 640px is the shared TmBreakpoints.Sm
    literal (breakpoints.css; a custom property is illegal inside an @container condition).
-   The iOS virtual keyboard (visualViewport) needs JS to keep the composer above it — recorded as
-   a carry-forward, NOT implemented speculatively. */
+   The iOS virtual keyboard (visualViewport) is tracked by the OPT-IN TrackVirtualKeyboard
+   parameter (FZE-13): the chat.js attachViewportTracker writes the covered gap as the runtime
+   knob --tm-chat-keyboard-inset into the root's inline style (never declared here — the
+   default lives in the var() fallback), and the sticky rows below add it to their offset. */
 @container tm-chat (width < 640px) {
   /* The composer sticks above the host's bottom navigation: the host sets
      --tm-chat-composer-offset to that navigation's height. Sticky needs the scrollport ABOVE the
      chat to be the host's — which is why the root clips with overflow: clip instead of hidden.
      The bottom edge clears the home indicator; --tm-chat-safe-area-bottom exists for hosts whose
-     own bottom chrome already pads the safe area (set it to 0 to avoid double padding). */
+     own bottom chrome already pads the safe area (set it to 0 to avoid double padding).
+     --tm-chat-keyboard-inset is the RUNTIME keyboard gap (FZE-13): 0px while the tracker is off
+     or the keyboard is closed, the covered height while an on-screen keyboard is open on iOS —
+     so the sticky composer follows the visual viewport instead of hiding under the keyboard. */
   .tm-chat__input-area {
     position: sticky;
-    bottom: var(--tm-chat-composer-offset, 0px);
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
     padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* While the tracker reports an open keyboard the keyboard covers the home indicator — the
+     safe-area part of the padding would double-pad above the keyboard, so it is dropped. The
+     offset also stops ADDING: the keyboard covers the host's bottom navigation, so the composer
+     rests on the LARGER of the two offsets (max) instead of keyboard + navigation. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
   }
 
   /* The thread panel covers the whole chat instead of squeezing the composer into a sliver; it
@@ -909,7 +925,8 @@
   /* The overlay's header and reply row stick like the composer: the panel is absolutely
      positioned at the chat's box, which on a phone extends past the fold — without stickiness
      the reply row would rest below it. The knob is the SAME --tm-chat-composer-offset the
-     composer reads, so both rows clear the host's bottom chrome together. */
+     composer reads (plus the FZE-13 runtime keyboard inset), so both rows clear the host's
+     bottom chrome — and the keyboard — together. */
   .tm-chat__thread-header {
     position: sticky;
     top: 0;
@@ -919,9 +936,28 @@
 
   .tm-chat__thread-input-area {
     position: sticky;
-    bottom: var(--tm-chat-composer-offset, 0px);
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
     background: var(--tm-bg-surface);
     padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Same keyboard-open rule as the composer: the safe-area padding is dropped while the
+     keyboard covers the home indicator, and the row rests on the keyboard (max) instead of
+     keyboard + navigation. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__thread-input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
+  }
+
+  /* While the keyboard is open the stuck composer covers the list's bottom — the tracker
+     MEASURES the covered gap into --tm-chat-composer-clearance (it exceeds the keyboard inset
+     whenever the chat's box extends past the fold) and the list reserves it as scroll room, so
+     the rescued last row can rest ABOVE the composer even when the messages themselves do not
+     overflow; scroll-padding keeps native scrollIntoView paths (deep links, focus moves) clear
+     of the composer too. Both knobs are RUNTIME-ONLY — written/removed by the tracker. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__messages {
+    padding-bottom: calc(var(--tm-space-4) + var(--tm-chat-composer-clearance, 0px));
+    scroll-padding-bottom: var(--tm-chat-composer-clearance, 0px);
   }
 
   /* With the full-width thread overlay open the covered body and composer are dead weight — and
