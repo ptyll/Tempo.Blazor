@@ -1,6 +1,7 @@
 @page "/chat"
 @using Tempo.Blazor.Components.Chat
 @using Tempo.Blazor.Models
+@implements IDisposable
 <PageTitle>Chat – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -409,6 +410,161 @@
     </div>
 </section>
 
+<!-- Custom Templates (FZE-9): the host owns the special message rows -->
+<section class="demo-section" data-testid="chat-custom-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Custom Templates</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-9</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        An inbox-style conversation in which the HOST renders the special messages through
+        <code>MessageTemplate</code> + <code>TmChatBubble</code>: an AI draft with a reason badge and
+        Approve/Edit/Discard, a queued reply with a countdown and Stop, a withdrawn message struck
+        through, a locked price-only bubble and a tip pill. Ordinary messages fall back to
+        <code>context.DefaultContent</code>. Every built-in feature is switched off; the typing
+        label, live-region texts, banner, owner note and the older pages are host-supplied.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 640px;">
+                <TmChat @ref="_customChat"
+                        CurrentUser="_customOwner"
+                        Messages="_customMessages"
+                        MessageTemplate="RenderCustomMessage"
+                        UseTemplateFor="@(m => m.Kind is not null)"
+                        EnableReactions="false"
+                        EnableThreads="false"
+                        AllowEditDelete="false"
+                        ShowReadReceipts="false"
+                        AutoReadReceipts="false"
+                        ShowAvatars="false"
+                        TypingUsers="_customTyping"
+                        TypingLabel="@(users => $"{users[0].Name} is typing…")"
+                        TypingTimeout="TimeSpan.FromSeconds(6)"
+                        TypingAriaHidden="true"
+                        MessageAnnouncement="DescribeCustomAnnouncement"
+                        OnSendMessage="HandleCustomInboxSend"
+                        OnLoadOlder="HandleCustomLoadOlderAsync"
+                        HasMoreBefore="_customHasMore"
+                        IsLoadingOlder="_customLoadingOlder"
+                        MessagesAriaLabel="Owner inbox messages">
+                    <BannerContent>
+                        <div class="chat-demo-conn @(_customOffline ? "chat-demo-conn--offline" : "chat-demo-conn--online")"
+                             data-testid="chat-custom-banner">
+                            <span class="chat-demo-conn__dot" aria-hidden="true"></span>
+                            <span class="chat-demo-conn__text">
+                                @(_customOffline
+                                    ? "Offline — replies are queued until the inbox reconnects."
+                                    : "Connected — replies send immediately.")
+                            </span>
+                            <TmToggle Value="_customOffline" ValueChanged="HandleOfflineChanged"
+                                      Label="Offline" AriaLabel="Offline mode"
+                                      Class="chat-demo-conn__toggle" />
+                        </div>
+                    </BannerContent>
+                    <ComposerAddon>
+                        <p class="chat-demo-owner-note" data-testid="chat-custom-owner-note">
+                            <TmIcon Name="info" Size="IconSize.Sm" />
+                            Owner note: every reply is visible to all agents in the shared inbox.
+                        </p>
+                    </ComposerAddon>
+                </TmChat>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomDeliverAsync">
+                Deliver incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomTypingRefreshAsync">
+                Simulate fan typing
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomLoadOlderAsync"
+                      Disabled="@(_customLoadingOlder || !_customHasMore)">
+                @(_customLoadingOlder ? "Loading older…" : "Simulate older page")
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Approve the AI draft to post it as a normal reply and stop the queued message
+                before its countdown runs out — the host owns every action. Switching
+                <em>Offline</em> queues your sends too; the paid voice note stays locked until Mia
+                unlocks it from her own view (the Subscribe Gate below).
+            </p>
+        </div>
+    </div>
+
+    <div class="showcase-card mt-6">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <code>TmChatBubble</code> is the presentation half a host uses inside its template — and
+            it works standalone. The alignment contract: <strong>incoming left, outgoing right,
+            system and pill centered</strong> (pending, queued and discarded align right; locked
+            follows its author).
+        </p>
+        <div class="chat-demo-bubbles" data-testid="chat-custom-bubble-showcase">
+            <TmChatBubble Variant="ChatBubbleVariant.Incoming"
+                          data-testid="chat-bubble-incoming"
+                          ActorLabel="Mia" Timestamp="new DateTimeOffset(2026, 7, 12, 9, 40, 0, TimeSpan.Zero)">
+                <span>Is the studio free on Friday evening?</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.Outgoing"
+                          data-testid="chat-bubble-outgoing"
+                          ActorLabel="Dana (owner)" Timestamp="new DateTimeOffset(2026, 7, 12, 9, 41, 0, TimeSpan.Zero)">
+                <span>Friday is free after 6 pm.</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.System"
+                          data-testid="chat-bubble-system"
+                          Timestamp="new DateTimeOffset(2026, 7, 12, 9, 42, 0, TimeSpan.Zero)">
+                <span>Mia joined the conversation</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.Pill"
+                          data-testid="chat-bubble-pill">
+                <span>Tip: replies queued outside business hours send when the inbox reopens.</span>
+            </TmChatBubble>
+        </div>
+    </div>
+</section>
+
+<!-- Subscribe Gate (FZE-9): a host composer replaces the built-in one -->
+<section class="demo-section" data-testid="chat-subscribe-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Subscribe Gate</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-9</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        <code>ComposerTemplate</code> replaces the built-in composer with host markup — here a fan
+        view that gates replies behind a subscription. The host registers its textarea with
+        <code>context.AttachAsync(input)</code> once mounted, so Enter/IME and the refocus behave
+        exactly like the built-in composer; <code>context.SetTextAsync</code> keeps the draft and
+        <code>context.SendAsync</code> goes through the same guarded pipeline.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <TmChat @ref="_gateChat"
+                    CurrentUser="_gateFan"
+                    Messages="_gateMessages"
+                    MessageTemplate="RenderGateMessage"
+                    UseTemplateFor="@(m => m.Kind is not null)"
+                    OnSendMessage="HandleGateSend"
+                    ComposerTemplate="SubscribeGateComposer"
+                    MessagesAriaLabel="Subscriber chat messages" />
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                The gate is plain host markup: until you subscribe, the chat renders a subscribe
+                card instead of an input (and the draft guard still applies to the host composer).
+                Press <em>Subscribe</em> — the composer mounts, the Enter/IME pipeline attaches and
+                Dana answers a moment after your first reply. Dana's paid voice note is locked:
+                press <em>Unlock</em> to pay $9.99 and reveal it as a normal row.
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleGateReset">
+                Reset subscription
+            </TmButton>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -556,6 +712,11 @@
             new("l1", "Welcome! Type a message and I will echo it back with a delay.", _bob, ChatMessageType.Incoming),
         };
         _liveTyping = new();
+
+        // ── Custom Templates + Subscribe Gate demos (FZE-9) ───────────────────
+        InitializeCustomDemo(owner: new ChatUser("owner", "Dana (owner)", "D", isOnline: true),
+                             fan: new ChatUser("fan-mia", "Mia", "M", isOnline: true));
+        InitializeGateDemo(fan: new ChatUser("gate-fan", "Mia", "M", isOnline: true));
     }
 
     private void HandleBasicSend(string text)
@@ -632,6 +793,24 @@
         {
             _customComposerAttachedId = _customComposerInput.Id;
             await _customComposerContext.AttachAsync(_customComposerInput);
+        }
+
+        // The subscribe-gate composer re-mounts when the host template switches from the gate
+        // card to the textarea — attach the Enter/IME pipeline to the CURRENT element, then put
+        // the caret in it so the subscriber can type immediately.
+        if (_gateComposerContext is not null && _gateSubscribed && !string.IsNullOrEmpty(_gateInput.Id)
+            && _gateInput.Id != _gateAttachedInputId)
+        {
+            _gateAttachedInputId = _gateInput.Id;
+            await _gateComposerContext.AttachAsync(_gateInput);
+            await _gateComposerContext.FocusAsync();
+        }
+
+        // The draft editor just mounted — move the focus into it (Edit opened it for typing).
+        if (_shouldFocusDraftEditor && !string.IsNullOrEmpty(_draftEditorInput.Id))
+        {
+            _shouldFocusDraftEditor = false;
+            await _draftEditorInput.FocusAsync();
         }
     }
 
@@ -802,5 +981,491 @@
             _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
         await InvokeAsync(StateHasChanged);
         await _a11yChat!.AnnounceAsync("Your draft was approved");
+    }
+
+    // ── Custom Templates demo (FZE-9) — the host owns the special rows ────
+    // Demo-local DTO the template reads back type-safely via context.PayloadAs<T>().
+    private sealed record CustomInboxDraft(string Request, string Reason);
+
+    private TmChat? _customChat;
+    private ChatUser _customOwner = default!;
+    private ChatUser _customFan = default!;
+    private List<ChatMessage> _customMessages = default!;
+    private List<ChatUser> _customTyping = new();
+    private bool _customOffline;
+    private bool _customHasMore = true;
+    private bool _customLoadingOlder;
+    private int _customSeq;
+
+    // Inline draft editing: the template renders the editor while this id is set. The ref + flag
+    // move the focus into the textarea right after the editor mounts.
+    private string? _customEditingDraftId;
+    private string _customDraftEditText = string.Empty;
+    private ElementReference _draftEditorInput;
+    private bool _shouldFocusDraftEditor;
+
+    // ── Subscribe Gate demo (FZE-9) — host composer with a gate ───────────
+    private TmChat? _gateChat;
+    private ChatUser _gateFan = default!;
+    private List<ChatMessage> _gateMessages = default!;
+    private bool _gateSubscribed;
+    private ElementReference _gateInput;
+    private ChatComposerContext? _gateComposerContext;
+    private string? _gateAttachedInputId;
+    private int _gateSeq;
+
+    // Seeded timestamps are relative to NOW so the demo conversation always looks fresh: the
+    // seeds sit a quarter of an hour in the past, delivered messages get DateTimeOffset.Now.
+    private DateTimeOffset _customBase;
+
+    // Cancellation for the demo's own simulated delays — cancelled in Dispose (IDisposable).
+    private readonly CancellationTokenSource _cts = new();
+
+    private ChatMessage CustomMessage(string id, string text, ChatUser author, ChatMessageType type, int minute) =>
+        new(id, text, author, type, _customBase.AddMinutes(minute));
+
+    private void InitializeCustomDemo(ChatUser owner, ChatUser fan)
+    {
+        _customOwner = owner;
+        _customFan = fan;
+        _customBase = DateTimeOffset.Now.AddMinutes(-15);
+
+        _customMessages = new()
+        {
+            new ChatMessage("ct1", "Tip: replies queued outside business hours send when the inbox reopens.", type: ChatMessageType.System, timestamp: _customBase)
+            {
+                Kind = "tip",
+            },
+            CustomMessage("ct2", "Hi! Is the studio free on Friday evening?", fan, ChatMessageType.Incoming, 1),
+            CustomMessage("ct3", "Hey Mia — let me check the calendar.", owner, ChatMessageType.Outgoing, 2),
+            CustomMessage("ct4", "No rush, thanks!", fan, ChatMessageType.Incoming, 3),
+            CustomMessage("ct5", "Friday is free after 6 pm.", owner, ChatMessageType.Outgoing, 4),
+            CustomMessage("ct6", "Perfect. Can I pay on site?", fan, ChatMessageType.Incoming, 5),
+            CustomMessage("ct7", "Card or cash, both work.", owner, ChatMessageType.Outgoing, 6),
+            CustomMessage("ct8", "Great, see you then!", fan, ChatMessageType.Incoming, 7),
+            CustomMessage("ct9", "See you 👋", owner, ChatMessageType.Outgoing, 8),
+            new ChatMessage("ct10", "Movie night is $50 per hour.", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(9))
+            {
+                Kind = "discarded",
+                Metadata = new Dictionary<string, object?> { ["discardNote"] = "Withdrawn before sending · wrong price" },
+            },
+            new ChatMessage("ct11", "Voice note: see you at 6 and bring the contract.", fan, ChatMessageType.Incoming, _customBase.AddMinutes(10))
+            {
+                Kind = "locked",
+            },
+            new ChatMessage("ct12", "The studio is booked — see you Friday at 6!", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(11))
+            {
+                Kind = "queued",
+                Metadata = new Dictionary<string, object?> { ["queuedUntil"] = DateTimeOffset.Now.AddMinutes(3) },
+            },
+            new ChatMessage("ct13", "Sure — the studio is $30/h including the projector.", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(12))
+            {
+                Kind = "ai-draft",
+                Payload = new CustomInboxDraft("Can you send the price list?", "pricing question"),
+            },
+        };
+    }
+
+    private void InitializeGateDemo(ChatUser fan)
+    {
+        _gateFan = fan;
+        _gateSubscribed = false;
+        _gateSeq = 0;
+        _gateMessages = new()
+        {
+            new ChatMessage("gt1", "Welcome to my studio channel! 💜", _customOwner, ChatMessageType.Incoming, _customBase.AddMinutes(-4)),
+            new ChatMessage("gt2", "Subscribers get weekly voice notes with booking tips.", _customOwner, ChatMessageType.Incoming, _customBase.AddMinutes(-3)),
+            new ChatMessage("gt3", "Voice note: see you at 6 and bring the contract.", _customOwner, ChatMessageType.Outgoing, _customBase.AddMinutes(-2))
+            {
+                Kind = "locked",
+            },
+        };
+    }
+
+    // ── MessageTemplate: route every host-owned Kind to its bubble ────────
+    private RenderFragment RenderCustomMessage(ChatMessageContext context) => context.Message.Kind switch
+    {
+        "ai-draft" => RenderCustomDraft(context),
+        "queued" => RenderCustomQueued(context),
+        "discarded" => RenderCustomDiscarded(context),
+        "tip" => RenderCustomTip(context),
+        "locked" => RenderCustomLocked(context),
+        _ => context.DefaultContent,
+    };
+
+    private RenderFragment RenderCustomDraft(ChatMessageContext context)
+    {
+        if (context.Message.Id == _customEditingDraftId)
+        {
+            return RenderDraftEditor();
+        }
+
+        var reason = context.PayloadAs<CustomInboxDraft>()?.Reason ?? "review";
+        return @<TmChatBubble Variant="ChatBubbleVariant.Pending"
+                              data-testid="chat-custom-draft"
+                              ActorLabel="AI assistant"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="AI draft — pending review">
+            <Badge><span class="chat-demo-badge chat-demo-badge--pending">AI draft · @reason</span></Badge>
+            <ChildContent><span>@context.Message.Text</span></ChildContent>
+            <Actions>
+                <div class="chat-demo-bubble-actions">
+                    <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--primary" data-testid="chat-custom-approve"
+                            aria-label="Approve AI draft"
+                            @onclick="@(() => ApproveDraftAsync(context.Message))">Approve</button>
+                    <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-edit"
+                            aria-label="Edit AI draft"
+                            @onclick="@(() => EditDraft(context.Message))">Edit</button>
+                    <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--danger" data-testid="chat-custom-discard"
+                            aria-label="Discard AI draft"
+                            @onclick="@(() => DiscardDraftAsync(context.Message))">Discard</button>
+                </div>
+            </Actions>
+        </TmChatBubble>;
+    }
+
+    private RenderFragment RenderDraftEditor() => @<div class="chat-demo-draft-editor" data-testid="chat-custom-draft-editor">
+        <textarea class="chat-demo-draft-editor__input" rows="2" aria-label="Edit draft reply"
+                  @ref="_draftEditorInput" @bind="_customDraftEditText"></textarea>
+        <div class="chat-demo-bubble-actions">
+            <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-draft-save"
+                    @onclick="SaveDraftEditAsync">Save</button>
+            <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-draft-cancel"
+                    @onclick="CancelDraftEditAsync">Cancel</button>
+        </div>
+    </div>;
+
+    // The queued countdown is the ChatDemoQueuedCountdown child: it owns the per-second timer,
+    // and on expiry the HOST sends the message (a plain outgoing row).
+    private RenderFragment QueuedCountdownFragment(ChatMessageContext context) => @<ChatDemoQueuedCountdown
+                              Until="@(context.GetMetadata<DateTimeOffset>("queuedUntil"))"
+                              OnExpired="@(() => SendExpiredQueuedAsync(context.Message))" />;
+
+    private RenderFragment RenderCustomQueued(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Queued"
+                              data-testid="chat-custom-queued"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Queued — not sent yet"
+                              Meta="@QueuedCountdownFragment(context)">
+        <Badge><span class="chat-demo-badge chat-demo-badge--queued">Queued</span></Badge>
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Actions>
+            <div class="chat-demo-bubble-actions">
+                <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--danger" data-testid="chat-custom-stop"
+                        aria-label="Stop sending queued reply"
+                        @onclick="@(() => StopQueuedAsync(context.Message))">Stop sending</button>
+            </div>
+        </Actions>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomDiscarded(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Discarded"
+                              data-testid="chat-custom-discarded"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Discarded — not sent">
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Note><span class="chat-demo-note">@(context.GetMetadata<string>("discardNote", "Withdrawn"))</span></Note>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomTip(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Pill"
+                              data-testid="chat-custom-tip">
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomLocked(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Locked"
+                              data-testid="chat-custom-locked"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Paid voice note · Mia hasn't unlocked yet">
+        @* The body is passed to demonstrate the guard: the Locked variant never renders it, so
+           the paid content cannot leak into the DOM. The owner has no Unlock button here — Mia
+           unlocks from her own view (the Subscribe Gate below). The price shows once. *@
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Badge><span class="chat-demo-badge chat-demo-badge--price">$9.99</span></Badge>
+    </TmChatBubble>;
+
+    // ── Host actions over the template kinds ──────────────────────────────
+    private async Task ApproveDraftAsync(ChatMessage draft)
+    {
+        _customMessages.Remove(draft);
+        _customMessages.Add(new ChatMessage($"ct-own-{Guid.NewGuid():N}", draft.Text, _customOwner,
+            ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusComposerAsync();
+            await _customChat.AnnounceAsync("Draft approved — reply posted.");
+        }
+    }
+
+    private void EditDraft(ChatMessage draft)
+    {
+        _customDraftEditText = draft.Text;
+        _customEditingDraftId = draft.Id;
+        _draftEditorInput = default;
+        _shouldFocusDraftEditor = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveDraftEditAsync()
+    {
+        // Blank edits keep the editor open — the draft is not lost to a mistyped Save.
+        if (string.IsNullOrWhiteSpace(_customDraftEditText)) return;
+
+        var draft = _customMessages.FirstOrDefault(m => m.Id == _customEditingDraftId);
+        _customEditingDraftId = null;
+        _draftEditorInput = default;
+        if (draft is null) return;
+
+        _customMessages.Remove(draft);
+        _customMessages.Add(new ChatMessage($"ct-own-{Guid.NewGuid():N}", _customDraftEditText, _customOwner,
+            ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusComposerAsync();
+        }
+    }
+
+    private async Task CancelDraftEditAsync()
+    {
+        var draftId = _customEditingDraftId;
+        _customEditingDraftId = null;
+        _shouldFocusDraftEditor = false;
+        _draftEditorInput = default;
+        await InvokeAsync(StateHasChanged);
+        if (draftId is not null && _customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(draftId);
+        }
+    }
+
+    private async Task DiscardDraftAsync(ChatMessage draft)
+    {
+        ReplaceCustom(draft.Id, m => m with
+        {
+            Kind = "discarded",
+            Metadata = new Dictionary<string, object?> { ["discardNote"] = "Discarded by the owner before sending" },
+        });
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(draft.Id);
+            await _customChat.AnnounceAsync("Draft discarded.");
+        }
+    }
+
+    private async Task StopQueuedAsync(ChatMessage queued)
+    {
+        ReplaceCustom(queued.Id, m => m with
+        {
+            Kind = "discarded",
+            Metadata = new Dictionary<string, object?> { ["discardNote"] = "Stopped before it was sent" },
+        });
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(queued.Id);
+            await _customChat.AnnounceAsync("Queued reply stopped.");
+        }
+    }
+
+    // The queued countdown expired: the host sends the message — the same row falls back to the
+    // built-in rendering once the kind is cleared.
+    private async Task SendExpiredQueuedAsync(ChatMessage queued)
+    {
+        ReplaceCustom(queued.Id, m => m with { Kind = null, Metadata = new Dictionary<string, object?>() });
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ReplaceCustom(string id, Func<ChatMessage, ChatMessage> update)
+    {
+        var index = _customMessages.FindIndex(m => m.Id == id);
+        if (index >= 0) _customMessages[index] = update(_customMessages[index]);
+    }
+
+    // ── Demo-side inputs of the custom chat ───────────────────────────────
+    private void HandleOfflineChanged(bool offline)
+    {
+        _customOffline = offline;
+        StateHasChanged();
+    }
+
+    private void HandleCustomInboxSend(string text)
+    {
+        // Offline sends queue like any host would: a queued row whose own ChatDemoQueuedCountdown
+        // counts down and sends it (the composer itself stays usable while offline).
+        var message = new ChatMessage($"ct-own-{Guid.NewGuid():N}", text, _customOwner, ChatMessageType.Outgoing, DateTimeOffset.Now);
+        if (_customOffline)
+        {
+            message = message with
+            {
+                Kind = "queued",
+                Metadata = new Dictionary<string, object?> { ["queuedUntil"] = DateTimeOffset.Now.AddSeconds(30) },
+            };
+        }
+        _customMessages.Add(message);
+    }
+
+    private async Task HandleCustomDeliverAsync()
+    {
+        _customSeq++;
+        _customMessages.Add(new ChatMessage($"ct-in-{_customSeq}", $"Incoming message #{_customSeq}",
+            _customFan, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleCustomTypingRefreshAsync()
+    {
+        // A fresh list instance opens a fresh TypingTimeout window.
+        _customTyping = new List<ChatUser> { _customFan };
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCustomLoadOlderAsync()
+    {
+        if (_customLoadingOlder || !_customHasMore) return;
+        _customLoadingOlder = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await Task.Delay(500, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // the demo page is gone — nothing to load into
+        }
+
+        var page = new List<ChatMessage>();
+        for (var i = 0; i < 8; i++)
+        {
+            _customSeq++;
+            page.Add(CustomMessage($"ct-old-{_customSeq}", $"Archived message #{_customSeq}",
+                _customFan, ChatMessageType.Incoming, -_customSeq));
+        }
+        page.Reverse();
+        _customMessages.InsertRange(0, page);
+        if (_customMessages.Count > 80) _customHasMore = false; // a finite demo archive
+        _customLoadingOlder = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>The host owns the announced sentence — the library never invents one.</summary>
+    private string? DescribeCustomAnnouncement(ChatMessage message)
+        => message.Type == ChatMessageType.System
+            ? message.Text
+            : $"New message from {message.Author?.Name}: {message.Text}";
+
+    // ── Subscribe Gate: ComposerTemplate with a gate ──────────────────────
+    private RenderFragment<ChatComposerContext> SubscribeGateComposer => context =>
+    {
+        _gateComposerContext = context;
+        return _gateSubscribed
+            ? @<div class="chat-demo-gate-composer">
+                <textarea class="chat-demo-gate-composer__input" rows="1" aria-label="Reply to Dana"
+                          placeholder="Reply to Dana…"
+                          value="@context.Text"
+                          @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"
+                          @ref="_gateInput"></textarea>
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                          Disabled="@(!context.CanSend)"
+                          OnClick="@(async () => await context.SendAsync())">Send</TmButton>
+            </div>
+            : @<div class="chat-demo-gate" data-testid="chat-gate-composer">
+                <p class="chat-demo-gate__title">Only subscribers can reply to Dana</p>
+                <p class="chat-demo-gate__text">Subscribe to unlock replies, voice notes and the weekly booking tips.</p>
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                          data-testid="chat-gate-subscribe"
+                          OnClick="HandleGateSubscribe">Subscribe for $4.99/mo</TmButton>
+            </div>;
+    };
+
+    private void HandleGateSubscribe()
+    {
+        _gateSubscribed = true;
+        StateHasChanged();
+    }
+
+    private void HandleGateReset()
+    {
+        InitializeGateDemo(_gateFan);
+        StateHasChanged();
+    }
+
+    private void HandleGateSend(string text)
+    {
+        _gateSeq++;
+        _gateMessages.Add(new ChatMessage($"gt-own-{_gateSeq}", text, _gateFan, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        StateHasChanged();
+        _ = GateAutoReplyAsync(text);
+    }
+
+    private async Task GateAutoReplyAsync(string text)
+    {
+        try
+        {
+            await Task.Delay(800, _cts.Token);
+            _gateSeq++;
+            _gateMessages.Add(new ChatMessage($"gt-in-{_gateSeq}", $"Thanks for subscribing! Re: “{text}”", _customOwner,
+                ChatMessageType.Incoming, DateTimeOffset.Now));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // The demo page went away during the simulated delay — nothing to answer anymore.
+        }
+    }
+
+    // ── Subscribe Gate: MessageTemplate for the locked voice note ─────────
+    private RenderFragment RenderGateMessage(ChatMessageContext context) => context.Message.Kind switch
+    {
+        "locked" => RenderGateLocked(context),
+        _ => context.DefaultContent,
+    };
+
+    private RenderFragment RenderGateLocked(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Locked"
+                              data-testid="chat-gate-locked"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Locked — subscribe to read">
+        @* The guard in action: the body is passed but the Locked variant never renders it, so
+           the paid content cannot leak into the DOM before the fan pays. The price shows once
+           (badge only — the Unlock button does not repeat it). *@
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Badge><span class="chat-demo-badge chat-demo-badge--price">$9.99</span></Badge>
+        <Actions>
+            <div class="chat-demo-bubble-actions">
+                <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--primary" data-testid="chat-gate-unlock"
+                        aria-label="Unlock voice note"
+                        @onclick="@(() => UnlockGateNoteAsync(context.Message))">Unlock</button>
+            </div>
+        </Actions>
+    </TmChatBubble>;
+
+    private async Task UnlockGateNoteAsync(ChatMessage locked)
+    {
+        // Reveal: the same message falls back to the built-in row once the host clears the kind.
+        ReplaceGate(locked.Id, m => m with { Kind = null, Metadata = new Dictionary<string, object?>() });
+        await InvokeAsync(StateHasChanged);
+        if (_gateChat is not null)
+        {
+            await _gateChat.FocusMessageAsync(locked.Id);
+            await _gateChat.AnnounceAsync("Voice note unlocked.");
+        }
+    }
+
+    private void ReplaceGate(string id, Func<ChatMessage, ChatMessage> update)
+    {
+        var index = _gateMessages.FindIndex(m => m.Id == id);
+        if (index >= 0) _gateMessages[index] = update(_gateMessages[index]);
+    }
+
+    public void Dispose()
+    {
+        // Cancel the demo's own simulated delays (gate auto-reply, load-older) — without this a
+        // pending Task.Delay would keep the circuit alive after the page is gone.
+        _cts.Cancel();
+        _cts.Dispose();
     }
 }
