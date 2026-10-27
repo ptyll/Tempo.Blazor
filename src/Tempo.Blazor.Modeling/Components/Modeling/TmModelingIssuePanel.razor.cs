@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Modeling;
 
 namespace Tempo.Blazor.Components.Modeling;
@@ -44,6 +45,9 @@ public partial class TmModelingIssuePanel
     private string GetIconClass(ModelingIssueDto issue)
         => $"tm-modeling-issue-panel__icon tm-modeling-issue-panel__icon--{GetSeverityKey(issue)}";
 
+    private string GetSeverityClass(ModelingIssueDto issue)
+        => $"tm-modeling-issue-panel__severity tm-modeling-issue-panel__severity--{GetSeverityKey(issue)}";
+
     private static string GetSeverityKey(ModelingIssueDto issue)
         => issue.Severity switch
         {
@@ -60,12 +64,13 @@ public partial class TmModelingIssuePanel
             _ => Loc["TmModelingIssuePanel_Info"]
         };
 
+    /// <summary>Distinct icon per severity: alert circle (error), alert triangle (warning), info (info).</summary>
     private static string GetSeverityIcon(ModelingIssueDto issue)
         => issue.Severity switch
         {
-            ModelingIssueSeverity.Error => "!",
-            ModelingIssueSeverity.Warning => "!",
-            _ => "i"
+            ModelingIssueSeverity.Error => IconNames.AlertCircle,
+            ModelingIssueSeverity.Warning => IconNames.AlertTriangle,
+            _ => IconNames.Info
         };
 
     private string GetMessage(ModelingIssueDto issue)

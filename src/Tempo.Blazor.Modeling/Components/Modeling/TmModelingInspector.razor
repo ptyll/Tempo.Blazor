@@ -17,9 +17,14 @@
     else
     {
         <header class="tm-modeling-inspector__header">
-            <span class="tm-modeling-inspector__kind">@KindLabel</span>
-            <h3>@DisplayName</h3>
-            <p>@DisplayType</p>
+            <span class="tm-modeling-inspector__type-icon" aria-hidden="true">
+                <TmIcon Name="@HeaderIcon" Size="IconSize.Sm" />
+            </span>
+            <div class="tm-modeling-inspector__heading">
+                <span class="tm-modeling-inspector__kind">@KindLabel</span>
+                <h3 class="tm-modeling-inspector__name">@DisplayName</h3>
+                <p class="tm-modeling-inspector__type">@DisplayType</p>
+            </div>
         </header>
 
         @if (Element is not null)

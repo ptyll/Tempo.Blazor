@@ -8,11 +8,11 @@
          aria-label="@Loc["TmModelingModelTree_Title"]">
     <div class="tm-modeling-model-tree__header">
         <div>
-            <h3>@Loc["TmModelingModelTree_Title"]</h3>
-            <span>@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>
+            <h3 class="tm-modeling-model-tree__title">@Loc["TmModelingModelTree_Title"]</h3>
+            <span class="tm-modeling-model-tree__count">@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>
         </div>
         <label class="tm-modeling-model-tree__search">
-            <span>@Loc["TmModelingModelTree_SearchLabel"]</span>
+            <span class="tm-modeling-model-tree__search-label">@Loc["TmModelingModelTree_SearchLabel"]</span>
             <input data-testid="@TestId("modeling-tree-search")"
                    value="@_filterText"
                    @oninput="HandleFilterChanged"
@@ -40,38 +40,69 @@
         <div class="tm-modeling-model-tree__groups" role="tree">
             @foreach (var group in FilteredGroups)
             {
+                var expanded = IsGroupExpanded(group.Key);
                 <div class="tm-modeling-model-tree__group"
-                     data-testid="@($"modeling-tree-group-{group.Key}")">
-                    <div class="tm-modeling-model-tree__group-header">
-                        <span>@group.Label</span>
-                        <strong>@group.Elements.Count</strong>
-                    </div>
-                    <div class="tm-modeling-model-tree__nodes">
-                        @foreach (var element in group.Elements)
-                        {
-                            <div>
-                                <button type="button"
-                                        class="@GetNodeClass(element)"
-                                        data-testid="@($"modeling-tree-node-{element.Id}")"
-                                        data-element-id="@element.Id"
-                                        data-semantic-type="@element.SemanticType"
-                                        data-modeling-drag-element-id="@element.Id"
-                                        draggable="true"
-                                        role="treeitem"
-                                        aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
-                                        aria-label="@GetNodeAriaLabel(element)"
-                                        title="@GetDisplayName(element)"
-                                        @onclick="() => SelectElementAsync(element)"
-                                        @onkeydown="args => HandleNodeKeyDownAsync(element, args)"
-                                        @ondragstart="() => HandleDragStartedAsync(element)"
-                                        @ondragend="HandleDragEndedAsync">
-                                    <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">::</span>
-                                    <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
-                                    <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
-                                </button>
-                            </div>
-                        }
-                    </div>
+                     data-testid="@($"modeling-tree-group-{group.Key}")"
+                     data-expanded="@expanded.ToString().ToLowerInvariant()">
+                    @* MO4 disclosure header: a real button with aria-expanded/aria-controls.
+                       Enter/Space stay native button activation; ArrowLeft/ArrowRight collapse
+                       and expand (docs/keyboard-activation-convention.md). *@
+                    @* APG disclosure-tree pattern: the group header is a treeitem whose
+                       aria-expanded/aria-controls operate the group it owns. *@
+                    <button type="button"
+                            role="treeitem"
+                            class="tm-modeling-model-tree__group-header"
+                            data-testid="@($"modeling-tree-group-header-{group.Key}")"
+                            aria-expanded="@expanded.ToString().ToLowerInvariant()"
+                            aria-controls="@GetGroupContentId(group.Key)"
+                            @onclick="() => ToggleGroup(group.Key)"
+                            @onkeydown="args => HandleGroupHeaderKeyDownAsync(group.Key, args)">
+                        <span class="tm-modeling-model-tree__group-chevron" aria-hidden="true">
+                            <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
+                        </span>
+                        <span class="tm-modeling-model-tree__group-icon" aria-hidden="true">
+                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(group.Key)" Size="IconSize.Xs" />
+                        </span>
+                        <span class="tm-modeling-model-tree__group-label">@group.Label</span>
+                        <strong class="tm-modeling-model-tree__group-count">@group.Elements.Count</strong>
+                        <span class="tm-sr-only">@Loc[expanded ? "TmModelingModelTree_CollapseGroup" : "TmModelingModelTree_ExpandGroup"]</span>
+                    </button>
+                    @if (expanded)
+                    {
+                        <div id="@GetGroupContentId(group.Key)" class="tm-modeling-model-tree__nodes" role="group">
+                            @foreach (var element in group.Elements)
+                            {
+                                <div>
+                                    <button type="button"
+                                            class="@GetNodeClass(element)"
+                                            data-testid="@($"modeling-tree-node-{element.Id}")"
+                                            data-element-id="@element.Id"
+                                            data-semantic-type="@element.SemanticType"
+                                            data-modeling-drag-element-id="@element.Id"
+                                            draggable="true"
+                                            role="treeitem"
+                                            aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
+                                            aria-label="@GetNodeAriaLabel(element)"
+                                            title="@GetDisplayName(element)"
+                                            @onclick="() => SelectElementAsync(element)"
+                                            @onkeydown="args => HandleNodeKeyDownAsync(element, args)"
+                                            @ondragstart="() => HandleDragStartedAsync(element)"
+                                            @ondragend="HandleDragEndedAsync">
+                                        <span class="tm-modeling-model-tree__type-icon" aria-hidden="true">
+                                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Xs" />
+                                        </span>
+                                        <span class="tm-modeling-model-tree__node-body">
+                                            <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
+                                            <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
+                                        </span>
+                                        <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
+                                            <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
+                                        </span>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </div>

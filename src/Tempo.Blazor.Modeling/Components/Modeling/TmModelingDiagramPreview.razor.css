@@ -82,8 +82,8 @@
         linear-gradient(var(--tm-bg-surface-secondary), var(--tm-bg-surface-secondary)) padding-box,
         repeating-linear-gradient(
             45deg,
-            color-mix(in srgb, var(--tm-color-primary) 22%, transparent) 0 8px,
-            transparent 8px 16px
+            color-mix(in srgb, var(--tm-color-primary) 22%, transparent) 0 var(--tm-space-2),
+            transparent var(--tm-space-2) var(--tm-space-4)
         ) border-box;
 }
 
@@ -109,7 +109,7 @@
     position: absolute;
     z-index: 2;
     inset: var(--tm-space-6) auto auto 50%;
-    max-width: min(28rem, calc(100% - var(--tm-space-8)));
+    max-width: min(calc(var(--tm-space-16) * 7), calc(100% - var(--tm-space-8)));
     transform: translateX(-50%);
     padding: var(--tm-space-2) var(--tm-space-3);
     border: 1px solid var(--tm-color-border);

@@ -16,6 +16,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private IReadOnlyList<ModelingElementGroup> _filteredGroups = [];
     private string? _filteredGroupsFilterText;
     private string? _filteredGroupsCultureName;
+    private readonly HashSet<string> _collapsedGroups = new(StringComparer.OrdinalIgnoreCase);
     private ModelingInteropModule? _interopModule;
     private ElementReference _treeRoot;
 
@@ -83,7 +84,67 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
     }
 
-    private int VisibleElementCount => FilteredGroups.Sum(group => group.Elements.Count);
+    private int VisibleElementCount
+        => FilteredGroups.Where(group => IsGroupExpanded(group.Key)).Sum(group => group.Elements.Count);
+
+    /// <summary>True while a filter text is active: matching groups render expanded regardless
+    /// of the stored collapsed state (the filter view is transient — the user's state comes
+    /// back when the filter clears).</summary>
+    private bool FilterActive => !string.IsNullOrWhiteSpace(_filterText);
+
+    /// <summary>A group renders expanded while filtering or when the user has not collapsed it.</summary>
+    private bool IsGroupExpanded(string groupKey)
+        => FilterActive || !_collapsedGroups.Contains(groupKey);
+
+    private void ToggleGroup(string groupKey)
+    {
+        // While a filter is active the expansion is transient; keep the user's stored state
+        // untouched so it survives the filter being cleared (and any rerender in between).
+        if (FilterActive)
+        {
+            return;
+        }
+
+        if (!_collapsedGroups.Remove(groupKey))
+        {
+            _collapsedGroups.Add(groupKey);
+        }
+    }
+
+    private Task HandleGroupHeaderKeyDownAsync(string groupKey, KeyboardEventArgs args)
+    {
+        // Enter/Space are NOT handled: the header is a native <button>, the browser produces
+        // the activation click that reaches ToggleGroup. Only the disclosure arrows are emulated.
+        switch (args.Key)
+        {
+            case "ArrowLeft":
+                if (FilterActive)
+                {
+                    break;
+                }
+
+                _collapsedGroups.Add(groupKey);
+                break;
+            case "ArrowRight":
+                if (FilterActive)
+                {
+                    break;
+                }
+
+                _collapsedGroups.Remove(groupKey);
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Stable DOM id of a group's node list (the disclosure header's aria-controls target).</summary>
+    private static string GetGroupContentId(string groupKey)
+        => $"tm-modeling-tree-group-{SlugifyGroupKey(groupKey)}";
+
+    private static string SlugifyGroupKey(string groupKey)
+        => string.Concat(groupKey.Trim().ToLowerInvariant().Select(character
+            => char.IsAsciiLetterOrDigit(character) ? character : '-'));
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -121,8 +182,10 @@ public partial class TmModelingModelTree : IAsyncDisposable
         // No Enter/Space activation here: the node is a native <button>, so the
         // browser itself produces the activation click (Enter on keydown, Space
         // on keyup) which reaches SelectElementAsync via @onclick. Selecting
-        // here as well fired OnElementSelected twice per key press.
+        // here as well fired OnElementSelected twice per key press. Navigation
+        // only walks nodes of EXPANDED groups — collapsed groups are not rendered.
         var visibleElements = FilteredGroups
+            .Where(group => IsGroupExpanded(group.Key))
             .SelectMany(group => group.Elements)
             .ToArray();
         if (visibleElements.Length == 0)

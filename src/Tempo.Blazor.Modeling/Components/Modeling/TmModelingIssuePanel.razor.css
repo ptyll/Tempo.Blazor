@@ -18,7 +18,7 @@
     background: var(--tm-color-surface);
 }
 
-.tm-modeling-issue-panel__header h3 {
+.tm-modeling-issue-panel__title {
     margin: 0;
     overflow: hidden;
     font-size: var(--tm-font-size-sm);
@@ -28,9 +28,22 @@
     white-space: nowrap;
 }
 
-.tm-modeling-issue-panel__header span {
-    color: var(--tm-text-secondary);
+/* Count-only badge (gap #12): the visible text is the bare number; the localized
+   "Issues: {0}" formulation lives on the aria-label. */
+.tm-modeling-issue-panel__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--tm-space-6);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
     font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
 }
 
 .tm-modeling-issue-panel__empty {
@@ -68,7 +81,7 @@
     min-width: 0;
     padding: var(--tm-space-2);
     border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-color-text);
     font: inherit;
@@ -76,8 +89,10 @@
 }
 
 /* Navigable issues only: the pointer cursor and hover affordance signal that activating
-   the row selects its source element. Sourceless issues are plain list items. */
+   the row selects its source element. Sourceless issues are plain list items. The chevron
+   needs a third grid column the non-navigable rows never render. */
 button.tm-modeling-issue-panel__item--navigable {
+    grid-template-columns: auto minmax(0, 1fr) auto;
     cursor: pointer;
 }
 
@@ -110,9 +125,6 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     width: var(--tm-space-6);
     height: var(--tm-space-6);
     border-radius: var(--tm-radius-full);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-bold);
-    line-height: 1;
 }
 
 .tm-modeling-issue-panel__icon--info {
@@ -145,9 +157,22 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     font-size: var(--tm-font-size-xs);
 }
 
-.tm-modeling-issue-panel__meta strong {
+/* Severity label tinted with its severity text token, next to the neutral category. */
+.tm-modeling-issue-panel__severity {
     color: var(--tm-color-text);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-issue-panel__severity--info {
+    color: var(--tm-color-info-text);
+}
+
+.tm-modeling-issue-panel__severity--warning {
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__severity--error {
+    color: var(--tm-color-danger-text);
 }
 
 .tm-modeling-issue-panel__message,
@@ -161,9 +186,41 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     font-size: var(--tm-font-size-sm);
 }
 
+/* Suggested fix (gap #11): a toned box with an icon and a localized "Recommendation:"
+   prefix, replacing the bare text. */
 .tm-modeling-issue-panel__fix {
-    color: var(--tm-text-secondary);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
     font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-issue-panel__fix-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+}
+
+.tm-modeling-issue-panel__fix-label {
+    flex: 0 0 auto;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-issue-panel__fix-text {
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__chevron {
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
 }
 
 @media (forced-colors: active) {
@@ -191,5 +248,9 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     .tm-modeling-issue-panel__fix {
         color: CanvasText;
         background: Canvas;
+    }
+
+    .tm-modeling-issue-panel__chevron {
+        color: CanvasText;
     }
 }

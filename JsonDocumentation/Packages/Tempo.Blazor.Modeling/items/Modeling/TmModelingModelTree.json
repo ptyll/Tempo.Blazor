@@ -54,5 +54,39 @@
       "isRequired": false,
       "description": "Raised when <see cref=\"SelectedElement\"/> changes."
     }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-model-tree__group-header",
+      "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
+    },
+    {
+      "name": "tm-modeling-model-tree__group-chevron",
+      "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
+    },
+    {
+      "name": "tm-modeling-model-tree__group-icon",
+      "description": "Semantic-type icon of the group."
+    },
+    {
+      "name": "tm-modeling-model-tree__group-label",
+      "description": "Group label text (the semantic type)."
+    },
+    {
+      "name": "tm-modeling-model-tree__group-count",
+      "description": "Element count pill of the group."
+    },
+    {
+      "name": "tm-modeling-model-tree__type-icon",
+      "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
+    },
+    {
+      "name": "tm-modeling-model-tree__node-body",
+      "description": "Name + meta stack inside the node button."
+    },
+    {
+      "name": "tm-modeling-model-tree__drag-handle",
+      "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
+    }
   ]
 }

@@ -72,6 +72,8 @@ public class PluralAdoptionTests : LocalizationTestBase
     {
         // The Modeling issue count was rewritten (Modeling redesign plan, phase 1) to the neutral
         // B16 formulation: the header states the count without forcing Czech to pick a plural form.
+        // Phase 2 moved that formulation onto the badge's aria-label — the visible badge text
+        // is the bare count (gap #12).
         UseCzechLocalization();
         var issues = Enumerable.Range(1, count)
             .Select(i => new ModelingIssueDto { Id = $"i{i}", Category = "Validation", Severity = ModelingIssueSeverity.Warning, Message = $"m{i}" })
@@ -79,7 +81,9 @@ public class PluralAdoptionTests : LocalizationTestBase
 
         var cut = Render<TmModelingIssuePanel>(p => p.Add(c => c.Issues, issues));
 
-        cut.Find(".tm-modeling-issue-panel__header span").TextContent.Should().Be(expected);
+        var badge = cut.Find("[data-testid='modeling-issue-count']");
+        badge.TextContent.Trim().Should().Be(count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        badge.GetAttribute("aria-label").Should().Be(expected);
     }
 
     // ── 449c99df: three core counts read as grammatical plural sentences ────────────────────

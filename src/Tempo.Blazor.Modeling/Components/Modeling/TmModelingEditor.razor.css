@@ -28,21 +28,31 @@
 }
 
 .tm-modeling-editor__title-group {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
     min-width: 0;
 }
 
 .tm-modeling-editor__title {
     margin: 0;
+    overflow: hidden;
     font-size: var(--tm-font-size-lg);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+/* The state badge sits next to the title; the wrapper is owner-rendered, the badge inside
+   comes from TmBadge (hence ::deep). */
 .tm-modeling-editor__state {
-    display: block;
-    margin-top: var(--tm-space-1);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.tm-modeling-editor__state ::deep .tm-badge {
+    max-width: 100%;
 }
 
 .tm-modeling-editor__chips {
@@ -114,8 +124,12 @@
     border-radius: var(--tm-radius-full);
     background: var(--tm-bg-muted);
     color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-lg);
-    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-editor__single-state--error .tm-modeling-editor__state-mark {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
 }
 
 .tm-modeling-editor__detail {
@@ -126,12 +140,17 @@
     color: var(--tm-color-danger-text) !important;
 }
 
+/* Phase 2 (gap #2): panels are cards — radius, shadow, hairline border — floating on the
+   workspace background with token-driven gutters. */
 .tm-modeling-editor__workspace {
     position: relative;
     display: grid;
     grid-template-columns: minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4)) minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4));
+    gap: var(--tm-space-3);
     min-height: 0;
+    padding: var(--tm-space-3);
     overflow: hidden;
+    background: var(--tm-bg-workspace);
 }
 
 /* Reload affordance over the mounted workspace (force reload keeps _model alive, so the
@@ -152,28 +171,21 @@
     background: var(--tm-color-surface);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
-    box-shadow: var(--tm-shadow-md, 0 2px 8px rgb(0 0 0 / 0.15));
+    box-shadow: var(--tm-shadow-md);
 }
 
 .tm-modeling-editor__panel {
     min-width: 0;
     min-height: 0;
     overflow: auto;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-color-surface);
-}
-
-.tm-modeling-editor__tree,
-.tm-modeling-editor__inspector {
-    border-inline-end: 1px solid var(--tm-color-border);
+    box-shadow: var(--tm-shadow-card);
 }
 
 .tm-modeling-editor__tree {
     overflow: hidden;
-}
-
-.tm-modeling-editor__inspector {
-    border-inline-start: 1px solid var(--tm-color-border);
-    border-inline-end: 0;
 }
 
 .tm-modeling-editor__panel-header {
@@ -290,6 +302,36 @@
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
+}
+
+/* Phase 2 (gap #3): each count is a separated status item; a state icon leads the strip.
+   Sibling separators (no positional child indexes) keep the DOM order free. */
+.tm-modeling-editor__status-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-modeling-editor__status-item + .tm-modeling-editor__status-item {
+    border-inline-start: 1px solid var(--tm-color-border);
+    padding-inline-start: var(--tm-space-3);
+}
+
+.tm-modeling-editor__status-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-success-text);
+}
+
+.tm-modeling-editor[data-state="error"] .tm-modeling-editor__status-icon {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-editor[data-state="loading"] .tm-modeling-editor__status-icon,
+.tm-modeling-editor[data-state="empty"] .tm-modeling-editor__status-icon {
+    color: var(--tm-text-secondary);
 }
 
 .tm-modeling-editor__status strong {
@@ -508,10 +550,15 @@
 
     .tm-modeling-editor__chip,
     .tm-modeling-editor__panel-tab,
-    .tm-modeling-editor__state-mark {
+    .tm-modeling-editor__state-mark,
+    .tm-modeling-editor__state ::deep .tm-badge {
         border-color: CanvasText;
         background: Canvas;
         color: CanvasText;
+    }
+
+    .tm-modeling-editor__status-item + .tm-modeling-editor__status-item {
+        border-color: CanvasText;
     }
 
     .tm-modeling-editor__panel-tab:focus-visible,

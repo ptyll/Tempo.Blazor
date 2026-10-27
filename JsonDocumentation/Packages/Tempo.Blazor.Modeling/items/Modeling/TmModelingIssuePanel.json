@@ -30,5 +30,43 @@
       "isRequired": false,
       "description": "Raised when the user selects an issue that points to a model element or relationship."
     }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-issue-panel__title",
+      "description": "Panel title heading."
+    },
+    {
+      "name": "tm-modeling-issue-panel__count",
+      "description": "Count-only badge in the header: visible text is the bare count, the localized formulation is the aria-label."
+    },
+    {
+      "name": "tm-modeling-issue-panel__severity",
+      "description": "Severity label in the row meta, tinted with the severity text token (`--severity--{info|warning|error}`)."
+    },
+    {
+      "name": "tm-modeling-issue-panel__category",
+      "description": "Category label after the severity."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix",
+      "description": "Suggested-fix toned box (primary subtle tokens) holding the icon, the localized prefix label and the fix text."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-icon",
+      "description": "Suggested-fix icon wrapper (TmIcon WandSparkles), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-label",
+      "description": "Localized \"Recommendation:\" prefix."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-text",
+      "description": "The suggested fix text."
+    },
+    {
+      "name": "tm-modeling-issue-panel__chevron",
+      "description": "Navigation chevron rendered only inside navigable issue buttons (TmIcon ChevronRight), aria-hidden."
+    }
   ]
 }

@@ -18,7 +18,7 @@
     background: var(--tm-color-surface);
 }
 
-.tm-modeling-model-tree__header h3 {
+.tm-modeling-model-tree__title {
     margin: 0;
     overflow: hidden;
     font-size: var(--tm-font-size-sm);
@@ -27,14 +27,17 @@
     white-space: nowrap;
 }
 
-.tm-modeling-model-tree__header span {
+.tm-modeling-model-tree__count {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
-}
-
-.tm-modeling-model-tree__search {
+}.tm-modeling-model-tree__search {
     display: grid;
     gap: var(--tm-space-1);
+}
+
+.tm-modeling-model-tree__search-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-modeling-model-tree__search input {
@@ -88,27 +91,79 @@
     min-width: 0;
 }
 
+/* MO4 disclosure header: a real button with aria-expanded/aria-controls. The chevron
+   rotates from "expanded" (down) to "collapsed" (right) via the aria-expanded state. */
 .tm-modeling-model-tree__group-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-2);
-    padding: 0 var(--tm-space-1);
+    width: 100%;
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 0;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
     color: var(--tm-color-text);
+    cursor: pointer;
+    font: inherit;
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
-    text-transform: uppercase;
+    text-align: start;
 }
 
-.tm-modeling-model-tree__group-header span {
+.tm-modeling-model-tree__group-header:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-modeling-model-tree__group-header:focus-visible {
+    outline: 2px solid var(--tm-color-primary-subtle);
+    outline-offset: 1px;
+}
+
+.tm-modeling-model-tree__group-chevron {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-modeling-model-tree__group-header[aria-expanded="false"] .tm-modeling-model-tree__group-chevron {
+    transform: rotate(-90deg);
+}
+
+.tm-modeling-model-tree__group-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-model-tree__group-label {
     overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.tm-modeling-model-tree__group-header strong {
+.tm-modeling-model-tree__group-count {
+    flex: 0 0 auto;
+    min-width: var(--tm-space-6);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
     color: var(--tm-color-text);
     font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-model-tree__group-chevron {
+        transition: none;
+    }
 }
 
 .tm-modeling-model-tree__nodes {
@@ -121,8 +176,9 @@
 
 .tm-modeling-model-tree__node {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--tm-space-1);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--tm-space-2);
+    align-items: center;
     width: 100%;
     min-width: 0;
     padding: var(--tm-space-2);
@@ -156,14 +212,23 @@
     box-shadow: inset 3px 0 0 var(--tm-color-primary);
 }
 
-.tm-modeling-model-tree__drag-handle {
-    grid-row: 1 / span 2;
+.tm-modeling-model-tree__type-icon {
+    display: inline-grid;
+    place-items: center;
     align-self: center;
-    color: var(--tm-color-text);
-    font-family: var(--tm-font-mono, monospace);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    letter-spacing: 0;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-model-tree__node-body {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-modeling-model-tree__drag-handle {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tm-text-secondary);
 }
 
 .tm-modeling-model-tree__node-name,
@@ -205,7 +270,10 @@
     }
 
     .tm-modeling-model-tree__node-meta,
-    .tm-modeling-model-tree__drag-handle {
+    .tm-modeling-model-tree__drag-handle,
+    .tm-modeling-model-tree__type-icon,
+    .tm-modeling-model-tree__group-icon,
+    .tm-modeling-model-tree__group-chevron {
         color: CanvasText;
     }
 }

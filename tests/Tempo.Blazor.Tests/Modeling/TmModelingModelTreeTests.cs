@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Tests.Localization;
@@ -216,6 +217,124 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             .Add(p => p.Elements, elements));
 
         cut.Find("[data-testid='modeling-tree-node-empty-name']").TextContent.Should().Contain("(Unnamed)");
+    }
+
+    [Fact]
+    public void Group_header_is_disclosure_with_count_and_aria_expanded()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        var header = cut.Find("[data-testid='modeling-tree-group-header-userTask']");
+        header.TagName.Should().Be("BUTTON", "the group header is a real disclosure button");
+        header.GetAttribute("aria-expanded").Should().Be("true");
+        header.GetAttribute("aria-controls").Should().NotBeNullOrEmpty();
+        header.TextContent.Should().Contain("userTask");
+        header.TextContent.Should().Contain("2", "the group header shows the element count");
+        header.QuerySelector(".tm-modeling-model-tree__group-chevron svg").Should().NotBeNull();
+
+        cut.Find("[data-testid='modeling-tree-group-userTask'] [role='group']").Should().NotBeNull(
+            "the node list is an ARIA group owned by the disclosure header");
+        cut.Find("[data-testid='modeling-tree-group-userTask']").GetAttribute("data-expanded")
+            .Should().Be("true");
+    }
+
+    [Fact]
+    public void Group_can_be_collapsed_and_expanded_with_keyboard()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll("[data-testid='modeling-tree-node-task-approve']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("1");
+
+        // ArrowLeft collapses, ArrowRight expands — Enter/Space stay native button activation
+        // (docs/keyboard-activation-convention.md: no emulated activation on native activatables).
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").KeyDown("ArrowLeft");
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").KeyDown("ArrowRight");
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true");
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Filter_expands_collapsed_groups_with_matches()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.FindAll("[data-testid='modeling-tree-node-task-approve']").Should().BeEmpty();
+
+        cut.Find("[data-testid='modeling-tree-search']").Input("Approve");
+
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").Should().NotBeNull(
+            "a collapsed group whose nodes match the filter is temporarily expanded");
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void Collapsed_state_survives_rerender_and_filter_clear()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+
+        cut.Find("[data-testid='modeling-tree-search']").Input("Approve");
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").Should().NotBeNull();
+
+        cut.Find("[data-testid='modeling-tree-search']").Input(string.Empty);
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false",
+                "clearing the filter restores the user's collapsed state");
+        cut.FindAll("[data-testid='modeling-tree-node-task-approve']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-tree-node-system-customer']").Should().NotBeNull(
+            "groups the user never collapsed stay expanded");
+    }
+
+    [Fact]
+    public void Node_renders_type_icon_with_fallback()
+    {
+        var elements = CreateElements().Append(new ModelingElementDto
+        {
+            Id = "mystery-element",
+            SemanticType = "mysteryType",
+            Name = "Mystery"
+        }).ToArray();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, elements));
+
+        cut.Find("[data-testid='modeling-tree-node-task-approve'] .tm-modeling-model-tree__type-icon svg")
+            .Should().NotBeNull("each node renders an icon derived from its semantic type");
+
+        var fallback = ModelingSemanticTypeIcons.ForSemanticType("mysteryType");
+        ModelingSemanticTypeIcons.ForSemanticType("userTask").Should().NotBe(fallback,
+            "a known semantic type maps to its own icon");
+        cut.FindComponents<TmIcon>()
+            .Select(icon => icon.Instance.Name)
+            .Should().Contain(fallback, "an unknown semantic type falls back to the generic icon");
+    }
+
+    [Fact]
+    public void Drag_handle_is_icon_not_text_glyph()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        var handle = cut.Find("[data-testid='modeling-tree-node-task-approve'] .tm-modeling-model-tree__drag-handle");
+
+        handle.TextContent.Should().NotContain("::");
+        handle.QuerySelector("svg").Should().NotBeNull("the drag affordance is an icon, not the '::' text glyph");
     }
 
     private static ModelingElementDto[] CreateElements() =>

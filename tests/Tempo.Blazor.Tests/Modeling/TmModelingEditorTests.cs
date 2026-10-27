@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
@@ -169,6 +170,88 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("empty");
         cut.Find("[data-testid='modeling-editor-empty']").Should().NotBeNull();
         callbackRaised.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Loaded_state_renders_status_badge_next_to_title()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() =>
+        {
+            var badge = cut.FindComponents<TmBadge>()
+                .Single(b => b.Markup.Contains("Loaded", StringComparison.Ordinal));
+            badge.Instance.Variant.Should().Be(BadgeVariant.Success);
+
+            cut.Find(".tm-modeling-editor__title-group .tm-badge").TextContent
+                .Should().Contain("Loaded", "the state badge renders next to the title");
+        });
+    }
+
+    [Fact]
+    public void State_badge_variants_track_editor_state()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new ThrowingModelingModelProvider()));
+
+        using var empty = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, "missing-provider"));
+
+        empty.FindComponents<TmBadge>()
+            .Should().Contain(b => b.Instance.Variant == BadgeVariant.Default
+                && b.Markup.Contains("No provider", StringComparison.Ordinal));
+
+        using var failing = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, ThrowingModelingModelProvider.Key));
+
+        failing.WaitForAssertion(() =>
+            failing.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("error"));
+
+        failing.FindComponents<TmBadge>()
+            .Should().Contain(b => b.Instance.Variant == BadgeVariant.Danger
+                && b.Markup.Contains("Error", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Empty_and_error_state_marks_are_icons()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new ThrowingModelingModelProvider()));
+
+        using var empty = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, "missing-provider"));
+
+        var emptyMark = empty.Find("[data-testid='modeling-editor-empty'] .tm-modeling-editor__state-mark");
+        emptyMark.QuerySelector("svg").Should().NotBeNull("the empty state mark is an icon");
+        emptyMark.TextContent.Trim().Should().BeEmpty("the '0' text glyph is gone");
+
+        using var failing = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, ThrowingModelingModelProvider.Key));
+
+        failing.WaitForAssertion(() =>
+            failing.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("error"));
+
+        var errorMark = failing.Find("[data-testid='modeling-editor-error'] .tm-modeling-editor__state-mark");
+        errorMark.QuerySelector("svg").Should().NotBeNull("the error state mark is an icon");
+        errorMark.TextContent.Trim().Should().BeEmpty("the '!' text glyph is gone");
+    }
+
+    [Fact]
+    public void Status_strip_renders_state_icon_and_separated_items()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() =>
+        {
+            var strip = cut.Find("[data-testid='modeling-status-strip']");
+            strip.QuerySelectorAll(".tm-modeling-editor__status-item").Should().HaveCountGreaterThanOrEqualTo(5);
+            strip.QuerySelector(".tm-modeling-editor__status-icon svg").Should().NotBeNull(
+                "the status strip leads with a state icon");
+        });
     }
 
     [Fact]

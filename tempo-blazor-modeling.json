@@ -349,6 +349,20 @@
           "isRequired": false,
           "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
         }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-editor__state",
+          "description": "Wrapper around the state TmBadge next to the editor title (variant by state)."
+        },
+        {
+          "name": "tm-modeling-editor__status-item",
+          "description": "One separated status item; the first carries the state icon."
+        },
+        {
+          "name": "tm-modeling-editor__status-icon",
+          "description": "Leading status icon (check/alert/clock by state), aria-hidden."
+        }
       ]
     },
     {
@@ -389,6 +403,24 @@
           "isRequired": false,
           "description": "Selected modeling relationship."
         }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-inspector__type-icon",
+          "description": "Header icon tile resolved from the semantic type (Link2 for relationships)."
+        },
+        {
+          "name": "tm-modeling-inspector__heading",
+          "description": "Header text column: kind chip, name, type."
+        },
+        {
+          "name": "tm-modeling-inspector__name",
+          "description": "The h3 name of the inspected element/relationship."
+        },
+        {
+          "name": "tm-modeling-inspector__type",
+          "description": "The semantic/relationship type line."
+        }
       ]
     },
     {
@@ -422,6 +454,44 @@
           "type": "EventCallback<ModelingIssueDto>",
           "isRequired": false,
           "description": "Raised when the user selects an issue that points to a model element or relationship."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-issue-panel__title",
+          "description": "Panel title heading."
+        },
+        {
+          "name": "tm-modeling-issue-panel__count",
+          "description": "Count-only badge in the header: visible text is the bare count, the localized formulation is the aria-label."
+        },
+        {
+          "name": "tm-modeling-issue-panel__severity",
+          "description": "Severity label in the row meta, tinted with the severity text token (`--severity--{info|warning|error}`)."
+        },
+        {
+          "name": "tm-modeling-issue-panel__category",
+          "description": "Category label after the severity."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix",
+          "description": "Suggested-fix toned box (primary subtle tokens) holding the icon, the localized prefix label and the fix text."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-icon",
+          "description": "Suggested-fix icon wrapper (TmIcon WandSparkles), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-label",
+          "description": "Localized \"Recommendation:\" prefix."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-text",
+          "description": "The suggested fix text."
+        },
+        {
+          "name": "tm-modeling-issue-panel__chevron",
+          "description": "Navigation chevron rendered only inside navigable issue buttons (TmIcon ChevronRight), aria-hidden."
         }
       ]
     },
@@ -481,6 +551,40 @@
           "isRequired": false,
           "description": "Raised when <see cref=\"SelectedElement\"/> changes."
         }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-model-tree__group-header",
+          "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-chevron",
+          "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-icon",
+          "description": "Semantic-type icon of the group."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-label",
+          "description": "Group label text (the semantic type)."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-count",
+          "description": "Element count pill of the group."
+        },
+        {
+          "name": "tm-modeling-model-tree__type-icon",
+          "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
+        },
+        {
+          "name": "tm-modeling-model-tree__node-body",
+          "description": "Name + meta stack inside the node button."
+        },
+        {
+          "name": "tm-modeling-model-tree__drag-handle",
+          "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
+        }
       ]
     },
     {
@@ -519,6 +623,40 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Callback raised when the user requests loading the model again."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-source-panel__title",
+          "description": "Panel title heading (the only header text node; the freshness badge sits beside it)."
+        },
+        {
+          "name": "tm-modeling-source-panel__metadata-row",
+          "description": "One two-column term/value row of the metadata dl, separated by a hairline from the next row."
+        },
+        {
+          "name": "tm-modeling-source-panel__term",
+          "description": "The dt: localized term label led by the row icon."
+        },
+        {
+          "name": "tm-modeling-source-panel__metadata-icon",
+          "description": "Row icon wrapper (database / tag / calendar), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning",
+          "description": "Stale-data warning box (warning tokens, role=status)."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning-icon",
+          "description": "Warning icon wrapper (TmIcon AlertTriangle), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning-text",
+          "description": "Stale warning text."
+        },
+        {
+          "name": "tm-modeling-source-panel__load",
+          "description": "Layout hook on the load TmButton (full width); colors come from the core .tm-btn-primary."
         }
       ]
     },

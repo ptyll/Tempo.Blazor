@@ -5,6 +5,9 @@
     border-top: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
+    /* Size container so the summary list can flow into two columns in a wide inspector
+       column and stack in a narrow one — the width is the PANEL's, not the viewport's. */
+    container: tm-modeling-inspector / inline-size;
 }
 
 .tm-modeling-inspector__empty {
@@ -22,12 +25,31 @@
 }
 
 .tm-modeling-inspector__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__type-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 var(--tm-space-8);
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-inspector__heading {
     display: grid;
     gap: var(--tm-space-1);
     min-width: 0;
 }
 
-.tm-modeling-inspector__header h3 {
+.tm-modeling-inspector__name {
     margin: 0;
     overflow-wrap: anywhere;
     font-size: var(--tm-font-size-lg);
@@ -35,7 +57,7 @@
     line-height: var(--tm-line-height-tight);
 }
 
-.tm-modeling-inspector__header p {
+.tm-modeling-inspector__type {
     margin: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
@@ -54,7 +76,7 @@
 
 .tm-modeling-inspector__summary {
     display: grid;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-2) var(--tm-space-4);
     margin: 0;
 }
 
@@ -63,6 +85,14 @@
     grid-template-columns: minmax(6rem, 0.42fr) minmax(0, 1fr);
     gap: var(--tm-space-2);
     min-width: 0;
+}
+
+/* In a WIDE container the summary pairs flow into two columns; the narrow default
+   stacks them one per row. */
+@container tm-modeling-inspector (min-width: 30rem) {
+    .tm-modeling-inspector__summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .tm-modeling-inspector__summary dt {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Modeling;
 
 namespace Tempo.Blazor.Components.Modeling;
@@ -29,6 +30,15 @@ public partial class TmModelingInspector
         : Relationship is not null
             ? Loc["TmModelingInspector_Relationship"]
             : Loc["TmModelingInspector_Title"];
+
+    /// <summary>Header icon: the element's semantic-type icon, a link for relationships, the
+    /// fallback shape otherwise (shared with the model tree so the same type always maps to
+    /// the same icon).</summary>
+    private string HeaderIcon => Element is not null
+        ? ModelingSemanticTypeIcons.ForSemanticType(Element.SemanticType)
+        : Relationship is not null
+            ? IconNames.Link2
+            : ModelingSemanticTypeIcons.Fallback;
 
     private string DisplayName => Element is not null
         ? Fallback(Element.Name, Loc["TmModelingModelTree_Unnamed"])

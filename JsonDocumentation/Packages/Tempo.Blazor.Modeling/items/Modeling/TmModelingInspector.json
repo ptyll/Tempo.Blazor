@@ -36,5 +36,23 @@
       "isRequired": false,
       "description": "Selected modeling relationship."
     }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-inspector__type-icon",
+      "description": "Header icon tile resolved from the semantic type (Link2 for relationships)."
+    },
+    {
+      "name": "tm-modeling-inspector__heading",
+      "description": "Header text column: kind chip, name, type."
+    },
+    {
+      "name": "tm-modeling-inspector__name",
+      "description": "The h3 name of the inspected element/relationship."
+    },
+    {
+      "name": "tm-modeling-inspector__type",
+      "description": "The semantic/relationship type line."
+    }
   ]
 }

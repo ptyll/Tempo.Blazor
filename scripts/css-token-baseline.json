@@ -1,5 +1,5 @@
 {
-  "count": 4662,
+  "count": 4660,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -117,7 +117,6 @@
     "color-literal|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|outline-color: var(--tm-color-primary-light, #818cf8);": 1,
     "color-literal|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|outline: 1px dashed var(--tm-color-primary, #6366f1);": 1,
     "color-literal|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|outline: 2px dashed color-mix(in srgb, var(--tm-color-success, #22c55e) 70%, transparent);": 1,
-    "color-literal|src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor.css|box-shadow: var(--tm-shadow-md, 0 2px 8px rgb(0 0 0 / 0.15));": 1,
     "color-literal|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor.css|.tm-db__field-row:hover { background: var(--tm-bg-2, #f3f4f6); }": 1,
     "color-literal|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor.css|.tm-db-table__row:hover { background: var(--tm-bg-hover, #fafafa); }": 1,
     "color-literal|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDatabaseBlock.razor.css|accent-color: var(--tm-accent, #3b82f6);": 1,
@@ -2869,7 +2868,6 @@
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg--show-blocks .tm-wysiwyg-block::before": 1,
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg-remote-cursor__label": 1,
     "white-on-primary|src/Tempo.Blazor.Maps/wwwroot/css/components/_map.css|.tm-map__cluster": 1,
-    "white-on-primary|src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingSourcePanel.razor.css|.tm-modeling-source-panel__load": 1,
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbCalendarView.razor.css|.tm-dbcal__cell-num--today": 1,
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTimelineView.razor.css|.tm-dbt__zoom-btn--active": 1,
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Embed/TmNotionBookmarkBlock.razor.css|.tm-notion-bookmark-block__confirm-btn:hover:not(:disabled)": 1,

@@ -9,6 +9,21 @@ namespace Tempo.Blazor.Tests.Modeling;
 public sealed class TmModelingInspectorTests : LocalizationTestBase
 {
     [Fact]
+    public void Header_renders_type_icon_name_and_type()
+    {
+        var element = CreateElement();
+
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, element));
+
+        var header = cut.Find(".tm-modeling-inspector__header");
+        header.QuerySelector(".tm-modeling-inspector__type-icon svg").Should().NotBeNull(
+            "the header leads with the semantic type icon");
+        header.TextContent.Should().Contain(element.Name);
+        header.TextContent.Should().Contain(element.SemanticType);
+    }
+
+    [Fact]
     public void Null_input_renders_empty_state()
     {
         using var cut = Render<TmModelingInspector>();

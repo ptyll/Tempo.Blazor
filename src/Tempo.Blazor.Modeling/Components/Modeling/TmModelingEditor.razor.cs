@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Modeling;
 
@@ -121,6 +123,30 @@ public partial class TmModelingEditor : IAsyncDisposable
         ModelingEditorState.Loaded => "TmModelingEditor_StateLoaded",
         ModelingEditorState.Error => "TmModelingEditor_StateError",
         _ => "TmModelingEditor_StateEmpty"
+    };
+
+    /// <summary>Color variant of the title state badge — success when loaded, danger on error,
+    /// primary while loading, neutral when no provider is selected.</summary>
+    private BadgeVariant StateBadgeVariant => _state switch
+    {
+        ModelingEditorState.Loaded => BadgeVariant.Success,
+        ModelingEditorState.Error => BadgeVariant.Danger,
+        ModelingEditorState.Loading => BadgeVariant.Primary,
+        _ => BadgeVariant.Default
+    };
+
+    /// <summary>Icon of the empty/error state mark — a box for "no model", an alert circle on error.</summary>
+    private string StateMarkIcon => _state == ModelingEditorState.Error
+        ? IconNames.AlertCircle
+        : IconNames.Box;
+
+    /// <summary>Leading status strip icon: check when loaded, alert on error, clock while loading.</summary>
+    private string StatusStripIcon => _state switch
+    {
+        ModelingEditorState.Loaded => IconNames.CheckCircle,
+        ModelingEditorState.Error => IconNames.AlertCircle,
+        ModelingEditorState.Loading => IconNames.Clock,
+        _ => IconNames.Box
     };
 
     private string DisplayProviderKey => string.IsNullOrWhiteSpace(ProviderKey) ? Loc["TmModelingEditor_NotSelected"] : ProviderKey!;

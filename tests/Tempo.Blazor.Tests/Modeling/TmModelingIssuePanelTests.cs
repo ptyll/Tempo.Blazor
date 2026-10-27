@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Tests.Localization;
@@ -8,6 +9,68 @@ namespace Tempo.Blazor.Tests.Modeling;
 
 public sealed class TmModelingIssuePanelTests : LocalizationTestBase
 {
+    [Fact]
+    public void Severity_icons_are_distinct_icon_names()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        cut.FindComponents<TmIcon>()
+            .Select(icon => icon.Instance.Name)
+            .Should().Contain(new[] { IconNames.AlertCircle, IconNames.AlertTriangle, IconNames.Info },
+                "each severity carries its own distinct icon in a toned circle");
+
+        cut.Find(".tm-modeling-issue-panel__icon--error").TextContent.Should().NotContain("!");
+        cut.Find(".tm-modeling-issue-panel__icon--info").TextContent.Should().NotContain("i");
+    }
+
+    [Fact]
+    public void Count_badge_shows_count_only_with_localized_aria_label()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        var badge = cut.Find("[data-testid='modeling-issue-count']");
+        badge.TextContent.Trim().Should().Be("3", "the visible badge text is the bare count");
+        badge.GetAttribute("aria-label").Should().Be("Issues: 3", "the localized formulation lives on the aria-label");
+        badge.ClassList.Should().Contain("tm-modeling-issue-panel__count");
+    }
+
+    [Fact]
+    public void Suggested_fix_renders_localized_label()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        var fix = cut.Find("[data-testid='modeling-issue-fix-1']");
+        fix.TextContent.Should().Contain("Recommendation:");
+        fix.TextContent.Should().Contain("Review the mapping.");
+        fix.QuerySelector(".tm-modeling-issue-panel__fix-icon svg").Should().NotBeNull(
+            "the suggested fix is a toned box with an icon, not bare text");
+    }
+
+    [Fact]
+    public void Navigable_issue_renders_chevron()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        cut.FindAll("button[data-testid^='modeling-issue-'] .tm-modeling-issue-panel__chevron")
+            .Should().HaveCount(3, "every navigable issue row ends with a navigation chevron");
+        cut.FindAll(".tm-modeling-issue-panel__chevron").Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Severity_labels_and_categories_are_color_coded()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        cut.Find("[data-severity='error'] .tm-modeling-issue-panel__severity")
+            .ClassList.Should().Contain("tm-modeling-issue-panel__severity--error");
+        cut.Find("[data-severity='warning'] .tm-modeling-issue-panel__category").TextContent.Should().Be("Validation");
+    }
+
     [Fact]
     public void Renders_issue_count_and_items()
     {

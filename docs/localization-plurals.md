@@ -31,7 +31,8 @@ language uses the English rules. A region (`cs-CZ`, `fr-CA`) uses its language's
 
 > **Neutral keys are not families.** `TmModelingIssuePanel_Count` used to be a plural family and
 > was deliberately rewritten (Modeling redesign plan, phase 1) into a PLAIN neutral key — a single
-> template per language (`Issues: {0}` / `Nálezy: {0}` / `Problèmes : {0}`) with no `_One`/`_Few`/
+> template per language (`Issues: {0}` / `Nálezy: {0}` / `Problémy: {0}` / `Problèmes : {0}`) with no
+> `_One`/`_Few`/
 > `_Many`/`_Other` siblings, so a simple panel header never forces a language to pick a grammatical
 > form. `Loc.Plural` falls through to the plain key when no family exists, and a host overrides
 > exactly that one key. Do not "restore" the family: a count-labeled panel header does not need it.

@@ -78,5 +78,19 @@
       "isRequired": false,
       "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
     }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-editor__state",
+      "description": "Wrapper around the state TmBadge next to the editor title (variant by state)."
+    },
+    {
+      "name": "tm-modeling-editor__status-item",
+      "description": "One separated status item; the first carries the state icon."
+    },
+    {
+      "name": "tm-modeling-editor__status-icon",
+      "description": "Leading status icon (check/alert/clock by state), aria-hidden."
+    }
   ]
 }

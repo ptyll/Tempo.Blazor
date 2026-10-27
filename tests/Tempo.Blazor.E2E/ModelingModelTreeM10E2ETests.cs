@@ -115,6 +115,68 @@ public sealed class ModelingModelTreeM10E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("Group disclosure: pointer collapse removes nodes from the DOM and the keyboard arrows collapse/expand")]
+    public async Task ModelTree_GroupCollapsesAndExpands_ByPointerAndKeyboard()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        var header = page.Locator("[data-testid='modeling-tree-group-header-startEvent']");
+
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        await header.ClickAsync();
+        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-bpmn-start-order']").CountAsync(),
+            "a collapsed group renders no node buttons");
+        Assert.AreEqual("false", await page.Locator("[data-testid='modeling-tree-group-startEvent']").GetAttributeAsync("data-expanded"));
+
+        // ArrowLeft keeps it collapsed, ArrowRight expands it again (Enter/Space stay native).
+        await header.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowLeft");
+        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        await page.Keyboard.PressAsync("ArrowRight");
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-bpmn-start-order']");
+    }
+
+    [TestMethod]
+    [Description("Filtering temporarily expands a collapsed group; clearing the filter restores the user's collapsed state")]
+    public async Task ModelTree_FilterExpandsCollapsedGroup_AndClearRestoresState()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+
+        await page.Locator("[data-testid='modeling-tree-group-header-serviceTask']").ClickAsync();
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']").CountAsync(),
+            "Ship order lives in the serviceTask group, which the user just collapsed");
+
+        await page.Locator("[data-testid='modeling-tree-search']").FillAsync("Ship");
+        await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-bpmn-ship-order']");
+        Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-group-header-serviceTask']").GetAttributeAsync("aria-expanded"));
+
+        // Edge case: an EMPTY filter (cleared) must hand the collapsed state back.
+        await page.Locator("[data-testid='modeling-tree-search']").FillAsync(string.Empty);
+        Assert.AreEqual("false", await page.Locator("[data-testid='modeling-tree-group-header-serviceTask']").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']").CountAsync());
+        await ExpectVisibleAsync(page, "[data-testid='modeling-tree-group-header-startEvent']");
+    }
+
+    [TestMethod]
+    [Description("Edge case: a single-element group collapses and expands like any other")]
+    public async Task ModelTree_SingleElementGroup_CollapsesAndExpands()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=long-name");
+        var header = page.Locator("[data-testid='modeling-tree-group-header-generatedTask']");
+
+        Assert.AreEqual("1", await header.Locator(".tm-modeling-model-tree__group-count").TextContentAsync(),
+            "the single-element group advertises a count of 1");
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        await header.ClickAsync();
+        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-demo-long-name']").CountAsync());
+        await header.ClickAsync();
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-demo-long-name']");
+    }
+
+    [TestMethod]
     [Description("Captures required M10 populated, filtered and empty-filter screenshots")]
     public async Task ModelTree_CapturesM10Screenshots()
     {
