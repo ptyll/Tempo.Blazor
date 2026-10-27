@@ -176,6 +176,20 @@ function escapeAttr(value) {
     return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+/** True when a selector match can actually take focus. A container, a disabled control, or a
+ * negative-tabindex node cannot — focusing it is a no-op and the trap would hold focus nowhere.
+ * The node-test stubs have no matches(), so a match with no disabled/tabindex signal counts. */
+function isFocusable(el) {
+    if (!el || (typeof el.hasAttribute === 'function' && el.hasAttribute('disabled'))) return false;
+    const ti = typeof el.getAttribute === 'function' ? el.getAttribute('tabindex') : null;
+    if (ti !== null && ti !== undefined) {
+        const n = Number.parseInt(ti, 10);
+        if (!Number.isNaN(n) && n < 0) return false;
+    }
+    if (typeof el.matches === 'function') return el.matches(FOCUSABLE);
+    return true;
+}
+
 function visibleFocusable(element) {
     return Array.from(element.querySelectorAll(FOCUSABLE))
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
@@ -391,6 +405,10 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
                 catch {
                     bySelector = null;
                 }
+                // A match that is not itself focusable (a container the consumer named, a disabled
+                // control) must not take the move: focus() on it is a no-op and the trap would
+                // hold focus nowhere. Fall through to the first focusable.
+                if (bySelector && !isFocusable(bySelector)) bySelector = null;
             }
             // An element reference wins over the id: the id is the fallback for a target that is not an
             // element reference yet.

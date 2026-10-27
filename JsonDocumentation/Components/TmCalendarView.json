@@ -2,7 +2,7 @@
   "itemName": "TmCalendarView",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Full-size calendar view displaying a month grid with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs.",
+  "description": "Full-size calendar view displaying a month of days with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day is aria-pressed, today is aria-current=date, and the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],

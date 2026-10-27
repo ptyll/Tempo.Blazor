@@ -29,12 +29,52 @@
   ```
 
 - **`TmScheduler` print from a phone is guaranteed through the toolbar, not through Ctrl+P.** The toolbar Print action calls `PrintAsync`, which awaits the desktop re-render before `window.print()`. A browser Ctrl+P raises `beforeprint`, and the component re-renders on it, but that re-render is async, so the browser may print the mobile markup (the focus day and its neighbours) before the seven columns arrive. A host that must print the full week from a phone calls `PrintAsync`.
+- **`TmCalendarView` and `TmCalendarGrid` are not an ARIA grid, and a day announces a long date.** Before, `div.tm-calendar` carried `role="grid"`, `div.tm-cal-nav` carried `role="row"`, each weekday header carried `aria-label` on a generic div, and a day's accessible name was the short date (`"d"`). After, both roles are gone, the header is an `<abbr title="Monday">` (no `aria-label`), a selected day is `aria-pressed="true"`, today is `aria-current="date"`, and the day's name is the long date (`"D"`, current culture). Every in-month day is its own tab stop (`tabindex="0"`); other-month and disabled days are `tabindex="-1"`. There is no roving tabindex — Tab walks the month. A selector that matched `[role="grid"]` or `[role="row"]` inside the mini-month matches nothing now — select `.tm-calendar` and `.tm-cal-nav`. An assertion keyed on the short date (`button[aria-label="7/10/2026"]`) must use the long date.
+
+  ```html
+  <!-- before -->
+  <div class="tm-calendar" role="grid">
+    <div class="tm-cal-nav" role="row">…</div>
+    <div class="tm-cal-header-cell" aria-label="Mon">Mon</div>
+    <button class="tm-cal-day" aria-label="7/10/2026">7</button>
+  </div>
+
+  <!-- after -->
+  <div class="tm-calendar">
+    <div class="tm-cal-nav">…</div>
+    <div class="tm-cal-header-cell"><abbr title="Monday">Mon</abbr></div>
+    <button class="tm-cal-day" aria-label="Wednesday, July 10, 2026" aria-pressed="false">7</button>
+  </div>
+  ```
+
+- **`TmMultiSelect` listbox moved onto the options container, and its id is referenced only while options render.** Before, the popup root carried `role="listbox"`, `aria-multiselectable="true"`, `id="{Id}-listbox"` and `Title`, and the combobox always emitted `aria-owns="{Id}-listbox"`. After, the listbox is `div.tm-multiselect__options`, which renders only when options exist. The combobox and the filter emit `aria-controls` (not `aria-owns`) only then, and `aria-activedescendant` only when that id is in the document and the index is in range. Loading, error and empty states are siblings (`role="status"` / `role="alert"`). A grouped listbox owns `role="group"` children named by their header (`role="presentation"`); an empty group key announces the localized "Other". The popup root carries no `Title`. A selector `#{Id}-listbox` matches only while options render. The popup root keeps `display: flex`.
+
+  ```html
+  <!-- before: the panel root was the listbox, always referenced -->
+  <div role="combobox" aria-owns="fruits-listbox"></div>
+  <div class="tm-overlay-panel tm-multiselect__popup" role="listbox" id="fruits-listbox">
+    <div class="tm-multiselect__filter">…</div>
+    <div class="tm-multiselect__options">…</div>
+  </div>
+
+  <!-- after: the options container is the listbox, referenced only while it renders -->
+  <div role="combobox" aria-controls="fruits-listbox"></div>
+  <div class="tm-overlay-panel tm-multiselect__popup">
+    <div class="tm-multiselect__filter">…</div>
+    <div class="tm-multiselect__options" role="listbox" id="fruits-listbox" aria-multiselectable="true">…</div>
+  </div>
+  ```
+
+- **Other-month day ink no longer fades.** Before, `.tm-cal-day--other-month` set `opacity: 0.5`, which blended gray-500 down to 1.96:1 on a white surface. After, the shared rule uses `--tm-text-tertiary` at full opacity; an other-month day that is also in range uses `--tm-text-secondary`; selected, range-start and range-end keep `--tm-cal-selected-fg`.
+
 - **Scheduler toolbar class names.** The desktop toolbar is now the core `TmToolbar`, so the hand-rolled button classes are gone. `.tm-scheduler-toolbar-nav-btn` remains, but only on the compact (mobile) row. `.tm-scheduler-toolbar-today-btn` and `.tm-scheduler-toolbar-add` are removed; Today and New event are `button.tm-toolbar-btn`, and Print lives in the More menu (`button.tm-toolbar-more`, group `data-tm-group="export"`). A selector that matched `.tm-scheduler-toolbar-today-btn` or `.tm-scheduler-toolbar-add` matches nothing now — use `[data-testid="scheduler-today"]` and `[data-testid="scheduler-add"]`.
 
 ### Added
 
+- **`TmOverlayPanel.SheetTitle` and `TmOverlayPanel.SheetInitialFocusSelector`.** `SheetTitle` names the sheet header and the drawer only; it does not name the popover. Null falls back to `Title`, then `AriaLabel`, then the localized "Menu". `SheetInitialFocusSelector` is a CSS selector scoped to the sheet, the same contract as `TmDrawer.InitialFocusSelector`. When it is null, a `Role` of `menu` or `listbox` still derives the first-entry selector, so existing menu and listbox sheets are unchanged. A match that is not itself focusable falls through to the first focusable.
+
 - **`TmScheduler` side panel and resource filter.** `SidePanel` (`RenderFragment`) and `EventDetailTemplate` (`RenderFragment<TmScheduleEvent>`) are host slots rendered through the core `TmSidePanel` with `Presentation = Auto`: docked on the right on desktop, a side sheet on tablet, a bottom sheet on mobile. The scheduler never invents the panel body. `SidePanelOpen` / `SidePanelOpenChanged` are two-way. An event click opens the detail when a template is set. Closing the panel — Escape on the docked panel too, the close button, or the backdrop — returns focus to that event through the scheduler's own root-scoped `TempoBlazor.Scheduler.focusRovingStop`; the panel passes no restore target, and the views stamp no `id` on an event element, because that id is not unique across views. The detail block carries its own `TmScheduler_CloseDetail` button, which clears only the detail: a host `SidePanel` stays open, and with no host panel the detail was the panel, so it closes. A detail whose event is no longer among the visible events closes on its own. `SidePanelTitle` names the docked header when no detail is showing; null falls back to the localized `TmSidePanel_DefaultTitle`, so the header is never just the close button. `ShowResourceFilter` (default `false`) adds the core `TmMultiSelect` as a toolbar group `data-tm-group="filter"` after `header-actions` and before `primary` (decision SCH-TOOLBAR-2); its trigger reads `TmScheduler_AllResources` or `TmScheduler_NSelected` and carries no visible label. On the compact row the filter is its own second row under the header, so it never squeezes `‹ title ›`, and its popup is the F3 bottom sheet. `SelectedResourceIds` / `SelectedResourceIdsChanged` filter Timeline rows, TimeGrid resource columns, and Month and Agenda events. An empty list keeps every resource, and so does a list whose ids match no known resource: a stale selection hides nothing. An event with no resource stays visible. A phone day whose visible resource the filter drops falls back to the first resource the filter still keeps. With both slots unset the scheduler renders no `.tm-scheduler-frame`, so the markup matches the pre-panel host. `TmMultiSelect` gains `MobilePresentation` (default `Popover`, so an existing multi-select is unchanged) and `LayoutMode`, forwarded to its popup. New resource keys, all four languages: `TmScheduler_AllResources` ("All resources"), `TmScheduler_NSelected` ("{0} selected"), `TmScheduler_OpenPanel` ("Panel"), `TmScheduler_EventDetail`, `TmScheduler_CloseDetail`.
-- **`TmMultiSelect.HideLabel` and `AriaLabel`.** `HideLabel` (default `false`) suppresses the visible `<label>` while `Label` stays the accessible name of the trigger and of the popup. `AriaLabel` overrides that name for both; null falls back to `Label`, which is what every existing multi-select announces. The popup's accessible name (`Title`) now follows the same effective name instead of always repeating `Label`.
+- **`TmMultiSelect.HideLabel` and `AriaLabel`.** `HideLabel` (default `false`) suppresses the visible `<label>` while `Label` stays the accessible name of the trigger and of the listbox. `AriaLabel` overrides that name for both; null falls back to `Label`. The listbox carries that name as `aria-label`; with neither set it is named by `aria-labelledby` pointing at the combobox. The popup root itself is no longer named (see Breaking / Migration).
 - **`TmSidePanel.CloseOnEscape`.** When `true`, Escape closes the DOCKED panel through `OpenChanged`. Default `false`: a docked panel is in-flow and leaves Escape to the host, so an existing panel is unchanged. The sheet presentation already closes on Escape and ignores it.
   ```razor
   <TmScheduler @bind-SelectedEvent="selected" @bind-SidePanelOpen="open"
@@ -644,6 +684,8 @@
 
 
 ### Fixed
+
+- **Calendar and multi-select accessible markup moved.** See Breaking / Migration. The classes `.tm-calendar`, `.tm-cal-nav`, `.tm-cal-day` and `.tm-multiselect__options` are unchanged, and the popup root still keeps `display: flex`.
 
 - **overlay.js restores Escape focus immediately again, and waits only for a focus trap.** A non-trap panel (a dropdown, a picker popup) gets its anchor focus back inside `dismiss('escape')`, as before. A `TrapFocus` panel keeps the page inert until it hides, so that restore waits for `hidePanel` (or `release` when the panel node is already gone). A vetoed dismissal clears the pending restore, and the late path still refuses to move a focus that already landed somewhere.
 

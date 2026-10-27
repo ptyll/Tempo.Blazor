@@ -62,6 +62,20 @@ internal static class DateTimeHelpers
         return result;
     }
 
+    /// <summary>
+    /// Full weekday names in the same order as <see cref="GetDayHeaders"/>. Header cells are
+    /// generic, so the abbreviated text stays visible and the full name is the accessible name
+    /// (an <c>abbr</c> title, or a screen-reader-only span).
+    /// </summary>
+    public static IReadOnlyList<string> GetDayHeaderNames(CultureInfo culture, DayOfWeek firstDayOfWeek)
+    {
+        var names = culture.DateTimeFormat.DayNames; // Sun=0 … Sat=6
+        var result = new string[7];
+        for (var i = 0; i < 7; i++)
+            result[i] = names[((int)firstDayOfWeek + i) % 7];
+        return result;
+    }
+
     /// <summary>Returns the start of the week containing <paramref name="date"/> for the supplied culture.</summary>
     public static DateOnly GetStartOfWeek(DateOnly date, CultureInfo culture)
     {

@@ -72,7 +72,8 @@
   background: var(--tm-color-gray-100);
 }
 
-.tm-cal-day--other-month   { color: var(--tm-text-tertiary); opacity: 0.5; cursor: default; }
+.tm-cal-day--other-month   { color: var(--tm-text-tertiary); cursor: default; }
+.tm-cal-day--other-month.tm-cal-day--in-range { color: var(--tm-text-secondary); }
 .tm-cal-day--today         { border-color: var(--tm-color-primary); }
 .tm-cal-day--selected      { background: var(--tm-cal-selected-bg); color: var(--tm-cal-selected-fg); border-color: var(--tm-cal-selected-bg); }
 .tm-cal-day--selected:hover { background: var(--tm-color-primary-hover); }

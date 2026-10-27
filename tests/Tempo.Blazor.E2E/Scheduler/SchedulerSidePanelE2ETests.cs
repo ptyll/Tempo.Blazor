@@ -197,12 +197,8 @@ public sealed class SchedulerSidePanelE2ETests : WasmTestBase
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']
                 });
-                const calendar = host.querySelector('.tm-calendar');
                 result.violations.forEach(v => {
                     v.nodes = (v.nodes || []).filter(n => {
-                        const described = ((n.target || []).join(' ') + ' ' + (n.html || ''));
-                        if (described.includes('tm-cal')) return false;
-                        if (v.id === 'aria-required-children' && described.includes('listbox')) return false;
                         const el = n.target && n.target[0] ? document.querySelector(n.target[0]) : null;
                         return !el || el.getClientRects().length > 0;
                     });

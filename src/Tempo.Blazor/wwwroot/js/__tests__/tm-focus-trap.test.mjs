@@ -342,6 +342,25 @@ test('an explicit initial target beats the selector', () => {
     assert.equal(item.focusCalls, 0);
 });
 
+test('a selector match that is not focusable falls through to the first focusable', () => {
+    // Review 8b: a consumer selector can name a container (or a disabled control). Focusing it
+    // is a no-op, so the trap must not take that match — the first focusable wins.
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocusSelector: '.tm-multiselect__options' };
+    const container = element(scope);
+    container.matches = () => false;
+    const first = element(scope);
+    installDom(body);
+    scope.querySelectorAll = () => [first];
+    scope.querySelector = () => container;
+
+    activate(scope, 'scope', null, false, null, true);
+
+    assert.equal(container.focusCalls ?? 0, 0, 'an unfocusable match is not focused');
+    assert.equal(first.focusCalls, 1, 'the first focusable takes the move');
+});
+
 test('an invalid consumer selector must not throw after the inert and scroll lock landed', () => {
     // U8: the selector is a consumer-supplied string. A typo must degrade to the first
     // focusable — the trap has already marked the background inert and locked the scroll when

@@ -1,8 +1,8 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using System.Globalization
 
-<div class="tm-calendar" role="grid">
-    <div class="tm-cal-nav" role="row">
+<div class="tm-calendar">
+    <div class="tm-cal-nav">
         <button class="tm-cal-nav-btn tm-cal-prev"
                 type="button"
                 aria-label="@Loc["TmDatePicker_PreviousMonth"]"
@@ -15,9 +15,13 @@
     </div>
 
     <div class="tm-cal-grid">
-        @foreach (var header in _dayHeaders)
+        @* Every in-month day is a native button and its own tab stop (tabindex 0). Other-month
+           and disabled days are tabindex -1. There is no roving tabindex: Tab walks the month. *@
+        @for (var h = 0; h < _dayHeaders.Count; h++)
         {
-            <div class="tm-cal-header-cell" aria-label="@header">@header</div>
+            <div class="tm-cal-header-cell">
+                <abbr title="@_dayHeaderNames[h]">@_dayHeaders[h]</abbr>
+            </div>
         }
         @foreach (var day in _days)
         {
@@ -45,8 +49,9 @@
                     data-date="@d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
                     tabindex="@(disabled || isOther ? "-1" : "0")"
                     disabled="@disabled"
-                    aria-label="@d.ToString("d")"
-                    aria-pressed="@isSelected.ToString().ToLowerInvariant()"
+                    aria-label="@d.ToString("D", CultureInfo.CurrentCulture)"
+                    aria-pressed="@(isSelected || isStart || isEnd ? "true" : "false")"
+                    aria-current="@(isToday ? "date" : null)"
                     @onclick="() => SelectDay(d)"
                     @onmouseover="() => HoverDay(d)">
                 @d.Day
@@ -70,6 +75,7 @@
 
     private IReadOnlyList<DateOnly> _days       = [];
     private IReadOnlyList<string>   _dayHeaders = [];
+    private IReadOnlyList<string>   _dayHeaderNames = [];
     private string                  _monthName  = string.Empty;
 
     protected override void OnParametersSet()
@@ -77,6 +83,7 @@
         var culture = CultureInfo.CurrentUICulture;
         _days       = DateTimeHelpers.GetCalendarDays(DisplayYear, DisplayMonth);
         _dayHeaders = DateTimeHelpers.GetDayHeaders(culture);
+        _dayHeaderNames = DateTimeHelpers.GetDayHeaderNames(culture, DayOfWeek.Monday);
         _monthName  = DateTimeHelpers.GetMonthName(DisplayMonth, culture);
     }
 

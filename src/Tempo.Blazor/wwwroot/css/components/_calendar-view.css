@@ -71,7 +71,9 @@
 }
 
 .tm-calendar-view__day-cell .tm-cal-day--other-month {
-    color: var(--tm-text-disabled);
+    /* Adjacent-month days are real text at --tm-font-size-xs. The shared rule already paints them
+       in --tm-text-tertiary (gray-500, 4.6:1) with no opacity fade. */
+    color: var(--tm-text-tertiary);
 }
 
 .tm-calendar-view__day-cell .tm-cal-day--disabled {

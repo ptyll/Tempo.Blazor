@@ -242,12 +242,6 @@ public class SchedulerNavigationE2ETests : WasmTestBase
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']
                 });
-                // axe's context exclude is a node selector, not a rule disable. The calendar's
-                // grid/row roles are a recorded core debt, so only that node is dropped.
-                const calendar = host.querySelector('.tm-calendar');
-                result.violations.forEach(v => {
-                    v.nodes = (v.nodes || []).filter(n => !(n.target || []).join(' ').includes('tm-cal'));
-                });
                 return result.violations
                     .filter(v => v.nodes.length > 0 && (v.impact === 'critical' || v.impact === 'serious'))
                     .map(v => `${v.impact}: ${v.id} - ${v.help} [${(v.nodes[0] && v.nodes[0].target) || ''}]`);

@@ -3077,6 +3077,7 @@
   "TmMultiSelect_Error": "Impossible de charger les options",
   "TmMultiSelect_Loading": "Chargement...",
   "TmMultiSelect_NoResults": "Aucun résultat",
+  "TmMultiSelect_OtherGroup": "Autres",
   "TmMultiSelect_Placeholder": "Sélectionner...",
   "TmMultiSelect_RemoveItem": "Retirer {0}",
   "TmMultiSelect_Retry": "Réessayer",

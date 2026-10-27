@@ -27,6 +27,25 @@ public class TmDatePickerTests : LocalizationTestBase
         cut.FindAll(".tm-calendar").Should().HaveCount(1);
     }
 
+    // TmDatePicker renders TmCalendarGrid, which shares the .tm-calendar markup the scheduler
+    // date-popover axe scan used to exclude. Same contract as TmCalendarView: not an APG grid.
+    [Fact]
+    public void DatePicker_OpenCalendar_Has_No_Grid_Or_Row_Role()
+    {
+        var cut = Render<TmDatePicker>();
+
+        cut.Find(".tm-date-picker-trigger").Click();
+
+        var calendar = cut.Find(".tm-calendar");
+        calendar.GetAttribute("role").Should().BeNull();
+        calendar.QuerySelector(".tm-cal-nav")!.GetAttribute("role").Should().BeNull();
+        calendar.QuerySelector(".tm-cal-day")!.TagName.Should().Be("BUTTON");
+        cut.Markup.Should().NotContain("role=\"grid\"");
+        cut.Markup.Should().NotContain("role=\"row\"");
+        calendar.QuerySelector(".tm-cal-header-cell")!.HasAttribute("aria-label").Should().BeFalse();
+        calendar.QuerySelector(".tm-cal-day")!.GetAttribute("aria-pressed").Should().Be("false");
+    }
+
     [Fact]
     public void DatePicker_SelectDate_ClosesCalendarAndUpdatesValue()
     {

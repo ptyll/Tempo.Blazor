@@ -313,7 +313,43 @@ public partial class TmMultiSelect<TItem, TValue>
     // aria-activedescendant target for the currently-highlighted option. The
     // option ids are generated in RenderOption as "{Id}-opt-{visible index}".
     private string? ActiveOptionId =>
-        _isOpen && _focusedIndex >= 0 ? $"{Id}-opt-{_focusedIndex}" : null;
+        HasListbox && _focusedIndex >= 0 && _focusedIndex < VisibleCount
+            ? $"{Id}-opt-{_focusedIndex}"
+            : null;
+
+    /// <summary>
+    /// The options container exists only while options render. Every idref that names it
+    /// (aria-controls, aria-activedescendant) is omitted otherwise, so a closed, empty,
+    /// loading or error popup never points at an id that is not in the document.
+    /// </summary>
+    private bool HasListbox => _isOpen && !_isLoading && !_hasError && VisibleCount > 0;
+
+    private int VisibleCount => GetVisibleItems().Count();
+
+    private string? ListboxIdRef => HasListbox ? $"{Id}-listbox" : null;
+
+    private string? ListboxAriaLabel => string.IsNullOrEmpty(EffectiveAriaLabel) ? null : EffectiveAriaLabel;
+
+    private string? ListboxLabelledBy =>
+        ListboxAriaLabel is null && !string.IsNullOrEmpty(Id) ? Id : null;
+
+    /// <summary>
+    /// Sheet mode with no filter has no focusable control inside the popup, so the listbox
+    /// itself is the tab stop and carries aria-activedescendant. Everywhere else the combobox
+    /// or the filter owns that relationship and the listbox stays out of the tab order.
+    /// </summary>
+    private bool ListboxIsSheetTabStop => !AllowFiltering && IsSheetPresentation;
+
+    private bool IsSheetPresentation => MobilePresentation == PanelPresentation.Sheet
+        || (MobilePresentation == PanelPresentation.Auto && LayoutMode == TmLayoutMode.Mobile);
+
+    private string? ListboxTabIndex => ListboxIsSheetTabStop ? "0" : null;
+
+    private bool ListboxOwnsActiveDescendant => ListboxIsSheetTabStop;
+
+    private string? SheetFocusSelector => AllowFiltering
+        ? ".tm-multiselect__filter-input"
+        : ".tm-multiselect__options[role='listbox']";
 
     private string GetItemId(TItem item)
     {
@@ -363,7 +399,7 @@ public partial class TmMultiSelect<TItem, TValue>
         if (_isOpen)
         {
             _filterText = string.Empty;
-            _focusedIndex = -1;
+            _focusedIndex = ListboxIsSheetTabStop && VisibleCount > 0 ? 0 : -1;
             // The filter focus is armed from OnOpened (HandlePanelOpened) — once overlay.js
             // open() ran showPopover() — not here: this render's OnAfterRenderAsync can run
             // before the panel is displayed, and the move is dropped (UX review round 2, m3).
@@ -483,7 +519,10 @@ public partial class TmMultiSelect<TItem, TValue>
         if (!open)
             await OnClose.InvokeAsync();
         else
+        {
+            _focusedIndex = ListboxIsSheetTabStop && VisibleCount > 0 ? 0 : -1;
             await OnOpen.InvokeAsync();
+        }
     }
 
     // ── Filtering ────────────────────────────────────────────────

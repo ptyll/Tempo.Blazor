@@ -4520,6 +4520,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_EventMoved"] = "{0} moved to {1}",
         ["TmScheduler_EventMovedToResource"] = "{0} moved to {1}, {2}",
         ["TmScheduler_EventResized"] = "Resized to {0} – {1}",
+        ["TmMultiSelect_OtherGroup"] = "Other",
     });
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -8336,6 +8337,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_EventMoved"] = "{0} přesunuto na {1}",
         ["TmScheduler_EventMovedToResource"] = "{0} přesunuto na {1}, {2}",
         ["TmScheduler_EventResized"] = "Čas změněn na {0} – {1}",
+        ["TmMultiSelect_OtherGroup"] = "Ostatní",
     }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 

@@ -3092,6 +3092,7 @@
   "TmMultiSelect_Error": "Nepodařilo se načíst možnosti",
   "TmMultiSelect_Loading": "Načítání...",
   "TmMultiSelect_NoResults": "Nebyly nalezeny žádné výsledky",
+  "TmMultiSelect_OtherGroup": "Ostatní",
   "TmMultiSelect_Placeholder": "Vyberte...",
   "TmMultiSelect_RemoveItem": "Odebrat {0}",
   "TmMultiSelect_Retry": "Zkusit znovu",

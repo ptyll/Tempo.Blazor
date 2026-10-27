@@ -3062,6 +3062,7 @@
   "TmMultiSelect_Error": "Failed to load options",
   "TmMultiSelect_Loading": "Loading...",
   "TmMultiSelect_NoResults": "No results found",
+  "TmMultiSelect_OtherGroup": "Other",
   "TmMultiSelect_Placeholder": "Select...",
   "TmMultiSelect_RemoveItem": "Remove {0}",
   "TmMultiSelect_Retry": "Retry",

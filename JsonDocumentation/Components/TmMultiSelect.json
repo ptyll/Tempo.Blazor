@@ -2,7 +2,7 @@
   "itemName": "TmMultiSelect",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+  "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. role=listbox, aria-multiselectable and the stable {Id}-listbox id live on div.tm-multiselect__options, and only while options render. The combobox and the filter point at that id with aria-controls only then; neither emits aria-owns. Loading, error and empty states are siblings (role=status or role=alert). A grouped listbox owns role=group children, each named by its header; an empty group key announces the localized \"Other\". With no Label and no AriaLabel the listbox is named by aria-labelledby pointing at the combobox. A mobile sheet takes SheetTitle from that same name, and initial focus lands on the filter, or on the listbox itself when filtering is off.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs",
     "@using Tempo.Blazor.Models"
