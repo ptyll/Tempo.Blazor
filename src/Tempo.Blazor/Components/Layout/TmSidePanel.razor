@@ -12,38 +12,18 @@
 {
     @if (Open)
     {
-        <aside class="tm-side-panel tm-side-panel--docked @Class"
-               style="--tm-side-panel-width: @Width"
-               data-layout="@Context.CssModifier"
-               data-side="@SideName"
-               aria-labelledby="@(HasTitle ? _titleId : null)"
-               aria-label="@(HasTitle ? null : DefaultName)"
-               data-testid="@RootTestId("tm-side-panel")"
-               @attributes="AdditionalAttributes">
-            <header class="tm-side-panel__header">
-                @if (!string.IsNullOrEmpty(Title))
-                {
-                    <h2 class="tm-side-panel__title" id="@_titleId">@Title</h2>
-                }
-                @if (HeaderActions is not null)
-                {
-                    <div class="tm-side-panel__header-actions">@HeaderActions</div>
-                }
-                <button type="button"
-                        class="tm-side-panel__close tm-touch-target"
-                        aria-label="@Loc["TmSidePanel_Close"]"
-                        @onclick="CloseAsync">
-                    <TmIcon Name="x" Size="IconSize.Sm" />
-                </button>
-            </header>
-            <div class="tm-side-panel__body">
-                @ChildContent
-            </div>
-            @if (FooterContent is not null)
-            {
-                <footer class="tm-side-panel__footer">@FooterContent</footer>
-            }
-        </aside>
+        @* CloseOnEscape is opt-in. Without it the aside is the direct child, the markup every
+           existing consumer already has. The scope is not modal: it never traps focus. *@
+        @if (CloseOnEscape)
+        {
+            <TmFocusScope Active="true" Modal="false" CloseOnEscape="true" OnEscape="CloseAsync">
+                @DockedPanel
+            </TmFocusScope>
+        }
+        else
+        {
+            @DockedPanel
+        }
     }
 }
 else if (Open)
@@ -101,6 +81,13 @@ else if (Open)
 
     /// <summary>Title shown in the panel header; also the accessible name of the sheet.</summary>
     [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// When true, Escape closes the DOCKED panel through <see cref="OpenChanged"/>. Default false:
+    /// a docked panel is in-flow and leaves Escape to the host, so an existing panel is unchanged.
+    /// The sheet presentation already closes on Escape and ignores this.
+    /// </summary>
+    [Parameter] public bool CloseOnEscape { get; set; }
 
     /// <summary>
     /// The id of the host element (typically the button that opened the panel) focus returns to
@@ -241,6 +228,39 @@ else if (Open)
         _reported = resolved;
         await ResolvedLayoutChanged.InvokeAsync(resolved);
     }
+
+    private RenderFragment DockedPanel => @<aside class="tm-side-panel tm-side-panel--docked @Class"
+               style="--tm-side-panel-width: @Width"
+               data-layout="@Context.CssModifier"
+               data-side="@SideName"
+               aria-labelledby="@(HasTitle ? _titleId : null)"
+               aria-label="@(HasTitle ? null : DefaultName)"
+               data-testid="@RootTestId("tm-side-panel")"
+               @attributes="AdditionalAttributes">
+        <header class="tm-side-panel__header">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <h2 class="tm-side-panel__title" id="@_titleId">@Title</h2>
+            }
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-side-panel__header-actions">@HeaderActions</div>
+            }
+            <button type="button"
+                    class="tm-side-panel__close tm-touch-target"
+                    aria-label="@Loc["TmSidePanel_Close"]"
+                    @onclick="CloseAsync">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        </header>
+        <div class="tm-side-panel__body">
+            @ChildContent
+        </div>
+        @if (FooterContent is not null)
+        {
+            <footer class="tm-side-panel__footer">@FooterContent</footer>
+        }
+    </aside>;
 
     private async Task CloseAsync() => await OpenChanged.InvokeAsync(false);
 

@@ -209,6 +209,8 @@ public sealed class MarkupClassCoverageTests
         "tm-scheduler-event-dot",
         "tm-scheduler-event-time",
         "tm-scheduler-event-title",
+        // The resource filter's toolbar group: layout comes from TmToolbar, so the class is a hook.
+        "tm-scheduler-toolbar-filter",
         "tm-screening__resolution-note",
         "tm-screening__source",
         "tm-screening__time",

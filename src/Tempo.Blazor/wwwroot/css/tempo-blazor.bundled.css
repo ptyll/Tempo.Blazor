@@ -3715,12 +3715,20 @@ to{transform:translateY(0);}
 .tm-scheduler-toolbar-title{width:100%;text-align:center;}
 .tm-scheduler-month,.tm-scheduler-week,.tm-scheduler-timegrid,.tm-scheduler-agenda{break-inside:avoid;}
 .tm-scheduler-month-row,.tm-scheduler-month-day{break-inside:avoid;}
+.tm-scheduler-side-panel{display:none;}
 .tm-scheduler-month-event,.tm-scheduler-week-event{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .tm-scheduler{container-type:normal;}
 }
+.tm-scheduler-frame{display:flex;flex:1 1 auto;min-height:0;min-width:0;}
+.tm-scheduler-frame>.tm-scheduler-body{flex:1 1 auto;min-width:0;min-height:0;}
+.tm-scheduler-side-panel{flex:0 0 auto;}
+.tm-scheduler-close-detail{align-self:flex-start;margin-top:var(--tm-space-3);padding:var(--tm-space-1) var(--tm-space-3);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-md,var(--tm-radius-sm));background:var(--tm-bg-surface);color:var(--tm-text-primary);font-size:var(--tm-font-size-sm);cursor:pointer;}
+.tm-scheduler-resource-filter{min-width:10rem;}
 .tm-scheduler{container-type:inline-size;container-name:tm-scheduler;position:relative;--tm-scheduler-day-col-min:7rem;}
 .tm-scheduler-layout{display:flex;flex-direction:column;height:100%;min-height:0;}
-.tm-scheduler-toolbar--compact{flex-wrap:nowrap;}
+.tm-scheduler-toolbar--compact{display:flex;flex-direction:column;gap:var(--tm-space-1);min-width:0;max-width:100%;}
+.tm-scheduler-toolbar-compact-header{display:flex;align-items:center;gap:var(--tm-space-1);min-width:0;max-width:100%;}
+.tm-scheduler-toolbar-filter--row{min-width:0;}
 .tm-scheduler-toolbar--compact .tm-scheduler-toolbar-nav-btn,.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-title [role="button"],.tm-scheduler-toolbar--compact .tm-scheduler-toolbar-view .tm-dropdown-trigger,.tm-scheduler-date-strip-day{min-width:var(--tm-touch-target,2.75rem);min-height:var(--tm-touch-target,2.75rem);}
 .tm-scheduler-toolbar--compact .tm-scheduler-toolbar-view{flex:0 0 auto;white-space:nowrap;}
 .tm-scheduler-date-strip{display:flex;gap:var(--tm-space-1);overflow-x:auto;padding:var(--tm-space-2);}

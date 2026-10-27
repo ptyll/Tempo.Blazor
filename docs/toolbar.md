@@ -309,6 +309,7 @@ frozen and may only grow.
 | `title` | TmScheduler toolbar title (the date popover trigger) |
 | `primary` | TmScheduler toolbar primary action (the add button, only with an `OnAddClick` delegate) |
 | `header-actions` | TmScheduler toolbar host actions, after the view switcher |
+| `filter` | TmScheduler toolbar resource filter (only with `ShowResourceFilter`), after `header-actions` and before `primary`. On the compact row it is its own second row under the header, so it never squeezes `‹ title ›` |
 | `overflow` | TmScheduler toolbar More menu (only when it has an entry) |
 
 ## Labels

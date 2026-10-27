@@ -33,6 +33,13 @@
       "description": "Title shown in the panel header; also the accessible name of the sheet."
     },
     {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, Escape closes the DOCKED panel through OpenChanged. Default false: a docked panel is in-flow and leaves Escape to the host. The sheet presentation already closes on Escape and ignores this."
+    },
+    {
       "name": "RestoreFocusTargetId",
       "type": "string?",
       "isRequired": false,

@@ -80,6 +80,12 @@
       "description": "Host content rendered before the navigation group."
     },
     {
+      "name": "ResourceFilter",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The resource filter, rendered as data-tm-group=filter after the view switcher. TmScheduler supplies the core TmMultiSelect when ShowResourceFilter is set."
+    },
+    {
       "name": "HeaderActions",
       "type": "RenderFragment?",
       "isRequired": false,

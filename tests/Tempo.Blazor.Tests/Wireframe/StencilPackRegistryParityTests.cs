@@ -204,7 +204,12 @@ public class StencilPackRegistryParityTests
             .Split('\n')
             .Single(line => line.Contains("\"type\": \"TmScheduler\""));
 
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "showSidePanel" && prop.Type == PropType.Bool && Equals(prop.Default, false));
+        schema.Roles.Should().Contain("scheduler");
+
         entry.Should().Contain("showAddButton");
+        entry.Should().Contain("showSidePanel");
         entry.Should().Contain("\\u25be");
         entry.Should().Contain("layoutMode == \\\"mobile\\\"");
     }

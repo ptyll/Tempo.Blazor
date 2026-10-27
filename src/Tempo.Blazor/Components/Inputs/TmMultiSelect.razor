@@ -6,7 +6,7 @@
 @typeparam TValue
 
 <div class="tm-input-wrapper @Class" @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (!HideLabel && !string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -14,7 +14,7 @@
     <div class="tm-multiselect @GetTriggerCss()"
          role="combobox"
          id="@Id"
-         aria-label="@Label"
+         aria-label="@EffectiveAriaLabel"
          tabindex="0"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
@@ -128,6 +128,9 @@
                     ConstrainHeight="true"
                     Id="@(Id + "-listbox")"
                     Role="listbox"
+                    Title="@EffectiveAriaLabel"
+                    MobilePresentation="MobilePresentation"
+                    LayoutMode="LayoutMode"
                     Class="tm-multiselect__popup"
                     aria-multiselectable="true"
                     @onkeydown="HandleKeyDownAsync">

@@ -131,27 +131,35 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
         await card.Locator("[data-tm-group='navigation']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         // The Print group collapses into More and leaves an empty, zero-height wrapper; only a
         // group that paints counts as a row.
-        var rows = await card.Locator(".tm-scheduler-toolbar").EvaluateAsync<int>(
-            """
-            node => {
-                const boxes = [...node.querySelectorAll('[data-tm-group]')]
-                    .map(el => el.getBoundingClientRect())
-                    .filter(box => box.height > 0);
-                if (boxes.length === 0) return 0;
-                const origin = Math.min(...boxes.map(box => box.top));
-                const placed = boxes
-                    .map(box => ({ top: box.top - origin, bottom: box.bottom - origin }))
-                    .sort((a, b) => a.top - b.top);
-                let rows = 0;
-                let rowBottom = -1;
-                for (const box of placed) {
-                    if (box.top >= rowBottom - 1) { rows++; rowBottom = box.bottom; }
-                }
-                return rows;
-            }
-            """);
+        var rows = await card.Locator(".tm-scheduler-toolbar").EvaluateAsync<int>(RowCount);
         Assert.AreEqual(1, rows, "a tablet toolbar is one row");
+
+        // A card with the resource filter keeps that one row: the filter joins it, it does not wrap.
+        var filtered = page.Locator("[data-testid='scheduler-panel'] .tm-scheduler");
+        await filtered.ScrollIntoViewIfNeededAsync();
+        var filteredRows = await filtered.Locator(".tm-scheduler-toolbar").EvaluateAsync<int>(RowCount);
+        Assert.AreEqual(1, filteredRows, "a tablet toolbar with the resource filter is still one row");
     }
+
+    private const string RowCount =
+        """
+        node => {
+            const boxes = [...node.querySelectorAll('[data-tm-group]')]
+                .map(el => el.getBoundingClientRect())
+                .filter(box => box.height > 0);
+            if (boxes.length === 0) return 0;
+            const origin = Math.min(...boxes.map(box => box.top));
+            const placed = boxes
+                .map(box => ({ top: box.top - origin, bottom: box.bottom - origin }))
+                .sort((a, b) => a.top - b.top);
+            let rows = 0;
+            let rowBottom = -1;
+            for (const box of placed) {
+                if (box.top >= rowBottom - 1) { rows++; rowBottom = box.bottom; }
+            }
+            return rows;
+        }
+        """;
 
     [TestMethod]
     public async Task Unbounded_Mobile_Host_Keeps_The_Action_Bar_In_View()
@@ -352,6 +360,20 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
         var bar = page.Locator("[data-testid='scheduler-mobile-section'] .showcase-card").Nth(2).Locator(".tm-mobile-action-bar");
         await bar.ScrollIntoViewIfNeededAsync();
         Assert.IsTrue(await bar.IsVisibleAsync(), "the action bar is visible in the action-bar card");
+
+        // The resource filter is a second row under the compact header, so the header itself still fits.
+        var filtered = page.Locator("[data-testid='scheduler-panel'] .tm-scheduler");
+        await filtered.ScrollIntoViewIfNeededAsync();
+        var filteredHost = (await filtered.BoundingBoxAsync())!;
+        var header = (await filtered.Locator(".tm-scheduler-toolbar-compact-header").BoundingBoxAsync())!;
+        var filter = (await filtered.Locator("[data-tm-group='filter']").BoundingBoxAsync())!;
+        Assert.IsTrue(filter.Y >= header.Y + header.Height - 1,
+            "the filter sits on its own row under the compact header");
+        Assert.IsTrue(filter.X >= filteredHost.X - 1 && filter.X + filter.Width <= filteredHost.X + filteredHost.Width + 1,
+            "the filter trigger stays inside the scheduler");
+        var headerNext = (await filtered.Locator("[data-testid='scheduler-next']").BoundingBoxAsync())!;
+        Assert.IsTrue(headerNext.X + headerNext.Width <= header.X + header.Width + 1,
+            "the compact header still fits once the filter is showing");
     }
 
     private static async Task PhaseShotAsync(IPage page, string file)

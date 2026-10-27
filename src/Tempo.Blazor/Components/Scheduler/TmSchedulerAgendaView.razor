@@ -30,7 +30,7 @@
                     @foreach (var evt in group.Value)
                     {
                         var e = evt;
-                        <button type="button" class="tm-scheduler-agenda-event @(Compact ? "tm-scheduler-agenda-event--card" : null) @(IsSelected(e) ? "tm-scheduler-agenda-event--selected" : "") @e.CssClass"
+                        <button type="button" data-event-id="@e.Id" class="tm-scheduler-agenda-event @(Compact ? "tm-scheduler-agenda-event--card" : null) @(IsSelected(e) ? "tm-scheduler-agenda-event--selected" : "") @e.CssClass"
                                 aria-current="@(IsSelected(e) ? "true" : null)"
                                 aria-label="@(EventTemplate is null ? AgendaEventLabel(e) : null)"
                                 @onclick="@(() => HandleEventClick(e))">

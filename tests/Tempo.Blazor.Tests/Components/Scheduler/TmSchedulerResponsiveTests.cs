@@ -288,6 +288,8 @@ public class TmSchedulerResponsiveTests : LocalizationTestBase
         print.Should().Contain("container-type: normal",
             "print must undo the container so the desktop layout prints from a phone");
         print.Should().Contain(".tm-scheduler-toolbar--compact");
+        print.Should().Contain(".tm-scheduler-side-panel { display: none; }",
+            "a docked panel is screen chrome and must not print");
     }
 
     [Fact]

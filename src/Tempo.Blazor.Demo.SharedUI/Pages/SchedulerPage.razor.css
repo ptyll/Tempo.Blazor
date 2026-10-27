@@ -1,0 +1,34 @@
+/* The panel body is the demo's, so its styles live with the page, not in the library. */
+
+.demo-scheduler-panel-day {
+    margin: var(--tm-space-3) 0 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.demo-scheduler-panel-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin-top: var(--tm-space-4);
+    padding-top: var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
+    color: var(--tm-text-primary);
+}
+
+.demo-scheduler-panel-detail h3 {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.demo-scheduler-panel-detail p {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.demo-scheduler-panel-calendar {
+    width: 100%;
+}

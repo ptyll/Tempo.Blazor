@@ -2066,6 +2066,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showNowIndicator", "Show Now Indicator", PropType.Bool, true, cat: "Appearance"),
                 P("mobileActionBar", "Mobile Action Bar", PropType.Enum, "none", cat: "Behavior",
                     opts: ["none", "auto"]),
+                P("showSidePanel", "Show Side Panel", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 

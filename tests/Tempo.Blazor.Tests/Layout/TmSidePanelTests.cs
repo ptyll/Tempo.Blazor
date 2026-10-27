@@ -184,6 +184,30 @@ public class TmSidePanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Docked_Does_Not_Close_On_Escape_By_Default()
+    {
+        var cut = RenderPanel(TmLayoutMode.Desktop);
+
+        cut.FindAll(".tm-focus-scope").Should().BeEmpty(
+            "CloseOnEscape is opt-in, so the default docked markup stays the aside alone");
+    }
+
+    [Fact]
+    public async Task Docked_CloseOnEscape_RaisesOpenChangedFalse()
+    {
+        bool? last = null;
+        var cut = RenderPanel(TmLayoutMode.Desktop, p => p
+            .Add(x => x.CloseOnEscape, true)
+            .Add(x => x.OpenChanged, EventCallback.Factory.Create<bool>(this, v => last = v)));
+
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        scope.Instance.CloseOnEscape.Should().BeTrue();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+
+        last.Should().BeFalse("the additive opt-in funnels Escape through the same OpenChanged");
+    }
+
+    [Fact]
     public void Sheet_Backdrop_RaisesOpenChangedFalse()
     {
         bool? last = null;

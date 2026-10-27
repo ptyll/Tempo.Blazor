@@ -17,7 +17,14 @@
 <div class="tm-scheduler-toolbar @(IsMobile ? "tm-scheduler-toolbar--compact" : null)">
     @if (IsMobile)
     {
-        @CompactRow
+        <div class="tm-scheduler-toolbar-compact-header">
+            @CompactRow
+        </div>
+        @if (ResourceFilter is not null)
+        {
+            @* Its own row, so the ‹ title › Today view header is never squeezed by the filter. *@
+            <div class="tm-scheduler-toolbar-filter tm-scheduler-toolbar-filter--row" data-tm-group="filter">@ResourceFilter</div>
+        }
     }
     else
     {
@@ -92,6 +99,11 @@
     @if (HeaderActions is not null)
     {
         <div class="tm-scheduler-toolbar-slot" data-tm-group="header-actions">@HeaderActions</div>
+    }
+
+    @if (ResourceFilter is not null)
+    {
+        <TmToolbarItem Class="tm-scheduler-toolbar-filter" data-tm-group="filter">@ResourceFilter</TmToolbarItem>
     }
 
     @if (OnAddClick.HasDelegate)
@@ -248,6 +260,14 @@
     /// Default false: the compact row keeps a Today icon button.
     /// </summary>
     [Parameter] public bool HasActionBar { get; set; }
+
+    /// <summary>
+    /// The host's resource filter, rendered as its own <c>data-tm-group="filter"</c> group after
+    /// <c>header-actions</c> and before <c>primary</c> (decision SCH-TOOLBAR-2). On the compact row it
+    /// is a second row under the header, so it never squeezes <c>‹ title ›</c>. Null renders no group,
+    /// so the frozen group order is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? ResourceFilter { get; set; }
 
     private bool IsMobile => LayoutMode == TmLayoutMode.Mobile;
 

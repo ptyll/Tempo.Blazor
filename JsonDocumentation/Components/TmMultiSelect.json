@@ -78,7 +78,34 @@
       "name": "Label",
       "type": "string?",
       "isRequired": false,
-      "description": "Label shown above the component."
+      "description": "Label shown above the component. Also the accessible name of the trigger and of the popup, unless AriaLabel overrides it."
+    },
+    {
+      "name": "HideLabel",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, Label is not rendered as a visible label. It stays the accessible name of the trigger and of the popup. Default false, so an existing multi-select still shows its label."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the trigger and of the popup. Null falls back to Label."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "Popover",
+      "description": "How the option popup presents on a narrow viewport. Popover (the default) keeps the anchored popup at every width. Auto follows LayoutMode: a content-height bottom sheet on mobile, the anchored popup otherwise."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout MobilePresentation resolves from. A forced value never measures. Ignored unless MobilePresentation is Auto."
     },
     {
       "name": "Placeholder",

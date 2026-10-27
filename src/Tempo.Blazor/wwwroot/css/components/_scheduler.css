@@ -418,6 +418,7 @@
     .tm-scheduler-agenda { break-inside: avoid; }
     .tm-scheduler-month-row,
     .tm-scheduler-month-day { break-inside: avoid; }
+    .tm-scheduler-side-panel { display: none; }
     .tm-scheduler-month-event,
     .tm-scheduler-week-event {
         -webkit-print-color-adjust: exact;
@@ -425,6 +426,42 @@
     }
     /* Print always shows the desktop layout, even from a phone (the component also pins it). */
     .tm-scheduler { container-type: normal; }
+}
+
+/* The body and the docked panel share one row. A sheet presents itself, so the frame stays a column. */
+.tm-scheduler-frame {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.tm-scheduler-frame > .tm-scheduler-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.tm-scheduler-side-panel {
+    flex: 0 0 auto;
+}
+
+/* The detail's own close. It clears the detail, not the host panel. */
+.tm-scheduler-close-detail {
+    align-self: flex-start;
+    margin-top: var(--tm-space-3);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md, var(--tm-radius-sm));
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+/* The resource filter is a toolbar group, sized by its content, never by the bar. */
+.tm-scheduler-resource-filter {
+    min-width: 10rem;
 }
 
 /* The scheduler measures its own width. Descendants query tm-scheduler; the root never styles itself. */
@@ -446,7 +483,24 @@
 }
 
 .tm-scheduler-toolbar--compact {
-    flex-wrap: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* The compact header is one row: ‹ title ›, Today and the view menu. The filter is the row below. */
+.tm-scheduler-toolbar-compact-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    max-width: 100%;
+}
+
+.tm-scheduler-toolbar-filter--row {
+    min-width: 0;
 }
 
 .tm-scheduler-toolbar--compact .tm-scheduler-toolbar-nav-btn,

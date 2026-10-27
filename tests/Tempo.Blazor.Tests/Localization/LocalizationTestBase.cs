@@ -899,6 +899,7 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmMultiSelect
         ["TmMultiSelect_ConfirmButton"] = "Done",
+        ["TmMultiSelect_SelectedCount"] = "{0} selected",
 
         // TmFilterBuilder operators
         ["TmFilter_Contains"]      = "contains",
@@ -4487,6 +4488,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_TimelineGrid"] = "Timeline",
         ["TmScheduler_NowIndicator"] = "Current time {0}",
         ["TmScheduler_Resources"] = "Resources",
+        ["TmScheduler_AllResources"] = "All resources",
+        ["TmScheduler_NSelected"] = "{0} selected",
+        ["TmScheduler_OpenPanel"] = "Panel",
+        ["TmScheduler_EventDetail"] = "Event detail",
+        ["TmScheduler_CloseDetail"] = "Close detail",
         ["TmScheduler_MoreAria_One"] = "{0} more event on {1} – open day view",
         ["TmScheduler_MoreAria_Other"] = "{0} more events on {1} – open day view",
         ["TmScheduler_ViewSwitcher"] = "View",
@@ -4563,6 +4569,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDialog_PromptPlaceholder"] = "Zadejte hodnotu…",
         ["Tm_Done"]        = "Hotovo",
         ["TmMultiSelect_ConfirmButton"] = "Hotovo",
+        ["TmMultiSelect_SelectedCount"] = "{0} vybráno",
         ["TmOverlayPanel_SheetFallback"] = "Nabídka",
         ["TmMobileActionBar_AriaLabel"] = "Panel akcí",
         ["TmMobileActionBar_More"] = "Více",
@@ -8295,6 +8302,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmScheduler_TimelineGrid"] = "Časová osa",
         ["TmScheduler_NowIndicator"] = "Aktuální čas {0}",
         ["TmScheduler_Resources"] = "Zdroje",
+        ["TmScheduler_AllResources"] = "Všechny zdroje",
+        ["TmScheduler_NSelected"] = "{0} vybráno",
+        ["TmScheduler_OpenPanel"] = "Panel",
+        ["TmScheduler_EventDetail"] = "Detail události",
+        ["TmScheduler_CloseDetail"] = "Zavřít detail",
         ["TmScheduler_MoreAria_One"] = "{0} další událost dne {1} – otevřít denní pohled",
         ["TmScheduler_MoreAria_Few"] = "{0} další události dne {1} – otevřít denní pohled",
         ["TmScheduler_MoreAria_Many"] = "{0} další události dne {1} – otevřít denní pohled",

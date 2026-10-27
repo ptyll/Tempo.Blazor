@@ -16600,6 +16600,12 @@
               "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
             },
             {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the trigger and of the popup. Null falls back to Label."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -16687,6 +16693,13 @@
               "description": "Help text shown below when no error is present."
             },
             {
+              "name": "HideLabel",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Label is not rendered as a visible label. It stays the accessible name of the trigger and of the popup. Default false, so an existing multi-select still shows its label.",
+              "default": "false"
+            },
+            {
               "name": "HideSelectedItems",
               "type": "bool",
               "isRequired": false,
@@ -16722,7 +16735,14 @@
               "name": "Label",
               "type": "string?",
               "isRequired": false,
-              "description": "Label shown above the component."
+              "description": "Label shown above the component. Also the accessible name of the trigger and of the popup, unless AriaLabel overrides it."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout MobilePresentation resolves from. A forced value never measures. Ignored unless MobilePresentation is Auto."
             },
             {
               "name": "LoadingMessage",
@@ -16735,6 +16755,13 @@
               "type": "int",
               "isRequired": false,
               "description": "Maximum selectable items. 0 = unlimited."
+            },
+            {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the option popup presents on a narrow viewport. Popover (the default) keeps the anchored popup at every width. Auto follows LayoutMode: a content-height bottom sheet on mobile, the anchored popup otherwise."
             },
             {
               "name": "Mode",
@@ -20203,6 +20230,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)."
+            },
+            {
+              "name": "CloseOnEscape",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Escape closes the DOCKED panel through OpenChanged. Default false: a docked panel is in-flow and leaves Escape to the host. The sheet presentation already closes on Escape and ignores this.",
+              "default": "false"
             },
             {
               "name": "FooterContent",
@@ -23843,6 +23877,12 @@
               "description": "Server-side data provider. Takes priority over Events if both are set."
             },
             {
+              "name": "EventDetailTemplate",
+              "type": "RenderFragment<TmScheduleEvent>?",
+              "isRequired": false,
+              "description": "Detail of the selected event, rendered in the same TmSidePanel. An event click opens it; closing the panel returns focus to that event. The host supplies the body."
+            },
+            {
               "name": "Events",
               "type": "IReadOnlyList<TmScheduleEvent>?",
               "isRequired": false,
@@ -24012,6 +24052,19 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "SelectedResourceIds",
+              "type": "IReadOnlyList<string>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Resource ids the views keep. An empty list keeps every resource and every event, and so does a list whose ids match no known resource: a stale selection hides nothing. Otherwise a non-empty list filters Timeline rows, TimeGrid resource columns, and Month and Agenda events."
+            },
+            {
+              "name": "SelectedResourceIdsChanged",
+              "type": "EventCallback<IReadOnlyList<string>>",
+              "isRequired": false,
+              "description": "Fires when the built-in resource filter changes the selection."
+            },
+            {
               "name": "ShowAdjacentMonthEvents",
               "type": "bool",
               "isRequired": false,
@@ -24046,11 +24099,43 @@
               "description": "When true, today's column draws the current-time indicator. Default true; set false to restore the previous look."
             },
             {
+              "name": "ShowResourceFilter",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, and Resources has entries, the toolbar offers the core TmMultiSelect as data-tm-group=filter, after header-actions and before primary. The trigger reads TmScheduler_AllResources or TmScheduler_NSelected and carries no visible label. On the compact row the filter is its own second row under the header; its popup is the F3 bottom sheet.",
+              "default": "false"
+            },
+            {
               "name": "ShowTouchHint",
               "type": "bool",
               "isRequired": false,
               "description": "When true, a localized touch hint renders under the toolbar. CSS shows it only for a coarse pointer with no hover.",
               "default": "false"
+            },
+            {
+              "name": "SidePanel",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content for the right-hand panel, rendered through the core TmSidePanel (Presentation = Auto): docked on desktop, a side sheet on tablet, a bottom sheet on mobile. Null renders nothing."
+            },
+            {
+              "name": "SidePanelOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the side panel is open. Two-way with SidePanelOpenChanged.",
+              "default": "false"
+            },
+            {
+              "name": "SidePanelOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Fires when the side panel opens or closes."
+            },
+            {
+              "name": "SidePanelTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible title of the docked panel header when no event detail is showing. Null uses the localized default (TmSidePanel_DefaultTitle). An open detail replaces it with TmScheduler_EventDetail."
             },
             {
               "name": "SlotDuration",
@@ -24221,6 +24306,10 @@
             {
               "title": "Read-only agenda view",
               "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Agenda\" ReadOnly=\"true\" />"
+            },
+            {
+              "title": "Side panel with a mini calendar and an event detail",
+              "code": "<TmScheduler Events=\"@_events\" Resources=\"@_resources\" ShowResourceFilter=\"true\" @bind-SelectedResourceIds=\"_resourceIds\" @bind-SelectedEvent=\"_selected\" @bind-SidePanelOpen=\"_open\">\n    <SidePanel>\n        <TmCalendarView Compact=\"true\" SelectedDate=\"@_selectedDay\" OnDateClick=\"@PickDay\" />\n    </SidePanel>\n    <EventDetailTemplate Context=\"evt\">\n        <h3>@evt.Title</h3>\n        <p>@evt.StartLocal.ToString(\"g\")</p>\n        <p>@evt.Description</p>\n    </EventDetailTemplate>\n</TmScheduler>"
             },
             {
               "title": "Month view with custom event template",
@@ -25397,6 +25486,12 @@
               "type": "DateTime",
               "isRequired": false,
               "description": "Inclusive start of the range the title describes. The scheduler fills it from the same range it loads. Day and Timeline titles show this day; Week and Agenda titles start here."
+            },
+            {
+              "name": "ResourceFilter",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The resource filter, rendered as data-tm-group=filter after the view switcher. TmScheduler supplies the core TmMultiSelect when ShowResourceFilter is set."
             },
             {
               "name": "ShowHeader",

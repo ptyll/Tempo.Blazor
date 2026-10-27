@@ -315,7 +315,7 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
             // overlay.js consumes an Escape that actually closes a floating panel via
             // preventDefault (plus stopImmediatePropagation at window capture). Honour the flag so
             // one gesture still means one layer if ordering ever lets this listener run anyway.
-            if (e.key !== 'Escape' || e.defaultPrevented) return;
+            if (e.key !== 'Escape' || e.defaultPrevented || e.tmEscapeHandled) return;
             if (modal) {
                 // The modal owns Escape unless a LATER modal registered, or a later non-modal trap
                 // currently holds focus. isTopmost counted every trap, so a non-modal inline sheet

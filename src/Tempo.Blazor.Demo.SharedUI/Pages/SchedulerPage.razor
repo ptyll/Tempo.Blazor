@@ -1,5 +1,6 @@
 @page "/scheduler"
 @using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Buttons
@@ -7,6 +8,7 @@
 @inject ToastService Toast
 @inject HttpClient Http
 @inject Microsoft.JSInterop.IJSRuntime JS
+@inject ITmLocalizer Loc
 
 <PageTitle>Scheduler – Tempo.Blazor</PageTitle>
 
@@ -358,6 +360,55 @@
     </div>
 </section>
 
+<!-- Side panel and the resource filter. The panel content is the host's: a mini calendar, the
+     selected day, and the selected event's own fields. No attendees, RSVP or categories. -->
+<section class="demo-section" data-testid="scheduler-panel-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Side panel and resource filter</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">A mini calendar, the selected day and the event detail, through the core side panel. The resource filter narrows every view.</p>
+        </div>
+        <button type="button" data-testid="scheduler-panel-toggle" aria-expanded="@_panelOpen.ToString().ToLowerInvariant()" @onclick="TogglePanel">
+            @Loc["TmScheduler_OpenPanel"]
+        </button>
+    </div>
+
+    <div class="showcase-card" data-testid="scheduler-panel" style="height: 640px; position: relative;">
+        <TmScheduler @bind-View="_panelView"
+                     @bind-CurrentDate="_panelDate"
+                     @bind-SelectedDate="_panelSelectedDate"
+                     @bind-SelectedEvent="_panelSelectedEvent"
+                     @bind-SidePanelOpen="_panelOpen"
+                     @bind-SelectedResourceIds="_panelResourceIds"
+                     Events="_panelEvents"
+                     Resources="_resources"
+                     ShowResourceFilter="true">
+            <SidePanel>
+                <TmCalendarView Compact="true" Class="demo-scheduler-panel-calendar"
+                                SelectedDate="@PanelDay" Today="@DateOnly.FromDateTime(DateTime.Today)"
+                                OnDateClick="PickPanelDay" />
+                <p class="demo-scheduler-panel-day" data-testid="scheduler-panel-day">
+                    Selected day: @PanelDay.ToString("d")
+                </p>
+            </SidePanel>
+            <EventDetailTemplate Context="evt">
+                <article class="demo-scheduler-panel-detail" data-testid="scheduler-panel-detail">
+                    <h3>@evt.Title</h3>
+                    <p>@evt.StartLocal.ToString("g") – @evt.EndLocal.ToString("t")</p>
+                    @if (!string.IsNullOrEmpty(evt.Description))
+                    {
+                        <p>@evt.Description</p>
+                    }
+                    @if (PanelResourceName(evt.ResourceId) is { } resource)
+                    {
+                        <p>Resource: @resource</p>
+                    }
+                </article>
+            </EventDetailTemplate>
+        </TmScheduler>
+    </div>
+</section>
+
 <!-- Timeline View -->
 <section class="demo-section" data-testid="scheduler-timeline-section">
     <div class="flex items-center justify-between mb-4">
@@ -637,6 +688,34 @@
     private (DateTime Start, DateTime End) _selectedSlot;
     private TmScheduleEvent? _selectedEvent;
 
+    private TmScheduleViewType _panelView = TmScheduleViewType.Month;
+    private DateTime _panelDate = new(2026, 6, 15);
+    private DateTime? _panelSelectedDate = new(2026, 6, 15);
+    private TmScheduleEvent? _panelSelectedEvent;
+    private bool _panelOpen;
+
+    private void TogglePanel() => _panelOpen = !_panelOpen;
+    private IReadOnlyList<string> _panelResourceIds = [];
+
+    private DateOnly PanelDay => DateOnly.FromDateTime(_panelSelectedDate ?? _panelDate);
+
+    private Task PickPanelDay(DateOnly day)
+    {
+        _panelSelectedDate = day.ToDateTime(TimeOnly.MinValue);
+        _panelDate = _panelSelectedDate.Value;
+        return Task.CompletedTask;
+    }
+
+    private string? PanelResourceName(string? id)
+        => _resources.FirstOrDefault(r => r.Id == id)?.Name;
+
+    private readonly List<TmScheduleEvent> _panelEvents =
+    [
+        new() { Id = "p1", Title = "Team Standup", Description = "Daily sync", ResourceId = "room-a", Start = new DateTime(2026, 6, 15, 9, 0, 0), End = new DateTime(2026, 6, 15, 9, 30, 0), Color = "#3b82f6" },
+        new() { Id = "p2", Title = "Design review", Description = "Walk the mockups", ResourceId = "room-b", Start = new DateTime(2026, 6, 15, 11, 0, 0), End = new DateTime(2026, 6, 15, 12, 0, 0), Color = "#10b981" },
+        new() { Id = "p3", Title = "Board prep", ResourceId = "room-d", Start = new DateTime(2026, 6, 16, 14, 0, 0), End = new DateTime(2026, 6, 16, 15, 0, 0), Color = "#8b5cf6" },
+    ];
+
     private List<TmScheduleResource> _resources = new()
     {
         new() { Id = "room-a", Name = "Conference Room A", Color = "#3b82f6", ResourceType = "Meeting room" },
@@ -888,3 +967,5 @@
         }
     }
 }
+
+

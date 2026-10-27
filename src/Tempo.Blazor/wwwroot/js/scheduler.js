@@ -400,6 +400,22 @@
          * change alone leaves the focus on the element the key was pressed in. preventScroll asks the
          * browser not to jump; it ignores that for a cell below the fold, so the page scroll is put back.
          */
+        claimEscape: function (root) {
+            if (!root || root.__tmClaimEscape) return;
+            root.__tmClaimEscape = function (e) {
+                if (e.key !== 'Escape' || !e.target || !e.target.closest) return;
+                var panel = e.target.closest('aside.tm-side-panel--docked');
+                if (panel && panel.querySelector('.tm-scheduler-close-detail')) e.tmEscapeHandled = true;
+            };
+            root.addEventListener('keydown', root.__tmClaimEscape, true);
+        },
+
+        releaseEscape: function (root) {
+            if (!root || !root.__tmClaimEscape) return;
+            root.removeEventListener('keydown', root.__tmClaimEscape, true);
+            root.__tmClaimEscape = null;
+        },
+
         focusRovingStop: function (root, selector) {
             if (!root) return;
             var stop = root.querySelector(selector);

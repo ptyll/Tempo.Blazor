@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 
@@ -54,8 +56,38 @@ public partial class TmMultiSelect<TItem, TValue>
     /// <summary>Label shown above the component.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>
+    /// When true, <see cref="Label"/> is not rendered as a visible <c>&lt;label&gt;</c>. It stays the
+    /// accessible name of the trigger and of the popup, unless <see cref="AriaLabel"/> overrides it.
+    /// Default false, so an existing multi-select still shows its label.
+    /// </summary>
+    [Parameter] public bool HideLabel { get; set; }
+
+    /// <summary>
+    /// Accessible name of the trigger and of the popup. Null falls back to <see cref="Label"/>, which
+    /// is what every existing multi-select announces.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
     /// <summary>Placeholder text when no items are selected.</summary>
     [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>
+    /// How the option popup presents on a narrow viewport. Default
+    /// <see cref="PanelPresentation.Popover"/>, the anchored popup at every width, so an existing
+    /// multi-select is unchanged. <see cref="PanelPresentation.Auto"/> follows
+    /// <see cref="LayoutMode"/>: a content-height bottom sheet on mobile (the F3 sheet), the anchored
+    /// popup otherwise.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
+
+    /// <summary>
+    /// The layout <see cref="MobilePresentation"/> resolves from. <see cref="TmLayoutMode.Auto"/>
+    /// follows the viewport scope; a forced value never measures, so a test can render a mode
+    /// without a DOM. Ignored unless <see cref="MobilePresentation"/> is
+    /// <see cref="PanelPresentation.Auto"/>.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Validation error message.</summary>
     [Parameter] public string? Error { get; set; }
@@ -97,6 +129,10 @@ public partial class TmMultiSelect<TItem, TValue>
     [Parameter] public bool Required { get; set; }
 
     // ── Accessibility ────────────────────────────────────────────
+
+    /// <summary>The name the trigger and the popup announce: <see cref="AriaLabel"/>, else the label.</summary>
+    private string? EffectiveAriaLabel => !string.IsNullOrEmpty(AriaLabel) ? AriaLabel : Label;
+
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
     private string ErrorId => $"{Id}-error";
     private string HelpId => $"{Id}-help";

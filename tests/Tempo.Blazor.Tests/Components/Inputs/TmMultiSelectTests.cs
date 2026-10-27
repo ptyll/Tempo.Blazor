@@ -50,6 +50,37 @@ public class TmMultiSelectTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmMultiSelect_HideLabel_Keeps_The_Name_And_Drops_The_Label()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.HideLabel, true));
+
+        cut.FindAll("label").Should().BeEmpty("HideLabel is the additive opt-out of the visible label");
+        cut.Find(".tm-multiselect").GetAttribute("aria-label").Should().Be("Fruits");
+        cut.FindComponent<TmOverlayPanel>().Instance.Title.Should().Be("Fruits",
+            "the popup keeps the label as its accessible name");
+    }
+
+    [Fact]
+    public void TmMultiSelect_AriaLabel_Names_The_Trigger_And_The_Popup()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.AriaLabel, "Choose fruits"));
+
+        cut.Find("label.tm-input-label").TextContent.Trim().Should().Be("Fruits");
+        cut.Find(".tm-multiselect").GetAttribute("aria-label").Should().Be("Choose fruits");
+        cut.FindComponent<TmOverlayPanel>().Instance.Title.Should().Be("Choose fruits");
+    }
+
+    [Fact]
     public void TmMultiSelect_No_Label_When_Null()
     {
         var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
