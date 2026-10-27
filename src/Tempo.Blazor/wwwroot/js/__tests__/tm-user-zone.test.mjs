@@ -5,7 +5,8 @@ import { resolve } from '../tm-user-zone.js';
 test('resolve returns an IANA zone id', () => {
     const id = resolve();
     assert.equal(typeof id, 'string');
-    assert.match(id, /\//, 'IANA ids are Area/City');
+    // IANA ids are Area/City, but UTC hosts (CI containers) legitimately report the bare "UTC"/"GMT".
+    assert.match(id, /^(?:[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)+|UTC|GMT|Etc\/.+)$/, 'IANA zone id');
 });
 
 test('resolve returns null instead of throwing when Intl is unavailable', () => {

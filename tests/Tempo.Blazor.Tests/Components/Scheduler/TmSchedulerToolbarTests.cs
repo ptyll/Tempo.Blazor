@@ -209,6 +209,8 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
     [Fact]
     public void Title_Is_A_GoToDate_Button()
     {
+        using var _ = CultureScope.Use("cs-CZ"); // pin the culture: the title month name depends on it
+
         var cut = Render<TmSchedulerToolbar>(p => p
             .Add(c => c.View, TmScheduleViewType.Month)
             .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
