@@ -150,20 +150,15 @@
                      ReadOnly="true"
                      OnEventClick="HandleEventClick">
             <EventTemplate Context="evt">
-                @if (_templateView != TmScheduleViewType.Month)
-                {
-                    <span data-testid="scheduler-month-template-event">@evt.Title</span>
-                }
-                else
-                {
+                @* The same two-line template in every view. The time grid and the timeline used to
+                   clip it to one line; the title still ellipsizes, the status badge wraps. *@
                 <div class="tm-demo-month-event-template" data-testid="scheduler-month-template-event"
-                     style="display: grid; gap: 2px; min-width: 0; margin: -2px; border-radius: 6px; padding: 4px 6px; background: @evt.Color; color: white; box-shadow: 0 1px 2px rgba(15,23,42,.18);">
+                     style="display: grid; gap: 2px; min-width: 0; border-radius: 6px; padding: 2px 4px;">
                     <strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@evt.Title</strong>
                     <span style="display: inline-flex; align-items: center; width: max-content; max-width: 100%; border-radius: 999px; padding: 1px 6px; background: rgba(255,255,255,.88); color: #334155; font-size: 10px; font-weight: 700; line-height: 1.35;">
                         @evt.Description
                     </span>
                 </div>
-                }
             </EventTemplate>
         </TmScheduler>
     </div>

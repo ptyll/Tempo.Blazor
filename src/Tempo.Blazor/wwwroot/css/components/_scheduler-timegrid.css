@@ -406,6 +406,11 @@
     gap: var(--tm-space-1);
 }
 
+/* A host template root is a flex item of the row. Without a floor it refuses to shrink and the title overflows the bar. The accessible name and the resize handles are not content. */
+.tm-scheduler-timegrid-event.tm-scheduler-event--compact > :not(.tm-sr-only):not(.tm-scheduler-event-resize-handle) {
+    min-width: 0;
+}
+
 .tm-scheduler-timegrid-event.tm-scheduler-event--compact .tm-scheduler-timegrid-event-title {
     order: -1;
     flex: 1 1 auto;

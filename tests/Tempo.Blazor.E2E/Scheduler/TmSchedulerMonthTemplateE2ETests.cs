@@ -46,10 +46,13 @@ public sealed class TmSchedulerMonthTemplateE2ETests : WasmTestBase
 
         await CaptureSchedulerAsync(card, "tm-scheduler-month-template");
 
-        // The same template reaches the other four views (B24).
+        // The same two-line template reaches the other four views, and the time grid and the
+        // timeline no longer clip the second line (the status badge).
         await AssertTemplateInViewAsync(card, "Week", "HV-1023");
+        await AssertBothLinesVisibleAsync(card, "HV-1023", "Critical");
         await AssertTemplateInViewAsync(card, "Day", "HV-1044");
         await AssertTemplateInViewAsync(card, "Timeline", "HV-1044");
+        await AssertBothLinesVisibleAsync(card, "HV-1044", "Running");
         // The agenda starts on the current date (2 July), so the 1 July event is outside its range.
         await AssertTemplateInViewAsync(card, "Agenda", "HV-1044");
     }
@@ -62,6 +65,25 @@ public sealed class TmSchedulerMonthTemplateE2ETests : WasmTestBase
         var templated = card.Locator("[data-testid='scheduler-month-template-event']",
             new LocatorLocatorOptions { HasText = title });
         await Assertions.Expect(templated.First).ToBeVisibleAsync();
+    }
+
+    /// <summary>Both lines of the template are visible: the title and the status badge.</summary>
+    private static async Task AssertBothLinesVisibleAsync(ILocator card, string title, string status)
+    {
+        var templated = card.Locator("[data-testid='scheduler-month-template-event']",
+            new LocatorLocatorOptions { HasText = title }).First;
+        var titleBox = await templated.Locator("strong").BoundingBoxAsync();
+        var statusBox = await templated.Locator("span").BoundingBoxAsync();
+        Assert.IsNotNull(titleBox, "the title line is rendered");
+        Assert.IsNotNull(statusBox, "the status line is rendered");
+        Assert.IsTrue(statusBox!.Height > 0 && statusBox.Width > 0, "the status badge is not clipped away");
+        Assert.IsTrue(statusBox.Y >= titleBox!.Y + titleBox.Height - 1,
+            "the status badge sits on its own line under the title");
+        var cardBox = await templated.Locator("xpath=ancestor::*[contains(@class,'tm-scheduler-event')][1]").BoundingBoxAsync();
+        Assert.IsNotNull(cardBox, "the template sits in an event card");
+        Assert.IsTrue(statusBox.Y + statusBox.Height <= cardBox!.Y + cardBox.Height + 1,
+            "the status badge stays inside the card");
+        await Assertions.Expect(templated).ToContainTextAsync(status);
     }
 
     private async Task<IPage> OpenSchedulerPageAsync()

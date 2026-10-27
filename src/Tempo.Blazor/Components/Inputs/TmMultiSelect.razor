@@ -117,7 +117,8 @@
        ancestor's overflow/transform can no longer clip it, and overlay.js repositions it on
        scroll/resize and flips it above the trigger when the space below runs out.
        Bottom + Start + 4px + MatchAnchorWidth replaces the old top:calc(100%+space-1);left:0;right:0. *@
-    <TmOverlayPanel Anchor="_triggerRef"
+    <TmOverlayPanel @ref="_panel"
+                    Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJsAsync"
                     OnOpened="HandlePanelOpened"
@@ -130,6 +131,7 @@
                     SheetInitialFocusSelector="@SheetFocusSelector"
                     MobilePresentation="MobilePresentation"
                     LayoutMode="LayoutMode"
+                    ResolvedLayoutChanged="OnPanelLayoutResolved"
                     Class="tm-multiselect__popup"
                     @onkeydown="HandleKeyDownAsync">
 

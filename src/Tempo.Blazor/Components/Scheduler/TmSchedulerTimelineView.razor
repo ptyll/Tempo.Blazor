@@ -126,14 +126,13 @@
         builder.AddEventStopPropagationAttribute(sequence++, "oncontextmenu", true);
         if (EventTemplate is not null)
         {
+            // The template renders directly into the bar. The ellipsis wrapper clipped a multi-line
+            // template to one line; a host that wants ellipsis puts it on its own markup.
             builder.OpenElement(sequence++, "span");
             builder.AddAttribute(sequence++, "class", "tm-sr-only");
             builder.AddContent(sequence++, EventAriaLabel(e));
             builder.CloseElement();
-            builder.OpenElement(sequence++, "span");
-            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-content");
             builder.AddContent(sequence++, EventTemplate(e));
-            builder.CloseElement();
         }
         else
         {

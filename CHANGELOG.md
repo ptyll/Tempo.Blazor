@@ -685,6 +685,17 @@
 
 ### Fixed
 
+- **Gantt "today" and the hours-zoom marker follow the injected clock and the display zone.** `TmGantt.TodayInZone` used to return `DateTime.Today` whenever the resolved zone equalled `TimeZoneInfo.Local`, so a display zone that happened to match the machine ignored the user's zone and the injected `TimeProvider`. It now converts `TimeProvider.GetUtcNow()` (the system clock when none is registered) into the zone: no zone service keeps the machine-local day, an unresolved zone stays UTC, and a resolved zone — including one equal to `TimeZoneInfo.Local` — is converted. `GanttHelper.GetCurrentTimeOffset` gains an overload that takes the instant; the existing signature is unchanged and still reads `DateTimeOffset.Now`. The hours-zoom marker passes the zone-converted clock, so it no longer sits at `DateTime.Now` when the zone matches the machine. `TmGanttWorkloadView.Today` still defaults to `DateTime.Today`; the Gantt already passes `TodayInZone()`.
+- **An event template in the time grid and the timeline is no longer clipped to one line.** Before, `EventTemplate` rendered inside `span.tm-scheduler-event-content`, whose rule is `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`, so a multi-line template written for the month cell was cut to a single line. The template now renders directly into the card. The visually-hidden accessible name, the card `title` and the resize handles are unchanged. The built-in time and title stay direct children of the card and keep their own ellipsis; the timeline default does not wrap them. `span.tm-scheduler-event-content` is a host opt-in: the same rule exists under the time-grid card and the timeline card. A host that relied on the wrapper to clip its own template puts the class on its own markup:
+
+  ```razor
+  <EventTemplate Context="evt">
+      <span class="tm-scheduler-event-content">@evt.Title</span>
+  </EventTemplate>
+  ```
+
+  This is a visual change, not an API change: no parameter or signature was removed. A template taller than the card is still cut at the card edge.
+- **`TmMultiSelect` sheet keyboard follows the panel's resolved layout.** With `MobilePresentation="Auto"` and `LayoutMode="Auto"` the listbox used to read the parameter, which stays `Auto`, so on a real phone the options had no `tabindex` and no `aria-activedescendant` even though the popup had opened as a sheet. The listbox now follows `TmOverlayPanel.IsSheet`. A forced `Sheet`, or `Auto` with `LayoutMode="Mobile"`, is unchanged.
 - **Calendar and multi-select accessible markup moved.** See Breaking / Migration. The classes `.tm-calendar`, `.tm-cal-nav`, `.tm-cal-day` and `.tm-multiselect__options` are unchanged, and the popup root still keeps `display: flex`.
 
 - **overlay.js restores Escape focus immediately again, and waits only for a focus trap.** A non-trap panel (a dropdown, a picker popup) gets its anchor focus back inside `dismiss('escape')`, as before. A `TrapFocus` panel keeps the page inert until it hides, so that restore waits for `hidePanel` (or `release` when the panel node is already gone). A vetoed dismissal clears the pending restore, and the late path still refuses to move a focus that already landed somewhere.
@@ -1457,7 +1468,7 @@
   <TmScheduler View="TmScheduleViewType.Month" OnMoreClick="ShowOverflow" />
   ```
 - **`TmScheduler`: `EventTemplate` now renders in the Day, Week, Timeline and Agenda views too.**
-  Before, the template replaced only the month cell's content; the other views kept their built-in time and title. Now the same template renders inside every view, and the positioning wrapper and resize handles stay. Impact: a template written for the wide month cell also renders inside the narrow time-grid bars and the timeline row, where a long layout is clipped. Branch on the bound view inside the template.
+  Before, the template replaced only the month cell's content; the other views kept their built-in time and title. Now the same template renders inside every view, and the positioning wrapper and resize handles stay. Impact: a template written for the wide month cell also renders inside the narrow time-grid bars and the timeline row. It is no longer forced to one line; a template taller than the card is cut at the card edge, so branch on the view for short bars.
   ```razor
   <!-- before: one template, rendered only in the month view -->
   <TmScheduler EventTemplate="e => @<span>@e.Title</span>" />

@@ -340,8 +340,25 @@ public partial class TmMultiSelect<TItem, TValue>
     /// </summary>
     private bool ListboxIsSheetTabStop => !AllowFiltering && IsSheetPresentation;
 
-    private bool IsSheetPresentation => MobilePresentation == PanelPresentation.Sheet
-        || (MobilePresentation == PanelPresentation.Auto && LayoutMode == TmLayoutMode.Mobile);
+    /// <summary>
+    /// The sheet decision follows the panel, not this component's <see cref="LayoutMode"/>
+    /// parameter. With <see cref="PanelPresentation.Auto"/> and <see cref="TmLayoutMode.Auto"/> the
+    /// parameter stays Auto while the panel resolves Mobile from the viewport cascade; reading the
+    /// parameter left the listbox without a tab stop on a real phone.
+    /// </summary>
+    private bool IsSheetPresentation => _panel?.IsSheet
+        ?? (MobilePresentation == PanelPresentation.Sheet
+            || (MobilePresentation == PanelPresentation.Auto && LayoutMode == TmLayoutMode.Mobile));
+
+    private TmOverlayPanel? _panel;
+
+    private Task OnPanelLayoutResolved(TmLayoutMode _)
+    {
+        // The panel reports a resolved layout only after it changes, so the listbox attributes
+        // (tabindex, aria-activedescendant) catch up on the next render.
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
     private string? ListboxTabIndex => ListboxIsSheetTabStop ? "0" : null;
 

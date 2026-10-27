@@ -63,11 +63,20 @@ public static class GanttHelper
 
     /// <summary>
     /// Returns the pixel offset of the current time within the current day for the hours zoom view.
+    /// The instant is the machine clock; callers that judge "now" in a zone of their own pass it
+    /// through <see cref="GetCurrentTimeOffset(DateTime, double, DateTimeOffset)"/>.
     /// </summary>
     public static double GetCurrentTimeOffset(DateTime dayStart, double pixelPerHour)
+        => GetCurrentTimeOffset(dayStart, pixelPerHour, DateTimeOffset.Now);
+
+    /// <summary>
+    /// Returns the pixel offset of <paramref name="now"/> within the current day for the hours zoom
+    /// view. The Gantt passes the injected <see cref="TimeProvider"/> converted into the display
+    /// zone, so the marker never reads <see cref="DateTime.Now"/>.
+    /// </summary>
+    public static double GetCurrentTimeOffset(DateTime dayStart, double pixelPerHour, DateTimeOffset now)
     {
-        var now = DateTime.Now;
-        var elapsed = (now - dayStart).TotalHours;
+        var elapsed = (now.DateTime - dayStart).TotalHours;
         return Math.Max(0, elapsed * pixelPerHour);
     }
 

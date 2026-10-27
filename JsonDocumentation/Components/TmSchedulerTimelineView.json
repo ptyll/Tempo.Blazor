@@ -2,7 +2,7 @@
   "itemName": "TmSchedulerTimelineView",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe; templated content sits in tm-scheduler-event-content, which ellipsizes, with the resize handles outside it. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
+  "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe. A host EventTemplate renders directly into the card, so a multi-line template is not clipped; the built-in time and title are direct children of the card and each ellipsizes on its own. span.tm-scheduler-event-content is a host opt-in ellipsis (the same rule exists on the time-grid card), and the resize handles stay outside the template. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],

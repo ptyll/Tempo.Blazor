@@ -621,6 +621,33 @@ public class TmMultiSelectTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Auto_On_A_Mobile_Viewport_Focuses_The_Listbox()
+    {
+        // MobilePresentation=Auto + LayoutMode=Auto used to read the parameter, which stays Auto,
+        // so a real phone (the panel resolved Mobile from the viewport cascade) never put tabindex
+        // or aria-activedescendant on the listbox. The listbox follows the panel's resolved layout.
+        var viewport = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile);
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.AllowFiltering, false)
+            .Add(c => c.MobilePresentation, PanelPresentation.Auto)
+            .Add(c => c.LayoutMode, TmLayoutMode.Auto)
+            .AddCascadingValue(TmLayoutScopes.Viewport, viewport));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.FindComponent<TmOverlayPanel>().Instance.IsSheet.Should().BeTrue(
+            "Auto on a mobile viewport cascade is the sheet");
+        var listbox = cut.Find("[role='listbox']");
+        listbox.GetAttribute("tabindex").Should().Be("0");
+        listbox.HasAttribute("aria-activedescendant").Should().BeTrue();
+    }
+
+    [Fact]
     public void Sheet_With_A_Label_Shows_That_Title_Not_Menu()
     {
         var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p

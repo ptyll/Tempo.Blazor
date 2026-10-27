@@ -2,6 +2,7 @@ using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Components.Scheduler;
@@ -60,21 +61,18 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
     public void TodayMarker_UsesTodayInTheUserZone()
     {
         var prague = Prague();
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 22, 30, 0, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(clock);
         Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(prague));
 
         var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()));
 
         var ppd = PixelPerDay(cut);
         var (start, _) = GanttHelper.GetTimeRange(Items());
-        var before = TimeZoneInfo.ConvertTime(DateTimeOffset.Now, prague).Date;
-        var after = TimeZoneInfo.ConvertTime(DateTimeOffset.Now, prague).Date;
+        var today = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), prague).Date;
 
-        var left = MarkerLeft(cut);
-        // DateTimeOffset.Now is read twice (test + component); tolerate a midnight crossing.
-        var candidates = new[] { before, after }.Distinct()
-            .Select(d => (d - start.Date).TotalDays * ppd);
-        candidates.Should().Contain(e => Math.Abs(e - left) < 0.5,
-            "the marker sits at (today in the user zone - timeline start) * pixelPerDay, got {0}", left);
+        MarkerLeft(cut).Should().BeApproximately((today - start.Date).TotalDays * ppd, 0.5,
+            "the marker sits at (today in the user zone - timeline start) * pixelPerDay");
     }
 
     [Fact]
@@ -96,20 +94,112 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
     public void TodayInZone_UnresolvedUserZone_ReadsUtc()
     {
         // The fixed 2.9.1 decision: UTC until the browser probe resolves the zone.
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 22, 30, 0, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(clock);
         Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(TimeZoneInfo.Utc, resolved: false));
 
         var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()));
 
         cut.Instance.TodayInZone().Should().Be(
-            TimeZoneInfo.ConvertTime(DateTimeOffset.Now, TimeZoneInfo.Utc).Date);
+            TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Utc).Date);
     }
 
     [Fact]
     public void TodayInZone_WithoutAService_ReadsMachineLocal()
     {
+        // No zone service: the machine-local calendar day of the injected clock, never DateTime.Today.
+        var clock = new ZonedClock(
+            new DateTimeOffset(2026, 6, 15, 22, 30, 0, TimeSpan.Zero), TimeZoneInfo.Local);
+        Services.AddSingleton<TimeProvider>(clock);
+
         var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()));
 
-        cut.Instance.TodayInZone().Should().Be(DateTime.Today);
+        cut.Instance.TodayInZone().Should().Be(
+            TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Local).Date);
+    }
+
+    [Fact]
+    public void TodayInZone_ResolvedLocalZone_ReadsTimeProvider_NotMachineToday()
+    {
+        // A resolved zone that equals TimeZoneInfo.Local used to short-circuit to DateTime.Today,
+        // so a display zone matching the machine ignored the injected clock. The day comes from
+        // TimeProvider, converted into that zone.
+        var clock = new ZonedClock(
+            DateTime.Today.AddDays(1).AddHours(15), TimeZoneInfo.Local);
+        Services.AddSingleton<TimeProvider>(clock);
+        Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(TimeZoneInfo.Local));
+
+        var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()));
+
+        var expected = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Local).Date;
+        expected.Should().NotBe(DateTime.Today, "the fixture only proves the bug when the clocks disagree");
+        cut.Instance.TodayInZone().Should().Be(expected);
+    }
+
+    [Fact]
+    public void CurrentTimeOffset_HoursZoom_UsesTimeProvider()
+    {
+        // Hours zoom places the current-time marker from TimeProvider, not DateTime.Now.
+        var clock = new ZonedClock(
+            new DateTimeOffset(2026, 6, 15, 10, 30, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        Services.AddSingleton<TimeProvider>(clock);
+        Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(TimeZoneInfo.Utc));
+
+        var cut = Render<TmGantt>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.ZoomPreset, GanttZoomPreset.Hours));
+
+        var style = cut.Find("[data-testid='current-time-marker']").GetAttribute("style");
+        style.Should().NotBeNull().And.Contain("left:");
+        var left = double.Parse(style!.Split("left:")[1].Split("px")[0].Trim(), CultureInfo.InvariantCulture);
+
+        var (start, _) = GanttHelper.GetTimeRange(Items());
+        var now = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Utc).DateTime;
+        var pixelPerDay = PixelPerDay(cut);
+        var expected = (now - start).TotalHours * (pixelPerDay / 24.0);
+        left.Should().BeApproximately(expected, 0.5);
+        left.Should().NotBeApproximately(
+            (DateTime.Now - start).TotalHours * (pixelPerDay / 24.0), 0.5,
+            "the marker must not sit at the machine clock");
+    }
+
+    [Fact]
+    public void CurrentTimeOffset_HoursZoom_UsesZonedClock_OnTheSpringForwardDay()
+    {
+        // 2026-03-29 is the Europe/Prague spring-forward day. 03:30 local is 01:30 UTC, and a
+        // conversion that dropped the offset would place the marker an hour off.
+        var prague = Prague();
+        var local = new DateTime(2026, 3, 29, 3, 30, 0);
+        var utc = TimeZoneInfo.ConvertTimeToUtc(local, prague);
+        var clock = new ZonedClock(new DateTimeOffset(utc, TimeSpan.Zero), prague);
+        Services.AddSingleton<TimeProvider>(clock);
+        Services.AddSingleton<ITmUserTimeZone>(new StubTmUserTimeZone(prague));
+
+        var items = new List<TmWorkItem>
+        {
+            new() { Id = "1", Title = "Design", Start = new DateTime(2026, 3, 23), End = new DateTime(2026, 3, 27) },
+            new() { Id = "2", Title = "Build", Start = new DateTime(2026, 3, 26), End = new DateTime(2026, 4, 3) },
+        };
+        var cut = Render<TmGantt>(p => p
+            .Add(c => c.Items, items)
+            .Add(c => c.ZoomPreset, GanttZoomPreset.Hours));
+
+        var style = cut.Find("[data-testid='current-time-marker']").GetAttribute("style");
+        var left = double.Parse(style!.Split("left:")[1].Split("px")[0].Trim(), CultureInfo.InvariantCulture);
+        var (start, end) = GanttHelper.GetTimeRange(items);
+        var width = double.Parse(
+            cut.Find(".tm-gantt__timeline-content").GetAttribute("style")!.Split("width:")[1].Split("px")[0].Trim(),
+            CultureInfo.InvariantCulture);
+        var pixelPerHour = width / (end - start).TotalDays / 24.0;
+        var expected = (local - start).TotalHours * pixelPerHour;
+        left.Should().BeApproximately(expected, 0.5, "03:30 Prague on the spring-forward day");
+        left.Should().NotBeApproximately(expected - pixelPerHour, 0.5, "the marker is not an hour early");
+    }
+
+    /// <summary>A fake clock whose local zone is the one the test pins. FakeTimeProvider.LocalTimeZone is read-only.</summary>
+    private sealed class ZonedClock(DateTimeOffset start, TimeZoneInfo zone) : FakeTimeProvider(start)
+    {
+        public override TimeZoneInfo LocalTimeZone => zone;
     }
 
     [Fact]

@@ -28,7 +28,7 @@ public partial class TmGantt : IDisposable
     private int _zoomLevel = 100;
     private double _todayOffset;
     /// <summary>Today in the display zone, recomputed once per <see cref="RefreshVisibleData"/>.</summary>
-    private DateTime _today = DateTime.Today;
+    private DateTime _today = default;
     private double _currentTimeOffset;
 
     // Phase 3 state
@@ -291,16 +291,28 @@ public partial class TmGantt : IDisposable
     /// Today's date in the circuit's user zone — the browser's zone (UTC on Blazor Server until the
     /// probe reports after the first interactive render, the runtime's zone on WebAssembly) — and
     /// the machine-local date only when no <see cref="ITmUserTimeZone"/> is registered (a bare test
-    /// context). Drives the today marker, new-task defaults, the overdue highlight and the
+    /// context). The instant comes from the injected <see cref="TimeProvider"/>, never from
+    /// <see cref="DateTime.Today"/>, so a zone that equals <see cref="TimeZoneInfo.Local"/> still
+    /// follows the clock. Drives the today marker, new-task defaults, the overdue highlight and the
     /// embedded calendar.
     /// </summary>
-    internal DateTime TodayInZone()
+    internal DateTime TodayInZone() => NowInZone().Date;
+
+    /// <summary>The injected clock converted into the display zone. Shared by today and the hours marker.</summary>
+    private DateTimeOffset NowInZone()
     {
-        var zone = _userZone?.Zone;
-        return zone is null || zone.Equals(TimeZoneInfo.Local)
-            ? DateTime.Today
-            : TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).Date;
+        var zone = _userZone?.Zone ?? Clock.LocalTimeZone;
+        return TimeZoneInfo.ConvertTime(Clock.GetUtcNow(), zone);
     }
+
+    /// <summary>
+    /// Clock behind "today" and the hours-zoom marker. Resolved through
+    /// <see cref="IServiceProvider"/> so a consumer that never registers a <see cref="TimeProvider"/>
+    /// still gets <see cref="TimeProvider.System"/>. Tests register a FakeTimeProvider.
+    /// </summary>
+    private TimeProvider Clock
+        => _clock ??= Services.GetService<TimeProvider>() ?? TimeProvider.System;
+    private TimeProvider? _clock;
 
     protected override void OnInitialized()
     {
@@ -818,7 +830,7 @@ public partial class TmGantt : IDisposable
 
     // OnInitialized pins this to the user-zone today (DI is available there); the zone event
     // re-pins it when the browser probe reports.
-    private DateTime _calendarDate = DateTime.Today;
+    private DateTime _calendarDate = default;
 
     private async Task OnCalendarEventChangedAsync(TmScheduleEvent e)
     {
@@ -1148,8 +1160,9 @@ public partial class TmGantt : IDisposable
         if (GetEffectiveZoomPreset() == GanttZoomPreset.Hours)
         {
             var pixelPerHour = pixelPerDay / 24.0;
+            var now = NowInZone();
             _currentTimeOffset = (timelineStart - timelineStart.Date).TotalHours * pixelPerHour
-                + GanttHelper.GetCurrentTimeOffset(timelineStart.Date, pixelPerHour);
+                + GanttHelper.GetCurrentTimeOffset(timelineStart.Date, pixelPerHour, now);
         }
 
         BuildTaskBars(timelineStart, timelineEnd, pixelPerDay);
