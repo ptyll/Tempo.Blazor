@@ -776,6 +776,8 @@
   "TmChat_JumpToNew": "Aller aux nouveaux messages",
   "TmChat_LoadOlder": "Charger les messages plus anciens",
   "TmChat_LoadingOlder": "Chargement des messages plus anciens…",
+  "TmChat_MessagesLabel": "Messages",
+  "TmChat_EditMessage": "Modifier le message",
   "TmCheckbox_Indeterminate": "Partiellement sélectionné",
   "TmColorPalette_Clear": "Effacer",
   "TmColorPalette_SelectColor": "Sélectionner une couleur",

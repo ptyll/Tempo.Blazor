@@ -416,7 +416,9 @@ public sealed class MarkupClassCoverageTests
             // population — 50 → 51.
             // FZE-5 (composer review): the thread panel's reply input gained its own per-instance
             // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 51 → 52.
-            ExpectedUnmeasurableStems: 52),
+            // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
+            // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 52 → 53.
+            ExpectedUnmeasurableStems: 53),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

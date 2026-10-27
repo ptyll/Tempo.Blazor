@@ -194,10 +194,10 @@ public class TmChatTemplateTests : LocalizationTestBase
 
         var cut = RenderChat(messages);
 
-        // tabindex="-1" (FZE-6): the scroller is programmatically focusable so a jump-button
-        // click can move focus onto it instead of leaving it on the body.
+        // role="region" + an accessible name + tabindex="0" (FZE-7): a scrollable region must be
+        // keyboard-focusable, and role=log is forbidden (it would imply a second live region).
         cut.Find(".tm-chat__messages").MarkupMatches(
-            @"<div class=""tm-chat__messages"" tabindex=""-1"">
+            @"<div class=""tm-chat__messages"" role=""region"" aria-label=""Messages"" tabindex=""0"">
                 <div class=""tm-chat__item"" data-message-id=""m1"">
                     <div class=""tm-chat__message tm-chat__message--system"">
                         <span class=""tm-chat__system-text"">Bob joined the conversation</span>

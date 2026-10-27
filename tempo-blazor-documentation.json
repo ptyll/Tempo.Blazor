@@ -3752,6 +3752,20 @@
           "description": "When true, the current user can edit and delete their own messages. Default true."
         },
         {
+          "name": "AnnouncementThrottle",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromSeconds(1)",
+          "description": "The trailing throttle window shared by the message pipeline and AnnounceAsync. Default 1 second. Within the window the latest announcement wins and is flushed when the window ends; a free window flushes immediately (the first message of a quiet conversation is never delayed). A non-positive value disables throttling — every announcement flushes immediately. The clock is the injected TimeProvider (fallback TimeProvider.System), so tests drive the window with a FakeTimeProvider; the pending timer is cancelled in DisposeAsync."
+        },
+        {
+          "name": "AnnounceOwnMessages",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the current user's own messages are announced. Default false — the user knows what they typed. 'Own' matches the built-in bubble logic: an Outgoing message or one authored by CurrentUser. System messages are not own and are announced like any other when MessageAnnouncement produces text for them.",
+          "default": "false"
+        },
+        {
           "name": "AutoReadReceipts",
           "type": "bool",
           "isRequired": false,
@@ -3772,6 +3786,12 @@
           "description": "Content rendered ABOVE the message list — a connection banner (offline / reconnecting) or any conversation-level callout. Rendered raw: TmChat adds NO wrapper element and deliberately does NOT turn the banner into an aria-live region. TmChat may own exactly one live region; if the banner content should be announced, put the role=\"status\" (or an explicit aria-live) on an element INSIDE this slot with short, host-controlled text."
         },
         {
+          "name": "BatchAnnouncement",
+          "type": "Func<IReadOnlyList<ChatMessage>, string?>?",
+          "isRequired": false,
+          "description": "Optional summary for a burst announced TOGETHER: when at least TWO messages wait in one AnnouncementThrottle window (a host action mixed into the window is composed around the summary, never summarized away), the trailing flush announces this instead of the last individual text (e.g. batch => $\"{batch.Count} new messages\"). The delegate receives the messages held by the window. A null result falls back to the last individual text; a single held message is announced through its own text without consulting the summary."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -3782,6 +3802,12 @@
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Content rendered ABOVE the built-in composer input, inside the composer area — an owner note, a hint or a short status line. Only rendered with the built-in composer (a ComposerTemplate replaces the whole area and renders its own chrome)."
+        },
+        {
+          "name": "ComposerAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the built-in composer textarea. Default: the effective placeholder (the host's Placeholder or the localized TmChat_Placeholder) — until this parameter existed the textarea had only a placeholder, which is no accessible name. Ignored with a ComposerTemplate (the template owns its own input)."
         },
         {
           "name": "ComposerDescribedBy",
@@ -3867,11 +3893,23 @@
           "description": "Replaces the CONTENT of the floating jump-to-new button (icon + localized count) with host markup. The template receives the current count of unseen messages; the <button> element itself stays built-in (its click — scroll to the bottom, count reset, composer refocus — and the TmChat_JumpToNew aria-label are the component's). Null (the default) renders the built-in content."
         },
         {
+          "name": "MessageAnnouncement",
+          "type": "Func<ChatMessage, string?>?",
+          "isRequired": false,
+          "description": "The text announced for ONE new message, supplied by the host (localized, with its domain context). The component never invents sentences. A null func or a null/whitespace result means 'do not announce this message' — the default state is a silent chat. Only messages APPENDED to the end of the rendered root list are candidates: the initial load, a fill from an empty list and a PREPEND of older history are not announced, thread replies render in the thread panel (announce them through AnnounceAsync) and the user's own messages are skipped unless AnnounceOwnMessages is true. Announcements share the AnnouncementThrottle trailing window with AnnounceAsync — a burst within the window is summarized by BatchAnnouncement or collapsed to the LATEST text."
+        },
+        {
           "name": "Messages",
           "type": "IReadOnlyList<ChatMessage>",
           "isRequired": false,
           "default": "[]",
           "description": "List of messages to display."
+        },
+        {
+          "name": "MessagesAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the messages container (a scrollable role=region with tabindex=0). Default: the localized TmChat_MessagesLabel. The container is deliberately NOT a role=log — log implies aria-live and would make a second live region out of it; new messages are announced through the component's own region instead. A page with SEVERAL chats should pass a DISTINCT label per chat — the container is a named landmark and a Tab stop, so two chats labelled 'Messages' are indistinguishable in the landmark list."
         },
         {
           "name": "MessageTemplate",

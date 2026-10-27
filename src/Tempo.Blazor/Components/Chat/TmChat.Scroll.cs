@@ -308,6 +308,26 @@ public partial class TmChat
             }
         }
 
+        // The appended ROOT rows are the announcement candidates (FZE-7): an initial fill from an
+        // empty list and a PREPEND of older history are deliberately not announced, so the batch
+        // only fills for a real append to a NON-EMPTY list — and only for ids the component has
+        // NEVER seen: a host reloading the conversation re-delivers the same ids (a
+        // tail-replaced reload would otherwise re-announce the whole history). The announcements
+        // half consumes (and clears) the batch in the same parameter set — ScheduleAnnouncements
+        // runs right after this method — so it never accumulates across sets.
+        if (appended > 0 && _lastRootCount > 0)
+        {
+            foreach (var message in roots.GetRange(count - appended, appended))
+            {
+                if (_seenRootIds.Add(message.Id)) _appendedRoots.Add(message);
+            }
+        }
+
+        // Seed / refresh the seen set AFTER the append filter: the first parameter set, a prepend
+        // and a reset mark the whole current root sequence as seen (a loaded history is not
+        // news), and the just-queued arrivals are marked seen too so a later reload skips them.
+        _seenRootIds.UnionWith(roots.Select(m => m.Id));
+
         // Accumulate the appended count: several classifications can land before ONE
         // after-render consumes them (Append then None, a racing parameter set) — overwriting
         // would undercount the unread behind the jump button.

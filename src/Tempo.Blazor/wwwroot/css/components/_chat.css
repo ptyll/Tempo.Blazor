@@ -44,6 +44,14 @@
   gap: var(--tm-space-3);
 }
 
+/* The container is a Tab stop (tabindex=0): a visible keyboard focus indicator — INSET so the
+   outline is not clipped by the scroller's own overflow (offset 0 would paint outside the box
+   and disappear under the parent's clipping). */
+.tm-chat__messages:focus-visible {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: -2px;
+}
+
 /* ── Load older ─────────────────────────────────────────────── */
 /* aria-disabled (not the native disabled) + the component's own in-flight guard; busy reads
    as the secondary text color with a progress cursor. */
@@ -492,6 +500,68 @@
 .tm-chat__send-btn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.05); }
 .tm-chat__send-btn:disabled { background: var(--tm-bg-muted); color: var(--tm-color-text-muted); cursor: not-allowed; }
 
+/* ── Per-message actions ────────────────────────────────────── */
+/* Mirror of TmChat.razor.css: a floating action bar above the bubble, hidden until the row is
+   hovered OR holds keyboard focus (the actions must not be hover-only, FZE-7). */
+.tm-chat__actions {
+  position: absolute;
+  top: calc(-1 * var(--tm-space-3));
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  box-shadow: var(--tm-shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--tm-transition-fast);
+  z-index: 2;
+}
+
+.tm-chat__message--incoming .tm-chat__actions { right: var(--tm-space-2); }
+.tm-chat__message--outgoing .tm-chat__actions { left: var(--tm-space-2); }
+
+.tm-chat__message:hover .tm-chat__actions,
+.tm-chat__item:focus-within .tm-chat__actions,
+.tm-chat__bubble:focus-within .tm-chat__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Touch has no hover: the per-message actions must not hide behind a gesture touch devices
+   cannot perform — always reveal them on coarse pointers / hover-less media. */
+@media (hover: none), (pointer: coarse) {
+  .tm-chat__actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.tm-chat__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-radius-sm);
+  background: transparent;
+  color: var(--tm-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-chat__action:hover {
+  background: var(--tm-bg-muted);
+  color: var(--tm-color-text);
+}
+
+.tm-chat__action--danger:hover {
+  color: var(--tm-color-error);
+}
+
 [data-theme="dark"] .tm-chat__attachment,
 .tm-dark .tm-chat__attachment { background: rgba(255, 255, 255, 0.05); }
 [data-theme="dark"] .tm-chat__attachment:hover,
@@ -501,6 +571,8 @@
 /* The looping typing/blink animations stop entirely (the transitions of the same file are
    covered by the shared enumeration in animations.css). */
 @media (prefers-reduced-motion: reduce) {
+  .tm-chat__actions,
+  .tm-chat__action,
   .tm-chat__load-older,
   .tm-chat__jump-new {
     transition: none;

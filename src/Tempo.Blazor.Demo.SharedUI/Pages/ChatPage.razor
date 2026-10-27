@@ -282,6 +282,50 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="chat-a11y-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Accessibility</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">Live region</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Exactly ONE polite live region per chat: new incoming messages are announced with the host's
+        text (<code>MessageAnnouncement</code>), a burst inside the 1-second window is summarized
+        (<code>BatchAnnouncement</code>) and host actions go through <code>AnnounceAsync</code>.
+        The messages container is a labelled keyboard-scrollable <code>role="region"</code>; the
+        typing indicator is never announced.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 420px;">
+                <TmChat @ref="_a11yChat"
+                        CurrentUser="_currentUser"
+                        Messages="_a11yMessages"
+                        MessagesAriaLabel="Accessibility demo messages"
+                        MessageAnnouncement="DescribeAnnouncement"
+                        BatchAnnouncement="@(batch => $"{batch.Count} new messages arrived")" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yInjectAsync">
+                Deliver incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yBurstAsync">
+                Deliver a burst of 3
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yHostActionAsync">
+                Approve a draft (host action)
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                A screen reader announces the injected messages through the chat's single polite
+                region; the burst collapses into one summary and the host action is announced on
+                its own. Turn on your screen reader (or the NVDA speech viewer) and try it.
+            </p>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -318,6 +362,9 @@
     // ── Live interactive demo ─────────────────────────────────────────────
     private List<ChatMessage> _liveMessages = default!;
     private List<ChatUser> _liveTyping = default!;
+
+    // ── Accessibility demo (FZE-7) ────────────────────────────────────────
+    private TmChat _a11yChat = default!;
 
     protected override void OnInitialized()
     {
@@ -399,6 +446,13 @@
             new("s3", "Hey Bob 👋", _currentUser, ChatMessageType.Outgoing),
             new("s4", "Carol joined the conversation", type: ChatMessageType.System),
             new("s5", "Hello!", _carol, ChatMessageType.Incoming),
+        };
+
+        // ── Accessibility demo: a quiet conversation the buttons animate ────
+        _a11yMessages = new()
+        {
+            new("a11y-1", "The accessibility phase is in review.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 9, 5, 0, TimeSpan.Zero)),
+            new("a11y-2", "Great — how are announcements handled?", _currentUser, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 9, 6, 0, TimeSpan.Zero)),
         };
 
         _liveMessages = new()
@@ -608,5 +662,43 @@
         if (_scrollMessages.Count > 60) _scrollHasMore = false; // a finite demo history
         _scrollLoadingOlder = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Accessibility demo (FZE-7) — one polite live region, host-supplied texts ──
+    private List<ChatMessage> _a11yMessages = default!;
+    private int _a11ySeq;
+
+    /// <summary>The host owns the announced sentence (localized, with its domain context).</summary>
+    private string? DescribeAnnouncement(ChatMessage message)
+        => message.Type == ChatMessageType.System
+            ? message.Text
+            : $"New message from {message.Author?.Name}: {message.Text}";
+
+    private async Task HandleA11yInjectAsync()
+    {
+        _a11ySeq++;
+        _a11yMessages.Add(new($"a11y-in-{_a11ySeq}", $"Incoming message #{_a11ySeq}",
+            _bob, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleA11yBurstAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            _a11ySeq++;
+            _a11yMessages.Add(new($"a11y-in-{_a11ySeq}", $"Burst message #{_a11ySeq}",
+                _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleA11yHostActionAsync()
+    {
+        _a11ySeq++;
+        _a11yMessages.Add(new($"a11y-own-{_a11ySeq}", "Alice's draft was approved",
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        await _a11yChat!.AnnounceAsync("Your draft was approved");
     }
 }

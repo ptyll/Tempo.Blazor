@@ -198,6 +198,37 @@ export function focusIfNeeded(element) {
     element.focus();
 }
 
+/**
+ * Restores focus after a surface (the TmChat thread panel) unmounted — WITHOUT stealing focus
+ * that something else still holds. The rules:
+ *
+ * 1. Does nothing (returns `false`) unless the document's `activeElement` is `null` or `<body>`:
+ *    an element that still holds focus (the composer input, a nested control) keeps it — a
+ *    restore that moved focus away from a live input would close the on-screen keyboard and
+ *    reset IME state, and the panel close itself already moved focus to the body when it owns
+ *    the restore.
+ * 2. Otherwise focuses `target` when it is still connected to the document (the opener button
+ *    that survived the close), else `fallback` when THAT is connected (the composer input, or
+ *    the messages container).
+ *
+ * @param {Element|null} target The preferred restore target (the thread opener button).
+ * @param {Element|null} fallback The fallback when the target is gone or detached.
+ * @returns {boolean} Whether focus was moved.
+ */
+export function restoreFocus(target, fallback) {
+    const doc = (target && target.ownerDocument) || (fallback && fallback.ownerDocument) || null;
+    const active = doc ? doc.activeElement : null;
+    if (active && doc && active !== doc.body) return false;
+    const candidate = target && target.isConnected
+        ? target
+        : (fallback && fallback.isConnected ? fallback : null);
+    if (candidate && typeof candidate.focus === 'function') {
+        candidate.focus();
+        return true;
+    }
+    return false;
+}
+
 /** @param {string} value A CSS length like "21px" or "1.5" — 0 when not parseable. */
 function positive(value) {
     const parsed = Number.parseFloat(value);
@@ -263,12 +294,15 @@ function scrollBehavior() {
  *   scrollToBottom: Function,
  *   scrollToMessage: Function,
  *   focusMessage: Function,
+ *   focusMessageVisible: Function,
  *   afterUpdate: Function,
  * }} `dispose` removes the listeners (idempotent); `isAtBottom()` reads the live state;
  *   `scrollToBottom()` / `scrollToMessage(id)` are the programmatic scrolls TmChat exposes
  *   (`scrollToMessage` returns whether the anchor was found); `focusMessage(id)` focuses a
  *   row (`tabindex="-1"`, `preventScroll` — the focus mover after a load-older prepend or a
- *   jump-button click so focus never falls to the body); `afterUpdate(mode)` is the
+ *   jump-button click so focus never falls to the body); `focusMessageVisible(id)` is the
+ *   public deep-link focus that first scrolls the row into view (`block: 'nearest'`,
+ *   reduced-motion aware) and then focuses it; `afterUpdate(mode)` is the
  *   per-render bookkeeping half.
  */
 export function attachScroller(container, dotNetRef, options) {
@@ -504,6 +538,29 @@ export function attachScroller(container, dotNetRef, options) {
             if (disposed) return false;
             const item = findMessage(id);
             if (!item || typeof item.focus !== 'function') return false;
+            if (typeof item.setAttribute === 'function') item.setAttribute('tabindex', '-1');
+            item.focus({ preventScroll: true });
+            return true;
+        },
+        /**
+         * Focuses a message row AND makes sure it is visible: `scrollIntoView` with
+         * `block: 'nearest'` (no viewport jump when the row is already on screen, honouring the
+         * reduced-motion preference) BEFORE the `preventScroll` focus. Returns whether the row
+         * was found. The public `FocusMessageAsync` path (deep links, "jump to message") — the
+         * internal refocus paths keep using `focusMessage`, which never scrolls.
+         *
+         * @param {string} id The `data-message-id` to resolve.
+         * @returns {boolean} Whether the anchor was found (and focused).
+         */
+        focusMessageVisible(id) {
+            if (disposed) return false;
+            const item = findMessage(id);
+            if (!item || typeof item.focus !== 'function') return false;
+            if (typeof item.scrollIntoView === 'function') {
+                item.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
+            } else if (typeof item.offsetTop === 'number') {
+                container.scrollTop = item.offsetTop;
+            }
             if (typeof item.setAttribute === 'function') item.setAttribute('tabindex', '-1');
             item.focus({ preventScroll: true });
             return true;

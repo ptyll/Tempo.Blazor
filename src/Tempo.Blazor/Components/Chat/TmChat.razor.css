@@ -48,6 +48,14 @@
   scrollbar-width: thin;
 }
 
+/* The container is a Tab stop (tabindex=0): a visible keyboard focus indicator — INSET so the
+   outline is not clipped by the scroller's own overflow (offset 0 would paint outside the box
+   and disappear under the parent's clipping). */
+.tm-chat__messages:focus-visible {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: -2px;
+}
+
 /* ── Load older ─────────────────────────────────────────────── */
 /* The built-in affordance at the top of the list (OnLoadOlder + HasMoreBefore); it is part of
    the scroll content — the user reaches it by scrolling up, exactly like a host's own
@@ -607,6 +615,8 @@
 }
 
 /* ── Hover actions ──────────────────────────────────────────── */
+/* The actions must not be hover-only (WCAG): keyboard users reach them through :focus-within on
+   the whole message item (the wrapper the scroller can focus) or the bubble. */
 .tm-chat__actions {
   position: absolute;
   top: calc(-1 * var(--tm-space-3));
@@ -627,9 +637,19 @@
 .tm-chat__message--outgoing .tm-chat__actions { left: var(--tm-space-2); }
 
 .tm-chat__message:hover .tm-chat__actions,
+.tm-chat__item:focus-within .tm-chat__actions,
 .tm-chat__bubble:focus-within .tm-chat__actions {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Touch has no hover: the per-message actions must not hide behind a gesture touch devices
+   cannot perform — always reveal them on coarse pointers / hover-less media. */
+@media (hover: none), (pointer: coarse) {
+  .tm-chat__actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .tm-chat__action {

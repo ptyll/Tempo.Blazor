@@ -779,6 +779,8 @@
   "TmChat_JumpToNew": "Prejsť na nové správy",
   "TmChat_LoadOlder": "Načítať staršie správy",
   "TmChat_LoadingOlder": "Načítajú sa staršie správy…",
+  "TmChat_MessagesLabel": "Správy",
+  "TmChat_EditMessage": "Upraviť správu",
   "TmCheckbox_Indeterminate": "Čiastočne vybrané",
   "TmColorPalette_Clear": "Vymazať",
   "TmColorPalette_SelectColor": "Vybrať farbu",

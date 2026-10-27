@@ -4,6 +4,20 @@
 
 <div class="tm-chat @Class" @attributes="AdditionalAttributes">
 
+    @* The component's ONE live region (FZE-7): host-supplied announcement texts land here. The
+       content is a span keyed by the announcement sequence — every announcement REPLACES the
+       span node, so even the SAME sentence is announced again (a live region ignores an
+       unchanged DOM text node) with a single render. Rendered unconditionally and always
+       present BEFORE content is announced, as live regions must be. Everything else in the
+       component — the banner, the typing indicator, templates — stays silent; the messages
+       container below is a labelled role=region, never a role=log. *@
+    <div class="tm-sr-only" aria-live="polite" aria-atomic="true" data-testid="@TestId("chat-announcements")">
+        @if (_announcement is not null)
+        {
+            <span @key="_announcementSeq">@_announcement</span>
+        }
+    </div>
+
     @if (HeaderContent is not null)
     {
         @HeaderContent
@@ -19,7 +33,17 @@
          while its scroller scrolls — an absolutely positioned child of the scroller itself
          would scroll away with the content) -->
     <div class="tm-chat__body">
-        <div class="tm-chat__messages" tabindex="-1" aria-busy="@(IsLoadingOlder ? "true" : null)" @ref="_messagesContainer">
+        @* role=region + an accessible name + tabindex=0: a scrollable region must be
+           keyboard-focusable (WCAG 2.1). Deliberately NOT role=log — log implies aria-live and
+           would make this a second live region; new messages are announced through the
+           component's own region above. The phase-6 focus fallbacks (jump button without a
+           composer, the load-older anchor) target this element too. *@
+        <div class="tm-chat__messages"
+             role="region"
+             aria-label="@MessagesAriaLabelText"
+             tabindex="0"
+             aria-busy="@(IsLoadingOlder ? "true" : null)"
+             @ref="_messagesContainer">
             @if (ShowLoadOlder)
             {
                 <button type="button"
@@ -140,9 +164,16 @@
     <!-- Thread panel -->
     @if (EnableThreads && ActiveThreadRoot is { } threadRoot)
     {
-        <aside class="tm-chat__thread-panel" data-testid="@TestId("chat-thread-panel")">
+        @* Escape is the container-level dismiss key (docs/keyboard-activation-convention.md): it
+           closes the thread from wherever inside the panel the focus sits. The handler acts ONLY
+           on Escape — every other key keeps its native meaning (typing, the input's Enter/IME
+           behavior belong to the input; the handler ignores them and nothing else is stopped). *@
+        <aside class="tm-chat__thread-panel"
+               data-testid="@TestId("chat-thread-panel")"
+               aria-labelledby="@_threadTitleId"
+               @onkeydown="HandleThreadAsideKeyDownAsync">
             <div class="tm-chat__thread-header">
-                <span class="tm-chat__thread-title">@Loc["TmChat_ThreadTitle"]</span>
+                <span class="tm-chat__thread-title" id="@_threadTitleId">@Loc["TmChat_ThreadTitle"]</span>
                 <button type="button"
                         class="tm-chat__thread-close"
                         data-testid="@TestId("chat-thread-close")"
@@ -172,6 +203,7 @@
                           enterkeyhint="@ComposerEnterKeyHint"
                           data-testid="@TestId("chat-thread-input")"
                           placeholder="@Loc["TmChat_ReplyPlaceholder"]"
+                          aria-label="@Loc["TmChat_ReplyPlaceholder"]"
                           disabled="@Disabled"
                           @ref="_threadInputElement"
                           @bind="_threadInput"
@@ -213,6 +245,7 @@
                   rows="1"
                   enterkeyhint="@ComposerEnterKeyHint"
                   placeholder="@PlaceholderText"
+                  aria-label="@ComposerAriaLabelText"
                   disabled="@Disabled"
                   aria-describedby="@ComposerDescribedByAttribute"
                   @ref="_composerInput"
@@ -305,6 +338,7 @@
                                   rows="1"
                                   enterkeyhint="@ComposerEnterKeyHint"
                                   data-testid="@TestId("chat-edit-input")"
+                                  aria-label="@Loc["TmChat_EditMessage"]"
                                   @ref="_editInputElement"
                                   @bind="_editText"
                                   @bind:event="oninput"
@@ -378,7 +412,8 @@
                     <button type="button"
                             class="tm-chat__thread-badge"
                             data-testid="@TestId($"chat-thread-open-{message.Id}")"
-                            @onclick="() => OpenThreadAsync(message)">
+                            @ref="_threadBadgeRefs[message.Id]"
+                            @onclick="() => OpenThreadAsync(message, ThreadOpenerKind.Badge)">
                         <TmIcon Name="message-circle" Size="IconSize.Sm" />
                         <span>@Loc.Plural("TmChat_ReplyCount", ReplyCountOf(message))</span>
                     </button>
@@ -405,7 +440,9 @@
                         @if (!inThread && CanReplyInThread)
                         {
                             <button type="button" class="tm-chat__action" data-testid="@TestId($"chat-reply-{message.Id}")"
-                                    aria-label="@Loc["TmChat_Reply"]" @onclick="() => OpenThreadAsync(message)">
+                                    aria-label="@Loc["TmChat_Reply"]"
+                                    @ref="_threadReplyRefs[message.Id]"
+                                    @onclick="() => OpenThreadAsync(message, ThreadOpenerKind.ReplyAction)">
                                 <TmIcon Name="message-circle" Size="IconSize.Sm" />
                             </button>
                         }

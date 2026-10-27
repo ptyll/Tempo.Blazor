@@ -2504,6 +2504,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmChat_JumpToNew"] = "Jump to new messages",
         ["TmChat_LoadOlder"] = "Load older messages",
         ["TmChat_LoadingOlder"] = "Loading older messages…",
+        ["TmChat_MessagesLabel"] = "Messages",
+        ["TmChat_EditMessage"] = "Edit message",
 
         // Signing
         ["TmSigning_Field_Text"] = "Text",
@@ -6429,6 +6431,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmChat_JumpToNew"] = "Přejít na nové zprávy",
         ["TmChat_LoadOlder"] = "Načíst starší zprávy",
         ["TmChat_LoadingOlder"] = "Načítají se starší zprávy…",
+        ["TmChat_MessagesLabel"] = "Zprávy",
+        ["TmChat_EditMessage"] = "Upravit zprávu",
 
         // Signing
         ["TmSigning_Field_Text"] = "Text",

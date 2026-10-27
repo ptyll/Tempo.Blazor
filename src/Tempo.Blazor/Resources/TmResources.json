@@ -773,6 +773,8 @@
   "TmChat_JumpToNew": "Jump to new messages",
   "TmChat_LoadOlder": "Load older messages",
   "TmChat_LoadingOlder": "Loading older messages…",
+  "TmChat_MessagesLabel": "Messages",
+  "TmChat_EditMessage": "Edit message",
   "TmCheckbox_Indeterminate": "Partially selected",
   "TmColorPalette_Clear": "Clear",
   "TmColorPalette_SelectColor": "Select color",

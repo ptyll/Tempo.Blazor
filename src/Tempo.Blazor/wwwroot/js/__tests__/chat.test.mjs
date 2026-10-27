@@ -16,7 +16,7 @@
 // scrollToMessage(id), focusMessage(id), reduced-motion aware scrolling and dispose.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attachComposer, attachScroller, focus, focusIfNeeded } from '../chat.js';
+import { attachComposer, attachScroller, focus, focusIfNeeded, restoreFocus } from '../chat.js';
 
 // ── fakes ───────────────────────────────────────────────────────────────────────────────────
 
@@ -534,6 +534,76 @@ test('focusIfNeeded focuses only when the element does not already hold focus', 
     assert.doesNotThrow(() => focusIfNeeded({ ownerDocument: { activeElement: null } }));
 });
 
+// ── restoreFocus (thread close) ──────────────────────────────────────────────────────────────
+
+/** A focusable element stub with a connected flag and an optional shared document. */
+function focusable(doc, { connected = true } = {}) {
+    const el = {
+        isConnected: connected,
+        focusCalls: 0,
+        focus() { this.focusCalls++; },
+    };
+    if (doc) el.ownerDocument = doc;
+    return el;
+}
+
+test('restoreFocus focuses the target when the restore owns the focus (body active)', () => {
+    const doc = { body: { tag: 'body' }, activeElement: null };
+    doc.activeElement = doc.body;
+    const opener = focusable(doc);
+    const fallback = focusable(doc);
+
+    assert.equal(restoreFocus(opener, fallback), true, 'focus moved onto the opener');
+    assert.equal(opener.focusCalls, 1);
+    assert.equal(fallback.focusCalls, 0, 'the fallback stays untouched while the target lives');
+});
+
+test('restoreFocus proceeds when activeElement is null (no focus anywhere yet)', () => {
+    const doc = { body: { tag: 'body' }, activeElement: null };
+    const opener = focusable(doc);
+
+    assert.equal(restoreFocus(opener, null), true);
+    assert.equal(opener.focusCalls, 1);
+});
+
+test('restoreFocus does not steal focus while the composer has it', () => {
+    const doc = { body: { tag: 'body' } };
+    const composer = focusable(doc);
+    doc.activeElement = composer; // the user is typing — the restore must not move focus
+    const opener = focusable(doc);
+    const fallback = focusable(doc);
+
+    assert.equal(restoreFocus(opener, fallback), false,
+        'a live input keeps the focus (no on-screen-keyboard close, no IME reset)');
+    assert.equal(opener.focusCalls, 0);
+    assert.equal(fallback.focusCalls, 0);
+});
+
+test('restoreFocus falls back when the target is detached, else reports false', () => {
+    const doc = { body: { tag: 'body' }, activeElement: null };
+    const detached = focusable(doc, { connected: false });
+    const fallback = focusable(doc);
+
+    assert.equal(restoreFocus(detached, fallback), true);
+    assert.equal(fallback.focusCalls, 1, 'the fallback receives the focus');
+    assert.equal(detached.focusCalls, 0, 'the detached target is never focused');
+
+    const unreachableFallback = focusable(doc, { connected: false });
+    assert.equal(restoreFocus(detached, unreachableFallback), false,
+        'neither candidate is connected — nothing to restore onto');
+    assert.equal(unreachableFallback.focusCalls, 0);
+});
+
+test('restoreFocus tolerates null arguments', () => {
+    assert.doesNotThrow(() => restoreFocus(null, null));
+    assert.equal(restoreFocus(null, null), false);
+
+    const doc = { body: { tag: 'body' }, activeElement: null };
+    const fallback = focusable(doc);
+    assert.equal(restoreFocus(null, fallback), true);
+    assert.equal(fallback.focusCalls, 1);
+});
+
 // ══ attachScroller (FZE-6) ══════════════════════════════════════════════════════════════════
 
 /** A scroll container stub: scrollTop/scrollHeight/clientHeight are plain fields the test mutates. */
@@ -894,6 +964,34 @@ test('focusMessage focuses the row with tabindex=-1 and preventScroll (no scroll
     assert.deepEqual(target.focusCalls, [{ preventScroll: true }]);
     assert.equal(container.scrollToCalls.length, 0, 'no scroll — the caller owns the position');
     assert.equal(handle.focusMessage('missing'), false, 'an unknown id is a no-op, not an error');
+});
+
+test('focusMessageVisible scrolls the row into view (nearest) before the preventScroll focus', () => {
+    const target = fakeMessage('m-2', { offsetTop: 400, offsetHeight: 40 });
+    const container = fakeContainer({ __messages: [fakeMessage('m-1'), target] });
+    const handle = attachScroller(container, scrollerDotNet());
+
+    assert.equal(handle.focusMessageVisible('m-2'), true);
+    assert.deepEqual(target.scrollIntoViewCalls, [{ block: 'nearest', behavior: 'smooth' }],
+        'the row is scrolled into view first — nearest never jumps the viewport');
+    assert.deepEqual(target.focusCalls, [{ preventScroll: true }],
+        'the focus itself does not fight the scroll (preventScroll)');
+    assert.equal(target.getAttribute('tabindex'), '-1');
+    assert.equal(handle.focusMessageVisible('missing'), false, 'an unknown id is a no-op, not an error');
+});
+
+test('focusMessageVisible honours reduced motion with an instant scroll', () => {
+    const restore = installMatchMedia(true); // prefers-reduced-motion: reduce
+    try {
+        const target = fakeMessage('m-2', { offsetTop: 400, offsetHeight: 40 });
+        const container = fakeContainer({ __messages: [fakeMessage('m-1'), target] });
+        const handle = attachScroller(container, scrollerDotNet());
+
+        assert.equal(handle.focusMessageVisible('m-2'), true);
+        assert.deepEqual(target.scrollIntoViewCalls, [{ block: 'nearest', behavior: 'auto' }]);
+    } finally {
+        restore();
+    }
 });
 
 test('the near-top report is skipped while the load-older button holds focus', async () => {

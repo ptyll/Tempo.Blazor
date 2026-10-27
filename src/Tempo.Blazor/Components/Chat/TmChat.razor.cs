@@ -364,6 +364,9 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     private static int _composerInputCounter;
     private readonly string _composerInputId = $"tm-chat-composer-{Interlocked.Increment(ref _composerInputCounter)}";
     private readonly string _threadInputId = $"tm-chat-thread-{Interlocked.Increment(ref _composerInputCounter)}";
+    // The thread panel's aria-labelledby target (the title span) — same per-instance counter, so
+    // several chats on one page never collide (MarkupClassCoverageTests scans the id prefixes).
+    private readonly string _threadTitleId = $"tm-chat-thread-title-{Interlocked.Increment(ref _composerInputCounter)}";
     private ChatComposerContext? _composerContext;
 
     // ── K6 interaction state ──
@@ -621,6 +624,15 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         // while this method is still pending (e.g. behind a slow OnDraftChanged handler) and
         // must already see the mode of THIS parameter set, not a stale one.
         DetectScrollChange();
+        // FZE-7: the appended rows feed the announcement pipeline — decided SYNCHRONOUSLY,
+        // before the first await, exactly like the scroll classification. The leading flush runs
+        // in the awaited half below.
+        ScheduleAnnouncements();
+        // Drop affordance references of rows that no longer render — the thread close path must
+        // never hand a stale element to restoreFocus.
+        PruneThreadRefs();
+        await FlushAnnouncementsIfDueAsync();
+
         // Parameter-driven transitions (e.g. the thread panel unmounting because its root message
         // left Messages) must be reported; the dedup keeps repeated parameter sets silent.
         await NotifyDraftChangedAsync();
@@ -648,6 +660,7 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     {
         _disposed = true;
         CancelTypingTimer();
+        CancelAnnouncementTimer();
         await DisposeScrollerAsync();
         await DisposeComposerInteropAsync();
     }
@@ -666,6 +679,9 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
         await ApplyScrollAfterRenderAsync(firstRender);
         await ReportReadReceiptsAsync();
         await SyncJsComposersAsync();
+        // LAST: the thread panel may have just closed (its own button OR a parameter-driven
+        // unmount) — the opener button regains focus once the DOM is settled.
+        await SyncThreadOpenerFocusAfterRenderAsync();
     }
 
     private async Task ReportReadReceiptsAsync()
@@ -893,8 +909,14 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
     private ChatMessage? ActiveThreadRoot
         => EffectiveActiveThread is null ? null : Messages.FirstOrDefault(m => m.Id == EffectiveActiveThread);
 
-    private async Task OpenThreadAsync(ChatMessage root)
+    private async Task OpenThreadAsync(ChatMessage root, ThreadOpenerKind opener)
     {
+        // The button that opens the thread gets the focus back when it closes (FZE-7) — the
+        // close button itself unmounts with the panel and would drop the focus to the body.
+        CaptureThreadOpener(root.Id, opener);
+        // The panel's reply input receives the focus after the render that mounts it — a
+        // keyboard user can type the reply at once (best effort, see the render sync).
+        _focusThreadInputAfterRender = true;
         _activeThread = root.Id;
         _pickerForId = null;
         await ActiveThreadRootIdChanged.InvokeAsync(root.Id);
@@ -948,16 +970,17 @@ public partial class TmChat : TmComponentBase, ITmDraftGuard, IAsyncDisposable
 
         if (RefocusAfterSend)
         {
-            await RefocusThreadInputAfterSendAsync();
+            await FocusThreadInputBestEffortAsync();
         }
     }
 
     /// <summary>
-    /// Refocuses the thread panel's reply input after a successful thread reply — the same
-    /// best-effort contract as the composer refocus: a failing or disconnected JS call (the
-    /// input unmounted between renders, the circuit dropped) is swallowed rather than surfaced.
+    /// Best-effort focus of the thread panel's reply input — shared by the open path (the panel
+    /// just mounted) and the post-send refocus (the same contract as the composer refocus): a
+    /// failing or disconnected JS call (the input unmounted between renders, the circuit
+    /// dropped) is swallowed rather than surfaced.
     /// </summary>
-    private async Task RefocusThreadInputAfterSendAsync()
+    private async Task FocusThreadInputBestEffortAsync()
     {
         if (string.IsNullOrEmpty(_threadInputElement.Id)) return;
         try

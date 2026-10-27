@@ -29,6 +29,13 @@ public partial class TmChat
     private TimeProvider? _clock;
 
     private ITimer? _typingTimer;
+
+    /// <summary>
+    /// Monotonic generation of the typing timer: bumped when a timer is armed and when one is
+    /// cancelled, so a fired callback can tell whether it still owns the CURRENT window.
+    /// </summary>
+    private int _typingTimerGen;
+
     private IReadOnlyList<ChatUser>? _lastTypingUsers;
     private ChatUser[] _lastTypingSnapshot = [];
     private TimeSpan? _lastTypingTimeout;
@@ -83,21 +90,26 @@ public partial class TmChat
             return;
         }
 
-        // Single-shot timer on the injected clock. The callback closes over `timer` itself so the
-        // ReferenceEquals check inside can tell "the currently armed timer" apart from one that
-        // was already replaced or cancelled.
+        // Single-shot timer on the injected clock. The callback closes over `timer` AND the
+        // generation: the ReferenceEquals check inside can tell "the currently armed timer" apart
+        // from one that was already replaced or cancelled, and the generation check invalidates a
+        // callback whose window was cancelled or superseded between firing and dispatching.
+        var gen = ++_typingTimerGen;
         ITimer? timer = null;
-        timer = Clock.CreateTimer(_ => _ = OnTypingExpiredAsync(timer), null, timeout, Timeout.InfiniteTimeSpan);
+        timer = Clock.CreateTimer(_ => _ = OnTypingExpiredAsync(timer, gen), null, timeout, Timeout.InfiniteTimeSpan);
         _typingTimer = timer;
     }
 
     private void CancelTypingTimer()
     {
+        // Bump the generation FIRST: a callback already in flight must observe a cancelled
+        // window even if it races this call on another thread.
+        _typingTimerGen++;
         _typingTimer?.Dispose();
         _typingTimer = null;
     }
 
-    private async Task OnTypingExpiredAsync(ITimer? timer)
+    private async Task OnTypingExpiredAsync(ITimer? timer, int generation)
     {
         if (timer is null || _disposed) return;
         // The callback runs on a thread-pool thread (TimeProvider.System) or the test thread
@@ -106,7 +118,12 @@ public partial class TmChat
         {
             await InvokeAsync(() =>
             {
-                if (_disposed || !ReferenceEquals(_typingTimer, timer)) return Task.CompletedTask;
+                if (_disposed
+                    || generation != _typingTimerGen
+                    || !ReferenceEquals(_typingTimer, timer))
+                {
+                    return Task.CompletedTask;
+                }
                 // Single-shot: once fired it can never expire again — disarm so
                 // TypingTimerIsPending reports the truth instead of a spent timer.
                 _typingTimer = null;

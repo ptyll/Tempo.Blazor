@@ -476,13 +476,19 @@ public class TmChatComposerTests : LocalizationTestBase
         cut.Find("[data-testid='chat-thread-open-m1']").Click();
         cut.WaitForAssertion(() => module.Invocations.Should().Contain(i => i.Identifier == "attachComposer"));
 
+        // Opening the thread itself focuses the panel's reply input (FZE-7) — that is
+        // invocation 1; the refocus after the send is the SECOND move onto the same input.
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(1,
+                "opening the thread focuses its reply input"));
+
         cut.Find("[data-testid='chat-thread-input']").Input("Follow-up");
         cut.Render();
         cut.Find("[data-testid='chat-thread-send']").Click();
 
         cut.WaitForAssertion(() => JSInterop.Invocations
-            .Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(1,
-                "RefocusAfterSend focuses the thread input after a successful reply"));
+            .Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(2,
+                "RefocusAfterSend focuses the thread input again after a successful reply"));
         cut.Find("[data-testid='chat-thread-input']").GetAttribute("value").Should().BeEmpty();
     }
 
