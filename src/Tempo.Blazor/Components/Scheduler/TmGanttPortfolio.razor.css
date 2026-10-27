@@ -6,16 +6,20 @@
     padding: 12px;
 }
 .tm-gantt-portfolio__project {
-    border: 1px solid var(--tm-border, rgba(0,0,0,0.1));
-    border-radius: 8px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     overflow: hidden;
 }
 .tm-gantt-portfolio__project-header {
     padding: 8px 12px;
-    background: var(--tm-surface-2, #f8fafc);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
     font-weight: 600;
     font-size: 0.9rem;
-    border-bottom: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+    border-bottom: 1px solid var(--tm-border-color);
 }
 .tm-gantt-portfolio__project-summary {
     overflow: hidden;

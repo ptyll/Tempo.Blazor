@@ -6,9 +6,9 @@
     right: 0;
     height: 100vh;
     width: min(380px, 95vw);
-    background: var(--tm-surface, #ffffff);
-    border-left: 1px solid var(--tm-border-color, #d1d5db);
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+    background: var(--tm-bg-surface);
+    border-left: 1px solid var(--tm-border-color);
+    box-shadow: var(--tm-shadow-popover);
     z-index: 900;
     display: flex;
     flex-direction: column;
@@ -19,13 +19,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-gantt__history-drawer-title {
     font-weight: 600;
     font-size: 0.95rem;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
 }
 
 .tm-gantt__history-drawer-body {
@@ -41,7 +41,7 @@
     justify-content: center;
     gap: 8px;
     padding: 40px 16px;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
     font-size: 0.85rem;
 }
 
@@ -55,10 +55,10 @@
 }
 
 .tm-gantt__history-entry {
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 0.375rem);
     padding: 10px 12px;
-    background: var(--tm-bg-subtle, #f9fafb);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-gantt__history-entry-header {
@@ -71,8 +71,8 @@
 .tm-gantt__history-entry-type {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-primary-subtle, #eff6ff);
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
     padding: 1px 6px;
     border-radius: 10px;
 }
@@ -80,12 +80,12 @@
 .tm-gantt__history-entry-author {
     font-size: 0.8rem;
     font-weight: 500;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
 }
 
 .tm-gantt__history-entry-time {
     font-size: 0.75rem;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
     margin-left: auto;
 }
 
@@ -98,12 +98,12 @@
 }
 
 .tm-gantt__history-old {
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
     text-decoration: line-through;
 }
 
 .tm-gantt__history-new {
-    color: var(--tm-color-success, #22c55e);
+    color: var(--tm-color-success);
     font-weight: 500;
 }
 

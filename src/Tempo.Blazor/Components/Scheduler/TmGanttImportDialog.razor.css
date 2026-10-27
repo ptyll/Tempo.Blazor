@@ -8,7 +8,7 @@
 
 .tm-gantt__import-tabs {
     display: flex;
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    border-bottom: 1px solid var(--tm-border-color);
     margin-bottom: 16px;
 }
 
@@ -22,13 +22,13 @@
     border-bottom: 2px solid transparent;
     cursor: pointer;
     font-size: 0.85rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     transition: color 0.15s, border-color 0.15s;
 }
 
 .tm-gantt__import-tab--active {
-    border-bottom-color: var(--tm-color-primary, #3b82f6);
-    color: var(--tm-color-primary, #3b82f6);
+    border-bottom-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
     font-weight: 500;
 }
 
@@ -65,7 +65,7 @@
 
 .tm-gantt__import-file-name {
     font-size: 0.8rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 .tm-gantt__import-jira-form {

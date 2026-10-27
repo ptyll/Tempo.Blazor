@@ -10,6 +10,7 @@ using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
+using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
 
@@ -345,7 +346,17 @@ public partial class TmGantt : IDisposable
         // event (RefreshAfterZoneChange) re-pins both once the browser probe reports.
         _userZone = Services.GetService<ITmUserTimeZone>();
         _calendarDate = TodayInZone();
+
+        // GanttTheme.Auto follows the global ThemeService when the host registered one (AddTempoBlazor
+        // does). A bare host without it simply inherits the ambient data-theme.
+        _themeService = Services.GetService<ThemeService>();
+        if (_themeService is not null)
+            _themeService.OnChanged += OnGlobalThemeChanged;
     }
+
+    private ThemeService? _themeService;
+
+    private void OnGlobalThemeChanged() => _ = InvokeAsync(StateHasChanged);
 
     /// <summary>Re-renders once the user zone arrives (the browser probe is Server-only and one-shot).</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -531,6 +542,12 @@ public partial class TmGantt : IDisposable
 
     public void Dispose()
     {
+        if (_themeService is not null)
+        {
+            _themeService.OnChanged -= OnGlobalThemeChanged;
+            _themeService = null;
+        }
+
         _userZoneObserver?.Dispose();
         if (_subscribedConnection is not null)
         {
@@ -636,6 +653,12 @@ public partial class TmGantt : IDisposable
     {
         ViewSettings.ShowTodayMarker = value;
         RefreshVisibleData();
+        await OnViewSettingsChanged.InvokeAsync(ViewSettings);
+    }
+
+    private async Task SetShowProgressLabel(bool value)
+    {
+        ViewSettings.ShowProgressLabel = value;
         await OnViewSettingsChanged.InvokeAsync(ViewSettings);
     }
 
@@ -1344,11 +1367,28 @@ public partial class TmGantt : IDisposable
 
     // ── CSS helpers ──────────────────────────────────────────────
 
+    /// <summary>
+    /// The theme classes are an alias of <see cref="GetDataTheme"/>: they carry no palette of their own
+    /// (the colours come from <c>tokens-dark.css</c> through <c>data-theme</c>) and stay only as a stable
+    /// hook for host selectors and tests.
+    /// </summary>
     private string GetThemeClass() => ViewSettings.Theme switch
     {
         GanttTheme.Dark => "tm-gantt--theme-dark",
         GanttTheme.Light => "tm-gantt--theme-light",
         _ => ""
+    };
+
+    /// <summary>
+    /// The <c>data-theme</c> of the root: an explicit Light/Dark wins, Auto follows the global
+    /// <see cref="ThemeService"/> (dark only - light is the default token set), and without either the
+    /// attribute is omitted so the Gantt inherits whatever the host put on an ancestor.
+    /// </summary>
+    private string? GetDataTheme() => ViewSettings.Theme switch
+    {
+        GanttTheme.Dark => "dark",
+        GanttTheme.Light => "light",
+        _ => _themeService is { IsDark: true } ? "dark" : null
     };
 
     private string GetRowClass(GanttTaskNode node)
@@ -1379,6 +1419,13 @@ public partial class TmGantt : IDisposable
             _ => ""
         };
     }
+
+    /// <summary>
+    /// Modifier of the percentage label: a bar that carries the exceeded-deadline flame (drawn just right
+    /// of the bar) pushes the label past it. Computed here so the stylesheet needs no <c>:has()</c>.
+    /// </summary>
+    private static string GetProgressLabelClass(TaskBarInfo bar) =>
+        bar.IsDeadlineExceeded ? "tm-gantt__bar-progress-label--after-deadline" : string.Empty;
 
     private string GetBarClass(TaskBarInfo bar)
     {
@@ -1427,9 +1474,21 @@ public partial class TmGantt : IDisposable
 
     private string GetBarColorStyle(TaskBarInfo bar)
     {
-        var color = string.IsNullOrEmpty(bar.Color) ? "var(--tm-color-primary, #3b82f6)" : bar.Color;
+        var color = string.IsNullOrEmpty(bar.Color) ? "var(--tm-color-primary-solid)" : bar.Color;
         return $"--tm-gantt-task-color: {color};";
     }
+
+    /// <summary>
+    /// Decorative glyph of a status chip. A status is never conveyed by colour alone (WCAG 1.4.1): the
+    /// chip is glyph + localized text, and the glyph is <c>aria-hidden</c> because the text names it.
+    /// </summary>
+    private static string GetStatusGlyph(TmWorkItemStatus status) => status switch
+    {
+        TmWorkItemStatus.Done => "✓",
+        TmWorkItemStatus.InProgress => "◉",
+        TmWorkItemStatus.Closed => "⊘",
+        _ => "○"
+    };
 
     private string GetStatusBadgeClass(TmWorkItemStatus status) => status switch
     {

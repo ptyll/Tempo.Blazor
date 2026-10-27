@@ -183,7 +183,7 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
             "el => { const c = getComputedStyle(el); return [c.position, c.backgroundColor, c.display].join('|'); }");
         var parts = scrim.Split('|');
         Assert.AreEqual("fixed", parts[0], "the scrim is viewport-fixed");
-        Assert.AreEqual("rgba(0, 0, 0, 0.45)", parts[1], "the scrim paints the dimmed backdrop");
+        Assert.AreEqual(await ScrimTokenAsync(page), parts[1], "the scrim paints the overlay token (--tm-bg-overlay), not a hard-coded black");
         Assert.AreEqual("flex", parts[2], "the scrim centres the dialog with flexbox");
 
         // The scrim covers the whole viewport — the UA [popover] fit-content shrink is reset.
@@ -226,7 +226,7 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
             "el => { const c = getComputedStyle(el); return [c.position, c.backgroundColor].join('|'); }");
         var parts = scrim.Split('|');
         Assert.AreEqual("fixed", parts[0], "the export scrim is viewport-fixed");
-        Assert.AreEqual("rgba(0, 0, 0, 0.45)", parts[1], "the export scrim paints the dimmed backdrop");
+        Assert.AreEqual(await ScrimTokenAsync(page), parts[1], "the export scrim paints the overlay token (--tm-bg-overlay)");
 
         var dialog = page.Locator(".tm-gantt__dialog");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -251,4 +251,18 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
     }
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
+
+    /// <summary>The computed value of <c>--tm-bg-overlay</c>: what the dialog scrim must paint (phase 2 tokenised it).</summary>
+    private static async Task<string> ScrimTokenAsync(IPage page) =>
+        await page.EvaluateAsync<string>(
+            """
+            () => {
+                const probe = document.createElement('span');
+                probe.style.backgroundColor = 'var(--tm-bg-overlay)';
+                document.body.appendChild(probe);
+                const value = getComputedStyle(probe).backgroundColor;
+                probe.remove();
+                return value;
+            }
+            """);
 }

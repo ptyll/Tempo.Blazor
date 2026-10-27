@@ -1,12 +1,12 @@
 /* TmGantt dialog shell (export / import / mapping dialogs + the history drawer close button).
    Global on purpose (phase 1, B21; decision GANTT-DIALOG-SHELL-GLOBAL): the shell is shared by three
    sub-components and is replaced by TmModal in phase 6, so it is declared ONCE here instead of being
-   duplicated into three scoped stylesheets. Values are moved verbatim; tokenisation is phase 2. */
+   duplicated into three scoped stylesheets. Tokenised in phase 2 (scrim, shadow, surfaces). */
 
 .tm-gantt__dialog-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--tm-bg-overlay);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -29,10 +29,10 @@
 }
 
 .tm-gantt__dialog {
-    background: var(--tm-surface, #ffffff);
+    background: var(--tm-bg-surface);
     border-radius: var(--tm-radius-lg, 0.5rem);
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--tm-border-color);
+    box-shadow: var(--tm-shadow-xl);
     width: min(520px, 95vw);
     max-height: 90vh;
     overflow: hidden;
@@ -45,20 +45,20 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-gantt__dialog-title {
     font-weight: 600;
     font-size: 0.95rem;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
 }
 
 .tm-gantt__dialog-close {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     padding: 4px;
     border-radius: var(--tm-radius-sm, 0.25rem);
     display: flex;
@@ -66,7 +66,7 @@
 }
 
 .tm-gantt__dialog-close:hover {
-    background: var(--tm-bg-muted, #f3f4f6);
+    background: var(--tm-bg-muted);
 }
 
 .tm-gantt__dialog-body {
@@ -79,6 +79,6 @@
     display: flex;
     gap: 8px;
     padding: 12px 16px;
-    border-top: 1px solid var(--tm-border-color, #d1d5db);
+    border-top: 1px solid var(--tm-border-color);
     justify-content: flex-end;
 }

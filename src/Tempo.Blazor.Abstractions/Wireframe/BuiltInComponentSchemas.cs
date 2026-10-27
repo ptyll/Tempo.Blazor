@@ -2587,6 +2587,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("taskCount", "Task Count", PropType.Int, 5, cat: "Appearance"),
                 P("period",    "Period",     PropType.Enum,"week", cat: "Appearance",
                     opts: ["day","week","month","quarter"]),
+                P("showProgressLabel", "Show Progress Label", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 

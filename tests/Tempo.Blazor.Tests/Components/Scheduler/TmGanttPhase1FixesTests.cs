@@ -402,14 +402,14 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
 
         cut.Find("[data-testid='gantt-view-week']").GetAttribute("aria-pressed").Should().Be("true");
         cut.Find("[data-testid='gantt-view-day']").GetAttribute("aria-pressed").Should().Be("false");
-        cut.Find("[data-testid='gantt-view-week']").ClassList.Should().Contain("tm-btn-secondary", "the active view is visually distinct");
+        cut.Find("[data-testid='gantt-view-week']").ClassList.Should().Contain("tm-gantt__segment-btn--active", "the active view is visually distinct");
 
         cut.Find("[data-testid='gantt-view-day']").Click();
 
         cut.Find("[data-testid='gantt-view-day']").GetAttribute("aria-pressed").Should().Be("true");
         cut.Find("[data-testid='gantt-view-week']").GetAttribute("aria-pressed").Should().Be("false");
-        cut.Find("[data-testid='gantt-view-day']").ClassList.Should().Contain("tm-btn-secondary");
-        cut.Find("[data-testid='gantt-view-week']").ClassList.Should().Contain("tm-btn-ghost");
+        cut.Find("[data-testid='gantt-view-day']").ClassList.Should().Contain("tm-gantt__segment-btn--active");
+        cut.Find("[data-testid='gantt-view-week']").ClassList.Should().NotContain("tm-gantt__segment-btn--active");
     }
 
     [Fact]

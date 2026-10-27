@@ -27,6 +27,13 @@ public class GanttViewSettings
     /// <summary>Show additional items in the task context menu (Duplicate, Move, Copy link). Default: false.</summary>
     public bool ShowAdvancedContextButtons { get; set; }
 
-    /// <summary>Color theme applied to the component. Default: Auto.</summary>
+    /// <summary>Show the completion percentage next to every task bar. Default: false.</summary>
+    public bool ShowProgressLabel { get; set; }
+
+    /// <summary>
+    /// Color theme applied to the component. Default: Auto, which follows the ambient theme
+    /// (the cascaded <c>data-theme</c> / the registered <c>ThemeService</c>); Light and Dark force
+    /// <c>data-theme</c> on the Gantt root.
+    /// </summary>
     public GanttTheme Theme { get; set; } = GanttTheme.Auto;
 }

@@ -14,9 +14,9 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    border-bottom: 1px solid var(--tm-border-color);
     margin-bottom: 8px;
 }
 
@@ -26,13 +26,13 @@
     gap: 12px;
     align-items: center;
     padding: 6px 0;
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-gantt__mapping-source {
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
 }
 
 .tm-gantt__mapping-select {

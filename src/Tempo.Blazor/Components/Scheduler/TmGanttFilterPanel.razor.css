@@ -14,7 +14,7 @@
 .tm-gantt__filter-panel-title {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -23,7 +23,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     padding: 2px;
     display: flex;
     align-items: center;
@@ -31,8 +31,8 @@
 }
 
 .tm-gantt__filter-panel-close:hover {
-    background: var(--tm-bg-hover, #f3f4f6);
-    color: var(--tm-text-primary, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-gantt__filter-row {
@@ -59,7 +59,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     padding: 2px 4px;
     border-radius: 3px;
     display: flex;
@@ -67,8 +67,8 @@
 }
 
 .tm-gantt__filter-remove:hover {
-    background: var(--tm-color-danger-subtle, #fef2f2);
-    color: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
 }
 
 .tm-gantt__filter-panel-actions {

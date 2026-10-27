@@ -6,13 +6,14 @@
 @using Tempo.Blazor.Components.DataDisplay
 @inject ITmLocalizer Loc
 
-<div class="tm-gantt @GetThemeClass() @Class" @attributes="AdditionalAttributes">
+<div class="tm-gantt @GetThemeClass() @Class" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
 
     <!-- Toolbar -->
     <div class="tm-gantt__toolbar">
         <div class="tm-gantt__toolbar-group">
             <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" OnClick="AddTaskAsync" Title="@Loc["TmGantt_AddTask"]" AriaLabel="@Loc["TmGantt_AddTask"]" data-testid="@TestId("gantt-add-task")">
-                <TmIcon Name="plus" />
+                <TmIcon Name="plus" Size="IconSize.Sm" />
+                @Loc["TmGantt_AddTask"]
             </TmButton>
             <span class="tm-gantt__toolbar-divider"></span>
             <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ExpandAllAsync" Title="@Loc["TmGantt_ExpandAll"]" AriaLabel="@Loc["TmGantt_ExpandAll"]" data-testid="@TestId("gantt-expand-all")">
@@ -22,18 +23,17 @@
                 <TmIcon Name="chevrons-up" Size="IconSize.Sm" />
             </TmButton>
             <span class="tm-gantt__toolbar-divider"></span>
-            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Day)" OnClick="() => SetViewAsync(GanttView.Day)"
-                      aria-pressed="@(IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")">
-                @Loc["TmGantt_DayView"]
-            </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Week)" OnClick="() => SetViewAsync(GanttView.Week)"
-                      aria-pressed="@(IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")">
-                @Loc["TmGantt_WeekView"]
-            </TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@ViewButtonVariant(GanttView.Month)" OnClick="() => SetViewAsync(GanttView.Month)"
-                      aria-pressed="@(IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")">
-                @Loc["TmGantt_MonthView"]
-            </TmButton>
+            <div class="tm-gantt__segment" role="group" aria-label="@Loc["TmGantt_ViewSwitcher"]">
+                <button type="button" class="tm-gantt__segment-btn @(IsViewActive(GanttView.Day) ? "tm-gantt__segment-btn--active" : "")"
+                        aria-pressed="@(IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")"
+                        @onclick="() => SetViewAsync(GanttView.Day)">@Loc["TmGantt_DayView"]</button>
+                <button type="button" class="tm-gantt__segment-btn @(IsViewActive(GanttView.Week) ? "tm-gantt__segment-btn--active" : "")"
+                        aria-pressed="@(IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")"
+                        @onclick="() => SetViewAsync(GanttView.Week)">@Loc["TmGantt_WeekView"]</button>
+                <button type="button" class="tm-gantt__segment-btn @(IsViewActive(GanttView.Month) ? "tm-gantt__segment-btn--active" : "")"
+                        aria-pressed="@(IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")"
+                        @onclick="() => SetViewAsync(GanttView.Month)">@Loc["TmGantt_MonthView"]</button>
+            </div>
         </div>
         <div class="tm-gantt__toolbar-group">
             <!-- Cascade sort -->
@@ -106,6 +106,12 @@
                             <span>@Loc["TmGantt_ShowDaysOff"]</span>
                         </label>
                         <label class="tm-gantt__view-settings-item">
+                            <input type="checkbox" data-testid="@TestId("vset-show-progress")"
+                                   checked="@ViewSettings.ShowProgressLabel"
+                                   @onchange="e => SetShowProgressLabel((bool)e.Value!)" />
+                            <span>@Loc["TmGantt_ShowProgressLabel"]</span>
+                        </label>
+                        <label class="tm-gantt__view-settings-item">
                             <input type="checkbox" data-testid="@TestId("vset-show-closed")"
                                    checked="@ViewSettings.ShowClosedTasks"
                                    @onchange="e => SetShowClosedTasks((bool)e.Value!)" />
@@ -165,44 +171,44 @@
                                    @onchange="() => SetTheme(GanttTheme.Dark)" />
                             <span>@Loc["TmGantt_ThemeDark"]</span>
                         </label>
-                    </div>
-                }
 
-                @if (NotificationSettings is not null)
-                {
-                    <div class="tm-gantt__view-settings-divider"></div>
-                    <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
-                    <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox"
-                                   checked="@NotificationSettings.EmailOnAssign"
-                                   @onchange="e => UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
-                            <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox"
-                                   checked="@NotificationSettings.EmailOnMention"
-                                   @onchange="e => UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
-                            <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox"
-                                   checked="@NotificationSettings.PushOnAssign"
-                                   @onchange="e => UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
-                            <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox"
-                                   checked="@NotificationSettings.PushOnMention"
-                                   @onchange="e => UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
-                            <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox"
-                                   checked="@NotificationSettings.PushOnDeadline"
-                                   @onchange="e => UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
-                            <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
-                        </label>
+                    @if (NotificationSettings is not null)
+                    {
+                        <div class="tm-gantt__view-settings-divider"></div>
+                        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
+                        <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
+                            <label class="tm-gantt__view-settings-item">
+                                <input type="checkbox"
+                                       checked="@NotificationSettings.EmailOnAssign"
+                                       @onchange="e => UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
+                                <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
+                            </label>
+                            <label class="tm-gantt__view-settings-item">
+                                <input type="checkbox"
+                                       checked="@NotificationSettings.EmailOnMention"
+                                       @onchange="e => UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
+                                <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
+                            </label>
+                            <label class="tm-gantt__view-settings-item">
+                                <input type="checkbox"
+                                       checked="@NotificationSettings.PushOnAssign"
+                                       @onchange="e => UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
+                                <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
+                            </label>
+                            <label class="tm-gantt__view-settings-item">
+                                <input type="checkbox"
+                                       checked="@NotificationSettings.PushOnMention"
+                                       @onchange="e => UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
+                                <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
+                            </label>
+                            <label class="tm-gantt__view-settings-item">
+                                <input type="checkbox"
+                                       checked="@NotificationSettings.PushOnDeadline"
+                                       @onchange="e => UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
+                                <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
+                            </label>
+                        </div>
+                    }
                     </div>
                 }
             </div>
@@ -417,12 +423,13 @@
     }
     else if (View == GanttView.Board)
     {
+        @* No column Color: the header is the same status chip as the tree (tokens, light and dark), so the board holds no hex. *@
         var kanbanColumns = new[]
         {
-            new KanbanColumn(nameof(TmWorkItemStatus.Open),       Loc[$"GanttStatus_{TmWorkItemStatus.Open}"],       "#e5e7eb"),
-            new KanbanColumn(nameof(TmWorkItemStatus.InProgress),  Loc[$"GanttStatus_{TmWorkItemStatus.InProgress}"],  "#dbeafe"),
-            new KanbanColumn(nameof(TmWorkItemStatus.Done),        Loc[$"GanttStatus_{TmWorkItemStatus.Done}"],        "#dcfce7"),
-            new KanbanColumn(nameof(TmWorkItemStatus.Closed),      Loc[$"GanttStatus_{TmWorkItemStatus.Closed}"],      "#f3f4f6"),
+            new KanbanColumn(nameof(TmWorkItemStatus.Open),       Loc[$"GanttStatus_{TmWorkItemStatus.Open}"]),
+            new KanbanColumn(nameof(TmWorkItemStatus.InProgress),  Loc[$"GanttStatus_{TmWorkItemStatus.InProgress}"]),
+            new KanbanColumn(nameof(TmWorkItemStatus.Done),        Loc[$"GanttStatus_{TmWorkItemStatus.Done}"]),
+            new KanbanColumn(nameof(TmWorkItemStatus.Closed),      Loc[$"GanttStatus_{TmWorkItemStatus.Closed}"]),
         };
         <div class="tm-gantt__board-view" data-testid="@TestId("gantt-board-view")">
             <TmKanbanBoard TItem="TmWorkItem"
@@ -431,6 +438,17 @@
                            ColumnSelector="t => t.Status.ToString()"
                            OnItemMoved="OnBoardItemMovedAsync"
                            OnCardClick="SelectTaskAsync">
+                <ColumnHeaderTemplate Context="col">
+                    @if (Enum.TryParse<TmWorkItemStatus>(col.Id, out var columnStatus))
+                    {
+                        @StatusChip(columnStatus)
+                    }
+                    else
+                    {
+                        <span class="tm-kanban__header-title">@col.Title</span>
+                    }
+                    <span class="tm-kanban__count">@Data.Count(t => t.Status.ToString() == col.Id)</span>
+                </ColumnHeaderTemplate>
                 <CardTemplate Context="task">
                     @if (!string.IsNullOrEmpty(task.Color))
                     {
@@ -459,7 +477,7 @@
                 @foreach (var g in byStatus)
                 {
                     <div class="tm-gantt__dashboard-stat">
-                        <span class="tm-gantt__status-badge @GetStatusBadgeClass(g.Key)">@Loc[$"GanttStatus_{g.Key}"]</span>
+                        @StatusChip(g.Key)
                         <strong>@g.Count()</strong>
                     </div>
                 }
@@ -707,10 +725,7 @@
                             else if (col.Key == GanttColumnKey.Status)
                             {
                                 <span class="tm-gantt__tree-cell tm-gantt__tree-cell--status">
-                                    <span class="tm-gantt__status-badge @GetStatusBadgeClass(node.Task.Status)"
-                                          data-testid="@TestId("status-badge")">
-                                        @Loc[$"GanttStatus_{node.Task.Status}"]
-                                    </span>
+                                    @StatusChip(node.Task.Status, TestId("status-badge"))
                                 </span>
                             }
                             else if (col.Key == GanttColumnKey.Start)
@@ -826,6 +841,11 @@
                              style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
                     }
                 </div>
+                @if (ViewSettings.ShowTodayMarker)
+                {
+                    <span class="tm-gantt__today-label" data-testid="@TestId("today-label")"
+                          style="left: @(F(_todayOffset))px">@Loc["TmGantt_Today"]</span>
+                }
             </div>
 
             <!-- Timeline Body -->
@@ -1003,6 +1023,15 @@
                                         </span>
                                     }
                                 </div>
+                                @* A sibling of the bar, not a child: the completed bar is faded (opacity .6) and a
+                                   descendant label would be composited with it, so its contrast was measured against
+                                   a half-transparent ancestor. Placed from the geometry the bar already has. *@
+                                @if (ViewSettings.ShowProgressLabel)
+                                {
+                                    <span class="tm-gantt__bar-progress-label @GetProgressLabelClass(bar)"
+                                          data-testid="@TestId("bar-progress-label")"
+                                          style="left: @(F(bar.Left + bar.Width))px">@(bar.Task.PercentComplete)%</span>
+                                }
                             }
                         </div>
                     }
@@ -1101,3 +1130,15 @@
         </div>
     }
 </div>
+
+@code {
+    /// <summary>
+    /// The status chip (glyph + text) shared by the tree, the Board column headers and the dashboard.
+    /// It lives in markup, not in code-behind: Blazor stamps the CSS-isolation scope attribute only on
+    /// elements the Razor compiler emits, so a chip built with a RenderTreeBuilder would never match the
+    /// scoped <c>.tm-gantt__status-badge</c> rules. The glyph is decorative (aria-hidden): the localized
+    /// text names the status, so it is never conveyed by colour alone (WCAG 1.4.1).
+    /// </summary>
+    private RenderFragment StatusChip(TmWorkItemStatus status, string? testId = null) =>
+        @<span class="tm-gantt__status-badge @GetStatusBadgeClass(status)" data-testid="@testId"><span class="tm-gantt__status-icon" aria-hidden="true">@GetStatusGlyph(status)</span>@Loc[$"GanttStatus_{status}"]</span>;
+}

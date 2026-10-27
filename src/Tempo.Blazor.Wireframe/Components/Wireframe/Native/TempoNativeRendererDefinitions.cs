@@ -492,6 +492,7 @@ internal static class TempoNativeRendererDefinitions
     {
         var taskCount = el.Props.GetInt("taskCount", 5);
         var period = el.Props.GetString("period", "week");
+        var showProgressLabel = el.Props.GetBool("showProgressLabel", false);
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
         var listW = el.W * 0.3;
@@ -521,10 +522,25 @@ internal static class TempoNativeRendererDefinitions
             var bx = listW + bStart * chartW;
             var bw = bLen * chartW;
             var isDone = t < 2;
+            // Redesign: the first row is the project summary bar (a darker tone), the rest are
+            // accent-tinted bars with a solid progress fill; done rows keep the green tone.
+            if (t == 0)
+            {
+                sb.Append(Rect(bx, ry + rowH * 0.2, bw, rowH * 0.6, ColorMuted, "none", 3));
+                continue;
+            }
+
             sb.Append(Rect(bx, ry + rowH * 0.2, bw, rowH * 0.6, isDone ? "#dcfce7" : FillAccent, isDone ? "#86efac" : "#93c5fd", 3));
-            if (isDone)
-                sb.Append(Rect(bx, ry + rowH * 0.2, bw * 0.8, rowH * 0.6, "#22c55e", "none", 3));
+            sb.Append(Rect(bx, ry + rowH * 0.2, bw * (isDone ? 1.0 : 0.45), rowH * 0.6, isDone ? "#22c55e" : Accent, "none", 3));
+            if (showProgressLabel)
+                sb.Append(Text(isDone ? "100%" : "45%", bx + bw + 4, ry + rowH / 2, 8, ColorMuted));
         }
+
+        // Today: a solid line with a pill in the header, as in the redesigned chart.
+        var todayX = listW + chartW * 0.38;
+        sb.Append(VLine(todayX, headerH, el.H, "#ef4444"));
+        sb.Append(Rect(todayX - 14, headerH - 8, 28, 16, "#ef4444", "none", 8));
+        sb.Append(Text("Today", todayX, headerH, 7, "#ffffff", "middle", "500"));
 
         Svg(b, sb.ToString());
     }

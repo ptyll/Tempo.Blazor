@@ -3,33 +3,83 @@
     flex-direction: column;
     height: 100%;
     min-height: 400px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: var(--tm-radius-lg, 0.5rem);
-    background: var(--tm-surface, #ffffff);
-    font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+    background: var(--tm-bg-workspace);
+    color: var(--tm-text-primary);
+    font-family: var(--tm-font-sans);
     overflow: hidden;
 }
 
-/* ─── Theme overrides ──────────────────────────────────────────── */
+/* ─── Theme aliases ────────────────────────────────────────────── */
 
+/* GanttViewSettings.Theme drives data-theme on the root (TmGantt.razor): [data-theme="dark"] in
+   tokens-dark.css repaints every token, and the indigo theme's nested-dark selectors reach it. These
+   classes carry no palette any more - they stay as a stable hook for host selectors, and only name the
+   native color-scheme of the controls inside the Gantt. */
 .tm-gantt--theme-dark {
-    --tm-surface: #1f2937;
-    --tm-bg-subtle: #111827;
-    --tm-bg-hover: #374151;
-    --tm-border-color: #374151;
-    --tm-text-primary: #f9fafb;
-    --tm-text-secondary: #9ca3af;
-    --tm-text-tertiary: #6b7280;
+    color-scheme: dark;
 }
 
 .tm-gantt--theme-light {
-    --tm-surface: #ffffff;
-    --tm-bg-subtle: #f9fafb;
-    --tm-bg-hover: #f3f4f6;
-    --tm-border-color: #d1d5db;
-    --tm-text-primary: #111827;
-    --tm-text-secondary: #6b7280;
-    --tm-text-tertiary: #9ca3af;
+    color-scheme: light;
+}
+
+/* ─── Segmented Day | Week | Month ─────────────────────────────── */
+
+.tm-gantt__segment {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-gantt__segment-btn {
+    min-height: 1.75rem;
+    padding: 0 var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__segment-btn:hover {
+    color: var(--tm-text-primary);
+}
+
+/* The fill alone is ~1.1:1 against the tray, under the 3:1 a control boundary needs (1.4.11): the
+   strong border is the boundary, the weight and the shadow carry the selection beyond it. */
+.tm-gantt__segment-btn--active {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
+    font-weight: var(--tm-font-weight-semibold);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-gantt__segment-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-gantt__segment-btn--active {
+        background: Highlight;
+        color: HighlightText;
+        forced-color-adjust: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__segment-btn {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 /* ─── Toolbar ──────────────────────────────────────────────────── */
@@ -39,8 +89,8 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
-    background: var(--tm-bg-subtle, #f9fafb);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
     flex-shrink: 0;
 }
 
@@ -53,7 +103,7 @@
 .tm-gantt__zoom-level {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     min-width: 40px;
     text-align: center;
 }
@@ -61,7 +111,7 @@
 .tm-gantt__toolbar-divider {
     width: 1px;
     height: 20px;
-    background: var(--tm-border-color, #d1d5db);
+    background: var(--tm-border-color);
     margin: 0 var(--tm-space-1, 0.25rem);
 }
 
@@ -83,10 +133,10 @@
     right: 0;
     z-index: 51;
     min-width: 220px;
-    background: var(--tm-surface, #ffffff);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-popover);
     padding: var(--tm-space-2, 0.5rem) 0;
 }
 
@@ -96,7 +146,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-gantt__view-settings-item {
@@ -105,13 +155,13 @@
     gap: var(--tm-space-2, 0.5rem);
     padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
     font-size: 0.875rem;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
     cursor: pointer;
     transition: background 0.1s ease;
 }
 
 .tm-gantt__view-settings-item:hover {
-    background: var(--tm-bg-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-gantt__view-settings-item input {
@@ -121,7 +171,7 @@
 
 .tm-gantt__view-settings-divider {
     height: 1px;
-    background: var(--tm-border-color, #e5e7eb);
+    background: var(--tm-border-color);
     margin: var(--tm-space-1, 0.25rem) 0;
 }
 
@@ -138,10 +188,10 @@
 .tm-gantt__tree {
     width: 420px;
     min-width: 300px;
-    border-right: 1px solid var(--tm-border-color, #d1d5db);
+    border-right: 1px solid var(--tm-border-color);
     display: flex;
     flex-direction: column;
-    background: var(--tm-surface, #ffffff);
+    background: var(--tm-bg-surface);
 }
 
 .tm-gantt__tree-header {
@@ -149,13 +199,13 @@
     align-items: center;
     height: 40px;
     padding: 0 var(--tm-space-3, 0.75rem);
-    background: var(--tm-bg-subtle, #f9fafb);
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 
@@ -187,17 +237,17 @@
     align-items: center;
     height: 40px;
     padding: 0 var(--tm-space-3, 0.75rem);
-    border-bottom: 1px solid var(--tm-border-color, #f3f4f6);
+    border-bottom: 1px solid var(--tm-border-color);
     cursor: pointer;
     transition: background 0.1s ease;
 }
 
 .tm-gantt__tree-row:hover {
-    background: var(--tm-bg-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-gantt__tree-row--selected {
-    background: var(--tm-color-primary-subtle, #dbeafe);
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-gantt__tree-cell {
@@ -206,7 +256,7 @@
     align-items: center;
     gap: var(--tm-space-1, 0.25rem);
     font-size: 0.875rem;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -220,7 +270,7 @@
     flex: 0 0 80px;
     justify-content: center;
     font-size: 0.75rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 .tm-gantt__tree-cell--status {
@@ -236,7 +286,7 @@
     justify-content: center;
     width: 16px;
     height: 20px;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
     cursor: grab;
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -248,11 +298,11 @@
 }
 
 .tm-gantt__tree-row--dragging { opacity: 0.4; }
-.tm-gantt__tree-row--drop-before { border-top: 2px solid var(--tm-color-primary, #3b82f6); }
-.tm-gantt__tree-row--drop-after { border-bottom: 2px solid var(--tm-color-primary, #3b82f6); }
+.tm-gantt__tree-row--drop-before { border-top: 2px solid var(--tm-color-primary); }
+.tm-gantt__tree-row--drop-after { border-bottom: 2px solid var(--tm-color-primary); }
 .tm-gantt__tree-row--drop-child {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    outline: 2px dashed var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    outline: 2px dashed var(--tm-color-primary);
     outline-offset: -2px;
 }
 
@@ -265,7 +315,7 @@
     width: 20px;
     height: 20px;
     padding: 0;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -283,6 +333,7 @@
 .tm-gantt__status-badge {
     display: inline-flex;
     align-items: center;
+    gap: var(--tm-space-1);
     padding: 1px 6px;
     border-radius: var(--tm-radius-sm, 0.25rem);
     font-size: 0.7rem;
@@ -291,10 +342,15 @@
     white-space: nowrap;
 }
 
-.tm-gantt__status-badge--open     { background: #f3f4f6; color: #6b7280; }
-.tm-gantt__status-badge--inprogress { background: #dbeafe; color: #1d4ed8; }
-.tm-gantt__status-badge--done     { background: #dcfce7; color: #15803d; }
-.tm-gantt__status-badge--closed   { background: #f3f4f6; color: #374151; }
+.tm-gantt__status-icon {
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.tm-gantt__status-badge--open       { background: var(--tm-status-open-bg);       color: var(--tm-status-open-fg); }
+.tm-gantt__status-badge--inprogress { background: var(--tm-status-inprogress-bg); color: var(--tm-status-inprogress-fg); }
+.tm-gantt__status-badge--done       { background: var(--tm-status-done-bg);       color: var(--tm-status-done-fg); }
+.tm-gantt__status-badge--closed     { background: var(--tm-status-closed-bg);     color: var(--tm-status-closed-fg); }
 
 /* ─── Priority dot ─────────────────────────────────────────────── */
 
@@ -306,16 +362,16 @@
     flex-shrink: 0;
 }
 
-.tm-gantt__priority-icon--highest { background: #dc2626; }
-.tm-gantt__priority-icon--high    { background: #f97316; }
-.tm-gantt__priority-icon--medium  { background: #eab308; }
-.tm-gantt__priority-icon--low     { background: #22c55e; }
-.tm-gantt__priority-icon--lowest  { background: #94a3b8; }
+.tm-gantt__priority-icon--highest{ background: var(--tm-priority-highest); }
+.tm-gantt__priority-icon--high   { background: var(--tm-priority-high); }
+.tm-gantt__priority-icon--medium { background: var(--tm-priority-medium); }
+.tm-gantt__priority-icon--low    { background: var(--tm-priority-low); }
+.tm-gantt__priority-icon--lowest { background: var(--tm-priority-lowest); }
 
 /* ─── Milestone icon ───────────────────────────────────────────── */
 
 .tm-gantt__milestone-icon {
-    color: var(--tm-color-warning, #f59e0b);
+    color: var(--tm-color-warning);
     width: 14px;
     height: 14px;
     flex-shrink: 0;
@@ -336,6 +392,7 @@
     overflow-y: hidden;
     position: relative;
     cursor: grab;
+    background: var(--tm-bg-surface);
 }
 
 .tm-gantt__timeline--panning {
@@ -347,11 +404,11 @@
     display: flex;
     align-items: center;
     height: 40px;
-    background: var(--tm-bg-subtle, #f9fafb);
-    border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -361,7 +418,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    border-right: 1px solid var(--tm-border-color, #e5e7eb);
+    border-right: 1px solid var(--tm-border-color);
     padding: 0 var(--tm-space-2, 0.5rem);
 }
 
@@ -383,7 +440,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.04);
+    background: var(--tm-scheduler-weekend-bg);
     pointer-events: none;
     z-index: 0;
 }
@@ -401,7 +458,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    border-right: 1px solid var(--tm-border-color, #f3f4f6);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 /* ─── Today marker ─────────────────────────────────────────────── */
@@ -410,20 +467,27 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    border-left: 2px dashed var(--tm-color-danger, #ef4444);
+    border-left: 2px solid var(--tm-color-danger);
     pointer-events: none;
     z-index: 3;
 }
 
-.tm-gantt__today-marker::before {
-    content: '';
+/* The pill sits in the timeline header and straddles its bottom edge, centred on the line. Inverse
+   ink on the danger fill holds AA in light and dark (pinned by TokenContrastTests). */
+.tm-gantt__today-label {
     position: absolute;
-    top: 0;
-    left: -5px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--tm-color-danger, #ef4444);
+    bottom: 0;
+    transform: translate(-50%, 50%);
+    z-index: 9;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-danger);
+    color: var(--tm-text-inverse);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1.25rem;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 /* ─── Dependencies ─────────────────────────────────────────────── */
@@ -438,12 +502,12 @@
 }
 
 .tm-gantt__dependency-line {
-    stroke: var(--tm-text-tertiary, #9ca3af);
+    stroke: var(--tm-text-tertiary);
     stroke-width: 1.5;
 }
 
 .tm-gantt__dependency-arrow {
-    fill: var(--tm-text-tertiary, #9ca3af);
+    fill: var(--tm-text-tertiary);
 }
 
 /* ─── Task bars ────────────────────────────────────────────────── */
@@ -461,22 +525,22 @@
 .tm-gantt__bar {
     position: relative;
     height: 20px;
-    background: var(--tm-gantt-task-color, var(--tm-color-primary, #3b82f6));
+    background: var(--tm-gantt-task-color, var(--tm-color-primary-solid));
     border-radius: var(--tm-radius-sm, 0.25rem);
     cursor: pointer;
     overflow: visible;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-sm);
     transition: box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 .tm-gantt__bar:hover {
     filter: brightness(1.08);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    box-shadow: var(--tm-shadow-md);
 }
 
 .tm-gantt__bar--selected {
-    box-shadow: 0 0 0 2px var(--tm-gantt-task-color, var(--tm-color-primary, #3b82f6)),
-                0 2px 6px rgba(0,0,0,0.18);
+    box-shadow: 0 0 0 2px var(--tm-gantt-task-color, var(--tm-color-primary-solid)),
+                var(--tm-shadow-md);
 }
 
 .tm-gantt__bar--group {
@@ -488,18 +552,19 @@
     opacity: 0.6;
 }
 
-.tm-gantt__bar--priority-highest { border-left: 3px solid #dc2626; }
-.tm-gantt__bar--priority-high    { border-left: 3px solid #f97316; }
-.tm-gantt__bar--priority-medium  { border-left: 3px solid #eab308; }
-.tm-gantt__bar--priority-low     { border-left: 3px solid #22c55e; }
-.tm-gantt__bar--priority-lowest  { border-left: 3px solid #94a3b8; }
+.tm-gantt__bar--priority-highest{ border-left: 3px solid var(--tm-priority-highest); }
+.tm-gantt__bar--priority-high   { border-left: 3px solid var(--tm-priority-high); }
+.tm-gantt__bar--priority-medium { border-left: 3px solid var(--tm-priority-medium); }
+.tm-gantt__bar--priority-low    { border-left: 3px solid var(--tm-priority-low); }
+.tm-gantt__bar--priority-lowest { border-left: 3px solid var(--tm-priority-lowest); }
 
 .tm-gantt__bar-progress {
     position: absolute;
     top: 0;
     left: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.2);
+    /* A darker tone of the bar's own colour: opaque, so the label keeps its contrast in every theme. */
+    background: color-mix(in srgb, var(--tm-gantt-task-color, var(--tm-color-primary-solid)) 60%, var(--tm-scheduler-event-fg-on-light));
     pointer-events: none;
     border-radius: inherit;
 }
@@ -509,12 +574,32 @@
     z-index: 1;
     padding: 0 6px;
     font-size: 0.75rem;
-    color: #ffffff;
+    color: var(--tm-color-on-primary-fixed);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 20px;
     display: block;
+}
+
+/* The percentage next to the bar (GanttViewSettings.ShowProgressLabel). A child of .tm-gantt__task-row
+   (a sibling of the bar, so the faded completed bar does not dim it); the inline `left` is the bar's right
+   edge, the margin is the gap. */
+.tm-gantt__bar-progress-label {
+    position: absolute;
+    margin-left: var(--tm-space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* The exceeded-deadline flame sits just right of the bar; the label steps past it
+   (class computed in C#, GetProgressLabelClass). */
+.tm-gantt__bar-progress-label--after-deadline {
+    margin-left: 1.5rem;
 }
 
 /* ─── Deadline marker ──────────────────────────────────────────── */
@@ -524,7 +609,7 @@
     right: -18px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
     z-index: 4;
     line-height: 1;
     pointer-events: none;
@@ -538,10 +623,10 @@
     left: 50%;
     transform: translateX(-50%);
     min-width: 160px;
-    background: var(--tm-surface, #fff);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-md);
     padding: var(--tm-space-2, 0.5rem);
     z-index: 20;
     pointer-events: none;
@@ -559,7 +644,7 @@
 .tm-gantt__bar-tooltip-title {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
     margin-bottom: 4px;
 }
 
@@ -568,7 +653,7 @@
     justify-content: space-between;
     gap: var(--tm-space-3, 0.75rem);
     font-size: 0.75rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 /* ─── Milestone ────────────────────────────────────────────────── */
@@ -576,10 +661,10 @@
 .tm-gantt__milestone {
     width: 12px;
     height: 12px;
-    background: var(--tm-color-warning, #f59e0b);
+    background: var(--tm-color-warning);
     transform: rotate(45deg);
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: var(--tm-shadow-sm);
 }
 
 /* ─── Context Menu ─────────────────────────────────────────────── */
@@ -593,10 +678,10 @@
 .tm-gantt__context-menu {
     position: absolute;
     min-width: 180px;
-    background: var(--tm-surface, #ffffff);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    box-shadow: var(--tm-shadow-popover);
     padding: var(--tm-space-1, 0.25rem) 0;
     display: flex;
     flex-direction: column;
@@ -609,7 +694,7 @@
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
     background: transparent;
     border: none;
-    color: var(--tm-text-primary, #111827);
+    color: var(--tm-text-primary);
     font-size: 0.875rem;
     cursor: pointer;
     text-align: left;
@@ -617,15 +702,15 @@
 }
 
 .tm-gantt__context-menu-item:hover {
-    background: var(--tm-bg-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
-.tm-gantt__context-menu-item--danger { color: var(--tm-color-danger, #ef4444); }
-.tm-gantt__context-menu-item--danger:hover { background: var(--tm-color-danger-subtle, #fee2e2); }
+.tm-gantt__context-menu-item--danger { color: var(--tm-color-danger); }
+.tm-gantt__context-menu-item--danger:hover { background: var(--tm-color-danger-subtle); }
 
 .tm-gantt__context-menu-divider {
     height: 1px;
-    background: var(--tm-border-color, #e5e7eb);
+    background: var(--tm-border-color);
     margin: var(--tm-space-1, 0.25rem) 0;
 }
 
@@ -654,7 +739,7 @@
 .tm-gantt__timeline-header--lower {
     top: 28px;
     height: 32px;
-    border-top: 1px solid var(--tm-border-color, #d1d5db);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-gantt__timeline-header-cell--upper {
@@ -665,8 +750,8 @@
     padding: 0 var(--tm-space-2, 0.5rem);
     font-weight: 600;
     font-size: 0.75rem;
-    color: var(--tm-text-primary, #111827);
-    border-right: 1px solid var(--tm-border-color, #d1d5db);
+    color: var(--tm-text-primary);
+    border-right: 1px solid var(--tm-border-color);
     box-sizing: border-box;
 }
 
@@ -677,8 +762,8 @@
     align-items: center;
     justify-content: center;
     font-size: 0.7rem;
-    color: var(--tm-text-secondary, #6b7280);
-    border-right: 1px solid var(--tm-border-color, #d1d5db);
+    color: var(--tm-text-secondary);
+    border-right: 1px solid var(--tm-border-color);
     box-sizing: border-box;
     white-space: nowrap;
     overflow: hidden;
@@ -691,7 +776,7 @@
     width: 50px;
     flex-shrink: 0;
     font-size: 0.7rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     text-align: center;
 }
 
@@ -701,13 +786,13 @@
     flex: 1;
     min-width: 60px;
     padding: 0 var(--tm-space-1, 0.25rem);
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    border: 1px solid var(--tm-color-primary);
     border-radius: var(--tm-radius-sm, 0.25rem);
-    background: var(--tm-surface, #fff);
-    color: var(--tm-text-primary, #111827);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     font-size: inherit;
     outline: none;
-    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle, #dbeafe);
+    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
 }
 
 /* ─── Phase 2: Progress mini-bar ───────────────────────────────── */
@@ -716,7 +801,7 @@
     display: inline-block;
     width: 48px;
     height: 6px;
-    background: var(--tm-bg-subtle, #e5e7eb);
+    background: var(--tm-bg-surface-secondary);
     border-radius: 3px;
     overflow: hidden;
     vertical-align: middle;
@@ -725,14 +810,14 @@
 
 .tm-gantt__progress-mini-fill {
     height: 100%;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     border-radius: 3px;
     transition: width 0.2s ease;
 }
 
 .tm-gantt__progress-mini-label {
     font-size: 0.75rem;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 /* ─── Phase 2: Bulk select ─────────────────────────────────────── */
@@ -751,38 +836,38 @@
     align-items: center;
     gap: var(--tm-space-2, 0.5rem);
     padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    border-top: 1px solid var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    border-top: 1px solid var(--tm-color-primary);
     font-size: 0.875rem;
 }
 
 .tm-gantt__bulk-toolbar-count {
     font-weight: 600;
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
     margin-right: var(--tm-space-2, 0.5rem);
 }
 
 /* ─── Phase 2: Overdue highlight ───────────────────────────────── */
 
 .tm-gantt__tree-row--overdue {
-    background: var(--tm-color-danger-subtle, #fef2f2) !important;
+    background: var(--tm-color-danger-subtle) !important;
 }
 
 .tm-gantt__bar--overdue {
-    --tm-gantt-task-color: var(--tm-color-danger, #ef4444);
-    box-shadow: 0 0 0 2px var(--tm-color-danger, #ef4444);
+    --tm-gantt-task-color: var(--tm-color-danger);
+    box-shadow: 0 0 0 2px var(--tm-color-danger);
     animation: tm-gantt-overdue-pulse 2s ease-in-out infinite;
 }
 
 @keyframes tm-gantt-overdue-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.6); }
-    50%       { box-shadow: 0 0 0 4px rgba(239,68,68,0.2); }
+    0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 60%, transparent); }
+    50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tm-color-danger) 20%, transparent); }
 }
 
 /* ─── Phase 2: Dependency lines ────────────────────────────────── */
 
 .tm-gantt__dep-line {
-    stroke: var(--tm-color-secondary, #6b7280);
+    stroke: var(--tm-text-secondary);
     stroke-width: 1.5;
     fill: none;
     cursor: pointer;
@@ -790,24 +875,24 @@
 }
 
 .tm-gantt__dep-line:hover {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2.5;
 }
 
 .tm-gantt__dep-line--selected {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2.5;
-    filter: drop-shadow(0 0 3px rgba(59,130,246,0.5));
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
 }
 
-.tm-gantt__dep-line--fs { stroke: var(--tm-color-secondary, #6b7280); }
-.tm-gantt__dep-line--ss { stroke: var(--tm-color-info, #0ea5e9); }
-.tm-gantt__dep-line--ff { stroke: var(--tm-color-success, #22c55e); }
-.tm-gantt__dep-line--sf { stroke: var(--tm-color-warning, #f59e0b); }
+.tm-gantt__dep-line--fs { stroke: var(--tm-text-secondary); }
+.tm-gantt__dep-line--ss { stroke: var(--tm-color-info); }
+.tm-gantt__dep-line--ff { stroke: var(--tm-color-success); }
+.tm-gantt__dep-line--sf { stroke: var(--tm-color-warning); }
 
 .tm-gantt__dep-lag-label {
     font-size: 10px;
-    fill: var(--tm-text-secondary, #6b7280);
+    fill: var(--tm-text-secondary);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
 }
 
@@ -820,8 +905,8 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--tm-color-primary, #3b82f6);
-    border: 2px solid white;
+    background: var(--tm-color-primary);
+    border: 2px solid var(--tm-bg-surface);
     opacity: 0;
     cursor: crosshair;
     z-index: 5;
@@ -858,15 +943,15 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 1.5px solid rgba(255,255,255,0.8);
+    border: 1.5px solid var(--tm-bg-surface);
     font-size: 9px;
     font-weight: 700;
-    color: white;
+    color: var(--tm-color-on-primary-fixed);
     background-size: cover;
     background-position: center;
     margin-left: -3px;
     flex-shrink: 0;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: var(--tm-shadow-xs);
 }
 
 .tm-gantt__bar-avatar:first-child { margin-left: 0; }
@@ -878,11 +963,11 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 1.5px solid rgba(255,255,255,0.8);
+    border: 1.5px solid var(--tm-bg-surface);
     font-size: 9px;
     font-weight: 700;
-    color: white;
-    background: rgba(0,0,0,0.4);
+    color: var(--tm-color-on-primary-fixed);
+    background: color-mix(in srgb, var(--tm-scheduler-event-fg-on-light) 55%, transparent);
     margin-left: -3px;
 }
 
@@ -891,7 +976,7 @@
 .tm-gantt__zoom-slider {
     width: 80px;
     height: 4px;
-    accent-color: var(--tm-color-primary, #3b82f6);
+    accent-color: var(--tm-color-primary);
     cursor: pointer;
     margin: 0 var(--tm-space-1, 0.25rem);
 }
@@ -903,7 +988,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger);
     opacity: 0.8;
     z-index: 8;
     pointer-events: none;
@@ -917,7 +1002,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger);
 }
 
 /* ─── Phase 2: Col toggle visibility ───────────────────────────── */
@@ -925,23 +1010,23 @@
 .tm-gantt__col-toggle {
     margin-left: 4px;
     cursor: pointer;
-    accent-color: var(--tm-color-primary, #3b82f6);
+    accent-color: var(--tm-color-primary);
 }
 
 /* ─── Phase 3: Critical Path ────────────────────────────────────── */
 
 .tm-gantt__bar--critical-path {
-    background: var(--tm-color-danger, #ef4444) !important;
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+    background: var(--tm-color-danger) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-danger) 30%, transparent);
 }
 
 /* ─── Phase 3: Baseline ghost bars ──────────────────────────────── */
 
 .tm-gantt__bar--baseline {
-    background: rgba(0, 0, 0, 0.12) !important;
+    background: color-mix(in srgb, var(--tm-text-primary) 12%, transparent) !important;
     pointer-events: none;
     z-index: 0;
-    border: 1px dashed rgba(0, 0, 0, 0.25);
+    border: 1px dashed color-mix(in srgb, var(--tm-text-primary) 25%, transparent);
     position: absolute;
     height: 20px;
     border-radius: 3px;
@@ -961,13 +1046,13 @@
 }
 
 .tm-gantt__deviation-badge--late {
-    background: var(--tm-color-danger-subtle, #fef2f2);
-    color: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
 }
 
 .tm-gantt__deviation-badge--early {
-    background: var(--tm-color-success-subtle, #f0fdf4);
-    color: var(--tm-color-success, #16a34a);
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success);
 }
 
 /* ─── Phase 3: Custom field columns ─────────────────────────────── */
@@ -984,8 +1069,8 @@
 /* ─── Phase 3: Filter panel ──────────────────────────────────────── */
 
 .tm-gantt__filter-panel {
-    border-bottom: 1px solid var(--tm-border-color, #e5e7eb);
-    background: var(--tm-bg-elevated, #f9fafb);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-elevated);
     padding: 8px 12px;
     animation: tm-gantt-slide-in 0.15s ease;
 }
@@ -998,9 +1083,9 @@
 /* ─── Phase 4: @mention spans ─────────────────────────────────── */
 
 .tm-gantt__mention {
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
     font-weight: 600;
-    background: var(--tm-color-primary-subtle, #eff6ff);
+    background: var(--tm-color-primary-subtle);
     border-radius: var(--tm-radius-sm, 0.25rem);
     padding: 0 3px;
 }
@@ -1020,13 +1105,13 @@
 }
 
 .tm-gantt__inline-badge--attachment {
-    background: var(--tm-color-warning-subtle, #fffbeb);
-    color: var(--tm-color-warning, #f59e0b);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning);
 }
 
 .tm-gantt__inline-badge--comment {
-    background: var(--tm-color-primary-subtle, #eff6ff);
-    color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 
@@ -1070,8 +1155,8 @@
     padding: 16px;
 }
 .tm-gantt__dashboard-widget {
-    background: var(--tm-surface-1, #fff);
-    border: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 10px;
     padding: 16px;
     min-height: 160px;
@@ -1086,19 +1171,19 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--tm-border, rgba(0,0,0,0.1));
-    background: var(--tm-surface-1, #fff);
+    border-right: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
     overflow: hidden;
 }
 .tm-gantt__sidebar-drawer-header {
     padding: 10px 12px;
-    border-bottom: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+    border-bottom: 1px solid var(--tm-border-color);
     font-weight: 600;
     font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--tm-text-secondary);
-    background: var(--tm-bg-subtle, #f8fafc);
+    background: var(--tm-bg-surface-secondary);
 }
 .tm-gantt__sidebar-drawer-body {
     flex: 1;
@@ -1107,7 +1192,7 @@
 }
 .tm-gantt__sidebar-empty {
     padding: 16px 12px;
-    color: var(--tm-text-muted, #94a3b8);
+    color: var(--tm-text-secondary);
     font-size: 0.8rem;
     text-align: center;
 }
@@ -1118,12 +1203,12 @@
     gap: 6px;
     padding: 5px 12px;
     font-size: 0.8rem;
-    border-bottom: 1px solid var(--tm-border-subtle, rgba(0,0,0,0.05));
+    border-bottom: 1px solid var(--tm-color-border-subtle);
     cursor: default;
 }
 .tm-gantt__sidebar-task-row--done .tm-gantt__sidebar-task-title {
     text-decoration: line-through;
-    color: var(--tm-text-muted, #94a3b8);
+    color: var(--tm-text-secondary);
 }
 .tm-gantt__sidebar-task-dot {
     width: 8px; height: 8px;
@@ -1138,7 +1223,7 @@
 }
 .tm-gantt__sidebar-task-pct {
     font-size: 0.7rem;
-    color: var(--tm-text-muted, #94a3b8);
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 /* Workload panel */
@@ -1148,7 +1233,7 @@
     gap: 6px;
     padding: 6px 12px;
     font-size: 0.8rem;
-    border-bottom: 1px solid var(--tm-border-subtle, rgba(0,0,0,0.05));
+    border-bottom: 1px solid var(--tm-color-border-subtle);
 }
 .tm-gantt__sidebar-workload-name {
     width: 80px;
@@ -1161,25 +1246,25 @@
 .tm-gantt__sidebar-workload-bar-wrap {
     flex: 1;
     height: 6px;
-    background: var(--tm-border-subtle, rgba(0,0,0,0.08));
+    background: var(--tm-color-border-subtle);
     border-radius: 3px;
     overflow: hidden;
 }
 .tm-gantt__sidebar-workload-bar {
     height: 100%;
-    background: var(--tm-color-primary, #6366f1);
+    background: var(--tm-color-primary);
     border-radius: 3px;
     transition: width 0.3s ease;
 }
-.tm-gantt__sidebar-workload-bar--over { background: var(--tm-color-danger, #ef4444); }
+.tm-gantt__sidebar-workload-bar--over { background: var(--tm-color-danger); }
 .tm-gantt__sidebar-workload-pct { font-size: 0.7rem; flex-shrink: 0; min-width: 28px; text-align: right; }
-.tm-gantt__sidebar-workload-pct--over { color: var(--tm-color-danger, #ef4444); font-weight: 600; }
+.tm-gantt__sidebar-workload-pct--over { color: var(--tm-color-danger); font-weight: 600; }
 /* History panel */
 .tm-gantt__sidebar-history-row {
     display: flex;
     flex-direction: column;
     padding: 5px 12px;
-    border-bottom: 1px solid var(--tm-border-subtle, rgba(0,0,0,0.05));
+    border-bottom: 1px solid var(--tm-color-border-subtle);
     font-size: 0.75rem;
     gap: 2px;
 }
@@ -1195,7 +1280,7 @@
     white-space: nowrap;
 }
 .tm-gantt__sidebar-history-date {
-    color: var(--tm-text-muted, #94a3b8);
+    color: var(--tm-text-secondary);
     font-size: 0.68rem;
 }
 
@@ -1211,7 +1296,7 @@
 .tm-gantt__board-column {
     min-width: 220px;
     flex-shrink: 0;
-    background: var(--tm-bg-subtle, #f8fafc);
+    background: var(--tm-bg-surface-secondary);
     border-radius: 10px;
     padding: 10px;
     display: flex;
@@ -1224,12 +1309,12 @@
     align-items: center;
     justify-content: space-between;
     padding-bottom: 8px;
-    border-bottom: 2px solid var(--tm-border, rgba(0,0,0,0.1));
+    border-bottom: 2px solid var(--tm-border-color);
 }
 .tm-gantt__board-column-count {
     font-size: 0.72rem;
-    color: var(--tm-text-muted, #94a3b8);
-    background: var(--tm-border, rgba(0,0,0,0.08));
+    color: var(--tm-text-secondary);
+    background: var(--tm-border-color);
     border-radius: 10px;
     padding: 1px 7px;
 }
@@ -1241,15 +1326,15 @@
     flex: 1;
 }
 .tm-gantt__board-card {
-    background: var(--tm-surface-1, #fff);
-    border: 1px solid var(--tm-border, rgba(0,0,0,0.1));
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
     transition: box-shadow 0.15s ease, transform 0.1s ease;
 }
 .tm-gantt__board-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-md);
     transform: translateY(-1px);
 }
 .tm-gantt__board-card-accent {
@@ -1269,17 +1354,17 @@
 }
 .tm-gantt__board-card-dates {
     font-size: 0.7rem;
-    color: var(--tm-text-muted, #94a3b8);
+    color: var(--tm-text-secondary);
 }
 .tm-gantt__board-card-progress {
     height: 3px;
-    background: var(--tm-border-subtle, rgba(0,0,0,0.08));
+    background: var(--tm-color-border-subtle);
     border-radius: 2px;
     overflow: hidden;
 }
 .tm-gantt__board-card-progress-fill {
     height: 100%;
-    background: var(--tm-color-primary, #6366f1);
+    background: var(--tm-color-primary);
     border-radius: 2px;
     transition: width 0.3s ease;
 }
@@ -1301,8 +1386,8 @@
     flex-direction: column;
     align-items: center;
     padding: var(--tm-space-2, 8px) 0;
-    border-right: 1px solid var(--tm-border-color, rgba(0,0,0,0.1));
-    background: var(--tm-bg-subtle, #f8fafc);
+    border-right: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
     gap: 4px;
 }
 .tm-gantt__sidebar-btn {
@@ -1315,16 +1400,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-text-secondary, #64748b);
+    color: var(--tm-text-secondary);
     transition: background 0.15s, color 0.15s;
 }
 .tm-gantt__sidebar-btn:hover {
-    background: var(--tm-color-primary-subtle, #eff6ff);
-    color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 .tm-gantt__sidebar-btn--active {
-    background: var(--tm-color-primary-subtle, #eff6ff);
-    color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 /* ── Dashboard widget grid (CSS-5.8.1) ─────────────────── */
@@ -1353,7 +1438,7 @@
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    border-bottom: 1px solid var(--tm-border-color, rgba(0,0,0,0.08));
+    border-bottom: 1px solid var(--tm-border-color);
     min-height: 40px;
 }
 .tm-gantt__people-row-header {
@@ -1365,7 +1450,7 @@
     padding: 4px 8px;
     font-size: 0.85rem;
     font-weight: 500;
-    border-right: 1px solid var(--tm-border-color, rgba(0,0,0,0.08));
+    border-right: 1px solid var(--tm-border-color);
 }
 .tm-gantt__people-row-name {
     overflow: hidden;
@@ -1382,9 +1467,9 @@
     position: absolute;
     top: 8px;
     height: 24px;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-solid);
     border-radius: 4px;
-    color: #fff;
+    color: var(--tm-color-on-primary-fixed);
     font-size: 0.75rem;
     padding: 0 6px;
     line-height: 24px;
@@ -1398,8 +1483,8 @@
     bottom: 0;
     background: repeating-linear-gradient(
         -45deg,
-        rgba(0,0,0,0.05),
-        rgba(0,0,0,0.05) 4px,
+        color-mix(in srgb, var(--tm-text-primary) 5%, transparent),
+        color-mix(in srgb, var(--tm-text-primary) 5%, transparent) 4px,
         transparent 4px,
         transparent 8px
     );
@@ -1409,8 +1494,8 @@
 
 /* ── Virtual Resource Avatar (F5.11) ───────────────────── */
 .tm-gantt__bar-avatar--virtual {
-    background: var(--tm-bg-subtle, #f8fafc) !important;
-    color: var(--tm-text-secondary, #64748b);
+    background: var(--tm-bg-surface-secondary) !important;
+    color: var(--tm-text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1436,7 +1521,7 @@
 .tm-gantt__overload-icon {
     display: inline-flex;
     align-items: center;
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
     font-size: 0.7rem;
     margin-left: 2px;
     vertical-align: middle;
