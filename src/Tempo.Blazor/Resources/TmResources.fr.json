@@ -5838,5 +5838,25 @@
   "TmGantt_CollapseTask": "Réduire {0}",
 
   "TmGantt_ColumnAssignees": "Assignés",
-  "TmGantt_ColumnPredecessor": "Prédécesseur"
+  "TmGantt_ColumnPredecessor": "Prédécesseur",
+  "TmGantt_Toolbar": "Barre d'outils du Gantt",
+  "TmGantt_GroupCreate": "Créer",
+  "TmGantt_GroupStructure": "Structure",
+  "TmGantt_GroupTime": "Temps",
+  "TmGantt_GroupPanels": "Panneaux",
+  "TmGantt_GroupData": "Données",
+  "TmGantt_GroupSettings": "Paramètres",
+  "TmGantt_AddTaskMore": "Autres façons d'ajouter une tâche",
+  "TmGantt_FilterActive": "Filtre (actifs : {0})",
+  "TmGantt_SearchTasks": "Rechercher des tâches…",
+  "TmGantt_PanelTabs": "Panneaux du Gantt",
+  "TmGantt_TaskList": "Liste des tâches",
+  "TmGantt_BulkSelectColumn": "Sélection",
+  "TmGantt_Duration": "Durée",
+  "TmGantt_Priority": "Priorité",
+  "TmGantt_DurationDays_One": "{0} jour",
+  "TmGantt_DurationDays_Many": "{0:N0} de jours",
+  "TmGantt_DurationDays_Other": "{0} jours",
+  "TmGantt_BarLabel": "{0}, {1} – {2}",
+  "TmGantt_MilestoneLabel": "{0}, {1}"
 }

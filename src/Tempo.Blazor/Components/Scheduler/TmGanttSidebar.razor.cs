@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Scheduler;
 
@@ -10,4 +11,16 @@ namespace Tempo.Blazor.Components.Scheduler;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public partial class TmGanttSidebar : TmGanttPart
 {
+    private bool TabsMode => Owner.SidebarMode == GanttSidebarMode.Tabs;
+
+    /// <summary>The drawer is the tabpanel of its tab only in tab mode; the icon rail has no tab semantics.</summary>
+    private string? PanelRole => TabsMode ? "tabpanel" : null;
+
+    private string? PanelId(GanttSidebarPanel panel) => TabsMode ? Owner.PanelDomId(panel) : null;
+
+    private string? PanelLabelledBy(GanttSidebarPanel panel) => TabsMode ? Owner.TabDomId(panel) : null;
+
+    private Dictionary<string, object> ReportsPanelAttributes => TabsMode
+        ? new() { ["role"] = "tabpanel", ["id"] = Owner.PanelDomId(GanttSidebarPanel.Reports), ["aria-labelledby"] = Owner.TabDomId(GanttSidebarPanel.Reports) }
+        : [];
 }

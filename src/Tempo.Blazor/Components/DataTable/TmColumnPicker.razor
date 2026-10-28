@@ -7,9 +7,15 @@
             @ref="_toggleRef"
             aria-haspopup="true"
             aria-expanded="@_open.ToString().ToLowerInvariant()"
+            aria-label="@(IconOnly ? Loc["TmDataTable_ColumnPicker"] : null)"
+            title="@(IconOnly ? Loc["TmDataTable_ColumnPicker"] : null)"
+            data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @onclick="ToggleOpen">
         <span class="tm-icon-columns"><TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" /></span>
-        @Loc["TmDataTable_ColumnPicker"]
+        @if (!IconOnly)
+        {
+            <span class="tm-toolbar-btn-text">@Loc["TmDataTable_ColumnPicker"]</span>
+        }
     </button>
 
     @* The panel is a TmOverlayPanel: popover="manual" puts it in the browser top layer (no
@@ -53,7 +59,19 @@
     [Parameter] public EventCallback<string> OnToggleColumn { get; set; }
     [Parameter] public EventCallback OnReset { get; set; }
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Renders the toggle as an icon only (the localized label stays its accessible name and tooltip) - for a
+    /// toolbar that shows no button text. Default <see langword="false"/> keeps the text.
+    /// </summary>
+    [Parameter] public bool IconOnly { get; set; }
+
+    /// <summary>The toolbar the picker sits in, if any: the toggle then joins the toolbar's roving tab stop (with or without its label).</summary>
+    [CascadingParameter] private Tempo.Blazor.Components.Toolbar.TmToolbar? Toolbar { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
+
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private readonly string _toggleId = $"tm-column-picker-{Guid.NewGuid():N}";

@@ -302,6 +302,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
 
         var root = cut.Find(".tm-gantt");
         root.Children.Select(c => c.ClassList.FirstOrDefault()).Should().Equal("tm-gantt__toolbar", "tm-gantt__content");
+        // (the panel tab strip and the header render nothing by default)
 
         var content = cut.Find(".tm-gantt__content");
         content.Children.Select(c => c.ClassList.First()).Should().Equal("tm-gantt__sidebar", "tm-gantt__main");
@@ -314,6 +315,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     [InlineData(typeof(TmGanttTree))]
     [InlineData(typeof(TmGanttTimeline))]
     [InlineData(typeof(TmGanttSidebar))]
+    [InlineData(typeof(TmGanttPanelTabs))]
     public void SubComponents_Are_Hidden_From_The_Editor_And_Take_Only_The_Owner(Type component)
     {
         // Razor cannot emit an internal component (it generates `public partial class`), so the contract is
@@ -342,6 +344,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     [InlineData("TmGanttTree")]
     [InlineData("TmGanttTimeline")]
     [InlineData("TmGanttSidebar")]
+    [InlineData("TmGanttPanelTabs")]
     public void Each_SubComponent_Has_Its_Own_Markup_CodeBehind_And_Stylesheet(string name)
     {
         var dir = Path.Combine(ThemeCss.RepositoryRoot().FullName, "src", "Tempo.Blazor", "Components", "Scheduler");
@@ -368,15 +371,15 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     private static readonly string[] ExpectedParameters =
     [
         "ActiveBaselineId", "ActiveTimerTaskId", "AdditionalAttributes", "AllowBulkSelect", "AllowDependencyCreation", "AutoSchedule",
-        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "Filters", "History",
+        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "Filters", "HeaderActions", "HeaderStart", "History",
         "Items", "NotificationSettings", "OnAttachmentRemoved", "OnAttachmentUpload", "OnAutoScheduled", "OnBaselineSaved",
         "OnBulkUpdate", "OnColumnsChanged", "OnCustomFieldChanged", "OnDataSorted", "OnDependencyAdded", "OnDependencyRemoved",
         "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnNewReportRequested",
         "OnNotificationTriggered", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
         "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports",
-        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowOverdueHighlight", "ShowSidebar", "ShowTaskPanel",
-        "ShowWorkloadPanel", "TestIdPrefix", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
+        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowTaskPanel",
+        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "TestIdPrefix", "Title", "ToolbarLabels", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
         "WorkloadDisplayMode", "ZoomPreset",
     ];
 }

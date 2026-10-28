@@ -535,3 +535,10 @@
     font-size: 0.75rem;
     animation: tm-timer-pulse 1.2s ease-in-out infinite;
 }
+
+/* Bars and milestones are reached from their row (tabindex -1, roving child): a visible focus ring when they hold it. */
+.tm-gantt__bar:focus-visible,
+.tm-gantt__milestone:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}

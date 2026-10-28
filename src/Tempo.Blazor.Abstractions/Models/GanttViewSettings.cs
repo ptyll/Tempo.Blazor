@@ -36,4 +36,7 @@ public class GanttViewSettings
     /// <c>data-theme</c> on the Gantt root.
     /// </summary>
     public GanttTheme Theme { get; set; } = GanttTheme.Auto;
+
+    /// <summary>Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false.</summary>
+    public bool WbsInTitle { get; set; }
 }

@@ -17,6 +17,9 @@ public partial class TmGanttReportsPanel
     /// </summary>
     [Parameter] public EventCallback OnNewReportRequested { get; set; }
 
+    /// <summary>Extra attributes for the panel root (the tab strip wires <c>role</c>, <c>id</c> and <c>aria-labelledby</c> through it).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     private async Task RunReportAsync(GanttReport report)
         => await OnReportRun.InvokeAsync(report);
 }

@@ -9,6 +9,17 @@
     display: flex;
     flex-direction: column;
     background: var(--tm-bg-surface);
+    /* Past 70% of the main area (a wide column set, custom fields) the grid scrolls instead of clipping. */
+    max-width: 70%;
+    overflow-x: auto;
+}
+
+/* The treegrid wrapper is a layout pass-through: header and body are its flex children, exactly as before. */
+.tm-gantt__tree-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .tm-gantt__tree-header {
@@ -63,6 +74,12 @@
     background: var(--tm-color-surface-hover);
 }
 
+/* A row is a roving tab stop (treegrid): its focus ring is inset so the scroller does not clip it. */
+.tm-gantt__tree-row:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
+}
+
 .tm-gantt__tree-row--selected {
     background: var(--tm-color-primary-subtle);
 }
@@ -79,7 +96,11 @@
     text-overflow: ellipsis;
 }
 
+/* The header cell shares the row cell's min-width, or a cramped grid collapses the header title to nothing and every
+   other header slides left of its column. */
+.tm-gantt__tree-header-cell--title,
 .tm-gantt__tree-cell--title {
+    flex: 1 0 var(--tm-gantt-title-min, 12rem);
     min-width: 150px;
 }
 
@@ -93,6 +114,45 @@
 .tm-gantt__tree-cell--status {
     flex: 0 0 90px;
     justify-content: center;
+}
+
+/* Priority column: glyph + text, never colour alone (the glyph shape differs per level). */
+.tm-gantt__tree-header-cell--priority,
+.tm-gantt__tree-cell--priority {
+    flex: 0 0 90px;
+}
+
+.tm-gantt__tree-cell--priority {
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__priority-glyph {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.tm-gantt__priority-glyph--highest { color: var(--tm-priority-highest); }
+
+.tm-gantt__priority-glyph--high { color: var(--tm-priority-high); }
+
+.tm-gantt__priority-glyph--medium { color: var(--tm-priority-medium); }
+
+.tm-gantt__priority-glyph--low { color: var(--tm-priority-low); }
+
+.tm-gantt__priority-glyph--lowest { color: var(--tm-priority-lowest); }
+
+.tm-gantt__priority-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* WBS as a prefix of the title (ViewSettings.WbsInTitle). */
+.tm-gantt__task-wbs {
+    margin-inline-end: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
 }
 
 /* ─── Drag handle ──────────────────────────────────────────────── */
@@ -264,14 +324,6 @@
 
 .tm-gantt__tree-row--overdue {
     background: var(--tm-color-danger-subtle) !important;
-}
-
-/* ─── Phase 2: Col toggle visibility ───────────────────────────── */
-
-.tm-gantt__col-toggle {
-    margin-left: 4px;
-    cursor: pointer;
-    accent-color: var(--tm-color-primary);
 }
 
 /* ─── Phase 3: Deviation badge ───────────────────────────────────── */

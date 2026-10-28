@@ -493,28 +493,66 @@ internal static class TempoNativeRendererDefinitions
         var taskCount = el.Props.GetInt("taskCount", 5);
         var period = el.Props.GetString("period", "week");
         var showProgressLabel = el.Props.GetBool("showProgressLabel", false);
+        var toolbarLabels = el.Props.GetBool("toolbarLabels", false);
+        var tabs = el.Props.GetString("sidebarMode", "rail") == "tabs";
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
+
+        // Redesign (desktop): an optional text tab strip (SidebarMode=Tabs) over a grouped toolbar row;
+        // with ToolbarLabels the buttons are pills with text, otherwise icon squares.
+        var top = 0.0;
+        if (tabs)
+        {
+            var tabNames = new[] { "Tasks", "Workload", "History", "Notifications", "Reports" };
+            for (var i = 0; i < tabNames.Length; i++)
+            {
+                var tx0 = 12 + i * 64;
+                sb.Append(Text(tabNames[i], tx0, 12, 8, i == 0 ? Accent : ColorMuted));
+            }
+
+            sb.Append(Rect(8, 22, 40, 2, Accent, "none", 1));
+            sb.Append(HLine(0, el.W, 24));
+            top = 24;
+        }
+
+        var toolbarH = 24.0;
+        sb.Append(Rect(8, top + 4, toolbarLabels ? 48 : 20, 16, Accent, "none", 3));
+        if (toolbarLabels)
+            sb.Append(Text("+ Add task", 12, top + 12, 7, "#ffffff"));
+        var tbX = toolbarLabels ? 64.0 : 32.0;
+        var tbLabels = new[] { "Expand", "Collapse", "Day", "Week", "Month", "Filter", "Export" };
+        for (var i = 0; i < tbLabels.Length && tbX < el.W - 40; i++)
+        {
+            var tbW = toolbarLabels ? 8 + tbLabels[i].Length * 4.5 : 16;
+            sb.Append(Rect(tbX, top + 4, tbW, 16, Fill, Border, 3));
+            if (toolbarLabels)
+                sb.Append(Text(tbLabels[i], tbX + tbW / 2, top + 12, 7, ColorText, "middle"));
+            tbX += tbW + 6 + (i == 1 || i == 4 ? 6 : 0);
+        }
+
+        sb.Append(HLine(0, el.W, top + toolbarH));
+        top += toolbarH;
+
         var listW = el.W * 0.3;
         var chartW = el.W - listW;
         var headerH = 28.0;
-        var rowH = (el.H - headerH) / taskCount;
-        sb.Append(Rect(0, 0, el.W, headerH, FillDark, "none", 4));
-        sb.Append(HLine(0, el.W, headerH));
-        sb.Append(Text("Task", 12, headerH / 2, 10, ColorMuted));
+        var rowH = (el.H - top - headerH) / taskCount;
+        sb.Append(Rect(0, top, el.W, headerH, FillDark, "none", 4));
+        sb.Append(HLine(0, el.W, top + headerH));
+        sb.Append(Text("Task", 12, top + headerH / 2, 10, ColorMuted));
         var ticks = period == "week" ? 7 : period == "month" ? 4 : 12;
         for (var t = 0; t < ticks; t++)
         {
             var tx = listW + t * chartW / ticks;
-            sb.Append(VLine(tx, 0, el.H, Border));
-            sb.Append(Text($"W{t + 1}", tx + chartW / ticks / 2, headerH / 2, 8, ColorMuted, "middle"));
+            sb.Append(VLine(tx, top, el.H, Border));
+            sb.Append(Text($"W{t + 1}", tx + chartW / ticks / 2, top + headerH / 2, 8, ColorMuted, "middle"));
         }
 
-        sb.Append(VLine(listW, 0, el.H, BorderStrong));
+        sb.Append(VLine(listW, top, el.H, BorderStrong));
         var barConfigs = new[] { (0.0, 0.4), (0.1, 0.55), (0.3, 0.3), (0.5, 0.4), (0.6, 0.35) };
         for (var t = 0; t < taskCount; t++)
         {
-            var ry = headerH + t * rowH;
+            var ry = top + headerH + t * rowH;
             if (t > 0)
                 sb.Append(HLine(0, el.W, ry));
             sb.Append(Text($"Task {t + 1}", 12, ry + rowH / 2, 10, ColorText));
@@ -538,9 +576,9 @@ internal static class TempoNativeRendererDefinitions
 
         // Today: a solid line with a pill in the header, as in the redesigned chart.
         var todayX = listW + chartW * 0.38;
-        sb.Append(VLine(todayX, headerH, el.H, "#ef4444"));
-        sb.Append(Rect(todayX - 14, headerH - 8, 28, 16, "#ef4444", "none", 8));
-        sb.Append(Text("Today", todayX, headerH, 7, "#ffffff", "middle", "500"));
+        sb.Append(VLine(todayX, top + headerH, el.H, "#ef4444"));
+        sb.Append(Rect(todayX - 14, top + headerH - 8, 28, 16, "#ef4444", "none", 8));
+        sb.Append(Text("Today", todayX, top + headerH, 7, "#ffffff", "middle", "500"));
 
         Svg(b, sb.ToString());
     }

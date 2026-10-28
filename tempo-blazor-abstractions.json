@@ -15425,6 +15425,16 @@
       ]
     },
     {
+      "itemName": "GanttSidebarMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt offers its panels: the vertical icon Rail (default) or a horizontal Tabs strip with text labels.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSidebarMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttSidebarPanel",
       "kind": "Enum",
       "category": "Models",
@@ -15614,6 +15624,12 @@
           "kind": "Property",
           "type": "GanttViewDensity",
           "description": "Row height density. Default: Comfortable (40 px)."
+        },
+        {
+          "name": "WbsInTitle",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
         }
       ]
     },
@@ -37376,11 +37392,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1494,
-    "manualItemCount": 1494,
-    "generatedItemCount": 1477,
+    "itemCount": 1495,
+    "manualItemCount": 1495,
+    "generatedItemCount": 1478,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1477
+    "publicApiTypeCount": 1478
   }
 }

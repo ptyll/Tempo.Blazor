@@ -8,6 +8,24 @@
   ],
   "parameters": [
     {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon (an IconNames value) shown before the text of the primary button."
+    },
+    {
+      "name": "ToggleAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the chevron button that opens the menu. When null (default) the attribute is omitted; set it so the icon-only toggle has a name."
+    },
+    {
+      "name": "PrimaryAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional HTML attributes for the primary action button (a data-testid, an aria-label); AdditionalAttributes still lands on the root element."
+    },
+    {
       "name": "Text",
       "type": "string",
       "isRequired": true,

@@ -8,6 +8,35 @@
 
 <div class="tm-gantt @GetThemeClass() @Class" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
 
+    @if (HasHeader)
+    {
+        <div class="tm-gantt__header" data-testid="@TestId("gantt-header")">
+            @if (!string.IsNullOrEmpty(Title) || !string.IsNullOrEmpty(Subtitle))
+            {
+                <div class="tm-gantt__header-titles">
+                    @if (!string.IsNullOrEmpty(Title))
+                    {
+                        <h2 class="tm-gantt__title">@Title</h2>
+                    }
+                    @if (!string.IsNullOrEmpty(Subtitle))
+                    {
+                        <p class="tm-gantt__subtitle">@Subtitle</p>
+                    }
+                </div>
+            }
+            @if (HeaderStart is not null)
+            {
+                <div class="tm-gantt__header-start">@HeaderStart</div>
+            }
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-gantt__header-actions">@HeaderActions</div>
+            }
+        </div>
+    }
+
+    <TmGanttPanelTabs Owner="this" />
+
     <TmGanttToolbar Owner="this" />
 
     <!-- Filter Panel -->
@@ -202,7 +231,10 @@
     {
 
     <!-- Main area: Tree + Timeline (also List view: tree only) -->
-    <div class="tm-gantt__main @(View == GanttView.List ? "tm-gantt__main--list-view" : "")">
+    <div class="tm-gantt__main @(View == GanttView.List ? "tm-gantt__main--list-view" : "")"
+         role="@(SidebarMode == GanttSidebarMode.Tabs ? "tabpanel" : null)"
+         id="@(SidebarMode == GanttSidebarMode.Tabs ? PanelDomId(GanttSidebarPanel.Tasks) : null)"
+         aria-labelledby="@(SidebarMode == GanttSidebarMode.Tabs ? TabDomId(GanttSidebarPanel.Tasks) : null)">
         <TmGanttTree Owner="this" />
 
         <!-- Right: Timeline (hidden in List view) -->

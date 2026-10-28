@@ -3013,6 +3013,12 @@
           "description": "Disables both the primary and dropdown buttons."
         },
         {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional icon (an IconNames value) shown before the text of the primary button."
+        },
+        {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
@@ -3032,6 +3038,12 @@
           "description": "Fires when the primary button is clicked."
         },
         {
+          "name": "PrimaryAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional HTML attributes for the primary action button (a data-testid, an aria-label); AdditionalAttributes still lands on the root element."
+        },
+        {
           "name": "SheetTitle",
           "type": "string?",
           "isRequired": false,
@@ -3049,6 +3061,12 @@
           "isRequired": true,
           "description": "Text label on the primary button.",
           "editorRequired": true
+        },
+        {
+          "name": "ToggleAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the chevron button that opens the menu. When null (default) the attribute is omitted; set it so the icon-only toggle has a name."
         },
         {
           "name": "Variant",
@@ -9287,7 +9305,8 @@
         {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS class(es)."
         },
         {
           "name": "Columns",
@@ -9299,6 +9318,13 @@
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "IconOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the toggle as an icon only (the localized label stays its accessible name and tooltip) - for a toolbar that shows no button text.",
+          "default": "false"
         },
         {
           "name": "OnReset",
@@ -23182,6 +23208,18 @@
           "description": "Active filter set. Empty = show all tasks."
         },
         {
+          "name": "HeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host actions at the end of the header row (Share, Save…). The Gantt has no built-in header actions."
+        },
+        {
+          "name": "HeaderStart",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host content at the start of the header row, after the Title (a project switcher, a breadcrumb)."
+        },
+        {
           "name": "History",
           "type": "IReadOnlyList<TmActivityEntry>",
           "isRequired": false,
@@ -23420,10 +23458,24 @@
           "description": "When true, highlights critical-path tasks with a distinct bar color."
         },
         {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Set false to hide the header row even when its slots are filled. With no slot set there is no header (today's look)."
+        },
+        {
           "name": "ShowOverdueHighlight",
           "type": "bool",
           "isRequired": false,
           "description": "When true, overdue tasks (End in past, not done) are highlighted."
+        },
+        {
+          "name": "ShowQuickSearch",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, the toolbar ends with a \"Search tasks…\" box that writes a Title/Contains entry into Filters (raising OnFiltersChanged); emptying the box removes it.",
+          "default": "false"
         },
         {
           "name": "ShowSidebar",
@@ -23442,6 +23494,32 @@
           "type": "bool",
           "isRequired": false,
           "description": "When true, shows the workload panel below the Gantt timeline."
+        },
+        {
+          "name": "SidebarMode",
+          "type": "GanttSidebarMode",
+          "isRequired": false,
+          "default": "GanttSidebarMode.Rail",
+          "description": "How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon Rail (default) or a horizontal Tabs strip with text labels (ARIA tabs). ShowSidebar = false hides either."
+        },
+        {
+          "name": "Subtitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Secondary header line under the Title."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Header title text. The header renders only when at least one of Title, Subtitle, HeaderStart or HeaderActions is set."
+        },
+        {
+          "name": "ToolbarLabels",
+          "type": "ToolbarLabels",
+          "isRequired": false,
+          "default": "ToolbarLabels.Icons",
+          "description": "How the toolbar buttons show their text. The default Icons keeps the icon-only row (the text stays the accessible name and the tooltip); IconsWithText shows every label; Auto shows them except on a toolbar narrower than 640px. Maps onto TmToolbar.Labels."
         },
         {
           "name": "View",
@@ -23683,6 +23761,27 @@
       ]
     },
     {
+      "itemName": "TmGanttPanelTabs",
+      "kind": "Component",
+      "category": "Scheduler",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "Internal part of TmGantt (hidden from the editor): the horizontal text tab strip (SidebarMode = Tabs) that selects the Tasks / Workload / History / Notifications / Reports panel. Place TmGantt, not this component.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPanelTabs.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Scheduler"
+      ],
+      "parameters": [
+        {
+          "name": "Owner",
+          "type": "TmGantt",
+          "isRequired": false,
+          "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+        }
+      ]
+    },
+    {
       "itemName": "TmGanttPortfolio",
       "kind": "Component",
       "category": "Scheduler",
@@ -23919,7 +24018,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Internal part of TmGantt (hidden from the editor): the command row - add / expand / collapse, the Day | Week | Month segment, zoom controls, panel toggles and the view-settings menu. Place TmGantt, not this component.",
+      "description": "Internal part of TmGantt (hidden from the editor): the grouped command row (a core TmToolbar: Create | Structure | Time | Panels | Data | Settings) with the Add task split button, the Day | Week | Month segment, zoom controls, panel toggles, the column menu, the view-settings menu and the optional quick search. Place TmGantt, not this component.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttToolbar.razor",
       "documentationStatus": "merged",
@@ -27605,6 +27704,12 @@
       ],
       "parameters": [
         {
+          "name": "Badge",
+          "type": "string?",
+          "isRequired": false,
+          "description": "A short count or marker shown as a small pill on the button (e.g. the number of active filters). Decorative (aria-hidden): put the meaning in Tooltip, the accessible name of an icon button. Null or empty renders nothing."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -29521,11 +29626,11 @@
     }
   ],
   "summary": {
-    "itemCount": 396,
-    "manualItemCount": 396,
-    "generatedItemCount": 388,
+    "itemCount": 397,
+    "manualItemCount": 397,
+    "generatedItemCount": 389,
     "generatedOnlyItemCount": 0,
-    "componentCount": 211,
+    "componentCount": 212,
     "publicApiTypeCount": 177
   }
 }

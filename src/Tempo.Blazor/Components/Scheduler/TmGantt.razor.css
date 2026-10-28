@@ -12,6 +12,8 @@
     color: var(--tm-text-primary);
     font-family: var(--tm-font-sans);
     overflow: hidden;
+    /* Component knob: the minimum width of the title column (header and cells share it). */
+    --tm-gantt-title-min: 12rem;
 }
 
 /* ─── Theme aliases ────────────────────────────────────────────── */
@@ -26,6 +28,49 @@
 
 .tm-gantt--theme-light {
     color-scheme: light;
+}
+
+/* ─── Host header (Title / Subtitle / HeaderStart / HeaderActions) ─── */
+
+.tm-gantt__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
+.tm-gantt__header-titles {
+    min-width: 0;
+}
+
+.tm-gantt__title {
+    margin: 0;
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__subtitle {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-gantt__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-inline-start: auto;
 }
 
 /* ─── Main layout ──────────────────────────────────────────────── */

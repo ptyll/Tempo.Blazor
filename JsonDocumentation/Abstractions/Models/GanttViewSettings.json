@@ -60,6 +60,12 @@
       "kind": "Property",
       "type": "GanttViewDensity",
       "description": "Row height density. Default: Comfortable (40 px)."
+    },
+    {
+      "name": "WbsInTitle",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
     }
   ],
   "itemName": "GanttViewSettings"

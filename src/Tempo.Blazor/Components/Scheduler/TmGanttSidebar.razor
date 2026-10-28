@@ -4,7 +4,7 @@
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Abstractions.WorkItems
 
-@if (Owner.ShowSidebar)
+@if (Owner.ShowSidebar && Owner.SidebarMode == GanttSidebarMode.Rail)
 {
     <nav class="tm-gantt__sidebar" data-testid="@TestId("gantt-sidebar")">
         <button type="button" class="tm-gantt__sidebar-btn @(Owner._activeSidebarPanel == GanttSidebarPanel.Tasks ? "tm-gantt__sidebar-btn--active" : "")"
@@ -54,12 +54,14 @@
 @if (Owner._activeSidebarPanel == GanttSidebarPanel.Reports)
 {
     <TmGanttReportsPanel Reports="Owner.Reports"
+                         @attributes="ReportsPanelAttributes"
                          OnReportRun="Owner.OnReportRun"
                          OnNewReportRequested="Owner.OnNewReportRequested" />
 }
 else if (Owner._activeSidebarPanel == GanttSidebarPanel.Tasks)
 {
-    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-tasks")">
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-tasks")"
+         role="@PanelRole" id="@PanelId(GanttSidebarPanel.Tasks)" aria-labelledby="@PanelLabelledBy(GanttSidebarPanel.Tasks)">
         <div class="tm-gantt__sidebar-drawer-header">
             <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarTasks"]</span>
         </div>
@@ -77,7 +79,8 @@ else if (Owner._activeSidebarPanel == GanttSidebarPanel.Tasks)
 }
 else if (Owner._activeSidebarPanel == GanttSidebarPanel.Workload)
 {
-    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-workload")">
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-workload")"
+         role="@PanelRole" id="@PanelId(GanttSidebarPanel.Workload)" aria-labelledby="@PanelLabelledBy(GanttSidebarPanel.Workload)">
         <div class="tm-gantt__sidebar-drawer-header">
             <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarWorkload"]</span>
         </div>
@@ -107,7 +110,8 @@ else if (Owner._activeSidebarPanel == GanttSidebarPanel.Workload)
 }
 else if (Owner._activeSidebarPanel == GanttSidebarPanel.History)
 {
-    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-history")">
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-history")"
+         role="@PanelRole" id="@PanelId(GanttSidebarPanel.History)" aria-labelledby="@PanelLabelledBy(GanttSidebarPanel.History)">
         <div class="tm-gantt__sidebar-drawer-header">
             <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarHistory"]</span>
         </div>
@@ -129,7 +133,8 @@ else if (Owner._activeSidebarPanel == GanttSidebarPanel.History)
 }
 else if (Owner._activeSidebarPanel == GanttSidebarPanel.Notifications && Owner.NotificationSettings is not null)
 {
-    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-notifications")">
+    <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-notifications")"
+         role="@PanelRole" id="@PanelId(GanttSidebarPanel.Notifications)" aria-labelledby="@PanelLabelledBy(GanttSidebarPanel.Notifications)">
         <div class="tm-gantt__sidebar-drawer-header">
             <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarNotifications"]</span>
         </div>

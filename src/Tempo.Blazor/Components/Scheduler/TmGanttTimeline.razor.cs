@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.WorkItems;
 
@@ -43,7 +45,8 @@ public partial class TmGanttTimeline : TmGanttPart
         int RowHeight,
         DateTime Today,
         string? Prefix,
-        string Culture);
+        string Culture,
+        int FocusSeq);
 
     /// <inheritdoc />
     protected override object? RenderState => new TimelineState(
@@ -52,7 +55,44 @@ public partial class TmGanttTimeline : TmGanttPart
         Owner._selectedDependencyId, Owner.ActiveTimerTaskId, Owner.ShowOverdueHighlight, Owner.ShowCriticalPath,
         Owner.ActiveBaselineId, Owner.AllowDependencyCreation, Owner.GetEffectiveZoomPreset(),
         Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ViewSettings.ShowProgressLabel,
-        Owner.ViewSettings.TaskNameLocation, Owner.RowHeight, Owner._today, Owner.TestIdPrefix, Loc.Culture.Name);
+        Owner.ViewSettings.TaskNameLocation, Owner.RowHeight, Owner._today, Owner.TestIdPrefix, Loc.Culture.Name,
+        Owner.FocusRequest?.Seq ?? 0);
+
+    private readonly Dictionary<string, ElementReference> _barRefs = [];
+    private int _handledFocusSeq;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Element references of bars that are no longer drawn (collapse, filter) would otherwise pile up.
+        var barIds = Owner._taskBars.Select(b => b.Task.Id).ToHashSet();
+        foreach (var id in _barRefs.Keys.Where(id => !barIds.Contains(id)).ToList()) _barRefs.Remove(id);
+
+        // ArrowRight on a leaf row asks for the focus of its bar; the bar is a roving child (tabindex -1), so it
+        // is reached by the request, never by Tab.
+        var request = Owner.FocusRequest;
+        if (request is not { Target: GanttFocusTarget.Bar } bar || bar.Seq == _handledFocusSeq) return;
+        _handledFocusSeq = bar.Seq;
+        if (_barRefs.TryGetValue(bar.TaskId, out var element))
+        {
+            try
+            {
+                await element.FocusAsync(preventScroll: false);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+
+    /// <summary>Accessible name of a bar: the task and its date range.</summary>
+    private string BarLabel(TaskBarInfo bar) => Loc["TmGantt_BarLabel", bar.Task.Title,
+        bar.Task.Start.ToString("d", Loc.Culture), bar.Task.End.ToString("d", Loc.Culture)];
+
+    private string MilestoneLabel(TaskBarInfo bar) => Loc["TmGantt_MilestoneLabel", bar.Task.Title, bar.Task.End.ToString("d", Loc.Culture)];
 
     private string GetBarClass(TaskBarInfo bar)
     {

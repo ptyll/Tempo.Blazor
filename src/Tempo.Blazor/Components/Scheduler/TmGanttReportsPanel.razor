@@ -2,7 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
 
-<div class="tm-gantt-reports-panel" data-testid="@TestId("gantt-reports-panel")">
+<div class="tm-gantt-reports-panel" data-testid="@TestId("gantt-reports-panel")" @attributes="AdditionalAttributes">
     <div class="tm-gantt-reports-panel__header">
         <span class="tm-gantt-reports-panel__title">@Loc["TmGantt_Reports"]</span>
         @if (OnNewReportRequested.HasDelegate)

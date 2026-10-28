@@ -5806,5 +5806,24 @@
   "TmGantt_CollapseTask": "Collapse {0}",
 
   "TmGantt_ColumnAssignees": "Assignees",
-  "TmGantt_ColumnPredecessor": "Predecessor"
+  "TmGantt_ColumnPredecessor": "Predecessor",
+  "TmGantt_Toolbar": "Gantt toolbar",
+  "TmGantt_GroupCreate": "Create",
+  "TmGantt_GroupStructure": "Structure",
+  "TmGantt_GroupTime": "Time",
+  "TmGantt_GroupPanels": "Panels",
+  "TmGantt_GroupData": "Data",
+  "TmGantt_GroupSettings": "Settings",
+  "TmGantt_AddTaskMore": "More ways to add a task",
+  "TmGantt_FilterActive": "Filter ({0} active)",
+  "TmGantt_SearchTasks": "Search tasks…",
+  "TmGantt_PanelTabs": "Gantt panels",
+  "TmGantt_TaskList": "Task list",
+  "TmGantt_BulkSelectColumn": "Select",
+  "TmGantt_Duration": "Duration",
+  "TmGantt_Priority": "Priority",
+  "TmGantt_DurationDays_One": "{0} day",
+  "TmGantt_DurationDays_Other": "{0} days",
+  "TmGantt_BarLabel": "{0}, {1} – {2}",
+  "TmGantt_MilestoneLabel": "{0}, {1}"
 }

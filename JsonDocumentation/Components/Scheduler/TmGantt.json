@@ -12,6 +12,58 @@
   ],
   "parameters": [
     {
+      "name": "ToolbarLabels",
+      "type": "ToolbarLabels",
+      "isRequired": false,
+      "default": "ToolbarLabels.Icons",
+      "description": "How the toolbar buttons show their text. The default Icons keeps the icon-only row (the text stays the accessible name and the tooltip); IconsWithText shows every label; Auto shows them except on a toolbar narrower than 640px. Maps onto TmToolbar.Labels."
+    },
+    {
+      "name": "ShowQuickSearch",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the toolbar ends with a \"Search tasks…\" box that writes a Title/Contains entry into Filters (raising OnFiltersChanged); emptying the box removes it."
+    },
+    {
+      "name": "SidebarMode",
+      "type": "GanttSidebarMode",
+      "isRequired": false,
+      "default": "GanttSidebarMode.Rail",
+      "description": "How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon Rail (default) or a horizontal Tabs strip with text labels (ARIA tabs). ShowSidebar = false hides either."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content at the start of the header row, after the Title (a project switcher, a breadcrumb)."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions at the end of the header row (Share, Save…). The Gantt has no built-in header actions."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Header title text. The header renders only when at least one of Title, Subtitle, HeaderStart or HeaderActions is set."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Secondary header line under the Title."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Set false to hide the header row even when its slots are filled. With no slot set there is no header (today's look)."
+    },
+    {
       "name": "Items",
       "type": "IReadOnlyList<TmWorkItem>",
       "isRequired": false,

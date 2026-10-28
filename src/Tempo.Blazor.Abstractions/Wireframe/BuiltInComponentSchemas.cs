@@ -2588,6 +2588,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("period",    "Period",     PropType.Enum,"week", cat: "Appearance",
                     opts: ["day","week","month","quarter"]),
                 P("showProgressLabel", "Show Progress Label", PropType.Bool, false, cat: "Appearance"),
+                P("toolbarLabels", "Toolbar Labels", PropType.Bool, false, cat: "Appearance"),
+                P("sidebarMode", "Sidebar Mode", PropType.Enum, "rail", cat: "Appearance",
+                    opts: ["rail","tabs"]),
             ]
         };
 

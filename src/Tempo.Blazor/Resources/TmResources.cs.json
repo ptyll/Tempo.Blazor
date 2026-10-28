@@ -5870,5 +5870,26 @@
   "TmGantt_CollapseTask": "Sbalit {0}",
 
   "TmGantt_ColumnAssignees": "Řešitelé",
-  "TmGantt_ColumnPredecessor": "Předchůdce"
+  "TmGantt_ColumnPredecessor": "Předchůdce",
+  "TmGantt_Toolbar": "Nástrojová lišta Ganttova diagramu",
+  "TmGantt_GroupCreate": "Vytvořit",
+  "TmGantt_GroupStructure": "Struktura",
+  "TmGantt_GroupTime": "Čas",
+  "TmGantt_GroupPanels": "Panely",
+  "TmGantt_GroupData": "Data",
+  "TmGantt_GroupSettings": "Nastavení",
+  "TmGantt_AddTaskMore": "Další způsoby přidání úkolu",
+  "TmGantt_FilterActive": "Filtr (aktivní: {0})",
+  "TmGantt_SearchTasks": "Hledat úkoly…",
+  "TmGantt_PanelTabs": "Panely Ganttova diagramu",
+  "TmGantt_TaskList": "Seznam úkolů",
+  "TmGantt_BulkSelectColumn": "Výběr",
+  "TmGantt_Duration": "Trvání",
+  "TmGantt_Priority": "Priorita",
+  "TmGantt_DurationDays_One": "{0} den",
+  "TmGantt_DurationDays_Few": "{0} dny",
+  "TmGantt_DurationDays_Many": "{0} dne",
+  "TmGantt_DurationDays_Other": "{0} dnů",
+  "TmGantt_BarLabel": "{0}, {1} – {2}",
+  "TmGantt_MilestoneLabel": "{0}, {1}"
 }

@@ -112,23 +112,36 @@
             @foreach (var bar in Owner._taskBars)
             {
                 <div class="tm-gantt__task-row"
+                     @key="bar.Task.Id"
                      style="top: @(F(bar.Top))px; height: @(Owner.RowHeight)px">
                     @if (bar.Task.IsMilestone)
                     {
                         <div class="tm-gantt__milestone"
+                             @key="bar.Task.Id"
+                             @ref="_barRefs[bar.Task.Id]"
+                             role="button" tabindex="-1"
+                             aria-label="@MilestoneLabel(bar)"
                              style="left: @(F(bar.Left - 6))px"
                              title="@bar.Task.Title"
                              @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
                              @onmousedown:stopPropagation="true">
                         </div>
                     }
                     else
                     {
                         <div class="tm-gantt__bar @GetBarClass(bar)"
+                             @key="bar.Task.Id"
+                             @ref="_barRefs[bar.Task.Id]"
+                             role="button" tabindex="-1"
+                             aria-label="@BarLabel(bar)"
                              data-testid="@TestId($"task-bar-{bar.Task.Id}")"
                              style="left: @(F(bar.Left))px; width: @(F(bar.Width))px; @GetBarColorStyle(bar)"
                              title="@bar.Task.Title (@bar.Task.PercentComplete%)"
                              @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
                              @onmousedown:stopPropagation="true">
                             <div class="tm-gantt__bar-progress" style="width: @(bar.Task.PercentComplete)%"></div>
                             @if (ShouldRenderBarLabel(bar))

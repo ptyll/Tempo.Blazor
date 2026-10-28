@@ -8,6 +8,8 @@ using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.DataTable;
+using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
@@ -39,6 +41,7 @@ public partial class TmGantt : IDisposable
     internal Dictionary<string, (double Left, double Width)> _baselinePositions = [];
     internal bool _filterPanelOpen;
     private IReadOnlyList<GanttFilter> _activeFilters = [];
+    private IReadOnlyList<GanttFilter>? _filtersParam;
 
     // Phase 4 state
     private bool _exportDialogOpen;
@@ -73,6 +76,8 @@ public partial class TmGantt : IDisposable
         new() { Key = GanttColumnKey.Start,    Visible = true,  Order = 3, Width = 90 },
         new() { Key = GanttColumnKey.End,      Visible = true,  Order = 4, Width = 90 },
         new() { Key = GanttColumnKey.Progress, Visible = true,  Order = 5, Width = 80 },
+        new() { Key = GanttColumnKey.Duration, Visible = false, Order = 6, Width = 80 },
+        new() { Key = GanttColumnKey.Priority, Visible = false, Order = 7, Width = 90 },
     };
 
     internal bool _isPanning;
@@ -269,6 +274,42 @@ public partial class TmGantt : IDisposable
     /// <summary>When true (default), the left sidebar navigation is visible.</summary>
     [Parameter] public bool ShowSidebar { get; set; } = true;
 
+    /// <summary>
+    /// How the toolbar buttons show their text. The default <see cref="ToolbarLabels.Icons"/> keeps today's
+    /// icon-only row (the text stays the accessible name and the tooltip); <see cref="ToolbarLabels.IconsWithText"/>
+    /// shows every label; <see cref="ToolbarLabels.Auto"/> shows them except on a toolbar narrower than 640px.
+    /// Mapped straight onto the core <c>TmToolbar.Labels</c>.
+    /// </summary>
+    [Parameter] public ToolbarLabels ToolbarLabels { get; set; } = ToolbarLabels.Icons;
+
+    /// <summary>
+    /// When true, the toolbar ends with a "Search tasks…" box that writes a <c>Title</c> / <c>Contains</c> entry
+    /// into <see cref="Filters"/> (raising <see cref="OnFiltersChanged"/>); emptying the box removes it. Default false.
+    /// </summary>
+    [Parameter] public bool ShowQuickSearch { get; set; }
+
+    /// <summary>
+    /// How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon
+    /// <see cref="GanttSidebarMode.Rail"/> (default) or a horizontal <see cref="GanttSidebarMode.Tabs"/> strip with
+    /// text labels. <see cref="ShowSidebar"/> = false hides either.
+    /// </summary>
+    [Parameter] public GanttSidebarMode SidebarMode { get; set; } = GanttSidebarMode.Rail;
+
+    /// <summary>Host content at the start of the header row, after the <see cref="Title"/> (a project switcher, a breadcrumb).</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host actions at the end of the header row (Share, Save…). The Gantt has no built-in header actions.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>Header title text. The header renders only when at least one of Title, Subtitle, HeaderStart or HeaderActions is set.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Secondary header line under the <see cref="Title"/>.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Set false to hide the header row even when its slots are filled. Default true (no header unless a slot is set).</summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
     /// <summary>Report definitions shown in the Reports sidebar panel.</summary>
     [Parameter] public IReadOnlyList<GanttReport> Reports { get; set; } = [];
 
@@ -396,7 +437,15 @@ public partial class TmGantt : IDisposable
     private void ApplyState()
     {
         _treeRoots = GanttHelper.BuildTree(Data).ToList();
-        _activeFilters = Filters;
+        if (!ReferenceEquals(Filters, _filtersParam))
+        {
+            // Only a new host-supplied set replaces the internal one (a re-render with the same
+            // reference must not discard filters the user applied inside the component).
+            _activeFilters = Filters;
+            SyncQuickSearchWithFilters();
+        }
+
+        _filtersParam = Filters;
 
         if (AutoSchedule && Data.Count > 0 && Dependencies.Count > 0)
         {
@@ -615,6 +664,23 @@ public partial class TmGantt : IDisposable
     internal void ToggleSidebarPanel(GanttSidebarPanel panel)
         => _activeSidebarPanel = _activeSidebarPanel == panel ? null : panel;
 
+    /// <summary>Tab strip (<see cref="GanttSidebarMode.Tabs"/>): select a panel; the Tasks tab is the Gantt itself, so it clears the drawer.</summary>
+    internal void SelectSidebarTab(GanttSidebarPanel panel)
+        => _activeSidebarPanel = panel == GanttSidebarPanel.Tasks ? null : panel;
+
+    /// <summary>Stable per-instance token for element ids that must not collide between Gantts on one page.</summary>
+    internal string InstanceId { get; } = Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>DOM id of a panel tab (<see cref="GanttSidebarMode.Tabs"/>).</summary>
+    internal string TabDomId(GanttSidebarPanel panel) => $"tm-gantt-{InstanceId}-tab-{panel.ToString().ToLowerInvariant()}";
+
+    /// <summary>DOM id of the panel a tab controls; the Tasks panel is the main tree + timeline area.</summary>
+    internal string PanelDomId(GanttSidebarPanel panel) => $"tm-gantt-{InstanceId}-panel-{panel.ToString().ToLowerInvariant()}";
+
+    /// <summary>True when the header row renders: not switched off and at least one of its slots is filled.</summary>
+    private bool HasHeader => ShowHeader
+        && (!string.IsNullOrEmpty(Title) || !string.IsNullOrEmpty(Subtitle) || HeaderStart is not null || HeaderActions is not null);
+
     internal void UpdateNotification(Action<TmNotificationPreferences> apply)
     {
         if (NotificationSettings is null) return;
@@ -804,7 +870,117 @@ public partial class TmGantt : IDisposable
     internal async Task SelectTaskAsync(TmWorkItem task)
     {
         SelectedTask = task;
+        _focusedRowId = task.Id;
         await OnTaskSelected.InvokeAsync(task);
+    }
+
+    /// <summary>Keyboard / "open" activation: selects the task and shows the task panel.</summary>
+    internal async Task ActivateTaskAsync(TmWorkItem task)
+    {
+        ShowTaskPanel = true;
+        await SelectTaskAsync(task);
+    }
+
+    // ── Treegrid keyboard (rows) and bar focus ───────────────────
+
+    private string? _focusedRowId;
+    private int _focusSeq;
+
+    /// <summary>The last request to move DOM focus to a row or a bar; the part that owns the element acts on it after its render.</summary>
+    internal GanttFocusRequest? FocusRequest { get; private set; }
+
+    /// <summary>A row took DOM focus (click, Tab, a programmatic move): it becomes the roving tab stop.</summary>
+    internal void NoteRowFocus(string taskId) => _focusedRowId = taskId;
+
+    internal void RequestFocus(GanttFocusTarget target, string taskId) => FocusRequest = new GanttFocusRequest(target, taskId, ++_focusSeq);
+
+    /// <summary>
+    /// The row that carries the roving tab stop: the last focused / selected row while it is still visible, else
+    /// the first visible row (so the grid is always reachable with one Tab).
+    /// </summary>
+    internal string? EffectiveFocusRowId()
+    {
+        if (_visibleNodes.Count == 0) return null;
+        if (_focusedRowId is not null && _visibleNodes.Any(n => n.Task.Id == _focusedRowId)) return _focusedRowId;
+        if (SelectedTask is not null && _visibleNodes.Any(n => n.Task.Id == SelectedTask.Id)) return SelectedTask.Id;
+        return _visibleNodes[0].Task.Id;
+    }
+
+    private void FocusRowAt(int index)
+    {
+        if (index < 0 || index >= _visibleNodes.Count) return;
+        var id = _visibleNodes[index].Task.Id;
+        _focusedRowId = id;
+        RequestFocus(GanttFocusTarget.Row, id);
+    }
+
+    /// <summary>
+    /// ARIA treegrid keys on a row: Up / Down / Home / End move between rows, Right expands (then steps into the
+    /// first child, then onto the bar of a leaf), Left collapses (then steps to the parent), Enter opens the task
+    /// panel. Space activates on key-up, like a native button (docs/keyboard-activation-convention.md).
+    /// </summary>
+    internal async Task HandleRowKeyDownAsync(KeyboardEventArgs e, GanttTaskNode node)
+    {
+        if (e.CtrlKey || e.AltKey || e.MetaKey) return;
+        var index = _visibleNodes.FindIndex(n => n.Task.Id == node.Task.Id);
+        if (index < 0) return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown": FocusRowAt(index + 1); break;
+            case "ArrowUp": FocusRowAt(index - 1); break;
+            case "Home": FocusRowAt(0); break;
+            case "End": FocusRowAt(_visibleNodes.Count - 1); break;
+            case "ArrowRight":
+                if (node.Children.Count > 0)
+                {
+                    if (!node.Task.IsExpanded) await ToggleExpandAsync(node.Task);
+                    else if (index + 1 < _visibleNodes.Count && _visibleNodes[index + 1].Task.ParentId == node.Task.Id) FocusRowAt(index + 1);
+                }
+                else if (View != GanttView.List)
+                {
+                    RequestFocus(GanttFocusTarget.Bar, node.Task.Id);
+                }
+                break;
+            case "ArrowLeft":
+                if (node.Children.Count > 0 && node.Task.IsExpanded) await ToggleExpandAsync(node.Task);
+                else if (node.Task.ParentId is not null)
+                {
+                    var parentIndex = _visibleNodes.FindIndex(n => n.Task.Id == node.Task.ParentId);
+                    if (parentIndex >= 0) FocusRowAt(parentIndex);
+                }
+                break;
+            case "Enter":
+                if (!e.Repeat) await ActivateTaskAsync(node.Task);
+                break;
+        }
+    }
+
+    internal async Task HandleRowKeyUpAsync(KeyboardEventArgs e, GanttTaskNode node)
+    {
+        if (e.Key == " " && !e.CtrlKey && !e.AltKey && !e.MetaKey) await ActivateTaskAsync(node.Task);
+    }
+
+    /// <summary>Keys on a bar or milestone (a non-native focusable: Enter on key-down, Space on key-up; Escape / Left return to the row).</summary>
+    internal async Task HandleBarKeyDownAsync(KeyboardEventArgs e, TmWorkItem task)
+    {
+        if (e.CtrlKey || e.AltKey || e.MetaKey) return;
+        switch (e.Key)
+        {
+            case "Enter":
+                if (!e.Repeat) await ActivateTaskAsync(task);
+                break;
+            case "Escape":
+            case "ArrowLeft":
+                _focusedRowId = task.Id;
+                RequestFocus(GanttFocusTarget.Row, task.Id);
+                break;
+        }
+    }
+
+    internal async Task HandleBarKeyUpAsync(KeyboardEventArgs e, TmWorkItem task)
+    {
+        if (e.Key == " " && !e.CtrlKey && !e.AltKey && !e.MetaKey) await ActivateTaskAsync(task);
     }
 
     internal async Task ExpandAllAsync()
@@ -860,6 +1036,22 @@ public partial class TmGantt : IDisposable
     {
         if (_contextMenuTask is null) return;
 
+        var newTask = await InsertRelativeCoreAsync(_contextMenuTask, position);
+        HideContextMenu();
+        await SelectTaskAsync(newTask);
+    }
+
+    /// <summary>The toolbar "Add task" menu: insert above / below / as a child of the selected task.</summary>
+    internal async Task InsertAtSelectionAsync(GanttInsertPosition position)
+    {
+        if (SelectedTask is null) return;
+
+        var newTask = await InsertRelativeCoreAsync(SelectedTask, position);
+        await SelectTaskAsync(newTask);
+    }
+
+    private async Task<TmWorkItem> InsertRelativeCoreAsync(TmWorkItem reference, GanttInsertPosition position)
+    {
         var today = TodayInZone();
         var newTask = new TmWorkItem
         {
@@ -868,20 +1060,19 @@ public partial class TmGantt : IDisposable
             Start = today,
             End = today.AddDays(1),
             PercentComplete = 0,
-            ParentId = position == GanttInsertPosition.Child ? _contextMenuTask.Id : _contextMenuTask.ParentId
+            ParentId = position == GanttInsertPosition.Child ? reference.Id : reference.ParentId
         };
 
         var args = new GanttTaskInsertedArgs
         {
             Task = newTask,
-            ReferenceTaskId = _contextMenuTask.Id,
+            ReferenceTaskId = reference.Id,
             Position = position
         };
 
         await OnTaskInserted.InvokeAsync(args);
         await RaiseTaskAddedAsync(newTask);
-        HideContextMenu();
-        await SelectTaskAsync(newTask);
+        return newTask;
     }
 
     private async Task DeleteTaskAsync()
@@ -1142,6 +1333,86 @@ public partial class TmGantt : IDisposable
         await OnColumnsChanged.InvokeAsync(updated);
     }
 
+    /// <summary>The columns the grid can render (the rest of <see cref="GanttColumnKey"/> is accepted and ignored).</summary>
+    internal static readonly IReadOnlySet<GanttColumnKey> RenderedColumns = new HashSet<GanttColumnKey>
+    {
+        GanttColumnKey.WBS, GanttColumnKey.Title, GanttColumnKey.Status, GanttColumnKey.Start, GanttColumnKey.End,
+        GanttColumnKey.Progress, GanttColumnKey.Duration, GanttColumnKey.Priority,
+    };
+
+    /// <summary>The entries of the column menu: every rendered column of <see cref="Columns"/> in order; the title column is always shown.</summary>
+    internal IReadOnlyList<ColumnVisibilityItem> ColumnMenuItems() => EffectiveColumns
+        .Where(c => RenderedColumns.Contains(c.Key))
+        .Select(c => new ColumnVisibilityItem(c.Key.ToString(), ColumnTitle(c.Key), c.Visible, c.Key != GanttColumnKey.Title))
+        .ToList();
+
+    internal string ColumnTitle(GanttColumnKey key) => key switch
+    {
+        GanttColumnKey.WBS => Loc["TmGantt_WBS"],
+        GanttColumnKey.Title => Loc["TmGantt_TaskTitle"],
+        GanttColumnKey.Status => Loc["TmGantt_Status"],
+        GanttColumnKey.Start => Loc["TmGantt_Start"],
+        GanttColumnKey.End => Loc["TmGantt_End"],
+        GanttColumnKey.Progress => Loc["TmGantt_TooltipProgress"],
+        GanttColumnKey.Duration => Loc["TmGantt_Duration"],
+        GanttColumnKey.Priority => Loc["TmGantt_Priority"],
+        _ => key.ToString(),
+    };
+
+    /// <summary>Column menu: flip the visibility of one column (by its <see cref="GanttColumnKey"/> name).</summary>
+    internal async Task ToggleColumnAsync(string key)
+    {
+        if (!Enum.TryParse<GanttColumnKey>(key, out var parsed)) return;
+        var current = EffectiveColumns.FirstOrDefault(c => c.Key == parsed);
+        if (current is null) return;
+        await ToggleColumnVisibilityAsync(parsed, !current.Visible);
+    }
+
+    /// <summary>Column menu "Reset": the default columns visible, every other rendered column hidden.</summary>
+    internal async Task ResetColumnsAsync()
+    {
+        var defaults = DefaultColumns.Where(c => c.Visible).Select(c => c.Key).ToHashSet();
+        var updated = EffectiveColumns
+            .Select(c => new GanttColumnDefinition { Key = c.Key, Visible = defaults.Contains(c.Key) || !RenderedColumns.Contains(c.Key) && c.Visible, Width = c.Width, Order = c.Order })
+            .ToList();
+        Columns = updated;
+        await OnColumnsChanged.InvokeAsync(updated);
+    }
+
+    // ── Quick search (toolbar) ───────────────────────────────────
+
+    internal string _quickSearchText = string.Empty;
+    private string? _quickSearchApplied;
+
+    private bool IsQuickSearchFilter(GanttFilter filter) =>
+        _quickSearchApplied is not null && filter.Field == "Title" && filter.Operator == GanttFilterOperator.Contains && filter.Value == _quickSearchApplied;
+
+    /// <summary>
+    /// The toolbar search box: keeps exactly one <c>Title</c> / <c>Contains</c> entry in the filter set (the other
+    /// filters stay), removes it when the box is emptied, and raises <see cref="OnFiltersChanged"/>.
+    /// </summary>
+    internal async Task SetQuickSearchAsync(string? text)
+    {
+        _quickSearchText = text ?? string.Empty;
+        var term = _quickSearchText.Trim();
+        var filters = _activeFilters.Where(f => !IsQuickSearchFilter(f)).ToList();
+        _quickSearchApplied = term.Length > 0 ? term : null;
+        if (term.Length > 0) filters.Add(new GanttFilter("Title", GanttFilterOperator.Contains, term));
+        await ApplyFiltersAsync(filters, fromQuickSearch: true);
+    }
+
+    /// <summary>The search box no longer describes the filter set once its Title/Contains entry is gone.</summary>
+    private void SyncQuickSearchWithFilters()
+    {
+        if (_quickSearchApplied is not null && !_activeFilters.Any(IsQuickSearchFilter))
+        {
+            _quickSearchApplied = null;
+            _quickSearchText = string.Empty;
+        }
+    }
+
+    internal int ActiveFilterCount => _activeFilters.Count;
+
     // ── Phase 3 Methods ──────────────────────────────────────────
 
     public async Task SaveBaselineAsync(string name)
@@ -1156,9 +1427,12 @@ public partial class TmGantt : IDisposable
         await OnBaselineSaved.InvokeAsync(baseline);
     }
 
-    public async Task ApplyFiltersAsync(IEnumerable<GanttFilter> filters)
+    public Task ApplyFiltersAsync(IEnumerable<GanttFilter> filters) => ApplyFiltersAsync(filters, fromQuickSearch: false);
+
+    private async Task ApplyFiltersAsync(IEnumerable<GanttFilter> filters, bool fromQuickSearch)
     {
         _activeFilters = filters.ToList();
+        if (!fromQuickSearch) SyncQuickSearchWithFilters();
         RefreshVisibleData();
         await OnFiltersChanged.InvokeAsync(_activeFilters);
     }
@@ -1513,6 +1787,12 @@ public partial class TmGantt : IDisposable
 
 public enum GanttView { Day, Week, Month, Workload, List, Calendar, Board, Dashboard, People }
 public enum GanttInsertPosition { Above, Below, Child, End }
+
+/// <summary>Where a requested DOM focus move lands: the task row in the grid or its bar in the timeline.</summary>
+internal enum GanttFocusTarget { Row, Bar }
+
+/// <summary>A request to move DOM focus; <c>Seq</c> makes two requests for the same element distinct.</summary>
+internal readonly record struct GanttFocusRequest(GanttFocusTarget Target, string TaskId, int Seq);
 
 public class GanttTaskInsertedArgs
 {

@@ -2,7 +2,7 @@
   "itemName": "TmGanttToolbar",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Internal part of TmGantt (hidden from the editor): the command row - add / expand / collapse, the Day | Week | Month segment, zoom controls, panel toggles and the view-settings menu. Place TmGantt, not this component.",
+  "description": "Internal part of TmGantt (hidden from the editor): the grouped command row (a core TmToolbar: Create | Structure | Time | Panels | Data | Settings) with the Add task split button, the Day | Week | Month segment, zoom controls, panel toggles, the column menu, the view-settings menu and the optional quick search. Place TmGantt, not this component.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttToolbar.razor",

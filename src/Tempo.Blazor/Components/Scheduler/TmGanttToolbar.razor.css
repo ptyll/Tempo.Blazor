@@ -59,19 +59,43 @@
 /* ─── Toolbar ──────────────────────────────────────────────────── */
 
 .tm-gantt__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    padding: 0;
     border-bottom: 1px solid var(--tm-border-color);
     background: var(--tm-bg-surface);
     flex-shrink: 0;
 }
 
-.tm-gantt__toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
+/* The row is the core TmToolbar (a child component), so its own box and the group wrappers it renders do not carry
+   this stylesheet's scope: ::deep is the documented way to reach them. The bar wraps instead of overflowing - the
+   items already state their Priority for the Overflow=Menu bar the tablet / mobile phases switch to. */
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar {
+    flex-wrap: wrap;
+    border-bottom: 0;
+    background: transparent;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    row-gap: var(--tm-space-1);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar .tm-toolbar-start {
+    flex-wrap: wrap;
+    row-gap: var(--tm-space-1);
+}
+
+/* A labelled group is a role=group wrapper; the segment, the zoom slider and the search box sit inside it. */
+.tm-gantt__toolbar ::deep [data-tm-toolbar-group] {
+    flex-wrap: wrap;
+}
+
+.tm-gantt__quick-search {
+    margin-inline-start: auto;
+    min-width: 12rem;
+    max-width: 18rem;
+}
+
+/* The filter badge sits on the button; the pressed Primary variant keeps it readable. */
+.tm-gantt__toolbar ::deep .tm-toolbar-btn--primary .tm-toolbar-btn-badge {
+    background: var(--tm-color-on-primary);
+    color: var(--tm-color-primary);
 }
 
 .tm-gantt__zoom-level {
@@ -80,13 +104,6 @@
     color: var(--tm-text-secondary);
     min-width: 40px;
     text-align: center;
-}
-
-.tm-gantt__toolbar-divider {
-    width: 1px;
-    height: 20px;
-    background: var(--tm-border-color);
-    margin: 0 var(--tm-space-1, 0.25rem);
 }
 
 /* ─── View Settings dropdown ───────────────────────────────────── */
@@ -157,4 +174,17 @@
     accent-color: var(--tm-color-primary);
     cursor: pointer;
     margin: 0 var(--tm-space-1, 0.25rem);
+}
+
+/* The column menu is a core TmColumnPicker (outline button); inside the toolbar it reads like its ghost siblings. */
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle {
+    border-color: transparent;
+    background: transparent;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle:hover,
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle[aria-expanded="true"] {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
 }

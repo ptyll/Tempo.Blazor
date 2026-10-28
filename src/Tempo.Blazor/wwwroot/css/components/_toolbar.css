@@ -273,3 +273,15 @@
   border-block-start: 1px solid var(--tm-border-color);
   margin-block: var(--tm-space-1);
 }
+
+/* A count pill on a button (TmToolbarButton.Badge): decorative, the accessible name carries the meaning. */
+.tm-toolbar-btn-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.125rem; height: 1.125rem; padding: 0 var(--tm-space-1);
+  border-radius: var(--tm-radius-pill);
+  background: var(--tm-color-primary); color: var(--tm-color-on-primary);
+  font-size: var(--tm-font-size-xs); font-weight: var(--tm-font-weight-semibold); line-height: 1;
+}
+@media (forced-colors: active) {
+  .tm-toolbar-btn-badge { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
