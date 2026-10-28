@@ -39,7 +39,50 @@ public partial class TmSpreadsheetSortDialog
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the level editor presents as cards (the phone layout). A forced <see cref="LayoutMode"/>
+    /// wins; <see cref="TmLayoutMode.Auto"/> reads the app-level viewport scope and keeps the table when
+    /// the host provides no scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
     private string AddLevelDomId => $"spreadsheet-sort-add-level-{_idSuffix}";
+
+    private void OnLevelKeyChanged(int index, int? value)
+    {
+        if (value is int column && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].KeyIndex = column;
+        }
+    }
+
+    private void OnLevelSortOnChanged(int index, SpreadsheetSortOn? value)
+    {
+        if (value is SpreadsheetSortOn sortOn && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].SortOn = sortOn;
+        }
+    }
+
+    private void OnLevelDirectionChanged(int index, SpreadsheetSortDirection? value)
+    {
+        if (value is SpreadsheetSortDirection direction && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].Direction = direction;
+        }
+    }
+
+    private void OnHasHeaderChanged(bool value) => _hasHeader = value;
+
+    private void OnCaseSensitiveChanged(bool value) => _caseSensitive = value;
 
     /// <summary>The selectable column keys (within the range).</summary>
     private IReadOnlyList<(int Index, string Label)> ColumnChoices { get; set; } = [];

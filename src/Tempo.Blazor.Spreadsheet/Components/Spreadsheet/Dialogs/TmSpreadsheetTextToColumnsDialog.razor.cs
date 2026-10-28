@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Interfaces;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Abstractions.Layout;
@@ -15,6 +16,51 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 public partial class TmSpreadsheetTextToColumnsDialog
 {
     private int _step = 1;
+
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the wizard shows the compact step line instead of the labelled stepper. A forced
+    /// <see cref="LayoutMode"/> wins; <see cref="TmLayoutMode.Auto"/> reads the viewport scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
+    /// <summary>The three wizard steps with the reference's labels (step 1 is the data TYPE, not data
+    /// selection — the component never selects the source).</summary>
+    private IReadOnlyList<IStepItem> _steps =>
+    [
+        new TextToColumnsStep("type", Loc["TmSpreadsheet_TextToColumns_StepLabel1"]),
+        new TextToColumnsStep("delimiters", Loc["TmSpreadsheet_TextToColumns_StepLabel2"]),
+        new TextToColumnsStep("format", Loc["TmSpreadsheet_TextToColumns_StepLabel3"])
+    ];
+
+    private sealed record TextToColumnsStep(string Id, string Label) : IStepItem
+    {
+        public string? Description => null;
+
+        public string? Icon => null;
+    }
+
+    private string StepLabel(int step) => Loc[step switch
+    {
+        1 => "TmSpreadsheet_TextToColumns_StepLabel1",
+        2 => "TmSpreadsheet_TextToColumns_StepLabel2",
+        _ => "TmSpreadsheet_TextToColumns_StepLabel3"
+    }];
+
+    private void OnStepClick(int index)
+    {
+        if (index >= 0 && index < 2 && index + 1 <= _step)
+        {
+            _step = index + 1;
+        }
+    }
 
     private readonly SpreadsheetSeparatorOptions _options = new() { Comma = true };
     private string _otherDelimiter = string.Empty;
@@ -85,11 +131,7 @@ public partial class TmSpreadsheetTextToColumnsDialog
 
     private void SetFormat(int col, SpreadsheetColumnFormat fmt) => _columnFormats[col] = fmt;
 
-    private void OnFormatChanged(int col, ChangeEventArgs e)
-    {
-        if (Enum.TryParse<SpreadsheetColumnFormat>(e.Value?.ToString(), out var fmt))
-            SetFormat(col, fmt);
-    }
+    private void OnFormatChanged(int col, SpreadsheetColumnFormat format) => SetFormat(col, format);
 
     private void SetMode(SpreadsheetTextToColumnsMode mode) => _options.Mode = mode;
 

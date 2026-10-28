@@ -1,41 +1,29 @@
 /* The sort dialog's CONTENT only — the card, the overlay, the header, the footer bar and the mobile
-   presentation belong to the core TmModal (redesign phase 3). Component-scoped rules reach only the
-   elements this component renders, so nothing here styles the modal's own parts. */
+   presentation belong to the core TmModal (redesign phase 3). Desktop/tablet keep the reference's
+   level table; the phone renders the same level as a card, because three selects squeezed into one
+   row were the phase-3 UX finding. */
 
 .tm-spreadsheet-sort__toolbar {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-4);
-    margin-bottom: var(--tm-space-3);
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    margin-bottom: var(--tm-space-4);
     flex-wrap: wrap;
 }
 
-.tm-spreadsheet-sort__tool {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    padding: var(--tm-space-1-5) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-sort__tool:hover {
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-primary);
-}
-
-.tm-spreadsheet-sort__header-toggle {
+.tm-spreadsheet-sort__toggles {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-1-5);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
+    gap: var(--tm-space-4);
+    flex-wrap: wrap;
 }
+
+.tm-spreadsheet-sort__toggles ::deep .tm-spreadsheet-sort__header-toggle {
+    font-size: var(--tm-text-sm);
+}
+
+/* ── Desktop / tablet: the level table ─────────────────────────────────────── */
 
 .tm-spreadsheet-sort__table {
     width: 100%;
@@ -44,7 +32,7 @@
 }
 
 .tm-spreadsheet-sort__table th {
-    text-align: left;
+    text-align: start;
     font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text-muted);
     padding: var(--tm-space-1) var(--tm-space-1-5);
@@ -53,17 +41,11 @@
 
 .tm-spreadsheet-sort__table td {
     padding: var(--tm-space-1) var(--tm-space-1-5);
+    vertical-align: middle;
 }
 
-.tm-spreadsheet-sort__table select {
-    width: 100%;
-    min-height: var(--tm-touch-target);
-    padding: var(--tm-space-1) var(--tm-space-1-5);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
+.tm-spreadsheet-sort__select {
+    min-width: 8rem;
 }
 
 .tm-spreadsheet-sort__rowlabel {
@@ -76,6 +58,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: var(--tm-space-1);
     min-width: var(--tm-touch-target);
     min-height: var(--tm-touch-target);
     border: none;
@@ -91,20 +74,87 @@
 }
 
 .tm-spreadsheet-sort__remove:disabled {
-    opacity: var(--tm-opacity-disabled);
-    cursor: default;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Phone: one card per sort level ───────────────────────────────────────── */
+
+.tm-spreadsheet-sort__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    container-type: inline-size;
+}
+
+.tm-spreadsheet-sort__card {
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-color-surface);
+}
+
+.tm-spreadsheet-sort__card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-bottom: var(--tm-space-3);
+}
+
+.tm-spreadsheet-sort__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet-sort__card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet-sort__card-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-spreadsheet-sort__card-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-spreadsheet-sort__field-label {
+    font-size: var(--tm-text-xs);
+    color: var(--tm-color-text-muted);
+}
+
+.tm-spreadsheet-sort__card .tm-spreadsheet-sort__select {
+    min-width: 0;
+    width: 100%;
+}
+
+/* A 320px sheet cannot carry three side-by-side fields: stack them. */
+@container (width < 20rem) {
+    .tm-spreadsheet-sort__card-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .tm-spreadsheet-sort__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-}
-
-/* A container query, not a media query: the dialog is embedded in a Notion block/modal, so its own
-   body width decides (the mobile sheet is ~320-390px wide). */
-@container (max-width: 420px) {
-    .tm-spreadsheet-sort__rowlabel {
-        display: none;
-    }
 }

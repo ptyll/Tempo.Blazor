@@ -81,7 +81,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         await page.ClickAsync(".tm-spreadsheet-toolbar__tab:text-is('Insert')");
         await page.ClickAsync("button[title='Insert link']");
         await page.WaitForSelectorAsync(".tm-spreadsheet-hyperlink", new() { State = WaitForSelectorState.Visible });
-        await page.SelectOptionAsync("#hl-type", "Web");
+        await page.Locator("#hl-type .tm-radio-segment").First.ClickAsync(); // Web page is the first segment
         await page.FillAsync("#hl-target", "https://example.com");
         await page.FillAsync("#hl-display", "Link");
         await page.ClickAsync(".tm-spreadsheet-hyperlink__btn--ok");

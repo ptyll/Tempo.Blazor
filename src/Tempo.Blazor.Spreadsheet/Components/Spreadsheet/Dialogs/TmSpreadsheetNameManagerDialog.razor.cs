@@ -59,7 +59,28 @@ public partial class TmSpreadsheetNameManagerDialog
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the list presents as cards (the phone layout). A forced <see cref="LayoutMode"/> wins;
+    /// <see cref="TmLayoutMode.Auto"/> reads the app-level viewport scope and keeps the table when the
+    /// host provides no scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
     protected override void OnParametersSet() => EnsureSelection();
+
+    private void OnFilterChanged(string value)
+    {
+        _filter = value ?? string.Empty;
+        EnsureSelection();
+    }
 
     private IReadOnlyList<SpreadsheetNamedRange> FilteredRanges =>
         string.IsNullOrWhiteSpace(_filter)
@@ -102,6 +123,17 @@ public partial class TmSpreadsheetNameManagerDialog
 
     private string GetRowClass(SpreadsheetNamedRange range)
         => IsSelected(range) ? "tm-spreadsheet-name-manager__row--selected" : string.Empty;
+
+    private string GetCardClass(SpreadsheetNamedRange range)
+    {
+        var classes = new List<string> { "tm-spreadsheet-name-manager__card" };
+        if (IsSelected(range))
+        {
+            classes.Add("tm-spreadsheet-name-manager__card--selected");
+        }
+
+        return string.Join(" ", classes);
+    }
 
     /// <summary>
     /// The grid always has exactly one roving tab stop and the toolbar acts only on a visible row:

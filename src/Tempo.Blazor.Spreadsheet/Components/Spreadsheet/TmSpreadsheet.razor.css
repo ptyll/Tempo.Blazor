@@ -27,6 +27,12 @@
     box-shadow: var(--tm-shadow-popover);
     font-size: var(--tm-text-sm);
     max-width: calc(100% - var(--tm-space-8));
+    border: 1px solid var(--tm-border-color-strong);
+}
+
+.tm-spreadsheet__datatool-toast-icon {
+    flex: 0 0 auto;
+    color: var(--tm-color-success);
 }
 
 .tm-spreadsheet__datatool-toast-close {

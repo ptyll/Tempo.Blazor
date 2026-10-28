@@ -1,3 +1,4 @@
+using Tempo.Blazor.Components.Inputs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -30,6 +31,19 @@ public partial class TmSpreadsheetHyperlinkDialog
         SpreadsheetHyperlinkKind.Web => "url",
         _ => "text"
     };
+
+    /// <summary>The four link kinds as the segmented control's options.</summary>
+    private List<RadioOption<SpreadsheetHyperlinkKind>> KindOptions =>
+    [
+        new(Loc["TmSpreadsheet_Hyperlink_TypeWeb"], SpreadsheetHyperlinkKind.Web),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeEmail"], SpreadsheetHyperlinkKind.Email),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeInternal"], SpreadsheetHyperlinkKind.InternalRef),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeNamedRange"], SpreadsheetHyperlinkKind.NamedRange)
+    ];
+
+    private void OnKindChanged(SpreadsheetHyperlinkKind kind) => _kind = kind;
+
+    private void OnTargetChanged(string? target) => _target = target ?? string.Empty;
 
     private SpreadsheetHyperlinkKind _kind = SpreadsheetHyperlinkKind.Web;
     private string _target = string.Empty;

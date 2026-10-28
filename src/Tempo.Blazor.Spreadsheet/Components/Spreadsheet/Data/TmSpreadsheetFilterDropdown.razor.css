@@ -1,3 +1,7 @@
+/* The desktop/tablet header filter dropdown. It is anchored to the header cell by the host; the
+   mobile sheet and the viewport clamp arrive with phase 6. Icons are shared TmIcons, so the old
+   ▲ ▼ ⚙ ✕ › glyphs are gone. */
+
 .tm-spreadsheet-filter-dropdown__overlay {
     position: fixed;
     inset: 0;
@@ -7,30 +11,43 @@
 .tm-spreadsheet-filter-dropdown {
     position: fixed;
     z-index: var(--tm-z-dropdown);
-    min-width: 240px;
-    max-width: 300px;
+    min-width: 15rem;
+    max-width: 19rem;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px;
+    gap: var(--tm-space-0-5);
+    padding: var(--tm-space-2);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-card);
     box-shadow: var(--tm-shadow-popover);
     font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
+    /* The panel is anchored at the click point; the inline max-height keeps its bottom inside the
+       viewport and this scroll makes the footer reachable on a short window (the phase-6 clamp
+       replaces the anchoring, this stays as the safety net). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.tm-spreadsheet-filter-dropdown__title {
+    padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-2);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-filter-dropdown__item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--tm-space-2);
     width: 100%;
-    padding: 6px 8px;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: none;
     background: transparent;
     border-radius: var(--tm-radius-control);
-    text-align: left;
+    text-align: start;
     cursor: pointer;
     color: inherit;
     font-size: var(--tm-text-sm);
@@ -41,65 +58,49 @@
 }
 
 .tm-spreadsheet-filter-dropdown__icon {
-    width: 16px;
-    text-align: center;
+    flex: 0 0 auto;
     color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-filter-dropdown__chevron {
-    margin-left: auto;
+    margin-inline-start: auto;
     color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-filter-dropdown__divider {
     height: 1px;
-    margin: 4px 0;
+    margin: var(--tm-space-1) 0;
     background: var(--tm-color-border-subtle);
 }
 
-.tm-spreadsheet-filter-dropdown__search {
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__search {
     width: 100%;
-    padding: 6px 8px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    font-size: var(--tm-text-sm);
-    box-sizing: border-box;
 }
 
 .tm-spreadsheet-filter-dropdown__list {
-    max-height: 220px;
+    max-height: 14rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 2px 0;
+    gap: var(--tm-space-0-5);
+    padding: var(--tm-space-0-5) 0;
 }
 
-.tm-spreadsheet-filter-dropdown__check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check {
+    padding: var(--tm-space-0-5) var(--tm-space-2);
     border-radius: var(--tm-radius-control);
-    cursor: pointer;
 }
 
-.tm-spreadsheet-filter-dropdown__check:hover {
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check:hover {
     background: var(--tm-color-surface-hover);
 }
 
-.tm-spreadsheet-filter-dropdown__check--all {
-    font-weight: 600;
-}
-
-.tm-spreadsheet-filter-dropdown__check span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check--all {
+    font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-spreadsheet-filter-dropdown__empty {
-    padding: 12px 8px;
+    padding: var(--tm-space-3) var(--tm-space-2);
     text-align: center;
     color: var(--tm-color-text-muted);
 }
@@ -107,27 +108,8 @@
 .tm-spreadsheet-filter-dropdown__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 6px;
-    padding-top: 6px;
+    gap: var(--tm-space-2);
+    margin-top: var(--tm-space-1);
+    padding-top: var(--tm-space-2);
     border-top: 1px solid var(--tm-color-border-subtle);
-}
-
-.tm-spreadsheet-filter-dropdown__btn {
-    padding: 6px 14px;
-    border-radius: var(--tm-radius-control);
-    border: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-filter-dropdown__btn--ok {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-}
-
-.tm-spreadsheet-filter-dropdown__btn:hover {
-    filter: brightness(0.97);
 }

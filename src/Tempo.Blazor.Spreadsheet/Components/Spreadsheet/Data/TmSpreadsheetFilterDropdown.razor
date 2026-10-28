@@ -1,47 +1,57 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Data
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
+@* The header filter dropdown (desktop/tablet). It is anchored to the header cell by the host; the
+   mobile presentation (a sheet plus a viewport clamp) arrives with the responsive chrome in phase 6.
+   Icons are the shared TmIcon set — the old ▲ ▼ ⚙ ✕ › glyphs are gone. *@
 <div class="tm-spreadsheet-filter-dropdown__overlay" @onclick="Close" @oncontextmenu:preventDefault></div>
 <div class="tm-spreadsheet-filter-dropdown"
      role="dialog"
      aria-label="@Loc["TmSpreadsheet_Filter_ButtonTitle"]"
-     style="left:@(X.ToString(System.Globalization.CultureInfo.InvariantCulture))px;top:@(Y.ToString(System.Globalization.CultureInfo.InvariantCulture))px;"
+     style="left:@(X.ToString(System.Globalization.CultureInfo.InvariantCulture))px;top:@(Y.ToString(System.Globalization.CultureInfo.InvariantCulture))px;max-height:calc(100dvh - @(Y.ToString(System.Globalization.CultureInfo.InvariantCulture))px - var(--tm-space-1));"
      @onclick:stopPropagation
      @onkeydown="OnKeyDown">
 
+    <div class="tm-spreadsheet-filter-dropdown__title">@Loc["TmSpreadsheet_Filter_Title"]</div>
+
     <button type="button" class="tm-spreadsheet-filter-dropdown__item" @onclick="SortAscending">
-        <span class="tm-spreadsheet-filter-dropdown__icon">▲</span> @Loc["TmSpreadsheet_Filter_SortAsc"]
+        <span class="tm-spreadsheet-filter-dropdown__icon"><TmIcon Name="arrow-up" Size="IconSize.Sm" /></span>
+        @Loc["TmSpreadsheet_Filter_SortAsc"]
     </button>
     <button type="button" class="tm-spreadsheet-filter-dropdown__item" @onclick="SortDescending">
-        <span class="tm-spreadsheet-filter-dropdown__icon">▼</span> @Loc["TmSpreadsheet_Filter_SortDesc"]
+        <span class="tm-spreadsheet-filter-dropdown__icon"><TmIcon Name="arrow-down" Size="IconSize.Sm" /></span>
+        @Loc["TmSpreadsheet_Filter_SortDesc"]
     </button>
 
     <div class="tm-spreadsheet-filter-dropdown__divider"></div>
 
     <button type="button" class="tm-spreadsheet-filter-dropdown__item" @onclick="OpenCustomFilter">
-        <span class="tm-spreadsheet-filter-dropdown__icon">⚙</span> @Loc[CustomFilterLabelKey] <span class="tm-spreadsheet-filter-dropdown__chevron">›</span>
+        <span class="tm-spreadsheet-filter-dropdown__icon"><TmIcon Name="settings" Size="IconSize.Sm" /></span>
+        @Loc[CustomFilterLabelKey]
+        <span class="tm-spreadsheet-filter-dropdown__chevron"><TmIcon Name="chevron-right" Size="IconSize.Sm" /></span>
     </button>
     @if (HasActiveFilter)
     {
         <button type="button" class="tm-spreadsheet-filter-dropdown__item" @onclick="ClearColumnFilter">
-            <span class="tm-spreadsheet-filter-dropdown__icon">✕</span> @Loc["TmSpreadsheet_Filter_ClearFilter"]
+            <span class="tm-spreadsheet-filter-dropdown__icon"><TmIcon Name="x" Size="IconSize.Sm" /></span>
+            @Loc["TmSpreadsheet_Filter_ClearFilter"]
         </button>
     }
 
     <div class="tm-spreadsheet-filter-dropdown__divider"></div>
 
-    <input class="tm-spreadsheet-filter-dropdown__search"
-           type="text"
-           placeholder="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
-           aria-label="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
-           value="@_search"
-           @oninput="OnSearchInput"
-           @onkeydown="OnSearchKeyDown" />
+    <TmTextInput Class="tm-spreadsheet-filter-dropdown__search"
+                 LeftIcon="search"
+                 Placeholder="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
+                 aria-label="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
+                 Value="@_search"
+                 ValueChanged="OnSearchChanged"
+                 OnKeyDown="OnSearchKeyDown" />
 
-    <label class="tm-spreadsheet-filter-dropdown__check tm-spreadsheet-filter-dropdown__check--all">
-        <input type="checkbox" checked="@AllVisibleChecked" @onchange="ToggleSelectAll" />
-        <span>@Loc["TmSpreadsheet_Filter_SelectAll"]</span>
-    </label>
+    <TmCheckbox Class="tm-spreadsheet-filter-dropdown__check tm-spreadsheet-filter-dropdown__check--all"
+                Label="@Loc["TmSpreadsheet_Filter_SelectAll"]"
+                Value="@AllVisibleChecked"
+                ValueChanged="OnSelectAllChanged" />
 
     <div class="tm-spreadsheet-filter-dropdown__list" role="listbox">
         @if (VisibleValues.Count == 0)
@@ -52,20 +62,24 @@
         {
             @foreach (var item in VisibleValues)
             {
-                <label class="tm-spreadsheet-filter-dropdown__check">
-                    <input type="checkbox" checked="@_checked.Contains(item.Display)" @onchange="() => ToggleValue(item.Display)" />
-                    <span>@(item.IsBlank ? Loc["TmSpreadsheet_Filter_Blanks"] : item.Display)</span>
-                </label>
+                var value = item;
+                <TmCheckbox Class="tm-spreadsheet-filter-dropdown__check"
+                            Label="@(value.IsBlank ? Loc["TmSpreadsheet_Filter_Blanks"] : value.Display)"
+                            Value="@_checked.Contains(value.Display)"
+                            ValueChanged="@((bool selected) => OnValueToggled(value.Display, selected))" />
             }
         }
     </div>
 
     <div class="tm-spreadsheet-filter-dropdown__actions">
-        <button type="button" class="tm-spreadsheet-filter-dropdown__btn tm-spreadsheet-filter-dropdown__btn--cancel" @onclick="Close">
+        <TmButton Variant="ButtonVariant.Ghost"
+                  Class="tm-spreadsheet-filter-dropdown__btn tm-spreadsheet-filter-dropdown__btn--cancel"
+                  OnClick="Close">
             @Loc["TmSpreadsheet_Filter_Cancel"]
-        </button>
-        <button type="button" class="tm-spreadsheet-filter-dropdown__btn tm-spreadsheet-filter-dropdown__btn--ok" @onclick="ApplyValues">
+        </TmButton>
+        <TmButton Class="tm-spreadsheet-filter-dropdown__btn tm-spreadsheet-filter-dropdown__btn--ok"
+                  OnClick="ApplyValues">
             @Loc["TmSpreadsheet_Filter_Ok"]
-        </button>
+        </TmButton>
     </div>
 </div>

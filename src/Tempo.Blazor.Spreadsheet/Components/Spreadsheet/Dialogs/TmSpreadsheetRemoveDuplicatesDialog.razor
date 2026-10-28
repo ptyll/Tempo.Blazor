@@ -1,7 +1,8 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-@* Remove Duplicates on the one core dialog frame (G6). *@
+@* Remove Duplicates on the one core dialog frame (G6). The column list is a set of core checkboxes
+   with a neutral "Selected N of M" line instead of a bare checkbox count. *@
 <TmModal Show="true"
          Title="@Loc["TmSpreadsheet_Dedup_Title"]"
          Size="ModalSize.Medium"
@@ -10,7 +11,7 @@
          FooterLayout="FooterLayout.Inline"
          CloseOnEscape="true"
          CloseOnOverlayClick="true"
-         InitialFocusTargetId="@FirstColumnDomId"
+         InitialFocusSelector=".tm-spreadsheet-dedup__column input"
          RestoreFocusTargetId="@RestoreFocusTargetId"
          Class="tm-spreadsheet-dedup"
          OnClose="Close">
@@ -18,32 +19,33 @@
         <p class="tm-spreadsheet-dedup__hint">@Loc["TmSpreadsheet_Dedup_Hint"]</p>
 
         <div class="tm-spreadsheet-dedup__toolbar">
-            <label class="tm-spreadsheet-dedup__toggle">
-                <input type="checkbox" checked="@_hasHeader" @onchange="e => _hasHeader = e.Value is bool b && b" />
-                <span>@Loc["TmSpreadsheet_Dedup_HasHeader"]</span>
-            </label>
-            <label class="tm-spreadsheet-dedup__toggle">
-                <input type="checkbox" checked="@_caseSensitive" @onchange="e => _caseSensitive = e.Value is bool b2 && b2" />
-                <span>@Loc["TmSpreadsheet_Dedup_CaseSensitive"]</span>
-            </label>
+            <TmCheckbox Class="tm-spreadsheet-dedup__toggle"
+                        Label="@Loc["TmSpreadsheet_Dedup_HasHeader"]"
+                        Value="@_hasHeader"
+                        ValueChanged="value => _hasHeader = value" />
+            <TmCheckbox Class="tm-spreadsheet-dedup__toggle"
+                        Label="@Loc["TmSpreadsheet_Dedup_CaseSensitive"]"
+                        Value="@_caseSensitive"
+                        ValueChanged="value => _caseSensitive = value" />
         </div>
 
         <div class="tm-spreadsheet-dedup__select-actions">
             <button type="button" class="tm-spreadsheet-dedup__link" @onclick="SelectAll">@Loc["TmSpreadsheet_Dedup_SelectAll"]</button>
             <button type="button" class="tm-spreadsheet-dedup__link" @onclick="DeselectAll">@Loc["TmSpreadsheet_Dedup_DeselectAll"]</button>
+            <span class="tm-spreadsheet-dedup__count" role="status" aria-live="polite">
+                @Loc["TmSpreadsheet_Dedup_SelectedColumns", _selected.Count, Columns.Count]
+            </span>
         </div>
 
         <div class="tm-spreadsheet-dedup__columns" role="group" aria-label="@Loc["TmSpreadsheet_Dedup_Columns"]">
             @foreach (var col in Columns)
             {
                 var c = col;
-                <label class="tm-spreadsheet-dedup__column">
-                    <input type="checkbox"
-                           id="@ColumnDomId(c)"
-                           checked="@IsSelected(c)"
-                           @onchange="e => ToggleColumn(c, e.Value is bool sel && sel)" />
-                    <span>@ColumnLabel(c)</span>
-                </label>
+                <TmCheckbox Class="tm-spreadsheet-dedup__column"
+                            id="@ColumnDomId(c)"
+                            Label="@ColumnLabel(c)"
+                            Value="@IsSelected(c)"
+                            ValueChanged="@((bool selected) => ToggleColumn(c, selected))" />
             }
         </div>
     </ChildContent>

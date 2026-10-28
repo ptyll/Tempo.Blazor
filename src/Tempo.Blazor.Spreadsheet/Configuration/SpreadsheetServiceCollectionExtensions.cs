@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Components.Spreadsheet;
 
 namespace Tempo.Blazor.Configuration;
 
@@ -14,6 +15,7 @@ public static class SpreadsheetServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddTempoBlazor();
+        SpreadsheetIcons.EnsureRegistered();
         return services;
     }
 }

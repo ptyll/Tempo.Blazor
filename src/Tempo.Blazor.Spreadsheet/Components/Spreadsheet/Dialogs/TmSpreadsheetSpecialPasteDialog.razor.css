@@ -1,56 +1,37 @@
 /* Paste Special CONTENT only — the card, overlay, header, footer bar and mobile presentation belong
-   to the core TmModal (redesign phase 3). */
+   to the core TmModal (redesign phase 3). Two radio columns: Paste | Operation. */
+
+.tm-spreadsheet-pastespecial__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-3);
+    container-type: inline-size;
+}
 
 .tm-spreadsheet-pastespecial__group {
-    margin: 0 0 var(--tm-space-4);
-    padding: 0;
-    border: none;
-}
-
-.tm-spreadsheet-pastespecial__group legend {
-    padding: 0;
-    margin-bottom: var(--tm-space-2);
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-pastespecial__group label {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    min-height: var(--tm-touch-target);
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-    cursor: pointer;
-}
-
-.tm-spreadsheet-pastespecial__op {
-    width: 100%;
-    min-height: var(--tm-touch-target);
-    padding: var(--tm-space-1) var(--tm-space-2);
+    min-width: 0;
+    padding: var(--tm-space-3);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-pastespecial__toggles {
     display: flex;
-    gap: var(--tm-space-4);
     flex-wrap: wrap;
-    margin-bottom: var(--tm-space-2);
+    gap: var(--tm-space-2) var(--tm-space-6);
+    margin-top: var(--tm-space-3);
 }
 
-.tm-spreadsheet-pastespecial__toggles label {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    min-height: var(--tm-touch-target);
+.tm-spreadsheet-pastespecial__toggles ::deep .tm-spreadsheet-pastespecial__toggle {
     font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-    cursor: pointer;
+}
+
+/* A phone cannot carry two option columns: stack them. */
+@container (width < 26rem) {
+    .tm-spreadsheet-pastespecial__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .tm-spreadsheet-pastespecial__actions {

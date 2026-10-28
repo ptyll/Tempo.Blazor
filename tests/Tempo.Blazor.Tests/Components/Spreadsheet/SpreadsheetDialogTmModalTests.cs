@@ -312,7 +312,7 @@ public class SpreadsheetDialogTmModalTests : LocalizationTestBase
             .Add(c => c.Message, "Message"));
 
         cut.Find(".tm-spreadsheet-alert").ClassList.Should().Contain(modifier);
-        cut.Find(".tm-spreadsheet-alert__icon").Should().NotBeNull("every severity paints its own icon");
+        cut.Find(".tm-spreadsheet-alert__badge").Should().NotBeNull("every severity paints its own badge");
         cut.Find(".tm-spreadsheet-alert__message").TextContent.Should().Be("Message");
 
         // One surface, one dialog frame: the alert is an alertdialog on TmModal.

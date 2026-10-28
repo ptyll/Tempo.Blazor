@@ -329,6 +329,7 @@
     @if (_dataToolMessage is not null)
     {
         <div class="tm-spreadsheet__datatool-toast" role="status">
+            <span class="tm-spreadsheet__datatool-toast-icon"><TmIcon Name="check-circle" Size="IconSize.Sm" /></span>
             <span>@_dataToolMessage</span>
             <button type="button" class="tm-spreadsheet__datatool-toast-close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="DismissDataToolMessage">
                 <TmIcon Name="close" />

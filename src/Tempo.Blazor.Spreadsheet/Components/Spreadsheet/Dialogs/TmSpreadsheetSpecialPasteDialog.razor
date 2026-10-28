@@ -1,7 +1,9 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
-@* Paste Special on the one core dialog frame (G6). *@
+@* Paste Special on the one core dialog frame (G6). The content and the arithmetic operation are two
+   radio columns (the reference stacks them; two columns keep the dialog short while making every
+   choice a single tap target), the toggles sit underneath. *@
 <TmModal Show="true"
          Title="@Loc["TmSpreadsheet_PasteSpecial_Title"]"
          Size="ModalSize.Medium"
@@ -10,35 +12,41 @@
          FooterLayout="FooterLayout.Inline"
          CloseOnEscape="true"
          CloseOnOverlayClick="true"
-         InitialFocusTargetId="@FirstContentDomId"
+         InitialFocusSelector="input[name='ps-content']:checked"
          RestoreFocusTargetId="@RestoreFocusTargetId"
          Class="tm-spreadsheet-pastespecial"
          OnClose="Close">
     <ChildContent>
-        <fieldset class="tm-spreadsheet-pastespecial__group">
-            <legend>@Loc["TmSpreadsheet_PasteSpecial_Paste"]</legend>
-            <label><input type="radio" id="@FirstContentDomId" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.All)" @onchange="() => SetContent(SpreadsheetPasteContent.All)" /> @Loc["TmSpreadsheet_PasteSpecial_All"]</label>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Values)" @onchange="() => SetContent(SpreadsheetPasteContent.Values)" /> @Loc["TmSpreadsheet_PasteSpecial_Values"]</label>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Formulas)" @onchange="() => SetContent(SpreadsheetPasteContent.Formulas)" /> @Loc["TmSpreadsheet_PasteSpecial_Formulas"]</label>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Formats)" @onchange="() => SetContent(SpreadsheetPasteContent.Formats)" /> @Loc["TmSpreadsheet_PasteSpecial_Formats"]</label>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.ValuesAndFormats)" @onchange="() => SetContent(SpreadsheetPasteContent.ValuesAndFormats)" /> @Loc["TmSpreadsheet_PasteSpecial_ValuesAndFormats"]</label>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.AllExceptBorders)" @onchange="() => SetContent(SpreadsheetPasteContent.AllExceptBorders)" /> @Loc["TmSpreadsheet_PasteSpecial_WithoutBorders"]</label>
-        </fieldset>
-
-        <fieldset class="tm-spreadsheet-pastespecial__group">
-            <legend>@Loc["TmSpreadsheet_PasteSpecial_Operation"]</legend>
-            <select @bind="_operation" class="tm-spreadsheet-pastespecial__op" aria-label="@Loc["TmSpreadsheet_PasteSpecial_Operation"]">
-                <option value="@SpreadsheetPasteOperation.None">@Loc["TmSpreadsheet_PasteSpecial_OpNone"]</option>
-                <option value="@SpreadsheetPasteOperation.Add">@Loc["TmSpreadsheet_PasteSpecial_OpAdd"]</option>
-                <option value="@SpreadsheetPasteOperation.Subtract">@Loc["TmSpreadsheet_PasteSpecial_OpSubtract"]</option>
-                <option value="@SpreadsheetPasteOperation.Multiply">@Loc["TmSpreadsheet_PasteSpecial_OpMultiply"]</option>
-                <option value="@SpreadsheetPasteOperation.Divide">@Loc["TmSpreadsheet_PasteSpecial_OpDivide"]</option>
-            </select>
-        </fieldset>
+        <div class="tm-spreadsheet-pastespecial__grid">
+            <div class="tm-spreadsheet-pastespecial__group">
+                <TmRadioGroup T="SpreadsheetPasteContent"
+                              Name="ps-content"
+                              Label="@Loc["TmSpreadsheet_PasteSpecial_Paste"]"
+                              Layout="RadioLayout.Vertical"
+                              Value="_content"
+                              ValueChanged="OnContentChanged"
+                              Options="@ContentOptions" />
+            </div>
+            <div class="tm-spreadsheet-pastespecial__group">
+                <TmRadioGroup T="SpreadsheetPasteOperation"
+                              Name="ps-operation"
+                              Label="@Loc["TmSpreadsheet_PasteSpecial_Operation"]"
+                              Layout="RadioLayout.Vertical"
+                              Value="_operation"
+                              ValueChanged="OnOperationChanged"
+                              Options="@OperationOptions" />
+            </div>
+        </div>
 
         <div class="tm-spreadsheet-pastespecial__toggles">
-            <label><input type="checkbox" checked="@_skipBlanks" @onchange="e => _skipBlanks = e.Value is bool b && b" /> @Loc["TmSpreadsheet_PasteSpecial_SkipBlanks"]</label>
-            <label><input type="checkbox" checked="@_transpose" @onchange="e => _transpose = e.Value is bool b2 && b2" /> @Loc["TmSpreadsheet_PasteSpecial_Transpose"]</label>
+            <TmCheckbox Class="tm-spreadsheet-pastespecial__toggle"
+                        Label="@Loc["TmSpreadsheet_PasteSpecial_SkipBlanks"]"
+                        Value="@_skipBlanks"
+                        ValueChanged="value => _skipBlanks = value" />
+            <TmCheckbox Class="tm-spreadsheet-pastespecial__toggle"
+                        Label="@Loc["TmSpreadsheet_PasteSpecial_Transpose"]"
+                        Value="@_transpose"
+                        ValueChanged="value => _transpose = value" />
         </div>
     </ChildContent>
     <Footer>

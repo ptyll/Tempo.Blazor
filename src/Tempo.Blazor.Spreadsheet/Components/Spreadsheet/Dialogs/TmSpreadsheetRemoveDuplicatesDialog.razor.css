@@ -16,18 +16,24 @@
 }
 
 .tm-spreadsheet-dedup__toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1-5);
     font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
-    cursor: pointer;
 }
 
 .tm-spreadsheet-dedup__select-actions {
     display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
     gap: var(--tm-space-3);
     margin-bottom: var(--tm-space-2);
+}
+
+/* A neutral "Selected N of M" line: the count tells the user what the OK button will act on. */
+.tm-spreadsheet-dedup__count {
+    margin-inline-start: auto;
+    font-size: var(--tm-text-xs);
+    color: var(--tm-color-text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .tm-spreadsheet-dedup__link {
@@ -48,14 +54,10 @@
     overflow: auto;
 }
 
-.tm-spreadsheet-dedup__column {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
+.tm-spreadsheet-dedup__columns ::deep .tm-spreadsheet-dedup__column {
     min-height: var(--tm-touch-target);
     font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
-    cursor: pointer;
 }
 
 .tm-spreadsheet-dedup__actions {

@@ -11686,6 +11686,12 @@
           "isRequired": false
         },
         {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "A CSS selector for the element that receives focus when the modal opens — for a target without a stable id or a set where the first match is right (a checked radio, the first checkbox). Resolved inside the focus scope; when it matches nothing the scope falls back to InitialFocusTargetId and then to its first-focusable path. Additive: null keeps the previous behaviour."
+        },
+        {
           "name": "InitialFocusTargetId",
           "type": "string?",
           "isRequired": false,

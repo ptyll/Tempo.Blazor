@@ -49,7 +49,7 @@ public class TmSpreadsheetNameManagerDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNameManagerDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        var filterInput = cut.Find(".tm-spreadsheet-name-manager__filter");
+        var filterInput = cut.Find(".tm-spreadsheet-name-manager__filter input");
         filterInput.Input("Sales");
 
         var rows = cut.FindAll("tbody tr");

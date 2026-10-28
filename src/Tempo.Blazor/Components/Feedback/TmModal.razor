@@ -42,7 +42,8 @@
                           RestoreFocus="RestoreFocus"
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId"
-                          InitialFocusTargetId="@InitialFocusTargetId">
+                          InitialFocusTargetId="@InitialFocusTargetId"
+                          InitialFocusSelector="@InitialFocusSelector">
                 
                 @if (IsSheet && CloseOnOverlayClick)
                 {
@@ -204,6 +205,15 @@
 
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
+
+    /// <summary>
+    /// A CSS selector for the element that receives focus when the modal opens — for a target that has
+    /// no stable id, or a set of candidates where the first match is the right one (a checked radio in a
+    /// list, the first checkbox of a list). Resolved inside the focus scope after the modal is promoted;
+    /// when it matches nothing the scope falls back to <see cref="InitialFocusTargetId"/> and then to its
+    /// own first-focusable path. Additive: the default (<c>null</c>) keeps the previous behaviour.
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
 
     /// <summary>
     /// Whether closing the modal restores the focus it took. Defaults to true; false leaves the focus

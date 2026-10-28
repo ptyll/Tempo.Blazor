@@ -33,7 +33,7 @@
     --tm-spreadsheet-ref-5: var(--tm-category-8);
     /* Find & Replace panel knobs: the floating desktop card reads these, so a host can widen or move
        it without overriding the panel's scoped rules. */
-    --tm-spreadsheet-find-width: 20rem;
+    --tm-spreadsheet-find-width: 30rem;
 
     display: flex;
     flex-direction: column;
@@ -610,31 +610,13 @@
     align-items: center;
     gap: var(--tm-space-2);
     margin-bottom: var(--tm-space-3);
+    container-type: inline-size;
 }
 
+/* The toolbar buttons are core TmButtons (New primary, Edit/Delete outline): only the shared
+   touch height is package-specific. */
 .tm-spreadsheet-name-manager__tool {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
     min-height: var(--tm-touch-target);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    cursor: pointer;
-}
-
-.tm-spreadsheet-name-manager__tool:hover:not(:disabled) {
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-primary);
-}
-
-.tm-spreadsheet-name-manager__tool:disabled {
-    opacity: var(--tm-opacity-disabled);
-    cursor: not-allowed;
 }
 
 .tm-spreadsheet-name-manager__tool:focus-visible,
@@ -647,23 +629,23 @@
     box-shadow: var(--tm-focus-ring);
 }
 
+/* The filter is the core TmSearchInput (it paints its own field, magnifier and clear button); the
+   toolbar only places it at the end of the row. */
 .tm-spreadsheet-name-manager__filter {
     flex: 1 1 auto;
     min-width: var(--tm-space-20);
+    max-width: 20rem;
     margin-left: auto;
-    min-height: var(--tm-touch-target);
-    padding: var(--tm-space-1-5) var(--tm-space-2-5);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    outline: none;
 }
 
-.tm-spreadsheet-name-manager__filter:focus {
-    border-color: var(--tm-color-primary);
+@container (width < 640px) {
+    .tm-spreadsheet-name-manager__filter {
+        flex: 1 1 100%;
+        max-width: none;
+        margin-inline-start: 0;
+    }
 }
+
 
 /* Name Manager table */
 .tm-spreadsheet-name-manager__table-wrap {
@@ -696,6 +678,12 @@
     white-space: nowrap;
 }
 
+.tm-spreadsheet-name-manager__name {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .tm-spreadsheet-name-manager__table tbody tr {
     cursor: pointer;
 }
@@ -719,6 +707,99 @@
     outline-offset: -2px;
 }
 
+/* Name Manager on the phone: one card per range (name + value, the reference formula, a scope chip
+   and the comment), because the five-column table squeezed every column to ~60px. */
+.tm-spreadsheet-name-manager__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-spreadsheet-name-manager__card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-color-surface);
+    cursor: pointer;
+}
+
+.tm-spreadsheet-name-manager__card--selected {
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset var(--tm-space-0-5) 0 0 var(--tm-color-primary);
+}
+
+.tm-spreadsheet-name-manager__card:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+.tm-spreadsheet-name-manager__card-main {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.tm-spreadsheet-name-manager__card-name {
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+    overflow-wrap: anywhere;
+}
+
+/* The phone card keeps both halves readable: the name wraps, the detail keeps a minimum width and
+   the scope chip never breaks mid-word. */
+.tm-spreadsheet-name-manager__card-detail {
+    flex: 1 1 0;
+    min-width: 8rem;
+}
+
+.tm-spreadsheet-name-manager__card-value {
+    margin-top: var(--tm-space-1);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text-muted);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-spreadsheet-name-manager__card-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.tm-spreadsheet-name-manager__card-refers {
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet-name-manager__chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    white-space: nowrap;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-name-manager__card-comment {
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-name-manager__card-chevron {
+    flex: 0 0 auto;
+    margin-top: var(--tm-space-1);
+    color: var(--tm-color-text-muted);
+}
+
 .tm-spreadsheet-name-manager__empty {
     padding: var(--tm-space-6) var(--tm-space-3);
     text-align: center;
@@ -735,9 +816,19 @@
     gap: var(--tm-space-2);
 }
 
+/* The phone's Close is the reference's full-width primary action. */
+.tm-spreadsheet-name-manager__actions {
+    width: 100%;
+}
+
+.tm-spreadsheet-name-manager__btn--close.tm-btn-block {
+    width: 100%;
+}
+
 /* Form bodies */
 .tm-spreadsheet-named-range-edit__body,
 .tm-spreadsheet-hyperlink__body {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
@@ -748,6 +839,15 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-1);
+}
+
+/* Link-type segmented control: an equal-width 2x2 grid so "Named range" never wraps onto a lone
+   second row. `Class` sits on the .tm-radio-group root, which wraps .tm-radio-group-options
+   (global sheet, so no scoped deep combinator). */
+.tm-spreadsheet-hyperlink__kinds .tm-radio-group-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
 }
 
 .tm-spreadsheet-named-range-edit__field label,
@@ -884,6 +984,26 @@
 }
 
 /* Form layout */
+/* The phone layout of the Number tab: the category is a select ABOVE its options, so both keep the
+   full dialog width instead of the reference's 140px listbox column. */
+.tm-fcd__number {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-fcd__category-select {
+    width: 100%;
+}
+
+.tm-fcd__number-options {
+    min-width: 0;
+}
+
+.tm-fcd__decimal {
+    max-width: 8rem;
+}
+
 .tm-fcd__form {
     display: flex;
     flex-direction: column;
@@ -956,8 +1076,8 @@
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
     overflow-y: auto;
-    flex: 1;
-    max-height: 200px;
+    flex: 0 0 auto;
+    max-height: 16rem;
 }
 
 .tm-fcd__listbox--sm {
@@ -1149,17 +1269,28 @@
     font-weight: var(--tm-font-weight-medium);
 }
 
-.tm-dvd__body {
+/* The form measures its OWN container: the spreadsheet embeds in a Notion block/modal, so the
+   viewport does not decide the layout. Label | field from 640px up, stacked below that. */
+.tm-dvd__form {
     padding: var(--tm-space-4) 0;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
 }
 
+/* The container is the DIALOG OVERLAY (the viewport-sized surface the modal paints), so "label |
+   field from 640px" describes the dialog's available width: desktop and tablet get the grid, a
+   390/320 phone stacks. A body-level container would never reach it — the Medium card's body is
+   ~470px even on a 1440 viewport. */
+.tm-modal-overlay.tm-dvd {
+    container-type: inline-size;
+}
+
 .tm-dvd__field {
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-1);
+    min-width: 0;
 }
 
 .tm-dvd__label {
@@ -1168,27 +1299,18 @@
     color: var(--tm-color-text);
 }
 
-.tm-dvd__select,
-.tm-dvd__input {
-    padding: 6px 10px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    outline: none;
+.tm-dvd__select {
+    width: 100%;
 }
 
-.tm-dvd__select:focus,
-.tm-dvd__input:focus {
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+.tm-dvd__field--multiline .tm-dvd__textarea {
+    width: 100%;
 }
 
 .tm-dvd__textarea {
-    padding: 6px 10px;
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-size: var(--tm-text-sm);
@@ -1196,12 +1318,37 @@
     resize: vertical;
 }
 
-.tm-dvd__checkbox {
+.tm-dvd__textarea:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-dvd__checks {
     display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-dvd__checkbox {
     font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
+}
+
+@container (width >= 640px) {
+    .tm-dvd__field {
+        display: grid;
+        grid-template-columns: 8rem minmax(0, 1fr);
+        align-items: center;
+        column-gap: var(--tm-space-3);
+    }
+
+    .tm-dvd__field--multiline {
+        align-items: start;
+    }
+
+    .tm-dvd__checks {
+        padding-inline-start: calc(8rem + var(--tm-space-3));
+    }
 }
 
 .tm-dvd__actions {
@@ -1226,16 +1373,25 @@
     --tm-spreadsheet-alert-ink: var(--tm-color-info);
 }
 
-.tm-spreadsheet-alert__icon {
+/* The severity reads as a large filled circle to the LEFT of the message (the reference's card), not
+   as a rail through the rounded corner. The circle's fill is the severity token, so it follows the
+   theme; the icon inside inherits the on-primary contrast colour. */
+.tm-spreadsheet-alert__badge {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-spreadsheet-alert-ink);
-    margin-bottom: var(--tm-space-2);
+    width: var(--tm-space-12);
+    height: var(--tm-space-12);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-spreadsheet-alert-ink);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-spreadsheet-alert__message {
     margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: var(--tm-text-md);
     color: var(--tm-color-text);
 }
@@ -1246,11 +1402,29 @@
     gap: var(--tm-space-2);
 }
 
-/* The severity rail on the modal's own body: the icon's colour repeated as a rule, so the severity
-   reads even for a reader who cannot see the icon. The thickness is the token, not a literal px. */
-.tm-spreadsheet-alert .tm-modal-body {
-    border-inline-start: var(--tm-space-0-5) solid var(--tm-spreadsheet-alert-ink);
-    padding-inline-start: var(--tm-space-4);
+/* Badge and message share one row, and the reference's card has no divider under the title. */
+.tm-modal-overlay.tm-spreadsheet-alert .tm-modal-body {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-4);
+}
+
+.tm-modal-overlay.tm-spreadsheet-alert .tm-modal-header {
+    border-bottom: none;
+    padding-bottom: var(--tm-space-2);
+}
+
+/* The reference wizard paints a COMPLETED step in the primary colour (the core stepper defaults to
+   the success green). The dialog's root class sits on the modal OVERLAY, so this override lives in the
+   package's global sheet — a scoped deep-combinator rule could never reach past the overlay's own scope. */
+.tm-spreadsheet-t2c .tm-stepper-step--completed .tm-stepper-indicator {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-spreadsheet-t2c .tm-stepper-connector-line--completed {
+    background: var(--tm-color-primary);
 }
 
 /* Find & Replace on the mobile layout: the panel becomes the content of the non-modal bottom sheet,
@@ -1258,6 +1432,12 @@
    the panel's own scoped rule (`.tm-spreadsheet-find[b-…]`) is a two-class specificity and ships in
    the scoped bundle that loads AFTER this file, so a plain descendant selector loses and the phone
    kept rendering the 20rem floating card inside the sheet. */
+/* The find sheet opens tall enough to show both fields and the counter before the user swipes: the
+   generic sheet starts at its peek detent, which cut the Replace-with row (phase-4 review). */
+.tm-drawer.tm-spreadsheet-find-host .tm-drawer__panel {
+    min-height: 60dvh;
+}
+
 .tm-drawer.tm-spreadsheet-find-host .tm-drawer__panel .tm-spreadsheet-find {
     position: static;
     width: 100%;

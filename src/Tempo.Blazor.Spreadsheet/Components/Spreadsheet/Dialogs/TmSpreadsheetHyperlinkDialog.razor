@@ -3,7 +3,8 @@
 
 @* Hyperlink on the one core dialog frame (G6). TmModal owns the overlay, the dialog role, the initial
    focus on the address field, Escape and the focus restore; the form and its Ctrl+Enter shortcut stay
-   the package's. *@
+   the package's. The link type is the core segmented radio group (convention P17, foundation F8), so
+   all four kinds are visible at once instead of hidden behind a select. *@
 <TmModal Show="true"
          Title="@Loc["TmSpreadsheet_Hyperlink_Title"]"
          Size="ModalSize.Medium"
@@ -21,49 +22,68 @@
            this wrapper, so their keydown never reaches the shortcut. *@
         <div class="tm-spreadsheet-hyperlink__body" @onkeydown="OnKeyDown">
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="@TypeSelectDomId">@Loc["TmSpreadsheet_Hyperlink_Type"]</label>
-                <select id="@TypeSelectDomId" @bind="_kind" class="tm-spreadsheet-hyperlink__select">
-                    <option value="@SpreadsheetHyperlinkKind.Web">@Loc["TmSpreadsheet_Hyperlink_TypeWeb"]</option>
-                    <option value="@SpreadsheetHyperlinkKind.Email">@Loc["TmSpreadsheet_Hyperlink_TypeEmail"]</option>
-                    <option value="@SpreadsheetHyperlinkKind.InternalRef">@Loc["TmSpreadsheet_Hyperlink_TypeInternal"]</option>
-                    <option value="@SpreadsheetHyperlinkKind.NamedRange">@Loc["TmSpreadsheet_Hyperlink_TypeNamedRange"]</option>
-                </select>
+                <TmRadioGroup T="SpreadsheetHyperlinkKind"
+                              id="@TypeSelectDomId"
+                              Class="tm-spreadsheet-hyperlink__kinds"
+                              Label="@Loc["TmSpreadsheet_Hyperlink_Type"]"
+                              Appearance="RadioAppearance.Segmented"
+                              Layout="RadioLayout.Horizontal"
+                              Value="_kind"
+                              ValueChanged="OnKindChanged"
+                              Options="@KindOptions" />
             </div>
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="@TargetInputDomId">@Loc["TmSpreadsheet_Hyperlink_Target"]</label>
+                <label class="tm-spreadsheet-hyperlink__label" for="@TargetInputDomId">@Loc["TmSpreadsheet_Hyperlink_Target"]</label>
                 @if (_kind == SpreadsheetHyperlinkKind.NamedRange)
                 {
-                    <select id="@TargetInputDomId" @bind="_target" class="tm-spreadsheet-hyperlink__select">
+                    <TmSelect TValue="string"
+                              Id="@TargetInputDomId"
+                              Class="tm-spreadsheet-hyperlink__select"
+                              Value="@_target"
+                              ValueChanged="OnTargetChanged">
                         <option value="">@Loc["TmSpreadsheet_Hyperlink_SelectNamedRange"]</option>
                         @foreach (var nr in Workbook.NamedRanges)
                         {
                             <option value="@nr.Name">@nr.Name</option>
                         }
-                    </select>
+                    </TmSelect>
                 }
                 else
                 {
-                    <input id="@TargetInputDomId" type="text" inputmode="@TargetInputMode" @bind="_target" @bind:event="oninput" class="tm-spreadsheet-hyperlink__input" />
+                    <TmTextInput Id="@TargetInputDomId"
+                                 Class="tm-spreadsheet-hyperlink__input"
+                                 Value="@_target"
+                                 ValueChanged="OnTargetChanged"
+                                 inputmode="@TargetInputMode" />
                 }
             </div>
 
             @if (_kind == SpreadsheetHyperlinkKind.Email)
             {
                 <div class="tm-spreadsheet-hyperlink__field">
-                    <label for="@EmailSubjectDomId">@Loc["TmSpreadsheet_Hyperlink_EmailSubject"]</label>
-                    <input id="@EmailSubjectDomId" type="text" @bind="_emailSubject" class="tm-spreadsheet-hyperlink__input" />
+                    <label class="tm-spreadsheet-hyperlink__label" for="@EmailSubjectDomId">@Loc["TmSpreadsheet_Hyperlink_EmailSubject"]</label>
+                    <TmTextInput Id="@EmailSubjectDomId"
+                                 Class="tm-spreadsheet-hyperlink__input"
+                                 Value="@(_emailSubject ?? string.Empty)"
+                                 ValueChanged="value => _emailSubject = value" />
                 </div>
             }
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="@DisplayInputDomId">@Loc["TmSpreadsheet_Hyperlink_Display"]</label>
-                <input id="@DisplayInputDomId" type="text" @bind="_display" class="tm-spreadsheet-hyperlink__input" />
+                <label class="tm-spreadsheet-hyperlink__label" for="@DisplayInputDomId">@Loc["TmSpreadsheet_Hyperlink_Display"]</label>
+                <TmTextInput Id="@DisplayInputDomId"
+                             Class="tm-spreadsheet-hyperlink__input"
+                             Value="@(_display ?? string.Empty)"
+                             ValueChanged="value => _display = value" />
             </div>
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="@TooltipInputDomId">@Loc["TmSpreadsheet_Hyperlink_Tooltip"]</label>
-                <input id="@TooltipInputDomId" type="text" @bind="_tooltip" class="tm-spreadsheet-hyperlink__input" />
+                <label class="tm-spreadsheet-hyperlink__label" for="@TooltipInputDomId">@Loc["TmSpreadsheet_Hyperlink_Tooltip"]</label>
+                <TmTextInput Id="@TooltipInputDomId"
+                             Class="tm-spreadsheet-hyperlink__input"
+                             Value="@(_tooltip ?? string.Empty)"
+                             ValueChanged="value => _tooltip = value" />
             </div>
         </div>
     </ChildContent>

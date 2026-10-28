@@ -366,4 +366,32 @@ public class TmModalTests : LocalizationTestBase
     }
 
     #endregion
+
+    #region InitialFocusSelector (phase-4 review, additive)
+
+    [Fact]
+    public void InitialFocusSelector_ReachesTheFocusScope()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.InitialFocusSelector, "input[name='pick']:checked"));
+
+        var scope = cut.Find(".tm-focus-scope");
+        scope.GetAttribute("data-initial-focus-selector").Should().Be("input[name='pick']:checked",
+            "the selector is an additive alternative to the id for targets without a stable id");
+    }
+
+    [Fact]
+    public void InitialFocusSelector_IsNullByDefault()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test"));
+
+        cut.Find(".tm-focus-scope").HasAttribute("data-initial-focus-selector").Should().BeFalse(
+            "the default markup is unchanged");
+    }
+
+    #endregion
 }

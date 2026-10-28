@@ -1,3 +1,5 @@
+using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Layout;
@@ -47,6 +49,34 @@ public partial class TmSpreadsheetCustomFilterDialog
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     private string FirstOperatorDomId => $"spreadsheet-custom-filter-op-{_idSuffix}";
+
+    private List<RadioOption<SpreadsheetFilterJoin>> JoinOptions =>
+    [
+        new(Loc["TmSpreadsheet_CustomFilter_And"], SpreadsheetFilterJoin.And),
+        new(Loc["TmSpreadsheet_CustomFilter_Or"], SpreadsheetFilterJoin.Or)
+    ];
+
+    private IReadOnlyList<SelectOption<SpreadsheetFilterOperator>> OperatorOptions =>
+        Operators.Select(op => new SelectOption<SpreadsheetFilterOperator>(op, Loc[OperatorKey(op)])).ToList();
+
+    private IReadOnlyList<SelectOption<SpreadsheetFilterOperator?>> SecondOperatorOptions
+    {
+        get
+        {
+            var options = new List<SelectOption<SpreadsheetFilterOperator?>>
+            {
+                new(null, "—")
+            };
+            options.AddRange(Operators.Select(op => new SelectOption<SpreadsheetFilterOperator?>(op, Loc[OperatorKey(op)])));
+            return options;
+        }
+    }
+
+    private void OnFirstOperatorChanged(SpreadsheetFilterOperator op) => _op1 = op;
+
+    private void OnSecondOperatorChanged(SpreadsheetFilterOperator? op) => _op2 = op;
+
+    private void OnJoinChanged(SpreadsheetFilterJoin join) => _join = join;
 
     /// <summary>
     /// Numeric and date criteria take a numeric keyboard on a phone; a text filter keeps the text one.

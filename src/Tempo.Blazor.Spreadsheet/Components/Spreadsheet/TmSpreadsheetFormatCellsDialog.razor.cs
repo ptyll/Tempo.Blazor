@@ -1,3 +1,5 @@
+using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Models;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -10,6 +12,9 @@ namespace Tempo.Blazor.Components.Spreadsheet;
 
 public partial class TmSpreadsheetFormatCellsDialog
 {
+    static TmSpreadsheetFormatCellsDialog() => SpreadsheetIcons.EnsureRegistered();
+
+
     // Per-instance id suffix: the ids below are implementation detail, never a selector contract.
     private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
 
@@ -31,6 +36,44 @@ public partial class TmSpreadsheetFormatCellsDialog
     /// can render that presentation without a DOM.
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the dialog presents the category as a select above the options (the phone layout). A
+    /// forced <see cref="LayoutMode"/> wins; <see cref="TmLayoutMode.Auto"/> reads the viewport scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
+    /// <summary>The category choices as core select options (labels localized per language).</summary>
+    private IReadOnlyList<SelectOption<string>> CategoryOptions =>
+        _numberCategories.Select(c => new SelectOption<string>(c, Loc[$"TmSpreadsheet_NumCat_{c}"])).ToList();
+
+    private void OnCategorySelected(string? category)
+    {
+        if (string.IsNullOrEmpty(category) || string.Equals(category, _selectedCategory, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _selectedCategory = category;
+        // The phone reaches the category through this select (the desktop/tablet listbox calls
+        // OnCategoryClick); both paths must refresh the working number format, or Apply wrote the
+        // PREVIOUS category's format.
+        UpdateNumberFormat();
+    }
+
+    private void OnDecimalPlacesChanged(int? value)
+    {
+        _numDecimalPlaces = Math.Clamp(value ?? _numDecimalPlaces, 0, 30);
+        UpdateNumberFormat();
+    }
 
 
     private SpreadsheetCellStyle _workingStyle = new();
@@ -271,8 +314,24 @@ public partial class TmSpreadsheetFormatCellsDialog
             sb.Append($" color: {_workingStyle.ForeColor};");
         if (_workingStyle.BackgroundColor is not null and not "transparent")
             sb.Append($" background-color: {_workingStyle.BackgroundColor};");
+        sb.Append($" text-align: {PreviewAlignment()};");
         return sb.ToString();
     }
+
+    /// <summary>
+    /// The preview aligns like the cell will: an explicit horizontal alignment wins, otherwise a
+    /// numeric format (Number/Currency/Accounting/Percentage) right-aligns and the rest stays left.
+    /// </summary>
+    private string PreviewAlignment() => _workingStyle.HorizontalAlign switch
+    {
+        SpreadsheetHorizontalAlign.Right => "right",
+        SpreadsheetHorizontalAlign.Center => "center",
+        SpreadsheetHorizontalAlign.Left => "left",
+        _ => IsNumericCategory(_selectedCategory) ? "right" : "left"
+    };
+
+    private static bool IsNumericCategory(string category) => category is
+        "Number" or "Currency" or "Accounting" or "Percentage";
 
     private void Apply()
     {

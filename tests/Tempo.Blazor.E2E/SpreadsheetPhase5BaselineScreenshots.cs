@@ -47,7 +47,7 @@ public partial class SpreadsheetBaselineScreenshots
 
         // Configure: Type = List, Formula1 = Apple,Banana,Cherry
         var dialog = page.Locator(".tm-dvd");
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("List");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("List");
         await page.WaitForTimeoutAsync(200);
         await FillValidationInputAsync(page, dialog.Locator(".tm-dvd__input").First, "Apple,Banana,Cherry");
 
@@ -66,7 +66,7 @@ public partial class SpreadsheetBaselineScreenshots
         // Set up a list validation on E2 and apply it.
         await OpenValidationDialogAsync(page, "E2");
         var dialog = page.Locator(".tm-dvd");
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("List");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("List");
         await page.WaitForTimeoutAsync(200);
         await FillValidationInputAsync(page, dialog.Locator(".tm-dvd__input").First, "Apple,Banana,Cherry");
         await dialog.Locator(".tm-dvd__actions button").Last.ClickAsync();
@@ -108,7 +108,7 @@ public partial class SpreadsheetBaselineScreenshots
         // Set up Stop-style whole-number 1–10 validation on E3.
         await OpenValidationDialogAsync(page, "E3");
         var dialog = page.Locator(".tm-dvd");
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("Whole");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("Whole");
         await page.WaitForTimeoutAsync(200);
 
         // Fill min and max

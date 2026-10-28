@@ -1,3 +1,4 @@
+using Tempo.Blazor.Components.Inputs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
@@ -18,8 +19,15 @@ public partial class TmSpreadsheetFindReplaceDialog
     private readonly SpreadsheetSearchOptions _options = new();
     private string _query = string.Empty;
     private string _replacement = string.Empty;
-    private ElementReference _queryInput;
+    private TmTextInput? _queryInput;
     private bool _shouldFocusQuery = true;
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Stable id of the Find field (the label's <c>for</c> target).</summary>
+    private string QueryDomId => $"tm-spreadsheet-find-query-{_idSuffix}";
+
+    /// <summary>Stable id of the Replace-with field.</summary>
+    private string ReplaceDomId => $"tm-spreadsheet-find-replace-{_idSuffix}";
 
     /// <summary>Initial search options used to seed the panel.</summary>
     [Parameter] public SpreadsheetSearchOptions? InitialOptions { get; set; }
@@ -96,7 +104,14 @@ public partial class TmSpreadsheetFindReplaceDialog
         if (_shouldFocusQuery)
         {
             _shouldFocusQuery = false;
-            try { await _queryInput.FocusAsync(); } catch { }
+            try
+            {
+                if (_queryInput is not null)
+                {
+                    await _queryInput.FocusAsync();
+                }
+            }
+            catch { }
         }
     }
 
@@ -109,36 +124,54 @@ public partial class TmSpreadsheetFindReplaceDialog
         Scope = _options.Scope
     };
 
-    private Task OnQueryInput(ChangeEventArgs e)
+    private Task OnQueryChanged(string value)
     {
-        _query = e.Value?.ToString() ?? string.Empty;
+        // TmTextInput raises BOTH input and change; the change event of a field that already holds the
+        // typed text must not re-run the search (that reset the match index to the first hit when the
+        // user pressed Enter to move to the next one).
+        var query = value ?? string.Empty;
+        if (string.Equals(query, _query, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _query = query;
         return RaiseSearch();
     }
 
-    private void OnReplacementInput(ChangeEventArgs e)
-        => _replacement = e.Value?.ToString() ?? string.Empty;
-
-    private Task OnMatchCaseToggle(ChangeEventArgs e)
+    private Task OnReplacementChanged(string value)
     {
-        _options.MatchCase = e.Value is bool b && b;
+        var replacement = value ?? string.Empty;
+        if (string.Equals(replacement, _replacement, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _replacement = replacement;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMatchCaseToggle(bool value)
+    {
+        _options.MatchCase = value;
         return RaiseSearch();
     }
 
-    private Task OnWholeCellToggle(ChangeEventArgs e)
+    private Task OnWholeCellToggle(bool value)
     {
-        _options.WholeCell = e.Value is bool b && b;
+        _options.WholeCell = value;
         return RaiseSearch();
     }
 
-    private Task OnInFormulasToggle(ChangeEventArgs e)
+    private Task OnInFormulasToggle(bool value)
     {
-        _options.SearchIn = e.Value is bool b && b ? SpreadsheetSearchIn.Formulas : SpreadsheetSearchIn.Values;
+        _options.SearchIn = value ? SpreadsheetSearchIn.Formulas : SpreadsheetSearchIn.Values;
         return RaiseSearch();
     }
 
-    private Task OnWorkbookScopeToggle(ChangeEventArgs e)
+    private Task OnWorkbookScopeToggle(bool value)
     {
-        _options.Scope = e.Value is bool b && b ? SpreadsheetSearchScope.Workbook : SpreadsheetSearchScope.Sheet;
+        _options.Scope = value ? SpreadsheetSearchScope.Workbook : SpreadsheetSearchScope.Sheet;
         return RaiseSearch();
     }
 

@@ -7,7 +7,7 @@
    on close. The package decides the severity icon, the words and whether a cancel path exists. *@
 <TmModal Show="true"
          Title="@ResolvedTitle"
-         Size="ModalSize.Small"
+         Size="ModalSize.Medium"
          LayoutMode="@LayoutMode"
          MobilePresentation="MobilePresentation.Auto"
          FooterLayout="FooterLayout.Inline"
@@ -22,7 +22,7 @@
          Class="@RootClass"
          OnClose="OnDismiss">
     <ChildContent>
-        <div class="tm-spreadsheet-alert__icon" aria-hidden="true">
+        <div class="tm-spreadsheet-alert__badge" aria-hidden="true">
             <TmIcon Name="@IconName" Size="IconSize.Lg" />
         </div>
         <p class="tm-spreadsheet-alert__message" id="@MessageDomId">@ResolvedMessage</p>

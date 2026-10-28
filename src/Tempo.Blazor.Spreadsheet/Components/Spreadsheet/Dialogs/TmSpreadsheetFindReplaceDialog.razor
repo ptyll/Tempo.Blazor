@@ -40,11 +40,16 @@
 @code {
     /// <summary>
     /// The panel itself — one markup for both presentations, so the fields, the counter and the
-    /// keyboard contract cannot drift between the floating panel and the mobile sheet.
+    /// keyboard contract cannot drift between the floating panel and the mobile sheet. The layout is
+    /// the reference's: a labelled Find row with the match counter, a labelled Replace row, the four
+    /// options in two columns and an action row whose primary action is Replace all.
     /// </summary>
     private RenderFragment PanelContent => __builder =>
     {
-            <div class="tm-spreadsheet-find" role="@(Mobile ? null : "dialog")" aria-label="@(Mobile ? null : Loc["TmSpreadsheet_Find_Title"])" @onkeydown="OnRootKeyDown">
+            <div class="tm-spreadsheet-find @(Mobile ? "tm-spreadsheet-find--sheet" : "tm-spreadsheet-find--floating")"
+                 role="@(Mobile ? null : "dialog")"
+                 aria-label="@(Mobile ? null : Loc["TmSpreadsheet_Find_Title"])"
+                 @onkeydown="OnRootKeyDown">
                 <div class="tm-spreadsheet-find__header">
                     <span class="tm-spreadsheet-find__title">@Loc["TmSpreadsheet_Find_Title"]</span>
                     <button type="button"
@@ -56,55 +61,84 @@
                     </button>
                 </div>
 
-                <div class="tm-spreadsheet-find__row">
-                    <input class="tm-spreadsheet-find__input tm-spreadsheet-find__query"
-                           placeholder="@Loc["TmSpreadsheet_Find_Query"]"
-                           aria-label="@Loc["TmSpreadsheet_Find_Query"]"
-                           value="@_query"
-                           @ref="_queryInput"
-                           @oninput="OnQueryInput"
-                           @onkeydown="OnFieldKeyDown" />
-                    <span class="tm-spreadsheet-find__counter" role="status" aria-live="polite">@CounterText</span>
-                </div>
+                <div class="tm-spreadsheet-find__fields">
+                    <div class="tm-spreadsheet-find__field">
+                        <label class="tm-spreadsheet-find__label" for="@QueryDomId">@Loc["TmSpreadsheet_Find_Query"]</label>
+                        <div class="tm-spreadsheet-find__control">
+                            <TmTextInput @ref="_queryInput"
+                                         Id="@QueryDomId"
+                                         Class="tm-spreadsheet-find__input tm-spreadsheet-find__query"
+                                         Value="@_query"
+                                         ValueChanged="OnQueryChanged"
+                                         OnKeyDown="OnFieldKeyDown"
+                                         Placeholder="@Loc["TmSpreadsheet_Find_Query"]" />
+                        </div>
+                        <span class="tm-spreadsheet-find__counter" role="status" aria-live="polite">@CounterText</span>
+                    </div>
 
-                <div class="tm-spreadsheet-find__row">
-                    <input class="tm-spreadsheet-find__input tm-spreadsheet-find__replace"
-                           placeholder="@Loc["TmSpreadsheet_Find_ReplaceWith"]"
-                           aria-label="@Loc["TmSpreadsheet_Find_ReplaceWith"]"
-                           value="@_replacement"
-                           @oninput="OnReplacementInput"
-                           @onkeydown="OnFieldKeyDown" />
+                    <div class="tm-spreadsheet-find__field">
+                        <label class="tm-spreadsheet-find__label" for="@ReplaceDomId">@Loc["TmSpreadsheet_Find_ReplaceWith"]</label>
+                        <div class="tm-spreadsheet-find__control">
+                            <TmTextInput Id="@ReplaceDomId"
+                                         Class="tm-spreadsheet-find__input tm-spreadsheet-find__replace"
+                                         Value="@_replacement"
+                                         ValueChanged="OnReplacementChanged"
+                                         OnKeyDown="OnFieldKeyDown"
+                                         Placeholder="@Loc["TmSpreadsheet_Find_ReplaceWith"]" />
+                        </div>
+                    </div>
                 </div>
 
                 <div class="tm-spreadsheet-find__options">
-                    <label class="tm-spreadsheet-find__option">
-                        <input type="checkbox" checked="@_options.MatchCase" @onchange="OnMatchCaseToggle" />
-                        <span>@Loc["TmSpreadsheet_Find_MatchCase"]</span>
-                    </label>
-                    <label class="tm-spreadsheet-find__option">
-                        <input type="checkbox" checked="@_options.WholeCell" @onchange="OnWholeCellToggle" />
-                        <span>@Loc["TmSpreadsheet_Find_WholeCell"]</span>
-                    </label>
-                    <label class="tm-spreadsheet-find__option">
-                        <input type="checkbox" checked="@(_options.SearchIn == SpreadsheetSearchIn.Formulas)" @onchange="OnInFormulasToggle" />
-                        <span>@Loc["TmSpreadsheet_Find_InFormulas"]</span>
-                    </label>
-                    <label class="tm-spreadsheet-find__option">
-                        <input type="checkbox" checked="@(_options.Scope == SpreadsheetSearchScope.Workbook)" @onchange="OnWorkbookScopeToggle" />
-                        <span>@Loc["TmSpreadsheet_Find_WorkbookScope"]</span>
-                    </label>
+                    <TmCheckbox Class="tm-spreadsheet-find__option"
+                                Label="@Loc["TmSpreadsheet_Find_MatchCase"]"
+                                Value="@_options.MatchCase"
+                                ValueChanged="OnMatchCaseToggle" />
+                    <TmCheckbox Class="tm-spreadsheet-find__option"
+                                Label="@Loc["TmSpreadsheet_Find_InFormulas"]"
+                                Value="@(_options.SearchIn == SpreadsheetSearchIn.Formulas)"
+                                ValueChanged="OnInFormulasToggle" />
+                    <TmCheckbox Class="tm-spreadsheet-find__option"
+                                Label="@Loc["TmSpreadsheet_Find_WholeCell"]"
+                                Value="@_options.WholeCell"
+                                ValueChanged="OnWholeCellToggle" />
+                    <TmCheckbox Class="tm-spreadsheet-find__option"
+                                Label="@Loc["TmSpreadsheet_Find_WorkbookScope"]"
+                                Value="@(_options.Scope == SpreadsheetSearchScope.Workbook)"
+                                ValueChanged="OnWorkbookScopeToggle" />
                 </div>
 
                 <div class="tm-spreadsheet-find__actions">
-                    <button type="button" class="tm-spreadsheet-find__btn" title="@Loc["TmSpreadsheet_Find_FindPrevious"]" aria-label="@Loc["TmSpreadsheet_Find_FindPrevious"]" @onclick="FindPrevious">
-                        <TmIcon Name="chevron-up" />
-                    </button>
-                    <button type="button" class="tm-spreadsheet-find__btn" title="@Loc["TmSpreadsheet_Find_FindNext"]" aria-label="@Loc["TmSpreadsheet_Find_FindNext"]" @onclick="FindNext">
-                        <TmIcon Name="chevron-down" />
-                    </button>
+                    <TmButton Variant="ButtonVariant.Outline"
+                              Class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--nav"
+                              Icon="chevron-up"
+                              OnClick="FindPrevious">
+                        @Loc["TmSpreadsheet_Find_FindPrevious"]
+                    </TmButton>
+                    <TmButton Variant="ButtonVariant.Outline"
+                              Class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--nav"
+                              Icon="chevron-down"
+                              OnClick="FindNext">
+                        @Loc["TmSpreadsheet_Find_FindNext"]
+                    </TmButton>
                     <span class="tm-spreadsheet-find__spacer"></span>
-                    <button type="button" class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--text" @onclick="Replace">@Loc["TmSpreadsheet_Find_Replace"]</button>
-                    <button type="button" class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--text" @onclick="ReplaceAll">@Loc["TmSpreadsheet_Find_ReplaceAll"]</button>
+                    <TmButton Variant="ButtonVariant.Outline"
+                              Class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--text"
+                              OnClick="Replace">
+                        @Loc["TmSpreadsheet_Find_Replace"]
+                    </TmButton>
+                    <TmButton Class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--text tm-spreadsheet-find__btn--primary"
+                              OnClick="ReplaceAll">
+                        @Loc["TmSpreadsheet_Find_ReplaceAll"]
+                    </TmButton>
+                    @if (!Mobile)
+                    {
+                        <TmButton Variant="ButtonVariant.Outline"
+                                  Class="tm-spreadsheet-find__btn tm-spreadsheet-find__btn--close"
+                                  OnClick="Close">
+                            @Loc["Tm_Close"]
+                        </TmButton>
+                    }
                 </div>
             </div>
     };

@@ -68,7 +68,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await page.WaitForSelectorAsync(".tm-spreadsheet-hyperlink", new() { State = WaitForSelectorState.Visible });
 
         // Fill dialog
-        await page.SelectOptionAsync("#hl-type", "Web");
+        await page.Locator("#hl-type .tm-radio-segment").First.ClickAsync(); // Web page is the first segment
         await page.FillAsync("#hl-target", "https://example.com");
         await page.FillAsync("#hl-display", "Example");
         await page.ClickAsync(".tm-spreadsheet-hyperlink__btn--ok");

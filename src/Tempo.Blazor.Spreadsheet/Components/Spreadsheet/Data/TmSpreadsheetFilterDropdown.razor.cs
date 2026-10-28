@@ -96,23 +96,32 @@ public partial class TmSpreadsheetFilterDropdown
         return SpreadsheetFilterKind.Text;
     }
 
-    private void OnSearchInput(ChangeEventArgs e) => _search = e.Value?.ToString() ?? string.Empty;
+    private void OnSearchChanged(string value) => _search = value ?? string.Empty;
 
-    private void ToggleValue(string display)
+    private void OnValueToggled(string display, bool selected)
     {
-        if (!_checked.Remove(display))
+        if (selected)
+        {
             _checked.Add(display);
+        }
+        else
+        {
+            _checked.Remove(display);
+        }
     }
 
-    private void ToggleSelectAll(ChangeEventArgs e)
+    private void OnSelectAllChanged(bool selected)
     {
-        var check = e.Value is bool b && b;
         foreach (var item in VisibleValues)
         {
-            if (check)
+            if (selected)
+            {
                 _checked.Add(item.Display);
+            }
             else
+            {
                 _checked.Remove(item.Display);
+            }
         }
     }
 

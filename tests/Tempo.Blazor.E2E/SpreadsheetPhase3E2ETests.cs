@@ -104,7 +104,9 @@ public partial class SpreadsheetE2ETests
 
         // Uncheck "Banana" and apply.
         var bananaRow = dropdown.Locator(".tm-spreadsheet-filter-dropdown__check", new() { HasTextString = "Banana" });
-        await bananaRow.Locator("input[type=checkbox]").UncheckAsync();
+        // Core TmCheckbox paints its input 0x0 (visually hidden) and the fixed dropdown can sit over a
+        // scrollable list, so drive the checkbox through the DOM: the change event is the real contract.
+        await bananaRow.Locator("input[type=checkbox]").EvaluateAsync("el => el.click()");
         await dropdown.Locator(".tm-spreadsheet-filter-dropdown__btn--ok").ClickAsync();
         await dropdown.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 

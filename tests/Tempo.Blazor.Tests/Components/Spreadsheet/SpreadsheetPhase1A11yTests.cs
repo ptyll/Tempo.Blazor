@@ -256,9 +256,9 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         // "Between" renders both operand inputs of the first condition, and a second condition
         // adds its own operator select — the full control surface in one render.
-        cut.FindAll(".tm-spreadsheet-custom-filter__op")[0]
+        cut.FindAll(".tm-spreadsheet-custom-filter__op select")[0]
             .Change(SpreadsheetFilterOperator.Between.ToString());
-        cut.FindAll(".tm-spreadsheet-custom-filter__op")[1]
+        cut.FindAll(".tm-spreadsheet-custom-filter__op select")[1]
             .Change(SpreadsheetFilterOperator.GreaterThan.ToString());
 
         var controls = cut.FindAll(".tm-spreadsheet-custom-filter select, .tm-spreadsheet-custom-filter input");
@@ -543,7 +543,7 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         // Select the second row, then filter it away.
         cut.FindAll("tbody tr")[1].Click();
-        cut.Find(".tm-spreadsheet-name-manager__filter").Input("Alp");
+        cut.Find(".tm-spreadsheet-name-manager__filter input").Input("Alp");
 
         var rows = cut.FindAll("tbody tr");
         rows.Should().ContainSingle();
@@ -567,7 +567,7 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNameManagerDialog>(parameters => parameters
             .Add(p => p.Workbook, workbook));
 
-        cut.Find(".tm-spreadsheet-name-manager__filter").Input("zzz");
+        cut.Find(".tm-spreadsheet-name-manager__filter input").Input("zzz");
 
         cut.FindAll("tbody tr").Should().BeEmpty();
         foreach (var tool in cut.FindAll(".tm-spreadsheet-name-manager__tool"))

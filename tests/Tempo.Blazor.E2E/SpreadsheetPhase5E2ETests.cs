@@ -54,7 +54,7 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Select "List" type — SelectOptionAsync fires change → OnTypeChanged → _validationType = List
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("List");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("List");
         await page.WaitForTimeoutAsync(200); // let Blazor re-render (operator select disappears)
 
         // Fill formula1 and fire change so Blazor @bind updates _formula1
@@ -97,7 +97,7 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Select "Whole" type; operator defaults to "between"
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("Whole");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("Whole");
         await page.WaitForTimeoutAsync(200);
 
         // Fill min and max; dispatch change to update Blazor @bind

@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetValidationAlert",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "The Spreadsheet validation alert, shared by the Stop-style error and the Warning / Information confirm. It rides the core TmModal frame: the modal owns the overlay, role=\"alertdialog\", aria-modal, the accessible name (the title) and description (the message, wired to aria-describedby), the initial focus on the primary action, the document-level Escape, the focus restore on close and the mobile presentation (a sheet on a narrow viewport). The severity decides the icon (--tm-color-danger / --tm-color-warning / --tm-color-info), the default words and the exit paths: Stop is a hard block (a single acknowledge action, a backdrop click does nothing, Escape acknowledges), while Warning and Information offer 'Cancel' plus 'Use anyway' and also close on a backdrop click. Element ids are per instance and are NOT a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
+  "description": "The severity-driven validation alert on the core TmModal frame (alertdialog, aria-describedby, focus trap, Escape, focus restore). A Medium card places a large filled severity badge to the LEFT of the message and has no divider under the title. Stop offers only the acknowledge action (a backdrop click does nothing); Warning adds the keep-the-value action; Information keeps both. A rule's own ErrorAlert title/message wins over the severity defaults.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetValidationAlert.razor",

@@ -1,9 +1,11 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Data
+@using Tempo.Blazor.Components.Workflow
 
 @* Text to Columns on the one core dialog frame (G6). The wizard is a TALL surface, so it asks the
    frame for MobilePresentation.AutoFullscreen — a fullscreen panel on a phone, the centred dialog
-   everywhere else (a sheet would clip the preview). *@
+   everywhere else (a sheet would clip the preview). The step indicator is the core TmStepper with the
+   reference's labels; the phone swaps it for the compact "Step 2 of 3 · Delimiters" line. *@
 <TmModal Show="true"
          Title="@Loc["TmSpreadsheet_TextToColumns_Title"]"
          Size="ModalSize.Large"
@@ -16,11 +18,21 @@
          Class="tm-spreadsheet-t2c"
          OnClose="Close">
     <ChildContent>
-        <ol class="tm-spreadsheet-t2c__steps">
-            <li class="@(_step == 1 ? "tm-spreadsheet-t2c__step--active" : "")">1</li>
-            <li class="@(_step == 2 ? "tm-spreadsheet-t2c__step--active" : "")">2</li>
-            <li class="@(_step == 3 ? "tm-spreadsheet-t2c__step--active" : "")">3</li>
-        </ol>
+        @if (Mobile)
+        {
+            <div class="tm-spreadsheet-t2c__step-compact" role="status" aria-live="polite">
+                @Loc["TmSpreadsheet_TextToColumns_StepCompact", _step, 3, StepLabel(_step)]
+            </div>
+        }
+        else
+        {
+            <div class="tm-spreadsheet-t2c__stepper-host">
+                <TmStepper Steps="_steps"
+                           ActiveStep="@(_step - 1)"
+                           Size="StepperSize.Small"
+                           OnStepClick="OnStepClick" />
+            </div>
+        }
 
         @if (_step == 1)
         {
@@ -51,40 +63,77 @@
             <div class="tm-spreadsheet-t2c__body">
                 @if (IsMode(SpreadsheetTextToColumnsMode.Delimited))
                 {
-                    <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step2DelimTitle"]</p>
+                    @if (!Mobile)
+                    {
+                        <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step2DelimTitle"]</p>
+                    }
+                    <p class="tm-spreadsheet-t2c__hint">@Loc["TmSpreadsheet_TextToColumns_DelimHint"]</p>
                     <div class="tm-spreadsheet-t2c__delims">
-                        <label><input type="checkbox" checked="@_options.Tab" @onchange="e => _options.Tab = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimTab"]</label>
-                        <label><input type="checkbox" checked="@_options.Semicolon" @onchange="e => _options.Semicolon = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimSemicolon"]</label>
-                        <label><input type="checkbox" checked="@_options.Comma" @onchange="e => _options.Comma = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimComma"]</label>
-                        <label><input type="checkbox" checked="@_options.Space" @onchange="e => _options.Space = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimSpace"]</label>
-                        <label class="tm-spreadsheet-t2c__delim-other">
-                            <input type="checkbox" checked="@_useOther" @onchange="e => _useOther = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimOther"]
-                            <input type="text" maxlength="1" class="tm-spreadsheet-t2c__other-input" aria-label="@Loc["TmSpreadsheet_TextToColumns_DelimOther"]" value="@_otherDelimiter" @oninput="e => _otherDelimiter = e.Value?.ToString() ?? string.Empty" />
-                        </label>
+                        <div class="tm-spreadsheet-t2c__delim">
+                            <TmCheckbox Class="tm-spreadsheet-t2c__delim-check"
+                                        Label="@Loc["TmSpreadsheet_TextToColumns_DelimTab"]"
+                                        Value="@_options.Tab"
+                                        ValueChanged="value => _options.Tab = value" />
+                        </div>
+                        <div class="tm-spreadsheet-t2c__delim">
+                            <TmCheckbox Class="tm-spreadsheet-t2c__delim-check"
+                                        Label="@Loc["TmSpreadsheet_TextToColumns_DelimSemicolon"]"
+                                        Value="@_options.Semicolon"
+                                        ValueChanged="value => _options.Semicolon = value" />
+                        </div>
+                        <div class="tm-spreadsheet-t2c__delim">
+                            <TmCheckbox Class="tm-spreadsheet-t2c__delim-check"
+                                        Label="@Loc["TmSpreadsheet_TextToColumns_DelimComma"]"
+                                        Value="@_options.Comma"
+                                        ValueChanged="value => _options.Comma = value" />
+                        </div>
+                        <div class="tm-spreadsheet-t2c__delim">
+                            <TmCheckbox Class="tm-spreadsheet-t2c__delim-check"
+                                        Label="@Loc["TmSpreadsheet_TextToColumns_DelimSpace"]"
+                                        Value="@_options.Space"
+                                        ValueChanged="value => _options.Space = value" />
+                        </div>
+                        <div class="tm-spreadsheet-t2c__delim tm-spreadsheet-t2c__delim-other">
+                            <TmCheckbox Class="tm-spreadsheet-t2c__delim-check"
+                                        Label="@Loc["TmSpreadsheet_TextToColumns_DelimOther"]"
+                                        Value="@_useOther"
+                                        ValueChanged="value => _useOther = value" />
+                            <input type="text" maxlength="1" class="tm-spreadsheet-t2c__other-input"
+                                   aria-label="@Loc["TmSpreadsheet_TextToColumns_DelimOther"]"
+                                   value="@_otherDelimiter"
+                                   @oninput="e => _otherDelimiter = e.Value?.ToString() ?? string.Empty" />
+                        </div>
                     </div>
                     <div class="tm-spreadsheet-t2c__row">
-                        <label class="tm-spreadsheet-t2c__inline">
-                            @Loc["TmSpreadsheet_TextToColumns_TextQualifier"]
-                            <select @bind="_qualifier" aria-label="@Loc["TmSpreadsheet_TextToColumns_TextQualifier"]">
+                        <div class="tm-spreadsheet-t2c__inline">
+                            <span class="tm-spreadsheet-t2c__inline-label">@Loc["TmSpreadsheet_TextToColumns_TextQualifier"]</span>
+                            <TmSelect TValue="string"
+                                      Class="tm-spreadsheet-t2c__qualifier"
+                                      AriaLabel="@Loc["TmSpreadsheet_TextToColumns_TextQualifier"]"
+                                      Value="_qualifier"
+                                      ValueChanged="value => _qualifier = value ?? string.Empty">
                                 <option value="&quot;">"</option>
                                 <option value="'">'</option>
                                 <option value="">@Loc["TmSpreadsheet_TextToColumns_QualifierNone"]</option>
-                            </select>
-                        </label>
-                        <label class="tm-spreadsheet-t2c__inline">
-                            <input type="checkbox" checked="@_options.TreatConsecutiveAsOne" @onchange="e => _options.TreatConsecutiveAsOne = e.Value is bool b && b" />
-                            @Loc["TmSpreadsheet_TextToColumns_TreatConsecutive"]
-                        </label>
+                            </TmSelect>
+                        </div>
+                        <TmCheckbox Class="tm-spreadsheet-t2c__inline tm-spreadsheet-t2c__consecutive"
+                                    Label="@Loc["TmSpreadsheet_TextToColumns_TreatConsecutive"]"
+                                    Value="@_options.TreatConsecutiveAsOne"
+                                    ValueChanged="value => _options.TreatConsecutiveAsOne = value" />
                     </div>
                 }
                 else
                 {
-                    <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step2FixedTitle"]</p>
+                    @if (!Mobile)
+                    {
+                        <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step2FixedTitle"]</p>
+                    }
                     <p class="tm-spreadsheet-t2c__hint">@Loc["TmSpreadsheet_TextToColumns_FixedHint"]</p>
-                    <label class="tm-spreadsheet-t2c__inline">
-                        @Loc["TmSpreadsheet_TextToColumns_BreakPositions"]
+                    <div class="tm-spreadsheet-t2c__inline">
+                        <span class="tm-spreadsheet-t2c__inline-label">@Loc["TmSpreadsheet_TextToColumns_BreakPositions"]</span>
                         <input type="text" class="tm-spreadsheet-t2c__breaks-input" value="@_fixedBreaks" @oninput="e => _fixedBreaks = e.Value?.ToString() ?? string.Empty" placeholder="@Loc["TmSpreadsheet_TextToColumns_BreakPositionsPlaceholder"]" />
-                    </label>
+                    </div>
                 }
 
                 @RenderPreview(showFormatHeader: false)
@@ -93,27 +142,35 @@
         else
         {
             <div class="tm-spreadsheet-t2c__body">
-                <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step3Title"]</p>
+                @if (!Mobile)
+                {
+                    <p class="tm-spreadsheet-t2c__steptitle">@Loc["TmSpreadsheet_TextToColumns_Step3Title"]</p>
+                }
+                <TmAlert Class="tm-spreadsheet-t2c__warning"
+                         Severity="AlertSeverity.Warning">
+                    @Loc["TmSpreadsheet_TextToColumns_OverwriteWarning"]
+                </TmAlert>
                 @if (PreviewColumnCount() > 0)
                 {
                     <div class="tm-spreadsheet-t2c__formats">
                         @for (var c = 0; c < PreviewColumnCount(); c++)
                         {
                             var col = c;
-                            <label class="tm-spreadsheet-t2c__inline">
+                            <div class="tm-spreadsheet-t2c__format-field">
                                 <span class="tm-spreadsheet-t2c__colname">@($"{Loc["TmSpreadsheet_TextToColumns_Column"]} {col + 1}")</span>
-                                <select value="@FormatFor(col)" @onchange="e => OnFormatChanged(col, e)">
+                                <TmSelect TValue="SpreadsheetColumnFormat"
+                                          Class="tm-spreadsheet-t2c__format"
+                                          Value="FormatFor(col)"
+                                          ValueChanged="value => OnFormatChanged(col, value)">
                                     <option value="@SpreadsheetColumnFormat.General">@Loc["TmSpreadsheet_TextToColumns_FormatGeneral"]</option>
                                     <option value="@SpreadsheetColumnFormat.Text">@Loc["TmSpreadsheet_TextToColumns_FormatText"]</option>
                                     <option value="@SpreadsheetColumnFormat.Skip">@Loc["TmSpreadsheet_TextToColumns_FormatSkip"]</option>
-                                </select>
-                            </label>
+                                </TmSelect>
+                            </div>
                         }
                     </div>
                 }
-                @RenderPreview(showFormatHeader: true)
-                <p class="tm-spreadsheet-t2c__warning">@Loc["TmSpreadsheet_TextToColumns_OverwriteWarning"]</p>
-            </div>
+                @RenderPreview(showFormatHeader: true)            </div>
         }
     </ChildContent>
     <Footer>
@@ -137,38 +194,46 @@
 </TmModal>
 
 @code {
-    private RenderFragment RenderPreview(bool showFormatHeader) => builder =>
-    {
-        var preview = Preview();
-        var cols = PreviewColumnCount();
-        if (preview.Count == 0 || cols == 0)
-            return;
-
-        var seq = 0;
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "tm-spreadsheet-t2c__preview");
-
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "tm-spreadsheet-t2c__preview-label");
-        builder.AddContent(seq++, Loc["TmSpreadsheet_TextToColumns_Preview"]);
-        builder.CloseElement();
-
-        builder.OpenElement(seq++, "table");
-        builder.AddAttribute(seq++, "class", "tm-spreadsheet-t2c__preview-table");
-        foreach (var row in preview)
-        {
-            builder.OpenElement(seq++, "tr");
-            for (var c = 0; c < cols; c++)
-            {
-                var skipped = showFormatHeader && FormatFor(c) == SpreadsheetColumnFormat.Skip;
-                builder.OpenElement(seq++, "td");
-                builder.AddAttribute(seq++, "class", skipped ? "tm-spreadsheet-t2c__preview-skip" : null);
-                builder.AddContent(seq++, c < row.Count ? row[c] : string.Empty);
-                builder.CloseElement();
-            }
-            builder.CloseElement();
+    /// <summary>
+    /// The preview: a real table with a sticky column header inside its own horizontal scroller, so a
+    /// wide split scrolls sideways instead of widening the wizard. Built as a Razor TEMPLATE (not a
+    /// RenderTreeBuilder fragment): only compiler-generated markup carries the component's CSS scope
+    /// attribute, and a builder-built table silently lost every style of this stylesheet.
+    /// </summary>
+    private RenderFragment RenderPreview(bool showFormatHeader) => @<text>
+        @{
+            var previewRows = Preview();
+            var previewColumns = PreviewColumnCount();
         }
-        builder.CloseElement();
-        builder.CloseElement();
-    };
+        @if (previewRows.Count > 0 && previewColumns > 0)
+        {
+            <div class="tm-spreadsheet-t2c__preview">
+                <div class="tm-spreadsheet-t2c__preview-label">@Loc["TmSpreadsheet_TextToColumns_Preview"]</div>
+                <div class="tm-spreadsheet-t2c__preview-scroll">
+                    <table class="tm-spreadsheet-t2c__preview-table">
+                        <thead>
+                            <tr>
+                                @for (var c = 0; c < previewColumns; c++)
+                                {
+                                    <th scope="col">@($"{Loc["TmSpreadsheet_TextToColumns_Column"]} {c + 1}")</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in previewRows)
+                            {
+                                <tr>
+                                    @for (var c = 0; c < previewColumns; c++)
+                                    {
+                                        var skipped = showFormatHeader && FormatFor(c) == SpreadsheetColumnFormat.Skip;
+                                        <td class="@(skipped ? "tm-spreadsheet-t2c__preview-skip" : null)">@(c < row.Count ? row[c] : string.Empty)</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </text>;
 }

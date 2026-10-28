@@ -51,7 +51,7 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Uncheck "my data has headers" so all four rows are treated as data.
-        await dialog.Locator(".tm-spreadsheet-dedup__toggle input[type=checkbox]").First.UncheckAsync();
+        await dialog.Locator(".tm-spreadsheet-dedup__toggle input[type=checkbox]").First.EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-dedup__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 
@@ -87,7 +87,7 @@ public partial class SpreadsheetE2ETests
         // Step 1 → Step 2.
         await dialog.Locator(".tm-spreadsheet-t2c__btn--ok").ClickAsync();
         // Enable the semicolon delimiter (2nd delimiter checkbox).
-        await dialog.Locator(".tm-spreadsheet-t2c__delims input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-t2c__delim", new() { HasTextString = "Semicolon" }).ClickAsync();
         // Step 2 → Step 3.
         await dialog.Locator(".tm-spreadsheet-t2c__btn--ok").ClickAsync();
         // Finish.
@@ -123,7 +123,7 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Choose "Values" (2nd content radio) and apply.
-        await dialog.Locator("input[name=ps-content]").Nth(1).CheckAsync();
+        await dialog.Locator("input[name=ps-content]").Nth(1).EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 
@@ -162,7 +162,7 @@ public partial class SpreadsheetE2ETests
         var dialog = page.Locator(".tm-spreadsheet-pastespecial");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         // Tick transpose (2nd toggle checkbox) and apply (content defaults to All).
-        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggle input[type=checkbox]").Nth(1).EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 
@@ -222,7 +222,7 @@ public partial class SpreadsheetE2ETests
 
         var dialog = page.Locator(".tm-spreadsheet-pastespecial");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggle input[type=checkbox]").Nth(1).EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 
@@ -286,7 +286,7 @@ public partial class SpreadsheetE2ETests
 
         var dialog = page.Locator(".tm-spreadsheet-pastespecial");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggle input[type=checkbox]").Nth(1).EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 
@@ -394,7 +394,7 @@ public partial class SpreadsheetE2ETests
 
         var dialog = page.Locator(".tm-spreadsheet-pastespecial");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggle input[type=checkbox]").Nth(1).EvaluateAsync("el => el.click()");
         await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 

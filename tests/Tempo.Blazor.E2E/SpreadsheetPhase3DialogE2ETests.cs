@@ -326,7 +326,7 @@ public partial class SpreadsheetE2ETests
         await alert.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
         StringAssert.Contains(await alert.GetAttributeAsync("class") ?? string.Empty, "tm-spreadsheet-alert--stop");
         Assert.AreEqual(1, await alert.Locator("[role='alertdialog']").CountAsync());
-        Assert.AreEqual(1, await alert.Locator(".tm-spreadsheet-alert__icon").CountAsync(), "Stop paints the danger icon");
+        Assert.AreEqual(1, await alert.Locator(".tm-spreadsheet-alert__badge").CountAsync(), "Stop paints the danger icon");
         Assert.AreEqual(1, await alert.Locator(".tm-spreadsheet-alert__actions button").CountAsync(),
             "a Stop alert offers exactly one way out: Got it");
         Assert.AreEqual(0, await alert.Locator(".tm-modal-close").CountAsync(),
@@ -688,14 +688,14 @@ public partial class SpreadsheetE2ETests
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("Whole");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("Whole");
         await page.WaitForTimeoutAsync(200);
         await FillDialogInputAsync(page, dialog.Locator(".tm-dvd__input").First, min);
         await FillDialogInputAsync(page, dialog.Locator(".tm-dvd__input").Last, max);
 
         await dialog.Locator(".tm-dvd__tab", new() { HasTextString = "Error alert" }).ClickAsync();
         await page.WaitForTimeoutAsync(200);
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("Warning");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("Warning");
         await page.WaitForTimeoutAsync(200);
 
         await dialog.Locator(".tm-dvd__actions button").Last.ClickAsync();

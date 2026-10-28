@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetSpecialPasteDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "The Paste Special dialog. Radio options choose what to paste (all / values / formulas / formats / values+formats / all-except-borders), a dropdown picks an arithmetic operation, and checkboxes toggle transpose and skip-blanks. Applying yields a SpreadsheetPasteSpecialOptions. All text is localized.",
+  "description": "The Paste Special dialog. Two radio columns choose what to paste (all / values / formulas / formats / values+formats / all-except-borders) and the arithmetic operation (none / add / subtract / multiply / divide); two checkboxes toggle skip-blanks and transpose. Applying yields a SpreadsheetPasteSpecialOptions. All text is localized.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetSpecialPasteDialog.razor",

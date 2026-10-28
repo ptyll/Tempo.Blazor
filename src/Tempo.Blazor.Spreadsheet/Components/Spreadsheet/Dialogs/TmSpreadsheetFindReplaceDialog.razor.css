@@ -1,7 +1,8 @@
-/* The floating desktop panel. The width, the offset from the grid's top-right corner and the spacing
-   are component knobs (`--tm-spreadsheet-find-*`, read through var() with the historical fallback), so
-   a host can widen the panel without editing the package. The mobile presentation is NOT this card:
-   inside the TmDrawer sheet the panel becomes in-flow content (see _spreadsheet.css). */
+/* Find & Replace CONTENT (redesign phase 4). The floating desktop panel keeps its position/size
+   knobs; the mobile presentation is the TmDrawer sheet's in-flow content (see _spreadsheet.css).
+   Layout follows the reference: a labelled Find row with the match counter, a labelled Replace row,
+   four options in two columns and an action row whose primary action is Replace all. */
+
 .tm-spreadsheet-find {
     position: absolute;
     top: var(--tm-space-2);
@@ -10,11 +11,11 @@
     width: var(--tm-spreadsheet-find-width);
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2);
-    padding: var(--tm-space-3);
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     box-shadow: var(--tm-shadow-lg);
 }
 
@@ -22,11 +23,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--tm-space-2);
 }
 
 .tm-spreadsheet-find__title {
-    font-size: var(--tm-text-sm);
-    font-weight: 600;
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text);
 }
 
@@ -34,11 +36,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
     padding: 0;
     border: none;
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     background: transparent;
     color: var(--tm-color-text-muted);
     cursor: pointer;
@@ -49,85 +51,112 @@
     color: var(--tm-color-text);
 }
 
-.tm-spreadsheet-find__row {
+/* One grid row per field: label | control | counter. The container is the panel's own content, so
+   the switch between "labels beside fields" and "labels above fields" is a container query, never a
+   viewport media query (the spreadsheet is embedded in a Notion block / modal). */
+.tm-spreadsheet-find__fields {
     display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    container-type: inline-size;
+}
+
+.tm-spreadsheet-find__field {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
     align-items: center;
-    gap: 8px;
+    column-gap: var(--tm-space-3);
+}
+
+.tm-spreadsheet-find__label {
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
+    white-space: nowrap;
+}
+
+.tm-spreadsheet-find__control {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.tm-spreadsheet-find__field--wide .tm-spreadsheet-find__control {
+    grid-column: 2 / -1;
 }
 
 .tm-spreadsheet-find__input {
-    flex: 1 1 auto;
-    height: 30px;
-    padding: 0 8px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    width: 100%;
+    min-height: var(--tm-touch-target);
     font-size: var(--tm-text-sm);
 }
 
-.tm-spreadsheet-find__input:focus {
-    /* The two-layer ring (5.17:1) instead of the soft glow (1.62:1), with a transparent outline
-       that forced-colors paints in the system colour. */
-    outline: 2px solid transparent;
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-focus-ring);
-}
-
 .tm-spreadsheet-find__counter {
-    flex: 0 0 auto;
-    min-width: 54px;
-    text-align: right;
+    grid-column: 3;
+    text-align: end;
     font-size: var(--tm-text-xs);
     color: var(--tm-color-text-muted);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .tm-spreadsheet-find__options {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-1) var(--tm-space-4);
 }
 
-.tm-spreadsheet-find__option {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: var(--tm-text-xs);
-    color: var(--tm-color-text);
-    cursor: pointer;
+.tm-spreadsheet-find__options ::deep .tm-spreadsheet-find__option {
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-find__actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding-top: var(--tm-space-3);
+    border-top: 1px solid var(--tm-color-border);
 }
 
 .tm-spreadsheet-find__spacer {
     flex: 1 1 auto;
 }
 
-.tm-spreadsheet-find__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 28px;
-    min-width: 28px;
-    padding: 0 6px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    cursor: pointer;
-    transition: background var(--tm-transition-fast);
+.tm-spreadsheet-find__btn--nav {
+    white-space: nowrap;
 }
 
-.tm-spreadsheet-find__btn:hover {
-    background: var(--tm-color-surface-hover);
+/* The sheet is narrower than the floating panel and has no card chrome of its own (the drawer owns
+   the surface) — the fields stack there instead of sharing a row with the label. */
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__field {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    row-gap: var(--tm-space-1);
 }
 
-.tm-spreadsheet-find__btn--text {
-    padding: 0 10px;
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__label {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__counter {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__control,
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__field--wide .tm-spreadsheet-find__control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__options {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__actions {
+    border-top: 1px solid var(--tm-color-border);
+}
+
+.tm-spreadsheet-find--sheet .tm-spreadsheet-find__btn--nav {
+    flex-direction: column;
+    gap: var(--tm-space-1);
 }

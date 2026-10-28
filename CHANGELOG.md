@@ -12,6 +12,52 @@
 
 ### Breaking / Migration
 
+- **Fixed (core `TmSelect`): a non-nullable value type at its default now emits its `value`.** Before, `SelectedValueString` returned `null` whenever the value equalled `default(TValue)`, so a select bound to `0` / an enum's first member painted a blank control; every spreadsheet dialog that switched back to such an option (Sort order "A → Z", Sort on "Values", data validation "Any"/"Stop"/type "Whole", Format Cells "General", a column index of 0) looked empty. After, a non-nullable struct default renders `FormatOptionValue(Value)` (e.g. `value="0"`, `value="Sunday"`) while the option list keeps its `selected` marker. Nullable value types and reference types keep the empty-option rules unchanged.
+
+  ```html
+  <!-- before: omitted value → the browser shows nothing selected -->
+  <select class="tm-select"><option value="0" selected>Zero</option>…</select>
+  <!-- after -->
+  <select class="tm-select" value="0"><option value="0" selected>Zero</option>…</select>
+  ```
+
+- **Added (core `TmModal`): `InitialFocusSelector`.** An additive CSS-selector alternative to `InitialFocusTargetId`, for a target that has no stable id or a set whose first match is the right one (a checked radio, the first checkbox). The Spreadsheet's Paste Special (`input[name='ps-content']:checked`) and Remove Duplicates (`.tm-spreadsheet-dedup__column input`) use it — their previous targets were non-focusable wrapper elements. `null` keeps the previous markup (no `data-initial-focus-selector` attribute).
+
+- **Spreadsheet redesign (phase 4): dialog content and hierarchy follow the reference mockups.** Every spreadsheet dialog body now renders core Tempo inputs for its choices, toggles and text fields (`TmSelect`, `TmTextInput`, `TmCheckbox`, `TmRadioGroup` segmented, `TmSearchInput`, `TmNumberInput`, `TmStepper`, `TmIcon`, `TmButton`) instead of raw `<select>`/`<input>` elements. The Format Cells Alignment/Font/Border/Fill tabs, the Text to Columns mode radios and the Data validation textareas stay native for now — they are rebuilt with their own tabs in a later phase. The dialog ROOT classes on the modal overlay (`tm-spreadsheet-sort`, `tm-spreadsheet-custom-filter`, `tm-spreadsheet-dedup`, `tm-spreadsheet-pastespecial`, `tm-spreadsheet-t2c`, `tm-spreadsheet-hyperlink`, `tm-spreadsheet-name-manager`, `tm-dvd`, `tm-fcd`, `tm-spreadsheet-alert`) and the action classes (`__btn--ok`, `__btn--cancel`) are unchanged; the inner DOM, the form wrapper class names and several control ids are not. The full per-dialog content contract is [docs/spreadsheet-dialogs.md](docs/spreadsheet-dialogs.md) → "Content and hierarchy (redesign phase 4)".
+
+  ```html
+  <!-- before: native controls, class on the control itself -->
+  <select class="tm-dvd__select">…</select>
+  <select class="tm-spreadsheet-custom-filter__op">…</select>
+  <input class="tm-spreadsheet-name-manager__filter">
+  <select id="hl-type"><option value="Web">Web page</option>…</select>
+  <ol class="tm-spreadsheet-t2c__steps"><li>1</li><li>2</li><li>3</li></ol>
+
+  <!-- after: core components; Class lands on the select WRAPPER, on the text INPUT, or on the root -->
+  <div class="tm-dvd__select tm-select-wrapper"><select class="tm-select">…</select></div>
+  <div class="tm-spreadsheet-custom-filter__op tm-select-wrapper"><select class="tm-select">…</select></div>
+  <div class="tm-spreadsheet-name-manager__filter tm-input-wrapper"><input type="search" class="tm-input"></div>
+  <div id="hl-type" class="tm-radio-group" role="radiogroup">
+    <label class="tm-radio-segment"><input class="tm-sr-only" type="radio">Web page</label>…
+  </div>
+  <div class="tm-stepper"><div class="tm-stepper-item">…Data type…</div>…</div>
+  ```
+
+  Practical migrations (all used by the repo's own Playwright specs):
+  - `.tm-dvd__select`, `.tm-dvd__body` → `.tm-dvd__select select`, `.tm-dvd__form`.
+  - `.tm-dvd__select` on the Error alert tab → `.tm-dvd__select select`; the `#tm-dvd-show-error`/`#tm-dvd-show-input` checkbox ids are gone (the toggles are `TmCheckbox`) — select `.tm-dvd__checks input`, in DOM order.
+  - `.tm-spreadsheet-sort__table select` → `.tm-spreadsheet-sort__select select`; the phone renders `.tm-spreadsheet-sort__card` instead of the table.
+  - `.tm-spreadsheet-custom-filter__op` → `.tm-spreadsheet-custom-filter__op select`; the And/Or radios are `input[name='custom-filter-join']` inside `.tm-radio-segment` labels.
+  - `.tm-spreadsheet-name-manager__filter` → `.tm-spreadsheet-name-manager__filter input` (type `search`); on a mobile layout the rows are `.tm-spreadsheet-name-manager__card` (no `tbody tr`).
+  - `#hl-type` is the segmented radiogroup ROOT, not a `<select>`: `page.SelectOptionAsync("#hl-type", "Web")` becomes `page.Locator("#hl-type .tm-radio-segment").First.ClickAsync()` (Web page is the first segment). `#hl-target` / `#hl-display` keep their ids on the `<input>`.
+  - Paste Special: the operation is a radio column (`input[name='ps-operation']`, five options) inside `.tm-spreadsheet-pastespecial__grid`; the old `select.tm-spreadsheet-pastespecial__op` is gone.
+  - Text to Columns: `<ol class="tm-spreadsheet-t2c__steps">` → the core `.tm-stepper`; the phone shows `.tm-spreadsheet-t2c__step-compact` instead. Delimiters are `.tm-spreadsheet-t2c__delim` wrappers around core checkboxes, and the preview is a `<table>` with a `<thead>` inside `.tm-spreadsheet-t2c__preview-scroll` (row selectors must use `tbody tr`).
+  - Remove Duplicates: `.tm-spreadsheet-dedup__count` states "Selected N of M"; the toggles/columns are core checkboxes (`.tm-spreadsheet-dedup__column` is the checkbox WRAPPER).
+  - Format Cells: the decimal places `input[type=number].tm-fcd__input--sm` → `.tm-fcd__decimal` (`TmNumberInput`, inner `.tm-number-input__input`); a mobile layout replaces `.tm-fcd__listbox[role=listbox]` with `.tm-fcd__category-select` + `.tm-fcd__number-options`; the preview's `style` now carries `text-align` from the format.
+  - Validation alert: `.tm-spreadsheet-alert__icon` → `.tm-spreadsheet-alert__badge`; the card is `ModalSize.Medium`, the badge sits left of the message and there is no divider under the title.
+  - Filter dropdown: the Unicode glyphs `▲ ▼ ⚙ ✕ ›` are gone (shared `TmIcon`), the panel starts with `.tm-spreadsheet-filter-dropdown__title` ("Filter and sort") and its values/select-all are core checkboxes.
+  - Find & Replace keeps its `.tm-spreadsheet-find__query` / `__replace` / `__counter` / `__btn--text` classes; it gains visible `.tm-spreadsheet-find__label`s, a primary "Replace all" (`__btn--primary` on the same button) and a desktop-only `.tm-spreadsheet-find__btn--close`.
+
 - **Scheduler redesign (phases 1–8c): the calendar loads what it draws, and it lays out from its own container.** `TmScheduler` now has one range for the query, the markup and the title (Timeline is one day, Agenda is `AgendaDays`, default 30), `EventTemplate` reaches every view, the toolbar is the core `TmToolbar` with named `data-tm-group`s, today's column draws a current-time line, and `LayoutMode="Auto"` renders the mobile layout under 640px. The side panel and the event detail are host slots; the mobile action bar is opt-in (`None`). Touch move and resize go through the shared `pointer-drag.js`, which `scheduler.js` loads with a dynamic import, and Alt+arrow is the non-drag alternative. The contract is [docs/scheduler.md](docs/scheduler.md). Every breaking change of the plan is listed in this section and under [Breaking / Migration (continued)](#breaking--migration-continued) with a before/after: the range and the title, `FirstDayOfWeek`, "+N more", the tinted cards, the toolbar, the now indicator, and the layout of a narrow container.
 
 - **`TmScheduler` "+N more" label is a plural family.** Before, the overflow button formatted the plain key `TmScheduler_More`, so a host that overrode only that key kept its wording. After, the button uses `Loc.Plural("TmScheduler_More", n)`, and a host that reworded the plain key must override the family. The built-in tables already do: Czech "+1 další / +2 další / +5 dalších", Slovak "+1 ďalšia / +2 ďalšie / +5 ďalších", French "+1 autre / +2 autres", English unchanged. A custom JSON table or an `ITmLocalizer` override migrates the same way — the plain key is now only the fallback:

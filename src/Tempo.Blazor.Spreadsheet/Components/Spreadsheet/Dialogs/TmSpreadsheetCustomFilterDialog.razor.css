@@ -1,48 +1,31 @@
 /* Custom filter CONTENT only — the card, overlay, header, footer bar and mobile presentation belong
-   to the core TmModal (redesign phase 3). */
+   to the core TmModal (redesign phase 3). The operator selects and the operand fields are core Tm
+   inputs; the join is a segmented radio group. */
+
+.tm-spreadsheet-custom-filter__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    container-type: inline-size;
+}
 
 .tm-spreadsheet-custom-filter__row {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
-    margin-bottom: var(--tm-space-3);
     flex-wrap: wrap;
 }
 
-.tm-spreadsheet-custom-filter__op,
-.tm-spreadsheet-custom-filter__value {
+.tm-spreadsheet-custom-filter__form ::deep .tm-spreadsheet-custom-filter__op,
+.tm-spreadsheet-custom-filter__form ::deep .tm-spreadsheet-custom-filter__value {
     flex: 1 1 8rem;
     min-width: 0;
-    min-height: var(--tm-touch-target);
-    padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-custom-filter__op:focus,
-.tm-spreadsheet-custom-filter__value:focus {
-    outline: 2px solid transparent;
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-spreadsheet-custom-filter__join {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-3);
-    margin-bottom: var(--tm-space-3);
-    font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-custom-filter__join label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1-5);
-    cursor: pointer;
 }
 
 .tm-spreadsheet-custom-filter__actions {
@@ -51,11 +34,17 @@
     gap: var(--tm-space-2);
 }
 
-/* Stacked criteria on a narrow dialog body (container query: the spreadsheet embeds in a Notion
+/* Stacked criteria in a narrow dialog body (container query: the spreadsheet embeds in a Notion
    block/modal, so the viewport does not decide). */
-@container (max-width: 420px) {
+@container (width < 26rem) {
     .tm-spreadsheet-custom-filter__row {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .tm-spreadsheet-custom-filter__op,
+    .tm-spreadsheet-custom-filter__value {
+        flex: 1 1 auto;
+        width: 100%;
     }
 }

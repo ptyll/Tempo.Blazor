@@ -1,3 +1,4 @@
+using Tempo.Blazor.Components.Inputs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Layout;
@@ -40,9 +41,30 @@ public partial class TmSpreadsheetSpecialPasteDialog
 
     private string FirstContentDomId => $"spreadsheet-pastespecial-all-{_idSuffix}";
 
-    private bool IsContent(SpreadsheetPasteContent content) => _content == content;
+    /// <summary>What to paste — the reference's six choices, in its order.</summary>
+    private List<RadioOption<SpreadsheetPasteContent>> ContentOptions =>
+    [
+        new(Loc["TmSpreadsheet_PasteSpecial_All"], SpreadsheetPasteContent.All),
+        new(Loc["TmSpreadsheet_PasteSpecial_Values"], SpreadsheetPasteContent.Values),
+        new(Loc["TmSpreadsheet_PasteSpecial_Formulas"], SpreadsheetPasteContent.Formulas),
+        new(Loc["TmSpreadsheet_PasteSpecial_Formats"], SpreadsheetPasteContent.Formats),
+        new(Loc["TmSpreadsheet_PasteSpecial_ValuesAndFormats"], SpreadsheetPasteContent.ValuesAndFormats),
+        new(Loc["TmSpreadsheet_PasteSpecial_WithoutBorders"], SpreadsheetPasteContent.AllExceptBorders)
+    ];
 
-    private void SetContent(SpreadsheetPasteContent content) => _content = content;
+    /// <summary>The arithmetic operation, as a radio column next to the paste content.</summary>
+    private List<RadioOption<SpreadsheetPasteOperation>> OperationOptions =>
+    [
+        new(Loc["TmSpreadsheet_PasteSpecial_OpNone"], SpreadsheetPasteOperation.None),
+        new(Loc["TmSpreadsheet_PasteSpecial_OpAdd"], SpreadsheetPasteOperation.Add),
+        new(Loc["TmSpreadsheet_PasteSpecial_OpSubtract"], SpreadsheetPasteOperation.Subtract),
+        new(Loc["TmSpreadsheet_PasteSpecial_OpMultiply"], SpreadsheetPasteOperation.Multiply),
+        new(Loc["TmSpreadsheet_PasteSpecial_OpDivide"], SpreadsheetPasteOperation.Divide)
+    ];
+
+    private void OnContentChanged(SpreadsheetPasteContent content) => _content = content;
+
+    private void OnOperationChanged(SpreadsheetPasteOperation operation) => _operation = operation;
 
     private Task Apply()
     {

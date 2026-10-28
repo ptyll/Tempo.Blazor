@@ -4,7 +4,8 @@
 
 @* The sort dialog rides the one core dialog frame (G6): TmModal owns the fixed overlay, the dialog
    role, aria-modal, the initial focus, the document-level Escape, the focus restore and the mobile
-   presentation. The package contributes the level table, the toolbar and the footer actions. *@
+   presentation. The package contributes the level editor — a table on the desktop/tablet layout and
+   the reference's cards on the phone, where three native selects in one row are unreadable. *@
 <TmModal Show="true"
          Title="@Loc["TmSpreadsheet_Sort_Title"]"
          Size="ModalSize.Medium"
@@ -19,70 +20,152 @@
          OnClose="Close">
     <ChildContent>
         <div class="tm-spreadsheet-sort__toolbar">
-            <button type="button" class="tm-spreadsheet-sort__tool" id="@AddLevelDomId" @onclick="AddLevel">
-                <TmIcon Name="plus" /> @Loc["TmSpreadsheet_Sort_AddLevel"]
-            </button>
-            <label class="tm-spreadsheet-sort__header-toggle">
-                <input type="checkbox" checked="@_hasHeader" @onchange="e => _hasHeader = e.Value is bool b && b" />
-                <span>@Loc["TmSpreadsheet_Sort_HasHeader"]</span>
-            </label>
-            <label class="tm-spreadsheet-sort__header-toggle">
-                <input type="checkbox" checked="@_caseSensitive" @onchange="e => _caseSensitive = e.Value is bool b2 && b2" />
-                <span>@Loc["TmSpreadsheet_Sort_CaseSensitive"]</span>
-            </label>
+            <TmButton Variant="ButtonVariant.Outline" Class="tm-spreadsheet-sort__tool" Icon="plus" id="@AddLevelDomId" OnClick="AddLevel">
+                @Loc["TmSpreadsheet_Sort_AddLevel"]
+            </TmButton>
+            <div class="tm-spreadsheet-sort__toggles">
+                <TmCheckbox Class="tm-spreadsheet-sort__header-toggle"
+                            Label="@Loc["TmSpreadsheet_Sort_HasHeader"]"
+                            Value="@_hasHeader"
+                            ValueChanged="OnHasHeaderChanged" />
+                <TmCheckbox Class="tm-spreadsheet-sort__header-toggle"
+                            Label="@Loc["TmSpreadsheet_Sort_CaseSensitive"]"
+                            Value="@_caseSensitive"
+                            ValueChanged="OnCaseSensitiveChanged" />
+            </div>
         </div>
 
-        <table class="tm-spreadsheet-sort__table">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>@Loc["TmSpreadsheet_Sort_Column"]</th>
-                    <th>@Loc["TmSpreadsheet_Sort_SortOn"]</th>
-                    <th>@Loc["TmSpreadsheet_Sort_Order"]</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
+        @if (Mobile)
+        {
+            <div class="tm-spreadsheet-sort__cards">
                 @for (var i = 0; i < _levels.Count; i++)
                 {
                     var level = _levels[i];
                     var index = i;
-                    <tr>
-                        <td class="tm-spreadsheet-sort__rowlabel">@(index == 0 ? Loc["TmSpreadsheet_Sort_SortBy"] : Loc["TmSpreadsheet_Sort_ThenBy"])</td>
-                        <td>
-                            <select aria-label="@Loc["TmSpreadsheet_Sort_ColumnLevelAria", index + 1]" @bind="level.KeyIndex">
-                                @foreach (var col in ColumnChoices)
-                                {
-                                    <option value="@col.Index">@col.Label</option>
-                                }
-                            </select>
-                        </td>
-                        <td>
-                            <select aria-label="@Loc["TmSpreadsheet_Sort_SortOnLevelAria", index + 1]" @bind="level.SortOn">
-                                <option value="@SpreadsheetSortOn.Value">@Loc["TmSpreadsheet_Sort_OnValue"]</option>
-                                <option value="@SpreadsheetSortOn.CellColor">@Loc["TmSpreadsheet_Sort_OnCellColor"]</option>
-                                <option value="@SpreadsheetSortOn.FontColor">@Loc["TmSpreadsheet_Sort_OnFontColor"]</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select aria-label="@Loc["TmSpreadsheet_Sort_OrderLevelAria", index + 1]" @bind="level.Direction">
-                                <option value="@SpreadsheetSortDirection.Ascending">@Loc["TmSpreadsheet_Sort_AtoZ"]</option>
-                                <option value="@SpreadsheetSortDirection.Descending">@Loc["TmSpreadsheet_Sort_ZtoA"]</option>
-                            </select>
-                        </td>
-                        <td>
-                            <button type="button" class="tm-spreadsheet-sort__remove"
-                                    title="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
-                                    aria-label="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
-                                    disabled="@(_levels.Count <= 1)"
-                                    @onclick="() => RemoveLevel(index)">
-                                <TmIcon Name="x" Size="IconSize.Sm" />
-                            </button>
-                        </td>
-                    </tr>
+                    <div class="tm-spreadsheet-sort__card">
+                        <div class="tm-spreadsheet-sort__card-head">
+                            <span class="tm-spreadsheet-sort__badge" aria-hidden="true">@(index + 1)</span>
+                            <span class="tm-spreadsheet-sort__card-title">
+                                @(index == 0 ? Loc["TmSpreadsheet_Sort_SortBy"] : Loc["TmSpreadsheet_Sort_ThenBy"])
+                            </span>
+                            @if (_levels.Count > 1)
+                            {
+                                <TmButton Variant="ButtonVariant.Ghost"
+                                          Icon="x"
+                                          Class="tm-spreadsheet-sort__remove"
+                                          OnClick="() => RemoveLevel(index)">
+                                    @Loc["TmSpreadsheet_Sort_DeleteLevel"]
+                                </TmButton>
+                            }
+                        </div>
+                        <div class="tm-spreadsheet-sort__card-fields">
+                            <div class="tm-spreadsheet-sort__card-field">
+                                <span class="tm-spreadsheet-sort__field-label">@Loc["TmSpreadsheet_Sort_Column"]</span>
+                                <TmSelect TValue="int"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_ColumnLevelAria", index + 1]"
+                                          Value="level.KeyIndex"
+                                          ValueChanged="value => OnLevelKeyChanged(index, value)">
+                                    @foreach (var col in ColumnChoices)
+                                    {
+                                        <option value="@col.Index">@col.Label</option>
+                                    }
+                                </TmSelect>
+                            </div>
+                            <div class="tm-spreadsheet-sort__card-field">
+                                <span class="tm-spreadsheet-sort__field-label">@Loc["TmSpreadsheet_Sort_SortOn"]</span>
+                                <TmSelect TValue="SpreadsheetSortOn"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_SortOnLevelAria", index + 1]"
+                                          Value="level.SortOn"
+                                          ValueChanged="value => OnLevelSortOnChanged(index, value)">
+                                    <option value="@SpreadsheetSortOn.Value">@Loc["TmSpreadsheet_Sort_OnValue"]</option>
+                                    <option value="@SpreadsheetSortOn.CellColor">@Loc["TmSpreadsheet_Sort_OnCellColor"]</option>
+                                    <option value="@SpreadsheetSortOn.FontColor">@Loc["TmSpreadsheet_Sort_OnFontColor"]</option>
+                                </TmSelect>
+                            </div>
+                            <div class="tm-spreadsheet-sort__card-field">
+                                <span class="tm-spreadsheet-sort__field-label">@Loc["TmSpreadsheet_Sort_Order"]</span>
+                                <TmSelect TValue="SpreadsheetSortDirection"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_OrderLevelAria", index + 1]"
+                                          Value="level.Direction"
+                                          ValueChanged="value => OnLevelDirectionChanged(index, value)">
+                                    <option value="@SpreadsheetSortDirection.Ascending">@Loc["TmSpreadsheet_Sort_AtoZ"]</option>
+                                    <option value="@SpreadsheetSortDirection.Descending">@Loc["TmSpreadsheet_Sort_ZtoA"]</option>
+                                </TmSelect>
+                            </div>
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
+            </div>
+        }
+        else
+        {
+            <table class="tm-spreadsheet-sort__table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>@Loc["TmSpreadsheet_Sort_Column"]</th>
+                        <th>@Loc["TmSpreadsheet_Sort_SortOn"]</th>
+                        <th>@Loc["TmSpreadsheet_Sort_Order"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < _levels.Count; i++)
+                    {
+                        var level = _levels[i];
+                        var index = i;
+                        <tr>
+                            <td class="tm-spreadsheet-sort__rowlabel">@(index == 0 ? Loc["TmSpreadsheet_Sort_SortBy"] : Loc["TmSpreadsheet_Sort_ThenBy"])</td>
+                            <td>
+                                <TmSelect TValue="int"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_ColumnLevelAria", index + 1]"
+                                          Value="level.KeyIndex"
+                                          ValueChanged="value => OnLevelKeyChanged(index, value)">
+                                    @foreach (var col in ColumnChoices)
+                                    {
+                                        <option value="@col.Index">@col.Label</option>
+                                    }
+                                </TmSelect>
+                            </td>
+                            <td>
+                                <TmSelect TValue="SpreadsheetSortOn"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_SortOnLevelAria", index + 1]"
+                                          Value="level.SortOn"
+                                          ValueChanged="value => OnLevelSortOnChanged(index, value)">
+                                    <option value="@SpreadsheetSortOn.Value">@Loc["TmSpreadsheet_Sort_OnValue"]</option>
+                                    <option value="@SpreadsheetSortOn.CellColor">@Loc["TmSpreadsheet_Sort_OnCellColor"]</option>
+                                    <option value="@SpreadsheetSortOn.FontColor">@Loc["TmSpreadsheet_Sort_OnFontColor"]</option>
+                                </TmSelect>
+                            </td>
+                            <td>
+                                <TmSelect TValue="SpreadsheetSortDirection"
+                                          Class="tm-spreadsheet-sort__select"
+                                          AriaLabel="@Loc["TmSpreadsheet_Sort_OrderLevelAria", index + 1]"
+                                          Value="level.Direction"
+                                          ValueChanged="value => OnLevelDirectionChanged(index, value)">
+                                    <option value="@SpreadsheetSortDirection.Ascending">@Loc["TmSpreadsheet_Sort_AtoZ"]</option>
+                                    <option value="@SpreadsheetSortDirection.Descending">@Loc["TmSpreadsheet_Sort_ZtoA"]</option>
+                                </TmSelect>
+                            </td>
+                            <td>
+                                <button type="button" class="tm-spreadsheet-sort__remove"
+                                        title="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
+                                        aria-label="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
+                                        disabled="@(_levels.Count <= 1)"
+                                        @onclick="() => RemoveLevel(index)">
+                                    <TmIcon Name="x" Size="IconSize.Sm" />
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </ChildContent>
     <Footer>
         <div class="tm-spreadsheet-sort__actions">

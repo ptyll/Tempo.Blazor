@@ -18,7 +18,7 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
             parameters => parameters.Add(p => p.Workbook, workbook));
 
         cut.Find(".tm-modal-title").TextContent.Should().Be("Hyperlink");
-        var options = cut.FindAll("#hl-type option");
+        var options = cut.FindAll("#hl-type .tm-radio-segment");
         options.Count.Should().Be(4);
     }
 
@@ -158,7 +158,9 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
 
         cut.Find("#hl-target").Input("https://test.com");
 
-        cut.Find("#hl-target")
+        // A keydown inside a field reaches the form wrapper by bubbling in the browser; bUnit does not
+        // bubble, so the event is dispatched on the wrapper that owns the shortcut.
+        cut.Find(".tm-spreadsheet-hyperlink__body")
             .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
 
         saved.Should().NotBeNull();

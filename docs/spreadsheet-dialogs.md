@@ -19,7 +19,7 @@ more — no `.tm-spreadsheet-dialog-backdrop`, no per-dialog `__backdrop`, no `p
 | Data validation | `.tm-dvd` | Medium | sheet |
 | Format Cells | `.tm-fcd` | Large | **fullscreen** |
 | Insert image | `.tm-spreadsheet-insert-image` | Small | sheet |
-| Validation alert | `.tm-spreadsheet-alert` (+ `--stop` / `--warning` / `--information`) | Small | sheet |
+| Validation alert | `.tm-spreadsheet-alert` (+ `--stop` / `--warning` / `--information`) | Medium | sheet |
 | Column width / row height | `.tm-spreadsheet-resize-dialog` | Small | sheet |
 
 Root class on the **overlay**, not on the card: `.tm-spreadsheet-name-manager` is the fixed overlay and
@@ -86,6 +86,50 @@ mobile layout (grabber, Escape closes, no backdrop, the grid stays operable). `C
 
 A rule's own `ErrorAlert.Title`/`Message` still wins; the severity picks the icon and the defaults, so an
 Information message no longer reads as a warning.
+
+## Content and hierarchy (redesign phase 4)
+
+The frame above is phase 3; this is what each body renders today, against the reference mockups in
+`output/imagegen/tempo-reimagined/Tempo.Blazor.Spreadsheet/`.
+
+- **Core inputs for choices and fields.** Every dialog body uses `TmSelect`, `TmTextInput`, `TmCheckbox`,
+  `TmRadioGroup` (`Appearance=Segmented` for single-choice rows), `TmSearchInput`, `TmNumberInput`,
+  `TmStepper`, `TmIcon` and `TmButton`. The Format Cells Alignment/Font/Border/Fill tabs, the Text to
+  Columns mode radios and the Data validation textareas stay native until their own tab rebuild. No
+  Unicode glyph is used as an icon in a dialog: the Border tab paints the registered
+  `tm-ss-border-*` SVG icons, and InitialFocusSelector handles wrappers that cannot take focus.
+- **Find & Replace** (still non-modal): visible `label`s for both fields (`.tm-spreadsheet-find__label`),
+  the match counter on the Find row, the four options in two columns, an icon + text pair for
+  Find previous / next, the primary **Replace all** and an explicit Close on the desktop panel. On the
+  phone sheet the labels move above the fields, the options to one column, and the header X is the only
+  close path.
+- **Sort**: the level table on desktop/tablet and one card per level on the phone
+  (`.tm-spreadsheet-sort__card`, fields with `.tm-spreadsheet-sort__field-label`, the remove action
+  spelled out). Add level is the primary action.
+- **Name Manager**: New is primary, the filter is the core `TmSearchInput`, and the phone replaces the
+  five-column table with cards (name + value, the reference formula, the scope as a chip, the comment).
+  The roving-tabindex/arrow-key contract is identical in both layouts.
+- **Paste Special**: two radio columns — what to paste and the arithmetic operation; transpose and skip
+  blanks underneath.
+- **Hyperlink**: the link kind is a segmented control (`#hl-type` is the radiogroup root); the target
+  keeps `inputmode="url"` / `"email"` by kind.
+- **Custom filter**: And/Or is segmented; numeric and date operands carry `inputmode="decimal"`.
+- **Remove duplicates**: a neutral "Selected N of M" line, core checkboxes, and the result toast gains a
+  check icon.
+- **Text to Columns**: the core `TmStepper` with the labels *Data type* / *Delimiters* / *Column format*
+  (`TmSpreadsheet_TextToColumns_StepLabel1..3`, completed steps paint a check, the active step carries
+  `aria-current="step"`); the phone shows the compact "Step N of 3 · Label" line. Delimiters sit in one
+  row and the preview is a table with a sticky header inside its own horizontal scroller.
+- **Data validation**: body is `.tm-dvd__form`; label | field from a 640 px dialog surface (the overlay
+  is the container), stacked on a phone; the rule selects/inputs/checkboxes are core controls.
+- **Format Cells**: the active tab is underlined in the primary colour; the phone replaces the category
+  listbox with a select above the options; decimal places is a `TmNumberInput` −/+ stepper and the
+  preview aligns like the format (numeric right, text left).
+- **Filter dropdown** (desktop): a "Filter and sort" title, shared icons for every row, core checkboxes
+  and buttons. The mobile sheet and the viewport clamp are phase 6.
+- **Validation alert**: a Medium card with a large filled severity badge to the LEFT of the message and
+  no divider under the title (`.tm-spreadsheet-alert__badge`); the old stacked icon and the severity
+  rail on `.tm-modal-body` are gone.
 
 ## Breaking change
 

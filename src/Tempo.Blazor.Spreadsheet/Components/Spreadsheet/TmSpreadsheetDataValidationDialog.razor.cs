@@ -1,3 +1,4 @@
+using Tempo.Blazor.Models;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -26,6 +27,27 @@ public partial class TmSpreadsheetDataValidationDialog
     private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
 
     private string TypeSelectDomId => $"spreadsheet-dv-type-{_idSuffix}";
+    private string OperatorSelectDomId => $"spreadsheet-dv-operator-{_idSuffix}";
+    private string Formula1DomId => $"spreadsheet-dv-formula1-{_idSuffix}";
+    private string Formula2DomId => $"spreadsheet-dv-formula2-{_idSuffix}";
+    private string InputTitleDomId => $"spreadsheet-dv-input-title-{_idSuffix}";
+    private string InputMessageDomId => $"spreadsheet-dv-input-message-{_idSuffix}";
+    private string ErrorStyleDomId => $"spreadsheet-dv-error-style-{_idSuffix}";
+    private string ErrorTitleDomId => $"spreadsheet-dv-error-title-{_idSuffix}";
+    private string ErrorMessageDomId => $"spreadsheet-dv-error-message-{_idSuffix}";
+
+    private IReadOnlyList<SelectOption<SpreadsheetValidationType>> TypeOptions =>
+        _allTypes.Select(t => new SelectOption<SpreadsheetValidationType>(t, Loc[$"TmSpreadsheet_Validation_Type_{t}"])).ToList();
+
+    private IReadOnlyList<SelectOption<SpreadsheetValidationOperator>> OperatorOptions =>
+        _allOperators.Select(op => new SelectOption<SpreadsheetValidationOperator>(op, Loc[$"TmSpreadsheet_Validation_Op_{op}"])).ToList();
+
+    private IReadOnlyList<SelectOption<SpreadsheetValidationErrorStyle>> ErrorStyleOptions =>
+    [
+        new(SpreadsheetValidationErrorStyle.Stop, Loc["TmSpreadsheet_Validation_Style_Stop"]),
+        new(SpreadsheetValidationErrorStyle.Warning, Loc["TmSpreadsheet_Validation_Style_Warning"]),
+        new(SpreadsheetValidationErrorStyle.Information, Loc["TmSpreadsheet_Validation_Style_Information"])
+    ];
 
     private string _activeTab = "Settings";
 
@@ -98,14 +120,11 @@ public partial class TmSpreadsheetDataValidationDialog
             && rule.ErrorAlert is null
             && rule.InputMessage is null;
 
-    private void OnTypeChanged(ChangeEventArgs e)
-        => _validationType = Enum.TryParse<SpreadsheetValidationType>(e.Value?.ToString(), out var t) ? t : SpreadsheetValidationType.Any;
+    private void OnTypeChanged(SpreadsheetValidationType type) => _validationType = type;
 
-    private void OnOperatorChanged(ChangeEventArgs e)
-        => _operator = Enum.TryParse<SpreadsheetValidationOperator>(e.Value?.ToString(), out var op) ? op : SpreadsheetValidationOperator.Between;
+    private void OnOperatorChanged(SpreadsheetValidationOperator op) => _operator = op;
 
-    private void OnErrorStyleChanged(ChangeEventArgs e)
-        => _errorStyle = Enum.TryParse<SpreadsheetValidationErrorStyle>(e.Value?.ToString(), out var s) ? s : SpreadsheetValidationErrorStyle.Stop;
+    private void OnErrorStyleChanged(SpreadsheetValidationErrorStyle style) => _errorStyle = style;
 
     private async Task OnApply()
     {
