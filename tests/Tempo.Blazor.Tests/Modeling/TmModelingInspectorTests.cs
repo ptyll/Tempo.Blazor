@@ -116,6 +116,43 @@ public sealed class TmModelingInspectorTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-inspector-review'] dd").TextContent.Should().BeEmpty();
     }
 
+    /// <summary>The summary/properties markup must be plain Razor — elements built through
+    /// RenderTreeBuilder in code do NOT receive the Razor compiler's CSS-isolation scope
+    /// attribute, so the TmModelingInspector.razor.css rules (<c>.tm-modeling-inspector__summary dt</c>,
+    /// <c>.tm-modeling-inspector__properties-table th</c>, …) would never match.</summary>
+    [Fact]
+    public void Summary_and_table_elements_carry_the_component_css_scope_attribute()
+    {
+        var element = CreateElement();
+        element.Properties = new Dictionary<string, JsonElement>
+        {
+            ["owner"] = JsonSerializer.SerializeToElement("Sales")
+        };
+
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, element));
+
+        var scopeAttribute = cut.Find(".tm-modeling-inspector").Attributes
+            .Select(attribute => attribute.Name)
+            .FirstOrDefault(name => name.StartsWith("b-", StringComparison.Ordinal));
+        scopeAttribute.Should().NotBeNullOrWhiteSpace("the inspector root must carry a CSS-isolation scope attribute");
+
+        var scopedElements =
+            cut.FindAll(".tm-modeling-inspector__summary")
+                .Concat(cut.FindAll(".tm-modeling-inspector__summary dt"))
+                .Concat(cut.FindAll(".tm-modeling-inspector__summary dd"))
+                .Concat(cut.FindAll(".tm-modeling-inspector__section h4"))
+                .Concat(cut.FindAll(".tm-modeling-inspector__properties-table th"))
+                .Concat(cut.FindAll(".tm-modeling-inspector__properties-table td"));
+        scopedElements.Should().NotBeEmpty();
+
+        foreach (var scopedElement in scopedElements)
+        {
+            scopedElement.GetAttribute(scopeAttribute!).Should().NotBeNull(
+                $"'{scopedElement.TagName}' must carry the '{scopeAttribute}' scope attribute so the scoped CSS rules apply");
+        }
+    }
+
     private static ModelingElementDto CreateElement(string id = "task-a", string name = "Approve request") => new()
     {
         Id = id,

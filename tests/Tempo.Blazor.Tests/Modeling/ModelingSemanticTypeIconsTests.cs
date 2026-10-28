@@ -121,6 +121,10 @@ public sealed class ModelingSemanticTypeIconsTests
             .Concat(UmlModelingCatalog.ElementTypes)
             .Concat(Archimate32ModelingCatalog.ElementTypes)
             .Concat(ErdVocabulary)
+            // The catalogs share types (and ErdVocabulary repeats a few) — xUnit refuses
+            // duplicate theory rows, so de-duplicate case-insensitively (resolution is
+            // case-insensitive too).
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(type => new object[] { type });
 
     private static readonly string[] ErdVocabulary =

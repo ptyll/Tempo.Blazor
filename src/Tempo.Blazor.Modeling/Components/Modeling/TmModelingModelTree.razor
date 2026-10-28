@@ -9,7 +9,7 @@
          aria-label="@Loc["TmModelingModelTree_Title"]">
     <div class="tm-modeling-model-tree__header">
         <div>
-            <h3 class="tm-modeling-model-tree__title">@Loc["TmModelingModelTree_Title"]</h3>
+            <h3 id="@TreeTitleId" class="tm-modeling-model-tree__title">@Loc["TmModelingModelTree_Title"]</h3>
             <span class="tm-modeling-model-tree__count">@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>
         </div>
         <label class="tm-modeling-model-tree__search">
@@ -39,14 +39,15 @@
     else
     {
         var activeTreeItemId = ResolveActiveTreeItemId();
-        <div class="tm-modeling-model-tree__groups" role="tree">
+        <div class="tm-modeling-model-tree__groups" role="tree" aria-labelledby="@TreeTitleId">
             @foreach (var (group, groupPosition) in FilteredGroups.Select((value, index) => (value, index + 1)))
             {
                 var expanded = IsGroupExpanded(group.Key);
+                var groupContentId = expanded ? GetGroupContentId(groupPosition) : null;
                 <div role="treeitem"
                      aria-level="1"
                      aria-expanded="@expanded.ToString().ToLowerInvariant()"
-                     aria-controls="@GetGroupContentId(groupPosition)"
+                     aria-controls="@groupContentId"
                      aria-setsize="@FilteredGroups.Count"
                      aria-posinset="@groupPosition"
                      aria-label="@GetGroupAriaLabel(group)"

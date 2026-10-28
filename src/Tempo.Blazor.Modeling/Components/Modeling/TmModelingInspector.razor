@@ -30,10 +30,52 @@
         @if (Element is not null)
         {
             <div data-testid="@TestId("modeling-inspector-selected-element")">
-                @RenderSummary()
-                @RenderDescription(Element.Description)
-                @RenderGovernance(Element.Governance)
-                @RenderProperties(Element.Properties)
+                <dl class="tm-modeling-inspector__summary">
+                    @foreach (var definition in SummaryDefinitions)
+                    {
+                        <div data-testid="@definition.TestId">
+                            <dt>@definition.Label</dt>
+                            <dd class="@definition.ValueClass">@definition.Value</dd>
+                        </div>
+                    }
+                </dl>
+                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-description">
+                    <h4>@Loc["TmModelingInspector_Description"]</h4>
+                    <p>@(string.IsNullOrWhiteSpace(Element.Description) ? Loc["TmModelingInspector_NoDescription"] : Element.Description)</p>
+                </section>
+                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-governance">
+                    <h4>@Loc["TmModelingInspector_Governance"]</h4>
+                    <dl class="tm-modeling-inspector__summary">
+                        @foreach (var definition in GovernanceDefinitions)
+                        {
+                            <div data-testid="@definition.TestId">
+                                <dt>@definition.Label</dt>
+                                <dd class="@definition.ValueClass">@definition.Value</dd>
+                            </div>
+                        }
+                    </dl>
+                </section>
+                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-properties">
+                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
+                    @if (Element.Properties.Count == 0)
+                    {
+                        <p class="tm-modeling-inspector__empty-note" data-testid="modeling-inspector-no-properties">@Loc["TmModelingInspector_NoProperties"]</p>
+                    }
+                    else
+                    {
+                        <table class="tm-modeling-inspector__properties-table">
+                            <tbody>
+                                @foreach (var property in Element.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
+                                        <th>@property.Key</th>
+                                        <td>@FormatPropertyValue(property.Value)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </section>
             </div>
         }
         else if (Relationship is not null)
@@ -44,105 +86,66 @@
                     <strong aria-hidden="true">→</strong>
                     <span>@DisplayTargetName</span>
                 </div>
-                @RenderSummary()
-                @RenderProperties(Relationship.Properties)
+                <dl class="tm-modeling-inspector__summary">
+                    @foreach (var definition in SummaryDefinitions)
+                    {
+                        <div data-testid="@definition.TestId">
+                            <dt>@definition.Label</dt>
+                            <dd class="@definition.ValueClass">@definition.Value</dd>
+                        </div>
+                    }
+                </dl>
+                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-properties">
+                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
+                    @if (Relationship.Properties.Count == 0)
+                    {
+                        <p class="tm-modeling-inspector__empty-note" data-testid="modeling-inspector-no-properties">@Loc["TmModelingInspector_NoProperties"]</p>
+                    }
+                    else
+                    {
+                        <table class="tm-modeling-inspector__properties-table">
+                            <tbody>
+                                @foreach (var property in Relationship.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
+                                        <th>@property.Key</th>
+                                        <td>@FormatPropertyValue(property.Value)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </section>
             </div>
         }
     }
 </section>
 
 @code {
-    private RenderFragment RenderSummary() => builder =>
+    /// <summary>One dt/dd pair of a summary definition list: the localized label, the display
+    /// value and the raw data-testid (matching the E2E selectors), plus an optional dd class.
+    /// The lists are materialized here and rendered through plain RAZOR markup above so every
+    /// dt/dd/th/td element carries this component's CSS-isolation scope attribute — the
+    /// TmModelingInspector.razor.css rules key off exactly that.</summary>
+    private sealed record DefinitionRow(string Label, string Value, string TestId, string? ValueClass = null);
+
+    /// <summary>The six summary rows shared by the element and the relationship panels.</summary>
+    private IReadOnlyList<DefinitionRow> SummaryDefinitions => new[]
     {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "dl");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__summary");
-
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Name"], DisplayName, "modeling-inspector-name");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SemanticType"], DisplayType, "modeling-inspector-type");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Notation"], DisplayNotation, "modeling-inspector-notation");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourceId"], DisplaySourceId, "modeling-inspector-source-id");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourceType"], DisplaySourceType, "modeling-inspector-source-type");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourcePath"], DisplaySourcePath, "modeling-inspector-source-path");
-
-        builder.CloseElement();
+        new DefinitionRow(Loc["TmModelingInspector_Name"], DisplayName, "modeling-inspector-name"),
+        new DefinitionRow(Loc["TmModelingInspector_SemanticType"], DisplayType, "modeling-inspector-type"),
+        new DefinitionRow(Loc["TmModelingInspector_Notation"], DisplayNotation, "modeling-inspector-notation"),
+        new DefinitionRow(Loc["TmModelingInspector_SourceId"], DisplaySourceId, "modeling-inspector-source-id"),
+        new DefinitionRow(Loc["TmModelingInspector_SourceType"], DisplaySourceType, "modeling-inspector-source-type"),
+        new DefinitionRow(Loc["TmModelingInspector_SourcePath"], DisplaySourcePath, "modeling-inspector-source-path"),
     };
 
-    private RenderFragment RenderDescription(string description) => builder =>
+    /// <summary>The governance rows of the element panel (trust level carries the low-trust pill class).</summary>
+    private IReadOnlyList<DefinitionRow> GovernanceDefinitions => new[]
     {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-description");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Description"]);
-        builder.CloseElement();
-        builder.OpenElement(sequence++, "p");
-        builder.AddContent(sequence++, string.IsNullOrWhiteSpace(description) ? Loc["TmModelingInspector_NoDescription"] : description);
-        builder.CloseElement();
-        builder.CloseElement();
-    };
-
-    private RenderFragment RenderGovernance(ModelingGovernanceDto governance) => builder =>
-    {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-governance");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Governance"]);
-        builder.CloseElement();
-
-        builder.OpenElement(sequence++, "dl");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__summary");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Trust"], governance.TrustLevel, "modeling-inspector-trust", GetTrustClass(governance.TrustLevel));
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_ReviewState"], governance.ReviewState, "modeling-inspector-review");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SyncState"], governance.SyncState, "modeling-inspector-sync");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_DataSource"], governance.DataSource, "modeling-inspector-data-source");
-        builder.CloseElement();
-
-        builder.CloseElement();
-    };
-
-    private RenderFragment RenderProperties(IReadOnlyDictionary<string, System.Text.Json.JsonElement> properties) => builder =>
-    {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-properties");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Properties"]);
-        builder.CloseElement();
-
-        if (properties.Count == 0)
-        {
-            builder.OpenElement(sequence++, "p");
-            builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__empty-note");
-            builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-no-properties");
-            builder.AddContent(sequence++, Loc["TmModelingInspector_NoProperties"]);
-            builder.CloseElement();
-        }
-        else
-        {
-            builder.OpenElement(sequence++, "table");
-            builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__properties-table");
-            builder.OpenElement(sequence++, "tbody");
-            foreach (var property in properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
-            {
-                builder.OpenElement(sequence++, "tr");
-                builder.AddAttribute(sequence++, "data-testid", $"modeling-inspector-property-{property.Key}");
-                builder.OpenElement(sequence++, "th");
-                builder.AddContent(sequence++, property.Key);
-                builder.CloseElement();
-                builder.OpenElement(sequence++, "td");
-                builder.AddContent(sequence++, FormatPropertyValue(property.Value));
-                builder.CloseElement();
-                builder.CloseElement();
-            }
-            builder.CloseElement();
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
+        new DefinitionRow(Loc["TmModelingInspector_Trust"], Element!.Governance.TrustLevel, "modeling-inspector-trust", GetTrustClass(Element.Governance.TrustLevel)),
+        new DefinitionRow(Loc["TmModelingInspector_ReviewState"], Element.Governance.ReviewState, "modeling-inspector-review"),
+        new DefinitionRow(Loc["TmModelingInspector_SyncState"], Element.Governance.SyncState, "modeling-inspector-sync"),
+        new DefinitionRow(Loc["TmModelingInspector_DataSource"], Element.Governance.DataSource, "modeling-inspector-data-source"),
     };
 }

@@ -568,6 +568,52 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         handle.QuerySelector("svg").Should().NotBeNull("the drag affordance is an icon, not the '::' text glyph");
     }
 
+    [Fact]
+    public async Task External_selection_syncs_roving_tabindex_and_raises_collapsed_groups()
+    {
+        var raised = new List<IReadOnlyCollection<string>>();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.CollapsedGroups, new[] { "userTask" })
+            .Add(p => p.CollapsedGroupsChanged, EventCallback.Factory
+                .Create<IReadOnlyCollection<string>>(this, value => raised.Add(value))));
+
+        cut.FindAll("[data-testid='modeling-tree-node-task-review']").Should().BeEmpty();
+
+        // A NEW SelectedElement instance (e.g. a canvas click) auto-reveals the collapsed group,
+        // moves the roving tabindex onto the selected node and raises the two-way binding with
+        // the revealed snapshot (queued out of OnParametersSet, flushed after render).
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?> { [nameof(TmModelingModelTree.SelectedElement)] = CreateElements().First(element => element.Id == "task-review") })));
+
+        cut.Find("[data-testid='modeling-tree-node-task-review']")
+            .GetAttribute("tabindex").Should().Be("0", "the roving tabindex follows an external selection");
+        cut.WaitForAssertion(() => raised.Should().ContainSingle(
+                "the auto-reveal keeps the two-way binding in sync"),
+            timeout: TimeSpan.FromSeconds(5));
+        raised[0].Should().BeEmpty("userTask was revealed");
+    }
+
+    [Fact]
+    public void Tree_is_labelled_by_its_title_and_aria_controls_follow_expansion()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        var tree = cut.Find("[role='tree']");
+        var titleId = tree.GetAttribute("aria-labelledby");
+        titleId.Should().NotBeNullOrWhiteSpace("the tree element is named by the header title");
+        cut.Find($"#{titleId}").TextContent.Should().NotBeEmpty();
+
+        var treeitem = cut.Find("[data-testid='modeling-tree-group-userTask']");
+        treeitem.GetAttribute("aria-controls").Should().NotBeNullOrWhiteSpace("an expanded group points at its content");
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-controls").Should().BeNull("a collapsed group has no content element to point at");
+    }
+
     private static ModelingElementDto[] CreateElements() =>
     [
         new()

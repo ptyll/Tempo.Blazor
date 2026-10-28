@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Rendering;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Modeling;
 
@@ -96,27 +95,4 @@ public partial class TmModelingInspector
         => string.Equals(trustLevel, "low", StringComparison.OrdinalIgnoreCase)
             ? "tm-modeling-inspector__value tm-modeling-inspector__value--trust-low"
             : "tm-modeling-inspector__value";
-
-    private static void AddDefinition(
-        RenderTreeBuilder builder,
-        ref int sequence,
-        string label,
-        string value,
-        string testId,
-        string? valueClass = null)
-    {
-        builder.OpenElement(sequence++, "div");
-        builder.AddAttribute(sequence++, "data-testid", testId);
-        builder.OpenElement(sequence++, "dt");
-        builder.AddContent(sequence++, label);
-        builder.CloseElement();
-        builder.OpenElement(sequence++, "dd");
-        if (!string.IsNullOrWhiteSpace(valueClass))
-        {
-            builder.AddAttribute(sequence++, "class", valueClass);
-        }
-        builder.AddContent(sequence++, value);
-        builder.CloseElement();
-        builder.CloseElement();
-    }
 }

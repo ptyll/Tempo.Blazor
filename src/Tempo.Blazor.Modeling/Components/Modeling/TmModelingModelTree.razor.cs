@@ -25,12 +25,17 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private IReadOnlyCollection<string>? _lastCollapsedGroupsParameter;
     private ModelingElementDto? _lastSelectedElementParameter;
     private string? _activeTreeItemId;
+    private bool _pendingCollapsedGroupsChanged;
     private ModelingInteropModule? _interopModule;
     private ElementReference _treeRoot;
 
     /// <summary>Per-instance DOM id prefix — two trees on one page must never share content ids
     /// (the old static slug collapsed different group keys onto the same id).</summary>
     private readonly string _idPrefix = $"tm-mmt-{Guid.NewGuid():N}";
+
+    /// <summary>DOM id of the header title, referenced by the <c>role="tree"</c> element's
+    /// <c>aria-labelledby</c> (per-instance, so two trees never collide).</summary>
+    private string TreeTitleId => $"{_idPrefix}-title";
 
     /// <summary>Scoped accessor for the shared, disposed-guarded module wrapper (the [Inject]
     /// runtime is only available after construction, so the wrapper is created lazily).</summary>
@@ -175,15 +180,30 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
 
         // External selection inside a collapsed group auto-reveals it, so the scroll target can
-        // render on the upcoming pass; the scroll itself happens once the node exists.
+        // render on the upcoming pass; the scroll itself happens once the node exists. The same
+        // new-selection signal moves the roving tabindex onto the selected node and — when the
+        // reveal actually changed the stored set — queues a CollapsedGroupsChanged raise (an
+        // OnParametersSet cannot await, so the two-way binding is refreshed after render).
         if (!ReferenceEquals(SelectedElement, _lastSelectedElementParameter)
-            && SelectedElement is not null
-            && !string.IsNullOrWhiteSpace(SelectedElement.SemanticType))
+            && SelectedElement is not null)
         {
             _lastSelectedElementParameter = SelectedElement;
-            var groupKey = NormalizeGroupKey(SelectedElement.SemanticType);
-            _collapsedGroups.Remove(groupKey);
-            _filterCollapsedGroups.Remove(groupKey);
+
+            if (!string.IsNullOrWhiteSpace(SelectedElement.Id))
+            {
+                _activeTreeItemId = $"element:{SelectedElement.Id}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedElement.SemanticType))
+            {
+                var groupKey = NormalizeGroupKey(SelectedElement.SemanticType);
+                if (_collapsedGroups.Remove(groupKey))
+                {
+                    _pendingCollapsedGroupsChanged = true;
+                }
+
+                _filterCollapsedGroups.Remove(groupKey);
+            }
         }
     }
 
@@ -193,6 +213,17 @@ public partial class TmModelingModelTree : IAsyncDisposable
         if (firstRender)
         {
             await RegisterDragDataTransferBridgeAsync();
+        }
+
+        // Flush the auto-reveal collapsed-groups raise queued by OnParametersSet (which cannot
+        // await) — the two-way binding must observe the revealed group too.
+        if (_pendingCollapsedGroupsChanged)
+        {
+            _pendingCollapsedGroupsChanged = false;
+            if (CollapsedGroupsChanged.HasDelegate)
+            {
+                await CollapsedGroupsChanged.InvokeAsync(_collapsedGroups.ToArray());
+            }
         }
 
         if (SelectedElement is null

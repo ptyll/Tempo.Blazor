@@ -32,8 +32,8 @@
 
 .tm-modeling-view-selector__field select:focus {
     border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-view-selector__empty-viewpoints {
