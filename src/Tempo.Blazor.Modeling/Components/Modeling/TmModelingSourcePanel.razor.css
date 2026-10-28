@@ -7,6 +7,9 @@
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: var(--tm-font-sans);
+    /* CSS size container (docs/responsive-conventions.md): the metadata rows collapse into a
+       single column from the PANEL's width, not the viewport's. */
+    container: tm-modeling-source-panel / inline-size;
 }
 
 .tm-modeling-source-panel__header {
@@ -28,7 +31,8 @@
 }
 
 /* Two-column metadata list: term | value rows separated by hairlines, each term led by its
-   row icon (database / tag / calendar). The dt owns the icon so the alignment is stable. */
+   row icon (database / tag / calendar). The dt owns the icon so the alignment is stable; the
+   term column is max-content (nowrap) so values start aligned. */
 .tm-modeling-source-panel__metadata {
     display: grid;
     margin: 0;
@@ -36,7 +40,7 @@
 
 .tm-modeling-source-panel__metadata-row {
     display: grid;
-    grid-template-columns: minmax(0, 0.38fr) minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: var(--tm-space-3);
     align-items: baseline;
     min-width: 0;
@@ -47,6 +51,17 @@
     border-top: 1px solid var(--tm-color-border-subtle);
 }
 
+/* Narrow panel: single column — the term above the value, wrapping again. */
+@container tm-modeling-source-panel (width < 640px) {
+    .tm-modeling-source-panel__metadata-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-source-panel__term {
+        white-space: normal;
+    }
+}
+
 .tm-modeling-source-panel__term {
     display: flex;
     align-items: center;
@@ -54,6 +69,7 @@
     min-width: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
 }
 
 .tm-modeling-source-panel__metadata-icon {

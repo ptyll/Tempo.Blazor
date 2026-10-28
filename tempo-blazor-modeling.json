@@ -515,6 +515,18 @@
           "description": "Additional CSS class applied to the tree root."
         },
         {
+          "name": "CollapsedGroups",
+          "type": "IReadOnlyCollection<string>?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the collapsed group keys. Seeded from when the instance is given a new collection; every user toggle raises CollapsedGroupsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+        },
+        {
+          "name": "CollapsedGroupsChanged",
+          "type": "EventCallback<IReadOnlyCollection<string>>",
+          "isRequired": false,
+          "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
+        },
+        {
           "name": "Elements",
           "type": "IReadOnlyList<ModelingElementDto>",
           "isRequired": false,

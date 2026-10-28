@@ -26,6 +26,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     private ModelingElementDto? _selectedElement;
     private ModelingRelationshipDto? _selectedRelationship;
     private ModelingElementDto? _draggedElement;
+    private IReadOnlyCollection<string>? _collapsedGroups;
     private string? _errorMessage;
     private string? _activeLoadKey;
     private string? _effectiveNotationKey;

@@ -82,8 +82,11 @@ public class PluralAdoptionTests : LocalizationTestBase
         var cut = Render<TmModelingIssuePanel>(p => p.Add(c => c.Issues, issues));
 
         var badge = cut.Find("[data-testid='modeling-issue-count']");
-        badge.TextContent.Trim().Should().Be(count.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        badge.GetAttribute("aria-label").Should().Be(expected);
+        // Phase 2 moved the neutral formulation from the aria-label onto a visually-hidden
+        // span (real content = accessible name): the visible badge text is the bare count.
+        badge.QuerySelector("span[aria-hidden='true']")!.TextContent.Trim().Should()
+            .Be(count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        badge.QuerySelector(".tm-sr-only")!.TextContent.Trim().Should().Be(expected);
     }
 
     // ── 449c99df: three core counts read as grammatical plural sentences ────────────────────

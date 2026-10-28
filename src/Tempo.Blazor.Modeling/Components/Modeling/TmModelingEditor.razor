@@ -139,6 +139,7 @@
             <aside class="@GetPanelClass(ModelingEditorPanel.Tree, "tm-modeling-editor__panel tm-modeling-editor__tree")" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
                 <TmModelingModelTree Elements="@VisibleTreeElements"
                                      SelectedElement="@_selectedElement"
+                                     @bind-CollapsedGroups="_collapsedGroups"
                                      OnElementSelected="SelectElementAsync"
                                      OnElementDragStarted="HandleElementDragStartedAsync"
                                      OnElementDragEnded="HandleElementDragEndedAsync" />

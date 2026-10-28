@@ -16,6 +16,8 @@
  *    scroll area, querying inside `treeRoot` only.
  *  - focusTreeElement(treeRoot, elementId): scroll + focus a tree node (keyboard navigation),
  *    querying inside `treeRoot` only.
+ *  - focusTreeGroupHeader(treeRoot, groupKey): scroll + focus a tree GROUP treeitem (the APG
+ *    `role="treeitem"` wrapper carrying `data-group-key`), same scoping as focusTreeElement.
  *  - focusWithin(root, selector): focus the first element matching the selector inside `root`,
  *    without scrolling.
  */
@@ -55,6 +57,20 @@ export function focusTreeElement(treeRoot, elementId) {
   const node = findTreeNode(treeRoot, elementId);
   node?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   node?.focus({ preventScroll: true });
+}
+
+export function focusTreeGroupHeader(treeRoot, groupKey) {
+  const root = queryRoot(treeRoot);
+  if (!root) {
+    return;
+  }
+
+  const escapedGroupKey = window.CSS?.escape
+    ? CSS.escape(groupKey)
+    : groupKey.replace(/["\\]/g, '\\$&');
+  const header = root.querySelector(`[data-group-key="${escapedGroupKey}"]`);
+  header?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  header?.focus({ preventScroll: true });
 }
 
 export function focusWithin(root, selector) {

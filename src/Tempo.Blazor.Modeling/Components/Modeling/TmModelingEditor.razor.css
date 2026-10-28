@@ -11,6 +11,9 @@
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: var(--tm-font-sans);
+    /* CSS size container: the workspace gutters below respond to the EDITOR's width, not
+       the viewport's (docs/responsive-conventions.md). */
+    container: tm-modeling-editor / inline-size;
 }
 
 .tm-modeling-editor__panel-tabs {
@@ -29,19 +32,21 @@
 
 .tm-modeling-editor__title-group {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--tm-space-3);
+    row-gap: var(--tm-space-1);
     min-width: 0;
 }
 
+/* The title wraps instead of ellipsizing: the state badge next to it stays reachable even
+   in a narrow toolbar, and long localized titles are never cut off. */
 .tm-modeling-editor__title {
     margin: 0;
-    overflow: hidden;
+    flex: 0 1 auto;
     font-size: var(--tm-font-size-lg);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 /* The state badge sits next to the title; the wrapper is owner-rendered, the badge inside
@@ -141,7 +146,8 @@
 }
 
 /* Phase 2 (gap #2): panels are cards — radius, shadow, hairline border — floating on the
-   workspace background with token-driven gutters. */
+   workspace background with token-driven gutters. The container lives on the editor root
+   (tm-modeling-editor), so a query can tighten the workspace's OWN gutters. */
 .tm-modeling-editor__workspace {
     position: relative;
     display: grid;
@@ -151,6 +157,15 @@
     padding: var(--tm-space-3);
     overflow: hidden;
     background: var(--tm-bg-workspace);
+}
+
+/* Below the 1200px (75rem) editor width the token gutters tighten so the panels keep their
+   content width (half-open: the boundary belongs to the wide side). */
+@container tm-modeling-editor (width < 75rem) {
+    .tm-modeling-editor__workspace {
+        gap: var(--tm-space-2);
+        padding: var(--tm-space-2);
+    }
 }
 
 /* Reload affordance over the mounted workspace (force reload keeps _model alive, so the

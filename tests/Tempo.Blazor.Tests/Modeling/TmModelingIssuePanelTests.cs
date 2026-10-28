@@ -31,8 +31,10 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
             .Add(p => p.Issues, CreateIssues()));
 
         var badge = cut.Find("[data-testid='modeling-issue-count']");
-        badge.TextContent.Trim().Should().Be("3", "the visible badge text is the bare count");
-        badge.GetAttribute("aria-label").Should().Be("Issues: 3", "the localized formulation lives on the aria-label");
+        badge.QuerySelector("span[aria-hidden='true']")!.TextContent.Trim().Should()
+            .Be("3", "the visible badge text is the bare count");
+        badge.QuerySelector(".tm-sr-only")!.TextContent.Should().Be("Issues: 3",
+            "the localized formulation lives on the visually-hidden span (real content = accessible name)");
         badge.ClassList.Should().Contain("tm-modeling-issue-panel__count");
     }
 

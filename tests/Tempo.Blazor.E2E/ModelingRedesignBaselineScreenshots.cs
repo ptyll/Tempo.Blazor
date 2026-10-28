@@ -95,6 +95,102 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     public async Task Capture_ErrorState()
         => await CaptureAsync("error", "?scenario=error", requiresLoadedState: false, expectedState: "error");
 
+    /// <summary>Phase 2 review baselines: the three loaded screens under each accent/theme
+    /// combination at the desktop viewport (dark tokens, indigo accent, indigo + dark), plus a
+    /// selected-element shot freezing the tree's selected node and the inspector detail.</summary>
+    [TestMethod]
+    [DataRow("dark")]
+    [DataRow("indigo")]
+    [DataRow("indigo-dark")]
+    [Description("Captures default / issues-mixed / stale-source at 1440x900 for dark, indigo and indigo-dark")]
+    public async Task Capture_Themed1440x900(string theme)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, 1440, 900);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-1440x900");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    [TestMethod]
+    [Description("Captures the selected-element state (tree selection + inspector detail) at 1440x900")]
+    public async Task Capture_ElementSelected()
+    {
+        var page = await OpenThemedModelingPageAsync(string.Empty, "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']")
+                .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "element-selected-1440x900");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Theme setup shared with <c>ModelingAccessibilityM25E2ETests</c>: the dark tokens
+    /// are stamped on the document element after load; the indigo accent is the demo's colour
+    /// theme (localStorage `tm-demo-color-theme=indigo`, consumed by the demo's color-theme.js
+    /// before Blazor boots), seeded through the context init script.</summary>
+    private async Task<IPage> OpenThemedModelingPageAsync(string query, string theme, int width, int height)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = false,
+            IsMobile = false,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var init = "localStorage.setItem('tm-demo-culture', 'en');";
+        if (theme.Contains("indigo", StringComparison.Ordinal))
+        {
+            init += "localStorage.setItem('tm-demo-color-theme', 'indigo');";
+        }
+
+        await context.AddInitScriptAsync(init);
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
+
+        if (theme.Contains("dark", StringComparison.Ordinal))
+        {
+            await page.EvaluateAsync(
+                """
+                () => {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    document.documentElement.classList.add('tm-dark', 'dark');
+                    document.body.classList.add('tm-dark', 'dark');
+                    document.querySelector('[data-theme]')?.setAttribute('data-theme', 'dark');
+                }
+                """);
+            await page.WaitForTimeoutAsync(300);
+        }
+
+        return page;
+    }
+
     private static readonly (int Width, int Height, bool Touch)[] BaselineViewports =
     [
         (1440, 900, false),

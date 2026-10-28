@@ -48,6 +48,9 @@ public partial class TmModelingIssuePanel
     private string GetSeverityClass(ModelingIssueDto issue)
         => $"tm-modeling-issue-panel__severity tm-modeling-issue-panel__severity--{GetSeverityKey(issue)}";
 
+    private string GetFixClass(ModelingIssueDto issue)
+        => $"tm-modeling-issue-panel__fix tm-modeling-issue-panel__fix--{GetSeverityKey(issue)}";
+
     private static string GetSeverityKey(ModelingIssueDto issue)
         => issue.Severity switch
         {

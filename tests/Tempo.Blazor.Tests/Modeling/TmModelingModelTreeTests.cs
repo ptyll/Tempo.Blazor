@@ -220,23 +220,61 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Group_header_is_disclosure_with_count_and_aria_expanded()
+    public void Group_header_is_apg_treeitem_with_count_and_aria_expanded()
     {
         using var cut = Render<TmModelingModelTree>(parameters => parameters
             .Add(p => p.Elements, CreateElements()));
 
+        var treeitem = cut.Find("[data-testid='modeling-tree-group-userTask']");
+        treeitem.GetAttribute("role").Should().Be("treeitem", "the group is an APG level-1 treeitem");
+        treeitem.TagName.Should().Be("DIV");
+        treeitem.GetAttribute("aria-level").Should().Be("1");
+        treeitem.GetAttribute("aria-expanded").Should().Be("true");
+        treeitem.GetAttribute("aria-controls").Should().NotBeNullOrEmpty();
+        treeitem.GetAttribute("aria-setsize").Should().Be("2");
+        treeitem.GetAttribute("aria-posinset").Should().Be("2");
+        treeitem.GetAttribute("aria-label").Should().Contain("User task");
+        cut.FindAll("[role='tree'] > [role='treeitem']")
+            .Count(item => item.GetAttribute("tabindex") == "0")
+            .Should().Be(1, "the roving tabindex marks exactly ONE active level-1 treeitem");
+        cut.FindAll("[role='tree'] [role='treeitem'] [role='treeitem']")
+            .Should().OnlyContain(node => node.GetAttribute("tabindex") == "-1",
+                "level-2 nodes stay out of the Tab order until the roving tabindex reaches them");
+
         var header = cut.Find("[data-testid='modeling-tree-group-header-userTask']");
-        header.TagName.Should().Be("BUTTON", "the group header is a real disclosure button");
-        header.GetAttribute("aria-expanded").Should().Be("true");
-        header.GetAttribute("aria-controls").Should().NotBeNullOrEmpty();
-        header.TextContent.Should().Contain("userTask");
+        header.TagName.Should().Be("DIV", "the header row is presentational; the treeitem owns focus");
+        header.GetAttribute("title").Should().NotBeNullOrEmpty("the sr-only hint moved into a tooltip");
+        header.TextContent.Should().Contain("User task");
         header.TextContent.Should().Contain("2", "the group header shows the element count");
         header.QuerySelector(".tm-modeling-model-tree__group-chevron svg").Should().NotBeNull();
 
         cut.Find("[data-testid='modeling-tree-group-userTask'] [role='group']").Should().NotBeNull(
-            "the node list is an ARIA group owned by the disclosure header");
-        cut.Find("[data-testid='modeling-tree-group-userTask']").GetAttribute("data-expanded")
-            .Should().Be("true");
+            "the node list is an ARIA group owned by the treeitem");
+        cut.FindAll("[data-testid='modeling-tree-group-userTask'] [role='treeitem'][aria-level='2']")
+            .Should().HaveCount(2, "each element node is a level-2 treeitem with setsize/posinset");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("3");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-rendered-count").Should().Be("3");
+    }
+
+    [Fact]
+    public void Group_ids_are_unique_per_instance_and_not_lossy_slugs()
+    {
+        var firstIds = RenderAndCollectGroupIds();
+        var secondIds = RenderAndCollectGroupIds();
+
+        firstIds.Should().NotIntersectWith(secondIds, "two trees on one page must not share content ids");
+        firstIds.Should().OnlyContain(id => id.StartsWith("tm-mmt-", StringComparison.Ordinal));
+        firstIds.Should().HaveCount(2).And.OnlyContain(id => id.EndsWith("-group-1") || id.EndsWith("-group-2"),
+            "content ids use the group position, not a lossy slug of the key");
+    }
+
+    private List<string> RenderAndCollectGroupIds()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+        return cut.FindAll("[role='tree'] [role='treeitem'] [role='group']")
+            .Select(node => node.GetAttribute("id") ?? string.Empty)
+            .ToList();
     }
 
     [Fact]
@@ -246,21 +284,214 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             .Add(p => p.Elements, CreateElements()));
 
         cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
             .GetAttribute("aria-expanded").Should().Be("false");
         cut.FindAll("[data-testid='modeling-tree-node-task-approve']").Should().BeEmpty();
-        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("1");
+        // data-visible-count keeps the MATCHING count contract (M10/M23/M26) — a collapsed
+        // group still counts; the RENDERED count drops instead.
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("3");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-rendered-count").Should().Be("1");
 
-        // ArrowLeft collapses, ArrowRight expands — Enter/Space stay native button activation
-        // (docs/keyboard-activation-convention.md: no emulated activation on native activatables).
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']").KeyDown("ArrowLeft");
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+        // ArrowLeft collapses (already collapsed: stays), ArrowRight expands — the toggle
+        // keys on the treeitem are Enter (keydown) and Space (keyup), the native button split.
+        cut.Find("[data-testid='modeling-tree-group-userTask']").KeyDown("ArrowLeft");
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
             .GetAttribute("aria-expanded").Should().Be("false");
 
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']").KeyDown("ArrowRight");
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+        cut.Find("[data-testid='modeling-tree-group-userTask']").KeyDown("ArrowRight");
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
             .GetAttribute("aria-expanded").Should().Be("true");
         cut.Find("[data-testid='modeling-tree-node-task-approve']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Enter_and_space_toggle_the_group_treeitem_exactly_once()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        // The group treeitem is a non-native focusable: Enter on keydown (no repeat) and
+        // Space on keyup — the native button split (docs/keyboard-activation-convention.md).
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false", "held Enter must not re-toggle");
+
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void Single_type_model_with_collapsed_group_never_shows_the_empty_filter_state()
+    {
+        // The BLOCKER regression: with ONE group and no filter text, collapsing it must not
+        // flip the tree into the empty-filter dead end — the header stays, click re-expands.
+        var elements = new[]
+        {
+            new ModelingElementDto { Id = "only-one", SemanticType = "userTask", Name = "Only element" }
+        };
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, elements));
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+
+        cut.FindAll("[data-testid='modeling-tree-empty-filter']").Should().BeEmpty(
+            "a collapsed single group is a collapsed tree, not an empty filter result");
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Should().NotBeNull(
+            "the header is still rendered so the group can be re-expanded");
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("1");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-rendered-count").Should().Be("0");
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.Find("[data-testid='modeling-tree-node-only-one']").Should().NotBeNull();
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-rendered-count").Should().Be("1");
+    }
+
+    [Fact]
+    public void Filter_toggle_uses_transient_state_and_keeps_stored_state_untouched()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        // Collapse a group WITHOUT a filter → stored state.
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+
+        // With the filter active, toggling moves the TRANSIENT set only.
+        cut.Find("[data-testid='modeling-tree-search']").Input("task");
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false", "the transient set drives the filtered view");
+
+        // Editing the filter starts a NEW transient session.
+        cut.Find("[data-testid='modeling-tree-search']").Input("review");
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true", "each filter edit clears the transient collapses");
+
+        cut.Find("[data-testid='modeling-tree-search']").Input(string.Empty);
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false", "the stored state was never touched by filter toggles");
+    }
+
+    [Fact]
+    public async Task Externally_selected_element_auto_reveals_its_collapsed_group()
+    {
+        var selected = CreateElements().First(element => element.Id == "task-review");
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.SelectedElement, selected));
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.FindAll("[data-testid='modeling-tree-node-task-review']").Should().BeEmpty();
+
+        // A NEW SelectedElement parameter instance inside the collapsed group re-reveals it;
+        // the scroll happens once the node is rendered (after the reveal render).
+        var next = new ModelingElementDto
+        {
+            Id = "task-review",
+            SourceId = selected.SourceId,
+            SourceType = selected.SourceType,
+            SourcePath = selected.SourcePath,
+            SemanticType = selected.SemanticType,
+            Name = selected.Name,
+            Description = selected.Description,
+            Tags = selected.Tags
+        };
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?> { [nameof(TmModelingModelTree.SelectedElement)] = next })));
+
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true", "an external selection reveals its collapsed group");
+        cut.Find("[data-testid='modeling-tree-node-task-review']").Should().NotBeNull();
+        cut.Instance.TestInteropModule.Should().NotBeNull();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "scrollTreeElementIntoView")
+            .Should().NotBeEmpty("the revealed node is scrolled into view once rendered"));
+    }
+
+    [Fact]
+    public void Two_way_collapsed_groups_seeds_and_raises()
+    {
+        var raised = new List<IReadOnlyCollection<string>>();
+        var seed = new[] { "userTask" };
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.CollapsedGroups, seed)
+            .Add(p => p.CollapsedGroupsChanged, EventCallback.Factory
+                .Create<IReadOnlyCollection<string>>(this, value => raised.Add(value))));
+
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("false", "the internal state seeds from the parameter");
+
+        cut.Find("[data-testid='modeling-tree-group-header-userTask']").Click();
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
+            .GetAttribute("aria-expanded").Should().Be("true");
+        raised.Should().HaveCount(1);
+        raised[0].Should().BeEmpty("the re-expansion raises the new snapshot");
+
+        cut.Find("[data-testid='modeling-tree-group-header-applicationComponent']").Click();
+        raised.Should().HaveCount(2);
+        raised[1].Should().BeEquivalentTo(["applicationComponent"]);
+    }
+
+    [Fact]
+    public async Task Keyboard_navigation_walks_the_flat_visible_list()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+        module.SetupVoid("focusTreeGroupHeader", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        // userTask sorts first: its header is the first flat entry; ArrowDown moves to the
+        // first NODE (a level-2 treeitem), not another header.
+        cut.Find("[data-testid='modeling-tree-group-userTask']").KeyDown("ArrowDown");
+
+        cut.WaitForAssertion(() => module.Invocations
+            .Select(invocation => invocation.Identifier)
+            .Should().Contain("focusTreeElement", "ArrowDown from a header focuses its first child node"));
+
+        // Left on a node focuses the node's group header (level 1 treeitem).
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").KeyDown("ArrowLeft");
+        cut.WaitForAssertion(() => module.Invocations
+            .Select(invocation => invocation.Identifier)
+            .Should().Contain("focusTreeGroupHeader", "ArrowLeft from a node focuses its group treeitem"));
+
+        // End jumps to the LAST visible entry (the applicationComponent node).
+        cut.Find("[data-testid='modeling-tree-group-userTask']").KeyDown("End");
+        cut.WaitForAssertion(() => module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().Contain("task-review", "End jumps to the last visible entry"));
+
+        // Right on a node is a no-op: no further focus invocation may appear (flush the
+        // dispatcher first — handler continuations record their JS calls asynchronously).
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").KeyDown("ArrowRight");
+        await cut.InvokeAsync(() => { });
+        module.Invocations.Count(invocation => invocation.Identifier == "focusTreeGroupHeader")
+            .Should().Be(1, "ArrowRight on a node is a no-op");
+
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "eval")
+            .Should().BeEmpty("keyboard navigation must not fall back to eval");
+
+        // Roving tabindex: exactly ONE visible treeitem carries tabindex=0.
+        cut.FindAll("[role='tree'] [role='treeitem']")
+            .Count(item => item.GetAttribute("tabindex") == "0")
+            .Should().BeLessThanOrEqualTo(1);
     }
 
     [Fact]
@@ -276,7 +507,7 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
 
         cut.Find("[data-testid='modeling-tree-node-task-approve']").Should().NotBeNull(
             "a collapsed group whose nodes match the filter is temporarily expanded");
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
             .GetAttribute("aria-expanded").Should().Be("true");
     }
 
@@ -293,7 +524,7 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
 
         cut.Find("[data-testid='modeling-tree-search']").Input(string.Empty);
 
-        cut.Find("[data-testid='modeling-tree-group-header-userTask']")
+        cut.Find("[data-testid='modeling-tree-group-userTask']")
             .GetAttribute("aria-expanded").Should().Be("false",
                 "clearing the filter restores the user's collapsed state");
         cut.FindAll("[data-testid='modeling-tree-node-task-approve']").Should().BeEmpty();

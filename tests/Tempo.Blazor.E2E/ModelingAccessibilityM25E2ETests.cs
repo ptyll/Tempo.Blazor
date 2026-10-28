@@ -60,11 +60,15 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         var focusedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
         Assert.IsFalse(string.IsNullOrWhiteSpace(focusedElementId), $"Focused tree node '{focusedTreeNodeTestId}' should expose data-element-id.");
 
-        await page.Keyboard.PressAsync("ArrowDown");
+        // The flat visible list interleaves group treeitems and nodes: walk forward until the
+        // focus lands on a DIFFERENT node (the entry after a node may be the next header).
         var navigatedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
-        if (string.Equals(focusedElementId, navigatedElementId, StringComparison.Ordinal))
+        for (var guard = 0;
+             guard < 20 && (string.IsNullOrWhiteSpace(navigatedElementId)
+                 || string.Equals(navigatedElementId, focusedElementId, StringComparison.Ordinal));
+             guard++)
         {
-            await page.Keyboard.PressAsync("ArrowUp");
+            await page.Keyboard.PressAsync("ArrowDown");
             navigatedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
         }
 
@@ -293,6 +297,18 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
             if (activeTestId.StartsWith("modeling-tree-node-", StringComparison.Ordinal))
             {
                 return activeTestId;
+            }
+
+            // The APG tree exposes ONE Tab stop (the roving tabindex on the active treeitem);
+            // once inside, the flat visible list is walked with the arrow keys.
+            if (activeTestId.StartsWith("modeling-tree-group-", StringComparison.Ordinal))
+            {
+                await page.Keyboard.PressAsync("ArrowDown");
+                var afterArrow = await ReadActiveTestIdAsync(page);
+                if (afterArrow.StartsWith("modeling-tree-node-", StringComparison.Ordinal))
+                {
+                    return afterArrow;
+                }
             }
 
             await page.Keyboard.PressAsync("Tab");

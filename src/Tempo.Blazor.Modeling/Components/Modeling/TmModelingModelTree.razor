@@ -4,7 +4,8 @@
 <section class="@RootClass"
          data-testid="@TestId("modeling-model-tree")"
          @ref="_treeRoot"
-         data-visible-count="@VisibleElementCount"
+         data-visible-count="@MatchingElementCount"
+         data-rendered-count="@RenderedNodeCount"
          aria-label="@Loc["TmModelingModelTree_Title"]">
     <div class="tm-modeling-model-tree__header">
         <div>
@@ -28,7 +29,7 @@
             <span>@Loc["TmModelingModelTree_EmptyText"]</span>
         </div>
     }
-    else if (VisibleElementCount == 0)
+    else if (MatchingElementCount == 0)
     {
         <div class="tm-modeling-model-tree__empty" data-testid="@TestId("modeling-tree-empty-filter")" aria-live="polite">
             <strong>@Loc["TmModelingModelTree_NoResultsTitle"]</strong>
@@ -37,26 +38,35 @@
     }
     else
     {
+        var activeTreeItemId = ResolveActiveTreeItemId();
         <div class="tm-modeling-model-tree__groups" role="tree">
-            @foreach (var group in FilteredGroups)
+            @foreach (var (group, groupPosition) in FilteredGroups.Select((value, index) => (value, index + 1)))
             {
                 var expanded = IsGroupExpanded(group.Key);
-                <div class="tm-modeling-model-tree__group"
+                <div role="treeitem"
+                     aria-level="1"
+                     aria-expanded="@expanded.ToString().ToLowerInvariant()"
+                     aria-controls="@GetGroupContentId(groupPosition)"
+                     aria-setsize="@FilteredGroups.Count"
+                     aria-posinset="@groupPosition"
+                     aria-label="@GetGroupAriaLabel(group)"
+                     tabindex="@GetGroupTabIndex(group.Key, activeTreeItemId)"
+                     class="tm-modeling-model-tree__group"
                      data-testid="@($"modeling-tree-group-{group.Key}")"
-                     data-expanded="@expanded.ToString().ToLowerInvariant()">
-                    @* MO4 disclosure header: a real button with aria-expanded/aria-controls.
-                       Enter/Space stay native button activation; ArrowLeft/ArrowRight collapse
-                       and expand (docs/keyboard-activation-convention.md). *@
-                    @* APG disclosure-tree pattern: the group header is a treeitem whose
-                       aria-expanded/aria-controls operate the group it owns. *@
-                    <button type="button"
-                            role="treeitem"
-                            class="tm-modeling-model-tree__group-header"
-                            data-testid="@($"modeling-tree-group-header-{group.Key}")"
-                            aria-expanded="@expanded.ToString().ToLowerInvariant()"
-                            aria-controls="@GetGroupContentId(group.Key)"
-                            @onclick="() => ToggleGroup(group.Key)"
-                            @onkeydown="args => HandleGroupHeaderKeyDownAsync(group.Key, args)">
+                     data-group-key="@group.Key"
+                     data-expanded="@expanded.ToString().ToLowerInvariant()"
+                     @onkeydown="args => HandleGroupKeyDownAsync(group.Key, args)"
+                     @onkeyup="args => HandleGroupKeyUpAsync(group.Key, args)">
+                    @* APG tree pattern: the group TREEITEM carries focus, aria-expanded and the
+                       roving tabindex; the header row inside it is presentational (@onclick only)
+                       and the count pill is aria-hidden (the treeitem's aria-label already names
+                       label + count). Enter/Space are EMULATED on the treeitem (non-native) —
+                       Enter on keydown (!repeat), Space on keyup — the native split
+                       (docs/keyboard-activation-convention.md). *@
+                    <div class="tm-modeling-model-tree__group-header"
+                         data-testid="@($"modeling-tree-group-header-{group.Key}")"
+                         title="@GetGroupHeaderTitle(expanded)"
+                         @onclick="() => ToggleGroupAsync(group.Key)">
                         <span class="tm-modeling-model-tree__group-chevron" aria-hidden="true">
                             <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
                         </span>
@@ -64,15 +74,18 @@
                             <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(group.Key)" Size="IconSize.Xs" />
                         </span>
                         <span class="tm-modeling-model-tree__group-label">@group.Label</span>
-                        <strong class="tm-modeling-model-tree__group-count">@group.Elements.Count</strong>
-                        <span class="tm-sr-only">@Loc[expanded ? "TmModelingModelTree_CollapseGroup" : "TmModelingModelTree_ExpandGroup"]</span>
-                    </button>
+                        <span class="tm-modeling-model-tree__group-count" aria-hidden="true">@group.Elements.Count</span>
+                    </div>
                     @if (expanded)
                     {
-                        <div id="@GetGroupContentId(group.Key)" class="tm-modeling-model-tree__nodes" role="group">
-                            @foreach (var element in group.Elements)
+                        <div id="@GetGroupContentId(groupPosition)" class="tm-modeling-model-tree__nodes" role="group">
+                            @foreach (var (element, nodePosition) in group.Elements.Select((value, index) => (value, index + 1)))
                             {
-                                <div>
+                                <div role="none">
+                                    @* The node is a NATIVE button: Enter/Space activate it natively.
+                                       The stopPropagation fences keep those keys from reaching the
+                                       emulating group treeitem (Space keyup would toggle the group
+                                       on top of the node's own click). *@
                                     <button type="button"
                                             class="@GetNodeClass(element)"
                                             data-testid="@($"modeling-tree-node-{element.Id}")"
@@ -81,15 +94,21 @@
                                             data-modeling-drag-element-id="@element.Id"
                                             draggable="true"
                                             role="treeitem"
+                                            aria-level="2"
+                                            aria-setsize="@group.Elements.Count"
+                                            aria-posinset="@nodePosition"
                                             aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
                                             aria-label="@GetNodeAriaLabel(element)"
                                             title="@GetDisplayName(element)"
+                                            tabindex="@GetNodeTabIndex(element.Id, activeTreeItemId)"
                                             @onclick="() => SelectElementAsync(element)"
                                             @onkeydown="args => HandleNodeKeyDownAsync(element, args)"
+                                            @onkeydown:stopPropagation="true"
+                                            @onkeyup:stopPropagation="true"
                                             @ondragstart="() => HandleDragStartedAsync(element)"
                                             @ondragend="HandleDragEndedAsync">
                                         <span class="tm-modeling-model-tree__type-icon" aria-hidden="true">
-                                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Xs" />
+                                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Sm" />
                                         </span>
                                         <span class="tm-modeling-model-tree__node-body">
                                             <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>

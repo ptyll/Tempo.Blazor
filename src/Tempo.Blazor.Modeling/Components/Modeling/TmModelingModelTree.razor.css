@@ -30,7 +30,9 @@
 .tm-modeling-model-tree__count {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
-}.tm-modeling-model-tree__search {
+}
+
+.tm-modeling-model-tree__search {
     display: grid;
     gap: var(--tm-space-1);
 }
@@ -54,8 +56,8 @@
 
 .tm-modeling-model-tree__search input:focus {
     border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-model-tree__empty {
@@ -77,7 +79,7 @@
 .tm-modeling-model-tree__groups {
     display: grid;
     align-content: start;
-    gap: var(--tm-space-3);
+    gap: var(--tm-space-1);
     min-height: 0;
     margin: 0;
     padding: var(--tm-space-3);
@@ -85,14 +87,19 @@
     list-style: none;
 }
 
+/* APG tree pattern: the group TREEITEM owns focus, aria-expanded and the roving tabindex. */
 .tm-modeling-model-tree__group {
     display: grid;
-    gap: var(--tm-space-2);
     min-width: 0;
 }
 
-/* MO4 disclosure header: a real button with aria-expanded/aria-controls. The chevron
-   rotates from "expanded" (down) to "collapsed" (right) via the aria-expanded state. */
+.tm-modeling-model-tree__group:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The header row inside the treeitem is presentational: the click target and the tooltip
+   ("Collapse group"/"Expand group") live here, the semantics live on the treeitem. */
 .tm-modeling-model-tree__group-header {
     display: flex;
     align-items: center;
@@ -101,12 +108,9 @@
     width: 100%;
     min-width: 0;
     padding: var(--tm-space-1) var(--tm-space-2);
-    border: 0;
     border-radius: var(--tm-radius-md);
-    background: transparent;
     color: var(--tm-color-text);
     cursor: pointer;
-    font: inherit;
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
     text-align: start;
@@ -114,11 +118,6 @@
 
 .tm-modeling-model-tree__group-header:hover {
     background: var(--tm-bg-muted);
-}
-
-.tm-modeling-model-tree__group-header:focus-visible {
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
 }
 
 .tm-modeling-model-tree__group-chevron {
@@ -129,7 +128,7 @@
     transition: transform var(--tm-transition-fast);
 }
 
-.tm-modeling-model-tree__group-header[aria-expanded="false"] .tm-modeling-model-tree__group-chevron {
+.tm-modeling-model-tree__group[aria-expanded="false"] .tm-modeling-model-tree__group-chevron {
     transform: rotate(-90deg);
 }
 
@@ -166,14 +165,21 @@
     }
 }
 
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__group-header {
+        min-height: var(--tm-touch-target);
+    }
+}
+
 .tm-modeling-model-tree__nodes {
     display: grid;
-    gap: var(--tm-space-1);
+    gap: 0;
     margin: 0;
-    padding: 0;
+    padding-inline-start: var(--tm-space-5);
     list-style: none;
 }
 
+/* Nodes are quiet rows: transparent chrome, hairline-free, hover paints muted. */
 .tm-modeling-model-tree__node {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -181,10 +187,10 @@
     align-items: center;
     width: 100%;
     min-width: 0;
-    padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border-subtle);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid transparent;
     border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+    background: transparent;
     color: var(--tm-color-text);
     font: inherit;
     text-align: left;
@@ -192,8 +198,7 @@
 }
 
 .tm-modeling-model-tree__node:hover {
-    border-color: var(--tm-color-primary-soft-border);
-    background: var(--tm-color-primary-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-modeling-model-tree__node:active {
@@ -201,15 +206,13 @@
 }
 
 .tm-modeling-model-tree__node:focus-visible {
-    border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-model-tree__node--selected {
-    border-color: var(--tm-color-primary);
+    border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-primary-subtle);
-    box-shadow: inset 3px 0 0 var(--tm-color-primary);
 }
 
 .tm-modeling-model-tree__type-icon {
@@ -225,10 +228,24 @@
     min-width: 0;
 }
 
+/* The drag affordance only surfaces on intent: node hover/focus, or coarse pointers where
+   there is no hover to rely on. */
 .tm-modeling-model-tree__drag-handle {
     display: inline-grid;
     place-items: center;
     color: var(--tm-text-secondary);
+    opacity: 0;
+}
+
+.tm-modeling-model-tree__node:hover .tm-modeling-model-tree__drag-handle,
+.tm-modeling-model-tree__node:focus-visible .tm-modeling-model-tree__drag-handle {
+    opacity: 1;
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__drag-handle {
+        opacity: 1;
+    }
 }
 
 .tm-modeling-model-tree__node-name,
@@ -260,10 +277,13 @@
         color: CanvasText;
     }
 
-    .tm-modeling-model-tree__node:focus-visible,
-    .tm-modeling-model-tree__node--selected {
+    .tm-modeling-model-tree__group:focus-visible,
+    .tm-modeling-model-tree__node:focus-visible {
         outline: 2px solid Highlight;
         outline-offset: 2px;
+    }
+
+    .tm-modeling-model-tree__node--selected {
         border-color: Highlight;
         background: Canvas;
         color: CanvasText;

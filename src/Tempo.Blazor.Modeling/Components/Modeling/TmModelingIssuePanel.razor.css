@@ -102,28 +102,15 @@ button.tm-modeling-issue-panel__item--navigable:hover {
 }
 
 button.tm-modeling-issue-panel__item--navigable:focus-visible {
-    border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
-}
-
-.tm-modeling-issue-panel__item--info {
-    border-inline-start: 3px solid var(--tm-color-info);
-}
-
-.tm-modeling-issue-panel__item--warning {
-    border-inline-start: 3px solid var(--tm-color-warning);
-}
-
-.tm-modeling-issue-panel__item--error {
-    border-inline-start: 3px solid var(--tm-color-danger);
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-issue-panel__icon {
     display: grid;
     place-items: center;
-    width: var(--tm-space-6);
-    height: var(--tm-space-6);
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     border-radius: var(--tm-radius-full);
 }
 
@@ -187,17 +174,30 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 }
 
 /* Suggested fix (gap #11): a toned box with an icon and a localized "Recommendation:"
-   prefix, replacing the bare text. */
+   prefix, replacing the bare text — tinted with the ROW'S severity tokens (info is the
+   default severity), not a fixed primary. */
 .tm-modeling-issue-panel__fix {
     display: flex;
     align-items: flex-start;
     gap: var(--tm-space-2);
     padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-primary-soft-border);
+    border: 1px solid var(--tm-color-info-soft-border);
     border-radius: var(--tm-radius-md);
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary-text);
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
     font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-issue-panel__fix--warning {
+    border-color: var(--tm-color-warning-soft-border);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__fix--error {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
 }
 
 .tm-modeling-issue-panel__fix-icon {
@@ -236,12 +236,6 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
         outline: 2px solid Highlight;
         outline-offset: 2px;
         border-color: Highlight;
-    }
-
-    .tm-modeling-issue-panel__item--info,
-    .tm-modeling-issue-panel__item--warning,
-    .tm-modeling-issue-panel__item--error {
-        border-inline-start-color: Highlight;
     }
 
     .tm-modeling-issue-panel__icon,

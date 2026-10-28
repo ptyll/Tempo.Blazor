@@ -9,10 +9,13 @@
         <h3 class="tm-modeling-issue-panel__title">@Loc["TmModelingIssuePanel_Title"]</h3>
         @* Neutral count formulation (B16) rendered as a COUNT-ONLY badge (gap #12): the visible
            text is the bare number, the localized "Issues: {0}" formulation lives on the
-           aria-label, so no language has to pick a grammatical form in the visible header. *@
+           visually-hidden span, so no language has to pick a grammatical form in the visible
+           header and the accessible name comes from the real content. *@
         <span class="tm-modeling-issue-panel__count"
-              data-testid="@TestId("modeling-issue-count")"
-              aria-label="@Loc["TmModelingIssuePanel_Count", Issues.Count]">@Issues.Count</span>
+              data-testid="@TestId("modeling-issue-count")">
+            <span aria-hidden="true">@Issues.Count</span>
+            <span class="tm-sr-only">@Loc["TmModelingIssuePanel_Count", Issues.Count]</span>
+        </span>
     </header>
 
     @if (Issues.Count == 0)
@@ -72,7 +75,7 @@
     /// </summary>
     private RenderFragment IssueBody(ModelingIssueDto issue, int index) => @<text>
         <span class="@GetIconClass(issue)" aria-hidden="true">
-            <TmIcon Name="@GetSeverityIcon(issue)" Size="IconSize.Xs" />
+            <TmIcon Name="@GetSeverityIcon(issue)" Size="IconSize.Sm" />
         </span>
         <span class="tm-modeling-issue-panel__body">
             <span class="tm-modeling-issue-panel__meta">
@@ -85,7 +88,7 @@
             <span class="tm-modeling-issue-panel__message">@GetMessage(issue)</span>
             @if (!string.IsNullOrWhiteSpace(issue.SuggestedFix))
             {
-                <span class="tm-modeling-issue-panel__fix" data-testid="@($"modeling-issue-fix-{index}")">
+                <span class="@GetFixClass(issue)" data-testid="@($"modeling-issue-fix-{index}")">
                     <span class="tm-modeling-issue-panel__fix-icon" aria-hidden="true">
                         <TmIcon Name="@IconNames.WandSparkles" Size="IconSize.Xs" />
                     </span>

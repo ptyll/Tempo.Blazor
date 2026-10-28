@@ -119,21 +119,24 @@ public sealed class ModelingModelTreeM10E2ETests : WasmTestBase
     public async Task ModelTree_GroupCollapsesAndExpands_ByPointerAndKeyboard()
     {
         var page = await OpenLoadedModelingPageAsync();
+        // The APG treeitem carries the state; the header row div inside it is the click target.
+        var treeitem = page.Locator("[data-testid='modeling-tree-group-startEvent']");
         var header = page.Locator("[data-testid='modeling-tree-group-header-startEvent']");
 
-        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await treeitem.GetAttributeAsync("aria-expanded"));
         await header.ClickAsync();
-        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await treeitem.GetAttributeAsync("aria-expanded"));
         Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-bpmn-start-order']").CountAsync(),
             "a collapsed group renders no node buttons");
-        Assert.AreEqual("false", await page.Locator("[data-testid='modeling-tree-group-startEvent']").GetAttributeAsync("data-expanded"));
+        Assert.AreEqual("false", await treeitem.GetAttributeAsync("data-expanded"));
 
-        // ArrowLeft keeps it collapsed, ArrowRight expands it again (Enter/Space stay native).
-        await header.FocusAsync();
+        // ArrowLeft keeps it collapsed, ArrowRight expands it again (Enter/Space are emulated
+        // on the group treeitem — the native button split).
+        await treeitem.FocusAsync();
         await page.Keyboard.PressAsync("ArrowLeft");
-        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await treeitem.GetAttributeAsync("aria-expanded"));
         await page.Keyboard.PressAsync("ArrowRight");
-        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await treeitem.GetAttributeAsync("aria-expanded"));
         await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-bpmn-start-order']");
     }
 
@@ -149,11 +152,11 @@ public sealed class ModelingModelTreeM10E2ETests : WasmTestBase
 
         await page.Locator("[data-testid='modeling-tree-search']").FillAsync("Ship");
         await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-bpmn-ship-order']");
-        Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-group-header-serviceTask']").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-group-serviceTask']").GetAttributeAsync("aria-expanded"));
 
         // Edge case: an EMPTY filter (cleared) must hand the collapsed state back.
         await page.Locator("[data-testid='modeling-tree-search']").FillAsync(string.Empty);
-        Assert.AreEqual("false", await page.Locator("[data-testid='modeling-tree-group-header-serviceTask']").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await page.Locator("[data-testid='modeling-tree-group-serviceTask']").GetAttributeAsync("aria-expanded"));
         Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']").CountAsync());
         await ExpectVisibleAsync(page, "[data-testid='modeling-tree-group-header-startEvent']");
     }
@@ -164,15 +167,16 @@ public sealed class ModelingModelTreeM10E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=long-name");
         var header = page.Locator("[data-testid='modeling-tree-group-header-generatedTask']");
+        var treeitem = page.Locator("[data-testid='modeling-tree-group-generatedTask']");
 
         Assert.AreEqual("1", await header.Locator(".tm-modeling-model-tree__group-count").TextContentAsync(),
             "the single-element group advertises a count of 1");
-        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await treeitem.GetAttributeAsync("aria-expanded"));
         await header.ClickAsync();
-        Assert.AreEqual("false", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await treeitem.GetAttributeAsync("aria-expanded"));
         Assert.AreEqual(0, await page.Locator("[data-testid='modeling-tree-node-demo-long-name']").CountAsync());
         await header.ClickAsync();
-        Assert.AreEqual("true", await header.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("true", await treeitem.GetAttributeAsync("aria-expanded"));
         await ExpectVisibleAsync(page, "[data-testid='modeling-tree-node-demo-long-name']");
     }
 
