@@ -56,6 +56,18 @@ public partial class TmModelingEditor : IAsyncDisposable
     private EditorShellPanel _shellCollapsed;
     private bool _issuesCollapsed;
 
+    /// <summary>The resolved layout of the editor's own container (Fáze 6): the compact branch
+    /// keeps the panel-tab state, the docked branch uses it for the tablet sheet rules. A forced
+    /// mode adopts in OnInitialized/OnParametersSet; an Auto editor follows the shell's
+    /// <see cref="TmEditorShell.ResolvedLayoutChanged"/> (the shell measures the same box).</summary>
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
+
+    /// <summary>The docked shell (panel DOM ids for the tablet toggles' aria-controls).</summary>
+    private TmEditorShell? _shell;
+
+    /// <summary>The diagram preview (the non-drag "Insert into preview" action routes through its drop path).</summary>
+    private TmModelingDiagramPreview? _preview;
+
     /// <summary>The selected inspector tab of the docked layout: "properties" (default) or "source".</summary>
     private string _inspectorTab = "properties";
 
@@ -74,6 +86,16 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// the shared 640/1024 pair would drop it to tablet inside a desktop dialog.
     /// </summary>
     private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1024);
+
+    /// <summary>
+    /// The layout of the EMBEDDED open-editor diagram editor: on the editor's tablet band the
+    /// dialog body presents the DE's tablet layout at BOTH tablet widths (the 1180 body would
+    /// otherwise cross the DE's 1024 desktop threshold — the reference shows the tablet
+    /// presentation in the dialog), so the editor's resolved mode pins it; every other layout
+    /// keeps the body-decided Auto resolution (the phase-4 contract).
+    /// </summary>
+    private TmLayoutMode OpenEditorDiagramLayoutMode
+        => _resolvedLayout == TmLayoutMode.Tablet ? TmLayoutMode.Tablet : TmLayoutMode.Auto;
 
     /// <summary>
     /// Layout thresholds of the editor's own container (Fáze 5, MO1): the same pair as the
@@ -480,8 +502,26 @@ public partial class TmModelingEditor : IAsyncDisposable
     private int IssueCount => DisplayIssues.Count;
 
     /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        // A forced layout is the host's decision: adopt it before the first render so the tablet
+        // sheet rules hold from the first frame (the same pattern the wireframe editor uses).
+        if (LayoutMode != TmLayoutMode.Auto)
+        {
+            _resolvedLayout = LayoutMode;
+        }
+    }
+
+    /// <inheritdoc />
     protected override Task OnParametersSetAsync()
     {
+        // Forced layouts adopt their flips here; an Auto editor is driven by the shell's
+        // ResolvedLayoutChanged instead (docs/responsive-conventions.md inherited-raise contract).
+        if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
+        {
+            ApplyResolvedLayout(LayoutMode);
+        }
+
         SyncEffectiveSelectionFromParameters();
         return LoadModelAsync(force: false);
     }
@@ -705,6 +745,23 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         _selectedElement = element;
         _selectedRelationship = null;
+        return OpenInspectorOnTabletAsync();
+    }
+
+    /// <summary>
+    /// Fáze 6: on a tablet a selection is an editing intent — the inspector side sheet opens
+    /// (and the tree drawer yields, keeping the one-sheet rule). Every selection path funnels
+    /// through here; other layouts keep their docked panels untouched.
+    /// </summary>
+    private Task OpenInspectorOnTabletAsync()
+    {
+        if (_resolvedLayout != TmLayoutMode.Tablet || _shellRightOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        _shellRightOpen = true;
+        _shellLeftOpen = false;
         return Task.CompletedTask;
     }
 
@@ -725,7 +782,24 @@ public partial class TmModelingEditor : IAsyncDisposable
         _selectedElement = args.Element;
         _selectedRelationship = null;
         _draggedElement = null;
+        await OpenInspectorOnTabletAsync();
         await OnNodeDropped.InvokeAsync(args);
+    }
+
+    /// <summary>
+    /// The model tree's non-drag alternative (Fáze 6, WCAG 2.5.7): route the "Insert into
+    /// preview" request through the preview's existing drop path at the viewport center —
+    /// the preview owns the node creation, the document mutation and the
+    /// <see cref="OnNodeDropped"/> contract, so the alternative and the drag stay one path.
+    /// </summary>
+    private async Task HandleInsertIntoPreviewAsync(ModelingElementDto element)
+    {
+        if (_preview is null)
+        {
+            return;
+        }
+
+        await _preview.InsertAtViewportCenterAsync(element);
     }
 
     private Task SelectRelationshipAsync(string relationshipId)
@@ -740,6 +814,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = null;
             _selectedRelationship = relationship;
+            return OpenInspectorOnTabletAsync();
         }
 
         return Task.CompletedTask;
@@ -771,6 +846,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = element;
             _selectedRelationship = null;
+            return OpenInspectorOnTabletAsync();
         }
 
         return Task.CompletedTask;
@@ -908,21 +984,9 @@ public partial class TmModelingEditor : IAsyncDisposable
     }
 
     // ── Fáze 5 (MO1): docked-shell state handlers ────────────────────────────
-    // The shell raises every state change; the editor stores it (host state is the truth). The
-    // layout-flip restore policy arrives with the tablet/mobile phases — the fields just mirror
-    // what the user picked so a re-render cannot undo it.
-
-    private Task OnShellLeftOpenChanged(bool open)
-    {
-        _shellLeftOpen = open;
-        return Task.CompletedTask;
-    }
-
-    private Task OnShellRightOpenChanged(bool open)
-    {
-        _shellRightOpen = open;
-        return Task.CompletedTask;
-    }
+    // The shell raises every state change; the editor stores it (host state is the truth).
+    // The Fáze 6 tablet overlay rules (layout tracking, the one-sheet toggles, the insert
+    // route) live in TmModelingEditor.Tablet.cs.
 
     private Task OnShellCollapsedPanelsChanged(EditorShellPanel collapsed)
     {
@@ -956,6 +1020,24 @@ public partial class TmModelingEditor : IAsyncDisposable
         => panel == _activePanel
             ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"
             : "tm-modeling-editor__panel-tab";
+
+    /// <summary>
+    /// The tablet tabs' state follows the SHEET flags (the compact `_activePanel` is a different
+    /// state machine): Tree is active while the drawer is open, Inspector while the sheet is,
+    /// Preview when the preview is alone — the visual state always agrees with aria-expanded.
+    /// </summary>
+    private string GetTabletPanelTabClass(ModelingEditorPanel panel)
+    {
+        var active = panel switch
+        {
+            ModelingEditorPanel.Tree => _shellLeftOpen,
+            ModelingEditorPanel.Inspector => _shellRightOpen,
+            _ => !_shellLeftOpen && !_shellRightOpen
+        };
+        return active
+            ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"
+            : "tm-modeling-editor__panel-tab";
+    }
 
     private string GetPanelClass(ModelingEditorPanel panel, string baseClass)
         => panel == _activePanel

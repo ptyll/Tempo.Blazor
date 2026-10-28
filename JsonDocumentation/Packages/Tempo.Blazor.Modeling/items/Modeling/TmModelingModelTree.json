@@ -1,104 +1,117 @@
 {
-  "itemName": "TmModelingModelTree",
-  "kind": "Component",
-  "category": "Modeling",
-  "description": "Displays semantic modeling elements grouped by type with live filtering and selection.",
-  "packageId": "Tempo.Blazor.Modeling",
-  "namespace": "Tempo.Blazor.Components.Modeling",
-  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
-  "documentationStatus": "generated",
-  "requiredImports": [
-    "@using Tempo.Blazor.Components.Modeling"
-  ],
-  "parameters": [
-    {
-      "name": "Class",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Additional CSS class applied to the tree root."
-    },
-    {
-      "name": "CollapsedGroups",
-      "type": "IReadOnlyCollection<string>?",
-      "isRequired": false,
-      "description": "Optional two-way binding of the collapsed group keys. Seeded from when the instance is given a new collection; every user toggle raises CollapsedGroupsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
-    },
-    {
-      "name": "CollapsedGroupsChanged",
-      "type": "EventCallback<IReadOnlyCollection<string>>",
-      "isRequired": false,
-      "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
-    },
-    {
-      "name": "Elements",
-      "type": "IReadOnlyList<ModelingElementDto>",
-      "isRequired": false,
-      "default": "[]",
-      "description": "Elements rendered by the tree. They are grouped by SemanticType."
-    },
-    {
-      "name": "OnElementDragEnded",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when the user ends a drag operation from a tree node."
-    },
-    {
-      "name": "OnElementDragStarted",
-      "type": "EventCallback<ModelingElementDto>",
-      "isRequired": false,
-      "description": "Raised when the user starts dragging an element node. Reserved for canvas drop support."
-    },
-    {
-      "name": "OnElementSelected",
-      "type": "EventCallback<ModelingElementDto>",
-      "isRequired": false,
-      "description": "Raised when the user selects an element node."
-    },
-    {
-      "name": "SelectedElement",
-      "type": "ModelingElementDto?",
-      "isRequired": false,
-      "description": "Currently selected element."
-    },
-    {
-      "name": "SelectedElementChanged",
-      "type": "EventCallback<ModelingElementDto?>",
-      "isRequired": false,
-      "description": "Raised when <see cref=\"SelectedElement\"/> changes."
-    }
-  ],
-  "cssClasses": [
-    {
-      "name": "tm-modeling-model-tree__group-header",
-      "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
-    },
-    {
-      "name": "tm-modeling-model-tree__group-chevron",
-      "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
-    },
-    {
-      "name": "tm-modeling-model-tree__group-icon",
-      "description": "Semantic-type icon of the group."
-    },
-    {
-      "name": "tm-modeling-model-tree__group-label",
-      "description": "Group label text (the semantic type)."
-    },
-    {
-      "name": "tm-modeling-model-tree__group-count",
-      "description": "Element count pill of the group."
-    },
-    {
-      "name": "tm-modeling-model-tree__type-icon",
-      "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
-    },
-    {
-      "name": "tm-modeling-model-tree__node-body",
-      "description": "Name + meta stack inside the node button."
-    },
-    {
-      "name": "tm-modeling-model-tree__drag-handle",
-      "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
-    }
-  ]
+ "itemName": "TmModelingModelTree",
+ "kind": "Component",
+ "category": "Modeling",
+ "description": "Displays semantic modeling elements grouped by type with live filtering and selection. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the viewport center.",
+ "packageId": "Tempo.Blazor.Modeling",
+ "namespace": "Tempo.Blazor.Components.Modeling",
+ "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
+ "documentationStatus": "generated",
+ "requiredImports": [
+  "@using Tempo.Blazor.Components.Modeling"
+ ],
+ "parameters": [
+  {
+   "name": "AllowNodeDrop",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the tree offers the non-drag \"Insert into preview\" action (Fáze 6, WCAG 2.5.7). Default true mirrors the hosting editor's AllowNodeDrop: when the host opts out of tree reuse the action disappears with the drop zone, so no alternative path offers what the drop zone refuses."
+  },
+  {
+   "name": "OnInsertIntoPreview",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user activates the row-level \"Insert into preview\" action. The HOST computes the drop geometry (the tree knows nothing about the document or its viewport): the hosting editor routes the request through the preview's existing drop path at the viewport center. Keyboard- and touch-reachable by construction (a native button beside the node treeitem, revealed on (hover: none) and :focus-within)."
+  },
+  {
+   "name": "Class",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Additional CSS class applied to the tree root."
+  },
+  {
+   "name": "CollapsedGroups",
+   "type": "IReadOnlyCollection<string>?",
+   "isRequired": false,
+   "description": "Optional two-way binding of the collapsed group keys. Seeded from when the instance is given a new collection; every user toggle raises CollapsedGroupsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+  },
+  {
+   "name": "CollapsedGroupsChanged",
+   "type": "EventCallback<IReadOnlyCollection<string>>",
+   "isRequired": false,
+   "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
+  },
+  {
+   "name": "Elements",
+   "type": "IReadOnlyList<ModelingElementDto>",
+   "isRequired": false,
+   "default": "[]",
+   "description": "Elements rendered by the tree. They are grouped by SemanticType."
+  },
+  {
+   "name": "OnElementDragEnded",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Raised when the user ends a drag operation from a tree node."
+  },
+  {
+   "name": "OnElementDragStarted",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user starts dragging an element node. Reserved for canvas drop support."
+  },
+  {
+   "name": "OnElementSelected",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user selects an element node."
+  },
+  {
+   "name": "SelectedElement",
+   "type": "ModelingElementDto?",
+   "isRequired": false,
+   "description": "Currently selected element."
+  },
+  {
+   "name": "SelectedElementChanged",
+   "type": "EventCallback<ModelingElementDto?>",
+   "isRequired": false,
+   "description": "Raised when <see cref=\"SelectedElement\"/> changes."
+  }
+ ],
+ "cssClasses": [
+  {
+   "name": "tm-modeling-model-tree__group-header",
+   "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-chevron",
+   "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-icon",
+   "description": "Semantic-type icon of the group."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-label",
+   "description": "Group label text (the semantic type)."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-count",
+   "description": "Element count pill of the group."
+  },
+  {
+   "name": "tm-modeling-model-tree__type-icon",
+   "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
+  },
+  {
+   "name": "tm-modeling-model-tree__node-body",
+   "description": "Name + meta stack inside the node button."
+  },
+  {
+   "name": "tm-modeling-model-tree__drag-handle",
+   "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
+  }
+ ]
 }

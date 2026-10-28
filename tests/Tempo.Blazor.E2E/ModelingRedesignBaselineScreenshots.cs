@@ -72,6 +72,9 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             try
             {
                 await WaitForLoadedStateAsync(page);
+                // Fáze 6: on the tablet band the inspector sheet starts open and overlays the
+                // preview header — a finger closes it before reaching the trigger underneath.
+                await CloseInspectorSheetOnTabletAsync(page);
                 await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
                 await page.Locator("[data-testid='modeling-open-diagram-editor']")
                     .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -277,6 +280,97 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Fáze 6: the tablet band of the shell workspace — 1024x768 and 1180x820 with
+    /// touch emulation, light and dark, the loaded workspace and the open-editor dialog (whose
+    /// body resolves the diagram editor's tablet layout). The demo page hides its sidebar from
+    /// 1024px of viewport up, so both windows land the editor in the 768–1199 container band.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures default / issues-mixed / stale-source at 1024x768 and 1180x820 (touch) for light and dark")]
+    public async Task Capture_ThemedTablet(string theme, int width, int height)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedTouchModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-tablet-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Fáze 6: the open-editor dialog on the tablet band — the ~90% TmModal with the
+    /// diagram editor's tablet layout (one docked panel expanded + the floating minimap) in the
+    /// body, light and dark at both tablet viewports.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures the open 'Open in editor' dialog at the tablet band viewports (touch) in light and dark")]
+    public async Task Capture_OpenInEditorDialog_ThemedTablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // Fáze 6: the inspector sheet starts open on the tablet and overlays the trigger —
+            // close it the way a finger would, then open the dialog.
+            await CloseInspectorSheetOnTabletAsync(page);
+            await page.Locator("[data-testid='modeling-open-in-editor-button']").TapAsync();
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout='tablet']")
+                .First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"open-editor-dialog-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 6: the Source tab as the tablet SHEET presents it (the wide-panel container
+    /// layout: three metadata columns, the load button in the header) — light and dark at 1024.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [Description("Captures source-sheet-tablet-{theme}-1024x768: the inspector sheet open on the Source tab")]
+    public async Task Capture_SourceSheet_Tablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?fresh=false", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // The inspector sheet starts open on a tablet; select the Source tab inside it.
+            await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
+                .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-source-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"source-sheet-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     /// <summary>Theme setup shared with <c>ModelingAccessibilityM25E2ETests</c>: the dark theme is
     /// applied by CLICKING the demo's ThemeToggle — the demo's ThemeService owns the
     /// <c>.demo-shell</c> <c>data-theme</c> attribute and the Tailwind <c>dark</c> class, so
@@ -347,6 +441,70 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         return page;
     }
 
+    /// <summary>The themed setup for the TABLET band (Fáze 6): the same theme flow as
+    /// <see cref="OpenThemedModelingPageAsync"/> but with touch emulation on, so the coarse
+    /// pointer styles and the sheet toggles render exactly as a tablet user sees them.</summary>
+    private async Task<IPage> OpenThemedTouchModelingPageAsync(string query, string theme, int width, int height)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = true,
+            IsMobile = false,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var init = "localStorage.setItem('tm-demo-culture', 'en');";
+        if (theme.Contains("indigo", StringComparison.Ordinal))
+        {
+            init += "localStorage.setItem('tm-demo-color-theme', 'indigo');";
+        }
+
+        await context.AddInitScriptAsync(init);
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
+
+        if (theme.Contains("dark", StringComparison.Ordinal))
+        {
+            // The tablet band hides the demo sidebar (from 1024px of viewport up), so the theme
+            // toggle inside it is display:none — dispatch the click (the wireframe phase-2
+            // pattern) instead of pointing a cursor at it.
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                await toggle.First.DispatchEventAsync("click");
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                // Fallback for a lagging circuit: force every data-theme scope dark, including the
+                // document element the tm-* dark token sheets key off.
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
+            await page.WaitForTimeoutAsync(300);
+        }
+
+        return page;
+    }
+
     private static readonly (int Width, int Height, bool Touch)[] BaselineViewports =
     [
         (1440, 900, false),
@@ -373,13 +531,20 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
                 }
 
                 // Phase 5 (MO1): the compact layout (the editor container below its own mobile
-                // threshold — 1024x768 and the phones here) keeps the issue and source panels
-                // behind the "Inspector" panel tab; the docked layouts render them directly. The
-                // baseline must show the screen a user reaches them through, so the tab opens
-                // whenever the compact tabs are visible (not by viewport width).
-                if (inspectorTabOnMobile && await IsCompactLayoutAsync(page))
+                // threshold — the phones here) keeps the issue and source panels behind the
+                // "Inspector" panel tab. Fáze 6: on the tablet band the stale SOURCE panel is
+                // reached through the inspector sheet's Source tab; the issue panel is the
+                // always-visible dock row under the preview.
+                if (inspectorTabOnMobile)
                 {
-                    await OpenMobileInspectorTabAsync(page, waitForIssuePanel: false);
+                    if (await IsCompactLayoutAsync(page))
+                    {
+                        await OpenMobileInspectorTabAsync(page, waitForIssuePanel: false);
+                    }
+                    else if (await IsTabletLayoutAsync(page))
+                    {
+                        await OpenTabletSourceTabAsync(page);
+                    }
                 }
 
                 if (withIssuePanelShots)
@@ -416,22 +581,59 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
-    /// <summary>Whether the compact panel-tab workspace rendered (the tab is visible then).</summary>
+    /// <summary>Whether the COMPACT panel-tab workspace rendered. Fáze 6: the tab row also
+    /// renders on the tablet band (as the visibility switch), so the compact check reads the
+    /// resolved layout instead of the tab's existence.</summary>
     private static async Task<bool> IsCompactLayoutAsync(IPage page)
+        => await page.EvaluateAsync<bool>(
+            "() => document.querySelector('.tm-modeling-editor .tm-layout')?.getAttribute('data-layout') === 'mobile'");
+
+    /// <summary>Whether the editor resolved the tablet band (the shell's overlay presentation).</summary>
+    private static Task<bool> IsTabletLayoutAsync(IPage page) => page.EvaluateAsync<bool>(
+        "() => document.querySelector('.tm-modeling-editor .tm-layout')?.getAttribute('data-layout') === 'tablet'");
+
+    /// <summary>Fáze 6: the inspector sheet starts open on a tablet and overlays the preview
+    /// header — close it the way a finger would (a no-op on the other layouts).</summary>
+    private static async Task CloseInspectorSheetOnTabletAsync(IPage page)
     {
-        var tab = page.Locator("[data-testid='modeling-panel-tab-inspector']");
-        return await tab.CountAsync() > 0 && await tab.IsVisibleAsync(new LocatorIsVisibleOptions { Timeout = 2000 });
+        if (!await IsTabletLayoutAsync(page))
+        {
+            return;
+        }
+
+        var close = page.Locator("[data-testid='modeling-sheet-close']");
+        if (await close.CountAsync() > 0)
+        {
+            await close.TapAsync();
+        }
+
+        await page.WaitForFunctionAsync(
+            "() => !document.querySelector(\"[data-testid='modeling-inspector-sheet']\")",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10_000 });
     }
 
     /// <summary>
     /// Opens the compact layout's "Inspector" panel tab. When <paramref name="waitForIssuePanel"/>
     /// is set the issue panel must be visible afterwards, otherwise the source panel (stale badge).
+    /// On the tablet band the stale SOURCE panel is reached through the inspector sheet's own
+    /// Source tab instead — handled by <see cref="OpenTabletSourceTabAsync"/>.
     /// </summary>
     private static async Task OpenMobileInspectorTabAsync(IPage page, bool waitForIssuePanel)
     {
         await page.Locator("[data-testid='modeling-panel-tab-inspector']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
         await page.Locator(waitForIssuePanel ? "[data-testid='modeling-issue-panel']" : "[data-testid='modeling-source-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    /// <summary>Fáze 6: on a tablet the source panel lives in the inspector SHEET behind the
+    /// Properties tab — select the sheet's Source tab and wait for the panel.</summary>
+    private static async Task OpenTabletSourceTabAsync(IPage page)
+    {
+        await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-source-panel']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
     }
 

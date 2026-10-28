@@ -827,8 +827,10 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     public void Forced_tablet_renders_the_docked_tablet_band()
     {
         // User decision (breakpoints): the Modeling pair is now 768/1200 — a forced Tablet editor
-        // is the shell's docked tablet band (at most one expanded panel), NOT the compact panel
-        // workspace: the compact branch stays below the editor's own mobile threshold.
+        // is the shell's TABLET band, NOT the compact panel workspace: the compact branch stays
+        // below the editor's own mobile threshold. Fáze 6 migrates the tablet presentation to the
+        // shell's Overlay (tree drawer + inspector sheet, at most one open) — the phase-5
+        // docked-column expectation is gone with it (Breaking / Migration).
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
@@ -838,10 +840,10 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
         {
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
-            cut.Find(".tm-editor-shell").Should().NotBeNull("the docked tablet band renders through the shell");
+            cut.Find(".tm-editor-shell").Should().NotBeNull("the tablet band renders through the shell");
             cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
-            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull();
-            cut.FindAll("[data-testid='modeling-panel-tabs']").Should().BeEmpty("the compact tabs stay a mobile-threshold affordance");
+            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull("the inspector sheet starts open");
+            cut.FindAll(".tm-editor-shell__panel").Should().BeEmpty("the tablet sides are overlays, not docked columns");
         });
     }
 

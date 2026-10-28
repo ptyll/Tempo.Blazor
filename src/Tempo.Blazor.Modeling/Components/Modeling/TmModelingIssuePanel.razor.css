@@ -65,6 +65,12 @@
         min-width: var(--tm-touch-target);
         min-height: var(--tm-touch-target);
     }
+
+    /* Fáze 6 (touch): the issue rows are the panel's primary tap targets — a row must reach
+       the shared 44px target, not just the header toggle. */
+    .tm-modeling-issue-panel__item {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-modeling-issue-panel__toggle:hover {

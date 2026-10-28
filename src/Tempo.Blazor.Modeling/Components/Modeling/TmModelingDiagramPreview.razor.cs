@@ -109,19 +109,45 @@ public partial class TmModelingDiagramPreview
             return;
         }
 
+        await InsertElementAsync(ActiveDraggedElement, args.OffsetX, args.OffsetY);
+    }
+
+    /// <summary>
+    /// The non-drag alternative (Fáze 6, WCAG 2.5.7): reuses <paramref name="element"/> as a new
+    /// preview node at the CENTER of the diagram viewport through the same path the drop uses.
+    /// The preview renders the page fitted (the viewer keeps the whole page visible and the
+    /// Modeling chrome owns no pan/zoom state in Blazor), so the viewport center is the page's
+    /// center — the same clamp/collision logic then places the node exactly as a real drop.
+    /// Public so the hosting editor can route the model tree's "Insert into preview" action here.
+    /// </summary>
+    public async Task InsertAtViewportCenterAsync(ModelingElementDto element)
+    {
+        if (!AllowNodeDrop || Document is null || element is null)
+        {
+            return;
+        }
+
+        Document.EnsurePages();
+        var page = Document.ActivePage;
+        await InsertElementAsync(element, page.Width / 2d, page.Height / 2d);
+    }
+
+    /// <summary>The shared drop/insert core: create the node at the given point, mutate the document and raise the contract.</summary>
+    private async Task InsertElementAsync(ModelingElementDto element, double offsetX, double offsetY)
+    {
         Document.EnsurePages();
         var page = Document.ActivePage;
         EnsureDefaultLayer(page);
 
-        var position = ResolveDropPosition(page, ActiveDraggedElement, args.OffsetX, args.OffsetY);
-        var node = CreateDroppedNode(page, ActiveDraggedElement, position);
+        var position = ResolveDropPosition(page, element, offsetX, offsetY);
+        var node = CreateDroppedNode(page, element, position);
         page.Nodes.Add(node);
         Document.ModifiedAt = DateTime.UtcNow;
 
         await DocumentChanged.InvokeAsync(Document);
         await OnNodeDropped.InvokeAsync(new ModelingNodeDroppedEventArgs
         {
-            Element = ActiveDraggedElement,
+            Element = element,
             Point = new DiagramPoint(position.X, position.Y),
             NodeId = node.Id
         });

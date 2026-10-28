@@ -414,4 +414,73 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
             .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
                 "the provider change closes through the close path, restoring the trigger focus");
     }
+
+    [Fact]
+    public async Task Open_editor_dialog_on_tablet_uses_modal_presentation_with_diagram_tablet_layout()
+    {
+        // Fáze 6: on a tablet the dialog stays a TmModal (~90% wide, NOT a fullscreen sheet)
+        // and the dialog body hands the embedded diagram editor the tablet layout — the
+        // forced-cascade contract: a forced TmLayoutContext ancestor pins the nested editor,
+        // whose data-editor-layout the E2E baselines assert.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var overlay = cut.Find("[data-testid='modeling-open-diagram-editor']");
+            overlay.ClassList.Should().Contain("tm-modal-overlay", "the tablet dialog is the core TmModal");
+            overlay.ClassList.Should().NotContain("tm-modal--fullscreen-presentation",
+                "a tablet keeps the ~90% dialog, not the fullscreen mobile presentation");
+        });
+
+        var dialog = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope");
+        dialog.GetAttribute("role").Should().Be("dialog");
+        dialog.GetAttribute("aria-modal").Should().Be("true");
+
+        // The dialog body resolves the embedded editor's layout itself: the DE reports tablet.
+        var embedded = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout]");
+        embedded.GetAttribute("data-editor-layout").Should().Be("tablet",
+            "the dialog body on a tablet renders the diagram editor's tablet layout");
+    }
+
+    [Fact]
+    public async Task Tablet_dialog_escape_consumers_close_their_surface_not_the_dialog()
+    {
+        // Fáze 6: the embedded diagram editor is tablet-docked inside the dialog — its Escape
+        // consumers (search panel, view menu) must keep winning over the dialog's own Escape,
+        // exactly like on the desktop (order-independent Escape consumers, phase 4).
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
+            .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
+        var canvas = modal.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramCanvas>().Single();
+
+        cut.Find("[data-testid='modeling-open-diagram-editor'] [data-tm-group='search'] button").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
+            .Should().NotBeNull());
+        await cut.InvokeAsync(() => canvas.Instance.JsOnSearchEscape());
+        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
+            .Should().BeEmpty("the search Escape consumer closes the panel");
+        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull("the dialog stays open");
+
+        var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+    }
 }

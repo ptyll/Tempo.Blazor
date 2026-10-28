@@ -198,7 +198,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Shows a generated modeling diagram through the diagram editor canvas.",
+      "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the center of the diagram viewport — the page center in the fit view — through the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramPreview.razor",
       "documentationStatus": "merged",
@@ -280,7 +280,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Loads a semantic modeling source and presents a modeling editor workspace. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
+      "description": "Loads a semantic modeling source and presents a modeling editor workspace. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell. On the TABLET band (768-1199 of container) the shell presents its TabletPanelPresentation.Overlay: the model tree is an overlay drawer, the inspector a non-modal side sheet, at most ONE open at a time, and the \"Panels\" tab row (the same test ids as the compact row) acts as the visibility switch (aria-expanded toggles; Preview closes both). A tree selection opens the inspector sheet, and the tree's \"Insert into preview\" action (WCAG 2.5.7 non-drag alternative to dragging) reuses the element through the preview's existing drop path at the viewport center — TmModelingDiagramPreview.InsertAtViewportCenterAsync — honoring AllowNodeDrop. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop AND the tablet band (the near-fullscreen footprint keys off the editor container, not the viewport); the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
       "documentationStatus": "merged",
@@ -622,7 +622,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays semantic modeling elements grouped by type with live filtering and selection.",
+      "description": "Displays semantic modeling elements grouped by type with live filtering and selection. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the viewport center.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
       "documentationStatus": "merged",
@@ -630,6 +630,13 @@
         "@using Tempo.Blazor.Components.Modeling"
       ],
       "parameters": [
+        {
+          "name": "AllowNodeDrop",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the tree offers the non-drag \"Insert into preview\" action (Fáze 6, WCAG 2.5.7). Default true mirrors the hosting editor's AllowNodeDrop: when the host opts out of tree reuse the action disappears with the drop zone, so no alternative path offers what the drop zone refuses."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -672,6 +679,12 @@
           "type": "EventCallback<ModelingElementDto>",
           "isRequired": false,
           "description": "Raised when the user selects an element node."
+        },
+        {
+          "name": "OnInsertIntoPreview",
+          "type": "EventCallback<ModelingElementDto>",
+          "isRequired": false,
+          "description": "Raised when the user activates the row-level \"Insert into preview\" action. The HOST computes the drop geometry (the tree knows nothing about the document or its viewport): the hosting editor routes the request through the preview's existing drop path at the viewport center. Keyboard- and touch-reachable by construction (a native button beside the node treeitem, revealed on (hover: none) and :focus-within)."
         },
         {
           "name": "SelectedElement",

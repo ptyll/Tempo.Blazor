@@ -39,6 +39,15 @@
     border-color: var(--tm-color-primary);
 }
 
+/* Fáze 6 (touch): the selects reach the shared 44px target on a coarse pointer (the hosting
+   editor pins the same rule through ::deep for its own chrome contract — this keeps the
+   component's own stylesheet truthful when read on its own). */
+@media (pointer: coarse) {
+    .tm-modeling-view-selector__field select {
+        min-height: var(--tm-touch-target);
+    }
+}
+
 .tm-modeling-view-selector__field select:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;

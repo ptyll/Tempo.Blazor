@@ -551,10 +551,13 @@
     min-height: calc(var(--tm-space-16) * 7);
 }
 
-/* Below the desktop breakpoint the dialog keeps the pre-TmModal footprint: a near-fullscreen
-   panel instead of the desktop 90vw × 90vh (the final mobile presentation is phase 7). The
-   overlay's own --tm-space-4 padding stays as the margin around the panel. */
-@media (max-width: 48rem) {
+/* Fáze 6: below the editor's own mobile threshold the dialog keeps the pre-TmModal footprint:
+   a near-fullscreen panel instead of the desktop 90vw x 90vh (the final mobile presentation is
+   phase 7). The decision comes from the EDITOR's own container — the modal paints fixed, but
+   container queries still match through the nearest ancestor container
+   (docs/responsive-conventions.md), so a 500px editor inside a wide viewport gets the compact
+   dialog and a tablet editor the ~90% one. No viewport @media in this stylesheet. */
+@container tm-modeling-editor (width < 768px) {
     ::deep .tm-modeling-editor__open-editor-modal .tm-modal {
         width: 100%;
         max-width: 100%;
@@ -609,7 +612,8 @@
     white-space: nowrap;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs {
+[data-layout='mobile'] .tm-modeling-editor__panel-tabs,
+[data-layout='tablet'] .tm-modeling-editor__panel-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--tm-space-1);
@@ -619,7 +623,8 @@
     flex-shrink: 0;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab {
+[data-layout='mobile'] .tm-modeling-editor__panel-tab,
+[data-layout='tablet'] .tm-modeling-editor__panel-tab {
     min-width: 0;
     min-height: calc(var(--tm-space-8) + var(--tm-space-1));
     padding: var(--tm-space-2) var(--tm-space-3);
@@ -637,18 +642,21 @@
     cursor: pointer;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab:hover {
+[data-layout='mobile'] .tm-modeling-editor__panel-tab:hover,
+[data-layout='tablet'] .tm-modeling-editor__panel-tab:hover {
     border-color: var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab:focus-visible {
+[data-layout='mobile'] .tm-modeling-editor__panel-tab:focus-visible,
+[data-layout='tablet'] .tm-modeling-editor__panel-tab:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab--active {
+[data-layout='mobile'] .tm-modeling-editor__panel-tab--active,
+[data-layout='tablet'] .tm-modeling-editor__panel-tab--active {
     border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-primary);
@@ -670,6 +678,34 @@
 [data-layout='mobile'] .tm-modeling-editor__status {
     overflow: hidden;
     white-space: nowrap;
+}
+
+/* ── Tablet layout (the editor container in the 768-1199 band) ───────────────────────
+   Fáze 6: the shell's Overlay presentation owns the structure (tree drawer / inspector
+   sheet, at most one open). The editor's own chrome keeps three duties here: the "Panels"
+   tabs row under the header (shared chrome with the compact row above), the coarse-pointer
+   44px targets, and a status strip that wraps instead of overflowing horizontally. */
+
+/* The tablet tab row sits inside the shell's header region: the overlay drawers cover the
+   main region only, so the switches stay reachable while a sheet is open. */
+[data-layout='tablet'] .tm-modeling-editor__panel-tabs {
+    border-bottom: 0;
+}
+
+/* Fáze 6 (touch): every control the phase names reaches --tm-touch-target on a coarse
+   pointer — the panel tabs and the selects (the editor's own field and the view selector's
+   fields, the latter a child component hence ::deep). The tree nodes and group headers, the
+   issue rows and the source panel's load button carry the same rule in their own stylesheets. */
+@media (pointer: coarse) {
+    [data-layout='tablet'] .tm-modeling-editor__panel-tab,
+    [data-layout='mobile'] .tm-modeling-editor__panel-tab {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-editor__field select,
+    .tm-modeling-editor__context ::deep .tm-modeling-view-selector__field select {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 @media (forced-colors: active) {

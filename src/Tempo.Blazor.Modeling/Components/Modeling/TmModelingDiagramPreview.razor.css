@@ -151,7 +151,11 @@
     pointer-events: none;
 }
 
-@media (max-width: 48rem) {
+/* Fáze 6 (responsive-conventions.md): the header stacks when the EDITOR's own container is
+   compact — a container query through the editor root's tm-modeling-editor container, not a
+   viewport media query, so a narrow preview inside a wide page behaves as the narrow editor
+   it is and a phone inside a wide container never does. */
+@container tm-modeling-editor (width < 768px) {
     .tm-modeling-diagram-preview__header {
         align-items: flex-start;
         flex-direction: column;

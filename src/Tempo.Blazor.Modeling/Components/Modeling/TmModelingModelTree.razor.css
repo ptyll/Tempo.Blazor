@@ -166,7 +166,9 @@
 }
 
 @media (pointer: coarse) {
-    .tm-modeling-model-tree__group-header {
+    .tm-modeling-model-tree__group-header,
+    .tm-modeling-model-tree__node,
+    .tm-modeling-model-tree__insert {
         min-height: var(--tm-touch-target);
     }
 }
@@ -177,6 +179,16 @@
     margin: 0;
     padding-inline-start: var(--tm-space-5);
     list-style: none;
+}
+
+/* Fáze 6: the row wrapper hosts the node treeitem and — when the host allows tree reuse —
+   the non-drag "Insert into preview" action. The trailing auto track collapses to 0 when the
+   action is absent (AllowNodeDrop=false), so the row fills the width either way. */
+.tm-modeling-model-tree__node-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
 }
 
 /* Nodes are quiet rows: transparent chrome, hairline-free, hover paints muted. */
@@ -267,6 +279,37 @@
     font-size: var(--tm-font-size-xs);
 }
 
+/* Fáze 6 (WCAG 2.5.7): the non-drag "Insert into preview" action. The reveal contract is the
+   core `.tm-reveal-on-hover` pair (markup): hidden until hover on a fine pointer ONLY, always
+   visible on (hover: none) and under :focus-within (docs/responsive-conventions.md). This
+   stylesheet owns the chrome and the coarse-pointer target. */
+.tm-modeling-model-tree__insert {
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    margin-inline-start: var(--tm-space-1);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-modeling-model-tree__insert:hover {
+    border-color: var(--tm-color-primary-soft-border);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-model-tree__insert:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
 @media (forced-colors: active) {
     .tm-modeling-model-tree,
     .tm-modeling-model-tree__header,
@@ -293,7 +336,15 @@
     .tm-modeling-model-tree__drag-handle,
     .tm-modeling-model-tree__type-icon,
     .tm-modeling-model-tree__group-icon,
-    .tm-modeling-model-tree__group-chevron {
+    .tm-modeling-model-tree__group-chevron,
+    .tm-modeling-model-tree__insert {
         color: CanvasText;
+    }
+
+    /* The non-drag alternative is never hidden in forced colors: the hover reveal is a
+       color-dependent affordance and the action must stay reachable. */
+    .tm-modeling-model-tree__insert {
+        opacity: 1;
+        border-color: CanvasText;
     }
 }

@@ -133,11 +133,20 @@
                own container (the same Modeling pair), so the nested TmDiagramEditors (preview +
                open-editor dialog) resolve from THEIR OWN containers instead of inheriting a
                forced Desktop cascade. The editor's resolved mode only seeds the shell's
-               pre-measure frame; a forced editor still pins the shell (tests/hosts). *@
-            <TmEditorShell Class="tm-modeling-editor__shell"
+               pre-measure frame; a forced editor still pins the shell (tests/hosts).
+               Fáze 6: the tablet presentation is the shell's Overlay — the tree as an overlay
+               drawer, the inspector as a non-modal side sheet, at most ONE open (the editor
+               owns the flags and renders the "Panels" tabs as the visibility switch). *@
+            <TmEditorShell @ref="_shell"
+                           Class="tm-modeling-editor__shell"
                            LayoutMode="LayoutMode"
                            Breakpoints="EffectiveBreakpoints"
                            InitialMode="layout.Resolved"
+                           ResolvedLayoutChanged="OnShellResolvedLayoutChanged"
+                           TabletPanelPresentation="TabletPanelPresentation.Overlay"
+                           LeftOverlayTestId="@TestId("modeling-tree-drawer")"
+                           RightOverlayTestId="@TestId("modeling-inspector-sheet")"
+                           OverlayCloseTestId="@TestId("modeling-sheet-close")"
                            LeftTitle="@Loc["TmModelingEditor_ModelTree"]"
                            RightTitle="@Loc["TmModelingEditor_Inspector"]"
                            CanvasTitle="@Loc["TmModelingEditor_Preview"]"
@@ -149,6 +158,42 @@
                            PersistWidthsKey="@EffectivePersistWidthsKey">
                 <Header>
                     <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@EditorHeaderContent</header>
+                    @if (layout.IsTablet)
+                    {
+                        @* Fáze 6: the "Panels" tabs double as the tablet visibility switch —
+                           Tree/Inspector toggle their drawer/sheet (one at a time, aria-expanded
+                           like a disclosure), Preview closes both. Same test ids as the compact
+                           row; the compact branch is the mobile-only alternative. *@
+                        <nav class="tm-modeling-editor__panel-tabs"
+                             data-testid="@TestId("modeling-panel-tabs")"
+                             aria-label="@Loc["TmModelingEditor_Panels"]">
+                            <button type="button"
+                                    class="@GetTabletPanelTabClass(ModelingEditorPanel.Tree)"
+                                    data-testid="@TestId("modeling-panel-tab-tree")"
+                                    aria-expanded="@_shellLeftOpen.ToString().ToLowerInvariant()"
+                                    aria-controls="@(_shellLeftOpen ? _shell?.LeftPanelId : null)"
+                                    title="@Loc["TmModelingEditor_ToggleTree"]"
+                                    @onclick="ToggleTreeSheetAsync">
+                                @Loc["TmModelingEditor_ModelTree"]
+                            </button>
+                            <button type="button"
+                                    class="@GetTabletPanelTabClass(ModelingEditorPanel.Preview)"
+                                    data-testid="@TestId("modeling-panel-tab-preview")"
+                                    title="@Loc["TmModelingEditor_PreviewOnly"]"
+                                    @onclick="ShowPreviewOnlyAsync">
+                                @Loc["TmModelingEditor_Preview"]
+                            </button>
+                            <button type="button"
+                                    class="@GetTabletPanelTabClass(ModelingEditorPanel.Inspector)"
+                                    data-testid="@TestId("modeling-panel-tab-inspector")"
+                                    aria-expanded="@_shellRightOpen.ToString().ToLowerInvariant()"
+                                    aria-controls="@(_shellRightOpen ? _shell?.RightPanelId : null)"
+                                    title="@Loc["TmModelingEditor_ToggleInspector"]"
+                                    @onclick="ToggleInspectorSheetAsync">
+                                @Loc["TmModelingEditor_Inspector"]
+                            </button>
+                        </nav>
+                    }
                 </Header>
                 <Left>@TreeSlot</Left>
                 <Canvas>@CanvasSlot</Canvas>
@@ -271,16 +316,21 @@
     </div>;
 
     /// <summary>The model tree. CollapsedGroups stays bound to the editor's own field: the tree may
-    /// remount when the layout flips, and the editor — not the tree instance — owns the state.</summary>
+    /// remount when the layout flips, and the editor — not the tree instance — owns the state.
+    /// AllowNodeDrop follows the editor's switch; the non-drag "Insert into preview" action routes
+    /// back through <see cref="HandleInsertIntoPreviewAsync"/> (the preview's drop path).</summary>
     private RenderFragment ModelTreeContent => @<TmModelingModelTree Elements="@VisibleTreeElements"
                                                                      SelectedElement="@_selectedElement"
+                                                                     AllowNodeDrop="@AllowNodeDrop"
+                                                                     OnInsertIntoPreview="HandleInsertIntoPreviewAsync"
                                                                      @bind-CollapsedGroups="_collapsedGroups"
                                                                      OnElementSelected="SelectElementAsync"
                                                                      OnElementDragStarted="HandleElementDragStartedAsync"
                                                                      OnElementDragEnded="HandleElementDragEndedAsync" />;
 
     /// <summary>The generated diagram preview — shared by both layouts.</summary>
-    private RenderFragment PreviewContent => @<TmModelingDiagramPreview Document="@_document"
+    private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
+                                                                        Document="@_document"
                                                                         DocumentChanged="UpdatePreviewDocumentAsync"
                                                                         ActiveDraggedElement="@_draggedElement"
                                                                         AllowNodeDrop="@AllowNodeDrop"
@@ -374,9 +424,15 @@
                         @* The dialog body is its own layout scope: the breakpoints ride on the
                            editor instance (768/1024) so the embedded editor resolves desktop from
                            the dialog body, not the viewport — the `data-editor-layout` contract
-                           the baselines and the E2E assert. *@
+                           the baselines and the E2E assert. Fáze 6: on the editor's tablet band
+                           the dialog body presents the diagram editor's TABLET layout at BOTH
+                           tablet widths (the 1180 body is wider than the DE's 1024 desktop
+                           threshold, so the editor's resolved mode pins it — the reference shows
+                           the tablet presentation in the dialog); every other layout keeps the
+                           body-decided resolution. *@
                         <TmDiagramEditor Document="@_openedEditorDocument"
                                          DocumentChanged="UpdateOpenedEditorDocumentAsync"
+                                         LayoutMode="@OpenEditorDiagramLayoutMode"
                                          LayoutBreakpoints="@OpenEditorBreakpoints"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
                                          ShowTitle="false"

@@ -65,6 +65,23 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// <summary>Raised when the user ends a drag operation from a tree node.</summary>
     [Parameter] public EventCallback OnElementDragEnded { get; set; }
 
+    /// <summary>
+    /// Whether the tree offers the non-drag "Insert into preview" action (Fáze 6, WCAG 2.5.7).
+    /// Default <c>true</c> mirrors the hosting editor's <see cref="TmModelingEditor.AllowNodeDrop"/>:
+    /// when the host opts out of tree reuse the action disappears with the drop zone, so no
+    /// alternative path offers what the drop zone refuses.
+    /// </summary>
+    [Parameter] public bool AllowNodeDrop { get; set; } = true;
+
+    /// <summary>
+    /// Raised when the user activates the row-level "Insert into preview" action. The HOST
+    /// computes the drop geometry: the tree knows nothing about the document or its viewport,
+    /// so it raises the request and the hosting editor routes it through the preview's existing
+    /// drop path at the viewport center. Keyboard- and touch-reachable by construction (a
+    /// native button), which is the point of the alternative.
+    /// </summary>
+    [Parameter] public EventCallback<ModelingElementDto> OnInsertIntoPreview { get; set; }
+
     /// <summary>Optional two-way binding of the collapsed group keys. Seeded from when the instance
     /// is given a new collection; every user toggle raises <see cref="CollapsedGroupsChanged"/> with
     /// a fresh snapshot. The parameter is NEVER assigned inside the component.</summary>
@@ -443,6 +460,11 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
     private Task HandleDragEndedAsync()
         => OnElementDragEnded.InvokeAsync();
+
+    /// <summary>The non-drag alternative (Fáze 6): raise the insert request; the hosting editor
+    /// owns the drop geometry and routes it through the preview's existing OnNodeDropped path.</summary>
+    private Task HandleInsertRequestedAsync(ModelingElementDto element)
+        => OnInsertIntoPreview.InvokeAsync(element);
 
     private async Task RegisterDragDataTransferBridgeAsync()
         => await Interop.InvokeVoidSafeAsync("registerTreeDragBridge");

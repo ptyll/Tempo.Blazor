@@ -614,6 +614,81 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             .GetAttribute("aria-controls").Should().BeNull("a collapsed group has no content element to point at");
     }
 
+    // ── Non-drag alternative (Fáze 6, WCAG 2.5.7) ────────────────────────────
+
+    [Fact]
+    public void Insert_into_preview_action_raises_insert_request()
+    {
+        // The row-level "Insert into preview" action is the WCAG 2.5.7 non-drag alternative:
+        // a keyboard/touch-reachable button that asks the host to reuse the element through
+        // the existing drop path (the drop geometry is computed by the hosting editor, which
+        // owns the document — the tree raises the request, not the geometry).
+        ModelingElementDto? requested = null;
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, element => requested = element)));
+
+        cut.Find("[data-testid='modeling-tree-insert-task-review']").Click();
+
+        cut.WaitForAssertion(() => requested.Should().NotBeNull());
+        requested!.Id.Should().Be("task-review");
+    }
+
+    [Fact]
+    public void Insert_action_respects_allow_node_drop()
+    {
+        // AllowNodeDrop=false hides the action (the host opted out of tree reuse entirely —
+        // the same switch the drop zone follows), so no alternative path may appear either.
+        var requested = 0;
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.AllowNodeDrop, false)
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, _ => requested++)));
+
+        cut.FindAll("[data-testid='modeling-tree-insert-task-review']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Insert_action_stays_reachable_without_hover_and_names_itself()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements()));
+
+        var button = cut.Find("[data-testid='modeling-tree-insert-task-approve']");
+        button.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace(
+            "an icon-only action names itself (the localized 'Insert into preview' label)");
+        button.GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+
+        // The reveal contract (docs/responsive-conventions.md) is the CORE class pair: the
+        // action hides until hover on a fine pointer only, stays visible on (hover: none) and
+        // reveals under :focus-within — nothing component-local may re-implement it.
+        button.ClassList.Should().Contain("tm-reveal-on-hover",
+            "the action uses the core hover-reveal class (fine pointers only)");
+        button.ParentElement!.ClassList.Should().Contain("tm-reveal-host",
+            "the row is the reveal host (hover or focus anywhere in the row reveals the action)");
+
+        var css = File.ReadAllText(FindTreeCssPath());
+        css.Should().NotContain("@media (hover:", "the reveal contract lives in the core breakpoints.css, not here");
+        css.Should().Contain("@media (pointer: coarse)",
+            "the coarse-pointer block pins the 44px targets");
+        css.Should().Contain(".tm-modeling-model-tree__node,\n    .tm-modeling-model-tree__insert {\n        min-height: var(--tm-touch-target)",
+            "tree nodes and the insert action meet the 44px target on a coarse pointer");
+    }
+
+    private static string FindTreeCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingModelTree.razor.css");
+    }
+
     private static ModelingElementDto[] CreateElements() =>
     [
         new()

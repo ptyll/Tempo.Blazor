@@ -155,6 +155,46 @@ public sealed class TmModelingSourcePanelTests : LocalizationTestBase
         sourceSystemElement.ClassList.Should().Contain("tm-modeling-source-panel__value");
     }
 
+    [Fact]
+    public void Wide_container_renders_metadata_in_three_columns()
+    {
+        // Fáze 6: the panel is a CSS size container — the bUnit DOM carries the structure the
+        // container query styles (three metadata cells plus the load button the wide layout
+        // moves into the header row); the widths themselves stay in the stylesheet (no CSS is
+        // evaluated in bUnit).
+        using var cut = Render<TmModelingSourcePanel>(parameters => parameters
+            .Add(p => p.Metadata, CreateMetadata(isFresh: true)));
+
+        cut.FindAll(".tm-modeling-source-panel__metadata-row").Should().HaveCount(3);
+        cut.Find("[data-testid='modeling-source-load-button']").Should().NotBeNull();
+
+        var css = File.ReadAllText(FindSourcePanelCssPath());
+        css.Should().Contain("@container tm-modeling-source-panel (width >= 640px)",
+            "the wide layout keys off the panel's own container");
+        css.Should().Contain("repeat(3, minmax(0, 1fr))",
+            "a wide container lays the metadata out in three columns");
+        css.Should().Contain("tm-modeling-source-panel__load",
+            "the wide layout moves the load button into the header row");
+        css.Should().Contain("@container tm-modeling-source-panel (width < 640px)",
+            "the narrow container keeps the stacked rows");
+        css.Should().Contain("grid-template-areas",
+            "the wide layout places the button next to the header through grid areas");
+    }
+
+    private static string FindSourcePanelCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingSourcePanel.razor.css");
+    }
+
     private static ModelingMetadataDto CreateMetadata(bool isFresh) => new()
     {
         SourceSystem = "Tempo tests",

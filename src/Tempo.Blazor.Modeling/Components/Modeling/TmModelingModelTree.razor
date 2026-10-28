@@ -82,7 +82,7 @@
                         <div id="@GetGroupContentId(groupPosition)" class="tm-modeling-model-tree__nodes" role="group">
                             @foreach (var (element, nodePosition) in group.Elements.Select((value, index) => (value, index + 1)))
                             {
-                                <div role="none">
+                                <div role="none" class="tm-modeling-model-tree__node-row tm-reveal-host">
                                     @* The node is a NATIVE button: Enter/Space activate it natively.
                                        The stopPropagation fences keep those keys from reaching the
                                        emulating group treeitem (Space keyup would toggle the group
@@ -119,6 +119,26 @@
                                             <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
                                         </span>
                                     </button>
+                                    @if (AllowNodeDrop)
+                                    {
+                                        @* Fáze 6 (WCAG 2.5.7): the non-drag alternative to dragging the
+                                           node into the preview — a SIBLING button (a button must never
+                                           nest inside a button). The core .tm-reveal-on-hover pair
+                                           hides it until hover on a fine pointer only; it stays
+                                           visible on (hover: none) and under :focus-within
+                                           (docs/responsive-conventions.md). The HOST computes the
+                                           drop geometry (the preview's viewport center) and routes
+                                           the request through the preview's existing drop path —
+                                           the tree raises the request only. *@
+                                        <button type="button"
+                                                class="tm-modeling-model-tree__insert tm-reveal-on-hover"
+                                                data-testid="@($"modeling-tree-insert-{element.Id}")"
+                                                aria-label="@Loc["TmModelingModelTree_InsertIntoPreview"]"
+                                                title="@Loc["TmModelingModelTree_InsertIntoPreview"]"
+                                                @onclick="() => HandleInsertRequestedAsync(element)">
+                                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                                        </button>
+                                    }
                                 </div>
                             }
                         </div>

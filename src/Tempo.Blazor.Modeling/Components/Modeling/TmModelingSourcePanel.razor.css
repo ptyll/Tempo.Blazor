@@ -62,6 +62,54 @@
     }
 }
 
+/* Fáze 6 (modeling-source-panel--tablet.png): a WIDE panel — the docked Source tab on the
+   tablet/desktop layouts — lays the three metadata cells out side by side and moves the
+   "Load model" button up into the header row (grid areas, so the DOM order and the test ids
+   never move). The stale warning keeps its own full-width row under the metadata. */
+@container tm-modeling-source-panel (width >= 640px) {
+    .tm-modeling-source-panel {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "header load"
+            "metadata metadata"
+            "warning warning";
+        align-items: center;
+    }
+
+    .tm-modeling-source-panel__header {
+        grid-area: header;
+    }
+
+    .tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
+        grid-area: load;
+        width: auto;
+    }
+
+    /* The empty state spans the row when there is no metadata to lay out. */
+    .tm-modeling-source-panel__empty {
+        grid-column: 1 / -1;
+    }
+
+    .tm-modeling-source-panel__metadata {
+        grid-area: metadata;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--tm-space-4);
+        column-gap: var(--tm-space-5);
+    }
+
+    .tm-modeling-source-panel__metadata-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-source-panel__term {
+        white-space: normal;
+    }
+
+    .tm-modeling-source-panel__warning {
+        grid-area: warning;
+    }
+}
+
 .tm-modeling-source-panel__term {
     display: flex;
     align-items: center;
@@ -126,6 +174,14 @@
    (--tm-color-on-primary text on the primary fill), so no local primary override here. */
 .tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
     width: 100%;
+}
+
+/* Fáze 6 (touch): the "Load model" button is --tm-input-height-md (~38px) by default — on a
+   coarse pointer it reaches the shared 44px target like the rest of the editor's controls. */
+@media (pointer: coarse) {
+    .tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 @media (forced-colors: active) {
