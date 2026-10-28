@@ -209,6 +209,8 @@ public sealed class MarkupClassCoverageTests
         "tm-scheduler-event-dot",
         "tm-scheduler-event-time",
         "tm-scheduler-event-title",
+        // The resource filter's toolbar group: layout comes from TmToolbar, so the class is a hook.
+        "tm-scheduler-toolbar-filter",
         "tm-screening__resolution-note",
         "tm-screening__source",
         "tm-screening__time",
@@ -411,14 +413,16 @@ public sealed class MarkupClassCoverageTests
             // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
             // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
             // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
+            // TmGantt redesign phase 4: the sidebar tab/panel DOM ids ($"tm-gantt-{InstanceId}-tab-…") in
+            // the toolbar/sidebar parts add the "tm-gantt-" stem — 50 → 51.
             // FZE-2 (TmChat slots): the composer textarea id is per component instance
             // ("tm-chat-composer-{counter}" in TmChat.razor.cs), so its prefix joined the scanned
-            // population — 50 → 51.
+            // population — 51 → 52.
             // FZE-5 (composer review): the thread panel's reply input gained its own per-instance
-            // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 51 → 52.
+            // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 52 → 53.
             // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
-            // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 52 → 53.
-            ExpectedUnmeasurableStems: 53),
+            // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 53 → 54.
+            ExpectedUnmeasurableStems: 54),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

@@ -124,7 +124,19 @@
       "name": "Role",
       "type": "string?",
       "isRequired": false,
-      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
+      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel. When the role lives on an inner element instead, leave this unset and pass SheetInitialFocusSelector so a mobile sheet still opens on that element."
+    },
+    {
+      "name": "SheetInitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a mobile sheet focuses first, scoped to the sheet. Same contract as TmDrawer.InitialFocusSelector. Null keeps the role-derived selector: a menu or listbox panel opens on its first entry, anything else on the first focusable. A match that is not itself focusable falls through to the first focusable (since 2.10.0)."
+    },
+    {
+      "name": "SheetTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Visible title of the sheet header, and the accessible name of the drawer, when the panel presents as a bottom sheet. Does not name the popover. Null falls back to Title, then AriaLabel, then a localized generic \"Menu\" (since 2.10.0)."
     },
     {
       "name": "AriaLabel",
@@ -142,7 +154,7 @@
       "name": "Title",
       "type": "string?",
       "isRequired": false,
-      "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label (since 2.9.1)."
+      "description": "Title of the sheet header when the panel presents as a bottom sheet, unless SheetTitle is set. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label. SheetTitle does not (since 2.9.1)."
     },
     {
       "name": "MobilePresentation",

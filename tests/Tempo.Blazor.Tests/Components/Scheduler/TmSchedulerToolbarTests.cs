@@ -147,7 +147,7 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
 
         var group = cut.Find("[role='tablist']");
         group.QuerySelector("[data-testid='scheduler-print']").Should().BeNull();
-        cut.Find("[data-testid='scheduler-more'] button").Click();
+        cut.Find("button.tm-toolbar-more").Click();
         var print = cut.Find("[data-testid='scheduler-print']");
         print.TextContent.Should().Contain("Print");
         print.GetAttribute("role").Should().Be("menuitem");
@@ -169,9 +169,9 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
         var groups = cut.FindAll("[data-tm-group]")
             .Select(g => g.GetAttribute("data-tm-group"))
             .ToList();
-        groups.Should().Equal("navigation", "title", "view", "primary", "overflow");
+        groups.Should().Equal("navigation", "title", "view", "primary", "export");
         cut.Find("[data-tm-group='primary'] [data-testid='scheduler-add']").Should().NotBeNull();
-        cut.Find("[data-tm-group='overflow'] [data-testid='scheduler-more']").Should().NotBeNull();
+        cut.Find("button.tm-toolbar-more").Should().NotBeNull();
     }
 
     /// <summary>The add button is opt-in. Without ShowAddButton the primary group is absent.</summary>
@@ -209,6 +209,8 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
     [Fact]
     public void Title_Is_A_GoToDate_Button()
     {
+        using var _ = CultureScope.Use("cs-CZ"); // pin the culture: the title month name depends on it
+
         var cut = Render<TmSchedulerToolbar>(p => p
             .Add(c => c.View, TmScheduleViewType.Month)
             .Add(c => c.CurrentDate, new DateTime(2025, 6, 15)));
@@ -281,8 +283,8 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
             .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
             .Add(c => c.ShowPrint, false));
 
-        cut.FindAll("[data-testid='scheduler-more']").Should().BeEmpty();
-        cut.FindAll("[data-tm-group='overflow']").Should().BeEmpty();
+        cut.FindAll("button.tm-toolbar-more").Should().BeEmpty();
+        cut.FindAll("[data-tm-group='export']").Should().BeEmpty();
     }
 
     /// <summary>Views filters the offered tabs and keeps the active one selected.</summary>
@@ -315,7 +317,7 @@ public class TmSchedulerToolbarTests : LocalizationTestBase
         var groups = cut.FindAll("[data-tm-group]").Select(g => g.GetAttribute("data-tm-group")).ToList();
         groups.IndexOf("header-start").Should().BeLessThan(groups.IndexOf("navigation"));
         groups.IndexOf("header-actions").Should().BeGreaterThan(groups.IndexOf("view"));
-        groups.Should().NotContain("overflow", "print is off, so More has no entries");
+        groups.Should().NotContain("export", "print is off, so More has no entries");
     }
 
     /// <summary>ShowHeader false renders nothing, so a host can supply its own chrome.</summary>

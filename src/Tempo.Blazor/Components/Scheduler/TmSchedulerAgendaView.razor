@@ -21,7 +21,7 @@
             var culture = CultureInfo.CurrentUICulture;
             <div class="tm-scheduler-agenda-group" role="listitem">
                 <div class="tm-scheduler-agenda-group-body" role="group" aria-label="@group.Key.ToString("D", culture)">
-                <div class="tm-scheduler-agenda-date">
+                <div class="tm-scheduler-agenda-date @(Compact ? "tm-scheduler-agenda-date--sticky" : null)">
                     <span class="tm-scheduler-agenda-date-day">@group.Key.Day</span>
                     <span class="tm-scheduler-agenda-date-weekday">@group.Key.ToString("dddd", culture)</span>
                     <span class="tm-scheduler-agenda-date-month">@group.Key.ToString("MMMM yyyy", culture)</span>
@@ -30,7 +30,7 @@
                     @foreach (var evt in group.Value)
                     {
                         var e = evt;
-                        <button type="button" class="tm-scheduler-agenda-event @(IsSelected(e) ? "tm-scheduler-agenda-event--selected" : "") @e.CssClass"
+                        <button type="button" data-event-id="@e.Id" class="tm-scheduler-agenda-event @(Compact ? "tm-scheduler-agenda-event--card" : null) @(IsSelected(e) ? "tm-scheduler-agenda-event--selected" : "") @e.CssClass"
                                 aria-current="@(IsSelected(e) ? "true" : null)"
                                 aria-label="@(EventTemplate is null ? AgendaEventLabel(e) : null)"
                                 @onclick="@(() => HandleEventClick(e))">
@@ -54,6 +54,10 @@
                                     }
                                 </span>
                                 <span class="tm-scheduler-agenda-event-title">@e.Title</span>
+                                @if (Compact)
+                                {
+                                    <span class="tm-scheduler-agenda-event-chevron" aria-hidden="true"><TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" /></span>
+                                }
                                 @if (!string.IsNullOrEmpty(e.Description))
                                 {
                                     <span class="tm-scheduler-agenda-event-desc">@e.Description</span>
@@ -77,6 +81,9 @@
 
     /// <summary>Number of days to show in the agenda. Values below 1 are treated as 1.</summary>
     [Parameter] public int AgendaDays { get; set; } = 30;
+
+    /// <summary>Renders each event as a card with a chevron and sticks the day header. The mobile layout sets it.</summary>
+    [Parameter] public bool Compact { get; set; }
 
     /// <summary>Events to display.</summary>
     [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }

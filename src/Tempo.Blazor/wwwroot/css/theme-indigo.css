@@ -8,7 +8,10 @@
    region nested inside the indigo root.
    ═══════════════════════════════════════════════════════════════ */
 
-:root[data-tm-theme="indigo"] {
+:root[data-tm-theme="indigo"],
+/* A light island (data-theme="light", tokens-dark.css) nested in the indigo root, e.g. TmGantt Theme = Light
+   inside a dark region of an indigo page: it needs the indigo LIGHT scale, not the ancestor's dark one. */
+:root[data-tm-theme="indigo"] [data-theme="light"] {
   /* Primary scale — Tailwind indigo. -600 is the filled-button step: white text
      on #4f46e5 measures 6.3:1, which clears WCAG AA. */
   --tm-color-primary-50:   #eef2ff;

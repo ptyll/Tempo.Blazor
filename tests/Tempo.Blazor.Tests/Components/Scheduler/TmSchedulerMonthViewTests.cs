@@ -216,9 +216,50 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
 
         var more = cut.Find(".tm-scheduler-month-more");
         more.Should().NotBeNull();
-        // 3 visible, 2 remaining → "+N more" shown
+        // 3 visible, 2 remaining → the plural "+N more" form, not a raw count.
         cut.FindAll(".tm-scheduler-month-event").Count.Should().Be(3);
-        more.TextContent.Should().NotBeEmpty();
+        more.TextContent.Trim().Should().Be("+2 more");
+    }
+
+    /// <summary>
+    /// The visible overflow label is a plural family (cs "+1 další / +2 další / +5 dalších"),
+    /// not the plain "+{0}" key. One remaining event uses the singular form.
+    /// </summary>
+    [Fact]
+    public void Month_More_Label_Uses_The_Plural_Form()
+    {
+        var events = Enumerable.Range(0, 4).Select(i =>
+            Evt($"Evt{i}", new DateTime(2025, 6, 10, 9 + i, 0, 0), new DateTime(2025, 6, 10, 10 + i, 0, 0))).ToList();
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.MaxVisibleEvents, 3));
+
+        cut.Find(".tm-scheduler-month-more").TextContent.Trim().Should().Be("+1 more");
+    }
+
+    /// <summary>
+    /// Czech plural rules under a cs culture: 2 remaining events take the "few" form ("+2 další")
+    /// and 5 take "other" ("+5 dalších"). The mock Czech map stands in for the embedded table.
+    /// </summary>
+    [Theory]
+    [InlineData(2, "+2 další")]
+    [InlineData(5, "+5 dalších")]
+    public void Month_More_Label_Follows_Czech_Plural_Rules(int remaining, string expected)
+    {
+        using var _ = CultureScope.Use("cs-CZ");
+        UseCzechLocalization();
+
+        var events = Enumerable.Range(0, 3 + remaining).Select(i =>
+            Evt($"Evt{i}", new DateTime(2025, 6, 10, 8, 0, 0).AddMinutes(i), new DateTime(2025, 6, 10, 8, 30, 0).AddMinutes(i))).ToList();
+
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Events, events)
+            .Add(c => c.MaxVisibleEvents, 3));
+
+        cut.Find(".tm-scheduler-month-more").TextContent.Trim().Should().Be(expected);
     }
 
     [Fact]

@@ -213,6 +213,11 @@ a:hover {
 /* Utility classes for component demos */
 .demo-section {
     margin-bottom: 3rem;
+    min-width: 0;
+}
+
+@media (width < 640px) {
+    .demo-page, .demo-section, .showcase-card { min-width: 0; max-width: 100%; }
 }
 
 .demo-section-title {

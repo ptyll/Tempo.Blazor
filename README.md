@@ -497,12 +497,37 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 ### Scheduler
 | Component | Description |
 |-----------|-------------|
-| `TmScheduler` | Full calendar/scheduler with multiple views |
-| `TmSchedulerDayView` | Day view for the scheduler |
-| `TmSchedulerWeekView` | Week view for the scheduler |
-| `TmSchedulerMonthView` | Month view for the scheduler |
-| `TmSchedulerAgendaView` | Agenda/list view for the scheduler |
-| `TmSchedulerTimelineView` | Horizontal timeline view for the scheduler |
+| `TmScheduler` | Calendar with Month, Week, Day, Timeline and Agenda. The views below are what it renders; a host does not compose them. Contract: [docs/scheduler.md](docs/scheduler.md) |
+
+```razor
+@* Side panel and event detail are host slots. The panel docks on desktop, sheets on tablet and mobile. *@
+<TmScheduler Events="_events"
+             Resources="_rooms"
+             ShowResourceFilter="true"
+             @bind-SelectedResourceIds="_resourceIds"
+             @bind-SelectedEvent="_selected"
+             @bind-SidePanelOpen="_open">
+    <SidePanel>
+        <TmCalendarView Compact="true" SelectedDate="@_day" OnDateClick="PickDay" />
+    </SidePanel>
+    <EventDetailTemplate Context="evt">
+        <h3>@evt.Title</h3>
+        <p>@evt.StartLocal.ToString("g")</p>
+    </EventDetailTemplate>
+</TmScheduler>
+
+@* Mobile action bar is opt-in (default None). Auto renders it only under a 640px container. *@
+<TmScheduler Events="_events" MobileActionBar="TmSchedulerMobileActionBar.Auto" />
+
+@* Ranges: Timeline is one day, Agenda spans AgendaDays (default 30). LayoutMode pins a layout for tests. *@
+<TmScheduler View="TmScheduleViewType.Agenda" AgendaDays="14"
+             FirstDayOfWeek="1" LayoutMode="TmLayoutMode.Desktop" />
+```
+
+Keyboard alternative to drag (WCAG 2.5.7): Alt+arrow moves the event, Alt+Shift+arrow resizes its
+end. A plain arrow stays the roving key of the grid. Touch move is a 400 ms long-press
+(`pointer-drag.js`, loaded by `scheduler.js`). `ShowTouchHint` (default `false`) opts into the
+localized hint, shown only on a coarse pointer.
 
 ### Import & Export
 | Component | Description |

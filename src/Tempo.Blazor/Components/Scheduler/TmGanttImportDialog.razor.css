@@ -1,0 +1,88 @@
+/* ─── Import dialog ──────────────────────────────────────────────── */
+
+/* The dialog card is a TmFocusScope root: its class is rendered by that child component, so the rule
+   reaches it through ::deep from the overlay div this component renders. */
+.tm-gantt__dialog-overlay ::deep .tm-gantt__import-dialog {
+    width: min(560px, 95vw);
+}
+
+.tm-gantt__import-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--tm-border-color);
+    margin-bottom: 16px;
+}
+
+.tm-gantt__import-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--tm-text-secondary);
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tm-gantt__import-tab--active {
+    border-bottom-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
+    font-weight: 500;
+}
+
+.tm-gantt__import-file-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+/* The wrapper exists only to hand JS an ElementReference — display:contents keeps it out of the
+   flex column's slot accounting so the empty box adds no gap. */
+.tm-gantt__import-file-input-wrap {
+    display: contents;
+}
+
+/* Visually hidden but still present: the chooser button clicks this input programmatically
+   (the native listener registered by registerFilePickerTrigger in TmGanttImportDialog.razor.js)
+   inside the same user gesture. display:none was
+   replaced by the standard sr-only geometry so the click works identically in every engine; the
+   input itself is aria-hidden + tabindex=-1, so it never reaches AT or the tab order. */
+.tm-gantt__import-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-gantt__import-file-name {
+    font-size: 0.8rem;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__import-jira-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Import failure surface: the dialog owns its own class (it used to borrow the task panel's). */
+.tm-gantt-import__error {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    margin-bottom: var(--tm-space-3);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
+    border-radius: var(--tm-radius-md);
+    font-size: var(--tm-font-size-sm);
+}

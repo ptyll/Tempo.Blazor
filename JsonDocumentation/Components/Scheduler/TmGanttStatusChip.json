@@ -1,0 +1,27 @@
+{
+  "itemName": "TmGanttStatusChip",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the status chip (glyph plus localized text) shared by the tree, the Board column headers and the dashboard.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttStatusChip.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Status",
+      "type": "TmWorkItemStatus",
+      "isRequired": false,
+      "description": "The status the chip shows."
+    },
+    {
+      "name": "ChipTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional data-testid of the chip, already resolved through the owning Gantt test-id prefix."
+    }
+  ]
+}

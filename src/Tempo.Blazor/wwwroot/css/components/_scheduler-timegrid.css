@@ -250,6 +250,45 @@
     overflow-y: auto;
 }
 
+/* A phone cannot fit a week: the columns keep a readable width and the ONE scroller (head and
+   body together, so the head scrolls with the body) pans sideways and snaps to a column. The
+   gutter stays sticky, so its X does not move. */
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-scroll {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    /* A snapped column lands past the sticky gutter, not under it. */
+    scroll-padding-inline-start: 4rem;
+    /* A host that gives the scheduler no height otherwise gets a full day, which pushes the
+       action bar below the fold. A bounded host (height: 100% of a sized ancestor) wins. */
+    max-height: 70dvh;
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-header,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-body,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-resource-row {
+    width: max-content;
+    min-width: 100%;
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-col,
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timegrid-col-header {
+    flex: 1 0 var(--tm-scheduler-day-col-min, 7rem);
+    min-width: var(--tm-scheduler-day-col-min, 7rem);
+    scroll-snap-align: start;
+}
+
+.tm-scheduler[data-layout="mobile"] {
+    --tm-scheduler-hour-height: 3.5rem;
+}
+
+/* The variable lives on the root, so a host override of .tm-scheduler wins. :where keeps this
+   rule at zero specificity, below both the mobile rule and any host rule. */
+@media (pointer: coarse) {
+    :where(.tm-scheduler) {
+        --tm-scheduler-hour-height: 3.5rem;
+    }
+}
+
 
 
 .tm-scheduler-timegrid-body {
@@ -367,6 +406,11 @@
     gap: var(--tm-space-1);
 }
 
+/* A host template root is a flex item of the row. Without a floor it refuses to shrink and the title overflows the bar. The accessible name and the resize handles are not content. */
+.tm-scheduler-timegrid-event.tm-scheduler-event--compact > :not(.tm-sr-only):not(.tm-scheduler-event-resize-handle) {
+    min-width: 0;
+}
+
 .tm-scheduler-timegrid-event.tm-scheduler-event--compact .tm-scheduler-timegrid-event-title {
     order: -1;
     flex: 1 1 auto;
@@ -472,8 +516,12 @@
     opacity: 0.5;
 }
 
-.tm-scheduler-timegrid-slot--drop-target {
+.tm-scheduler-timegrid-slot--drop-target,
+.tm-scheduler-timegrid-col.tm-scheduler-timegrid-slot--drop-target,
+.tm-scheduler-timegrid-resource-col.tm-scheduler-timegrid-slot--drop-target {
     background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
 }
 
 /* ── Resize handles ── */
@@ -494,28 +542,55 @@
     background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 40%, transparent);
 }
 
-/* A finger needs a larger target than a mouse (B13), but never so large that the two handles cover
-   a 30-minute event. A quick swipe must pan the page; the 400ms long-press in scheduler.js is what
-   starts the resize, and once it has started the helper cancels the pan. */
+/* A finger needs a 44px target, but only on the selected event: every event showing both handles
+   would cover the grid. The hit area hangs half outside, so the event itself keeps its body. */
 @media (pointer: coarse) {
     .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
-        height: min(var(--tm-space-4), 25%);
+        display: none;
+    }
+
+    .tm-scheduler-timegrid-event--selected,
+    .tm-scheduler-timegrid-event:focus {
+        overflow: visible;
+    }
+
+    .tm-scheduler-timegrid-event--selected .tm-scheduler-event-resize-handle,
+    .tm-scheduler-timegrid-event:focus .tm-scheduler-event-resize-handle {
+        display: block;
+        height: var(--tm-touch-target);
         touch-action: pan-y;
+    }
+
+    .tm-scheduler-timegrid-event--selected .tm-scheduler-event-resize-handle--top,
+    .tm-scheduler-timegrid-event:focus .tm-scheduler-event-resize-handle--top {
+        top: calc(var(--tm-touch-target) / -2);
+    }
+
+    .tm-scheduler-timegrid-event--selected .tm-scheduler-event-resize-handle--bottom,
+    .tm-scheduler-timegrid-event:focus .tm-scheduler-event-resize-handle--bottom {
+        bottom: calc(var(--tm-touch-target) / -2);
+    }
+
+    /* A compact event has no room for two grips. The bottom one changes the end, which is the
+       keyboard resize too. */
+    .tm-scheduler-timegrid-event--selected.tm-scheduler-event--compact .tm-scheduler-event-resize-handle--top,
+    .tm-scheduler-timegrid-event:focus.tm-scheduler-event--compact .tm-scheduler-event-resize-handle--top {
+        display: none;
     }
 }
 
-/* No hover on a touch screen: the grip has to be visible without it. */
+/* No hover on a touch screen: the grip has to be visible without it, in the event colour. */
 @media (hover: none) {
     .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle::after {
         content: "";
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 24px;
-        height: 4px;
+        width: var(--tm-space-6);
+        height: var(--tm-space-1);
         transform: translate(-50%, -50%);
         border-radius: var(--tm-radius-full, 999px);
-        background: var(--tm-border-color-strong);
+        background: var(--event-color, var(--tm-color-primary));
     }
 }
 

@@ -1,0 +1,294 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Abstractions.WorkItems
+
+@{
+    var focusRowId = Owner.EffectiveFocusRowId();
+}
+<div class="tm-gantt__tree" data-testid="@TestId("gantt-tree")" style="@TreeStyle">
+  <div class="tm-gantt__tree-grid" role="treegrid" aria-label="@Loc["TmGantt_TaskList"]" style="@(TreeWidth is { } minWidth ? $"min-width: {minWidth}px" : null)">
+    <div class="tm-gantt__tree-header" role="row">
+        @if (Owner.AllowBulkSelect)
+        {
+            <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--checkbox" role="columnheader" aria-label="@Loc["TmGantt_BulkSelectColumn"]"></span>
+        }
+        @foreach (var col in Owner.EffectiveColumns.Where(c => c.Visible))
+        {
+            @if (col.Key == GanttColumnKey.WBS)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--wbs" role="columnheader">@Loc["TmGantt_WBS"]</span>
+            }
+            else if (col.Key == GanttColumnKey.Title)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--title" role="columnheader">@Loc["TmGantt_TaskTitle"]</span>
+            }
+            else if (col.Key == GanttColumnKey.Status)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--status" role="columnheader">@Loc["TmGantt_Status"]</span>
+            }
+            else if (col.Key == GanttColumnKey.Start)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow" role="columnheader">@Loc["TmGantt_Start"]</span>
+            }
+            else if (col.Key == GanttColumnKey.End)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow" role="columnheader">@Loc["TmGantt_End"]</span>
+            }
+            else if (col.Key == GanttColumnKey.Progress)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow" role="columnheader"
+                      aria-label="@Loc["TmGantt_TooltipProgress"]"
+                      data-testid="@TestId("col-header-progress")">%</span>
+            }
+            else if (col.Key == GanttColumnKey.Duration)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--narrow" role="columnheader"
+                      data-testid="@TestId("col-header-duration")">@Loc["TmGantt_Duration"]</span>
+            }
+            else if (col.Key == GanttColumnKey.Priority)
+            {
+                <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--priority" role="columnheader"
+                      data-testid="@TestId("col-header-priority")">@Loc["TmGantt_Priority"]</span>
+            }
+        }
+        @foreach (var cf in Owner.CustomFields)
+        {
+            <span class="tm-gantt__tree-header-cell tm-gantt__custom-field-header" role="columnheader"
+                  data-testid="@TestId($"custom-col-header-{cf.Id}")">@cf.Name</span>
+        }
+    </div>
+    <div class="tm-gantt__tree-body" role="rowgroup" @ref="Owner._treeBodyRef" @onscroll="Owner.OnTreeScroll">
+        @foreach (var node in Owner._visibleNodes)
+        {
+            <div class="tm-gantt__tree-row @GetRowClass(node) @GetDragClass(node)"
+                 @key="node.Task.Id"
+                 @ref="_rowRefs[node.Task.Id]"
+                 role="row"
+                 aria-level="@(node.Depth + 1)"
+                 aria-expanded="@(node.Children.Count > 0 ? (node.Task.IsExpanded ? "true" : "false") : null)"
+                 aria-selected="@(Owner.SelectedTask?.Id == node.Task.Id ? "true" : "false")"
+                 tabindex="@(node.Task.Id == focusRowId ? 0 : -1)"
+                 data-testid="@TestId($"tree-row-{node.Task.Id}")"
+                 draggable="true"
+                 @onfocus="() => Owner.NoteRowFocus(node.Task.Id)"
+                 @onkeydown="e => Owner.HandleRowKeyDownAsync(e, node)"
+                 @onkeyup="e => Owner.HandleRowKeyUpAsync(e, node)"
+                 @onclick="() => Owner.SelectTaskAsync(node.Task)"
+                 @oncontextmenu="e => Owner.ShowContextMenu(e, node.Task)"
+                 @oncontextmenu:preventDefault
+                 @ondragstart="() => Owner.OnDragStart(node.Task)"
+                 @ondragover="e => Owner.OnDragOver(node.Task, e)"
+                 @ondragover:preventDefault
+                 @ondragleave="Owner.OnDragLeave"
+                 @ondrop="() => Owner.OnDropAsync(node.Task)">
+
+                @if (Owner.AllowBulkSelect)
+                {
+                    <span class="tm-gantt__tree-cell tm-gantt__tree-cell--checkbox" role="gridcell" @onclick:stopPropagation @onkeydown:stopPropagation="true" @onkeyup:stopPropagation="true">
+                        <input type="checkbox" data-testid="@TestId($"bulk-select-{node.Task.Id}")"
+                               checked="@Owner._selectedTaskIds.Contains(node.Task.Id)"
+                               @onchange="e => Owner.ToggleBulkSelect(node.Task.Id, (bool)e.Value!)" />
+                    </span>
+                }
+
+                @foreach (var col in Owner.EffectiveColumns.Where(c => c.Visible))
+                {
+                    @if (col.Key == GanttColumnKey.WBS)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--wbs" role="gridcell"
+                              data-testid="@TestId("wbs-number")">@node.WbsNumber</span>
+                    }
+                    else if (col.Key == GanttColumnKey.Title)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" role="gridcell" style="padding-left: @(node.Depth * 20)px">
+                            <span class="tm-gantt__drag-handle">
+                                <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
+                            </span>
+                            @if (node.Children.Count > 0)
+                            {
+                                <button type="button" class="tm-gantt__expand-btn" tabindex="-1" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onkeyup:stopPropagation="true" @onclick="() => Owner.ToggleExpandAsync(node.Task)"
+                                        aria-label="@(node.Task.IsExpanded ? Loc["TmGantt_CollapseTask", node.Task.Title] : Loc["TmGantt_ExpandTask", node.Task.Title])"
+                                        aria-expanded="@(node.Task.IsExpanded ? "true" : "false")">
+                                    <TmIcon Name="@(node.Task.IsExpanded ? "chevron-down" : "chevron-right")" />
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="tm-gantt__expand-spacer"></span>
+                            }
+                            @if (node.Task.IsMilestone)
+                            {
+                                <TmIcon Name="diamond" Class="tm-gantt__milestone-icon" />
+                            }
+                            <span class="tm-gantt__priority-icon @GetPriorityIconClass(node.Task.Priority)"
+                                  data-testid="@TestId("priority-icon")"
+                                  title="@Loc[$"GanttPriority_{node.Task.Priority}"]"></span>
+
+                            @if (Owner._inlineEditTaskId == node.Task.Id && Owner._inlineEditColumn == GanttColumnKey.Title)
+                            {
+                                <input class="tm-gantt__inline-edit"
+                                       data-testid="@TestId("inline-edit-input")"
+                                       value="@Owner._inlineEditValue"
+                                       @onclick:stopPropagation
+                                       @onkeydown:stopPropagation="true"
+                                       @onkeyup:stopPropagation="true"
+                                       @onchange="e => Owner._inlineEditValue = e.Value?.ToString() ?? string.Empty"
+                                       @onkeydown="Owner.HandleInlineEditKeyDownAsync"
+                                       @onblur="Owner.CommitInlineEditAsync" />
+                            }
+                            else
+                            {
+                                <span class="tm-gantt__task-title"
+                                      data-testid="@TestId($"tree-cell-title-{node.Task.Id}")"
+                                      @ondblclick:stopPropagation
+                                      @ondblclick="() => Owner.StartInlineEdit(node.Task.Id, GanttColumnKey.Title, node.Task.Title)">
+                                    @if (Owner.ViewSettings.WbsInTitle)
+                                    {
+                                        <span class="tm-gantt__task-wbs">@node.WbsNumber</span>
+                                    }
+                                    @node.Task.Title
+                                </span>
+                                @if (node.Task.Attachments.Count > 0)
+                                {
+                                    <span class="tm-gantt__inline-badge tm-gantt__inline-badge--attachment"
+                                          data-testid="@TestId($"attachment-count-{node.Task.Id}")"
+                                          title="@node.Task.Attachments.Count @Loc["GanttTask_Attachments"]">
+                                        <TmIcon Name="paperclip" Size="IconSize.Xs" />
+                                        @node.Task.Attachments.Count
+                                    </span>
+                                }
+                                @if (node.Task.Comments.Count > 0)
+                                {
+                                    <span class="tm-gantt__inline-badge tm-gantt__inline-badge--comment"
+                                          data-testid="@TestId($"comment-count-{node.Task.Id}")"
+                                          title="@node.Task.Comments.Count @Loc["GanttTask_Comments"]">
+                                        <TmIcon Name="message-circle" Size="IconSize.Xs" />
+                                        @node.Task.Comments.Count
+                                    </span>
+                                }
+                                @* Overloaded assignee icon (F5.1.5) *@
+                                @if (Owner._overloadedAssigneeIds.Count > 0 &&
+                                     node.Task.Assignees.Any(a => Owner._overloadedAssigneeIds.Contains(a.Id)))
+                                {
+                                    @foreach (var ol in node.Task.Assignees.Where(a => Owner._overloadedAssigneeIds.Contains(a.Id)))
+                                    {
+                                        <span class="tm-gantt__overload-icon"
+                                              data-testid="@($"overload-icon-{ol.Id}")"
+                                              title="@Loc["TmGantt_Overloaded"]">
+                                            <TmIcon Name="alert-triangle" Size="IconSize.Xs" />
+                                        </span>
+                                    }
+                                }
+                            }
+                        </span>
+                    }
+                    else if (col.Key == GanttColumnKey.Status)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--status" role="gridcell">
+                            <TmGanttStatusChip Status="node.Task.Status" ChipTestId="@TestId("status-badge")" />
+                        </span>
+                    }
+                    else if (col.Key == GanttColumnKey.Start)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow" role="gridcell">
+                            @node.Task.Start.ToString("dd.MM.yyyy")
+                            @if (Owner.ActiveBaselineId is not null && Owner._baselinePositions.ContainsKey(node.Task.Id))
+                            {
+                                var bt = Owner.Baselines.FirstOrDefault(b => b.Id == Owner.ActiveBaselineId)
+                                                  ?.Tasks.FirstOrDefault(t => t.TaskId == node.Task.Id);
+                                var devDays = bt is not null ? (int)(node.Task.Start - bt.Start).TotalDays : 0;
+                                <span class="tm-gantt__deviation-badge @(devDays > 0 ? "tm-gantt__deviation-badge--late" : "tm-gantt__deviation-badge--early")"
+                                      data-testid="@TestId($"deviation-badge-{node.Task.Id}")"
+                                      title="@Loc["TmGantt_BaselineDeviation"]">
+                                    @(devDays > 0 ? "+" : "")@devDays d
+                                </span>
+                            }
+                        </span>
+                    }
+                    else if (col.Key == GanttColumnKey.End)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow" role="gridcell">@node.Task.End.ToString("dd.MM.yyyy")</span>
+                    }
+                    else if (col.Key == GanttColumnKey.Progress)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow" role="gridcell">
+                            <div class="tm-gantt__progress-mini">
+                                <div class="tm-gantt__progress-mini-fill" style="width: @(node.Task.PercentComplete)%"></div>
+                            </div>
+                            <span class="tm-gantt__progress-mini-label">@(node.Task.PercentComplete)%</span>
+                        </span>
+                    }
+                    else if (col.Key == GanttColumnKey.Duration)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--narrow" role="gridcell"
+                              data-testid="@TestId($"tree-cell-duration-{node.Task.Id}")">@DurationText(node.Task)</span>
+                    }
+                    else if (col.Key == GanttColumnKey.Priority)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__tree-cell--priority" role="gridcell"
+                              data-testid="@TestId($"tree-cell-priority-{node.Task.Id}")">
+                            <span class="tm-gantt__priority-glyph @GetPriorityGlyphClass(node.Task.Priority)" aria-hidden="true">
+                                <TmIcon Name="@GetPriorityGlyph(node.Task.Priority)" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-gantt__priority-text">@Loc[$"GanttPriority_{node.Task.Priority}"]</span>
+                        </span>
+                    }
+                }
+
+                @foreach (var cf in Owner.CustomFields)
+                {
+                    var cfVal = node.Task.CustomFields.TryGetValue(cf.Id, out var v) ? v : null;
+                    @if (Owner._inlineEditTaskId == node.Task.Id && Owner._inlineEditCustomFieldId == cf.Id)
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__custom-field-cell" role="gridcell">
+                            <input class="tm-gantt__inline-edit" data-testid="@TestId("inline-edit-input")"
+                                   value="@Owner._inlineEditValue"
+                                   @onclick:stopPropagation
+                                   @onkeydown:stopPropagation="true"
+                                   @onkeyup:stopPropagation="true"
+                                   @oninput="e => Owner._inlineEditValue = e.Value?.ToString() ?? string.Empty"
+                                   @onchange="e => Owner._inlineEditValue = e.Value?.ToString() ?? string.Empty"
+                                   @onkeydown="Owner.HandleInlineEditKeyDownAsync"
+                                   @onblur="Owner.CommitCustomFieldEditAsync" />
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="tm-gantt__tree-cell tm-gantt__custom-field-cell" role="gridcell"
+                              data-testid="@TestId($"custom-cell-{cf.Id}-{node.Task.Id}")"
+                              @ondblclick:stopPropagation
+                              @ondblclick="() => Owner.StartCustomFieldInlineEdit(node.Task.Id, cf.Id, cfVal ?? string.Empty)">
+                            @cfVal
+                        </span>
+                    }
+                }
+            </div>
+        }
+    </div>
+  </div>
+
+    <!-- Bulk toolbar -->
+    @if (Owner.AllowBulkSelect && Owner._selectedTaskIds.Count > 0)
+    {
+        <div class="tm-gantt__bulk-toolbar">
+            <span class="tm-gantt__bulk-toolbar-count">@Owner._selectedTaskIds.Count @Loc["TmGantt_BulkSelected"]</span>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                      OnClick="() => Owner.ExecuteBulkStatusUpdateAsync(TmWorkItemStatus.Done)"
+                      data-testid="@TestId("bulk-status-done")">
+                @Loc["TmGantt_BulkMarkDone"]
+            </TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                      OnClick="() => Owner.ExecuteBulkStatusUpdateAsync(TmWorkItemStatus.InProgress)"
+                      data-testid="@TestId("bulk-status-inprogress")">
+                @Loc["TmGantt_BulkMarkInProgress"]
+            </TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                      OnClick="Owner.ClearBulkSelection"
+                      data-testid="@TestId("bulk-clear")">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </TmButton>
+        </div>
+    }
+</div>

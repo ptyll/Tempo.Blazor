@@ -123,6 +123,50 @@
     color: var(--tm-text-tertiary);
 }
 
+/* Mobile cards. The compound selector outranks the desktop grid above (same file, later, higher
+   specificity) — a bare --card rule in _scheduler.css lost to that grid and the title collapsed
+   to 0. Compact group body is one column: the sticky day header sits above the cards. */
+.tm-scheduler-agenda-group-body:has(.tm-scheduler-agenda-event--card) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.tm-scheduler-agenda-date.tm-scheduler-agenda-date--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    width: auto;
+    flex-direction: row;
+    gap: var(--tm-space-2);
+    background: var(--tm-bg-surface);
+}
+
+.tm-scheduler-agenda-event.tm-scheduler-agenda-event--card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "dot time chevron"
+        "dot title chevron"
+        "dot desc chevron";
+    align-items: center;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+}
+
+.tm-scheduler-agenda-event--card .tm-scheduler-agenda-event-dot { grid-area: dot; margin-top: 0; }
+.tm-scheduler-agenda-event--card .tm-scheduler-agenda-event-time { grid-area: time; min-width: 0; }
+.tm-scheduler-agenda-event--card .tm-scheduler-agenda-event-title {
+    grid-area: title;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tm-scheduler-agenda-event--card .tm-scheduler-agenda-event-desc { grid-area: desc; min-width: 0; }
+.tm-scheduler-agenda-event--card .tm-scheduler-agenda-event-chevron { grid-area: chevron; color: var(--tm-text-tertiary); }
+
 .tm-scheduler-agenda-empty {
     display: flex;
     align-items: center;

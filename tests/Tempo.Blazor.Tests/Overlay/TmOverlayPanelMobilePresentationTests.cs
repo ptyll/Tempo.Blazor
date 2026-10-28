@@ -329,6 +329,45 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void MobilePresentationSheet_SheetInitialFocusSelector_IsForwarded()
+    {
+        // The listbox role can live on an inner element, so the panel root carries none. The sheet
+        // must still open on the consumer's chosen control rather than the header Done button.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.SheetInitialFocusSelector, ".tm-multiselect__options[role='listbox']")
+            .Add(c => c.Title, "Fruits")
+            .AddChildContent("<div role='listbox' class='tm-multiselect__options' tabindex='0'><div role='option'>Apple</div></div>"));
+
+        cut.Find(".tm-overlay-panel-sheet__content").GetAttribute("role").Should().BeNull();
+        cut.Find(".tm-focus-scope").GetAttribute("data-initial-focus-selector")
+            .Should().Be(".tm-multiselect__options[role='listbox']");
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_SheetTitle_NamesTheHeader_AndDoesNotRenameThePopover()
+    {
+        // SheetTitle is the visible sheet heading and the drawer name. It must not become the
+        // popover's aria-label — that stays Title / AriaLabel.
+        var sheet = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.SheetTitle, "Favorite fruits")
+            .AddChildContent("<div>Body</div>"));
+
+        sheet.Find(".tm-overlay-panel-sheet__title").TextContent.Should().Be("Favorite fruits");
+        sheet.Find(".tm-focus-scope").GetAttribute("aria-label").Should().Be("Favorite fruits");
+
+        var popover = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.SheetTitle, "Favorite fruits")
+            .AddChildContent("<div>Body</div>"));
+
+        popover.Find(".tm-overlay-panel").GetAttribute("aria-label").Should().BeNull();
+    }
+
+    [Fact]
     public void MobilePresentationSheet_ShowsGrabberWhileSwipeToDismissIsOn()
     {
         var cut = Render<TmOverlayPanel>(p => p

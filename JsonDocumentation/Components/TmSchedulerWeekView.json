@@ -76,6 +76,12 @@
       "description": "Fires when an event is moved or resized."
     },
     {
+      "name": "OnAnnounced",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
+    },
+    {
       "name": "OnSlotContextMenu",
       "type": "EventCallback<SchedulerSlotContext>",
       "isRequired": false,
@@ -92,6 +98,25 @@
       "type": "IReadOnlyList<TmScheduleResource>?",
       "isRequired": false,
       "description": "Resources for grouping columns."
+    },
+    {
+      "name": "ShowDateStrip",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the date strip and shows the focused day with its neighbours. The mobile layout sets it."
+    },
+    {
+      "name": "FocusedDay",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The day the strip focuses. Defaults to CurrentDate."
+    },
+    {
+      "name": "FocusedDayChanged",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires when the strip picks a day."
     },
     {
       "name": "EventTemplate",

@@ -1,5 +1,6 @@
 @page "/gantt"
 @using Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Components.Toolbar
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Abstractions.Shared
 @inject IHttpClientFactory HttpFactory
@@ -64,7 +65,10 @@ else
         @ToggleChip("Overdue Highlight",     _showOverdueHighlight,    v => _showOverdueHighlight = v,    "bg-orange-600")
         @ToggleChip("Bulk Select",           _allowBulkSelect,         v => _allowBulkSelect = v,         "bg-teal-600")
         @ToggleChip("Dep. Creation",         _allowDependencyCreation, v => _allowDependencyCreation = v, "bg-pink-600")
+        @ToggleChip("Panel tabs",            _tabsMode,                v => _tabsMode = v,               "bg-cyan-600")
+        @ToggleChip("Toolbar labels",        _toolbarLabels,           v => _toolbarLabels = v,          "bg-lime-600")
         @ToggleChip("Adv. Context Menu", _viewSettings.ShowAdvancedContextButtons, v => { _viewSettings.ShowAdvancedContextButtons = v; }, "bg-amber-600")
+        @ToggleChip("Progress %", _viewSettings.ShowProgressLabel, v => { _viewSettings.ShowProgressLabel = v; }, "bg-indigo-600")
     </div>
 
     <!-- ── Active Timer Banner ────────────────────────────────── -->
@@ -101,6 +105,9 @@ else
                  NotificationSettings="@_notificationSettings"
                  ShowTaskPanel="true"
                  ShowSidebar="true"
+                 SidebarMode="@(_tabsMode ? GanttSidebarMode.Tabs : GanttSidebarMode.Rail)"
+                 ToolbarLabels="@(_toolbarLabels ? ToolbarLabels.IconsWithText : ToolbarLabels.Icons)"
+                 ShowQuickSearch="@_toolbarLabels"
                  ShowWorkloadPanel="@_showWorkloadPanel"
                  WorkloadDisplayMode="@_workloadMode"
                  ShowCriticalPath="@_showCriticalPath"
@@ -125,7 +132,12 @@ else
                  OnVirtualResourceAdded="@HandleVirtualResourceAdded"
                  OnResourceCalendarChanged="@HandleResourceCalendarChanged"
                  OnStatusChanged="@HandleStatusChanged"
-                 OnBulkUpdate="@HandleBulkUpdate" />
+                 OnBulkUpdate="@HandleBulkUpdate"
+                 OnColumnsChanged="@HandleColumnsChanged">
+            <HeaderStart>
+                <span class="text-lg font-semibold text-slate-900 dark:text-white" data-testid="gantt-demo-project-name">Project Aurora</span>
+            </HeaderStart>
+        </TmGantt>
     </section>
 
     <!-- ── Info Cards ─────────────────────────────────────────── -->
@@ -302,7 +314,7 @@ else
 
     // ── View / Feature state ──────────────────────────────────────
     private GanttView             _view                    = GanttView.Week;
-    private GanttViewSettings     _viewSettings            = new() { ShowAvatarsOnChart = true, ShowTodayMarker = true, ShowDaysOff = true, ShowAdvancedContextButtons = true };
+    private GanttViewSettings     _viewSettings            = new() { ShowAvatarsOnChart = true, ShowTodayMarker = true, ShowDaysOff = true, ShowAdvancedContextButtons = true, WbsInTitle = true };
     private TmWorkItem?            _selectedTask;
     private string?               _activeBaselineId;
     private WorkloadDisplayMode   _workloadMode            = WorkloadDisplayMode.Hours;
@@ -312,20 +324,25 @@ else
     private bool                  _showOverdueHighlight    = true;
     private bool                  _allowBulkSelect         = true;
     private bool                  _allowDependencyCreation = true;
+    private bool                  _tabsMode                = true;
+    private bool                  _toolbarLabels           = true;
 
     private IReadOnlyList<GanttFilter> _filters = [];
 
     private IReadOnlyList<GanttColumnDefinition> _columns =
     [
-        new() { Key = GanttColumnKey.WBS,        Visible = true,  Order = 0, Width = 50 },
+        // The reference grid: Name | Status | Start | End, plus Duration and Priority (the column menu in the
+        // toolbar toggles any of them). Assignees / Estimation are accepted by the model and not rendered.
+        new() { Key = GanttColumnKey.WBS,        Visible = false, Order = 0, Width = 50 },
         new() { Key = GanttColumnKey.Title,      Visible = true,  Order = 1 },
         new() { Key = GanttColumnKey.Status,     Visible = true,  Order = 2, Width = 90 },
         new() { Key = GanttColumnKey.Start,      Visible = true,  Order = 3, Width = 90 },
         new() { Key = GanttColumnKey.End,        Visible = true,  Order = 4, Width = 90 },
-        new() { Key = GanttColumnKey.Progress,   Visible = true,  Order = 5, Width = 80 },
-        new() { Key = GanttColumnKey.Assignees,  Visible = true,  Order = 6, Width = 90 },
-        new() { Key = GanttColumnKey.Priority,   Visible = false, Order = 7, Width = 80 },
-        new() { Key = GanttColumnKey.Estimation, Visible = false, Order = 8, Width = 70 },
+        new() { Key = GanttColumnKey.Duration,   Visible = true,  Order = 5, Width = 80 },
+        new() { Key = GanttColumnKey.Priority,   Visible = true,  Order = 6, Width = 80 },
+        new() { Key = GanttColumnKey.Progress,   Visible = false, Order = 7, Width = 80 },
+        new() { Key = GanttColumnKey.Assignees,  Visible = false, Order = 8, Width = 90 },
+        new() { Key = GanttColumnKey.Estimation, Visible = false, Order = 9, Width = 70 },
     ];
 
     private TmNotificationPreferences _notificationSettings = new()
@@ -575,6 +592,12 @@ else
     {
         _filters = filters;
         Log($"Filters changed: {filters.Count} active");
+    }
+
+    private void HandleColumnsChanged(IReadOnlyList<GanttColumnDefinition> columns)
+    {
+        _columns = columns;
+        Log($"Columns changed: {string.Join(", ", columns.Where(c => c.Visible).Select(c => c.Key))}");
     }
 
     private void HandleViewSettingsChanged(GanttViewSettings settings)

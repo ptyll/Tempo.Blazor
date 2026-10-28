@@ -1,0 +1,21 @@
+{
+  "itemName": "TmGanttPanelTabs",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the horizontal text tab strip (SidebarMode = Tabs) that selects the Tasks / Workload / History / Notifications / Reports panel. Place TmGantt, not this component.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPanelTabs.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Owner",
+      "type": "TmGantt",
+      "isRequired": false,
+      "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+    }
+  ]
+}

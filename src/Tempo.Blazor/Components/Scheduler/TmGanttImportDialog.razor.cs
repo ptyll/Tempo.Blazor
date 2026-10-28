@@ -139,8 +139,21 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// The Import action needs something to import: a chosen file on the Excel / MS Project tabs, or the
+    /// URL, token and project key on the JIRA tab. It used to stay enabled and silently return.
+    /// </summary>
+    private bool CanImport => !_isImporting && _tab switch
+    {
+        ImportTab.Jira => !string.IsNullOrWhiteSpace(_jiraUrl)
+                          && !string.IsNullOrWhiteSpace(_jiraToken)
+                          && !string.IsNullOrWhiteSpace(_jiraProject),
+        _ => _selectedFile is not null,
+    };
+
     private async Task ImportAsync()
     {
+        if (!CanImport) return;
         _errorMessage = null;
         _isImporting = true;
         try
@@ -148,7 +161,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             IReadOnlyList<TmWorkItem> tasks;
             if (_tab == ImportTab.Excel)
             {
-                if (_selectedFile is null) return;
                 if (ResolveGanttExcelImporterType() is not { } importerType)
                 {
                     // Already-localized guidance — this path never reaches the exception
@@ -157,13 +169,12 @@ public partial class TmGanttImportDialog : IAsyncDisposable
                     await OnImportError.InvokeAsync(_errorMessage);
                     return;
                 }
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var stream = _selectedFile!.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 tasks = ImportExcelTasks(stream, importerType);
             }
             else if (_tab == ImportTab.Mpp)
             {
-                if (_selectedFile is null) return;
-                using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+                using var stream = _selectedFile!.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
                 tasks = GanttMppImporter.Import(stream);
             }
             else

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 
@@ -54,8 +56,38 @@ public partial class TmMultiSelect<TItem, TValue>
     /// <summary>Label shown above the component.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>
+    /// When true, <see cref="Label"/> is not rendered as a visible <c>&lt;label&gt;</c>. It stays the
+    /// accessible name of the trigger and of the popup, unless <see cref="AriaLabel"/> overrides it.
+    /// Default false, so an existing multi-select still shows its label.
+    /// </summary>
+    [Parameter] public bool HideLabel { get; set; }
+
+    /// <summary>
+    /// Accessible name of the trigger and of the popup. Null falls back to <see cref="Label"/>, which
+    /// is what every existing multi-select announces.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
     /// <summary>Placeholder text when no items are selected.</summary>
     [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>
+    /// How the option popup presents on a narrow viewport. Default
+    /// <see cref="PanelPresentation.Popover"/>, the anchored popup at every width, so an existing
+    /// multi-select is unchanged. <see cref="PanelPresentation.Auto"/> follows
+    /// <see cref="LayoutMode"/>: a content-height bottom sheet on mobile (the F3 sheet), the anchored
+    /// popup otherwise.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
+
+    /// <summary>
+    /// The layout <see cref="MobilePresentation"/> resolves from. <see cref="TmLayoutMode.Auto"/>
+    /// follows the viewport scope; a forced value never measures, so a test can render a mode
+    /// without a DOM. Ignored unless <see cref="MobilePresentation"/> is
+    /// <see cref="PanelPresentation.Auto"/>.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Validation error message.</summary>
     [Parameter] public string? Error { get; set; }
@@ -97,6 +129,10 @@ public partial class TmMultiSelect<TItem, TValue>
     [Parameter] public bool Required { get; set; }
 
     // ── Accessibility ────────────────────────────────────────────
+
+    /// <summary>The name the trigger and the popup announce: <see cref="AriaLabel"/>, else the label.</summary>
+    private string? EffectiveAriaLabel => !string.IsNullOrEmpty(AriaLabel) ? AriaLabel : Label;
+
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
     private string ErrorId => $"{Id}-error";
     private string HelpId => $"{Id}-help";
@@ -277,7 +313,60 @@ public partial class TmMultiSelect<TItem, TValue>
     // aria-activedescendant target for the currently-highlighted option. The
     // option ids are generated in RenderOption as "{Id}-opt-{visible index}".
     private string? ActiveOptionId =>
-        _isOpen && _focusedIndex >= 0 ? $"{Id}-opt-{_focusedIndex}" : null;
+        HasListbox && _focusedIndex >= 0 && _focusedIndex < VisibleCount
+            ? $"{Id}-opt-{_focusedIndex}"
+            : null;
+
+    /// <summary>
+    /// The options container exists only while options render. Every idref that names it
+    /// (aria-controls, aria-activedescendant) is omitted otherwise, so a closed, empty,
+    /// loading or error popup never points at an id that is not in the document.
+    /// </summary>
+    private bool HasListbox => _isOpen && !_isLoading && !_hasError && VisibleCount > 0;
+
+    private int VisibleCount => GetVisibleItems().Count();
+
+    private string? ListboxIdRef => HasListbox ? $"{Id}-listbox" : null;
+
+    private string? ListboxAriaLabel => string.IsNullOrEmpty(EffectiveAriaLabel) ? null : EffectiveAriaLabel;
+
+    private string? ListboxLabelledBy =>
+        ListboxAriaLabel is null && !string.IsNullOrEmpty(Id) ? Id : null;
+
+    /// <summary>
+    /// Sheet mode with no filter has no focusable control inside the popup, so the listbox
+    /// itself is the tab stop and carries aria-activedescendant. Everywhere else the combobox
+    /// or the filter owns that relationship and the listbox stays out of the tab order.
+    /// </summary>
+    private bool ListboxIsSheetTabStop => !AllowFiltering && IsSheetPresentation;
+
+    /// <summary>
+    /// The sheet decision follows the panel, not this component's <see cref="LayoutMode"/>
+    /// parameter. With <see cref="PanelPresentation.Auto"/> and <see cref="TmLayoutMode.Auto"/> the
+    /// parameter stays Auto while the panel resolves Mobile from the viewport cascade; reading the
+    /// parameter left the listbox without a tab stop on a real phone.
+    /// </summary>
+    private bool IsSheetPresentation => _panel?.IsSheet
+        ?? (MobilePresentation == PanelPresentation.Sheet
+            || (MobilePresentation == PanelPresentation.Auto && LayoutMode == TmLayoutMode.Mobile));
+
+    private TmOverlayPanel? _panel;
+
+    private Task OnPanelLayoutResolved(TmLayoutMode _)
+    {
+        // The panel reports a resolved layout only after it changes, so the listbox attributes
+        // (tabindex, aria-activedescendant) catch up on the next render.
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private string? ListboxTabIndex => ListboxIsSheetTabStop ? "0" : null;
+
+    private bool ListboxOwnsActiveDescendant => ListboxIsSheetTabStop;
+
+    private string? SheetFocusSelector => AllowFiltering
+        ? ".tm-multiselect__filter-input"
+        : ".tm-multiselect__options[role='listbox']";
 
     private string GetItemId(TItem item)
     {
@@ -327,7 +416,7 @@ public partial class TmMultiSelect<TItem, TValue>
         if (_isOpen)
         {
             _filterText = string.Empty;
-            _focusedIndex = -1;
+            _focusedIndex = ListboxIsSheetTabStop && VisibleCount > 0 ? 0 : -1;
             // The filter focus is armed from OnOpened (HandlePanelOpened) — once overlay.js
             // open() ran showPopover() — not here: this render's OnAfterRenderAsync can run
             // before the panel is displayed, and the move is dropped (UX review round 2, m3).
@@ -447,7 +536,10 @@ public partial class TmMultiSelect<TItem, TValue>
         if (!open)
             await OnClose.InvokeAsync();
         else
+        {
+            _focusedIndex = ListboxIsSheetTabStop && VisibleCount > 0 ? 0 : -1;
             await OnOpen.InvokeAsync();
+        }
     }
 
     // ── Filtering ────────────────────────────────────────────────

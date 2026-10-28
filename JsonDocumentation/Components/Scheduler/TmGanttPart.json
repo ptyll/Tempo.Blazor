@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "Scheduler",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "description": "Internal base of the pieces TmGantt is composed of (TmGanttToolbar, TmGanttTree, TmGanttTimeline, TmGanttSidebar), hidden from the editor. All Gantt state stays in TmGantt; a part reads it through Owner and draws its slice of the DOM. A part forwards its events to the owner, and the tree and the timeline skip a render pass in which nothing they draw changed. A host places TmGantt, never a part.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPart.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Owner",
+      "kind": "Property",
+      "type": "TmGantt",
+      "description": "The Gantt this part belongs to. Internal: TmGantt passes itself; a host never sets it."
+    }
+  ],
+  "itemName": "TmGanttPart"
+}

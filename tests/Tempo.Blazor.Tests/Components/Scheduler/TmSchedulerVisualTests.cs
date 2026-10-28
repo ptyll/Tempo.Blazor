@@ -40,10 +40,10 @@ public class TmSchedulerVisualTests : LocalizationTestBase
         prev.TextContent.Should().NotContain("‹");
         next.TextContent.Should().NotContain("›");
 
-        cut.Find("[data-testid='scheduler-more'] button").Click();
+        cut.Find("button.tm-toolbar-more").Click();
         var print = cut.Find("[data-testid='scheduler-print']");
         print.InnerHtml.Should().Contain("svg", "print is an icon button; the label stays in the accessible name");
-        print.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        print.TextContent.Should().Contain("Print");
 
         cut.Find(".tm-scheduler-toolbar-views [role='tablist']").Should().NotBeNull();
     }
@@ -246,8 +246,17 @@ public class TmSchedulerVisualTests : LocalizationTestBase
             .Add(c => c.Events, events)
             .Add(c => c.Resources, resources));
 
-        cut.Find(".tm-scheduler-timeline-event-title").TextContent.Should().Contain("Workshop");
-        cut.Find(".tm-scheduler-timeline-event-time").TextContent.Should().NotBeNullOrWhiteSpace();
+        var card = cut.Find(".tm-scheduler-timeline-event");
+        var title = card.QuerySelector(".tm-scheduler-timeline-event-title");
+        var time = card.QuerySelector(".tm-scheduler-timeline-event-time");
+        title.Should().NotBeNull();
+        time.Should().NotBeNull();
+        title!.TextContent.Should().Contain("Workshop");
+        time!.TextContent.Should().NotBeNullOrWhiteSpace();
+        title.ParentElement!.ClassName.Should().Contain("tm-scheduler-timeline-event");
+        time.ParentElement!.ClassName.Should().Contain("tm-scheduler-timeline-event");
+        card.QuerySelector(".tm-scheduler-event-content").Should().BeNull(
+            "the default timeline card has no content wrapper");
     }
 
     [Fact]
@@ -378,12 +387,20 @@ public class TmSchedulerVisualTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Templated_Events_Ellipsize_Inside_A_Content_Wrapper()
+    public void Templated_Event_Is_Not_Wrapped_In_Ellipsis_Content()
     {
-        RenderFragment<TmScheduleEvent> template = e => builder => builder.AddContent(0, e.Title);
+        // A host template renders directly into the card. The ellipsis wrapper clipped a multi-line
+        // template to one line; the host that wants ellipsis puts it on its own markup.
+        RenderFragment<TmScheduleEvent> template = e => builder =>
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "host-template");
+            builder.AddContent(2, e.Title);
+            builder.CloseElement();
+        };
         var events = new List<TmScheduleEvent>
         {
-            Evt("A very long templated title that must ellipsize", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0))
+            Evt("A very long templated title that must not be clipped", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0))
         };
 
         var grid = Render<TmSchedulerTimeGrid>(p => p
@@ -392,9 +409,13 @@ public class TmSchedulerVisualTests : LocalizationTestBase
             .Add(c => c.EventTemplate, template));
         var timed = grid.Find(".tm-scheduler-timegrid-event");
         timed.GetAttribute("title").Should().Be(events[0].Title);
-        var wrapper = timed.QuerySelector(".tm-scheduler-event-content");
-        wrapper.Should().NotBeNull();
-        timed.QuerySelector("[data-resize-edge]")?.ParentElement?.ClassName.Should().NotContain("tm-scheduler-event-content");
+        timed.QuerySelector(".tm-scheduler-event-content").Should().BeNull(
+            "the template is not wrapped in the ellipsis span");
+        timed.QuerySelector(".tm-sr-only").Should().NotBeNull("the accessible name stays");
+        timed.QuerySelector(".host-template").Should().NotBeNull();
+        timed.QuerySelector(".host-template")!.ParentElement!.ClassName.Should().Contain("tm-scheduler-timegrid-event");
+        timed.QuerySelector("[data-resize-edge]").Should().NotBeNull();
+        timed.QuerySelector("[data-resize-edge]")!.ParentElement!.ClassName.Should().Contain("tm-scheduler-timegrid-event");
 
         var timeline = Render<TmSchedulerTimelineView>(p => p
             .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
@@ -402,8 +423,56 @@ public class TmSchedulerVisualTests : LocalizationTestBase
             .Add(c => c.EventTemplate, template)
             .Add(c => c.ReadOnly, false));
         var bar = timeline.Find(".tm-scheduler-timeline-event");
-        bar.QuerySelector(".tm-scheduler-event-content").Should().NotBeNull();
+        bar.QuerySelector(".tm-scheduler-event-content").Should().BeNull();
+        bar.QuerySelector(".tm-sr-only").Should().NotBeNull();
+        bar.QuerySelector(".host-template")!.ParentElement!.ClassName.Should().Contain("tm-scheduler-timeline-event");
         bar.QuerySelector("[data-resize-edge='left']").Should().NotBeNull();
+        bar.GetAttribute("title").Should().Be(events[0].Title);
+    }
+
+    [Fact]
+    public void Default_Timeline_Event_Has_Time_And_Title_As_Card_Children()
+    {
+        // No template: the time and the title are direct children of the card, each with its own
+        // ellipsis. The shared wrapper is a host opt-in, never added by the default branch.
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Built-in title", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0))
+        };
+
+        var grid = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, events));
+        var card = grid.Find(".tm-scheduler-timegrid-event");
+        card.QuerySelector(".tm-scheduler-timegrid-event-title").Should().NotBeNull();
+        card.QuerySelector(".tm-scheduler-event-content").Should().BeNull(
+            "the time-grid default never used the shared wrapper");
+
+        var timeline = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Events, events));
+        var bar = timeline.Find(".tm-scheduler-timeline-event");
+        var time = bar.QuerySelector(".tm-scheduler-timeline-event-time");
+        var title = bar.QuerySelector(".tm-scheduler-timeline-event-title");
+        time.Should().NotBeNull();
+        title.Should().NotBeNull();
+        time!.ParentElement!.ClassName.Should().Contain("tm-scheduler-timeline-event");
+        title!.ParentElement!.ClassName.Should().Contain("tm-scheduler-timeline-event");
+        bar.QuerySelector(".tm-scheduler-event-content").Should().BeNull(
+            "the default timeline card has no content wrapper");
+    }
+
+    [Fact]
+    public void Compact_TimeGrid_Gives_A_Host_Template_MinWidth_Zero()
+    {
+        // A compact card is a row. A host template root must be allowed to shrink, or a long
+        // title overflows the bar. The rule excludes the accessible name and the resize handles.
+        var css = Css("_scheduler-timegrid.css");
+        var rule = Rule(css,
+            ".tm-scheduler-timegrid-event.tm-scheduler-event--compact > :not(.tm-sr-only):not(.tm-scheduler-event-resize-handle)");
+        rule.Should().Contain("min-width: 0");
+        css.Should().Contain(".tm-scheduler-timegrid-event .tm-scheduler-event-content");
+        Css("_scheduler-timeline.css").Should().Contain(".tm-scheduler-timeline-event .tm-scheduler-event-content");
     }
 
     [Fact]

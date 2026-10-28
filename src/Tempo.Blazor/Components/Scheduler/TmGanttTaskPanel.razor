@@ -19,7 +19,8 @@
                 <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
                           OnClick="() => OnClose.InvokeAsync()"
                           data-testid="@TestId("task-panel-close")"
-                          Title="@Loc["TmGanttTaskPanel_Close"]">
+                          Title="@Loc["TmGanttTaskPanel_Close"]"
+                          AriaLabel="@Loc["TmGanttTaskPanel_Close"]">
                     <TmIcon Name="x" Size="IconSize.Sm" />
                 </TmButton>
             }
@@ -99,6 +100,8 @@
                             class="tm-gantt__panel-color-swatch @(_editColor == hex ? "tm-gantt__panel-color-swatch--selected" : "")"
                             style="background-color: @hex"
                             title="@hex"
+                            aria-label="@($"{Loc["TmGanttTaskPanel_Color"]} {hex}")"
+                            aria-pressed="@(_editColor == hex ? "true" : "false")"
                             @onclick="() => _editColor = _editColor == hex ? null : hex"
                             @onclick:stopPropagation></button>
                 }
@@ -136,6 +139,7 @@
                             <a href="@att.Url" target="_blank" class="tm-gantt-task-panel__attachment-link">@att.FileName</a>
                             <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
                                       OnClick="() => RemoveAttachmentAsync(att.Id)"
+                                      AriaLabel="@($"{Loc["TmGantt_RemoveAttachment"]}: {att.FileName}")"
                                       data-testid="@($"attachment-remove-{att.Id}")">
                                 <TmIcon Name="x" Size="IconSize.Xs" />
                             </TmButton>
@@ -266,6 +270,7 @@
                         <span>@GetDependencyLabel(dep)</span>
                         <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
                                   OnClick="() => PromptRemoveDependency(dep.Id)"
+                                  AriaLabel="@Loc["TmGanttTaskPanel_RemoveDependency", GetDependencyLabel(dep)]"
                                   data-testid="@($"task-dep-remove-{dep.Id}")">
                             <TmIcon Name="x" />
                         </TmButton>

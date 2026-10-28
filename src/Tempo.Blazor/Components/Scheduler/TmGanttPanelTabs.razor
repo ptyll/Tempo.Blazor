@@ -1,0 +1,29 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
+
+@* SidebarMode = Tabs: the Tasks / Workload / History / Notifications / Reports panels as a text tab strip above the
+   chart (ARIA tablist; roving tabindex; arrow keys, Home and End move the selection and the focus together). The
+   Tasks tab is the Gantt itself; the other four open the same drawer the icon rail opens (TmGanttSidebar). *@
+@if (Owner.ShowSidebar && Owner.SidebarMode == GanttSidebarMode.Tabs)
+{
+    <div class="tm-gantt__panel-tabs" role="tablist" aria-label="@Loc["TmGantt_PanelTabs"]"
+         data-testid="@TestId("gantt-panel-tabs")" @onkeydown="HandleTabKeyDown">
+        @foreach (var panel in TabPanels)
+        {
+            var selected = IsTabSelected(panel);
+            <button type="button" role="tab" @ref="_tabRefs[panel]"
+                    id="@Owner.TabDomId(panel)"
+                    aria-controls="@Owner.PanelDomId(panel)"
+                    class="tm-gantt__panel-tab @(selected ? "tm-gantt__panel-tab--active" : "")"
+                    aria-selected="@(selected ? "true" : "false")"
+                    tabindex="@(selected ? 0 : -1)"
+                    data-testid="@TestId($"panel-tab-{panel.ToString().ToLowerInvariant()}")"
+                    @onclick="() => SelectTab(panel)">
+                <TmIcon Name="@TabIcon(panel)" Size="IconSize.Sm" />
+                <span>@Loc[TabLabelKey(panel)]</span>
+            </button>
+        }
+    </div>
+}

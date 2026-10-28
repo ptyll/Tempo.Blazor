@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Models;
@@ -47,6 +48,39 @@ public class TmMultiSelectTests : LocalizationTestBase
             .Add(c => c.Label, "Fruits"));
 
         cut.Find("label.tm-input-label").TextContent.Trim().Should().Be("Fruits");
+    }
+
+    [Fact]
+    public void TmMultiSelect_HideLabel_Keeps_The_Name_And_Drops_The_Label()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.HideLabel, true));
+
+        cut.FindAll("label").Should().BeEmpty("HideLabel is the additive opt-out of the visible label");
+        cut.Find(".tm-multiselect").GetAttribute("aria-label").Should().Be("Fruits");
+        cut.Find(".tm-multiselect").Click();
+        cut.Find(".tm-multiselect__options").GetAttribute("aria-label").Should().Be("Fruits",
+            "the listbox keeps the label as its accessible name");
+    }
+
+    [Fact]
+    public void TmMultiSelect_AriaLabel_Names_The_Trigger_And_The_Popup()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.AriaLabel, "Choose fruits"));
+
+        cut.Find("label.tm-input-label").TextContent.Trim().Should().Be("Fruits");
+        cut.Find(".tm-multiselect").GetAttribute("aria-label").Should().Be("Choose fruits");
+        cut.Find(".tm-multiselect").Click();
+        cut.Find(".tm-multiselect__options").GetAttribute("aria-label").Should().Be("Choose fruits");
     }
 
     [Fact]
@@ -444,6 +478,191 @@ public class TmMultiSelectTests : LocalizationTestBase
 
         cut.Find("[role='combobox']").GetAttribute("aria-expanded").Should().Be("true");
         cut.Find("[role='listbox']").Should().NotBeNull();
+    }
+
+    // A listbox may own only options. The filter, header, select-all and footer stay siblings of
+    // the options container; the popup root keeps display:flex and must not carry the role.
+    [Fact]
+    public void Popup_Listbox_Role_Sits_On_The_Options_Container()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.ShowSelectAll, true)
+            .Add(c => c.ShowConfirmButton, true));
+
+        cut.Find(".tm-multiselect").Click();
+
+        var popup = cut.Find(".tm-multiselect__popup");
+        popup.GetAttribute("role").Should().BeNull();
+        popup.GetAttribute("aria-multiselectable").Should().BeNull();
+        popup.GetAttribute("id").Should().NotBe("fruits-listbox");
+
+        var listbox = cut.Find(".tm-multiselect__options");
+        listbox.GetAttribute("role").Should().Be("listbox");
+        listbox.GetAttribute("aria-multiselectable").Should().Be("true");
+        listbox.GetAttribute("id").Should().Be("fruits-listbox");
+        listbox.GetAttribute("aria-label").Should().Be("Fruits");
+
+        cut.Find("[role='combobox']").GetAttribute("aria-controls").Should().Be("fruits-listbox");
+        cut.Find("[role='combobox']").HasAttribute("aria-owns").Should().BeFalse(
+            "aria-owns names an id that is absent while the popup is closed");
+        cut.Find(".tm-multiselect__filter-input").GetAttribute("aria-controls").Should().Be("fruits-listbox");
+        listbox.QuerySelectorAll("[role='option']").Should().NotBeEmpty();
+
+        popup.QuerySelector(":scope > .tm-multiselect__filter").Should().NotBeNull();
+        popup.QuerySelector(":scope > .tm-multiselect__select-all").Should().NotBeNull();
+        popup.QuerySelector(":scope > .tm-multiselect__footer").Should().NotBeNull();
+        listbox.QuerySelector(".tm-multiselect__filter").Should().BeNull();
+        listbox.QuerySelector(".tm-multiselect__footer").Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("empty")]
+    [InlineData("nomatch")]
+    public void Open_Without_Options_Does_Not_Point_At_A_Missing_Listbox(string kind)
+    {
+        var items = kind == "empty" ? [] : FruitOptions;
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, items)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+        if (kind == "nomatch")
+            cut.Find(".tm-multiselect__filter-input").Input("zzzz");
+
+        cut.FindAll("[role='listbox']").Should().BeEmpty();
+        var combo = cut.Find("[role='combobox']");
+        combo.HasAttribute("aria-controls").Should().BeFalse();
+        combo.HasAttribute("aria-owns").Should().BeFalse();
+        combo.HasAttribute("aria-activedescendant").Should().BeFalse();
+        cut.Find(".tm-multiselect__filter-input").HasAttribute("aria-controls").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Grouped_Listbox_Owns_Only_Named_Groups()
+    {
+        var items = new List<SelectOption<string>>
+        {
+            SelectOption<string>.From("apple", "Apple"),
+            SelectOption<string>.From("banana", "Banana"),
+            SelectOption<string>.From("carrot", "Carrot"),
+            SelectOption<string>.From("", "No group")
+        };
+
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "food")
+            .Add(c => c.Label, "Food")
+            .Add(c => c.Items, items)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.ValueField, o => o.Value)
+            .Add(c => c.GroupField, o => string.IsNullOrEmpty(o.Value) ? null : o.Label[0].ToString()));
+
+        cut.Find(".tm-multiselect").Click();
+
+        var listbox = cut.Find("[role='listbox']");
+        foreach (var child in listbox.Children)
+            child.GetAttribute("role").Should().BeOneOf("group", "option");
+
+        var groups = listbox.QuerySelectorAll("[role='group']");
+        groups.Should().NotBeEmpty();
+        foreach (var group in groups)
+        {
+            var labelledBy = group.GetAttribute("aria-labelledby");
+            labelledBy.Should().NotBeNullOrWhiteSpace();
+            cut.Find($"#{labelledBy}").GetAttribute("role").Should().Be("presentation");
+        }
+
+        listbox.QuerySelectorAll("[role='option']").Should().HaveCount(items.Count);
+    }
+
+    [Fact]
+    public void Unnamed_Listbox_Falls_Back_To_The_Trigger()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "plain")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+
+        var listbox = cut.Find("[role='listbox']");
+        listbox.HasAttribute("aria-label").Should().BeFalse();
+        listbox.GetAttribute("aria-labelledby").Should().Be("plain");
+    }
+
+    [Fact]
+    public void Sheet_Without_Filtering_Focuses_The_Listbox_Not_Done()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.AllowFiltering, false)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.Find(".tm-focus-scope").GetAttribute("data-initial-focus-selector")
+            .Should().Be(".tm-multiselect__options[role='listbox']");
+        var listbox = cut.Find("[role='listbox']");
+        listbox.GetAttribute("tabindex").Should().Be("0");
+        listbox.HasAttribute("aria-activedescendant").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Auto_On_A_Mobile_Viewport_Focuses_The_Listbox()
+    {
+        // MobilePresentation=Auto + LayoutMode=Auto used to read the parameter, which stays Auto,
+        // so a real phone (the panel resolved Mobile from the viewport cascade) never put tabindex
+        // or aria-activedescendant on the listbox. The listbox follows the panel's resolved layout.
+        var viewport = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile);
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.AllowFiltering, false)
+            .Add(c => c.MobilePresentation, PanelPresentation.Auto)
+            .Add(c => c.LayoutMode, TmLayoutMode.Auto)
+            .AddCascadingValue(TmLayoutScopes.Viewport, viewport));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.FindComponent<TmOverlayPanel>().Instance.IsSheet.Should().BeTrue(
+            "Auto on a mobile viewport cascade is the sheet");
+        var listbox = cut.Find("[role='listbox']");
+        listbox.GetAttribute("tabindex").Should().Be("0");
+        listbox.HasAttribute("aria-activedescendant").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Sheet_With_A_Label_Shows_That_Title_Not_Menu()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Label, "Fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.Find(".tm-overlay-panel-sheet__title").TextContent.Should().Be("Fruits");
+        cut.Find(".tm-focus-scope").GetAttribute("aria-label").Should().NotBe("Menu");
     }
 
     // ── Keyboard activation ────────────────────────────────────────────────

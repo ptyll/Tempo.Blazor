@@ -1,0 +1,28 @@
+/* TmGanttStatusChip: the status chip (glyph + text) shared by the tree, the Board column headers and the dashboard. */
+
+/* ─── Status badge ─────────────────────────────────────────────── */
+
+.tm-gantt__status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 1px 6px;
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.tm-gantt__status-icon {
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.tm-gantt__status-badge--open       { background: var(--tm-status-open-bg);       color: var(--tm-status-open-fg); }
+
+.tm-gantt__status-badge--inprogress { background: var(--tm-status-inprogress-bg); color: var(--tm-status-inprogress-fg); }
+
+.tm-gantt__status-badge--done       { background: var(--tm-status-done-bg);       color: var(--tm-status-done-fg); }
+
+.tm-gantt__status-badge--closed     { background: var(--tm-status-closed-bg);     color: var(--tm-status-closed-fg); }

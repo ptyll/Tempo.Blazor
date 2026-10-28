@@ -1,12 +1,21 @@
 @namespace Tempo.Blazor.Components.Scheduler
+@inherits Tempo.Blazor.Components.TmComponentBase
 @implements IAsyncDisposable
 @using Microsoft.Extensions.DependencyInjection
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @inject Microsoft.JSInterop.IJSRuntime JS
 
-<div class="tm-scheduler @Class" @ref="_rootRef">
-    <TmSchedulerToolbar View="@View"
+<TmLayoutObserver LayoutMode="EffectiveLayoutMode" IsContainer="false" Class="tm-scheduler-layout">
+<LayoutContent Context="mode">
+<div class="tm-scheduler @(mode.IsMobile ? "tm-scheduler--mobile" : mode.IsTablet ? "tm-scheduler--tablet" : "tm-scheduler--desktop") @Class" data-layout="@mode.CssModifier" @ref="_rootRef">
+    <TmSchedulerToolbar @ref="_toolbar" View="@View"
                         Views="@Views"
                         CurrentDate="@EffectiveDate"
                         RangeStart="@VisibleRange.Start"
@@ -16,6 +25,7 @@
                         Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
                         HeaderStart="@HeaderStart"
                         HeaderActions="@HeaderActions"
+                        ResourceFilter="@ResourceFilter(mode)"
                         OnViewChange="@HandleViewChange"
                         OnPrev="@NavigatePrev"
                         OnNext="@NavigateNext"
@@ -23,139 +33,58 @@
                         OnDatePicked="@NavigateToPickedDate"
                         ShowPrint="@AllowPrint"
                         OnPrint="@PrintAsync"
-                        InstanceId="@_instanceId" />
+                        InstanceId="@_instanceId"
+                        LayoutMode="@mode.Resolved"
+                        HasActionBar="@(MobileActionBar == TmSchedulerMobileActionBar.Auto && mode.IsMobile)" />
 
-    <div class="tm-scheduler-body"
-         role="@(ShowHeader ? "tabpanel" : null)"
-         id="@(ShowHeader ? $"tabpanel-{ToolbarTabId}" : null)"
-         aria-labelledby="@(ShowHeader ? $"tab-{ToolbarTabId}" : null)">
-        @switch (View)
-        {
-            case TmScheduleViewType.Month:
-                <TmSchedulerMonthView CurrentDate="@EffectiveDate"
-                                      Today="@TodayInDisplayZone()"
-                                      Events="@_loadedEvents"
-                                      MaxVisibleEvents="@MaxVisibleEvents"
-                                      FirstDayOfWeek="@NormalizedFirstDay"
-                                      MonthWeeks="@MonthWeeks"
-                                      ReadOnly="@ReadOnly"
-                                      ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
-                                      HighlightWeekends="@HighlightWeekends"
-                                      AllDayEventStyle="@AllDayEventStyle"
-                                      OnSlotClick="@HandleSlotClickAsync"
-                                      SelectedDate="@SelectedDate"
-                                      SelectedEvent="@SelectedEvent"
-                                      SelectedEventChanged="@HandleSelectedEventAsync"
-                                      OnEventClick="@OnEventClick"
-                                      OnEventChanged="@HandleEventChangedAsync"
-                                      OnSlotContextMenu="@OnSlotContextMenu"
-                                      OnEventContextMenu="@OnEventContextMenu"
-                                      OnMoreClick="@HandleMoreClickAsync"
-                                      CurrentDateChanged="@(CurrentDateChanged.HasDelegate ? HandleMonthKeyboardNavigateAsync : default)"
-                                      EventTemplate="@EventTemplate" />
-                break;
+    @if (ShowTouchHint)
+    {
+        <p class="tm-scheduler-touch-hint">@Loc["TmScheduler_TouchHint"]</p>
+    }
 
-            case TmScheduleViewType.Day:
-                <TmSchedulerDayView CurrentDate="@EffectiveDate"
-                                    Events="@_loadedEvents"
-                                    Resources="@Resources"
-                                    SlotDuration="@SlotDuration"
-                                    ReadOnly="@ReadOnly"
-                                    HideTimeGrid="@HideTimeGrid"
-                                    Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
-                                    HighlightWeekends="@HighlightWeekends"
-                                    AllDayEventStyle="@AllDayEventStyle"
-                                    WorkDayStart="@WorkDayStart"
-                                    WorkDayEnd="@WorkDayEnd"
-                                    ShowFullDay="@ShowFullDay"
-                                    HighlightOffHours="@HighlightOffHours"
-                                    ScrollToTime="@ScrollToTime"
-                                    ShowNowIndicator="@ShowNowIndicator"
-                                    TimeZone="@ResolveTimeZone()"
-                                    ResourceHeaderTemplate="@ResourceHeaderTemplate"
-                                    ShowEventResource="@ShowEventResource"
-                                    OnSlotClick="@HandleSlotClickAsync"
-                                    SelectedDate="@SelectedDate"
-                                    SelectedEvent="@SelectedEvent"
-                                    SelectedEventChanged="@HandleSelectedEventAsync"
-                                    OnEventClick="@OnEventClick"
-                                    OnEventChanged="@HandleEventChangedAsync"
-                                    OnSlotContextMenu="@OnSlotContextMenu"
-                                    OnEventContextMenu="@OnEventContextMenu"
-                                    EventTemplate="@EventTemplate" />
-                break;
-
-            case TmScheduleViewType.Week:
-                <TmSchedulerWeekView CurrentDate="@EffectiveDate"
-                                     Events="@_loadedEvents"
-                                     Resources="@Resources"
-                                     FirstDayOfWeek="@NormalizedFirstDay"
-                                     WeekDays="@WeekDays"
-                                     SlotDuration="@SlotDuration"
-                                     ReadOnly="@ReadOnly"
-                                     HideTimeGrid="@HideTimeGrid"
-                                     Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
-                                     HighlightWeekends="@HighlightWeekends"
-                                     AllDayEventStyle="@AllDayEventStyle"
-                                     WorkDayStart="@WorkDayStart"
-                                     WorkDayEnd="@WorkDayEnd"
-                                     ShowFullDay="@ShowFullDay"
-                                     HighlightOffHours="@HighlightOffHours"
-                                     ScrollToTime="@ScrollToTime"
-                                     ShowNowIndicator="@ShowNowIndicator"
-                                     TimeZone="@ResolveTimeZone()"
-                                     ResourceHeaderTemplate="@ResourceHeaderTemplate"
-                                     ShowEventResource="@ShowEventResource"
-                                     OnSlotClick="@HandleSlotClickAsync"
-                                     SelectedDate="@SelectedDate"
-                                     SelectedEvent="@SelectedEvent"
-                                     SelectedEventChanged="@HandleSelectedEventAsync"
-                                     OnEventClick="@OnEventClick"
-                                     OnEventChanged="@HandleEventChangedAsync"
-                                     OnSlotContextMenu="@OnSlotContextMenu"
-                                     OnEventContextMenu="@OnEventContextMenu"
-                                     EventTemplate="@EventTemplate" />
-                break;
-
-            case TmScheduleViewType.Agenda:
-                <TmSchedulerAgendaView CurrentDate="@EffectiveDate"
-                                       AgendaDays="@NormalizedAgendaDays"
-                                       Events="@_loadedEvents"
-                                       SelectedEvent="@SelectedEvent"
-                                       SelectedEventChanged="@HandleSelectedEventAsync"
-                                       OnEventClick="@OnEventClick"
-                                       EventTemplate="@EventTemplate" />
-                break;
-
-            case TmScheduleViewType.Timeline:
-                <TmSchedulerTimelineView CurrentDate="@EffectiveDate"
-                                         Events="@_loadedEvents"
-                                         Resources="@Resources"
-                                         SlotDuration="@SlotDuration"
-                                         ReadOnly="@ReadOnly"
-                                         WorkDayStart="@WorkDayStart"
-                                         WorkDayEnd="@WorkDayEnd"
-                                         ShowFullDay="@ShowFullDay"
-                                         HighlightOffHours="@HighlightOffHours"
-                                         ScrollToTime="@ScrollToTime"
-                                         ShowNowIndicator="@ShowNowIndicator"
-                                         TimeZone="@ResolveTimeZone()"
-                                         ResourceHeaderTemplate="@ResourceHeaderTemplate"
-                                         OnSlotClick="@HandleSlotClickAsync"
-                                         SelectedEvent="@SelectedEvent"
-                                         SelectedEventChanged="@HandleSelectedEventAsync"
-                                         OnEventClick="@OnEventClick"
-                                         OnEventChanged="@HandleEventChangedAsync"
-                                         OnSlotContextMenu="@OnSlotContextMenu"
-                                         OnEventContextMenu="@OnEventContextMenu"
-                                         EventTemplate="@EventTemplate" />
-                break;
-        }
-    </div>
+    @* The frame only exists to sit a docked panel beside the body. With both slots unset the body
+       stays a direct child of the scheduler, which is the markup a host had before. *@
+    @if (HasPanel)
+    {
+        <div class="tm-scheduler-frame">
+            @SchedulerBody(mode)
+            @if (PanelContent is not null)
+            {
+                @* Auto, never mode.Resolved. Passing the observer's resolved mode forces a layout, and a
+                   forced ancestor wins over the panel's own measurement — a narrow container would stay
+                   docked. The panel measures itself (container) and its sheet measures the viewport. *@
+                <TmSidePanel Presentation="SidePanelPresentation.Auto"
+                             Open="@PanelOpen"
+                             OpenChanged="HandlePanelOpenChanged"
+                             CloseOnEscape="true"
+                             Side="SidePanelSide.Right"
+                             Title="@PanelTitle"
+                             RestoreFocusTargetId="@null"
+                             Class="tm-scheduler-side-panel">
+                    @PanelContent
+                </TmSidePanel>
+            }
+        </div>
+    }
+    else
+    {
+        @SchedulerBody(mode)
+    }
+    <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
+    @if (MobileActionBar == TmSchedulerMobileActionBar.Auto && mode.IsMobile)
+    {
+        <TmMobileActionBar Items="@ActionBarItems(mode)"
+                           AriaLabel="@Loc["TmScheduler_ActionBar"]"
+                           Placement="ActionBarPlacement.StickyContainer"
+                           LayoutMode="TmLayoutMode.Mobile" />
+    }
 </div>
+</LayoutContent>
+</TmLayoutObserver>
 
 @code {
     private IReadOnlyList<TmScheduleEvent> _loadedEvents = [];
+    private string? _announcement;
 
     /// <summary>Service provider for the optional user-zone lookups (never a required dependency).</summary>
     [Inject] private IServiceProvider Services { get; set; } = default!;
@@ -204,6 +133,54 @@
 
     /// <summary>Fires when the user selects an event.</summary>
     [Parameter] public EventCallback<TmScheduleEvent?> SelectedEventChanged { get; set; }
+
+    /// <summary>
+    /// Host content for the right-hand panel. Rendered through the core <c>TmSidePanel</c>
+    /// (<c>Presentation = Auto</c>): docked on the right on desktop, a side sheet on tablet, a bottom
+    /// sheet on mobile. Null renders nothing, so the default markup is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? SidePanel { get; set; }
+
+    /// <summary>
+    /// Detail of the selected event, rendered in the same <c>TmSidePanel</c> as <see cref="SidePanel"/>.
+    /// An event click opens it; Escape (or the panel close) closes it and returns focus to that event.
+    /// The host supplies the body — the scheduler never invents attendees, RSVP or categories.
+    /// </summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventDetailTemplate { get; set; }
+
+    /// <summary>
+    /// Accessible title of the docked panel header when no event detail is showing. Null uses the
+    /// localized default (<c>TmSidePanel_DefaultTitle</c>, "Side panel"), so the header is never just
+    /// the close button. An open detail replaces it with <c>TmScheduler_EventDetail</c>.
+    /// </summary>
+    [Parameter] public string? SidePanelTitle { get; set; }
+
+    /// <summary>
+    /// Whether the side panel is open. Two-way with <see cref="SidePanelOpenChanged"/>. An event click
+    /// opens it when <see cref="EventDetailTemplate"/> is set; closing it clears that detail.
+    /// </summary>
+    [Parameter] public bool SidePanelOpen { get; set; }
+
+    /// <summary>Fires when the side panel opens or closes.</summary>
+    [Parameter] public EventCallback<bool> SidePanelOpenChanged { get; set; }
+
+    /// <summary>
+    /// Resource ids the views keep. An empty list (the default) keeps every resource and every event.
+    /// A non-empty list keeps Timeline rows, TimeGrid resource columns, and Month and Agenda events
+    /// whose <see cref="TmScheduleEvent.ResourceId"/> is in the list. A list whose ids match no known
+    /// resource is not a filter either: it keeps every event, so a stale selection hides nothing.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> SelectedResourceIds { get; set; } = [];
+
+    /// <summary>Fires when the built-in resource filter changes the selection.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> SelectedResourceIdsChanged { get; set; }
+
+    /// <summary>
+    /// When true, and <see cref="Resources"/> has entries, the toolbar offers the core resource filter
+    /// ("Resources ▾", <c>data-tm-group="filter"</c>). On mobile the popup is the F3 bottom sheet.
+    /// Default false, so an existing toolbar is unchanged.
+    /// </summary>
+    [Parameter] public bool ShowResourceFilter { get; set; }
 
     /// <summary>Fires when an empty time slot is clicked.</summary>
     [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
@@ -268,6 +245,28 @@
     [Parameter] public int MaxVisibleEvents { get; set; } = 3;
 
     /// <summary>
+    /// Maximum events shown in a month day cell on a mobile layout. Default: 1, so a phone cell keeps
+    /// one chip and the "+N more" link. Desktop and tablet keep <see cref="MaxVisibleEvents"/>.
+    /// </summary>
+    [Parameter] public int CompactMaxVisibleEvents { get; set; } = 1;
+
+    /// <summary>The cap a mobile month cell uses. A negative host value clamps to zero.</summary>
+    private int EffectiveCompactCap => Math.Max(0, CompactMaxVisibleEvents);
+
+    /// <summary>
+    /// Pins the scheduler's layout. <see cref="TmLayoutMode.Auto"/> measures the scheduler's own
+    /// container; a forced value renders that layout without a DOM measurement, which is what a test uses.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// The mobile action bar. <see cref="TmSchedulerMobileActionBar.None"/> (default) renders nothing,
+    /// so an existing host is unchanged. <see cref="TmSchedulerMobileActionBar.Auto"/> renders the bar
+    /// on a mobile layout only.
+    /// </summary>
+    [Parameter] public TmSchedulerMobileActionBar MobileActionBar { get; set; } = TmSchedulerMobileActionBar.None;
+
+    /// <summary>
     /// Fires when the "+N more" button of a month day cell is activated, with that day's date.
     /// Without a delegate the scheduler opens that day in the Day view, but only when the host binds
     /// both <c>@bind-View</c> and <c>@bind-CurrentDate</c>; with either binding missing the click is inert.
@@ -319,11 +318,61 @@
     /// <summary>When true, a timed event names its resource under the title.</summary>
     [Parameter] public bool ShowEventResource { get; set; }
 
-    /// <summary>Opens the browser print dialog; the scheduler's print stylesheet lays out the current view for paper.</summary>
+    /// <summary>
+    /// When true, a touch hint renders under the toolbar. It is visible only on a coarse pointer
+    /// with no hover (<c>(hover: none) and (pointer: coarse)</c>). Default false: a host opts in.
+    /// </summary>
+    [Parameter] public bool ShowTouchHint { get; set; }
+
+    /// <summary>
+    /// Opens the browser print dialog. Print always lays out the desktop view, even from a phone:
+    /// the observer is pinned to <see cref="TmLayoutMode.Desktop"/>, one render is awaited so the
+    /// desktop markup is in the DOM, then <c>window.print</c> runs and the pin is released.
+    /// </summary>
     public async Task PrintAsync()
     {
+        _printing = true;
+        var rendered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _printRendered = rendered;
+        StateHasChanged();
+        try
+        {
+            await rendered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        catch (TimeoutException)
+        {
+            // A test host, or a render that never reached OnAfterRender, must not hang the print.
+        }
+
         try { await JS.InvokeVoidAsync("window.print"); }
         catch { /* JS unavailable (e.g. tests) */ }
+        finally
+        {
+            _printing = false;
+            _printRendered = null;
+            StateHasChanged();
+        }
+    }
+
+    private bool _printing;
+    private TaskCompletionSource? _printRendered;
+    private TmSchedulerToolbar? _toolbar;
+    private DotNetObjectReference<TmScheduler>? _printRef;
+
+    /// <summary>The layout the observer measures, unless a print is forcing the desktop view.</summary>
+    private TmLayoutMode EffectiveLayoutMode => _printing ? TmLayoutMode.Desktop : LayoutMode;
+
+    /// <summary>
+    /// The browser's <c>beforeprint</c> / <c>afterprint</c> (wired by <c>scheduler.js</c>). Additive:
+    /// existing <c>[JSInvokable]</c> signatures on the views are unchanged. A host that calls
+    /// <see cref="PrintAsync"/> already pinned desktop, so this only covers Ctrl+P.
+    /// </summary>
+    [JSInvokable]
+    public Task OnPrintMediaAsync(bool printing)
+    {
+        _printing = printing;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -374,6 +423,31 @@
     protected override async Task OnParametersSetAsync()
     {
         await LoadEventsAsync();
+        ReconcileDetail();
+        ReconcileVisibleResource();
+    }
+
+    /// <summary>
+    /// A detail whose event is no longer among the visible events has nothing to show, so it closes.
+    /// The host panel stays: only the detail is cleared.
+    /// </summary>
+    private void ReconcileDetail()
+    {
+        if (_detailEventId is null) return;
+        if (VisibleEvents.Any(e => e.Id == _detailEventId)) return;
+        _detailOpen = false;
+        _detailEventId = null;
+    }
+
+    /// <summary>
+    /// A phone day shows one resource. When the filter drops the one it was showing, fall back to the
+    /// first resource the filter still keeps, so the picker never names a column the grid cannot show.
+    /// </summary>
+    private void ReconcileVisibleResource()
+    {
+        if (_visibleResourceId is null || VisibleResources is not { } visible) return;
+        if (visible.Any(r => r.Id == _visibleResourceId)) return;
+        _visibleResourceId = visible.FirstOrDefault()?.Id;
     }
 
     /// <summary>Re-renders once the user zone arrives (the browser probe is Server-only and one-shot).</summary>
@@ -382,9 +456,21 @@
     /// <summary>Triggers the one-time browser zone probe after the first interactive render.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _printRendered?.TrySetResult();
+
         if (firstRender)
         {
             _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, RefreshAfterZoneChange);
+            try
+            {
+                _printRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.attachPrintListener", _rootRef, _printRef);
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.claimEscape", _rootRef);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+            {
+                // Without the script Ctrl+P still prints; only the desktop pin is missing.
+            }
             if (_userZoneObserver is not null)
             {
                 await _userZoneObserver.ProbeAsync();
@@ -424,10 +510,15 @@
     public async ValueTask DisposeAsync()
     {
         _userZoneObserver?.Dispose();
-        if (!_scrollGuardAttached) return;
+        _printRef?.Dispose();
         try
         {
-            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachPrintListener", _rootRef);
+            await JS.InvokeVoidAsync("TempoBlazor.Scheduler.releaseEscape", _rootRef);
+            if (_scrollGuardAttached)
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.detachScrollGuard", _rootRef);
+            }
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
         {
@@ -437,8 +528,87 @@
 
     private readonly string _instanceId = "tm-sched-" + Guid.NewGuid().ToString("N");
     private string ToolbarTabId => $"{_instanceId}-{View}";
+
+    private string BodyLabel => SchedulerViewLabel.Of(Loc, View);
     private ElementReference _rootRef;
     private bool _scrollGuardAttached;
+
+    private IReadOnlyList<TmActionItem> ActionBarItems(TmLayoutContext mode)
+    {
+        var items = new List<TmActionItem>();
+        if (OnAddClick.HasDelegate)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "scheduler-add",
+                Label = Loc["TmScheduler_AddEvent"],
+                Icon = IconNames.Plus,
+                OnClick = OnAddClick,
+            });
+        }
+
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-today",
+            Label = Loc["TmScheduler_Today"],
+            Icon = IconNames.Target,
+            OnClick = EventCallback.Factory.Create(this, NavigateToday),
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-view",
+            Label = Loc["TmScheduler_ViewSwitcher"],
+            Icon = IconNames.Layers,
+            KeepMenuOpen = true,
+            OnClick = EventCallback.Factory.Create(this, OpenViewMenuAsync),
+        });
+        if (AllowPrint)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "scheduler-print",
+                Label = Loc["TmScheduler_Print"],
+                Icon = IconNames.Printer,
+                Overflow = ActionOverflow.Always,
+                Group = "more",
+                OnClick = EventCallback.Factory.Create(this, PrintAsync),
+            });
+        }
+
+        items.Add(new TmActionItem
+        {
+            Id = "scheduler-go-to-date",
+            Label = Loc["TmScheduler_GoToDate"],
+            Icon = IconNames.MapPin,
+            Overflow = ActionOverflow.Always,
+            Group = "more",
+            OnClick = EventCallback.Factory.Create(this, OpenDatePickerAsync),
+        });
+        return items;
+    }
+
+    private DateOnly? _stripDay;
+    private string? _visibleResourceId;
+    private bool _detailOpen;
+    private string? _detailEventId;
+
+    private DateOnly StripDay => _stripDay ?? DateOnly.FromDateTime(EffectiveDate);
+
+    private Task OpenViewMenuAsync() => _toolbar?.OpenViewMenuAsync() ?? Task.CompletedTask;
+
+    private Task OpenDatePickerAsync() => _toolbar?.OpenDatePickerAsync() ?? Task.CompletedTask;
+
+    private Task PickResourceAsync(string? id)
+    {
+        _visibleResourceId = id;
+        return Task.CompletedTask;
+    }
+
+    private Task PickStripDayAsync(DateOnly day)
+    {
+        _stripDay = day;
+        return SelectedDateChanged.InvokeAsync(day.ToDateTime(TimeOnly.MinValue));
+    }
 
     private async Task LoadEventsAsync()
     {
@@ -532,6 +702,19 @@
         Color = item.Color ?? item.StatusColor
     };
 
+    private async Task AnnounceAsync(string text)
+    {
+        // Clear first, so the same sentence announced twice is a new text node and is read again.
+        if (!string.IsNullOrEmpty(_announcement))
+        {
+            _announcement = null;
+            StateHasChanged();
+            await Task.Yield();
+        }
+        _announcement = text;
+        StateHasChanged();
+    }
+
     private async Task HandleEventChangedAsync(TmScheduleEvent e)
     {
         if (WorkItemSource is not null && WorkItemSource.Capabilities.HasFlag(TmWorkItemCapabilities.Update))
@@ -557,6 +740,27 @@
 
     /// <summary>The one range this render loads, titles and hands to the view.</summary>
     private SchedulerRangeOptions RangeOptions => new(NormalizedFirstDay, NormalizedAgendaDays, WeekDays, MonthWeeks);
+
+    /// <summary>
+    /// Events the views render. An empty <see cref="SelectedResourceIds"/> keeps every loaded event;
+    /// so does a selection that names no known resource (a stale selection is not a filter). Otherwise
+    /// a selection keeps only events whose resource is in it. An event with no resource stays, so a
+    /// filter never hides an unassigned appointment.
+    /// </summary>
+    private bool ResourceFilterActive => SelectedResourceIds is { Count: > 0 }
+        && Resources is { } known && known.Any(r => SelectedResourceIds.Contains(r.Id));
+
+    private IReadOnlyList<TmScheduleEvent> VisibleEvents => ResourceFilterActive
+        ? _loadedEvents.Where(e => e.ResourceId is null || SelectedResourceIds.Contains(e.ResourceId)).ToList()
+        : _loadedEvents;
+
+    /// <summary>
+    /// Resources the resource views render. An empty selection keeps the host list (including null,
+    /// which is what a view reads as "no resource grouping").
+    /// </summary>
+    private IReadOnlyList<TmScheduleResource>? VisibleResources => ResourceFilterActive && Resources is not null
+        ? Resources.Where(r => SelectedResourceIds.Contains(r.Id)).ToList()
+        : Resources;
 
     private (DateTime Start, DateTime End) VisibleRange
         => SchedulerRange.Visible(View, EffectiveDate, RangeOptions);
@@ -589,7 +793,295 @@
     }
 
     /// <summary>An event click selects it. The view already raised OnEventClick.</summary>
-    private Task HandleSelectedEventAsync(TmScheduleEvent? evt) => SelectedEventChanged.InvokeAsync(evt);
+    private async Task HandleSelectedEventAsync(TmScheduleEvent? evt)
+    {
+        if (evt is not null && EventDetailTemplate is not null)
+        {
+            _detailEventId = evt.Id;
+            _detailOpen = true;
+            if (SidePanelOpenChanged.HasDelegate)
+            {
+                await SidePanelOpenChanged.InvokeAsync(true);
+            }
+        }
+
+        await SelectedEventChanged.InvokeAsync(evt);
+    }
+
+    /// <summary>
+    /// True once a slot is set, which is the only time the frame and the panel render.
+    /// </summary>
+    private bool HasPanel => SidePanel is not null || EventDetailTemplate is not null;
+
+    private TmScheduleEvent? _detailEvent
+        => _detailEventId is null ? null : VisibleEvents.FirstOrDefault(e => e.Id == _detailEventId);
+
+    private bool PanelOpen => SidePanel is not null ? SidePanelOpen : _detailOpen && _detailEvent is not null;
+
+    /// <summary>
+    /// The docked header is never just the close button. An open detail names itself; otherwise the
+    /// host's <see cref="SidePanelTitle"/> wins over the localized default.
+    /// </summary>
+    private string? PanelTitle => _detailEvent is not null && EventDetailTemplate is not null
+        ? Loc["TmScheduler_EventDetail"]
+        : SidePanel is not null ? (SidePanelTitle ?? Loc["TmSidePanel_DefaultTitle"]) : null;
+
+    private RenderFragment SchedulerBody(TmLayoutContext mode) => @<div class="tm-scheduler-body"
+         role="@(ShowHeader && !mode.IsMobile ? "tabpanel" : null)"
+         id="@(ShowHeader && !mode.IsMobile ? $"tabpanel-{ToolbarTabId}" : null)"
+         aria-labelledby="@(ShowHeader && !mode.IsMobile ? $"tab-{ToolbarTabId}" : null)"
+         aria-label="@(mode.IsMobile ? BodyLabel : null)">
+        @switch (View)
+        {
+            case TmScheduleViewType.Month:
+                <TmSchedulerMonthView CurrentDate="@EffectiveDate"
+                                      Today="@TodayInDisplayZone()"
+                                      Events="@VisibleEvents"
+                                      MaxVisibleEvents="@(mode.IsMobile ? EffectiveCompactCap : MaxVisibleEvents)"
+                                      FirstDayOfWeek="@NormalizedFirstDay"
+                                      MonthWeeks="@MonthWeeks"
+                                      ReadOnly="@ReadOnly"
+                                      ShowAdjacentMonthEvents="@ShowAdjacentMonthEvents"
+                                      HighlightWeekends="@HighlightWeekends"
+                                      AllDayEventStyle="@AllDayEventStyle"
+                                      TimeZone="@ResolveTimeZone()"
+                                      OnSlotClick="@HandleSlotClickAsync"
+                                      SelectedDate="@SelectedDate"
+                                      SelectedEvent="@SelectedEvent"
+                                      SelectedEventChanged="@HandleSelectedEventAsync"
+                                      OnEventClick="@OnEventClick"
+                                      OnEventChanged="@HandleEventChangedAsync"
+                                      OnAnnounced="@AnnounceAsync"
+                                      OnSlotContextMenu="@OnSlotContextMenu"
+                                      OnEventContextMenu="@OnEventContextMenu"
+                                      OnMoreClick="@HandleMoreClickAsync"
+                                      CurrentDateChanged="@(CurrentDateChanged.HasDelegate ? HandleMonthKeyboardNavigateAsync : default)"
+                                      EventTemplate="@EventTemplate" />
+                break;
+            case TmScheduleViewType.Day:
+                <TmSchedulerDayView CurrentDate="@EffectiveDate"
+                                    Events="@VisibleEvents"
+                                    Resources="@VisibleResources"
+                                    VisibleResourceId="@_visibleResourceId"
+                                    VisibleResourceIdChanged="PickResourceAsync"
+                                    ShowResourcePicker="@mode.IsMobile"
+                                    SlotDuration="@SlotDuration"
+                                    ReadOnly="@ReadOnly"
+                                    HideTimeGrid="@HideTimeGrid"
+                                    Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                                    HighlightWeekends="@HighlightWeekends"
+                                    AllDayEventStyle="@AllDayEventStyle"
+                                    WorkDayStart="@WorkDayStart"
+                                    WorkDayEnd="@WorkDayEnd"
+                                    ShowFullDay="@ShowFullDay"
+                                    HighlightOffHours="@HighlightOffHours"
+                                    ScrollToTime="@ScrollToTime"
+                                    ShowNowIndicator="@ShowNowIndicator"
+                                    TimeZone="@ResolveTimeZone()"
+                                    ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                                    ShowEventResource="@ShowEventResource"
+                                    OnSlotClick="@HandleSlotClickAsync"
+                                    SelectedDate="@SelectedDate"
+                                    SelectedEvent="@SelectedEvent"
+                                    SelectedEventChanged="@HandleSelectedEventAsync"
+                                    OnEventClick="@OnEventClick"
+                                    OnEventChanged="@HandleEventChangedAsync"
+                                    OnAnnounced="@AnnounceAsync"
+                                    OnSlotContextMenu="@OnSlotContextMenu"
+                                    OnEventContextMenu="@OnEventContextMenu"
+                                    EventTemplate="@EventTemplate" />
+                break;
+            case TmScheduleViewType.Week:
+                <TmSchedulerWeekView CurrentDate="@EffectiveDate"
+                                     Events="@VisibleEvents"
+                                     Resources="@VisibleResources"
+                                     ShowDateStrip="@mode.IsMobile"
+                                     FocusedDay="@StripDay"
+                                     FocusedDayChanged="PickStripDayAsync"
+                                     FirstDayOfWeek="@NormalizedFirstDay"
+                                     WeekDays="@WeekDays"
+                                     SlotDuration="@SlotDuration"
+                                     ReadOnly="@ReadOnly"
+                                     HideTimeGrid="@HideTimeGrid"
+                                     Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                                     HighlightWeekends="@HighlightWeekends"
+                                     AllDayEventStyle="@AllDayEventStyle"
+                                     WorkDayStart="@WorkDayStart"
+                                     WorkDayEnd="@WorkDayEnd"
+                                     ShowFullDay="@ShowFullDay"
+                                     HighlightOffHours="@HighlightOffHours"
+                                     ScrollToTime="@ScrollToTime"
+                                     ShowNowIndicator="@ShowNowIndicator"
+                                     TimeZone="@ResolveTimeZone()"
+                                     ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                                     ShowEventResource="@ShowEventResource"
+                                     OnSlotClick="@HandleSlotClickAsync"
+                                     SelectedDate="@SelectedDate"
+                                     SelectedEvent="@SelectedEvent"
+                                     SelectedEventChanged="@HandleSelectedEventAsync"
+                                     OnEventClick="@OnEventClick"
+                                     OnEventChanged="@HandleEventChangedAsync"
+                                     OnAnnounced="@AnnounceAsync"
+                                     OnSlotContextMenu="@OnSlotContextMenu"
+                                     OnEventContextMenu="@OnEventContextMenu"
+                                     EventTemplate="@EventTemplate" />
+                break;
+            case TmScheduleViewType.Agenda:
+                <TmSchedulerAgendaView CurrentDate="@EffectiveDate"
+                                       AgendaDays="@NormalizedAgendaDays"
+                                       Compact="@mode.IsMobile"
+                                       Events="@VisibleEvents"
+                                       SelectedEvent="@SelectedEvent"
+                                       SelectedEventChanged="@HandleSelectedEventAsync"
+                                       OnEventClick="@OnEventClick"
+                                       EventTemplate="@EventTemplate" />
+                break;
+            case TmScheduleViewType.Timeline:
+                <TmSchedulerTimelineView CurrentDate="@EffectiveDate"
+                                         Events="@VisibleEvents"
+                                         Resources="@VisibleResources"
+                                         SlotDuration="@SlotDuration"
+                                         ReadOnly="@ReadOnly"
+                                         WorkDayStart="@WorkDayStart"
+                                         WorkDayEnd="@WorkDayEnd"
+                                         ShowFullDay="@ShowFullDay"
+                                         HighlightOffHours="@HighlightOffHours"
+                                         ScrollToTime="@ScrollToTime"
+                                         ShowNowIndicator="@ShowNowIndicator"
+                                         TimeZone="@ResolveTimeZone()"
+                                         ResourceHeaderTemplate="@ResourceHeaderTemplate"
+                                         OnSlotClick="@HandleSlotClickAsync"
+                                         SelectedEvent="@SelectedEvent"
+                                         SelectedEventChanged="@HandleSelectedEventAsync"
+                                         OnEventClick="@OnEventClick"
+                                         OnEventChanged="@HandleEventChangedAsync"
+                                         OnAnnounced="@AnnounceAsync"
+                                         OnSlotContextMenu="@OnSlotContextMenu"
+                                         OnEventContextMenu="@OnEventContextMenu"
+                                         EventTemplate="@EventTemplate" />
+                break;
+        }
+    </div>;
+
+    private RenderFragment? PanelContent
+    {
+        get
+        {
+            var detail = _detailEvent is { } shown && EventDetailTemplate is not null
+                ? EventDetailTemplate(shown)
+                : null;
+            if (SidePanel is null && detail is null) return null;
+            var closeId = TestId("scheduler-close-detail");
+            return @<div @onkeydown="HandleDetailEscapeAsync">
+                @SidePanel
+                @if (detail is not null)
+                {
+                    @detail
+                    <button type="button" class="tm-scheduler-close-detail" data-testid="@closeId"
+                            @onclick="CloseDetailAsync">@Loc["TmScheduler_CloseDetail"]</button>
+                }
+            </div>;
+        }
+    }
+
+    /// <summary>
+    /// The detail's own close. It clears the detail and returns focus to the event. With a host
+    /// <see cref="SidePanel"/> the panel stays open; without one the detail was the panel, so it closes.
+    /// </summary>
+    private async Task HandleDetailEscapeAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseDetailAsync();
+    }
+
+    private async Task CloseDetailAsync()
+    {
+        var returning = _detailEvent;
+        _detailOpen = false;
+        _detailEventId = null;
+        if (returning is not null)
+        {
+            await ReturnFocusToEventAsync(returning);
+        }
+
+        if (SidePanel is null && SidePanelOpenChanged.HasDelegate)
+        {
+            await SidePanelOpenChanged.InvokeAsync(false);
+        }
+    }
+
+    private async Task HandlePanelOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            var returning = _detailEvent;
+            _detailOpen = false;
+            _detailEventId = null;
+            if (returning is not null)
+            {
+                await ReturnFocusToEventAsync(returning);
+            }
+        }
+
+        if (SidePanelOpenChanged.HasDelegate)
+        {
+            await SidePanelOpenChanged.InvokeAsync(open);
+        }
+    }
+
+    private async Task ReturnFocusToEventAsync(TmScheduleEvent evt)
+    {
+        if (_rootRef.Context is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "TempoBlazor.Scheduler.focusRovingStop",
+                _rootRef,
+                $"[data-event-id=\"{evt.Id}\"]");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// The toolbar's resource filter. Null unless the host asked for it and named some resources,
+    /// so the default toolbar groups are unchanged. The popup is the multi-select's own overlay:
+    /// anchored on desktop and tablet, the F3 bottom sheet on mobile.
+    /// </summary>
+    private RenderFragment? ResourceFilter(TmLayoutContext mode) => ShowResourceFilter && Resources is { Count: > 0 }
+        ? BuildResourceFilter(mode)
+        : null;
+
+    private const string _resourceFilterTestId = "scheduler-resource-filter";
+
+    private RenderFragment BuildResourceFilter(TmLayoutContext mode)
+    {
+        var resources = Resources ?? [];
+        return @<text>
+        <TmMultiSelect TItem="TmScheduleResource" TValue="string"
+                       Items="@resources"
+                       Values="@SelectedResourceIds"
+                       ValuesChanged="HandleResourceFilterChanged"
+                       DisplayField="@(r => r.Name)"
+                       ValueField="@(r => r.Id)"
+                       Mode="MultiSelectMode.CheckBox"
+                       Placeholder="@ResourceFilterText"
+                       Label="@Loc["TmScheduler_Resources"]"
+                       HideLabel="true"
+                       MobilePresentation="PanelPresentation.Auto"
+                       LayoutMode="@mode.Resolved"
+                       data-testid="@_resourceFilterTestId"
+                       Class="tm-scheduler-resource-filter" />
+        </text>;
+    }
+
+    private Task HandleResourceFilterChanged(IReadOnlyList<string> ids)
+        => SelectedResourceIdsChanged.InvokeAsync(ids);
+
+    /// <summary>The trigger text: every resource, or how many the host selected.</summary>
+    private string ResourceFilterText => SelectedResourceIds is { Count: > 0 }
+        ? Loc["TmScheduler_NSelected", SelectedResourceIds.Count]
+        : Loc["TmScheduler_AllResources"];
 
     private async Task NavigateToday()
     {

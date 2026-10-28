@@ -21,14 +21,10 @@ public partial class TmGanttHistoryDrawer
     /// <summary>Fires when the drawer should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private string GetChangeTypeLabel(string changeType) => changeType switch
-    {
-        "TaskChanged"       => Loc["GanttHistory_TaskChanged"],
-        "StatusChanged"     => Loc["GanttHistory_StatusChanged"],
-        "PriorityChanged"   => Loc["GanttHistory_PriorityChanged"],
-        "DependencyChanged" => Loc["GanttHistory_DependencyChanged"],
-        _                   => changeType
-    };
+    /// <summary>Zone the entry timestamps are shown in. Defaults to the machine's local zone (<see cref="TimeZoneInfo.Local"/>); <see cref="TmGantt"/> passes the user's display zone.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
+    private string GetChangeTypeLabel(string changeType) => GanttLabels.ChangeType(Loc, changeType);
 
     private async Task TimeTravelAsync(DateTimeOffset timestamp) =>
         await OnTimeTravelRequested.InvokeAsync(timestamp.UtcDateTime);

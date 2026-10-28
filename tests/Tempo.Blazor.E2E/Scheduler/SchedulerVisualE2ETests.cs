@@ -115,7 +115,7 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
             await page.Keyboard.PressAsync("Escape");
             await Assertions.Expect(toolbar.Locator(".tm-calendar-view")).ToBeHiddenAsync();
 
-            var more = toolbar.Locator("[data-testid='scheduler-more'] button");
+            var more = toolbar.Locator("button.tm-toolbar-more");
             await ParkBelowHeaderAsync(page, toolbar.Locator(".tm-scheduler-toolbar"));
             await more.ClickAsync();
             await page.WaitForTimeoutAsync(400);

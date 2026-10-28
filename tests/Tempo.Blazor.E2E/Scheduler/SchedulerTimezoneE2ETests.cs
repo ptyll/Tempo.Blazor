@@ -6,12 +6,16 @@ namespace Tempo.Blazor.E2E.Scheduler;
 /// <summary>
 /// E2E for TmScheduler K3 on the Scheduler demo page (WASM demo at 7106): timezone display
 /// (Europe/Prague vs America/New_York), a valid ICS download, and the print-media layout.
-/// Screenshots land in <c>__screenshots__/scheduler/</c> for UX review.
+/// Committed shots in <c>__screenshots__/scheduler/</c> are rewritten only with
+/// <c>TM_E2E_UPDATE_BASELINE=1</c>; otherwise they land in the git-ignored TestResults folder.
 /// </summary>
 [TestClass]
 public class SchedulerTimezoneE2ETests : WasmTestBase
 {
     private const string SchedulerPage = "/scheduler";
+
+    private static bool UpdateBaseline =>
+        string.Equals(Environment.GetEnvironmentVariable("TM_E2E_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
 
     private async Task<IPage> OpenAsync()
     {
@@ -79,8 +83,10 @@ public class SchedulerTimezoneE2ETests : WasmTestBase
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {
-        var dir = Path.Combine(FindRepoRoot().FullName,
-            "tests", "Tempo.Blazor.E2E", "__screenshots__", "scheduler");
+        var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E",
+            UpdateBaseline
+                ? Path.Combine("__screenshots__", "scheduler")
+                : Path.Combine("TestResults", "scheduler"));
         Directory.CreateDirectory(dir);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(dir, $"{fileName}.png"), FullPage = true });
     }

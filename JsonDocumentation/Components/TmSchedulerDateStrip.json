@@ -1,0 +1,35 @@
+{
+  "itemName": "TmSchedulerDateStrip",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "The mobile week strip. It offers the week's days as buttons; the selected day is aria-pressed and today carries aria-current=date. TmScheduler renders it in the week view on a mobile layout.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Dates",
+      "type": "IReadOnlyList<DateOnly>?",
+      "isRequired": false,
+      "description": "The days the strip offers, in order."
+    },
+    {
+      "name": "SelectedDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The selected day. The matching button is aria-pressed."
+    },
+    {
+      "name": "Today",
+      "type": "DateOnly",
+      "isRequired": false,
+      "description": "Today. The matching button gets aria-current=date."
+    },
+    {
+      "name": "OnDateSelected",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires with the day the user picked."
+    }
+  ]
+}

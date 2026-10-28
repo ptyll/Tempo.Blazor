@@ -3015,6 +3015,12 @@
               "description": "Disables both the primary and dropdown buttons."
             },
             {
+              "name": "Icon",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional icon (an IconNames value) shown before the text of the primary button."
+            },
+            {
               "name": "IsLoading",
               "type": "bool",
               "isRequired": false,
@@ -3034,6 +3040,12 @@
               "description": "Fires when the primary button is clicked."
             },
             {
+              "name": "PrimaryAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional HTML attributes for the primary action button (a data-testid, an aria-label); AdditionalAttributes still lands on the root element."
+            },
+            {
               "name": "SheetTitle",
               "type": "string?",
               "isRequired": false,
@@ -3051,6 +3063,12 @@
               "isRequired": true,
               "description": "Text label on the primary button.",
               "editorRequired": true
+            },
+            {
+              "name": "ToggleAriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the chevron button that opens the menu. When null (default) the attribute is omitted; set it so the icon-only toggle has a name."
             },
             {
               "name": "Variant",
@@ -7738,6 +7756,12 @@
               "description": "The user-visible label. Names the rendered button and stays fully in the DOM."
             },
             {
+              "name": "MenuTestId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The same host test id, rendered as data-menu-testid on the More entry when the bar button still owns data-testid (a collapsed Secondary, for example). Empty renders no attribute. A test that must match exactly one [data-testid] with More open keys the menu copy off this instead."
+            },
+            {
               "name": "OnClick",
               "kind": "Property",
               "type": "EventCallback",
@@ -7754,6 +7778,12 @@
               "kind": "Property",
               "type": "int",
               "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
+            },
+            {
+              "name": "TestId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Host test id copied onto the overflow entry as data-testid. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute."
             }
           ],
           "properties": [
@@ -7903,6 +7933,24 @@
           ]
         },
         {
+          "itemName": "TmGanttPart",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal base of the pieces TmGantt is composed of (TmGanttToolbar, TmGanttTree, TmGanttTimeline, TmGanttSidebar), hidden from the editor. All Gantt state stays in TmGantt; a part reads it through Owner and draws its slice of the DOM. A part forwards its events to the owner, and the tree and the timeline skip a render pass in which nothing they draw changed. A host places TmGantt, never a part.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPart.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Owner",
+              "kind": "Property",
+              "type": "TmGantt",
+              "description": "The Gantt this part belongs to. Internal: TmGantt passes itself; a host never sets it."
+            }
+          ]
+        },
+        {
           "itemName": "TmPickerFetchState",
           "kind": "Enum",
           "category": "Components",
@@ -7988,6 +8036,16 @@
               "description": "Whether the search found results (Ok), found none (Empty), or failed transiently (Transient)."
             }
           ]
+        },
+        {
+          "itemName": "TmSchedulerMobileActionBar",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Whether TmScheduler renders the mobile action bar. None (the default) renders nothing, so an existing host is unchanged. Auto renders the bar on a mobile layout only.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerMobileActionBar.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "TmSignatureCaptureChangedEventArgs",
@@ -10279,7 +10337,8 @@
             {
               "name": "Class",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Additional CSS class(es)."
             },
             {
               "name": "Columns",
@@ -10291,6 +10350,13 @@
               "name": "Disabled",
               "type": "bool",
               "isRequired": false
+            },
+            {
+              "name": "IconOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the toggle as an icon only (the localized label stays its accessible name and tooltip) - for a toolbar that shows no button text.",
+              "default": "false"
             },
             {
               "name": "OnReset",
@@ -17574,7 +17640,7 @@
           "kind": "Component",
           "category": "Inputs",
           "namespace": "Tempo.Blazor.Components.Inputs",
-          "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+          "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. role=listbox, aria-multiselectable and the stable {Id}-listbox id live on div.tm-multiselect__options, and only while options render. The combobox and the filter point at that id with aria-controls only then; neither emits aria-owns. Loading, error and empty states are siblings (role=status or role=alert). A grouped listbox owns role=group children, each named by its header; an empty group key announces the localized \"Other\". With no Label and no AriaLabel the listbox is named by aria-labelledby pointing at the combobox. A mobile sheet takes SheetTitle from that same name, and initial focus lands on the filter, or on the listbox itself when filtering is off.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmMultiSelect.razor",
           "documentationStatus": "merged",
@@ -17606,6 +17672,12 @@
               "isRequired": false,
               "default": "true",
               "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the trigger and of the popup. Null falls back to Label."
             },
             {
               "name": "Class",
@@ -17695,6 +17767,13 @@
               "description": "Help text shown below when no error is present."
             },
             {
+              "name": "HideLabel",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Label is not rendered as a visible label. It stays the accessible name of the trigger and of the popup. Default false, so an existing multi-select still shows its label.",
+              "default": "false"
+            },
+            {
               "name": "HideSelectedItems",
               "type": "bool",
               "isRequired": false,
@@ -17730,7 +17809,14 @@
               "name": "Label",
               "type": "string?",
               "isRequired": false,
-              "description": "Label shown above the component."
+              "description": "Label shown above the component. Also the accessible name of the trigger and of the popup, unless AriaLabel overrides it."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout MobilePresentation resolves from. A forced value never measures. Ignored unless MobilePresentation is Auto."
             },
             {
               "name": "LoadingMessage",
@@ -17743,6 +17829,13 @@
               "type": "int",
               "isRequired": false,
               "description": "Maximum selectable items. 0 = unlimited."
+            },
+            {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the option popup presents on a narrow viewport. Popover (the default) keeps the anchored popup at every width. Auto follows LayoutMode: a content-height bottom sheet on mobile, the anchored popup otherwise."
             },
             {
               "name": "Mode",
@@ -21213,6 +21306,13 @@
               "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)."
             },
             {
+              "name": "CloseOnEscape",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, Escape closes the DOCKED panel through OpenChanged. Default false: a docked panel is in-flow and leaves Escape to the host. The sheet presentation already closes on Escape and ignores this.",
+              "default": "false"
+            },
+            {
               "name": "FooterContent",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -22679,7 +22779,7 @@
               "name": "Role",
               "type": "string?",
               "isRequired": false,
-              "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
+              "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel. When the role lives on an inner element instead, leave this unset and pass SheetInitialFocusSelector so a mobile sheet still opens on that element."
             },
             {
               "name": "SheetDoneEnabled",
@@ -22687,6 +22787,18 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether the sheet header's Done action is enabled. A consumer mid-task can keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH dates are picked, so a half range can never close the sheet silently (Escape, the backdrop click and the swipe still close and keep the partial selection). Sheet mode only (since 2.9.1)."
+            },
+            {
+              "name": "SheetInitialFocusSelector",
+              "type": "string?",
+              "isRequired": false,
+              "description": "CSS selector of the element a mobile sheet focuses first, scoped to the sheet. Same contract as TmDrawer.InitialFocusSelector. Null keeps the role-derived selector: a menu or listbox panel opens on its first entry, anything else on the first focusable. A match that is not itself focusable falls through to the first focusable (since 2.10.0)."
+            },
+            {
+              "name": "SheetTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Visible title of the sheet header, and the accessible name of the drawer, when the panel presents as a bottom sheet. Does not name the popover. Null falls back to Title, then AriaLabel, then a localized generic \"Menu\" (since 2.10.0)."
             },
             {
               "name": "Shift",
@@ -22699,7 +22811,7 @@
               "name": "Title",
               "type": "string?",
               "isRequired": false,
-              "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label (since 2.9.1)."
+              "description": "Title of the sheet header when the panel presents as a bottom sheet, unless SheetTitle is set. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label. SheetTitle does not (since 2.9.1)."
             },
             {
               "name": "TrapFocus",
@@ -22735,7 +22847,7 @@
           "kind": "Component",
           "category": "Pickers",
           "namespace": "Tempo.Blazor.Components.Pickers",
-          "description": "Reusable calendar month grid with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker.",
+          "description": "Reusable calendar month with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day, and a range start or end, is aria-pressed; today is aria-current=date; the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmCalendarGrid.razor",
           "documentationStatus": "merged",
@@ -22835,7 +22947,7 @@
           "kind": "Component",
           "category": "Pickers",
           "namespace": "Tempo.Blazor.Components.Pickers",
-          "description": "Full-size calendar view displaying a month grid with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs.",
+          "description": "Full-size calendar view displaying a month of days with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day is aria-pressed, today is aria-current=date, and the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmCalendarView.razor",
           "documentationStatus": "merged",
@@ -22848,6 +22960,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders a mini-month (tm-calendar-view--compact): no event area, a smaller day cell. Default false. A scheduler title popover sets it."
             },
             {
               "name": "Events",
@@ -24085,7 +24203,7 @@
               "name": "Class",
               "type": "string?",
               "isRequired": false,
-              "description": "Fires when the user clicks \"Run\" on a report."
+              "description": "Additional CSS classes appended to the root element."
             },
             {
               "name": "Columns",
@@ -24097,7 +24215,8 @@
             {
               "name": "ContainerWidth",
               "type": "double?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser; set it to override the measurement (tests, prerendering)."
             },
             {
               "name": "CustomFields",
@@ -24121,6 +24240,18 @@
               "description": "Active filter set. Empty = show all tasks."
             },
             {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions at the end of the header row (Share, Save…). The Gantt has no built-in header actions."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content at the start of the header row, after the Title (a project switcher, a breadcrumb)."
+            },
+            {
               "name": "History",
               "type": "IReadOnlyList<TmActivityEntry>",
               "isRequired": false,
@@ -24139,6 +24270,18 @@
               "type": "TmNotificationPreferences?",
               "isRequired": false,
               "description": "Notification preferences for the current user."
+            },
+            {
+              "name": "OnAttachmentRemoved",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires when the user removes an attachment of the selected task in the task panel (argument = attachment id)."
+            },
+            {
+              "name": "OnAttachmentUpload",
+              "type": "EventCallback<IBrowserFile>",
+              "isRequired": false,
+              "description": "Fires when the user picks a file to attach to the selected task in the task panel. Persisting the file is the host's job."
             },
             {
               "name": "OnAutoScheduled",
@@ -24189,6 +24332,12 @@
               "description": "Fires when a new dependency is added."
             },
             {
+              "name": "OnDescriptionChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Fires when the user edits the description of the selected task in the task panel (live)."
+            },
+            {
               "name": "OnExportRequested",
               "type": "EventCallback<GanttExportOptions>",
               "isRequired": false,
@@ -24211,6 +24360,12 @@
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Fires when an import operation fails (contains error message)."
+            },
+            {
+              "name": "OnNewReportRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Fires when the user asks for a new report from the Reports panel. The \"New report\" button is only rendered when the host handles this callback."
             },
             {
               "name": "OnNotificationTriggered",
@@ -24335,10 +24490,24 @@
               "description": "When true, highlights critical-path tasks with a distinct bar color."
             },
             {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Set false to hide the header row even when its slots are filled. With no slot set there is no header (today's look)."
+            },
+            {
               "name": "ShowOverdueHighlight",
               "type": "bool",
               "isRequired": false,
               "description": "When true, overdue tasks (End in past, not done) are highlighted."
+            },
+            {
+              "name": "ShowQuickSearch",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, the toolbar ends with a \"Search tasks…\" box that writes a Title/Contains entry into Filters (raising OnFiltersChanged); emptying the box removes it.",
+              "default": "false"
             },
             {
               "name": "ShowSidebar",
@@ -24357,6 +24526,32 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true, shows the workload panel below the Gantt timeline."
+            },
+            {
+              "name": "SidebarMode",
+              "type": "GanttSidebarMode",
+              "isRequired": false,
+              "default": "GanttSidebarMode.Rail",
+              "description": "How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon Rail (default) or a horizontal Tabs strip with text labels (ARIA tabs). ShowSidebar = false hides either."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Secondary header line under the Title."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Header title text. The header renders only when at least one of Title, Subtitle, HeaderStart or HeaderActions is set."
+            },
+            {
+              "name": "ToolbarLabels",
+              "type": "ToolbarLabels",
+              "isRequired": false,
+              "default": "ToolbarLabels.Icons",
+              "description": "How the toolbar buttons show their text. The default Icons keeps the icon-only row (the text stays the accessible name and the tooltip); IconsWithText shows every label; Auto shows them except on a toolbar narrower than 640px. Maps onto TmToolbar.Labels."
             },
             {
               "name": "View",
@@ -24509,6 +24704,12 @@
               "type": "EventCallback<DateTime>",
               "isRequired": false,
               "description": "Fires when the user requests time-travel to a specific timestamp."
+            },
+            {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Zone the entry timestamps are shown in. Defaults to the machine's local zone; TmGantt passes the user's display zone."
             }
           ]
         },
@@ -24592,11 +24793,32 @@
           ]
         },
         {
+          "itemName": "TmGanttPanelTabs",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the horizontal text tab strip (SidebarMode = Tabs) that selects the Tasks / Workload / History / Notifications / Reports panel. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPanelTabs.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
           "itemName": "TmGanttPortfolio",
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Portfolio overview that renders multiple projects, each shown as a summary TmGantt with its own tasks and dependencies, giving a roll-up view across several project schedules.",
+          "description": "Portfolio overview that renders multiple projects, each in its own card with an embedded TmGantt that draws the project's tasks and dependencies, giving an overview across several project schedules. Every nested Gantt gets its own test-id prefix (gantt-{project.Id}, after the portfolio's own prefix) so ids of tasks shared across projects stay unique.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPortfolio.razor",
           "documentationStatus": "merged",
@@ -24605,10 +24827,17 @@
           ],
           "parameters": [
             {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes appended to the root element."
+            },
+            {
               "name": "Projects",
               "type": "IReadOnlyList<GanttPortfolioProject>",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Projects to show; each card draws the project's Tasks and Dependencies in its own Gantt."
             }
           ]
         },
@@ -24617,7 +24846,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Panel that lists saved Gantt reports and lets the user create a new report or run an existing one. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
+          "description": "Panel that lists saved Gantt reports and lets the user run an existing one; a \"New report\" button is shown only when the host handles OnNewReportRequested. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttReportsPanel.razor",
           "documentationStatus": "merged",
@@ -24626,15 +24855,71 @@
           ],
           "parameters": [
             {
+              "name": "OnNewReportRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Fires when the user asks for a new report. The panel has no report editor of its own, so the \"New report\" button is only rendered when the host handles this callback."
+            },
+            {
               "name": "OnReportRun",
               "type": "EventCallback<GanttReport>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Fires when the user clicks \"Run\" on a report."
             },
             {
               "name": "Reports",
               "type": "IReadOnlyList<GanttReport>",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Report definitions to list."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttSidebar",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the icon rail and the Tasks / Workload / History / Notifications / Reports drawer. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttSidebar.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttStatusChip",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the status chip (glyph plus localized text) shared by the tree, the Board column headers and the dashboard.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttStatusChip.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "ChipTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional data-testid of the chip, already resolved through the owning Gantt test-id prefix."
+            },
+            {
+              "name": "Status",
+              "type": "TmWorkItemStatus",
+              "isRequired": true,
+              "description": "The status the chip shows."
             }
           ]
         },
@@ -24740,6 +25025,69 @@
           ]
         },
         {
+          "itemName": "TmGanttTimeline",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the timeline - two-row header, grid, markers, dependency lines, baseline ghosts and task bars. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttTimeline.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttToolbar",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the grouped command row (a core TmToolbar: Create | Structure | Time | Panels | Data | Settings) with the Add task split button, the Day | Week | Month segment, zoom controls, panel toggles, the column menu, the view-settings menu and the optional quick search. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttToolbar.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttTree",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the task grid - header, rows, inline edit, drag-and-drop reorder and the bulk-action bar. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttTree.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
           "itemName": "TmGanttWorkloadView",
           "kind": "Component",
           "category": "Scheduler",
@@ -24783,7 +25131,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop) and the title heading is a polite live region.",
+          "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. A host EventTemplate renders directly into the time-grid and timeline cards; span.tm-scheduler-event-content is the host opt-in ellipsis for a template that should stay one line. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmScheduler.razor",
           "documentationStatus": "merged",
@@ -24816,7 +25164,14 @@
               "name": "Class",
               "type": "string?",
               "isRequired": false,
-              "description": "Additional CSS class(es)."
+              "description": "Additional CSS class(es). Give the scheduler a bounded height: the root is height 100%, which only resolves against a sized ancestor, and an unbounded host grows with the day. On a mobile layout the time-grid scroller is capped at 70dvh so the action bar stays reachable."
+            },
+            {
+              "name": "CompactMaxVisibleEvents",
+              "type": "int",
+              "isRequired": false,
+              "default": "1",
+              "description": "Maximum events shown in a month day cell on a mobile layout. Default: 1."
             },
             {
               "name": "CurrentDate",
@@ -24836,6 +25191,12 @@
               "type": "IScheduleDataProvider?",
               "isRequired": false,
               "description": "Server-side data provider. Takes priority over Events if both are set."
+            },
+            {
+              "name": "EventDetailTemplate",
+              "type": "RenderFragment<TmScheduleEvent>?",
+              "isRequired": false,
+              "description": "Detail of the selected event, rendered in the same TmSidePanel. An event click opens it; closing the panel returns focus to that event. The host supplies the body."
             },
             {
               "name": "Events",
@@ -24889,11 +25250,25 @@
               "default": "false"
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Pins the layout. Auto measures the scheduler's own container; a forced value renders that layout without a measurement."
+            },
+            {
               "name": "MaxVisibleEvents",
               "type": "int",
               "isRequired": false,
               "default": "3",
-              "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+              "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3. A mobile layout uses CompactMaxVisibleEvents instead."
+            },
+            {
+              "name": "MobileActionBar",
+              "type": "TmSchedulerMobileActionBar",
+              "isRequired": false,
+              "default": "TmSchedulerMobileActionBar.None",
+              "description": "The mobile action bar. None (default) renders nothing. Auto renders the bar on a mobile layout only."
             },
             {
               "name": "MonthWeeks",
@@ -24993,6 +25368,19 @@
               "description": "Fires when the user selects an event."
             },
             {
+              "name": "SelectedResourceIds",
+              "type": "IReadOnlyList<string>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Resource ids the views keep. An empty list keeps every resource and every event, and so does a list whose ids match no known resource: a stale selection hides nothing. Otherwise a non-empty list filters Timeline rows, TimeGrid resource columns, and Month and Agenda events."
+            },
+            {
+              "name": "SelectedResourceIdsChanged",
+              "type": "EventCallback<IReadOnlyList<string>>",
+              "isRequired": false,
+              "description": "Fires when the built-in resource filter changes the selection."
+            },
+            {
               "name": "ShowAdjacentMonthEvents",
               "type": "bool",
               "isRequired": false,
@@ -25025,6 +25413,45 @@
               "isRequired": false,
               "default": "true",
               "description": "When true, today's column draws the current-time indicator. Default true; set false to restore the previous look."
+            },
+            {
+              "name": "ShowResourceFilter",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, and Resources has entries, the toolbar offers the core TmMultiSelect as data-tm-group=filter, after header-actions and before primary. The trigger reads TmScheduler_AllResources or TmScheduler_NSelected and carries no visible label. On the compact row the filter is its own second row under the header; its popup is the F3 bottom sheet.",
+              "default": "false"
+            },
+            {
+              "name": "ShowTouchHint",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, a localized touch hint renders under the toolbar. CSS shows it only for a coarse pointer with no hover.",
+              "default": "false"
+            },
+            {
+              "name": "SidePanel",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content for the right-hand panel, rendered through the core TmSidePanel (Presentation = Auto): docked on desktop, a side sheet on tablet, a bottom sheet on mobile. Null renders nothing."
+            },
+            {
+              "name": "SidePanelOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the side panel is open. Two-way with SidePanelOpenChanged.",
+              "default": "false"
+            },
+            {
+              "name": "SidePanelOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Fires when the side panel opens or closes."
+            },
+            {
+              "name": "SidePanelTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible title of the docked panel header when no event detail is showing. Null uses the localized default (TmSidePanel_DefaultTitle). An open detail replaces it with TmScheduler_EventDetail."
             },
             {
               "name": "SlotDuration",
@@ -25092,7 +25519,6 @@
             "tm-scheduler-toolbar",
             "tm-scheduler-toolbar-nav",
             "tm-scheduler-toolbar-nav-btn",
-            "tm-scheduler-toolbar-today-btn",
             "tm-scheduler-toolbar-title",
             "tm-scheduler-toolbar-views",
             "tm-scheduler-toolbar-print",
@@ -25158,7 +25584,7 @@
             },
             {
               "name": "--tm-scheduler-hour-height",
-              "description": "Height of one hour in the time grid. Defaults to 3rem."
+              "description": "Height of one hour in the time grid. Defaults to 3rem on the root. A coarse pointer raises it to 3.5rem through :where(.tm-scheduler), so a host rule on .tm-scheduler wins over the coarse default and the mobile layout rule (also 3.5rem) wins over both."
             },
             {
               "name": "--tm-scheduler-visible-hours",
@@ -25198,6 +25624,10 @@
               "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Agenda\" ReadOnly=\"true\" />"
             },
             {
+              "title": "Side panel with a mini calendar and an event detail",
+              "code": "<TmScheduler Events=\"@_events\" Resources=\"@_resources\" ShowResourceFilter=\"true\" @bind-SelectedResourceIds=\"_resourceIds\" @bind-SelectedEvent=\"_selected\" @bind-SidePanelOpen=\"_open\">\n    <SidePanel>\n        <TmCalendarView Compact=\"true\" SelectedDate=\"@_selectedDay\" OnDateClick=\"@PickDay\" />\n    </SidePanel>\n    <EventDetailTemplate Context=\"evt\">\n        <h3>@evt.Title</h3>\n        <p>@evt.StartLocal.ToString(\"g\")</p>\n        <p>@evt.Description</p>\n    </EventDetailTemplate>\n</TmScheduler>"
+            },
+            {
               "title": "Month view with custom event template",
               "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Month\" CurrentDate=\"DateTime.Today\" ReadOnly=\"true\">\n    <EventTemplate Context=\"evt\">\n        <div class=\"custom-month-event\">\n            <strong>@evt.Title</strong>\n            <span>@evt.Description</span>\n        </div>\n    </EventTemplate>\n</TmScheduler>"
             }
@@ -25222,6 +25652,13 @@
               "isRequired": false,
               "default": "30",
               "description": "Number of days to show in the agenda. Values below 1 are treated as 1."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders each event as a card with a chevron and sticks the day header. The mobile layout sets it.",
+              "default": "false"
             },
             {
               "name": "CurrentDate",
@@ -25283,6 +25720,90 @@
           ]
         },
         {
+          "itemName": "TmSchedulerDateStrip",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "The mobile week strip. It offers the week's days as buttons; the selected day is aria-pressed and today carries aria-current=date. TmScheduler renders it in the week view on a mobile layout.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerDateStrip.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Dates",
+              "type": "IReadOnlyList<DateOnly>?",
+              "isRequired": false,
+              "description": "The days the strip offers, in order."
+            },
+            {
+              "name": "OnDateSelected",
+              "type": "EventCallback<DateOnly>",
+              "isRequired": false,
+              "description": "Fires with the day the user picked."
+            },
+            {
+              "name": "SelectedDate",
+              "type": "DateOnly?",
+              "isRequired": false,
+              "description": "The selected day. The matching button is aria-pressed."
+            },
+            {
+              "name": "Today",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "Today. The matching button gets aria-current=date."
+            }
+          ]
+        },
+        {
+          "itemName": "TmSchedulerDateStripDay",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "One day button of the mobile week strip. TmSchedulerDateStrip renders one per day and moves DOM focus onto the roving stop through FocusAsync.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerDateStripDay.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Day",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "The day this button represents."
+            },
+            {
+              "name": "IsStop",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether this button is the roving tab stop."
+            },
+            {
+              "name": "OnClick",
+              "type": "EventCallback<DateOnly>",
+              "isRequired": false,
+              "description": "Fires with the day when the button is activated."
+            },
+            {
+              "name": "Selected",
+              "type": "DateOnly?",
+              "isRequired": false,
+              "description": "The selected day. The matching button is aria-pressed."
+            },
+            {
+              "name": "Today",
+              "type": "DateOnly",
+              "isRequired": false,
+              "description": "Today. The matching button gets aria-current=date."
+            }
+          ]
+        },
+        {
           "itemName": "TmSchedulerDayView",
           "kind": "Component",
           "category": "Scheduler",
@@ -25339,6 +25860,12 @@
               "isRequired": false,
               "description": "When true, a Saturday or Sunday column gets tm-scheduler-timegrid-col--weekend.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -25433,6 +25960,13 @@
               "description": "When true today's column draws the current-time indicator, forwarded to the time grid."
             },
             {
+              "name": "ShowResourcePicker",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the resource picker above the grid. The mobile layout sets it.",
+              "default": "false"
+            },
+            {
               "name": "SlotDuration",
               "type": "int",
               "isRequired": false,
@@ -25450,6 +25984,18 @@
               "type": "DateOnly",
               "isRequired": false,
               "description": "Today in the display zone. The matching column gets tm-scheduler-timegrid-col--today."
+            },
+            {
+              "name": "VisibleResourceId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The resource whose column the mobile picker shows. Defaults to the first resource."
+            },
+            {
+              "name": "VisibleResourceIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Fires when the picker chooses another resource."
             },
             {
               "name": "WorkDayEnd",
@@ -25531,7 +26077,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler. A timed event renders as a tinted card (a light tint of the event colour, a coloured left stripe, a small radius and shadow); an all-day event keeps a solid fill so its text contrast holds. Weekday headers are sentence case. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
+          "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a plural '+N more' overflow indicator (Loc.Plural of TmScheduler_More, so Czech reads '+1 další / +2 další / +5 dalších'). Used internally by TmScheduler. A timed event renders as a tinted card (a light tint of the event colour, a coloured left stripe, a small radius and shadow); an all-day event keeps a solid fill so its text contrast holds. Weekday headers are sentence case. Accessibility: the grid is role=grid with one roving tab stop on the day cells (arrows move a day or a week, Home/End the row, PageUp/PageDown raise CurrentDateChanged); events are role=button with an accessible name. An EventTemplate must not contain its own focusable element: the event wrapper is already the button, and the template's time is announced from a screen-reader prefix.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerMonthView.razor",
           "documentationStatus": "merged",
@@ -25589,7 +26135,7 @@
               "type": "int",
               "isRequired": false,
               "default": "3",
-              "description": "Max events visible per day cell before showing \"+N more\"."
+              "description": "Max events visible per day cell before showing the plural '+N more' label (Loc.Plural of TmScheduler_More)."
             },
             {
               "name": "MonthWeeks",
@@ -25597,6 +26143,12 @@
               "isRequired": false,
               "default": "TmSchedulerMonthWeeks.Six",
               "description": "How many weeks the grid renders. Auto drops an empty trailing week."
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -25672,6 +26224,13 @@
               "description": "When true, events are also rendered in adjacent-month day cells visible in the grid."
             },
             {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Display zone used when a move writes the new local time. Null uses the machine zone.",
+              "default": "null"
+            },
+            {
               "name": "Today",
               "type": "DateTime",
               "isRequired": false,
@@ -25713,7 +26272,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Reusable vertical time grid used internally by day and week views. Renders date columns with hour slots, all-day event row, overlapping event layout, drag-and-drop, and resize handles with JS interop. Accessibility: the slots share one roving tab stop (Up/Down a slot, Left/Right a column, crossing a resource column before the next day) and events are role=button. An EventTemplate must not contain its own focusable element.",
+          "description": "Reusable vertical time grid used internally by day and week views. Renders date columns with hour slots, all-day event row, overlapping event layout, drag-and-drop, and resize handles with JS interop. A host EventTemplate renders directly into the card. span.tm-scheduler-event-content is a host opt-in ellipsis (the same rule exists on the timeline card); a compact card also gives that template root min-width: 0 so a long title can shrink. Accessibility: the slots share one roving tab stop (Up/Down a slot, Left/Right a column, crossing a resource column before the next day) and events are role=button. An EventTemplate must not contain its own focusable element.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerTimeGrid.razor",
           "documentationStatus": "merged",
@@ -25773,6 +26332,12 @@
               "isRequired": false,
               "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -25956,7 +26521,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe; templated content sits in tm-scheduler-event-content, which ellipsizes, with the resize handles outside it. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
+          "description": "Horizontal timeline view with resource rows and 24-hour time slots. An event renders as a tinted card with a coloured left stripe. A host EventTemplate renders directly into the card, so a multi-line template is not clipped; the built-in time and title are direct children of the card and each ellipsizes on its own. span.tm-scheduler-event-content is a host opt-in ellipsis (the same rule exists on the time-grid card), and the resize handles stay outside the template. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop. Accessibility: the rows form a grid (one row header and one cell per resource), and the slots inside each cell share one roving tab stop (Left/Right a slot, Up/Down a resource). A keyboard context menu opens on the slot itself. An EventTemplate must not contain its own focusable element.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmSchedulerTimelineView.razor",
           "documentationStatus": "merged",
@@ -25988,6 +26553,12 @@
               "isRequired": false,
               "description": "When true, hours outside the working day are tinted. Default false.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -26147,6 +26718,13 @@
               "description": "Currently displayed date. The Month title is this date's month."
             },
             {
+              "name": "HasActionBar",
+              "type": "bool",
+              "isRequired": false,
+              "description": "The mobile action bar carries Today, so the compact row omits its own Today button.",
+              "default": "false"
+            },
+            {
               "name": "HeaderActions",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -26163,6 +26741,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab. A standalone toolbar generates its own."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout the scheduler resolved. Mobile renders the compact row; desktop and tablet render the core toolbar."
             },
             {
               "name": "OnAddClick",
@@ -26219,6 +26804,12 @@
               "description": "Inclusive start of the range the title describes. The scheduler fills it from the same range it loads. Day and Timeline titles show this day; Week and Agenda titles start here."
             },
             {
+              "name": "ResourceFilter",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The resource filter, rendered as data-tm-group=filter after the view switcher. TmScheduler supplies the core TmMultiSelect when ShowResourceFilter is set."
+            },
+            {
               "name": "ShowHeader",
               "type": "bool",
               "isRequired": false,
@@ -26254,7 +26845,6 @@
             "tm-scheduler-toolbar",
             "tm-scheduler-toolbar-nav",
             "tm-scheduler-toolbar-nav-btn",
-            "tm-scheduler-toolbar-today-btn",
             "tm-scheduler-toolbar-title",
             "tm-scheduler-toolbar-views",
             "tm-scheduler-toolbar-primary",
@@ -26313,6 +26903,18 @@
               "description": "First day of week (0=Sunday, 1=Monday, ...)."
             },
             {
+              "name": "FocusedDay",
+              "type": "DateOnly?",
+              "isRequired": false,
+              "description": "The day the strip focuses. Defaults to CurrentDate."
+            },
+            {
+              "name": "FocusedDayChanged",
+              "type": "EventCallback<DateOnly>",
+              "isRequired": false,
+              "description": "Fires when the strip picks a day."
+            },
+            {
               "name": "HideTimeGrid",
               "type": "bool",
               "isRequired": false,
@@ -26331,6 +26933,12 @@
               "isRequired": false,
               "description": "When true, Saturday and Sunday columns get tm-scheduler-timegrid-col--weekend.",
               "default": "false"
+            },
+            {
+              "name": "OnAnnounced",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the sentence a move or a resize should announce. The scheduler owns the one live region."
             },
             {
               "name": "OnEventChanged",
@@ -26403,6 +27011,13 @@
               "type": "EventCallback<TmScheduleEvent?>",
               "isRequired": false,
               "description": "Fires when the user selects an event."
+            },
+            {
+              "name": "ShowDateStrip",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the date strip and shows the focused day with its neighbours. The mobile layout sets it.",
+              "default": "false"
             },
             {
               "name": "ShowEventResource",
@@ -28121,6 +28736,12 @@
           ],
           "parameters": [
             {
+              "name": "Badge",
+              "type": "string?",
+              "isRequired": false,
+              "description": "A short count or marker shown as a small pill on the button (e.g. the number of active filters). Decorative (aria-hidden): put the meaning in Tooltip, the accessible name of an icon button. Null or empty renders nothing."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -29448,6 +30069,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_gantt-dialog.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_gauge.css",
           "kind": "Css"
         },
@@ -30041,12 +30666,12 @@
         }
       ],
       "summary": {
-        "itemCount": 394,
-        "manualItemCount": 394,
-        "generatedItemCount": 386,
+        "itemCount": 404,
+        "manualItemCount": 404,
+        "generatedItemCount": 396,
         "generatedOnlyItemCount": 0,
-        "componentCount": 206,
-        "publicApiTypeCount": 180
+        "componentCount": 214,
+        "publicApiTypeCount": 182
       }
     },
     {
@@ -84266,6 +84891,16 @@
           ]
         },
         {
+          "itemName": "GanttSidebarMode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "How the Gantt offers its panels: the vertical icon Rail (default) or a horizontal Tabs strip with text labels.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSidebarMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "GanttSidebarPanel",
           "kind": "Enum",
           "category": "Models",
@@ -84427,6 +85062,12 @@
               "description": "Shade non-working days (weekends/holidays) in the timeline. Default: true."
             },
             {
+              "name": "ShowProgressLabel",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Show the completion percentage next to every task bar. Default: false."
+            },
+            {
               "name": "ShowTodayMarker",
               "kind": "Property",
               "type": "bool",
@@ -84442,13 +85083,19 @@
               "name": "Theme",
               "kind": "Property",
               "type": "GanttTheme",
-              "description": "Color theme applied to the component. Default: Auto."
+              "description": "Color theme applied to the component. Default: Auto, which follows the ambient theme (the cascaded data-theme / the registered ThemeService); Light and Dark force data-theme on the Gantt root."
             },
             {
               "name": "ViewDensity",
               "kind": "Property",
               "type": "GanttViewDensity",
               "description": "Row height density. Default: Comfortable (40 px)."
+            },
+            {
+              "name": "WbsInTitle",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
             }
           ]
         },
@@ -106211,12 +106858,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1494,
-        "manualItemCount": 1494,
-        "generatedItemCount": 1477,
+        "itemCount": 1495,
+        "manualItemCount": 1495,
+        "generatedItemCount": 1478,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1477
+        "publicApiTypeCount": 1478
       }
     },
     {
@@ -123197,10 +123844,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3314,
-    "manualItemCount": 3314,
+    "itemCount": 3325,
+    "manualItemCount": 3325,
     "generatedOnlyItemCount": 0,
-    "componentCount": 489,
-    "publicApiTypeCount": 2772
+    "componentCount": 497,
+    "publicApiTypeCount": 2775
   }
 }

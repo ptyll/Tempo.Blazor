@@ -244,6 +244,33 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Pickers_OpenDatePicker_Axe_HasNoCriticalOrSerious()
+    {
+        // The closed-section scan never sees the calendar. An open TmDatePicker must clear
+        // color-contrast (other-month days) and aria-prohibited-attr (weekday headers) itself.
+        var page = await OpenAsync("/pickers");
+        var picker = page.Locator(".tm-date-picker").First;
+        var trigger = picker.Locator(".tm-date-picker-trigger");
+        await trigger.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await trigger.ClickAsync();
+        await picker.Locator(".tm-calendar").WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+
+        var light = await AxeViolationsAllAsync(page, ".tm-date-picker .tm-calendar", CriticalOrSerious, ["h2", "h3"]);
+        Assert.AreEqual(0, light.Length, "LIGHT:" + Environment.NewLine + string.Join(Environment.NewLine, light));
+
+        // The open calendar covers its own trigger, so close through the picker's own handler
+        // (a page-level Escape is consumed by overlay.js) and reopen after the theme switch.
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(picker.Locator(".tm-calendar")).ToHaveCountAsync(0);
+        await SetDarkAsync(page);
+        await trigger.ClickAsync();
+        await picker.Locator(".tm-calendar").WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        var dark = await AxeViolationsAllAsync(page, ".tm-date-picker .tm-calendar", CriticalOrSerious, ["h2", "h3"]);
+        Assert.AreEqual(0, dark.Length, "DARK:" + Environment.NewLine + string.Join(Environment.NewLine, dark));
+    }
+
+    [TestMethod]
     public async Task Pickers_ClickingLabel_FocusesTrigger()
     {
         var page = await OpenAsync("/pickers");

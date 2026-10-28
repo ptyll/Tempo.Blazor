@@ -6,12 +6,16 @@ namespace Tempo.Blazor.E2E.Scheduler;
 /// <summary>
 /// Phase 5 review shots and assertions. The now line is checked against a pinned instant
 /// (<c>?now=</c>), so Prague and New York are known numbers rather than "now". Element screenshots
-/// of the new surfaces land in <c>__screenshots__/scheduler/phase5/</c>.
+/// of the new surfaces land in <c>__screenshots__/scheduler/phase5/</c> only with
+/// <c>TM_E2E_UPDATE_BASELINE=1</c>; otherwise they land in TestResults.
 /// </summary>
 [TestClass]
 public class SchedulerPhase5ReviewE2ETests : WasmTestBase
 {
     private const string PinnedNow = "2026-06-15T08:15:00Z";
+
+    private static bool UpdateBaseline =>
+        string.Equals(Environment.GetEnvironmentVariable("TM_E2E_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
 
     private async Task<IPage> OpenAsync(string query = "")
     {
@@ -125,8 +129,10 @@ public class SchedulerPhase5ReviewE2ETests : WasmTestBase
 
     private static async Task SaveSchedulerAsync(IPage page, ILocator scheduler, string file)
     {
-        var dir = Path.Combine(FindRepoRoot().FullName,
-            "tests", "Tempo.Blazor.E2E", "__screenshots__", "scheduler", "phase5");
+        var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E",
+            UpdateBaseline
+                ? Path.Combine("__screenshots__", "scheduler", "phase5")
+                : Path.Combine("TestResults", "scheduler", "phase5"));
         Directory.CreateDirectory(dir);
         await scheduler.ScreenshotAsync(new LocatorScreenshotOptions { Path = Path.Combine(dir, $"{file}.png") });
     }

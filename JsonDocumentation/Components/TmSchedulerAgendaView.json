@@ -21,6 +21,13 @@
       "description": "Number of days to show in the agenda. Values below 1 are treated as 1."
     },
     {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders each event as a card with a chevron and sticks the day header. The mobile layout sets it."
+    },
+    {
       "name": "Events",
       "type": "IReadOnlyList<TmScheduleEvent>?",
       "isRequired": false,

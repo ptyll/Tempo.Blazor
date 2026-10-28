@@ -2056,12 +2056,17 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("title", "Title", PropType.String, "Schedule", cat: "Content"),
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
                 P("view",  "View",  PropType.Enum,   "week",     cat: "Appearance",
                     opts: ["day","week","month","agenda","timeline"]),
                 P("showPrint", "Show Print", PropType.Bool, true, cat: "Appearance"),
                 P("showAddButton", "Show Add Button", PropType.Bool, false, cat: "Appearance"),
                 P("workWeek", "Work Week", PropType.Bool, false, cat: "Appearance"),
                 P("showNowIndicator", "Show Now Indicator", PropType.Bool, true, cat: "Appearance"),
+                P("mobileActionBar", "Mobile Action Bar", PropType.Enum, "none", cat: "Behavior",
+                    opts: ["none", "auto"]),
+                P("showSidePanel", "Show Side Panel", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 
@@ -2582,6 +2587,10 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("taskCount", "Task Count", PropType.Int, 5, cat: "Appearance"),
                 P("period",    "Period",     PropType.Enum,"week", cat: "Appearance",
                     opts: ["day","week","month","quarter"]),
+                P("showProgressLabel", "Show Progress Label", PropType.Bool, false, cat: "Appearance"),
+                P("toolbarLabels", "Toolbar Labels", PropType.Bool, false, cat: "Appearance"),
+                P("sidebarMode", "Sidebar Mode", PropType.Enum, "rail", cat: "Appearance",
+                    opts: ["rail","tabs"]),
             ]
         };
 

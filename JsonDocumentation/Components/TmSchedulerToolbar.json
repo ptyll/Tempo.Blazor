@@ -80,6 +80,12 @@
       "description": "Host content rendered before the navigation group."
     },
     {
+      "name": "ResourceFilter",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The resource filter, rendered as data-tm-group=filter after the view switcher. TmScheduler supplies the core TmMultiSelect when ShowResourceFilter is set."
+    },
+    {
       "name": "HeaderActions",
       "type": "RenderFragment?",
       "isRequired": false,
@@ -105,6 +111,20 @@
       "description": "Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab. A standalone toolbar generates its own."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout the scheduler resolved. Mobile renders the compact row; desktop and tablet render the core toolbar."
+    },
+    {
+      "name": "HasActionBar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The mobile action bar carries Today, so the compact row omits its own Today button."
+    },
+    {
       "name": "ShowPrint",
       "type": "bool",
       "isRequired": false,
@@ -121,7 +141,6 @@
     "tm-scheduler-toolbar",
     "tm-scheduler-toolbar-nav",
     "tm-scheduler-toolbar-nav-btn",
-    "tm-scheduler-toolbar-today-btn",
     "tm-scheduler-toolbar-title",
     "tm-scheduler-toolbar-views",
     "tm-scheduler-toolbar-primary",

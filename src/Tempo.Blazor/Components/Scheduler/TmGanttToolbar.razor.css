@@ -1,0 +1,190 @@
+/* TmGanttToolbar: command row, Day | Week | Month segment, zoom controls, view-settings menu. */
+
+/* ─── Segmented Day | Week | Month ─────────────────────────────── */
+
+.tm-gantt__segment {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-gantt__segment-btn {
+    min-height: 1.75rem;
+    padding: 0 var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__segment-btn:hover {
+    color: var(--tm-text-primary);
+}
+
+/* The fill alone is ~1.1:1 against the tray, under the 3:1 a control boundary needs (1.4.11): the
+   strong border is the boundary, the weight and the shadow carry the selection beyond it. */
+.tm-gantt__segment-btn--active {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
+    font-weight: var(--tm-font-weight-semibold);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-gantt__segment-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-gantt__segment-btn--active {
+        background: Highlight;
+        color: HighlightText;
+        forced-color-adjust: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__segment-btn {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ─── Toolbar ──────────────────────────────────────────────────── */
+
+.tm-gantt__toolbar {
+    padding: 0;
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+    flex-shrink: 0;
+}
+
+/* The row is the core TmToolbar (a child component), so its own box and the group wrappers it renders do not carry
+   this stylesheet's scope: ::deep is the documented way to reach them. The bar wraps instead of overflowing - the
+   items already state their Priority for the Overflow=Menu bar the tablet / mobile phases switch to. */
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar {
+    flex-wrap: wrap;
+    border-bottom: 0;
+    background: transparent;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    row-gap: var(--tm-space-1);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar .tm-toolbar-start {
+    flex-wrap: wrap;
+    row-gap: var(--tm-space-1);
+}
+
+/* A labelled group is a role=group wrapper; the segment, the zoom slider and the search box sit inside it. */
+.tm-gantt__toolbar ::deep [data-tm-toolbar-group] {
+    flex-wrap: wrap;
+}
+
+.tm-gantt__quick-search {
+    margin-inline-start: auto;
+    min-width: 12rem;
+    max-width: 18rem;
+}
+
+/* The filter badge sits on the button; the pressed Primary variant keeps it readable. */
+.tm-gantt__toolbar ::deep .tm-toolbar-btn--primary .tm-toolbar-btn-badge {
+    background: var(--tm-color-on-primary);
+    color: var(--tm-color-primary);
+}
+
+.tm-gantt__zoom-level {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--tm-text-secondary);
+    min-width: 40px;
+    text-align: center;
+}
+
+/* ─── View Settings dropdown ───────────────────────────────────── */
+
+.tm-gantt__view-settings-wrapper {
+    position: relative;
+}
+
+.tm-gantt__view-settings-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+}
+
+.tm-gantt__view-settings-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 51;
+    min-width: 220px;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    box-shadow: var(--tm-shadow-popover);
+    padding: var(--tm-space-2, 0.5rem) 0;
+}
+
+.tm-gantt__view-settings-label {
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--tm-text-tertiary);
+}
+
+.tm-gantt__view-settings-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
+    font-size: 0.875rem;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.tm-gantt__view-settings-item:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-gantt__view-settings-item input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.tm-gantt__view-settings-divider {
+    height: 1px;
+    background: var(--tm-border-color);
+    margin: var(--tm-space-1, 0.25rem) 0;
+}
+
+/* ─── Phase 2: Zoom slider ──────────────────────────────────────── */
+
+.tm-gantt__zoom-slider {
+    width: 80px;
+    height: 4px;
+    accent-color: var(--tm-color-primary);
+    cursor: pointer;
+    margin: 0 var(--tm-space-1, 0.25rem);
+}
+
+/* The column menu is a core TmColumnPicker (outline button); inside the toolbar it reads like its ghost siblings. */
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle {
+    border-color: transparent;
+    background: transparent;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle:hover,
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle[aria-expanded="true"] {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
+}

@@ -6,6 +6,22 @@
     width: 100%;
 }
 
+/* The mini-month a popover hosts. The day cell drops its event area and shrinks to the day button. */
+.tm-calendar-view--compact .tm-calendar-view__day-cell {
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+    border: none;
+}
+
+.tm-calendar-view--compact .tm-calendar-view__day-cell .tm-cal-day {
+    width: var(--tm-space-8, 2rem);
+    height: var(--tm-space-8, 2rem);
+    margin: 0;
+    align-self: center;
+    font-size: var(--tm-font-size-xs);
+}
+
 .tm-calendar-view .tm-cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -55,7 +71,9 @@
 }
 
 .tm-calendar-view__day-cell .tm-cal-day--other-month {
-    color: var(--tm-text-disabled);
+    /* Adjacent-month days are real text at --tm-font-size-xs. The shared rule already paints them
+       in --tm-text-tertiary (gray-500, 4.6:1) with no opacity fade. */
+    color: var(--tm-text-tertiary);
 }
 
 .tm-calendar-view__day-cell .tm-cal-day--disabled {

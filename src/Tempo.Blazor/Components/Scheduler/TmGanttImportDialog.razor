@@ -28,7 +28,7 @@
             <div class="tm-gantt__dialog-body">
                 @if (!string.IsNullOrEmpty(_errorMessage))
                 {
-                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("import-error")" role="alert">
+                    <div class="tm-gantt-import__error" data-testid="@TestId("import-error")" role="alert">
                         <TmIcon Name="alert-circle" />
                         <span>@_errorMessage</span>
                     </div>
@@ -103,7 +103,8 @@
             </div>
 
             <div class="tm-gantt__dialog-actions">
-                <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" IsDisabled="_isImporting">
+                <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" Disabled="@(!CanImport)"
+                          IsLoading="_isImporting" data-testid="@TestId("import-submit")">
                     @Loc["TmGantt_Import"]
                 </TmButton>
                 <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">

@@ -5550,125 +5550,116 @@ Stromové zobrazení s vnořenými uzly.
 
 ### TmScheduler
 
-Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline pohledem.
+Kalendář s pohledy Month, Week, Day, Timeline a Agenda. Rozsah, který se načítá, je stejný rozsah, který se vykreslí a který nese titulek: Timeline je jeden den, Agenda `AgendaDays` dní (výchozí 30) a posouvá se o stejný počet. Vizuální kontrakt, toolbar a dotyk jsou v [docs/scheduler.md](docs/scheduler.md).
+
+Pohledy `TmSchedulerDayView`, `TmSchedulerWeekView`, `TmSchedulerMonthView`, `TmSchedulerAgendaView` a `TmSchedulerTimelineView` renderuje `TmScheduler` sám; hostitel je samostatně nepoužívá.
 
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
-| `tm-scheduler` | Kořenový kontejner |
-| `tm-scheduler-body` | Tělo scheduleru |
+| `tm-scheduler` | Kořen (`data-layout` = `desktop` / `tablet` / `mobile`) |
+| `tm-scheduler-layout` | Obal `TmLayoutObserver` |
+| `tm-scheduler-body` | Tělo; na desktopu `role="tabpanel"` |
+| `tm-scheduler-frame` | Tělo vedle dokovaného panelu (jen se `SidePanel` nebo detailem) |
+| `tm-scheduler-event-surface` | Sdílená tónovaná karta události (časované události a all-day při `AllDayEventStyle.Tinted`) |
+| `tm-scheduler-event-surface--selected` | Vybraná karta (`SelectedEvent`) |
+| `tm-scheduler-month-more` | Tlačítko „+N more“ (plurál `TmScheduler_More`) |
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Events` | `IEnumerable<IScheduleEvent>?` | `null` | Statické události |
-| `DataProvider` | `IScheduleDataProvider?` | `null` | Server-side provider |
-| `View` | `SchedulerView` | `Week` | Pohled: `Day`, `Week`, `Month`, `Agenda`, `Timeline` |
-| `ViewChanged` | `EventCallback<SchedulerView>` | — | Změna pohledu |
-| `CurrentDate` | `DateTime` | `DateTime.Today` | Aktuální datum |
-| `CurrentDateChanged` | `EventCallback<DateTime>` | — | Změna data |
-| `OnEventClick` | `EventCallback<IScheduleEvent>` | — | Klik na událost |
-| `OnSlotClick` | `EventCallback<SchedulerSlotClickEventArgs>` | — | Klik na slot |
-| `OnEventChanged` | `EventCallback<ScheduleEventChangeArgs>` | — | Drag & drop změna |
-| `OnSlotContextMenu` | `EventCallback<SchedulerSlotContext>` | — | Kontextové menu na slotu |
-| `OnEventContextMenu` | `EventCallback<SchedulerEventContext>` | — | Kontextové menu na události |
-| `Resources` | `IEnumerable<IScheduleResource>?` | `null` | Zdroje (místnosti, osoby) |
-| `FirstDayOfWeek` | `DayOfWeek` | `Monday` | První den týdne |
-| `WorkDayStart` | `TimeSpan` | `08:00` | Začátek pracovního dne |
-| `WorkDayEnd` | `TimeSpan` | `17:00` | Konec pracovního dne |
-| `SlotDuration` | `TimeSpan` | `00:30` | Délka slotu |
-| `ReadOnly` | `bool` | `false` | Pouze ke čtení |
-| `EventTemplate` | `RenderFragment<IScheduleEvent>?` | `null` | Custom šablona události |
+| `Events` | `IReadOnlyList<TmScheduleEvent>?` | `null` | Události na klientu |
+| `DataProvider` | `IScheduleDataProvider?` | `null` | Serverový provider; má přednost před `Events` |
+| `WorkItemSource` | `ITmWorkItemProvider?` | `null` | Sdílený zdroj s Ganttem; použije se, když není `DataProvider` |
+| `View` / `ViewChanged` | `TmScheduleViewType` | `Month` | Aktivní pohled |
+| `Views` | `IReadOnlyList<TmScheduleViewType>?` | `null` | Pohledy v přepínači; `null` nabízí všechny |
+| `CurrentDate` / `CurrentDateChanged` | `DateTime` | dnes v zobrazené zóně | Den, který určuje viditelný rozsah |
+| `SelectedDate` / `SelectedDateChanged` | `DateTime?` | `null` | Vybraný den |
+| `SelectedEvent` / `SelectedEventChanged` | `TmScheduleEvent?` | `null` | Vybraná událost (`aria-current`, třída `--selected`) |
+| `OnEventClick` | `EventCallback<TmScheduleEvent>` | — | Klik na událost |
+| `OnSlotClick` | `EventCallback<(DateTime Start, DateTime End)>` | — | Klik na prázdný slot |
+| `OnEventChanged` | `EventCallback<TmScheduleEvent>` | — | Událost po přesunu nebo změně délky |
+| `OnSlotContextMenu` | `EventCallback<SchedulerSlotContext>` | — | Kontextové menu slotu |
+| `OnEventContextMenu` | `EventCallback<SchedulerEventContext>` | — | Kontextové menu události |
+| `OnMoreClick` | `EventCallback<DateTime>` | — | „+N more“; bez delegáta otevře ten den, ale jen s `@bind-View` i `@bind-CurrentDate` |
+| `OnAddClick` | `EventCallback` | — | Tlačítko Nová událost; renderuje se jen s delegátem |
+| `Resources` | `IReadOnlyList<TmScheduleResource>?` | `null` | Zdroje (místnosti, osoby) |
+| `ShowResourceFilter` | `bool` | `false` | Filtr zdrojů v toolbaru (`data-tm-group="filter"`) |
+| `SelectedResourceIds` / `SelectedResourceIdsChanged` | `IReadOnlyList<string>` | `[]` | Prázdný seznam (i seznam bez známého id) nefiltruje nic |
+| `SidePanel` | `RenderFragment?` | `null` | Obsah bočního panelu; tělo dodává hostitel |
+| `EventDetailTemplate` | `RenderFragment<TmScheduleEvent>?` | `null` | Detail události ve stejném panelu |
+| `SidePanelTitle` | `string?` | `null` | Titul dokovaného panelu bez detailu |
+| `SidePanelOpen` / `SidePanelOpenChanged` | `bool` | `false` | Otevření panelu |
+| `FirstDayOfWeek` | `int` | `1` | 0 = neděle … 6 = sobota; mimo rozsah se přetočí |
+| `WeekDays` | `TmSchedulerWeekDays` | `FullWeek` | `WorkWeek` skryje víkend |
+| `MonthWeeks` | `TmSchedulerMonthWeeks` | `Six` | `Auto` zahodí prázdný poslední týden |
+| `AgendaDays` | `int` | `30` | Délka Agendy (minimum 1) |
+| `WorkDayStart` / `WorkDayEnd` | `TimeOnly` | `08:00` / `17:00` | Pracovní doba |
+| `SlotDuration` | `int` | `30` | Délka slotu v minutách |
+| `ShowFullDay` | `bool` | `true` | `false` kreslí jen pracovní hodiny |
+| `HighlightOffHours` | `bool` | `false` | Tón mimo pracovní dobu |
+| `HighlightWeekends` | `bool` | `false` | Označí sobotu a neděli |
+| `ScrollToTime` | `TimeSpan?` | `null` | Po prvním renderu odscrolluje na tento čas |
+| `ShowNowIndicator` | `bool` | `true` | Čára aktuálního času |
+| `AllDayEventStyle` | `TmAllDayEventStyle` | `Solid` | `Tinted` použije sdílenou kartu |
+| `MaxVisibleEvents` | `int` | `3` | Událostí v buňce měsíce před „+N“ |
+| `CompactMaxVisibleEvents` | `int` | `1` | Totéž na mobilním layoutu |
+| `ShowAdjacentMonthEvents` | `bool` | `true` | Události v buňkách sousedního měsíce |
+| `HideTimeGrid` | `bool` | `false` | Skryje hodinovou mřížku (zůstanou hlavičky a all-day) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | `Auto` měří vlastní kontejner; vynucená hodnota přeskočí měření |
+| `MobileActionBar` | `TmSchedulerMobileActionBar` | `None` | `Auto` vykreslí lištu jen na mobilu |
+| `ShowTouchHint` | `bool` | `false` | Nápověda dotyku; viditelná jen na hrubém ukazateli |
+| `ShowEventResource` | `bool` | `false` | Název zdroje pod titulem časované události |
+| `ResourceHeaderTemplate` | `RenderFragment<TmScheduleResource>?` | `null` | Vlastní hlavička zdroje |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Slot před navigací / za přepínačem pohledů |
+| `ShowHeader` | `bool` | `true` | `false` skryje toolbar |
+| `AllowPrint` | `bool` | `true` | Tisk v menu More |
+| `ReadOnly` | `bool` | `false` | Bez přesunu a změny délky |
+| `TimeZoneId` | `string?` | `null` | IANA nebo Windows id; bez něj `ITmUserTimeZone` |
+| `EventTemplate` | `RenderFragment<TmScheduleEvent>?` | `null` | Obsah karty ve všech pohledech; obal a úchyty zůstávají |
 | `Class` | `string?` | `null` | Další CSS třídy |
-| `Disabled` | `bool` | `false` | Zakáže interakce |
-| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+
+`PrintAsync()` otevře tiskový dialog až po vykreslení desktopového layoutu. `ResolveTimeZone()` vrátí efektivní zónu.
 
 #### Příklady
 
 ```razor
-<TmScheduler Events="_events"
-    @bind-View="_view"
-    @bind-CurrentDate="_currentDate"
-    OnEventClick="OpenEvent"
-    OnSlotClick="CreateEvent"
-    OnEventChanged="HandleDragDrop"
-    FirstDayOfWeek="DayOfWeek.Monday"
-    WorkDayStart="@(new TimeSpan(8, 0, 0))"
-    WorkDayEnd="@(new TimeSpan(18, 0, 0))"
-    SlotDuration="@(TimeSpan.FromMinutes(30))">
+<TmScheduler @bind-View="_view"
+             @bind-CurrentDate="_currentDate"
+             Events="_events"
+             FirstDayOfWeek="1"
+             WorkDayStart="new TimeOnly(8, 0)"
+             WorkDayEnd="new TimeOnly(18, 0)"
+             SlotDuration="30"
+             OnEventClick="OpenEvent"
+             OnSlotClick="CreateEvent"
+             OnEventChanged="SaveMovedEvent">
     <EventTemplate Context="evt">
-        <div style="background: @evt.Color">
-            <strong>@evt.Title</strong>
-            <small>@evt.Start.ToString("HH:mm")</small>
-        </div>
+        <span class="tm-scheduler-event-content">@evt.Title</span>
     </EventTemplate>
 </TmScheduler>
-
-@* S resources (timeline pohled) *@
-<TmScheduler Events="_events" View="SchedulerView.Timeline"
-    Resources="@(new List<TmScheduleResource>
-    {
-        new() { Id = "room1", Name = "Zasedačka A", Color = "#3b82f6" },
-        new() { Id = "room2", Name = "Zasedačka B", Color = "#22c55e" },
-    })"
-    @bind-CurrentDate="_date"
-    OnSlotClick="CreateBooking" />
-
-@* Agenda pohled *@
-<TmScheduler Events="_events" View="SchedulerView.Agenda"
-    @bind-CurrentDate="_date" OnEventClick="OpenDetail" ReadOnly="true" />
 ```
 
-#### Funkce Timeline pohledu
+Složení bočního panelu, filtr zdrojů, mobilní lišta a zúžený rozsah jsou v [docs/scheduler.md](docs/scheduler.md).
 
-Timeline pohled (`SchedulerView.Timeline`) podporuje pokročilé interakce:
+#### Timeline, přesun a změna délky
 
-**Drag & Drop**
-- Události lze přetahovat mezi zdroji (resources) a časovými sloty
-- Použijte `OnEventChanged` callback pro zpracování změn
-- `draggable` atribut je automaticky nastaven podle `ReadOnly` a `IsReadOnly` události
-
-**Resize (změna velikosti)**
-- Každá událost má dva resize handly:
-  - **Levý handle** - mění začátek události (start čas)
-  - **Pravý handle** - mění konec události (end čas)
-- Handly se zobrazí při najetí myší na událost
-- Minimální délka události je 1 slot (`SlotDuration`)
-
-**Kontextové menu**
-- `OnSlotContextMenu` - pravé tlačítko na volný slot
-- `OnEventContextMenu` - pravé tlačítko na událost
-- Obsahuje souřadnice myši pro zobrazení menu
+- Myš a pero přesouvají událost přes HTML5 drag-and-drop; prst drží 400 ms a pak táhne (`pointer-drag.js`).
+- Změna délky kreslí dva úchyty (`.tm-scheduler-event-resize-handle`): časová mřížka horní a dolní, Timeline levý a pravý. Klávesnice (Alt+Shift+šipka) mění jen konec. Na hrubém ukazateli se 44px úchyt ukáže na vybrané nebo fokusované události; kompaktní vybraná událost skryje počáteční úchyt. Minimální délka je jeden slot.
+- `draggable="true"` dostane jen událost, která není `ReadOnly` a nemá `IsReadOnly`.
+- Klávesnicová alternativa (WCAG 2.5.7) je Alt+šipka; Alt+Shift mění konec. Běžná šipka zůstává roving klávesou mřížky.
+- `OnSlotContextMenu` nese `SchedulerSlotContext`: `Start` a `End` rozsahu slotu, `ClientX` a `ClientY` pro umístění menu a `ResourceId`, když je pohled seskupený podle zdroje.
+- `OnEventContextMenu` nese `SchedulerEventContext`: kliknutou `Event` (`TmScheduleEvent`) a `ClientX` s `ClientY`. Rozsah ani `ResourceId` v něm nejsou — bere se z události.
 
 ```razor
-<TmScheduler View="SchedulerView.Timeline"
-    Events="_events"
-    Resources="_resources"
-    OnEventChanged="HandleEventChanged"
-    OnSlotContextMenu="HandleSlotContextMenu"
-    OnEventContextMenu="HandleEventContextMenu" />
-
-@code {
-    private void HandleEventChanged(ScheduleEventChangeArgs args)
-    {
-        // Zpracování drag & drop nebo resize
-        var evt = args.Event;
-        evt.Start = args.NewStart;
-        evt.End = args.NewEnd;
-        evt.ResourceId = args.NewResourceId;
-    }
-
-    private void HandleSlotContextMenu(SchedulerSlotContext context)
-    {
-        // Zobrazení kontextového menu na slotu
-        var x = context.MouseX;
-        var y = context.MouseY;
-        var slotStart = context.SlotStart;
-        var resourceId = context.ResourceId;
-    }
-}
+<TmScheduler View="TmScheduleViewType.Timeline"
+             Events="_events"
+             Resources="_resources"
+             OnEventChanged="HandleEventChanged"
+             OnSlotContextMenu="HandleSlotContextMenu"
+             OnEventContextMenu="HandleEventContextMenu" />
 ```
 
 ---

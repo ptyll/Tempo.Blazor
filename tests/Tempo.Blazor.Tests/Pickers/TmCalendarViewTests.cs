@@ -191,4 +191,60 @@ public class TmCalendarViewTests : LocalizationTestBase
         var style = eventEl.GetAttribute("style") ?? "";
         style.Should().Contain("#ef4444");
     }
+
+    [Fact]
+    public void CalendarView_Compact_Adds_The_Modifier_And_Default_Does_Not()
+    {
+        var compact = Render<TmCalendarView>(p => p.Add(x => x.Compact, true));
+        compact.Find(".tm-calendar-view").ClassList.Should().Contain("tm-calendar-view--compact");
+
+        var full = Render<TmCalendarView>();
+        full.Find(".tm-calendar-view").ClassList.Should().NotContain("tm-calendar-view--compact");
+    }
+
+    // Days are native buttons and month navigation is its own pair of buttons, so this is not an
+    // APG grid. role=grid/row without row/gridcell children is an axe aria-required-children failure.
+    [Fact]
+    public void CalendarView_Has_No_Grid_Or_Row_Role()
+    {
+        var cut = Render<TmCalendarView>(p => p
+            .Add(x => x.SelectedDate, new DateOnly(2025, 6, 15)));
+
+        cut.Markup.Should().NotContain("role=\"grid\"");
+        cut.Markup.Should().NotContain("role=\"row\"");
+
+        var day = cut.Find(".tm-cal-day[data-date='2025-06-15']");
+        day.TagName.Should().Be("BUTTON");
+        day.GetAttribute("type").Should().Be("button");
+
+        cut.Find(".tm-cal-nav").Should().NotBeNull();
+        cut.FindAll(".tm-cal-nav-btn").Should().HaveCount(2);
+        cut.Find(".tm-cal-title").GetAttribute("aria-live").Should().Be("polite");
+        day.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void CalendarView_Selected_Is_Pressed_And_Today_Is_Current_Date()
+    {
+        var today = new DateOnly(2025, 6, 10);
+        var selected = new DateOnly(2025, 6, 15);
+        using var _ = CultureScope.Use("en-US");
+        {
+            var cut = Render<TmCalendarView>(p => p
+                .Add(x => x.Today, today)
+                .Add(x => x.SelectedDate, selected));
+
+            var selectedDay = cut.Find(".tm-cal-day[data-date='2025-06-15']");
+            selectedDay.GetAttribute("aria-pressed").Should().Be("true");
+            selectedDay.GetAttribute("aria-label").Should().Be(selected.ToString("D"));
+
+            var todayDay = cut.Find(".tm-cal-day[data-date='2025-06-10']");
+            todayDay.GetAttribute("aria-current").Should().Be("date");
+            todayDay.GetAttribute("aria-pressed").Should().Be("false");
+
+            var header = cut.Find(".tm-cal-header-cell");
+            header.HasAttribute("aria-label").Should().BeFalse("a generic header cell must not carry a name");
+            header.QuerySelector("abbr")!.GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+        }
+    }
 }

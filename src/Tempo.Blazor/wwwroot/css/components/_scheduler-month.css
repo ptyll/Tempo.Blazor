@@ -152,6 +152,22 @@
     color: var(--tm-text-primary);
 }
 
+/* A phone cell is too narrow for time and title on one line. Two clamped lines, minimal padding. */
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-month-event {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-month-event-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+}
+
 .tm-scheduler-month-day--other .tm-scheduler-month-day-number {
     color: var(--tm-text-tertiary);
 }
@@ -201,4 +217,6 @@
 
 .tm-scheduler-month-day--drop-target {
     background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
 }

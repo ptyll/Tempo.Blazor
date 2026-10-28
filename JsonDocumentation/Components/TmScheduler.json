@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop) and the title heading is a polite live region.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. A host EventTemplate renders directly into the time-grid and timeline cards; span.tm-scheduler-event-content is the host opt-in ellipsis for a template that should stay one line. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -74,6 +74,57 @@
       "type": "EventCallback<TmScheduleEvent?>",
       "isRequired": false,
       "description": "Fires when the user selects an event."
+    },
+    {
+      "name": "SidePanel",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content for the right-hand panel, rendered through the core TmSidePanel (Presentation = Auto): docked on desktop, a side sheet on tablet, a bottom sheet on mobile. Null renders nothing."
+    },
+    {
+      "name": "EventDetailTemplate",
+      "type": "RenderFragment<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Detail of the selected event, rendered in the same TmSidePanel. An event click opens it; closing the panel returns focus to that event. The host supplies the body."
+    },
+    {
+      "name": "SidePanelTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible title of the docked panel header when no event detail is showing. Null uses the localized default (TmSidePanel_DefaultTitle). An open detail replaces it with TmScheduler_EventDetail."
+    },
+    {
+      "name": "SidePanelOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the side panel is open. Two-way with SidePanelOpenChanged."
+    },
+    {
+      "name": "SidePanelOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when the side panel opens or closes."
+    },
+    {
+      "name": "SelectedResourceIds",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Resource ids the views keep. An empty list keeps every resource and every event, and so does a list whose ids match no known resource: a stale selection hides nothing. Otherwise a non-empty list filters Timeline rows, TimeGrid resource columns, and Month and Agenda events."
+    },
+    {
+      "name": "SelectedResourceIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Fires when the built-in resource filter changes the selection."
+    },
+    {
+      "name": "ShowResourceFilter",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, and Resources has entries, the toolbar offers the core TmMultiSelect as data-tm-group=filter, after header-actions and before primary. The trigger reads TmScheduler_AllResources or TmScheduler_NSelected and carries no visible label. On the compact row the filter is its own second row under the header; its popup is the F3 bottom sheet."
     },
     {
       "name": "Views",
@@ -171,6 +222,13 @@
       "description": "Which days the week renders. WorkWeek keeps the first five; the title and the data load use the same range."
     },
     {
+      "name": "ShowTouchHint",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, a localized touch hint renders under the toolbar. CSS shows it only for a coarse pointer with no hover."
+    },
+    {
       "name": "MonthWeeks",
       "type": "TmSchedulerMonthWeeks",
       "isRequired": false,
@@ -260,7 +318,28 @@
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3."
+      "description": "Maximum events shown in a month day cell before \"+N more\". Default: 3. A mobile layout uses CompactMaxVisibleEvents instead."
+    },
+    {
+      "name": "CompactMaxVisibleEvents",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Maximum events shown in a month day cell on a mobile layout. Default: 1."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Pins the layout. Auto measures the scheduler's own container; a forced value renders that layout without a measurement."
+    },
+    {
+      "name": "MobileActionBar",
+      "type": "TmSchedulerMobileActionBar",
+      "isRequired": false,
+      "default": "None",
+      "description": "The mobile action bar. None (default) renders nothing. Auto renders the bar on a mobile layout only."
     },
     {
       "name": "OnMoreClick",
@@ -272,7 +351,7 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Additional CSS class(es)."
+      "description": "Additional CSS class(es). Give the scheduler a bounded height: the root is height 100%, which only resolves against a sized ancestor, and an unbounded host grows with the day. On a mobile layout the time-grid scroller is capped at 70dvh so the action bar stays reachable."
     },
     {
       "name": "AllowPrint",
@@ -308,7 +387,6 @@
     "tm-scheduler-toolbar",
     "tm-scheduler-toolbar-nav",
     "tm-scheduler-toolbar-nav-btn",
-    "tm-scheduler-toolbar-today-btn",
     "tm-scheduler-toolbar-title",
     "tm-scheduler-toolbar-views",
 
@@ -346,7 +424,7 @@
     { "name": "--tm-scheduler-event-tint", "description": "Amount of the event colour mixed into the shared surface. 14%." },
     { "name": "--tm-scheduler-event-border-tint", "description": "Amount of the event colour mixed into the shared surface border. 28%." },
     { "name": "--tm-scheduler-event-bar-width", "description": "Width of the shared surface left bar. Defaults to --tm-space-1." },
-    { "name": "--tm-scheduler-hour-height", "description": "Height of one hour in the time grid. Defaults to 3rem." },
+    { "name": "--tm-scheduler-hour-height", "description": "Height of one hour in the time grid. Defaults to 3rem on the root. A coarse pointer raises it to 3.5rem through :where(.tm-scheduler), so a host rule on .tm-scheduler wins over the coarse default and the mobile layout rule (also 3.5rem) wins over both." },
     { "name": "--tm-scheduler-visible-hours", "description": "Read-only. The component sets it to the visible range in hours, and the geometry reads it." },
     { "name": "--tm-scheduler-offhours-bg", "description": "Wash of a slot outside working hours when HighlightOffHours is true. A 6% mix of --tm-text-secondary." },
     { "name": "--tm-scheduler-lane-height", "description": "Height of one timeline lane. Defaults to 3.5rem." },
@@ -371,6 +449,10 @@
     {
       "title": "Read-only agenda view",
       "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Agenda\" ReadOnly=\"true\" />"
+    },
+    {
+      "title": "Side panel with a mini calendar and an event detail",
+      "code": "<TmScheduler Events=\"@_events\" Resources=\"@_resources\" ShowResourceFilter=\"true\" @bind-SelectedResourceIds=\"_resourceIds\" @bind-SelectedEvent=\"_selected\" @bind-SidePanelOpen=\"_open\">\n    <SidePanel>\n        <TmCalendarView Compact=\"true\" SelectedDate=\"@_selectedDay\" OnDateClick=\"@PickDay\" />\n    </SidePanel>\n    <EventDetailTemplate Context=\"evt\">\n        <h3>@evt.Title</h3>\n        <p>@evt.StartLocal.ToString(\"g\")</p>\n        <p>@evt.Description</p>\n    </EventDetailTemplate>\n</TmScheduler>"
     },
     {
       "title": "Month view with custom event template",

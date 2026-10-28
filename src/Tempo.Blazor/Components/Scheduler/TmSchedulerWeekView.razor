@@ -2,6 +2,11 @@
 @using Tempo.Blazor.Models
 
 <div class="tm-scheduler-week">
+    @if (ShowDateStrip)
+    {
+        <TmSchedulerDateStrip Dates="@_week" SelectedDate="@FocusedDay" Today="@Today"
+                              OnDateSelected="PickStripDayAsync" />
+    }
     <TmSchedulerTimeGrid Dates="@_dates"
                          Events="@Events"
                          Resources="@Resources"
@@ -25,7 +30,8 @@
                          SelectedEvent="@SelectedEvent"
                          SelectedEventChanged="@SelectedEventChanged"
                          OnEventClick="@OnEventClick"
-                         OnEventChanged="@OnEventChanged"
+                         OnEventChanged="@FollowStripOnMoveAsync"
+                         OnAnnounced="@OnAnnounced"
                          OnSlotContextMenu="@OnSlotContextMenu"
                          OnEventContextMenu="@OnEventContextMenu"
                          EventTemplate="@EventTemplate" />
@@ -33,6 +39,7 @@
 
 @code {
     private List<DateOnly> _dates = [];
+    private List<DateOnly> _week = [];
 
     /// <summary>Currently displayed date (any day in the target week).</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
@@ -69,6 +76,9 @@
 
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires with the sentence a move or a resize should announce.</summary>
+    [Parameter] public EventCallback<string> OnAnnounced { get; set; }
 
     /// <summary>Fires when right-clicking on a time slot.</summary>
     [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
@@ -121,11 +131,61 @@
     /// <summary>When true a timed event names its resource, forwarded to the time grid.</summary>
     [Parameter] public bool ShowEventResource { get; set; }
 
-    protected override void OnParametersSet()
+    /// <summary>
+    /// Renders the date strip and shows the focused day with its neighbours instead of the whole week.
+    /// The mobile layout sets it; desktop and tablet leave it false.
+    /// </summary>
+    [Parameter] public bool ShowDateStrip { get; set; }
+
+    /// <summary>The day the strip focuses. Defaults to <see cref="CurrentDate"/>.</summary>
+    [Parameter] public DateOnly? FocusedDay { get; set; }
+
+    /// <summary>Fires when the strip picks a day.</summary>
+    [Parameter] public EventCallback<DateOnly> FocusedDayChanged { get; set; }
+
+    private DateTime _rangeSeen;
+
+    protected override async Task OnParametersSetAsync()
     {
-        _dates = GetWeekDates();
+        _week = SchedulerRange.WeekDates(CurrentDate, FirstDayOfWeek, WeekDays).ToList();
+        // Only a range change resets the strip. A pick inside the same week must survive, and a
+        // selected day is adopted only when the week itself moved.
+        if (_rangeSeen != CurrentDate)
+        {
+            _rangeSeen = CurrentDate;
+            if (FocusedDay is { } remembered && !_week.Contains(remembered))
+            {
+                await FocusedDayChanged.InvokeAsync(DateOnly.FromDateTime(CurrentDate));
+            }
+            else if (SelectedDate is { } selected && _week.Contains(DateOnly.FromDateTime(selected))
+                     && FocusedDay != DateOnly.FromDateTime(selected))
+            {
+                await FocusedDayChanged.InvokeAsync(DateOnly.FromDateTime(selected));
+            }
+        }
+        _dates = ShowDateStrip ? Neighbours() : _week;
     }
 
-    private List<DateOnly> GetWeekDates()
-        => SchedulerRange.WeekDates(CurrentDate, FirstDayOfWeek, WeekDays).ToList();
+    private List<DateOnly> Neighbours()
+    {
+        var focus = FocusedDay ?? DateOnly.FromDateTime(CurrentDate);
+        var at = _week.FindIndex(d => d == focus);
+        if (at < 0) at = 0;
+        var from = Math.Max(0, at - 1);
+        var to = Math.Min(_week.Count - 1, at + 1);
+        return _week.GetRange(from, to - from + 1);
+    }
+
+    private Task PickStripDayAsync(DateOnly day) => FocusedDayChanged.InvokeAsync(day);
+
+    /// <summary>
+    /// A mobile week renders three columns. A move that lands outside them moves the strip day
+    /// along, so the event stays on screen. The host still hears the move.
+    /// </summary>
+    private async Task FollowStripOnMoveAsync(TmScheduleEvent evt)
+    {
+        var landed = DateOnly.FromDateTime(evt.StartLocal);
+        if (ShowDateStrip && !_dates.Contains(landed)) await FocusedDayChanged.InvokeAsync(landed);
+        await OnEventChanged.InvokeAsync(evt);
+    }
 }

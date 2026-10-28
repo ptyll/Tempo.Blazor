@@ -6,7 +6,7 @@
 @typeparam TValue
 
 <div class="tm-input-wrapper @Class" @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Label))
+    @if (!HideLabel && !string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
@@ -14,11 +14,11 @@
     <div class="tm-multiselect @GetTriggerCss()"
          role="combobox"
          id="@Id"
-         aria-label="@Label"
+         aria-label="@EffectiveAriaLabel"
          tabindex="0"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
-         aria-owns="@(Id + "-listbox")"
+         aria-controls="@ListboxIdRef"
          aria-activedescendant="@(!AllowFiltering ? ActiveOptionId : null)"
          aria-required="@(Required ? "true" : null)"
          aria-invalid="@(IsInvalid ? "true" : null)"
@@ -117,7 +117,8 @@
        ancestor's overflow/transform can no longer clip it, and overlay.js repositions it on
        scroll/resize and flips it above the trigger when the space below runs out.
        Bottom + Start + 4px + MatchAnchorWidth replaces the old top:calc(100%+space-1);left:0;right:0. *@
-    <TmOverlayPanel Anchor="_triggerRef"
+    <TmOverlayPanel @ref="_panel"
+                    Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJsAsync"
                     OnOpened="HandlePanelOpened"
@@ -126,10 +127,12 @@
                     Offset="4"
                     MatchAnchorWidth="true"
                     ConstrainHeight="true"
-                    Id="@(Id + "-listbox")"
-                    Role="listbox"
+                    SheetTitle="@EffectiveAriaLabel"
+                    SheetInitialFocusSelector="@SheetFocusSelector"
+                    MobilePresentation="MobilePresentation"
+                    LayoutMode="LayoutMode"
+                    ResolvedLayoutChanged="OnPanelLayoutResolved"
                     Class="tm-multiselect__popup"
-                    aria-multiselectable="true"
                     @onkeydown="HandleKeyDownAsync">
 
             @if (HeaderTemplate is not null)
@@ -149,6 +152,7 @@
                            @onkeydown="HandleFilterKeyDownAsync"
                            @onclick:stopPropagation="true"
                            aria-label="@Loc["TmMultiSelect_Search"]"
+                           aria-controls="@ListboxIdRef"
                            aria-activedescendant="@(AllowFiltering ? ActiveOptionId : null)" />
                 </div>
             }
@@ -166,61 +170,75 @@
                 </div>
             }
 
-            <div class="tm-multiselect__options">
-                @if (_isLoading)
+            @if (_isLoading)
+            {
+                <div class="tm-multiselect__loading" role="status">
+                    <span>@(LoadingMessage ?? Loc["TmMultiSelect_Loading"])</span>
+                </div>
+            }
+            else if (_hasError)
+            {
+                <div class="tm-multiselect__error" role="alert">
+                    <span>@(ErrorMessage ?? Loc["TmMultiSelect_Error"])</span>
+                    <button type="button" @onclick="LoadFromProviderAsync">
+                        @Loc["TmMultiSelect_Retry"]
+                    </button>
+                </div>
+            }
+            else
+            {
+                var visibleItems = GetVisibleItems().ToList();
+                @if (visibleItems.Count == 0)
                 {
-                    <div class="tm-multiselect__loading">
-                        <span>@(LoadingMessage ?? Loc["TmMultiSelect_Loading"])</span>
-                    </div>
-                }
-                else if (_hasError)
-                {
-                    <div class="tm-multiselect__error">
-                        <span>@(ErrorMessage ?? Loc["TmMultiSelect_Error"])</span>
-                        <button type="button" @onclick="LoadFromProviderAsync">
-                            @Loc["TmMultiSelect_Retry"]
-                        </button>
-                    </div>
-                }
-                else
-                {
-                    var visibleItems = GetVisibleItems().ToList();
-                    @if (visibleItems.Count == 0)
+                    @if (NoRecordsTemplate is not null)
                     {
-                        @if (NoRecordsTemplate is not null)
-                        {
-                            @NoRecordsTemplate
-                        }
-                        else
-                        {
-                            <div class="tm-multiselect__empty">
-                                @(EmptyMessage ?? Loc["TmMultiSelect_NoResults"])
-                            </div>
-                        }
-                    }
-                    else if (GroupField is not null)
-                    {
-                        @foreach (var group in visibleItems.GroupBy(GroupField))
-                        {
-                            <div class="tm-multiselect__group">
-                                <div class="tm-multiselect__group-header">@(group.Key ?? "")</div>
-                                @foreach (var item in group)
-                                {
-                                    var idx = visibleItems.IndexOf(item);
-                                    @RenderOption(item, idx)
-                                }
-                            </div>
-                        }
+                        @NoRecordsTemplate
                     }
                     else
                     {
-                        @for (int i = 0; i < visibleItems.Count; i++)
-                        {
-                            @RenderOption(visibleItems[i], i)
-                        }
+                        <div class="tm-multiselect__empty" role="status">
+                            @(EmptyMessage ?? Loc["TmMultiSelect_NoResults"])
+                        </div>
                     }
                 }
-            </div>
+                else
+                {
+                    <div class="tm-multiselect__options"
+                         role="listbox"
+                         id="@(Id + "-listbox")"
+                         aria-multiselectable="true"
+                         aria-label="@ListboxAriaLabel"
+                         aria-labelledby="@ListboxLabelledBy"
+                         tabindex="@(ListboxTabIndex)"
+                         aria-activedescendant="@(ListboxOwnsActiveDescendant ? ActiveOptionId : null)">
+                        @if (GroupField is not null)
+                        {
+                            var groupIndex = 0;
+                            @foreach (var group in visibleItems.GroupBy(GroupField))
+                            {
+                                var headerId = $"{Id}-grp-{groupIndex}";
+                                var groupName = string.IsNullOrEmpty(group.Key) ? Loc["TmMultiSelect_OtherGroup"] : group.Key;
+                                <div class="tm-multiselect__group" role="group" aria-labelledby="@headerId">
+                                    <div id="@headerId" class="tm-multiselect__group-header" role="presentation">@groupName</div>
+                                    @foreach (var item in group)
+                                    {
+                                        var idx = visibleItems.IndexOf(item);
+                                        @RenderOption(item, idx)
+                                    }
+                                </div>
+                                groupIndex++;
+                            }
+                        }
+                        else
+                        {
+                            @for (int i = 0; i < visibleItems.Count; i++)
+                            {
+                                @RenderOption(visibleItems[i], i)
+                            }
+                        }
+                    </div>
+                }
+            }
 
             @if (FooterTemplate is not null || ShowConfirmButton)
             {

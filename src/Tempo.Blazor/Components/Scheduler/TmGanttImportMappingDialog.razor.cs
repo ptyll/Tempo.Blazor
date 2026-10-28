@@ -7,6 +7,7 @@ namespace Tempo.Blazor.Components.Scheduler;
 public partial class TmGanttImportMappingDialog
 {
     private readonly Dictionary<string, GanttColumnKey?> _mappings = new();
+    private readonly string _titleId = $"gantt-mapping-title-{Guid.NewGuid():N}";
 
     private static readonly GanttColumnKey[] AvailableTargets =
     [
@@ -34,6 +35,7 @@ public partial class TmGanttImportMappingDialog
     /// <summary>Fires when the dialog should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         foreach (var col in SourceColumns)

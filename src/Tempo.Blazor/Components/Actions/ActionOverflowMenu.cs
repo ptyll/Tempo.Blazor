@@ -253,6 +253,18 @@ internal sealed class ActionOverflowMenu : ComponentBase
         builder.AddAttribute(seq + 4, "class", item.Danger ? $"{ItemClass} {ItemClass}--danger" : ItemClass);
         builder.AddAttribute(seq + 5, "disabled", item.Disabled);
         builder.AddAttribute(seq + 6, "data-action-id", ActionId(item));
+        // seq + 21 stays before the capture and is absent when the host wrote no test id, so a
+        // reorder or a state flip never moves the capture frame at seq + 20.
+        if (!string.IsNullOrEmpty(item.TestId))
+        {
+            builder.AddAttribute(seq + 21, "data-testid", item.TestId);
+        }
+        // seq + 22 is the bar-owned id. It is absent when the entry itself owns data-testid, so the
+        // two attributes never land on the same node.
+        if (!string.IsNullOrEmpty(item.MenuTestId))
+        {
+            builder.AddAttribute(seq + 22, "data-menu-testid", item.MenuTestId);
+        }
         builder.SetKey(ItemKey(item));
         builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeAsync(item)));
         if (item.Checked is not null)

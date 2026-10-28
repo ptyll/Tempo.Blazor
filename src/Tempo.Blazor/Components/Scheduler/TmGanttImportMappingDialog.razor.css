@@ -1,0 +1,42 @@
+/* ─── Import mapping dialog ──────────────────────────────────────── */
+
+/* The dialog card is a TmFocusScope root: its class is rendered by that child component, so the rule
+   reaches it through ::deep from the overlay div this component renders. */
+.tm-gantt__dialog-overlay ::deep .tm-gantt__import-mapping-dialog {
+    width: min(560px, 95vw);
+}
+
+.tm-gantt__mapping-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tm-text-secondary);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--tm-border-color);
+    margin-bottom: 8px;
+}
+
+.tm-gantt__mapping-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__mapping-source {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__mapping-select {
+    width: 100%;
+    font-size: 0.85rem;
+    height: 32px;
+}

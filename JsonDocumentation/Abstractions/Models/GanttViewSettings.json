@@ -32,6 +32,12 @@
       "description": "Shade non-working days (weekends/holidays) in the timeline. Default: true."
     },
     {
+      "name": "ShowProgressLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Show the completion percentage next to every task bar. Default: false."
+    },
+    {
       "name": "ShowTodayMarker",
       "kind": "Property",
       "type": "bool",
@@ -47,13 +53,19 @@
       "name": "Theme",
       "kind": "Property",
       "type": "GanttTheme",
-      "description": "Color theme applied to the component. Default: Auto."
+      "description": "Color theme applied to the component. Default: Auto, which follows the ambient theme (the cascaded data-theme / the registered ThemeService); Light and Dark force data-theme on the Gantt root."
     },
     {
       "name": "ViewDensity",
       "kind": "Property",
       "type": "GanttViewDensity",
       "description": "Row height density. Default: Comfortable (40 px)."
+    },
+    {
+      "name": "WbsInTitle",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
     }
   ],
   "itemName": "GanttViewSettings"

@@ -26,12 +26,12 @@
     }
     else
     {
-        <div class="tm-gantt__workload-grid" style="grid-template-columns: 140px repeat(@dates.Count, 1fr);">
+        <div class="tm-gantt__workload-grid" style="grid-template-columns: 8.75rem repeat(@dates.Count, minmax(2.5rem, 1fr));">
             <div class="tm-gantt__workload-header-cell tm-gantt__workload-assignee-header"></div>
             @foreach (var date in dates)
             {
                 <div class="tm-gantt__workload-header-cell @(date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "tm-gantt__workload-weekend" : "")">
-                    @date.ToString("dd.MM")
+                    @GanttLabels.ShortDayMonth(date, Loc.Culture)
                 </div>
             }
             @foreach (var assigneeId in assigneeIds)
@@ -43,11 +43,17 @@
                 {
                     var entry = entries.FirstOrDefault(e => e.AssigneeId == assigneeId && e.Date == date);
                     var isOver = entry is not null && entry.AllocatedHours > entry.CapacityHours;
-                    var cellClass = entry is null ? "" : (isOver ? "tm-gantt__workload-cell--over" : "tm-gantt__workload-cell--ok");
+                    var cellClass = entry is null ? "tm-gantt__workload-cell--empty" : (isOver ? "tm-gantt__workload-cell--over" : "tm-gantt__workload-cell--ok");
                     var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
                     <div class="tm-gantt__workload-data-cell @cellClass @(isWeekend ? "tm-gantt__workload-weekend" : "")"
                          data-testid="@($"workload-cell-{assigneeId}-{date:yyyy-MM-dd}")">
-                        @if (entry is not null)
+                        @if (entry is null)
+                        {
+                            @* A dash for "nothing allocated"; the words are for assistive tech, which would read a bare dash as punctuation. *@
+                            <span aria-hidden="true">–</span>
+                            <span class="tm-sr-only">@Loc["TmGantt_WorkloadNoAllocation"]</span>
+                        }
+                        else
                         {
                             @if (DisplayMode == WorkloadDisplayMode.Hours)
                             {

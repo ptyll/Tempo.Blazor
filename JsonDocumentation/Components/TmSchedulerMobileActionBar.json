@@ -1,0 +1,6 @@
+{
+  "itemName": "TmSchedulerMobileActionBar",
+  "kind": "Enum",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "description": "Whether TmScheduler renders the mobile action bar. None (the default) renders nothing, so an existing host is unchanged. Auto renders the bar on a mobile layout only."
+}

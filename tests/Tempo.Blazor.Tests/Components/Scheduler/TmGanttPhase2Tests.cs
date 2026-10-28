@@ -256,7 +256,9 @@ public class TmGanttPhase2Tests : LocalizationTestBase
             p.Add(c => c.OnColumnsChanged, (IReadOnlyList<GanttColumnDefinition> c) => changedCols = c);
         });
 
-        cut.Find("[data-testid='col-toggle-progress']").Change(false);
+        // Phase 4: the header checkbox is gone; the column menu (TmColumnPicker) toggles visibility.
+        cut.Find("[data-testid='gantt-column-menu'] .tm-column-picker-toggle").Click();
+        cut.Find(".tm-column-picker-item input[data-key='Progress']").Change(false);
 
         changedCols.Should().NotBeNull();
         changedCols!.First(c => c.Key == GanttColumnKey.Progress).Visible.Should().BeFalse();

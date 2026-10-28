@@ -147,7 +147,7 @@ public class TmGanttImportDialogTests : LocalizationTestBase
            .UploadFiles(InputFileContent.CreateFromBinary(new byte[] { 1, 2, 3 }, "tasks.xlsx"));
         cut.FindAll(".tm-gantt__dialog-actions button")[0].Click();
 
-        cut.Find(".tm-gantt-task-panel__error").GetAttribute("role").Should().Be("alert",
+        cut.Find(".tm-gantt-import__error").GetAttribute("role").Should().Be("alert",
             "the import error must be announced — same convention as TmGanttTaskPanel's error surface");
     }
 
@@ -165,7 +165,7 @@ public class TmGanttImportDialogTests : LocalizationTestBase
            .UploadFiles(InputFileContent.CreateFromBinary(new byte[] { 1, 2, 3 }, "tasks.xlsx"));
         cut.FindAll(".tm-gantt__dialog-actions button")[0].Click();
 
-        var error = cut.Find(".tm-gantt-task-panel__error").TextContent;
+        var error = cut.Find(".tm-gantt-import__error").TextContent;
         error.Should().NotContain("target of an invocation",
             "the raw TargetInvocationException message must never reach the user");
         error.Should().Contain("unexpected error",

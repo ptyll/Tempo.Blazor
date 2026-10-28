@@ -11,10 +11,15 @@
             class="tm-split-button__primary"
             disabled="@Disabled"
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
+            @attributes="PrimaryAttributes"
             @onclick="HandlePrimaryClick">
         @if (IsLoading)
         {
             <span class="tm-split-button__spinner"></span>
+        }
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <TmIcon Name="@Icon" Size="IconSize.Sm" />
         }
         <span class="tm-split-button__text">@Text</span>
     </button>
@@ -24,6 +29,7 @@
             disabled="@Disabled"
             aria-haspopup="true"
             aria-expanded="@(_isOpen ? "true" : "false")"
+            aria-label="@ToggleAriaLabel"
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @ref="_toggleRef"
             @onclick="ToggleDropdown">
@@ -101,6 +107,21 @@
     /// accessible name, so a <c>role="menu"</c> popover is not unnamed.
     /// </summary>
     [Parameter] public string? SheetTitle { get; set; }
+
+    /// <summary>Optional icon (an <c>IconNames</c> value) shown before the text of the primary button.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>
+    /// Accessible name of the chevron button that opens the menu. When <see langword="null"/> (default) the
+    /// attribute is omitted (the pre-existing markup); set it so the icon-only toggle has a name.
+    /// </summary>
+    [Parameter] public string? ToggleAriaLabel { get; set; }
+
+    /// <summary>
+    /// Additional HTML attributes for the primary action button (a <c>data-testid</c>, an <c>aria-label</c>);
+    /// <see cref="AdditionalAttributes"/> still lands on the root element.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? PrimaryAttributes { get; set; }
 
     /// <summary>Additional CSS class(es) to apply to the root element.</summary>
     [Parameter] public string? Class { get; set; }

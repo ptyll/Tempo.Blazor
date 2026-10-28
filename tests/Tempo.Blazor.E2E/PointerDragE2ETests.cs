@@ -143,10 +143,11 @@ public class PointerDragE2ETests : WasmTestBase
     {
         var page = await OpenSchedulerDayAsync(touch: true, 1024, 800);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "precondition: coarse pointer emulation");
+        await Event(page).ClickAsync();
         var before = await EventHeightAsync(page);
         var slot = await SlotPixelsAsync(page);
         var handleBox = (await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;
-        Assert.IsTrue(handleBox.Height >= 10, $"the handle grows on a coarse pointer ({handleBox.Height}px)");
+        Assert.IsTrue(handleBox.Height >= 44, $"the selected coarse handle is a 44px target ({handleBox.Height}px)");
         Assert.AreEqual("pan-y", await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").EvaluateAsync<string>("e => getComputedStyle(e).touchAction"),
             "a coarse handle pans vertically; the long-press, not touch-action, starts the resize");
 
@@ -173,6 +174,7 @@ public class PointerDragE2ETests : WasmTestBase
     public async Task Scheduler_Touch_PointerCancel_RestoresTheEvent_WithoutNotifying()
     {
         var page = await OpenSchedulerDayAsync(touch: true, 1024, 800);
+        await Event(page).FocusAsync();
         var before = await EventHeightAsync(page);
         var slot = await SlotPixelsAsync(page);
         var action = await LastActionAsync(page);
@@ -201,6 +203,7 @@ public class PointerDragE2ETests : WasmTestBase
     public async Task Scheduler_Touch_ResizeAt390_StillResizes_AndThePageStillScrolls()
     {
         var page = await OpenSchedulerDayAsync(touch: true, 390, 800);
+        await Event(page).FocusAsync();
         var before = await EventHeightAsync(page);
         var slot = await SlotPixelsAsync(page);
         var box = (await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;
@@ -271,6 +274,7 @@ public class PointerDragE2ETests : WasmTestBase
     public async Task Scheduler_Touch_HoldThenDrag_ResizesAndCommits(int width)
     {
         var page = await OpenSchedulerDayAsync(touch: true, width, 800);
+        await Event(page).FocusAsync();
         var before = await EventHeightAsync(page);
         var slot = await SlotPixelsAsync(page);
         var box = (await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;

@@ -7,6 +7,12 @@
     overflow-x: auto;
 }
 
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline {
+    --tm-scheduler-timeline-resource-width: 5rem;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline-start: var(--tm-scheduler-timeline-resource-width);
+}
+
 /* ── Header ── */
 .tm-scheduler-timeline-header,
 .tm-scheduler-timeline-row {
@@ -78,6 +84,14 @@
     z-index: 4;
 }
 
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline-resource-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    padding-inline: var(--tm-space-1);
+}
+
 .tm-scheduler-timeline-resource-label {
     width: var(--tm-scheduler-timeline-resource-width, 12rem);
     flex: 0 0 var(--tm-scheduler-timeline-resource-width, 12rem);
@@ -109,6 +123,7 @@
     cursor: pointer;
     border-right: 1px solid var(--tm-border-color);
     transition: background-color 0.1s ease;
+    scroll-snap-align: start;
 }
 
 .tm-scheduler-timeline-event:focus-visible {
@@ -172,7 +187,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: safe center;
     cursor: pointer;
     overflow: visible;
     z-index: 1;
@@ -235,27 +250,54 @@
     background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 40%, transparent);
 }
 
-/* A finger needs a larger target than a mouse (B13), but never so wide that the two handles cover
-   the event. A quick swipe pans the timeline; the 400ms long-press in scheduler.js starts the resize. */
+/* The timeline mirrors the time grid: a coarse pointer shows the 44px handles only on the selected
+   event, hanging half outside so the bar itself stays tappable. */
 @media (pointer: coarse) {
     .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle {
-        width: min(var(--tm-space-4), 25%);
+        display: none;
+    }
+
+    .tm-scheduler-timeline-event--selected,
+    .tm-scheduler-timeline-event:focus {
+        overflow: visible;
+    }
+
+    .tm-scheduler-timeline-event--selected .tm-scheduler-event-resize-handle,
+    .tm-scheduler-timeline-event:focus .tm-scheduler-event-resize-handle {
+        display: block;
+        width: var(--tm-touch-target);
         touch-action: pan-x;
+    }
+
+    .tm-scheduler-timeline-event--selected .tm-scheduler-event-resize-handle--left,
+    .tm-scheduler-timeline-event:focus .tm-scheduler-event-resize-handle--left {
+        left: calc(var(--tm-touch-target) / -2);
+    }
+
+    .tm-scheduler-timeline-event--selected .tm-scheduler-event-resize-handle--right,
+    .tm-scheduler-timeline-event:focus .tm-scheduler-event-resize-handle--right {
+        right: calc(var(--tm-touch-target) / -2);
+    }
+
+    /* A narrow bar has no room for two grips. The right one changes the end. */
+    .tm-scheduler-timeline-event--selected.tm-scheduler-event--compact .tm-scheduler-event-resize-handle--left,
+    .tm-scheduler-timeline-event:focus.tm-scheduler-event--compact .tm-scheduler-event-resize-handle--left {
+        display: none;
     }
 }
 
-/* No hover on a touch screen: the grip has to be visible without it. */
+/* No hover on a touch screen: the grip has to be visible without it, in the event colour. */
 @media (hover: none) {
     .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle::after {
         content: "";
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 4px;
-        height: 24px;
+        width: var(--tm-space-1);
+        height: var(--tm-space-6);
         transform: translate(-50%, -50%);
         border-radius: var(--tm-radius-full, 999px);
-        background: var(--tm-border-color-strong);
+        background: var(--event-color, var(--tm-color-primary));
     }
 }
 
@@ -284,8 +326,12 @@
 }
 
 /* Drop target highlighting */
-.tm-scheduler-timeline-row-body--drop-target {
+.tm-scheduler-timeline-row-body--drop-target,
+.tm-scheduler-timeline-row.tm-scheduler-timeline-slot--drop-target,
+.tm-scheduler-timeline-row-body.tm-scheduler-timeline-slot--drop-target {
     background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
 }
 
 .tm-scheduler-timeline-slot--drop-target {

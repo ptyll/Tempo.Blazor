@@ -1,10 +1,26 @@
 @namespace Tempo.Blazor.Components.Scheduler
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Models
 
 <div class="tm-scheduler-day">
+    @if (ShowResourcePicker && Resources is { Count: > 0 })
+    {
+        <TmDropdown Text="@PickedName" Icon="@IconNames.User"
+                    AriaLabel="@Loc["TmScheduler_ShowResources"]" data-testid="@TestId("scheduler-resources-menu")"
+                    MobilePresentation="PanelPresentation.Auto" LayoutMode="TmLayoutMode.Mobile"
+                    OnSelect="PickResourceAsync">
+            @foreach (var resource in Resources)
+            {
+                <TmDropdownItem Value="@resource.Id" data-resource="@resource.Id"
+                                Checked="@(resource.Id == EffectiveResourceId)">@resource.Name</TmDropdownItem>
+            }
+        </TmDropdown>
+    }
     <TmSchedulerTimeGrid Dates="@_dates"
                          Events="@Events"
-                         Resources="@Resources"
+                         Resources="@ShownResources"
                          SlotDuration="@SlotDuration"
                          ReadOnly="@ReadOnly"
                          HideTimeGrid="@HideTimeGrid"
@@ -27,6 +43,7 @@
                          SelectedEventChanged="@SelectedEventChanged"
                          OnEventClick="@OnEventClick"
                          OnEventChanged="@OnEventChanged"
+                          OnAnnounced="@OnAnnounced"
                          OnSlotContextMenu="@OnSlotContextMenu"
                          OnEventContextMenu="@OnEventContextMenu"
                          EventTemplate="@EventTemplate" />
@@ -65,14 +82,43 @@
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
 
+    /// <summary>Fires with the sentence a move or a resize should announce.</summary>
+    [Parameter] public EventCallback<string> OnAnnounced { get; set; }
+
     /// <summary>Fires when right-clicking on a time slot.</summary>
     [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
 
     /// <summary>Fires when right-clicking on an event.</summary>
     [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
-    /// <summary>Resources for grouping columns.</summary>
+    /// <summary>Resources for grouping columns, and the options the picker offers.</summary>
     [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>
+    /// The resource the picker shows and the grid filters to. Null means the first resource, so a
+    /// phone day opens on one column instead of every resource side by side.
+    /// </summary>
+    [Parameter] public string? VisibleResourceId { get; set; }
+
+    /// <summary>Fires with the resource the picker chose.</summary>
+    [Parameter] public EventCallback<string?> VisibleResourceIdChanged { get; set; }
+
+    /// <summary>Renders the resource picker above the grid. The mobile layout sets it.</summary>
+    [Parameter] public bool ShowResourcePicker { get; set; }
+
+    private string? EffectiveResourceId
+        => VisibleResourceId ?? Resources?.FirstOrDefault()?.Id;
+
+    private string PickedName
+        => Resources?.FirstOrDefault(r => r.Id == EffectiveResourceId)?.Name ?? Loc["TmScheduler_ShowResources"];
+
+    /// <summary>The columns the grid renders: the picked resource when the picker is showing.</summary>
+    private IReadOnlyList<TmScheduleResource>? ShownResources
+        => ShowResourcePicker && Resources is not null && EffectiveResourceId is not null
+            ? Resources.Where(r => r.Id == EffectiveResourceId).ToList()
+            : Resources;
+
+    private Task PickResourceAsync(string id) => VisibleResourceIdChanged.InvokeAsync(id);
 
     /// <summary>Optional custom event template.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }

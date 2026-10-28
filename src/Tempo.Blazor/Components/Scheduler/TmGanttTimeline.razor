@@ -1,0 +1,241 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Abstractions.WorkItems
+
+<div class="tm-gantt__timeline @(Owner._isPanning ? "tm-gantt__timeline--panning" : "")"
+     data-testid="@TestId("gantt-timeline")"
+     @ref="Owner._timelineContainerRef"
+     @onmousedown="Owner.OnTimelineMouseDown"
+     @onmousemove="Owner.OnTimelineMouseMove"
+     @onmouseup="Owner.OnTimelineMouseUp"
+     @onmouseleave="Owner.OnTimelineMouseUp"
+     @onwheel="Owner.OnTimelineWheel">
+
+    <!-- Two-row Timeline Header -->
+    <div class="tm-gantt__timeline-header" style="width: @(F(Owner._totalTimelineWidth))px">
+        <div class="tm-gantt__timeline-header--upper">
+            @foreach (var h in Owner._upperHeaders)
+            {
+                <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--upper"
+                     style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
+            }
+        </div>
+        <div class="tm-gantt__timeline-header--lower">
+            @foreach (var h in Owner._lowerHeaders)
+            {
+                <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower"
+                     style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
+            }
+        </div>
+        @if (Owner.ViewSettings.ShowTodayMarker)
+        {
+            <span class="tm-gantt__today-label" data-testid="@TestId("today-label")"
+                  style="left: @(F(Owner._todayOffset))px">@Loc["TmGantt_Today"]</span>
+        }
+    </div>
+
+    <!-- Timeline Body -->
+    <div class="tm-gantt__timeline-body"
+         @ref="Owner._timelineBodyRef"
+         @onscroll="Owner.OnTimelineBodyScroll">
+        <div class="tm-gantt__timeline-content"
+             style="height: @(F(Owner._visibleNodes.Count * Owner.RowHeight))px; width: @(F(Owner._totalTimelineWidth))px">
+
+            <!-- Non-working day overlays -->
+            @if (Owner.ViewSettings.ShowDaysOff)
+            {
+                @foreach (var rect in Owner._nonWorkingRects)
+                {
+                    <div class="tm-gantt__nonworking-overlay"
+                         data-testid="@TestId("nonworking-overlay")"
+                         style="left: @(F(rect.Offset))px; width: @(F(rect.Width))px"></div>
+                }
+            }
+
+            <!-- Grid lines -->
+            <div class="tm-gantt__grid">
+                @foreach (var header in Owner._timelineHeaders)
+                {
+                    <div class="tm-gantt__grid-line" style="left: @(F(header.Offset))px; width: @(F(header.Width))px"></div>
+                }
+            </div>
+
+            <!-- Today marker -->
+            @if (Owner.ViewSettings.ShowTodayMarker)
+            {
+                <div class="tm-gantt__today-marker"
+                     data-testid="@TestId("today-marker")"
+                     style="left: @(F(Owner._todayOffset))px"
+                     title="@Loc["TmGantt_Today"]"></div>
+            }
+
+            <!-- Current time marker (Hours view only) -->
+            @if (Owner.ZoomPreset == GanttZoomPreset.Hours)
+            {
+                <div class="tm-gantt__current-time-marker"
+                     data-testid="@TestId("current-time-marker")"
+                     style="left: @(F(Owner._currentTimeOffset))px"></div>
+            }
+
+            <!-- Dependency lines (SVG) -->
+            <svg class="tm-gantt__dependencies" style="width: @(F(Owner._totalTimelineWidth))px; height: 100%">
+                @foreach (var dep in Owner._visibleDependencies)
+                {
+                    <line x1="@F(dep.X1)" y1="@F(dep.Y1)" x2="@F(dep.X2)" y2="@F(dep.Y2)"
+                          class="@GetDepLineClass(dep)"
+                          data-testid="@TestId($"dep-line-{dep.DependencyId}")"
+                          @onclick:stopPropagation
+                          @onclick="() => Owner.SelectDependency(dep.DependencyId)" />
+                    <polygon points="@GetArrowPoints(dep.X2, dep.Y2)"
+                             class="tm-gantt__dependency-arrow" />
+                    @if (dep.LagDays != 0)
+                    {
+                        @((MarkupString)$"<text x=\"{F(dep.MidX)}\" y=\"{F(dep.MidY - 4)}\" class=\"tm-gantt__dep-lag-label\" data-testid=\"dep-lag-{dep.DependencyId}\" text-anchor=\"middle\">{(dep.LagDays > 0 ? "+" : "")}{dep.LagDays} d</text>")
+                    }
+                }
+            </svg>
+
+            <!-- Baseline ghost bars -->
+            @if (Owner.ActiveBaselineId is not null)
+            {
+                @foreach (var bar in Owner._taskBars.Where(b => b.BaselineLeft.HasValue))
+                {
+                    <div class="tm-gantt__bar tm-gantt__bar--baseline"
+                         data-testid="@TestId($"ghost-bar-{bar.Task.Id}")"
+                         style="left: @(F(bar.BaselineLeft!.Value))px; width: @(F(bar.BaselineWidth!.Value))px; top: @(F(bar.Top))px;"></div>
+                }
+            }
+
+            <!-- Task bars -->
+            @foreach (var bar in Owner._taskBars)
+            {
+                <div class="tm-gantt__task-row"
+                     @key="bar.Task.Id"
+                     style="top: @(F(bar.Top))px; height: @(Owner.RowHeight)px">
+                    @if (bar.Task.IsMilestone)
+                    {
+                        <div class="tm-gantt__milestone"
+                             @key="bar.Task.Id"
+                             @ref="_barRefs[bar.Task.Id]"
+                             role="button" tabindex="-1"
+                             aria-label="@MilestoneLabel(bar)"
+                             style="left: @(F(bar.Left - 6))px"
+                             title="@bar.Task.Title"
+                             @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
+                             @onmousedown:stopPropagation="true">
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tm-gantt__bar @GetBarClass(bar)"
+                             @key="bar.Task.Id"
+                             @ref="_barRefs[bar.Task.Id]"
+                             role="button" tabindex="-1"
+                             aria-label="@BarLabel(bar)"
+                             data-testid="@TestId($"task-bar-{bar.Task.Id}")"
+                             style="left: @(F(bar.Left))px; width: @(F(bar.Width))px; @GetBarColorStyle(bar)"
+                             title="@bar.Task.Title (@bar.Task.PercentComplete%)"
+                             @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
+                             @onmousedown:stopPropagation="true">
+                            <div class="tm-gantt__bar-progress" style="width: @(bar.Task.PercentComplete)%"></div>
+                            @if (ShouldRenderBarLabel(bar))
+                            {
+                                <span class="tm-gantt__bar-label">@bar.Task.Title</span>
+                            }
+
+                            <!-- Assignee avatars (up to 3 + overflow) -->
+                            @{
+                                var assignees = bar.Task.Assignees ?? [];
+                                var visibleAvatars = assignees.Take(3).ToList();
+                                var overflowCount = assignees.Count - visibleAvatars.Count;
+                            }
+                            @if (visibleAvatars.Count > 0)
+                            {
+                                <div class="tm-gantt__bar-avatars">
+                                    @foreach (var a in visibleAvatars)
+                                    {
+                                        @if (a.IsVirtual && string.IsNullOrEmpty(a.AvatarUrl))
+                                        {
+                                            <span class="tm-gantt__bar-avatar tm-gantt__bar-avatar--virtual"
+                                                  data-testid="@($"bar-avatar-virtual-{a.Id}")"
+                                                  title="@a.Name">
+                                                <TmIcon Name="users" Size="IconSize.Xs" />
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="tm-gantt__bar-avatar"
+                                                  style="@GetAvatarStyle(a)"
+                                                  title="@a.Name">
+                                                @if (string.IsNullOrEmpty(a.AvatarUrl))
+                                                {
+                                                    @GetAvatarInitial(a)
+                                                }
+                                            </span>
+                                        }
+                                    }
+                                    @if (overflowCount > 0)
+                                    {
+                                        <span class="tm-gantt__bar-avatar-overflow">+@overflowCount</span>
+                                    }
+                                </div>
+                            }
+
+                            <!-- Dep creation handles -->
+                            @if (Owner.AllowDependencyCreation)
+                            {
+                                <span class="tm-gantt__dep-handle tm-gantt__dep-handle--start"
+                                      @onmousedown:stopPropagation
+                                      @onmousedown="() => Owner.StartDepDrag(bar.Task.Id, fromEnd: false)"></span>
+                                <span class="tm-gantt__dep-handle tm-gantt__dep-handle--end"
+                                      @onmousedown:stopPropagation
+                                      @onmousedown="() => Owner.StartDepDrag(bar.Task.Id, fromEnd: true)"
+                                      @onmouseup:stopPropagation
+                                      @onmouseup="() => Owner.OnDepDrop(bar.Task.Id)"></span>
+                            }
+
+                            <!-- Hover tooltip -->
+                            <div class="tm-gantt__bar-tooltip" data-testid="@TestId("bar-tooltip")">
+                                <div class="tm-gantt__bar-tooltip-title">@bar.Task.Title</div>
+                                <div class="tm-gantt__bar-tooltip-row">
+                                    <span>@Loc["TmGantt_TooltipStart"]:</span>
+                                    <span>@bar.Task.Start.ToString("dd.MM.yyyy")</span>
+                                </div>
+                                <div class="tm-gantt__bar-tooltip-row">
+                                    <span>@Loc["TmGantt_TooltipEnd"]:</span>
+                                    <span>@bar.Task.End.ToString("dd.MM.yyyy")</span>
+                                </div>
+                                <div class="tm-gantt__bar-tooltip-row">
+                                    <span>@Loc["TmGantt_TooltipProgress"]:</span>
+                                    <span>@bar.Task.PercentComplete%</span>
+                                </div>
+                            </div>
+                            <!-- Deadline exceeded marker -->
+                            @if (bar.IsDeadlineExceeded)
+                            {
+                                <span class="tm-gantt__bar-deadline" data-testid="@TestId("deadline-marker")" title="@Loc["GanttTask_DeadlineExceeded"]">
+                                    <TmIcon Name="flame" Size="IconSize.Sm" />
+                                </span>
+                            }
+                        </div>
+                        @* A sibling of the bar, not a child: the completed bar is faded (opacity .6) and a
+                           descendant label would be composited with it, so its contrast was measured against
+                           a half-transparent ancestor. Placed from the geometry the bar already has. *@
+                        @if (Owner.ViewSettings.ShowProgressLabel)
+                        {
+                            <span class="tm-gantt__bar-progress-label @GetProgressLabelClass(bar)"
+                                  data-testid="@TestId("bar-progress-label")"
+                                  style="left: @(F(bar.Left + bar.Width))px">@(bar.Task.PercentComplete)%</span>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

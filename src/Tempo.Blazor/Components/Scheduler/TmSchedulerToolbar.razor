@@ -1,54 +1,90 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Pickers
+@using Tempo.Blazor.Components.Toolbar
 @using Tempo.Blazor.Models
 @using System.Globalization
 @inject IJSRuntime JS
 
 @if (ShowHeader)
 {
-<div class="tm-scheduler-toolbar">
+<div class="tm-scheduler-toolbar @(IsMobile ? "tm-scheduler-toolbar--compact" : null)">
+    @if (IsMobile)
+    {
+        <div class="tm-scheduler-toolbar-compact-header">
+            @CompactRow
+        </div>
+        @if (ResourceFilter is not null)
+        {
+            @* Its own row, so the ‹ title › Today view header is never squeezed by the filter. *@
+            <div class="tm-scheduler-toolbar-filter tm-scheduler-toolbar-filter--row" data-tm-group="filter">@ResourceFilter</div>
+        }
+    }
+    else
+    {
+        <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="@Loc["TmScheduler_Toolbar"]"
+                   OverflowLabel="@Loc["Tm_More"]" Class="tm-scheduler-toolbar-bar">
+            @FullRow
+        </TmToolbar>
+    }
+</div>
+}
+
+@code {
+    private RenderFragment CompactRow => @<text>
+    <div class="tm-scheduler-toolbar-nav" data-tm-group="navigation">
+        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-prev")"
+                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev"><TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" /></button>
+        @TitleGroup
+        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-next")"
+                aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext"><TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" /></button>
+        @if (!HasActionBar)
+        {
+            <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-today")"
+                    aria-label="@Loc["TmScheduler_Today"]" @onclick="OnToday"><TmIcon Name="@IconNames.Target" Size="IconSize.Sm" /></button>
+        }
+    </div>
+    <div class="tm-scheduler-toolbar-view" data-tm-group="view" data-testid="@TestId("scheduler-view-menu")">
+        <TmDropdown @ref="_viewDropdown" Text="@GetViewLabel(View)"
+                    AriaLabel="@($"{Loc["TmScheduler_SwitchView"]}: {GetViewLabel(View)}")" data-testid="@TestId("scheduler-view")"
+                    MobilePresentation="PanelPresentation.Auto" LayoutMode="TmLayoutMode.Mobile"
+                    OnSelect="HandleViewAsync">
+            @foreach (var view in OfferedViews)
+            {
+                <TmDropdownItem Value="@view.ToString()" data-view="@view.ToString()"
+                                Checked="@(view == View)">@GetViewLabel(view)</TmDropdownItem>
+            }
+        </TmDropdown>
+    </div>
+    </text>;
+
+    private RenderFragment FullRow => @<text>
     @if (HeaderStart is not null)
     {
         <div class="tm-scheduler-toolbar-slot" data-tm-group="header-start">@HeaderStart</div>
     }
+    <TmToolbarGroup Class="tm-scheduler-toolbar-nav" data-tm-group="navigation">
+        <TmToolbarButton Priority="ToolbarButtonPriority.Pinned" Text="@Loc["TmScheduler_Today"]"
+                         data-testid="@TestId("scheduler-today")" OnClick="OnToday" />
+        <TmToolbarButton Priority="ToolbarButtonPriority.Pinned" Icon="@IconNames.ChevronLeft"
+                         Tooltip="@Loc["TmScheduler_Prev"]" data-testid="@TestId("scheduler-prev")"
+                         aria-label="@Loc["TmScheduler_Prev"]" OnClick="OnPrev" />
+        <TmToolbarButton Priority="ToolbarButtonPriority.Pinned" Icon="@IconNames.ChevronRight"
+                         Tooltip="@Loc["TmScheduler_Next"]" data-testid="@TestId("scheduler-next")"
+                         aria-label="@Loc["TmScheduler_Next"]" OnClick="OnNext" />
+    </TmToolbarGroup>
 
-    <div class="tm-scheduler-toolbar-nav" data-tm-group="navigation">
-        <button type="button" class="tm-scheduler-toolbar-nav-btn tm-scheduler-toolbar-today-btn"
-                data-testid="@TestId("scheduler-today")"
-                @onclick="OnToday">@Loc["TmScheduler_Today"]</button>
-        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-prev")"
-                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev"><TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" /></button>
-        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="@TestId("scheduler-next")"
-                aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext"><TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" /></button>
-    </div>
+    <TmToolbarItem Class="tm-scheduler-toolbar-title" data-tm-group="title">
+        @TitleGroup
+    </TmToolbarItem>
 
-    <div class="tm-scheduler-toolbar-title" data-tm-group="title" @ref="_titleRef">
-        <span class="tm-sr-only" aria-live="polite" aria-atomic="true">@DisplayTitle</span>
-        <TmPopover @ref="_datePopover" @bind-IsOpen="_dateOpen" ShowArrow="false"
-                   Title="@Loc["TmScheduler_GoToDate"]" Role="dialog" TrapFocus="true"
-                   TriggerAriaLabel="@GoToDateLabel" OnOpened="FocusCalendarDayAsync"
-                   Class="tm-scheduler-toolbar-date">
-            <TriggerContent>
-                <span class="tm-scheduler-toolbar-title-btn">
-                    <span aria-hidden="true"><TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" /></span>
-                    <span class="tm-scheduler-toolbar-title-text">@DisplayTitle</span>
-                    <span aria-hidden="true" class="tm-scheduler-toolbar-title-chevron"><TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" /></span>
-                </span>
-            </TriggerContent>
-            <ChildContent>
-                <TmCalendarView SelectedDate="@DisplayedDay"
-                                Today="@Today"
-                                OnDateClick="PickDateAsync" />
-            </ChildContent>
-        </TmPopover>
-    </div>
-
-    <div class="tm-scheduler-toolbar-views" data-tm-group="view">
+    <TmToolbarGroup Class="tm-scheduler-toolbar-views" data-tm-group="view">
         <TmTabs Variant="TabVariant.Pill" ActiveTabId="@ActiveTabId" ActiveTabIdChanged="SelectViewAsync"
                 AriaLabel="@Loc["TmScheduler_ViewSwitcher"]">
             @foreach (var view in OfferedViews)
@@ -58,41 +94,66 @@
                             TabAttributes="@(new Dictionary<string, object> { ["data-view"] = v.ToString() })" />
             }
         </TmTabs>
-    </div>
+    </TmToolbarGroup>
 
     @if (HeaderActions is not null)
     {
         <div class="tm-scheduler-toolbar-slot" data-tm-group="header-actions">@HeaderActions</div>
     }
 
+    @if (ResourceFilter is not null)
+    {
+        <TmToolbarItem Class="tm-scheduler-toolbar-filter" data-tm-group="filter">@ResourceFilter</TmToolbarItem>
+    }
+
     @if (OnAddClick.HasDelegate)
     {
-        <div class="tm-scheduler-toolbar-primary" data-tm-group="primary">
-            <button type="button" class="tm-scheduler-toolbar-add" data-testid="@TestId("scheduler-add")"
-                    @onclick="OnAddClick">
-                <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
-                <span>@Loc["TmScheduler_AddEvent"]</span>
-            </button>
-        </div>
+        <TmToolbarGroup Class="tm-scheduler-toolbar-primary" data-tm-group="primary">
+            <TmToolbarButton Priority="ToolbarButtonPriority.Pinned" Icon="@IconNames.Plus"
+                             Text="@Loc["TmScheduler_AddEvent"]" data-testid="@TestId("scheduler-add")"
+                             OnClick="OnAddClick" />
+        </TmToolbarGroup>
     }
 
     @if (ShowPrint)
     {
-        <div class="tm-scheduler-toolbar-overflow" data-tm-group="overflow">
-            <TmDropdown Icon="@IconNames.MoreHorizontal" Text="@Loc["Tm_More"]" AriaLabel="@Loc["Tm_More"]"
-                        ShowChevron="false" OutlineTrigger="true" data-testid="@TestId("scheduler-more")"
-                        OnSelect="HandleMoreAsync">
-                <TmDropdownItem Value="print" Icon="@IconNames.Printer" aria-label="@Loc["TmScheduler_Print"]" data-testid="@TestId("scheduler-print")">@Loc["TmScheduler_Print"]</TmDropdownItem>
-            </TmDropdown>
-        </div>
+        <TmToolbarGroup Class="tm-scheduler-toolbar-overflow" data-tm-group="export">
+            <TmToolbarButton Priority="ToolbarButtonPriority.OverflowOnly" Icon="@IconNames.Printer"
+                             Text="@Loc["TmScheduler_Print"]" Tooltip="@Loc["TmScheduler_Print"]"
+                             data-testid="@TestId("scheduler-print")" OnClick="OnPrint" />
+        </TmToolbarGroup>
     }
-</div>
+    </text>;
+
+    private RenderFragment TitleGroup => @<text>
+    <div class="tm-scheduler-toolbar-title" @ref="_titleRef">
+        <span class="tm-sr-only" aria-live="polite" aria-atomic="true">@DisplayTitle</span>
+        <TmPopover @ref="_datePopover" @bind-IsOpen="_dateOpen" ShowArrow="false"
+                   Title="@Loc["TmScheduler_GoToDate"]" Role="dialog" TrapFocus="true"
+                   TriggerAriaLabel="@GoToDateLabel" OnOpened="FocusCalendarDayAsync"
+                   MobilePresentation="PanelPresentation.Auto" LayoutMode="LayoutMode"
+                   Class="tm-scheduler-toolbar-date">
+            <TriggerContent>
+                <span class="tm-scheduler-toolbar-title-btn">
+                    <span aria-hidden="true"><TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" /></span>
+                    <span class="tm-scheduler-toolbar-title-text">@DisplayTitle</span>
+                    <span aria-hidden="true" class="tm-scheduler-toolbar-title-chevron"><TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" /></span>
+                </span>
+            </TriggerContent>
+            <ChildContent>
+                <TmCalendarView Compact="true" Class="tm-scheduler-date-calendar" SelectedDate="@DisplayedDay"
+                                Today="@Today" OnDateClick="PickDateAsync" />
+            </ChildContent>
+        </TmPopover>
+    </div>
+    </text>;
 }
 
 @code {
     private string Instance => string.IsNullOrEmpty(InstanceId) ? _fallbackId : InstanceId;
     private readonly string _fallbackId = "tm-sched-" + Guid.NewGuid().ToString("N");
     private TmPopover? _datePopover;
+    private TmDropdown? _viewDropdown;
     private bool _dateOpen;
     private ElementReference _titleRef;
 
@@ -188,6 +249,28 @@
     /// <summary>Instance id shared with the scheduler body, so the body's tabpanel id matches the active tab.</summary>
     [Parameter] public string? InstanceId { get; set; }
 
+    /// <summary>
+    /// The layout the scheduler resolved. Mobile renders the compact row; desktop and tablet render
+    /// the core toolbar. A forced value needs no measurement.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// When true the mobile action bar already offers Today, so the compact row omits its own.
+    /// Default false: the compact row keeps a Today icon button.
+    /// </summary>
+    [Parameter] public bool HasActionBar { get; set; }
+
+    /// <summary>
+    /// The host's resource filter, rendered as its own <c>data-tm-group="filter"</c> group after
+    /// <c>header-actions</c> and before <c>primary</c> (decision SCH-TOOLBAR-2). On the compact row it
+    /// is a second row under the header, so it never squeezes <c>‹ title ›</c>. Null renders no group,
+    /// so the frozen group order is unchanged.
+    /// </summary>
+    [Parameter] public RenderFragment? ResourceFilter { get; set; }
+
+    private bool IsMobile => LayoutMode == TmLayoutMode.Mobile;
+
     private string DisplayTitle
     {
         get
@@ -233,16 +316,26 @@
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
     }
 
-    private Task HandleMoreAsync(string value)
-        => value == "print" ? OnPrint.InvokeAsync() : Task.CompletedTask;
+    private Task HandleViewAsync(string value)
+        => Enum.TryParse<TmScheduleViewType>(value, out var view)
+            ? OnViewChange.InvokeAsync(view)
+            : Task.CompletedTask;
 
-    private string GetViewLabel(TmScheduleViewType view) => view switch
+    /// <summary>
+    /// Opens the view switcher. On mobile that is the compact-row dropdown (a sheet under
+    /// <c>MobilePresentation=Auto</c>); on desktop and tablet the switcher is a tablist, so this
+    /// is a no-op. The action bar calls it — the dropdown stays the one control.
+    /// </summary>
+    public async Task OpenViewMenuAsync()
     {
-        TmScheduleViewType.Day => Loc["TmScheduler_Day"],
-        TmScheduleViewType.Week => Loc["TmScheduler_Week"],
-        TmScheduleViewType.Month => Loc["TmScheduler_Month"],
-        TmScheduleViewType.Agenda => Loc["TmScheduler_Agenda"],
-        TmScheduleViewType.Timeline => Loc["TmScheduler_Timeline"],
-        _ => view.ToString()
-    };
+        if (_viewDropdown is not null) await _viewDropdown.OpenAsync();
+    }
+
+    /// <summary>Opens the title date popover. The action bar's "Go to date" calls it.</summary>
+    public async Task OpenDatePickerAsync()
+    {
+        if (_datePopover is not null) await _datePopover.OpenAsync();
+    }
+
+    private string GetViewLabel(TmScheduleViewType view) => SchedulerViewLabel.Of(Loc, view);
 }

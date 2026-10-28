@@ -30,18 +30,49 @@ function el(classes = [], parent = null, rect = { left: 0, top: 0, width: 0, hei
             add: n => set.add(n), remove: n => set.delete(n), contains: n => set.has(n),
         },
         setAttribute(name, value) { node.attrs.set(name, String(value)); },
+        getAttribute(name) { return node.attrs.has(name) ? node.attrs.get(name) : null; },
         removeAttribute(name) { node.attrs.delete(name); },
         getBoundingClientRect: () => node.rect,
         setPointerCapture(id) { node.captured.add(id); },
         releasePointerCapture(id) { node.captured.delete(id); node.released.push(id); },
+        appendChild(child) { node.children.push(child); child.parent = node; child.parentElement = node; return child; },
+        remove() { if (node.parent) node.parent.children = node.parent.children.filter(c => c !== node); },
+        children: [],
+        querySelector(selector) {
+            const scoped = selector.startsWith(':scope > ') ? selector.slice(':scope > '.length) : selector;
+            const wanted = scoped.startsWith('.') ? scoped.slice(1) : null;
+            const walk = list => {
+                for (const child of list) {
+                    if (wanted && child.classList.contains(wanted)) return child;
+                    const found = walk(child.children ?? []);
+                    if (found) return found;
+                }
+                return null;
+            };
+            return walk(node.children);
+        },
         closest(selector) {
+            const matches = (n, raw) => {
+                const compound = raw.trim();
+                const parts = compound.split(/(?=[.\[])/).filter(Boolean);
+                return parts.every(part => {
+                    if (part.startsWith('.')) return n.classList.contains(part.slice(1));
+                    if (part.startsWith('[')) {
+                        const name = part.slice(1, part.indexOf('='));
+                        const key = name.replace(/^data-/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+                        return n.attrs.has(name) || (n.dataset && n.dataset[key] !== undefined);
+                    }
+                    return false;
+                });
+            };
             for (let n = node; n; n = n.parent) {
-                const wanted = selector.split(',').map(s => s.trim());
-                if (wanted.some(s => s.startsWith('.')
-                    ? n.classList.contains(s.slice(1))
-                    : s.startsWith('[') && n.attrs.has(s.slice(1, s.indexOf('='))))) return n;
+                if (selector.split(',').some(s => matches(n, s))) return n;
             }
             return null;
+        },
+        // closest() starts at the node itself, so a handle must answer for its own selector.
+        matches(selector) {
+            return node.closest(selector) === node;
         },
     };
     // Pointer events bubble: a captured pointer's events fire on the handle and reach the document.
@@ -51,12 +82,14 @@ function el(classes = [], parent = null, rect = { left: 0, top: 0, width: 0, hei
         (node.parent ?? doc)?.dispatch(type, event);
         return event;
     };
+    if (parent) parent.children.push(node);
     return node;
 }
 
 /** A timegrid with one event (top 100, height 60 of a 1440px-tall body) and both resize handles. */
 function timegrid({ eventId = 'e1', slot = 30 } = {}) {
-    const grid = el(['tm-scheduler-timegrid']);
+    const schedulerRoot = el(['tm-scheduler']);
+    const grid = el(['tm-scheduler-timegrid'], schedulerRoot);
     grid.dataset.slotDuration = String(slot);
     const body = el(['tm-scheduler-timegrid-body'], grid, { left: 0, top: 0, width: 700, height: 1440 });
     const event = el(['tm-scheduler-timegrid-event'], body, { left: 10, top: 100, width: 100, height: 60 });
@@ -65,7 +98,7 @@ function timegrid({ eventId = 'e1', slot = 30 } = {}) {
     top.dataset.resizeEdge = 'top';
     const bottom = el(['tm-scheduler-event-resize-handle', 'tm-scheduler-event-resize-handle--bottom'], event);
     bottom.dataset.resizeEdge = 'bottom';
-    return { grid, body, event, top, bottom };
+    return { schedulerRoot, grid, body, event, top, bottom };
 }
 
 /** A timeline row (1440px wide = one minute per pixel) with one event. */
@@ -91,10 +124,28 @@ let doc;
 let scheduler;
 
 async function boot() {
-    doc = { ...bag(), readyState: 'complete', currentScript: { src: helperUrl.replace('pointer-drag.js', 'scheduler.js') }, contains: () => true };
+    doc = {
+        ...bag(), readyState: 'complete',
+        currentScript: { src: helperUrl.replace('pointer-drag.js', 'scheduler.js') },
+        contains: () => true,
+        createElement() {
+            const node = el();
+            // className is how the live time label is marked; querySelector matches classList.
+            Object.defineProperty(node, 'className', {
+                set(value) { String(value).split(/\s+/).filter(Boolean).forEach(c => node.classList.add(c)); },
+                get() { return ''; },
+            });
+            return node;
+        },
+        elementFromPoint: () => null,
+    };
     globalThis.document = doc;
     globalThis.window = { TempoBlazor: undefined };
     globalThis.matchMedia = undefined;
+    // pointer-gesture.js schedules its auto-scroller on a frame. The stub never paints, so the
+    // callback is recorded and never run.
+    globalThis.requestAnimationFrame = () => 1;
+    globalThis.cancelAnimationFrame = () => {};
     // A fresh module instance per test: the IIFE attaches to the globals above.
     await import(`../scheduler.js?${Math.random()}`);
     scheduler = globalThis.window.TempoBlazor.Scheduler;
@@ -178,7 +229,8 @@ test('the scroll guard prevents default only for an unmodified roving key on a r
 
 test('no mouse listener is registered any more - the gesture is Pointer Events on the document', () => {
     assert.equal(doc.count('mousedown'), 0);
-    assert.equal(doc.count('pointerdown'), 1);
+    // Two delegated listeners: the resize handles, and the touch move of the event body.
+    assert.equal(doc.count('pointerdown'), 2);
 });
 
 test('touch resize is gated behind a 400ms long-press; a quick swipe is not a resize', async (t) => {
@@ -420,7 +472,7 @@ test('init twice never stacks a second listener', async () => {
     await scheduler.ready;
     scheduler.init();
     await scheduler.ready;
-    assert.equal(doc.count('pointerdown'), 1);
+    assert.equal(doc.count('pointerdown'), 2, 'resize and move, still one of each');
 });
 
 test('destroy mid-resize restores the event, releases the capture and removes every listener', () => {
@@ -443,7 +495,7 @@ test('init after destroy works again', async () => {
     scheduler.destroy();
     scheduler.init();
     await scheduler.ready;
-    assert.equal(doc.count('pointerdown'), 1);
+    assert.equal(doc.count('pointerdown'), 2);
 });
 
 // ── a cancelled resize puts back the INLINE geometry Blazor rendered (found by the real-browser E2E) ──
@@ -609,6 +661,55 @@ test('a guarded key puts the page position back on the frame the browser scrolls
     assert.equal(windowListeners.length, 0, 'detach removes the window scroll pin');
 });
 
+test('a wheel, a touch or a non-roving key releases the pin at once', () => {
+    const listeners = [];
+    const root = {
+        contains: () => true,
+        addEventListener: (type, handler) => listeners.push({ type, handler }),
+        removeEventListener() {},
+    };
+    const stop = { getAttribute: () => 'gridcell', closest: () => stop };
+    let y = 0;
+    const windowListeners = [];
+    globalThis.window.scrollX = 0;
+    Object.defineProperty(globalThis.window, 'scrollY', { configurable: true, get: () => y, set: value => { y = value; } });
+    globalThis.window.scrollTo = options => { y = options.top; };
+    globalThis.window.requestAnimationFrame = () => 1;
+    globalThis.window.addEventListener = (type, fn) => windowListeners.push({ type, fn });
+    globalThis.window.removeEventListener = (type, fn) => {
+        const at = windowListeners.findIndex(l => l.type === type && l.fn === fn);
+        if (at >= 0) windowListeners.splice(at, 1);
+    };
+
+    scheduler.attachScrollGuard(root);
+    const fire = (type, event) => listeners.filter(l => l.type === type).forEach(l => l.handler(event));
+    fire('focusin', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, true, 'focusing a roving stop arms the pin');
+
+    // A scroll that starts before the first stable frame is the focus scroll, and is corrected.
+    y = 40;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 0, 'a scroll before the first stable frame is the focus scroll and is put back');
+
+    // The user takes the wheel. The pin must let go immediately, not a second later.
+    fire('wheel', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a wheel releases the pin at once');
+    y = 80;
+    windowListeners.filter(l => l.type === 'scroll').forEach(l => l.fn());
+    assert.equal(y, 80, 'a scroll after the wheel is the user and is kept');
+
+    // A touch and a plain key do the same.
+    fire('focusin', { target: stop });
+    fire('touchstart', { target: stop });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a touch releases the pin');
+
+    fire('keydown', { key: 'ArrowDown', target: stop, preventDefault() {} });
+    assert.equal(root.__tmSchedulerScrollHold, true, 'a roving key arms the pin again');
+    fire('keydown', { key: 'a', target: stop, preventDefault() {} });
+    assert.equal(root.__tmSchedulerScrollHold, false, 'a key that is not a roving key releases the pin');
+    scheduler.detachScrollGuard(root);
+});
+
 test('a focus that lands before any guarded key does not scroll the page', () => {
     const root = el(['tm-scheduler']);
     let y = 420;
@@ -705,6 +806,400 @@ test('scrollToTime scrolls the grid scroller by the visible range, under the sti
 
     scheduler.scrollToTime(null, 600);
     assert.equal(scroller.scrollTop > 0, true);
+});
+
+// ── touch move (B13) ────────────────────────────────────────────────────────────────────────
+// The event body moves only for a touch long-press. A mouse or a pen press on the body must not
+// start a pointer gesture: that stays HTML5 drag-and-drop, so the desktop behaviour is unchanged.
+
+/** Two day columns (1440px tall = one minute per pixel) and one draggable event in the first. */
+function moveGrid({ eventId = 'e1', slot = 30, draggable = true } = {}) {
+    const schedulerRoot = el(['tm-scheduler']);
+    const grid = el(['tm-scheduler-timegrid'], schedulerRoot);
+    grid.dataset.slotDuration = String(slot);
+    grid.dataset.rangeStart = '0';
+    grid.dataset.rangeMinutes = '1440';
+    const body = el(['tm-scheduler-timegrid-body'], grid, { left: 0, top: 0, width: 200, height: 1440 });
+    const col1 = el(['tm-scheduler-timegrid-col'], body, { left: 0, top: 0, width: 100, height: 1440 });
+    col1.dataset.date = '2026-10-13';
+    const col2 = el(['tm-scheduler-timegrid-col'], body, { left: 100, top: 0, width: 100, height: 1440 });
+    col2.dataset.date = '2026-10-14';
+    const event = el(['tm-scheduler-timegrid-event'], col1, { left: 0, top: 600, width: 100, height: 60 });
+    // A real rect already includes the live translate. The mock has to do the same, or a snap that
+    // re-reads the origin after writing the transform looks stable when it is not.
+    const base = event.rect;
+    event.getBoundingClientRect = () => {
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(event.style.transform || '');
+        const dx = match ? Number(match[1]) : 0;
+        const dy = match ? Number(match[2]) : 0;
+        return { left: base.left + dx, top: base.top + dy, width: base.width, height: base.height };
+    };
+    event.dataset.eventId = eventId;
+    event.draggable = draggable;
+    event.attrs.set('draggable', draggable ? 'true' : 'false');
+    return { schedulerRoot, grid, body, col1, col2, event };
+}
+
+/** A month grid with two day cells and one draggable event in the first. */
+function monthGrid({ eventId = 'm1' } = {}) {
+    const schedulerRoot = el(['tm-scheduler']);
+    const root = el(['tm-scheduler-month'], schedulerRoot);
+    const day1 = el(['tm-scheduler-month-day'], root, { left: 0, top: 0, width: 100, height: 80 });
+    day1.dataset.date = '2026-10-13';
+    const event = el(['tm-scheduler-month-event'], day1, { left: 4, top: 20, width: 90, height: 20 });
+    event.dataset.eventId = eventId;
+    event.attrs.set('draggable', 'true');
+    const day2 = el(['tm-scheduler-month-day'], root, { left: 100, top: 0, width: 100, height: 80 });
+    day2.dataset.date = '2026-10-20';
+    return { schedulerRoot, root, day1, day2, event };
+}
+
+/** Two timeline rows (1440px wide = one minute per pixel) and one draggable event in the first. */
+function moveTimeline({ eventId = 't1', slot = 30 } = {}) {
+    const root = el(['tm-scheduler-timeline']);
+    root.dataset.slotDuration = String(slot);
+    root.dataset.rangeStart = '0';
+    root.dataset.rangeMinutes = '1440';
+    root.dataset.date = '2026-10-13';
+    const row1 = el(['tm-scheduler-timeline-row'], root);
+    row1.dataset.resource = 'room-a';
+    const body1 = el(['tm-scheduler-timeline-row-body'], row1, { left: 0, top: 0, width: 1440, height: 40 });
+    const event = el(['tm-scheduler-timeline-event'], body1, { left: 600, top: 0, width: 60, height: 30 });
+    event.dataset.eventId = eventId;
+    event.attrs.set('draggable', 'true');
+    const row2 = el(['tm-scheduler-timeline-row'], root);
+    row2.dataset.resource = 'room-b';
+    const body2 = el(['tm-scheduler-timeline-row-body'], row2, { left: 0, top: 40, width: 1440, height: 40 });
+    return { root, row1, row2, body1, body2, event };
+}
+
+/** Hold a touch for the long-press, then drag it. Returns the pointerup event. */
+function longPressDrag(t, target, from, to) {
+    // setTimeout is read when the hold is armed, so the mock has to be on before the pointerdown.
+    // A second gesture in the same test finds it already enabled.
+    try { t.mock.timers.enable({ apis: ['setTimeout'] }); } catch { /* already on */ }
+    doc.dispatch('pointerdown', ev(target, { pointerType: 'touch', pointerId: 7, clientX: from.x, clientY: from.y }));
+    t.mock.timers.tick(400);
+    target.dispatch('pointermove', ev(target, { pointerType: 'touch', pointerId: 7, clientX: to.x, clientY: to.y }));
+    return ev(target, { pointerType: 'touch', pointerId: 7, clientX: to.x, clientY: to.y });
+}
+
+test('a 400ms touch hold on the event body starts a move; a quick swipe sends nothing', async (t) => {
+    const g = moveGrid();
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+    doc.elementFromPoint = () => g.col2;
+
+    doc.dispatch('pointerdown', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 630 }));
+    doc.dispatch('pointermove', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 140, clientY: 690 }));
+    doc.dispatch('pointerup', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 140, clientY: 690 }));
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), false, 'a swipe before the hold is a scroll');
+    assert.equal(ref.calls.length, 0, 'a swipe notifies nothing');
+
+    const up = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), true, 'the hold starts the move');
+    assert.equal(g.event.draggable, false, 'HTML5 drag is off while the finger moves the event');
+    g.event.dispatch('pointerup', up);
+
+    assert.equal(ref.calls.filter(c => c[0] === 'NotifyMoveComplete').length, 1, 'the release notifies .NET exactly once');
+});
+
+test('a mouse or a pen press on the event body does not start a pointer move', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const g = moveGrid();
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    for (const pointerType of ['mouse', 'pen']) {
+        doc.dispatch('pointerdown', ev(g.event, { pointerType, clientX: 40, clientY: 630 }));
+        t.mock.timers.tick(400);
+        g.event.dispatch('pointermove', ev(g.event, { pointerType, clientX: 140, clientY: 690 }));
+        g.event.dispatch('pointerup', ev(g.event, { pointerType, clientX: 140, clientY: 690 }));
+        assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), false, pointerType);
+    }
+    assert.deepEqual(ref.calls, [], 'mouse and pen keep HTML5 drag-and-drop');
+    assert.equal(g.event.draggable, true);
+});
+
+test('a touch on a resize handle stays a resize, and a read-only event does not move', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const g = timegrid({ slot: 30 });
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', pointerId: 7, clientY: 160 }));
+    t.mock.timers.tick(400);
+    g.bottom.dispatch('pointermove', ev(g.bottom, { pointerType: 'touch', pointerId: 7, clientY: 220 }));
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), false, 'the handle is a resize, not a move');
+    // 60px at one minute per pixel, from a 60px event: the edge moved, the body did not.
+    assert.equal(g.event.style.height, '120px');
+    g.bottom.dispatch('pointerup', ev(g.bottom, { pointerType: 'touch', pointerId: 7, clientY: 220 }));
+    assert.deepEqual(ref.calls, [['NotifyResizeComplete', 'e1', 60, 'bottom']]);
+
+    const locked = moveGrid({ eventId: 'locked', draggable: false });
+    scheduler.registerInstance(locked.grid, ref);
+    doc.dispatch('pointerdown', ev(locked.event, { pointerType: 'touch', pointerId: 8, clientX: 40, clientY: 630 }));
+    t.mock.timers.tick(400);
+    locked.event.dispatch('pointermove', ev(locked.event, { pointerType: 'touch', pointerId: 8, clientX: 140, clientY: 690 }));
+    assert.equal(locked.event.classList.contains('tm-scheduler-event--moving'), false, 'draggable is not true');
+    assert.equal(ref.calls.filter(c => c[0] === 'NotifyMoveComplete').length, 0);
+});
+
+test('the drop target resolves the day, the snapped minute and the resource from the element under the finger', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+    // The press is 30px into a 60px event whose top is minute 600. The finger ends at 690, so the
+    // grabbed point (finger minus that 30px offset) is minute 660 — not the finger's own 690.
+    doc.elementFromPoint = () => g.col2;
+
+    g.event.dispatch('pointerup', longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 }));
+    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-14', 660, null]]);
+
+    const tl = moveTimeline({ slot: 30 });
+    const tlRef = dotnet();
+    scheduler.registerInstance(tl.root, tlRef);
+    doc.elementFromPoint = () => tl.body2;
+    tl.event.dispatch('pointerup', longPressDrag(t, tl.event, { x: 630, y: 10 }, { x: 750, y: 50 }));
+    // The press is 30px into a 60px event whose left edge is minute 600, so the grabbed point at
+    // finger 750 is minute 720, and the row under the finger carries the resource.
+    assert.deepEqual(tlRef.calls, [['NotifyMoveComplete', 't1', '2026-10-13', 720, 'room-b']]);
+    assert.equal(tl.body2.classList.contains('tm-scheduler-timeline-slot--drop-target'), false);
+
+    const month = monthGrid();
+    const monthRef = dotnet();
+    scheduler.registerInstance(month.root, monthRef);
+    doc.elementFromPoint = () => month.day2;
+    month.event.dispatch('pointerup', longPressDrag(t, month.event, { x: 40, y: 30 }, { x: 140, y: 30 }));
+    // A month has no minute axis: -1 tells .NET to keep the time of day.
+    assert.deepEqual(monthRef.calls, [['NotifyMoveComplete', 'm1', '2026-10-20', -1, null]]);
+    assert.equal(month.day2.classList.contains('tm-scheduler-month-day--drop-target'), false,
+        'the drop target highlight is gone once the finger lifts');
+});
+
+test('two moves that snap to the same minute write the same transform', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col1;
+
+    longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 645 });
+    const first = g.event.style.transform;
+    g.event.dispatch('pointermove', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 650 }));
+    assert.equal(g.event.style.transform, first,
+        'a second move that snaps to the same minute must not re-measure the translated rect');
+});
+
+test('a hold without a move shows the grabbed minute, not the offset as a coordinate', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    try { t.mock.timers.enable({ apis: ['setTimeout'] }); } catch { /* already on */ }
+    doc.dispatch('pointerdown', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 630 }));
+    t.mock.timers.tick(400);
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent, '10:00 – 11:00',
+        'the press is 30px into a 10:00 event, so the label stays 10:00 until the finger moves');
+});
+
+test('a timeline label that starts under the resource column parks on the scheduler root', async (t) => {
+    const tl = moveTimeline({ slot: 30 });
+    // Production wraps the timeline in .tm-scheduler. The label parks there, outside the row's
+    // stacking context, so the sticky resource column cannot paint over it.
+    const schedulerRoot = el(['tm-scheduler']);
+    tl.root.parent = schedulerRoot;
+    schedulerRoot.appendChild = child => { schedulerRoot.children.push(child); child.parentElement = schedulerRoot; return child; };
+    const resource = el(['tm-scheduler-timeline-resource-label--sticky'], tl.root, { left: 0, top: 0, width: 48, height: 40, right: 48, bottom: 40 });
+    tl.root.querySelectorAll = () => [resource];
+    scheduler.registerInstance(tl.root, dotnet());
+    const created = [];
+    const real = doc.createElement.bind(doc);
+    doc.createElement = () => {
+        const node = real();
+        created.push(node);
+        node.getBoundingClientRect = () => ({ left: 10, top: 0, width: 80, height: 20, right: 90, bottom: 20 });
+        return node;
+    };
+    try { t.mock.timers.enable({ apis: ['setTimeout'] }); } catch { /* already on */ }
+    doc.dispatch('pointerdown', ev(tl.event, { pointerType: 'touch', pointerId: 7, clientX: 630, clientY: 10 }));
+    t.mock.timers.tick(400);
+    assert.equal(created[0]?.style.marginLeft, '42px', 'the label moves right of the resource column');
+    assert.equal(created[0]?.parentElement, schedulerRoot,
+        'the timeline label parks on the scheduler root so the sticky resource column cannot paint over it');
+});
+
+test('the visual translate snaps to the same minute the release commits, honouring the grab offset', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+    doc.elementFromPoint = () => g.col1;
+
+    // Press 30px into the event (top 600). A finger at 645 would be 10:45 raw, but the grabbed
+    // point is 615, which snaps to 10:30 — and the translate must show that same 30px, not the raw 45.
+    const up = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 645 });
+    assert.equal(g.event.style.transform, 'translate(0px, 30px)',
+        'the preview snaps to the committed minute instead of following the finger raw');
+    g.event.dispatch('pointerup', up);
+    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-13', 630, null]]);
+});
+
+test('a month day and a grid column under the finger get the drop-target class, removed on release', async (t) => {
+    const month = monthGrid();
+    scheduler.registerInstance(month.root, dotnet());
+    doc.elementFromPoint = () => month.day2;
+    const up = longPressDrag(t, month.event, { x: 40, y: 30 }, { x: 140, y: 30 });
+    assert.equal(month.day2.classList.contains('tm-scheduler-month-day--drop-target'), true);
+    assert.equal(month.day1.classList.contains('tm-scheduler-month-day--drop-target'), false);
+    month.event.dispatch('pointerup', up);
+    assert.equal(month.day2.classList.contains('tm-scheduler-month-day--drop-target'), false);
+
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col2;
+    const gridUp = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
+    assert.equal(g.col2.classList.contains('tm-scheduler-timegrid-slot--drop-target'), true);
+    g.event.dispatch('pointerup', gridUp);
+    assert.equal(g.col2.classList.contains('tm-scheduler-timegrid-slot--drop-target'), false);
+});
+
+test('a pointer resize removes the live time label from the scheduler root', async (t) => {
+    const g = timegrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 220 }));
+    assert.equal(g.schedulerRoot.querySelector(':scope > .tm-scheduler-event-drag-time') !== null, true,
+        'a resize parks the live label on the scheduler root');
+
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 220 }));
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null,
+        'releasing the resize removes the label from the root');
+
+    // A move first, then a resize. The resize session must not inherit the move's delta, or the
+    // label jumps by the earlier drag instead of sitting on the event being resized.
+    const moved = moveGrid({ slot: 30 });
+    scheduler.registerInstance(moved.grid, dotnet());
+    doc.elementFromPoint = () => moved.col1;
+    const up = longPressDrag(t, moved.event, { x: 40, y: 630 }, { x: 40, y: 690 });
+    moved.event.dispatch('pointerup', up);
+
+    const resized = timegrid({ slot: 30 });
+    scheduler.registerInstance(resized.grid, dotnet());
+    doc.dispatch('pointerdown', ev(resized.bottom, { clientY: 160 }));
+    resized.bottom.dispatch('pointermove', ev(resized.bottom, { clientY: 190 }));
+    const label = resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
+    const box = resized.event.getBoundingClientRect();
+    assert.equal(Math.abs(parseFloat(label.style.top) - box.top) <= 4, true,
+        `a resize label sits on the event (top ${label.style.top} vs event ${box.top})`);
+    resized.bottom.dispatch('pointerup', ev(resized.bottom, { clientY: 190 }));
+});
+
+test('a month drag after a timed drag does not reuse the stale label', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col1;
+    const up = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 690 });
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time') !== null, true);
+
+    const month = monthGrid();
+    scheduler.registerInstance(month.root, dotnet());
+    doc.elementFromPoint = () => month.day2;
+    longPressDrag(t, month.event, { x: 40, y: 30 }, { x: 140, y: 30 });
+    assert.equal(month.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null,
+        'a month has no minute axis, so it shows no label of its own and none left by the grid');
+    month.event.dispatch('pointerup', ev(month.event, { pointerType: 'touch', pointerId: 7 }));
+    g.event.dispatch('pointerup', up);
+});
+
+test('the live time label follows the event while the scroller auto-scrolls', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    // The scroller wraps the grid. Reparenting the grid under it is what the lookup walks up to.
+    const scroller = el(['tm-scheduler-timegrid-scroll'], g.schedulerRoot, { left: 0, top: 0, width: 200, height: 600 });
+    scroller.scrollTop = 0;
+    scroller.scrollLeft = 0;
+    scroller.appendChild(g.grid);
+
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col1;
+    longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 40, y: 630 });
+    const label = g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
+    const before = parseFloat(label.style.top);
+
+    // The auto-scroller moves the content 120px. The event's box moves with it; the label must too.
+    scroller.scrollTop = 120;
+    g.event.rect = { ...g.event.rect, top: g.event.rect.top - 120 };
+    doc.dispatch('pointermove', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 40, clientY: 630 }));
+
+    assert.equal(Math.abs(parseFloat(label.style.top) - (before - 120)) <= 1, true,
+        `the label moves with the scrolled content (${label.style.top} vs ${before - 120})`);
+});
+
+test('the live time label follows the pointer and a resize shows it too', async (t) => {
+    const g = moveGrid({ slot: 30 });
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.elementFromPoint = () => g.col2;
+
+    longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
+
+    const label = g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time');
+    // The press is 30px into the event, so the grabbed point at finger 690 is 11:00, and the label
+    // joins the two times with a spaced en dash.
+    assert.equal(label?.textContent, '11:00 – 12:00', 'the one hour event lands at 11:00');
+    assert.equal(g.event.style.transform.includes('translate'), true, 'the event follows the finger');
+    g.event.dispatch('pointerup', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 140, clientY: 690 }));
+    assert.equal(g.schedulerRoot.querySelector('.tm-scheduler-event-drag-time'), null, 'the label goes away with the gesture');
+
+    const resized = timegrid({ slot: 30 });
+    scheduler.registerInstance(resized.grid, dotnet());
+    doc.dispatch('pointerdown', ev(resized.bottom, { clientY: 160 }));
+    resized.bottom.dispatch('pointermove', ev(resized.bottom, { clientY: 220 }));
+    assert.equal(resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent?.endsWith('–'), false);
+    assert.match(resized.schedulerRoot.querySelector('.tm-scheduler-event-drag-time')?.textContent ?? '', /^\d{2}:\d{2} – \d{2}:\d{2}$/);
+});
+
+test('Escape and pointercancel roll the move back and notify nothing', async (t) => {
+    const g = moveGrid();
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+    doc.elementFromPoint = () => g.col2;
+
+    const start = longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), true);
+    doc.dispatch('keydown', { ...start, key: 'Escape' });
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), false, 'Escape restores the event');
+    assert.equal(g.event.style.transform ?? '', '', 'the live translate is gone');
+    assert.equal(g.event.draggable, true);
+    assert.deepEqual(ref.calls, []);
+
+    // A cancel instead of a release: pointerup would be the commit.
+    longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 });
+    doc.dispatch('pointercancel', ev(g.event, { pointerType: 'touch', pointerId: 7, clientX: 140, clientY: 690 }));
+    assert.equal(g.event.classList.contains('tm-scheduler-event--moving'), false, 'pointercancel restores too');
+    assert.deepEqual(ref.calls, [], 'a cancel commits nothing either');
+});
+
+test('Alt+Arrow reports a move step and Alt+Shift+Arrow a resize step, once each', () => {
+    const g = moveGrid();
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    const chord = (key, shiftKey) => ({
+        key, altKey: true, shiftKey, ctrlKey: false, metaKey: false, target: g.event,
+        preventDefault() { this.defaultPrevented = true; },
+    });
+
+    const plain = chord('ArrowDown', false);
+    doc.dispatch('keydown', plain);
+    assert.equal(plain.defaultPrevented, true, 'Alt+Arrow is the move alternative, so the browser must not navigate');
+    assert.deepEqual(ref.calls, [['NotifyKeyboardStep', 'e1', 0, 1, false]]);
+
+    const shifted = chord('ArrowDown', true);
+    doc.dispatch('keydown', shifted);
+    assert.equal(shifted.defaultPrevented, true, 'Alt+Shift+Arrow is the resize alternative');
+    assert.deepEqual(ref.calls[1], ['NotifyKeyboardStep', 'e1', 0, 1, true]);
+
+    const roving = chord('ArrowDown', false);
+    roving.altKey = false;
+    doc.dispatch('keydown', roving);
+    assert.equal(ref.calls.length, 2, 'a plain arrow stays the roving key and is not prevented here');
+    assert.equal(roving.defaultPrevented, undefined);
 });
 
 test('scrollToTime scrolls a timeline root horizontally, past its label column', () => {

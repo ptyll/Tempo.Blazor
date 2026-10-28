@@ -40,6 +40,8 @@ public class TmSchedulerTimeGridPhase5Tests : LocalizationTestBase
     [Fact]
     public void TimeGrid_Renders_All_24_Hours_By_Default()
     {
+        using var _ = CultureScope.Use("cs-CZ"); // the gutter uses the culture's short time ("H:mm")
+
         var cut = Render<TmSchedulerTimeGrid>(p => p
             .Add(c => c.Dates, [Monday])
             .Add(c => c.SlotDuration, 60));
@@ -55,6 +57,8 @@ public class TmSchedulerTimeGridPhase5Tests : LocalizationTestBase
     [Fact]
     public void TimeGrid_Renders_Hours_From_WorkDayStart_When_ShowFullDay_False()
     {
+        using var _ = CultureScope.Use("cs-CZ"); // the gutter uses the culture's short time ("H:mm")
+
         var cut = Render<TmSchedulerTimeGrid>(p => p
             .Add(c => c.Dates, [Monday])
             .Add(c => c.SlotDuration, 60)

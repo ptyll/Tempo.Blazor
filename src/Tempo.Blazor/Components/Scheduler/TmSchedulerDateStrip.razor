@@ -1,0 +1,70 @@
+@namespace Tempo.Blazor.Components.Scheduler
+
+@* The mobile week strip. One roving tab stop; the selected day is pressed and today is current. *@
+<div class="tm-scheduler-date-strip" role="group" aria-label="@Loc["TmScheduler_DateStrip"]"
+     @onkeydown="HandleKeyDown" @onkeydown:preventDefault="_handled">
+    @{ var days = Dates ?? []; var stop = RovingIndex(days); }
+    @for (var i = 0; i < days.Count; i++)
+    {
+        var index = i;
+        <TmSchedulerDateStripDay @ref="_days[index]" Day="@days[index]" Selected="@SelectedDate" Today="@Today"
+                                 IsStop="@(index == stop)" OnClick="OnDateSelected" />
+    }
+</div>
+
+@code {
+    /// <summary>The days the strip offers, in order.</summary>
+    [Parameter] public IReadOnlyList<DateOnly>? Dates { get; set; }
+
+    /// <summary>The selected day. The matching button is <c>aria-pressed</c>.</summary>
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+
+    /// <summary>Today. The matching button gets <c>aria-current="date"</c>.</summary>
+    [Parameter] public DateOnly Today { get; set; }
+
+    /// <summary>Fires with the day the user picked.</summary>
+    [Parameter] public EventCallback<DateOnly> OnDateSelected { get; set; }
+
+    private TmSchedulerDateStripDay?[] _days = [];
+    private int _stop;
+    private int _pendingFocus = -1;
+    private bool _handled;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocus < 0) return;
+        var index = _pendingFocus;
+        _pendingFocus = -1;
+        if (index >= _days.Length || _days[index] is not { } day) return;
+        try { await day.FocusAsync().AsTask(); }
+        catch (JSException) { }
+    }
+
+    private int RovingIndex(IReadOnlyList<DateOnly> days)
+    {
+        if (_days.Length != days.Count) _days = new TmSchedulerDateStripDay?[days.Count];
+        if (days.Count == 0) return 0;
+        var selected = SelectedDate is { } day ? days.ToList().FindIndex(d => d == day) : -1;
+        if (selected >= 0) return selected;
+        return Math.Clamp(_stop, 0, days.Count - 1);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        var days = Dates ?? [];
+        if (days.Count == 0) return;
+        var next = e.Key switch
+        {
+            "ArrowRight" => RovingIndex(days) + 1,
+            "ArrowLeft" => RovingIndex(days) - 1,
+            "Home" => 0,
+            "End" => days.Count - 1,
+            _ => -1
+        };
+        _handled = next >= 0 || e.Key is "ArrowRight" or "ArrowLeft" or "Home" or "End";
+        if (!_handled) return;
+        _stop = Math.Clamp(next, 0, days.Count - 1);
+        _pendingFocus = _stop;
+        await OnDateSelected.InvokeAsync(days[_stop]);
+    }
+}

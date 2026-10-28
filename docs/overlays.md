@@ -115,6 +115,17 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   stays, the surface promotes *after* it (rule 8), and the host closes the menu afterwards
   through `CloseMoreAsync()` — focus then returns to the trigger.
 
+### An in-flow panel that shares Escape with its content
+
+A docked `TmSidePanel` leaves Escape alone unless the host opts in with `CloseOnEscape`. The
+scheduler does. Its listener is the focus trap's document bubble listener, which runs after the
+target's own handler and returns when `event.tmEscapeHandled` is set. The scheduler marks that
+flag in the capture phase (`TempoBlazor.Scheduler.claimEscape`) only while a detail is open and
+the key target is inside its panel, then closes the detail itself. With no detail open the flag
+stays unset and the same key closes the panel. The listener is removed on dispose
+(`releaseEscape`). A host that shares one Escape key the same way marks the in-flight event; it
+does not add a second document listener.
+
 ### Modality of dialog popups
 
 A `Role="dialog"` popup that must trap focus (calendar popups) passes
