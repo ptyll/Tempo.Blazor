@@ -45,7 +45,8 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
             .Add(p => p.NotationKey, "unknown"));
 
         cut.Find("[data-testid='modeling-view-selector']").Should().NotBeNull();
-        cut.FindAll("[data-testid='modeling-viewpoint-select']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-viewpoint-empty'] select").HasAttribute("disabled")
+            .Should().BeTrue("the Viewpoint select is disabled while no notation is chosen");
         cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("No viewpoints");
     }
 
@@ -55,8 +56,27 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
         using var cut = Render<TmModelingViewSelector>(parameters => parameters
             .Add(p => p.NotationKey, "custom-empty"));
 
-        cut.FindAll("[data-testid='modeling-viewpoint-select']").Should().BeEmpty();
-        cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("No viewpoints");
+        var empty = cut.Find("[data-testid='modeling-viewpoint-empty']");
+        empty.QuerySelector("select")!.HasAttribute("disabled").Should().BeTrue();
+        empty.TextContent.Should().Contain("No viewpoints");
+        empty.QuerySelector(".tm-modeling-view-selector__hint").Should().NotBeNull(
+            "the hint is a plain span below the disabled select");
+    }
+
+    [Fact]
+    public void Disabled_viewpoint_select_is_described_by_the_per_instance_hint()
+    {
+        using var cut = Render<TmModelingViewSelector>(parameters => parameters
+            .Add(p => p.NotationKey, (string?)null));
+
+        var select = cut.Find("[data-testid='modeling-viewpoint-empty'] select");
+        var describedBy = select.GetAttribute("aria-describedby");
+        describedBy.Should().NotBeNullOrEmpty("the disabled select points at the hint for assistive tech");
+        cut.Find($"[data-testid='modeling-viewpoint-empty'] #{describedBy}")
+            .Should().NotBeNull("the referenced hint element exists");
+        describedBy.Should().Contain("viewpoint-hint");
+        select.GetAttribute("aria-label").Should().Be("Viewpoint",
+            "the visible span is not a wrapping label — the select carries its accessible name on aria-label (axe select-name)");
     }
 
     [Fact]
@@ -124,6 +144,8 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
 
         cut.Find("[data-testid='modeling-notation-select']").TextContent.Should().Contain("Select notation");
         cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("Select a notation");
+        cut.Find("[data-testid='modeling-viewpoint-empty'] select").HasAttribute("disabled")
+            .Should().BeTrue("the Viewpoint select renders disabled while no notation is chosen");
     }
 
     private sealed class TestNotationProfile : IModelingNotationProfile

@@ -307,6 +307,8 @@
   "TmDemo_FocusRestoreNestedTitle": "Je názov voľný?",
   "TmDemo_FocusRestoreNestedMessage": "Dialóg otvorený nad modálnym oknom. Jeho zatvorenie vráti fokus na tlačidlo, ktoré ho otvorilo.",
   "TmModelingEditor_DemoError": "Ukázkový modelovací poskytovateľ nedokázal načítať model.",
+  "TmDemo_Modeling_ProviderDefault": "Ukázkový BPMN / ArchiMate model",
+  "TmDemo_Modeling_ProviderUml": "Ukázkový UML model tried",
   "TmCalendarHeatmapDemo_Title": "Kalendárna heatmapa",
   "TmCalendarHeatmapDemo_Description": "Porovnajte denné výdavky počas celého roka alebo sa zamerajte na vlastný rozsah dátumov.",
   "TmCalendarHeatmapDemo_AnnualTitle": "Ročné výdavky — Primárna",

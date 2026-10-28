@@ -33,38 +33,41 @@
         @* MO3: one provider surface. When the selector is enabled the labeled select owns the
            value (and the model reloads on change); otherwise the provider stays a labeled
            chip. The notation/viewpoint chips are gone — the labeled selects own those values. *@
-        @if (ShowProviderSelector)
-        {
-            <label class="tm-modeling-editor__field">
-                <span>@Loc["TmModelingEditor_Provider"]</span>
-                <select id="@_providerSelectId"
-                        data-testid="@TestId("modeling-provider-select")"
-                        value="@EffectiveProviderKey"
-                        @onchange="HandleProviderChangedAsync">
-                    @if (string.IsNullOrWhiteSpace(EffectiveProviderKey))
-                    {
-                        <option value="">@Loc["TmModelingEditor_SelectProvider"]</option>
-                    }
-                    @foreach (var option in ProviderOptions)
-                    {
-                        <option value="@option">@option</option>
-                    }
-                </select>
-            </label>
-        }
-        else
-        {
-            <div class="tm-modeling-editor__chips">
-                <span class="tm-modeling-editor__chip">
+        @* Review fix (phase 3): the provider surface and the notation/viewpoint selector form one
+           right-aligned header group that wraps together — the toolbar keeps only the title. *@
+        <div class="tm-modeling-editor__context">
+            @if (ShowProviderSelector)
+            {
+                <label class="tm-modeling-editor__field">
                     <span>@Loc["TmModelingEditor_Provider"]</span>
-                    <strong>@DisplayProviderKey</strong>
-                </span>
-            </div>
-        }
-        <TmModelingViewSelector NotationKey="@EffectiveNotationKey"
-                                ViewpointKey="@EffectiveViewpointKey"
-                                OnNotationChanged="ChangeNotationAsync"
-                                OnViewpointChanged="ChangeViewpointAsync" />
+                    <select data-testid="@TestId("modeling-provider-select")"
+                            value="@EffectiveProviderKey"
+                            @onchange="HandleProviderChangedAsync">
+                        @if (string.IsNullOrWhiteSpace(EffectiveProviderKey))
+                        {
+                            <option value="">@Loc["TmModelingEditor_SelectProvider"]</option>
+                        }
+                        @foreach (var option in ProviderOptions)
+                        {
+                            <option value="@option">@ResolveProviderDisplayName(option)</option>
+                        }
+                    </select>
+                </label>
+            }
+            else
+            {
+                <div class="tm-modeling-editor__chips">
+                    <span class="tm-modeling-editor__chip">
+                        <span>@Loc["TmModelingEditor_Provider"]</span>
+                        <strong>@DisplayProviderKey</strong>
+                    </span>
+                </div>
+            }
+            <TmModelingViewSelector NotationKey="@EffectiveNotationKey"
+                                    ViewpointKey="@EffectiveViewpointKey"
+                                    OnNotationChanged="ChangeNotationAsync"
+                                    OnViewpointChanged="ChangeViewpointAsync" />
+        </div>
     </header>
 
     @* keepLoadedSurface reloads (force reload over an already loaded model) keep _model alive
@@ -197,19 +200,24 @@
                 role="status"
                 aria-live="polite"
                 aria-atomic="true">
-            @* MO3 dedupe: the state text lives only on the title badge — the strip leads with
-               the state icon plus the last-loaded time (when the model carries metadata),
-               falling back to the state label without metadata. *@
-            <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
-                <span class="tm-modeling-editor__status-icon" aria-hidden="true">
-                    <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
-                </span>
-                @StatusStripStateText
-            </span>
+            @* Review fix (phase 3): the counts lead the strip; the state/last-loaded item is
+               pushed to its trailing edge (margin-inline-start:auto). The state label stays
+               available to screen readers — an sr-only "Loaded – " leads the last-loaded time
+               (visible text alone would be just the time). *@
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Elements"]: <strong>@(_model?.Elements.Count ?? 0)</strong></span>
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Relationships"]: <strong>@(_model?.Relationships.Count ?? 0)</strong></span>
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramNodes"]: <strong>@(_document?.Nodes.Count ?? 0)</strong></span>
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramEdges"]: <strong>@(_document?.Edges.Count ?? 0)</strong></span>
+            <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
+                <span class="tm-modeling-editor__status-icon" aria-hidden="true">
+                    <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
+                </span>
+                @if (_model?.Metadata.LoadedAt is { } lastLoadedAt && lastLoadedAt != default)
+                {
+                    <span class="tm-sr-only">@Loc[StateLabelKey] – </span>
+                }
+                @StatusStripStateText
+            </span>
         </footer>
 
         @if (_openedEditorDocument is not null)

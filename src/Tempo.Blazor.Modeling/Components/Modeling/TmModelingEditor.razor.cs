@@ -35,7 +35,6 @@ public partial class TmModelingEditor : IAsyncDisposable
     private string? _lastNotationParameter;
     private string? _lastViewpointParameter;
     private string? _lastProviderParameter;
-    private string _providerSelectId = $"tm-modeling-editor-{Guid.NewGuid():N}-provider";
     private IReadOnlyList<ModelingElementDto>? _visibleTreeElementsSource;
     private IReadOnlyList<ModelingElementDto> _visibleTreeElements = [];
     private string? _visibleTreeElementsNotationKey;
@@ -94,6 +93,12 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>Raised when the editor provider selection changes (semantics of <see cref="OnNotationChanged"/> for the provider).</summary>
     [Parameter] public EventCallback<string?> OnProviderChanged { get; set; }
+
+    /// <summary>Optional display-name resolver for the provider options and the provider chip
+    /// (review fix, phase 3). Receives the raw provider key and returns the text to show; when
+    /// the callback is null (or returns nothing) the raw key itself is shown. The demo maps the
+    /// keys to localized names; a host may resolve them from its own registry.</summary>
+    [Parameter] public Func<string, string>? ProviderDisplayName { get; set; }
 
     /// <summary>Optional notation key passed to the selected provider and generator.</summary>
     [Parameter] public string? NotationKey { get; set; }
@@ -184,7 +189,12 @@ public partial class TmModelingEditor : IAsyncDisposable
         _ => IconNames.Box
     };
 
-    private string DisplayProviderKey => string.IsNullOrWhiteSpace(EffectiveProviderKey) ? Loc["TmModelingEditor_NotSelected"] : EffectiveProviderKey!;
+    private string DisplayProviderKey => string.IsNullOrWhiteSpace(EffectiveProviderKey) ? Loc["TmModelingEditor_NotSelected"] : ResolveProviderDisplayName(EffectiveProviderKey!);
+
+    /// <summary>Visible text of a provider option (header select and chip): the host's
+    /// <see cref="ProviderDisplayName"/> resolution when supplied, otherwise the raw key.</summary>
+    private string ResolveProviderDisplayName(string providerKey)
+        => ProviderDisplayName?.Invoke(providerKey) ?? providerKey;
 
     /// <summary>The provider the editor loads from: the host parameter until the user picks
     /// another one in the header selector (the in-editor override wins until the parameter
@@ -575,6 +585,9 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// host parameter itself changes, the model is reloaded through the new provider (keeping
     /// the loaded workspace mounted, like the source-panel reload) and both callbacks are raised
     /// — <see cref="ProviderKeyChanged"/> (two-way binding) and <see cref="OnProviderChanged"/>.
+    /// The in-editor notation/viewpoint overrides reset to the host parameter baseline (review
+    /// fix, phase 3): a new provider may carry different notations, so a stale override must not
+    /// filter the reloaded model.
     /// </summary>
     private async Task ChangeProviderAsync(string? providerKey)
     {
@@ -585,7 +598,11 @@ public partial class TmModelingEditor : IAsyncDisposable
         }
 
         _effectiveProviderKey = normalized;
-        _openedEditorDocument = null;
+        _effectiveNotationKey = string.IsNullOrWhiteSpace(NotationKey) ? null : NotationKey;
+        _effectiveViewpointKey = string.IsNullOrWhiteSpace(ViewpointKey) ? null : ViewpointKey;
+        // The opened diagram-editor overlay closes through the regular close path so the focus
+        // restore onto the preview's "Open in editor" trigger still runs (review fix, phase 3).
+        await CloseGeneratedDiagramAsync();
         var reload = LoadModelAsync(force: true);
         await ProviderKeyChanged.InvokeAsync(_effectiveProviderKey);
         await OnProviderChanged.InvokeAsync(_effectiveProviderKey);

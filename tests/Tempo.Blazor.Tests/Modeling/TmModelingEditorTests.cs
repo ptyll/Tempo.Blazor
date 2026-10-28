@@ -341,6 +341,90 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Host_provider_binding_round_trip_does_not_reload_the_new_provider_twice()
+    {
+        var alpha = new CountingModelingModelProvider("tempo.tests.modeling.alpha");
+        var beta = new CountingModelingModelProvider("tempo.tests.modeling.beta");
+        Services.AddSingleton<IModelingModelProvider>(alpha);
+        Services.AddSingleton<IModelingModelProvider>(beta);
+
+        // The host side of @bind-ProviderKey: the editor raises ProviderKeyChanged, the host
+        // stores the value and renders it back through the ProviderKey parameter.
+        string? hostProvider = "tempo.tests.modeling.alpha";
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, hostProvider)
+            .Add(p => p.ShowProviderSelector, true)
+            .Add(p => p.ProviderKeyChanged, EventCallback.Factory.Create<string?>(this, value => hostProvider = value)));
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+        alpha.LoadCount.Should().Be(1);
+
+        cut.Render();
+        cut.Find("[data-testid='modeling-provider-select']").Change("tempo.tests.modeling.beta");
+
+        // The round trip: the host re-renders with the value the editor just reported.
+        cut.Render(parameters => parameters
+            .Add(p => p.ProviderKey, hostProvider)
+            .Add(p => p.ShowProviderSelector, true));
+
+        cut.WaitForAssertion(() =>
+        {
+            var editor = cut.Find("[data-testid='modeling-editor']");
+            editor.GetAttribute("data-provider").Should().Be("tempo.tests.modeling.beta");
+            editor.GetAttribute("data-state").Should().Be("loaded");
+        });
+        beta.LoadCount.Should().Be(1, "the round-tripped parameter must not trigger a second load");
+        alpha.LoadCount.Should().Be(1, "the old provider is not asked again");
+    }
+
+    [Fact]
+    public async Task Fast_provider_switch_back_discards_the_slow_provider_result()
+    {
+        var alpha = new GatedSwitchModelingModelProvider("tempo.tests.modeling.alpha", "alpha-element", 2, gated: false);
+        var beta = new GatedSwitchModelingModelProvider("tempo.tests.modeling.beta", "beta-element", 5, gated: true);
+        Services.AddSingleton<IModelingModelProvider>(alpha);
+        Services.AddSingleton<IModelingModelProvider>(beta);
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, "tempo.tests.modeling.alpha")
+            .Add(p => p.ShowProviderSelector, true));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-element-count").Should().Be("2");
+        });
+
+        cut.Render();
+        // A → B: beta is gated, the load stays in flight.
+        cut.Find("[data-testid='modeling-provider-select']").Change("tempo.tests.modeling.beta");
+        // … and immediately back to A: the beta load is superseded.
+        cut.Find("[data-testid='modeling-provider-select']").Change("tempo.tests.modeling.alpha");
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-provider")
+                .Should().Be("tempo.tests.modeling.alpha");
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-element-count").Should().Be("2");
+        });
+
+        // Release beta now: its stale result must never reach the editor state.
+        beta.Release();
+        await Task.Delay(200);
+        cut.Render();
+
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("data-provider")
+            .Should().Be("tempo.tests.modeling.alpha", "the beta result is never applied");
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("data-element-count")
+            .Should().Be("2", "the beta model (5 elements) never replaced the alpha model");
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("data-notation")
+            .Should().Be("", "the notation override reset to the parameter baseline (none set)");
+    }
+
+    [Fact]
     public void Header_does_not_duplicate_notation_and_viewpoint_chips()
     {
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
@@ -373,20 +457,101 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
 
         var stateItem = cut.Find("[data-testid='modeling-status-strip'] .tm-modeling-editor__status-item--state");
-        stateItem.TextContent.Trim().Should().Be(
+        stateItem.TextContent.Should().Contain(
             $"Last loaded: {TimestampedModelingModelProvider.LoadedAt.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture)}",
             "the localized 'Last loaded: {0}' format substitutes the shared TmModelingSourcePanel time");
-        cut.Find("[data-testid='modeling-status-strip']").TextContent
-            .Should().NotContain("Loaded", "the state text lives only on the title badge — the strip dedupes it");
 
-        // Fallback: without metadata the strip keeps the state label.
+        // Review fix (phase 3): the state stays available to screen readers — an sr-only
+        // "Loaded – " lead-in precedes the last-loaded time (the visible text is just the time).
+        var srOnly = stateItem.QuerySelector(".tm-sr-only");
+        srOnly.Should().NotBeNull("the state label is kept for screen readers before the time");
+        srOnly!.TextContent.Should().Be("Loaded – ");
+
+        // The state/last-loaded item is the LAST strip item (margin-inline-start:auto anchors
+        // it at the trailing edge); the counts lead the strip.
+        cut.FindAll("[data-testid='modeling-status-strip'] > .tm-modeling-editor__status-item")
+            .Last().ClassList.Should().Contain("tm-modeling-editor__status-item--state");
+
+        // Fallback: without metadata the strip keeps the state label (no sr-only duplication).
         using var plain = Render<TmModelingEditor>(parameters => parameters
             .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
 
         plain.WaitForAssertion(() =>
             plain.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-        plain.Find("[data-testid='modeling-status-strip'] .tm-modeling-editor__status-item--state")
-            .TextContent.Should().Contain("Loaded", "without metadata the strip falls back to the state label");
+        var plainItem = plain.Find("[data-testid='modeling-status-strip'] .tm-modeling-editor__status-item--state");
+        plainItem.TextContent.Should().Contain("Loaded", "without metadata the strip falls back to the state label");
+        plainItem.QuerySelector(".tm-sr-only").Should().BeNull("the state label is not duplicated for screen readers");
+    }
+
+    [Fact]
+    public void Status_strip_anchors_the_last_loaded_item_at_the_trailing_edge()
+    {
+        Services.AddSingleton<IModelingModelProvider>(new SuccessfulModelingModelProvider());
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        var css = File.ReadAllText(FindEditorCssPath());
+        css.Should().Contain(".tm-modeling-editor__status-item--state").And.Contain("margin-inline-start: auto",
+            "the state/last-loaded item is pushed to the trailing edge of the strip");
+    }
+
+    private static string FindEditorCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingEditor.razor.css");
+    }
+
+    [Fact]
+    public void Provider_display_name_resolves_option_text_and_chip_value()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.ShowProviderSelector, true)
+            .Add(p => p.ProviderDisplayName, key => $"Pretty {key}"));
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-provider-select']")
+            .TextContent.Should().Contain($"Pretty {SuccessfulModelingModelProvider.Key}",
+                "the header select option text goes through the display-name resolver");
+
+        using var chip = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.ProviderDisplayName, key => $"Pretty {key}"));
+
+        chip.Find(".tm-modeling-editor__chip strong").TextContent.Should().Be($"Pretty {SuccessfulModelingModelProvider.Key}");
+    }
+
+    [Fact]
+    public void Provider_display_name_falls_back_to_the_raw_key()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.ShowProviderSelector, true));
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-provider-select']")
+            .TextContent.Should().Contain(SuccessfulModelingModelProvider.Key,
+                "without a resolver the raw provider key is shown");
     }
 
     [Fact]
@@ -633,6 +798,76 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             var gate = _gate;
             cancellationToken.Register(() => gate.TrySetCanceled(cancellationToken));
             return gate.Task;
+        }
+    }
+
+    /// <summary>Provider whose model is distinguishable by element id/count; optionally blocks
+    /// every call behind a gate until <see cref="Release"/> (fast A→B→A switch tests).</summary>
+    private sealed class GatedSwitchModelingModelProvider : IModelingModelProvider
+    {
+        private readonly string _key;
+        private readonly string _elementId;
+        private readonly int _elementCount;
+        private readonly bool _gated;
+        private TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public GatedSwitchModelingModelProvider(string key, string elementId, int elementCount, bool gated)
+        {
+            _key = key;
+            _elementId = elementId;
+            _elementCount = elementCount;
+            _gated = gated;
+        }
+
+        public string ProviderKey => _key;
+
+        public void Release() => _gate.TrySetResult();
+
+        public async Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        {
+            if (_gated)
+            {
+                var release = new TaskCompletionSource();
+                await using var _ = cancellationToken.Register(() => release.TrySetCanceled(cancellationToken));
+                await Task.WhenAny(_gate.Task, release.Task);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            var model = new ModelingModelDto
+            {
+                Id = $"modeling-editor-switch-{_key}",
+                Title = $"Modeling editor switch {_key}",
+                Metadata = new ModelingMetadataDto { SourceSystem = "Unit tests" }
+            };
+
+            for (var index = 0; index < _elementCount; index++)
+            {
+                model.Elements.Add(new ModelingElementDto
+                {
+                    Id = $"{_elementId}-{index}",
+                    SourceId = $"{_elementId}-{index}",
+                    Notation = "bpmn",
+                    SemanticType = "userTask",
+                    Name = $"{_elementId} {index}"
+                });
+            }
+
+            model.Views.Add(new ModelingViewDto
+            {
+                Id = "main-view",
+                Name = "Main view",
+                Notation = "bpmn",
+                Nodes = model.Elements.Select(element => new ModelingViewNodeDto
+                {
+                    ElementId = element.Id,
+                    X = 120,
+                    Y = 160,
+                    Width = 180,
+                    Height = 90
+                }).ToList()
+            });
+
+            return model;
         }
     }
 

@@ -22,9 +22,13 @@
     background: var(--tm-color-surface);
 }
 
+/* Review fix (phase 3, 1024 preview): the title may shrink to a token floor and the actions
+   keep claiming their content width — the flex wrap then moves the buttons to their own row
+   instead of clipping them at the panel edge. */
 .tm-modeling-diagram-preview__title-group {
     display: grid;
     gap: var(--tm-space-1);
+    flex: 1 1 calc(var(--tm-space-16) * 2);
     min-width: 0;
 }
 
@@ -48,6 +52,7 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--tm-space-2);
+    flex: 1 1 auto;
 }
 
 .tm-modeling-diagram-preview__empty {

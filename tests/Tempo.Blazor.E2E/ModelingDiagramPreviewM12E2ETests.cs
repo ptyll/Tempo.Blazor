@@ -159,6 +159,44 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("At 1024x768 the preview header actions wrap instead of clipping outside the preview panel")]
+    public async Task DiagramPreview_ActionsStayInsidePreviewAt1024()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
+            HasTouch = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = 60_000,
+        });
+        await WaitForAppReadyAsync(page);
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var previewBox = await page.Locator("[data-testid='modeling-diagram-preview']").BoundingBoxAsync();
+        Assert.IsNotNull(previewBox, "the preview panel must be measurable");
+        var previewRight = previewBox!.X + previewBox.Width;
+
+        foreach (var testId in new[] { "modeling-open-in-editor-button", "modeling-generate-diagram-button" })
+        {
+            var box = await page.Locator($"[data-testid='{testId}']").BoundingBoxAsync();
+            Assert.IsNotNull(box, $"{testId} must be rendered and measurable");
+            Assert.IsTrue(
+                box!.X + box.Width <= previewRight + 0.5,
+                $"{testId} right edge ({box.X + box.Width:0.#}) must not clip past the preview right edge ({previewRight:0.#})");
+        }
+    }
+
+    [TestMethod]
     [Description("Empty model generation renders an empty diagram canvas with a helpful hint")]
     public async Task DiagramPreview_EmptyModelShowsEmptyCanvasHint()
     {

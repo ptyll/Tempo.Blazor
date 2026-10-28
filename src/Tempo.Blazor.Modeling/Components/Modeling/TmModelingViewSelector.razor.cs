@@ -11,6 +11,11 @@ public partial class TmModelingViewSelector
     private string? _lastNotationParameter;
     private string? _lastViewpointParameter;
 
+    /// <summary>Stable per-instance id of the viewpoint hint — the disabled select's
+    /// aria-describedby pairs with <c>{id}-hint</c> so the hint survives a TestIdPrefix rename
+    /// (review fix, phase 3).</summary>
+    private string ViewpointHintId { get; } = $"tm-modeling-view-selector-{Guid.NewGuid():N}-viewpoint-hint";
+
     private static readonly IReadOnlyList<NotationOption> BuiltInNotationOptions =
     [
         new("bpmn", "BPMN 2.0"),

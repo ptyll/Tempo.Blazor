@@ -31,19 +31,22 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* Review fix (phase 3): the outline is the focus-VISIBLE affordance only — plain :focus keeps
+   the border change so mouse clicks do not draw a ring around the select. */
 .tm-modeling-view-selector__field select:focus {
     border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-view-selector__field select:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
-.tm-modeling-view-selector__empty-viewpoints {
-    max-width: calc(var(--tm-space-16) * 3);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+/* Review fix (phase 3): the hint under the disabled Viewpoint select is a plain span — no
+   border, no background, just secondary text (the extra specificity out-ranks the shared
+   __field span label rule). */
+.tm-modeling-view-selector__field .tm-modeling-view-selector__hint {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
-    line-height: var(--tm-line-height-normal);
+    font-weight: normal;
 }

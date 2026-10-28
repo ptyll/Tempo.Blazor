@@ -35,8 +35,16 @@
     }
     else
     {
-        <div class="tm-modeling-view-selector__empty-viewpoints" data-testid="@TestId("modeling-viewpoint-empty")">
-            @ViewpointEmptyText
+        @* Review fix (phase 3): the Viewpoint field keeps its shape — a labeled DISABLED select
+           (described by the hint) plus a plain hint span, instead of a boxed message. The
+           visible span is not a wrapping <label>, so the select carries its name on aria-label
+           (axe select-name rule); the per-instance id pairs it with the hint for assistive tech. *@
+        <div class="tm-modeling-view-selector__field" data-testid="@TestId("modeling-viewpoint-empty")">
+            <span>@Loc["TmModelingViewSelector_Viewpoint"]</span>
+            <select disabled
+                    aria-label="@Loc["TmModelingViewSelector_Viewpoint"]"
+                    aria-describedby="@ViewpointHintId"></select>
+            <span id="@ViewpointHintId" class="tm-modeling-view-selector__hint">@ViewpointEmptyText</span>
         </div>
     }
 </section>

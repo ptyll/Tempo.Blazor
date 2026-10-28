@@ -22,12 +22,25 @@
 
 .tm-modeling-editor__toolbar {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: var(--tm-space-4);
     padding: var(--tm-space-3) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
+}
+
+/* Review fix (phase 3): the provider field/chip and the notation/viewpoint selector are one
+   right-aligned group. It owns the leftover toolbar width and wraps as a whole when the title
+   takes the row, so the labeled fields keep their baseline alignment (align-items: flex-end). */
+.tm-modeling-editor__context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .tm-modeling-editor__title-group {
@@ -61,11 +74,13 @@
 }
 
 /* MO3: the header provider select mirrors the TmModelingViewSelector fields (label above the
-   field, --tm-input-height-md) so the three labeled selects read as one row. */
+   field, --tm-input-height-md) so the three labeled selects read as one row. The field may
+   shrink to its minimum inside the wrapping context group (review fix, phase 3). */
 .tm-modeling-editor__field {
     display: grid;
     gap: var(--tm-space-1);
-    min-width: calc(var(--tm-space-16) * 2);
+    flex: 0 1 calc(var(--tm-space-16) * 4);
+    min-width: calc(var(--tm-space-16) * 3);
     max-width: calc(var(--tm-space-16) * 8);
 }
 
@@ -88,8 +103,13 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* Review fix (phase 3): the outline is the focus-VISIBLE affordance only — plain :focus keeps
+   the border change so mouse clicks do not draw a ring around the select. */
 .tm-modeling-editor__field select:focus {
     border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__field select:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
@@ -194,10 +214,12 @@
     background: var(--tm-bg-workspace);
 }
 
-/* Below the 1200px (75rem) editor width the token gutters tighten so the panels keep their
-   content width (half-open: the boundary belongs to the wide side). */
+/* Below the 1200px (75rem) editor width the token gutters tighten and the side columns give
+   their slack to the preview, so the preview header actions never clip at 1024 (half-open:
+   the boundary belongs to the wide side). */
 @container tm-modeling-editor (width < 75rem) {
     .tm-modeling-editor__workspace {
+        grid-template-columns: calc(var(--tm-space-16) * 3) minmax(0, 1fr) calc(var(--tm-space-16) * 3);
         gap: var(--tm-space-2);
         padding: var(--tm-space-2);
     }
@@ -368,6 +390,12 @@
     padding-inline-start: var(--tm-space-3);
 }
 
+/* Review fix (phase 3): the state/last-loaded item is pushed to the trailing edge of the
+   strip — the counts read first, the freshness line anchors the end. */
+.tm-modeling-editor__status-item--state {
+    margin-inline-start: auto;
+}
+
 .tm-modeling-editor__status-icon {
     display: inline-grid;
     place-items: center;
@@ -446,6 +474,21 @@
     .tm-modeling-editor__toolbar {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    /* Review fix (phase 3): stacked header — the context group fills the row and every labeled
+       field takes the full column (the view selector fields come from the child component,
+       hence ::deep). */
+    .tm-modeling-editor__context {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: flex-start;
+    }
+
+    .tm-modeling-editor__context ::deep .tm-modeling-view-selector__field {
+        flex: 1 1 100%;
+        width: 100%;
     }
 
     .tm-modeling-editor__field,
@@ -601,6 +644,10 @@
         border-color: CanvasText;
         background: Canvas;
         color: CanvasText;
+    }
+
+    .tm-modeling-editor__field select {
+        border-color: CanvasText;
     }
 
     .tm-modeling-editor__status-item + .tm-modeling-editor__status-item {

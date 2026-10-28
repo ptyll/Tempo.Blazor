@@ -43323,6 +43323,12 @@
               "description": "Callback raised when the editor viewpoint selection changes."
             },
             {
+              "name": "ProviderDisplayName",
+              "type": "Func<string, string>?",
+              "isRequired": false,
+              "description": "Optional display-name resolver for the provider options and the provider chip (review fix, phase 3). Receives the raw provider key and returns the text to show; when the callback is null (or returns nothing) the raw key itself is shown. The demo maps the keys to localized names; a host may resolve them from its own registry."
+            },
+            {
               "name": "ProviderKey",
               "type": "string?",
               "isRequired": false,
@@ -43362,8 +43368,12 @@
               "description": "Leading status icon (check/alert/clock by state), aria-hidden."
             },
             {
+              "name": "tm-modeling-editor__context",
+              "description": "Right-aligned header group wrapping the provider field/chip and the TmModelingViewSelector; wraps as a whole under the title and becomes a single-column grid below 48rem (review fix, phase 3)."
+            },
+            {
               "name": "tm-modeling-editor__field",
-              "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; mirrors the TmModelingViewSelector fields."
+              "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; may shrink to its token minimum inside the wrapping context group (review fix, phase 3)."
             }
           ]
         },

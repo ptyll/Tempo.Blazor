@@ -1,5 +1,6 @@
 using System.Reflection;
 using Tempo.Blazor.Configuration;
+using Tempo.Blazor.Modeling;
 using Tempo.Blazor.EmailTemplates;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.Demo.SharedUI.Localization;
@@ -114,6 +115,8 @@ builder.Services.AddTempoBlazorDocumentEditor();
 builder.Services.AddTempoBlazorDiagramEditor();
 builder.Services.AddTempoBlazorWireframe();
 builder.Services.AddTempoBlazorModeling();
+// Second demo modeling source (phase 3): the header provider select lists both keys.
+builder.Services.AddSingleton<IModelingModelProvider, Tempo.Blazor.Demo.SharedUI.Services.DemoUmlModelingModelProvider>();
 builder.Services.AddTempoBlazorSpreadsheet();
 builder.Services.AddTempoBlazorGanttXlsx();
 builder.Services.AddTempoBlazorDataTableXlsx();
