@@ -312,10 +312,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
         // A parameter pass comes from the host: it may have changed the document in place, so the gated canvas repaints.
         MarkContentChanged();
 
-        // A forced layout never raises ResolvedLayoutChanged for its first value: adopt it (and its
-        // flips) here. The initial value is not a change, except that an Auto observer which inherits
-        // a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers
-        // adopt it — that raise arrives through OnShellResolvedLayoutChanged.
+        // Forced layouts adopt their flips here; the inherited-raise contract: docs/responsive-conventions.md.
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout) ApplyResolvedLayout(LayoutMode);
 
         // A host-side change of ReadOnly / ShowRulers wins over the local user state (it is the
