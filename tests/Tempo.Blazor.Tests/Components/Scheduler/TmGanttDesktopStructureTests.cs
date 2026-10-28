@@ -620,11 +620,14 @@ public class TmGanttDesktopStructureTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmColumnPicker_Text_Is_Wrapped_In_The_Toolbar_Text_Span()
+    public void TmColumnPicker_Text_Is_Wrapped_In_The_Toolbar_Text_Span_Only_Inside_A_Toolbar()
     {
-        var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns, [new ColumnVisibilityItem("A", "A", true, true)]));
+        RenderPickerInToolbar(false).Find(".tm-column-picker-toggle .tm-toolbar-btn-text").TextContent.Trim().Should().Be("Choose columns");
 
-        cut.Find(".tm-column-picker-toggle .tm-toolbar-btn-text").TextContent.Trim().Should().Be("Choose columns");
+        // Standalone (the DataTable default markup) keeps the bare text node.
+        var standalone = Render<TmColumnPicker>(p => p.Add(c => c.Columns, [new ColumnVisibilityItem("A", "A", true, true)]));
+        standalone.FindAll(".tm-column-picker-toggle .tm-toolbar-btn-text").Should().BeEmpty();
+        standalone.Find(".tm-column-picker-toggle").TextContent.Trim().Should().Be("Choose columns");
     }
 
     [Fact]

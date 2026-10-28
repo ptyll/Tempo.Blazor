@@ -12,7 +12,10 @@
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @onclick="ToggleOpen">
         <span class="tm-icon-columns"><TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" /></span>
-        @if (!IconOnly)
+        @* Inside a TmToolbar the label is wrapped in the text span (so the toolbar can hide it); outside one it
+           stays the bare text node of the pre-toolbar markup (DataTable default-markup snapshots stay identical). *@
+        @(Toolbar is null && !IconOnly ? Loc["TmDataTable_ColumnPicker"] : null)
+        @if (Toolbar is not null && !IconOnly)
         {
             <span class="tm-toolbar-btn-text">@Loc["TmDataTable_ColumnPicker"]</span>
         }

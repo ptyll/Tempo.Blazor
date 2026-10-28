@@ -413,7 +413,9 @@ public sealed class MarkupClassCoverageTests
             // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
             // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
             // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
-            ExpectedUnmeasurableStems: 50),
+            // TmGantt redesign phase 4: the sidebar tab/panel DOM ids ($"tm-gantt-{InstanceId}-tab-…") in
+            // the toolbar/sidebar parts add the "tm-gantt-" stem — 50 → 51.
+            ExpectedUnmeasurableStems: 51),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),
