@@ -265,6 +265,10 @@ public static class IconNames
     public const string Star          = "star";
     /// <summary>Icon name for: Target, Goal.</summary>
     public const string Target        = "target";
+    /// <summary>Icon name for: Flag, Milestone.</summary>
+    public const string Flag          = "flag";
+    /// <summary>Icon name for: Wallet, Budget.</summary>
+    public const string Wallet        = "wallet";
     /// <summary>Icon name for: Zap, Lightning, Energy.</summary>
     public const string Zap           = "zap";
     /// <summary>Icon name for: Award.</summary>

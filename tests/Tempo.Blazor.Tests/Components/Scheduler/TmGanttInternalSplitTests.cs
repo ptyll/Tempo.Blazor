@@ -371,15 +371,15 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     private static readonly string[] ExpectedParameters =
     [
         "ActiveBaselineId", "ActiveTimerTaskId", "AdditionalAttributes", "AllowBulkSelect", "AllowDependencyCreation", "AutoSchedule",
-        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "Filters", "HeaderActions", "HeaderStart", "History",
+        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
         "Items", "NotificationSettings", "OnAttachmentRemoved", "OnAttachmentUpload", "OnAutoScheduled", "OnBaselineSaved",
         "OnBulkUpdate", "OnColumnsChanged", "OnCustomFieldChanged", "OnDataSorted", "OnDependencyAdded", "OnDependencyRemoved",
         "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnNewReportRequested",
-        "OnNotificationTriggered", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
+        "OnNotificationTriggered", "OnReportDelete", "OnReportDuplicate", "OnReportEdit", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
         "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports",
-        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowTaskPanel",
+        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowTaskPanel", "ShowToolbar",
         "ShowWorkloadPanel", "SidebarMode", "Subtitle", "TestIdPrefix", "Title", "ToolbarLabels", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
-        "WorkloadDisplayMode", "ZoomPreset",
+        "WorkloadDisplayMode", "WorkloadDisplayModeChanged", "WorkloadPlacement", "ZoomPreset",
     ];
 }

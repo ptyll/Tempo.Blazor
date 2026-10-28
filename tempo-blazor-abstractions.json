@@ -15286,6 +15286,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "GanttHistoryDrawerPlacement",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "What the Gantt history drawer is positioned against: the Gantt component (default) or the viewport.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHistoryDrawerPlacement.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttImportAuthException",
       "kind": "Class",
       "category": "Models",
@@ -15480,6 +15490,16 @@
       ]
     },
     {
+      "itemName": "GanttTaskAction",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttTaskNameLocation",
       "kind": "Enum",
       "category": "Models",
@@ -15632,6 +15652,16 @@
           "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
         }
       ]
+    },
+    {
+      "itemName": "GanttWorkloadPlacement",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Where the Gantt shows its workload: as the alternate Workload view (default) or as a panel docked under the timeline.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttWorkloadPlacement.cs",
+      "documentationStatus": "merged"
     },
     {
       "itemName": "GanttZoomPreset",
@@ -37392,11 +37422,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1495,
-    "manualItemCount": 1495,
-    "generatedItemCount": 1478,
+    "itemCount": 1498,
+    "manualItemCount": 1498,
+    "generatedItemCount": 1481,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1478
+    "publicApiTypeCount": 1481
   }
 }

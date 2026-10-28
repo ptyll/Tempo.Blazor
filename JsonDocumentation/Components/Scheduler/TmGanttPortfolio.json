@@ -16,13 +16,31 @@
       "type": "IReadOnlyList<GanttPortfolioProject>",
       "isRequired": false,
       "default": "[]",
-      "description": "Projects to show; each card draws the project's Tasks and Dependencies in its own Gantt."
+      "description": "Projects to show; each card is collapsible and shows the project's date range, task count and weighted completion above its own Gantt."
     },
     {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS classes appended to the root element."
+    },
+    {
+      "name": "OnProjectSelected",
+      "type": "EventCallback<GanttPortfolioProject>",
+      "isRequired": false,
+      "description": "Fires when the user clicks a project's name. Without a handler the name is plain text."
+    },
+    {
+      "name": "ProjectActions",
+      "type": "RenderFragment<GanttPortfolioProject>?",
+      "isRequired": false,
+      "description": "Host content at the end of each card header (a menu, a status chip); the project is the context."
+    },
+    {
+      "name": "ProjectMaxHeight",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Maximum height of the Gantt area of a card as a CSS length (e.g. 400px). Default: the stylesheet value (15rem)."
     }
   ]
 }

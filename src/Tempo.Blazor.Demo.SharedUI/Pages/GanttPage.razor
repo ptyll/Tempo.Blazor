@@ -67,6 +67,7 @@ else
         @ToggleChip("Dep. Creation",         _allowDependencyCreation, v => _allowDependencyCreation = v, "bg-pink-600")
         @ToggleChip("Panel tabs",            _tabsMode,                v => _tabsMode = v,               "bg-cyan-600")
         @ToggleChip("Toolbar labels",        _toolbarLabels,           v => _toolbarLabels = v,          "bg-lime-600")
+    @ToggleChip("Docked workload",       _dockedWorkload,          v => _dockedWorkload = v,         "bg-fuchsia-600")
         @ToggleChip("Adv. Context Menu", _viewSettings.ShowAdvancedContextButtons, v => { _viewSettings.ShowAdvancedContextButtons = v; }, "bg-amber-600")
         @ToggleChip("Progress %", _viewSettings.ShowProgressLabel, v => { _viewSettings.ShowProgressLabel = v; }, "bg-indigo-600")
     </div>
@@ -102,6 +103,9 @@ else
                  ResourceCalendars="@_resourceCalendars"
                  Reports="@_reports"
                  OnReportRun="@HandleReportRun"
+                 OnReportEdit="@HandleReportEdit"
+                 OnReportDuplicate="@HandleReportDuplicate"
+                 OnReportDelete="@HandleReportDelete"
                  NotificationSettings="@_notificationSettings"
                  ShowTaskPanel="true"
                  ShowSidebar="true"
@@ -110,6 +114,8 @@ else
                  ShowQuickSearch="@_toolbarLabels"
                  ShowWorkloadPanel="@_showWorkloadPanel"
                  WorkloadDisplayMode="@_workloadMode"
+                 WorkloadDisplayModeChanged="@(m => _workloadMode = m)"
+                 WorkloadPlacement="@(_dockedWorkload ? GanttWorkloadPlacement.Docked : GanttWorkloadPlacement.View)"
                  ShowCriticalPath="@_showCriticalPath"
                  AutoSchedule="@_autoSchedule"
                  OnAutoScheduled="@HandleAutoScheduled"
@@ -326,6 +332,7 @@ else
     private bool                  _allowDependencyCreation = true;
     private bool                  _tabsMode                = true;
     private bool                  _toolbarLabels           = true;
+    private bool                  _dockedWorkload;
 
     private IReadOnlyList<GanttFilter> _filters = [];
 
@@ -631,6 +638,20 @@ else
                 if (idx >= 0) _baselines[idx] = created;
             }
         }
+    }
+
+    private void HandleReportEdit(GanttReport report) => Toast.ShowInfo($"Edit report: {report.Name}");
+
+    private void HandleReportDuplicate(GanttReport report)
+    {
+        _reports = [.. _reports, new GanttReport { Name = $"{report.Name} (copy)", Type = report.Type }];
+        Toast.ShowInfo($"Report duplicated: {report.Name}");
+    }
+
+    private void HandleReportDelete(GanttReport report)
+    {
+        _reports = _reports.Where(r => r.Id != report.Id).ToList();
+        Toast.ShowInfo($"Report deleted: {report.Name}");
     }
 
     private void HandleReportRun(GanttReport report)

@@ -34,6 +34,31 @@
       "isRequired": false,
       "default": "DateTime.Today",
       "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today; defaults to Today."
+    },
+    {
+      "name": "DisplayModeChanged",
+      "type": "EventCallback<WorkloadDisplayMode>",
+      "isRequired": false,
+      "description": "Raised by the Hours | Percent segment of the docked header (arg = the new mode)."
+    },
+    {
+      "name": "Docked",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Docked presentation: a card with a header (title, Hours | Percent segment), a continuous date axis over RangeStart..RangeEnd, a legend and a range note. Default false keeps the sparse alternate-view grid."
+    },
+    {
+      "name": "RangeStart",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "First day of the docked date axis (the Gantt's range start)."
+    },
+    {
+      "name": "RangeEnd",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "Last day of the docked date axis (the Gantt's range end)."
     }
   ]
 }

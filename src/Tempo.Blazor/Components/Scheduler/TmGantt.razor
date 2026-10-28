@@ -4,6 +4,7 @@
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Feedback
 @inject ITmLocalizer Loc
 
 <div class="tm-gantt @GetThemeClass() @Class" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
@@ -37,7 +38,10 @@
 
     <TmGanttPanelTabs Owner="this" />
 
-    <TmGanttToolbar Owner="this" />
+    @if (ShowToolbar)
+    {
+        <TmGanttToolbar Owner="this" />
+    }
 
     <!-- Filter Panel -->
     @if (_filterPanelOpen)
@@ -55,6 +59,10 @@
 
     <TmGanttSidebar Owner="this" />
 
+    @{
+        // The view area (alternate views, or the tree + timeline). A template, because the docked workload wraps it
+        // in a column with the panel underneath - and the default placement must not add a wrapper element.
+        RenderFragment viewArea = @<text>
     <!-- Phase 5: alternate views (Workload, Calendar, Board, Dashboard, People) -->
     @if (View == GanttView.Workload)
     {
@@ -244,8 +252,40 @@
         } @* end @if (View != GanttView.List) *@
     </div>
     } @* end else (main area) *@
+        </text>;
+    }
 
-    @if (ShowTaskPanel)
+    @if (DockedWorkload)
+    {
+        <div class="tm-gantt__center">
+            @viewArea
+            <div class="tm-gantt__docked-workload" data-testid="@TestId("gantt-workload-dock")">
+                @{ var dockRange = GanttHelper.GetTimeRange(Data); }
+                <TmGanttWorkloadView Tasks="Data" WorkingSchedule="WorkingSchedule"
+                                     DisplayMode="WorkloadDisplayMode"
+                                     DisplayModeChanged="OnWorkloadModeChangedAsync"
+                                     Today="TodayInZone()"
+                                     Docked="true" RangeStart="dockRange.Start" RangeEnd="dockRange.End" />
+            </div>
+        </div>
+    }
+    else
+    {
+        @viewArea
+    }
+
+    @* One right-hand panel at a time: the Reports inspector takes the place of the task panel while it is open. *@
+    @if (ReportsPanelOpen)
+    {
+        <TmGanttReportsPanel Reports="Reports"
+                             @attributes="ReportsPanelAttributes"
+                             OnReportRun="OnReportRun"
+                             OnReportEdit="OnReportEdit"
+                             OnReportDelete="OnReportDelete"
+                             OnReportDuplicate="OnReportDuplicate"
+                             OnNewReportRequested="OnNewReportRequested" />
+    }
+    else if (ShowTaskPanel)
     {
         <TmGanttTaskPanel Task="SelectedTask"
                           AllTasks="Data"
@@ -260,9 +300,12 @@
                           OnDescriptionChanged="OnDescriptionChanged"
                           OnAttachmentUpload="OnAttachmentUpload"
                           OnAttachmentRemoved="OnAttachmentRemoved"
+                          OnStatusChanged="OnTaskPanelStatusChangedAsync"
+                          OnAction="OnTaskPanelActionAsync"
+                          IsOverloaded="SelectedTaskOverloaded"
+                          BaselineTask="SelectedTaskBaseline"
                           OnClose="() => ShowTaskPanel = false" />
     }
-
     </div> @* tm-gantt__content *@
 
     <!-- Export Dialog -->
@@ -286,11 +329,24 @@
     @if (_historyDrawerOpen)
     {
         <TmGanttHistoryDrawer History="History"
+                              Tasks="Data"
                               IsOpen="_historyDrawerOpen"
+                              Placement="HistoryDrawerPlacement"
+                              OnTaskSelected="OpenTaskByIdAsync"
                               TimeZone="@(_userZone?.Zone ?? Clock.LocalTimeZone)"
                               OnTimeTravelRequested="OnTimeTravelRequested"
                               OnRollbackRequested="OnRollbackRequested"
                               OnClose="ToggleHistoryDrawer" />
+    }
+
+    @* The task panel's Delete asks first; rendered only while a delete is pending (the default markup is unchanged). *@
+    @if (_pendingDelete is not null)
+    {
+        <TmDialog Show="true" Type="DialogType.Confirm" Variant="DialogVariant.Warning" IsDangerous="true"
+                  Title="@Loc["TmGantt_DeleteConfirmTitle"]"
+                  Message="@Loc["TmGantt_DeleteConfirmMessage", _pendingDelete.Title]"
+                  OkButtonText="@Loc["TmGantt_DeleteTask"]"
+                  OnResult="ConfirmDeleteAsync" />
     }
 
     <!-- Context Menu -->
@@ -318,7 +374,8 @@
                 @if (ViewSettings.ShowAdvancedContextButtons)
                 {
                     <div class="tm-gantt__context-menu-divider"></div>
-                    <button type="button" class="tm-gantt__context-menu-item">
+                    <button type="button" class="tm-gantt__context-menu-item"
+                            @onclick="DuplicateContextTaskAsync">
                         <TmIcon Name="copy" Size="IconSize.Sm" />
                         <span>@Loc["TmGantt_DuplicateTask"]</span>
                     </button>

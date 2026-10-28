@@ -30,7 +30,16 @@ else
             </button>
         </div>
         <div data-testid="gantt-demo-portfolio">
-            <TmGanttPortfolio Projects="@PortfolioProjects" />
+            <TmGanttPortfolio Projects="@PortfolioProjects"
+                              OnProjectSelected="@(project => Toast.ShowInfo($"Project selected: {project.Name}"))">
+                <ProjectActions Context="project">
+                    <TmDropdown Text="" ShowChevron="false" Icon="more-horizontal" AriaLabel="@($"Actions for {project.Name}")"
+                                OnSelect="@(action => Toast.ShowInfo($"{action}: {project.Name}"))">
+                        <TmDropdownItem Value="Open">Open project</TmDropdownItem>
+                        <TmDropdownItem Value="Archive">Archive</TmDropdownItem>
+                    </TmDropdown>
+                </ProjectActions>
+            </TmGanttPortfolio>
         </div>
         <TmGanttImportMappingDialog IsOpen="_mappingOpen"
                                     SourceColumns="@_mappingColumns"

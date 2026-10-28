@@ -559,7 +559,9 @@
 </div>
 <div class="tm-gantt-task-panel">
 <div class="tm-gantt-task-panel__header">
+<div class="tm-gantt-task-panel__header-main">
 <span class="tm-gantt-task-panel__header-title">Design</span>
+</div>
 <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" aria-label="Close panel" blazor:onclick="H" data-testid="task-panel-close" Title="Close panel">
 <span class="tm-btn-label">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -570,7 +572,10 @@
 </button>
 </div>
 <div class="tm-gantt-task-panel__scroll">
+<section class="tm-gantt-task-panel__group" data-testid="task-section-plan">
+<h3 class="tm-gantt-task-panel__group-title">Plan</h3>
 <div class="tm-gantt-task-panel__grid">
+<div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--wide">
 <div class="tm-form-field " data-testid="task-title">
 <label class="tm-form-field-label">Title</label>
 <div class="tm-form-field-control">
@@ -578,6 +583,7 @@
 <div class="tm-input-container">
 <input id="G" type="text" value="Design" placeholder="Enter task title..." tabindex="0" class="tm-input" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
 </input>
+</div>
 </div>
 </div>
 </div>
@@ -607,9 +613,15 @@
 <div class="tm-form-field " data-testid="task-duration">
 <label class="tm-form-field-label">Duration</label>
 <div class="tm-form-field-control">
-<span class="tm-gantt-task-panel__duration-display">9 days</span>
+<div class="tm-input-wrapper">
+<div class="tm-input-container">
+<input id="G" type="text" value="9 days" readonly tabindex="0" class="tm-input tm-input-readonly" blazor:oninput="H" blazor:onchange="H" blazor:onkeydown="H" blazor:onkeyup="H" blazor:onkeypress="H" blazor:onfocus="H" blazor:onblur="H" blazor:elementReference="R">
+</input>
 </div>
 </div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
 <div class="tm-form-field " data-testid="task-deadline">
 <label class="tm-form-field-label">Deadline</label>
 <div class="tm-form-field-control">
@@ -621,6 +633,56 @@
 </div>
 </div>
 </div>
+</div>
+</div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-progress">
+<h3 class="tm-gantt-task-panel__group-title">Progress</h3>
+<div class="tm-gantt-task-panel__grid">
+<div class="tm-form-field " data-testid="task-status">
+<label class="tm-form-field-label">Status</label>
+<div class="tm-form-field-control">
+<div class="tm-select-wrapper ">
+<div class="tm-select-container">
+<select id="G" value="Done" class="tm-select" aria-label="Status" blazor:onchange="H">
+<option value="Open">Open</option>
+<option value="InProgress">In Progress</option>
+<option value="Done" selected selected>Done</option>
+<option value="Closed">Closed</option>
+</select>
+<div class="tm-select-arrow" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+<polyline points="6 9 12 15 18 9">
+</polyline>
+</svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-form-field " data-testid="task-priority">
+<label class="tm-form-field-label">Priority</label>
+<div class="tm-form-field-control">
+<div class="tm-select-wrapper ">
+<div class="tm-select-container">
+<select id="G" value="Medium" class="tm-select" aria-label="Priority" blazor:onchange="H">
+<option value="Highest">Highest</option>
+<option value="High">High</option>
+<option value="Medium" selected selected>Medium</option>
+<option value="Low">Low</option>
+<option value="Lowest">Lowest</option>
+</select>
+<div class="tm-select-arrow" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+<polyline points="6 9 12 15 18 9">
+</polyline>
+</svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
 <div class="tm-form-field " data-testid="task-percent">
 <label class="tm-form-field-label">Percent complete</label>
 <div class="tm-form-field-control">
@@ -633,6 +695,7 @@
 </svg>
 </button>
 <input type="number" id="G" value="100" min="0" max="100" step="1" class="tm-number-input__input" blazor:onchange="H" />
+<span class="tm-number-input__suffix">%</span>
 <button type="button" class="tm-number-input__increment" disabled aria-label="Increase" blazor:onclick="H">
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 <line x1="12" y1="5" x2="12" y2="19">
@@ -645,18 +708,50 @@
 </div>
 </div>
 </div>
+</div>
 <div class="tm-form-field " data-testid="task-estimation">
 <label class="tm-form-field-label">Estimation (h)</label>
 <div class="tm-form-field-control">
-<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+<div class="tm-input-wrapper tm-decimal-input ">
+<div class="tm-decimal-input__control ">
+<input id="tm-decimal-G" type="text" inputmode="decimal" class="tm-decimal-input__input" value="" blazor:onchange="H" blazor:oninput="H" blazor:onkeydown="H" blazor:onfocus="H" blazor:onblur="H" />
+</div>
+</div>
 </div>
 </div>
 <div class="tm-form-field " data-testid="task-timelog">
 <label class="tm-form-field-label">Logged (h)</label>
 <div class="tm-form-field-control">
-<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+<div class="tm-input-wrapper tm-decimal-input ">
+<div class="tm-decimal-input__control ">
+<input id="tm-decimal-G" type="text" inputmode="decimal" class="tm-decimal-input__input" value="" blazor:onchange="H" blazor:oninput="H" blazor:onkeydown="H" blazor:onfocus="H" blazor:onblur="H" />
 </div>
 </div>
+</div>
+</div>
+<div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--wide">
+<div class="tm-form-field " data-testid="task-assignees">
+<label class="tm-form-field-label">Assignees</label>
+<div class="tm-form-field-control">
+<div class="tm-gantt-task-panel__assignees">
+<div class="tm-avatar-group tm-avatar-group-sm">
+<div class="tm-avatar tm-avatar-sm tm-avatar-circle tm-avatar-pink">
+<div class="tm-avatar-fallback">A</div>
+</div>
+<div class="tm-avatar tm-avatar-sm tm-avatar-circle tm-avatar-red">
+<div class="tm-avatar-fallback">DP</div>
+</div>
+</div>
+<span class="tm-gantt-task-panel__assignee-names">Alice, Dev pool</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-structure">
+<h3 class="tm-gantt-task-panel__group-title">Structure</h3>
+<div class="tm-gantt-task-panel__grid">
 <div class="tm-form-field " data-testid="task-milestone">
 <label class="tm-form-field-label">Milestone</label>
 <div class="tm-form-field-control">
@@ -671,6 +766,7 @@
 </div>
 </div>
 </div>
+<div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
 <div class="tm-form-field " data-testid="task-parent">
 <label class="tm-form-field-label">Parent task</label>
 <div class="tm-form-field-control">
@@ -694,8 +790,11 @@
 </div>
 </div>
 </div>
-<div class="tm-gantt-task-panel__section" data-testid="task-color-picker">
-<span class="tm-gantt-task-panel__section-label">Color</span>
+</div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-appearance">
+<h3 class="tm-gantt-task-panel__group-title">Appearance</h3>
+<div data-testid="task-color-picker">
 <div class="tm-gantt-task-panel__color-swatches">
 <button type="button" class="tm-gantt__panel-color-swatch " style="background-color: #3b82f6" title="#3b82f6" aria-label="Color #3b82f6" aria-pressed="false" blazor:onclick="H" blazor:onclick:stopPropagation>
 </button>
@@ -723,13 +822,18 @@
 </button>
 </div>
 </div>
-<div class="tm-gantt-task-panel__section" data-testid="task-description">
-<span class="tm-gantt-task-panel__section-label">Description</span>
-<textarea class="tm-input tm-gantt-task-panel__description" rows="4" blazor:onchange="H" placeholder="Add a description...">
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-description">
+<h3 class="tm-gantt-task-panel__group-title">Description</h3>
+<div data-testid="task-description">
+<textarea class="tm-input tm-gantt-task-panel__description" rows="4" aria-label="Description" blazor:onchange="H" placeholder="Add a description...">
 </textarea>
 </div>
-<div class="tm-gantt-task-panel__section" data-testid="attachment-list">
-<span class="tm-gantt-task-panel__section-label">Attachments</span>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-attachments">
+<h3 class="tm-gantt-task-panel__group-title">Attachments</h3>
+<div data-testid="attachment-list">
+</div>
 <div class="tm-file-drop-zone " data-testid="attachment-upload">
 <div class="tm-file-drop-zone__area " blazor:ondragenter="H" blazor:ondragleave="H" blazor:ondragover:preventDefault blazor:ondrop="H">
 <div class="tm-file-drop-zone__content">
@@ -742,9 +846,10 @@
 </input>
 </div>
 </div>
-</div>
-<div class="tm-gantt-task-panel__section" data-testid="comment-list">
-<span class="tm-gantt-task-panel__section-label">Comments</span>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-comments">
+<h3 class="tm-gantt-task-panel__group-title">Comments</h3>
+<div data-testid="comment-list">
 <div class="tm-comments">
 <div class="tm-comments-empty">
 <div class="tm-empty-state">
@@ -754,26 +859,39 @@
 <button class="tm-btn tm-btn-outline tm-btn-sm tm-comments-add-btn" type="button" blazor:onclick="H">[TmActivityComments_AddComment]</button>
 </div>
 </div>
-<div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--budget" data-testid="task-budget-section">
-<span class="tm-gantt-task-panel__section-label">Budget &amp; Cost</span>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-budget">
+<h3 class="tm-gantt-task-panel__group-title">Budget &amp; Cost</h3>
+<div data-testid="task-budget-section">
 <div class="tm-gantt-task-panel__budget-grid">
 <div class="tm-form-field " data-testid="task-budget">
 <label class="tm-form-field-label">Budget Hours</label>
 <div class="tm-form-field-control">
-<input type="number" class="tm-input" min="0" step="0.5" blazor:onchange="H" />
+<div class="tm-input-wrapper tm-decimal-input ">
+<div class="tm-decimal-input__control ">
+<input id="tm-decimal-G" type="text" inputmode="decimal" class="tm-decimal-input__input" value="" blazor:onchange="H" blazor:oninput="H" blazor:onkeydown="H" blazor:onfocus="H" blazor:onblur="H" />
+</div>
+</div>
 </div>
 </div>
 <div class="tm-form-field " data-testid="task-actual-cost">
 <label class="tm-form-field-label">Actual Cost</label>
 <div class="tm-form-field-control">
-<input type="number" class="tm-input" min="0" step="0.01" blazor:onchange="H" />
+<div class="tm-input-wrapper tm-decimal-input ">
+<div class="tm-decimal-input__control ">
+<input id="tm-decimal-G" type="text" inputmode="decimal" class="tm-decimal-input__input" value="" blazor:onchange="H" blazor:oninput="H" blazor:onkeydown="H" blazor:onfocus="H" blazor:onblur="H" />
 </div>
 </div>
 </div>
 </div>
-<div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--timelog" data-testid="task-timelog-section">
+</div>
+</div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-timelog">
+<h3 class="tm-gantt-task-panel__group-title">Time Log</h3>
+<div data-testid="task-timelog-section">
 <div class="tm-gantt-task-panel__timelog-header">
-<span class="tm-gantt-task-panel__section-label">Time Log</span>
+<div class="tm-gantt-task-panel__timelog-total" data-testid="task-timelog-total">Total Logged: 0.0 h</div>
 <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="timer-start-btn">
 <span class="tm-btn-label">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -782,10 +900,11 @@
 </svg>Start Timer</span>
 </button>
 </div>
-<div class="tm-gantt-task-panel__timelog-total" data-testid="task-timelog-total">Total Logged: 0.0 h</div>
 </div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-dependencies">
+<h3 class="tm-gantt-task-panel__group-title">Dependencies</h3>
 <div class="tm-gantt-task-panel__deps" data-testid="task-dependencies">
-<span class="tm-gantt-task-panel__deps-label">Dependencies</span>
 <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-add-dep">
 <span class="tm-btn-label">
 <svg class="tm-icon tm-icon-md tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -794,14 +913,64 @@
 </svg>Add dependency</span>
 </button>
 </div>
+</section>
+<section class="tm-gantt-task-panel__group" data-testid="task-section-actions">
+<h3 class="tm-gantt-task-panel__group-title">Actions</h3>
+<div class="tm-gantt-task-panel__action-list">
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-mark-done">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='20 6 9 17 4 12'/>
+</svg>
+<span class="tm-btn-label">Mark done</span>
+</button>
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-add-above">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='12' y1='19' x2='12' y2='5'/>
+<polyline points='5 12 12 5 19 12'/>
+</svg>
+<span class="tm-btn-label">Add task above</span>
+</button>
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-add-below">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<line x1='12' y1='5' x2='12' y2='19'/>
+<polyline points='19 12 12 19 5 12'/>
+</svg>
+<span class="tm-btn-label">Add task below</span>
+</button>
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-add-child">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='15 10 20 15 15 20'/>
+<path d='M4 4v7a4 4 0 0 0 4 4h12'/>
+</svg>
+<span class="tm-btn-label">Add child task</span>
+</button>
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-duplicate">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<rect x='9' y='9' width='13' height='13' rx='2' ry='2'/>
+<path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/>
+</svg>
+<span class="tm-btn-label">Duplicate task</span>
+</button>
+<button type="button" class="tm-btn tm-btn-danger tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="task-action-delete">
+<svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+<polyline points='3 6 5 6 21 6'/>
+<path d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/>
+<path d='M10 11v6'/>
+<path d='M14 11v6'/>
+<path d='M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2'/>
+</svg>
+<span class="tm-btn-label">Delete task</span>
+</button>
+</div>
+</section>
+</div>
 <div class="tm-gantt-task-panel__actions">
+<button type="button" class="tm-btn tm-btn-secondary tm-btn-md" tabindex="0" blazor:onclick="H" data-testid="task-cancel">
+<span class="tm-btn-label">Cancel</span>
+</button>
 <button type="button" class="tm-btn tm-btn-primary tm-btn-md" tabindex="0" blazor:onclick="H" data-testid="task-save">
 <span class="tm-btn-label">Save</span>
 </button>
-<button type="button" class="tm-btn tm-btn-ghost tm-btn-md" tabindex="0" blazor:onclick="H" data-testid="task-cancel">
-<span class="tm-btn-label">Cancel</span>
-</button>
-</div>
 </div>
 </div>
 </div>

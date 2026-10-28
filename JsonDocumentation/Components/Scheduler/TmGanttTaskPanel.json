@@ -96,6 +96,37 @@
       "type": "EventCallback<(string TaskId, GanttTimeLogEntry Entry)>",
       "isRequired": false,
       "description": "Fires when the user stops the timer (arg = taskId + completed log entry)."
+    },
+    {
+      "name": "OnStatusChanged",
+      "type": "EventCallback<(string TaskId, TmWorkItemStatus NewStatus)>",
+      "isRequired": false,
+      "description": "Fires on Save when the Status field was changed (arg = task id + the new status); like the priority, the status is a draft until Save and Cancel reverts it. TmGantt applies it to the task and raises its own OnStatusChanged."
+    },
+    {
+      "name": "OnAction",
+      "type": "EventCallback<GanttTaskAction>",
+      "isRequired": false,
+      "description": "Fires when the user picks a command of the Actions section (mark done, add above / below / child, duplicate, delete). The section renders only when the host handles this callback."
+    },
+    {
+      "name": "IsOverloaded",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true the Progress section states that one of the task's assignees is over capacity (read-only)."
+    },
+    {
+      "name": "BaselineTask",
+      "type": "GanttBaselineTask?",
+      "isRequired": false,
+      "description": "The task's entry in the active baseline; when set the Progress section shows the start / end deviation from it (read-only)."
+    },
+    {
+      "name": "Breadcrumb",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional breadcrumb shown above the task title in the panel header."
     }
   ]
 }

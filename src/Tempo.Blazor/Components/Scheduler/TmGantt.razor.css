@@ -12,6 +12,8 @@
     color: var(--tm-text-primary);
     font-family: var(--tm-font-sans);
     overflow: hidden;
+    /* The history drawer is positioned against the component, not the viewport. */
+    position: relative;
     /* Component knob: the minimum width of the title column (header and cells share it). */
     --tm-gantt-title-min: 12rem;
 }
@@ -74,6 +76,21 @@
 }
 
 /* ─── Main layout ──────────────────────────────────────────────── */
+
+/* Docked workload: the chart and the panel stack in one column beside the sidebar / right-hand panel. */
+.tm-gantt__center {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* The chart keeps a usable height however much the docked workload would like. */
+.tm-gantt__center > .tm-gantt__main {
+    min-height: 9rem;
+}
+
 
 .tm-gantt__main {
     display: flex;
@@ -405,4 +422,14 @@
     );
     pointer-events: none;
     z-index: 1;
+}
+
+/* The docked workload panel's host: a flex item of the centre column that never grows past its content. */
+.tm-gantt__docked-workload {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: 0;
+    max-height: 40%;
+    display: flex;
+    flex-direction: column;
 }

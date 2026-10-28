@@ -35,6 +35,8 @@ public class TmGanttMarkupSnapshotTests : LocalizationTestBase
     private static readonly Regex ElementReference = new(@"blazor:elementReference=""[0-9a-f-]*""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     private static readonly Regex EventHandlerId = new(@"blazor:on([a-z]+)=""\d+""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     private static readonly Regex RandomElementId = new(@"\bid=""[0-9a-f]{8}""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+    // TmDecimalInput (the task panel hour fields) generates a "tm-decimal-<guid>" id per instance; the portfolio card body id carries a per-instance token.
+    private static readonly Regex GeneratedGuidId = new(@"(tm-decimal-|gantt-portfolio-)[0-9a-f]{8,32}", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     // Core toolbar items carry per-instance GUID ids (data-tm-toolbar-group, data-tm-toolbar-item).
     private static readonly Regex ToolbarId = new(@"(data-tm-toolbar-(?:group|item))=""[a-z-]*[0-9a-f]{32}""", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
     private static readonly Regex AvatarHue = new(@"hsl\(\d+, 60%, 50%\)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
@@ -93,6 +95,7 @@ public class TmGanttMarkupSnapshotTests : LocalizationTestBase
         text = ElementReference.Replace(text, "blazor:elementReference=\"R\"");
         text = EventHandlerId.Replace(text, "blazor:on$1=\"H\"");
         text = RandomElementId.Replace(text, "id=\"G\"");
+        text = GeneratedGuidId.Replace(text, "$1G");
         text = ToolbarId.Replace(text, "$1=\"T\"");
         // The avatar hue is string.GetHashCode(), randomised per process.
         text = AvatarHue.Replace(text, "hsl(H, 60%, 50%)");

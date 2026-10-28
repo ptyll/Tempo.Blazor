@@ -2,22 +2,48 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
 
-<div class="tm-gantt__workload" data-testid="@TestId("gantt-workload-view")">
-    @{
-        var allEntries = WorkloadCalculator.Calculate(Tasks, WorkingSchedule);
-        var assigneeIds = allEntries.Select(e => e.AssigneeId).Distinct().OrderBy(x => x).ToList();
+@{
+    var allEntries = WorkloadCalculator.Calculate(Tasks, WorkingSchedule);
+    var assigneeIds = allEntries.Select(e => e.AssigneeId).Distinct().OrderBy(x => x).ToList();
 
+    List<DateTime> dates;
+    if (HasRange)
+    {
+        // Docked: the Gantt's own continuous axis, so the panel lines up with the timeline above it.
+        dates = BuildDockedDates();
+    }
+    else
+    {
         // Show a 4-week window starting from the earliest date that has data, capped at today
         var windowStart = allEntries.Any()
             ? allEntries.Min(e => e.Date)
             : Today;
         if (windowStart < Today.AddDays(-7)) windowStart = Today.AddDays(-7);
         var windowEnd = windowStart.AddDays(27);
-        var dates = allEntries.Select(e => e.Date)
+        dates = allEntries.Select(e => e.Date)
             .Where(d => d >= windowStart && d <= windowEnd)
             .Distinct().OrderBy(d => d).ToList();
-        var entries = allEntries.Where(e => dates.Contains(e.Date)).ToList();
     }
+    var entries = allEntries.Where(e => dates.Contains(e.Date)).ToList();
+}
+<div class="tm-gantt__workload @(HasRange ? "tm-gantt__workload--docked" : "")" data-testid="@TestId("gantt-workload-view")">
+    @if (HasRange)
+    {
+        <div class="tm-gantt__workload-header">
+            <h3 class="tm-gantt__workload-title">@Loc["TmGantt_WorkloadView"]</h3>
+            <div class="tm-gantt__workload-mode" role="group" aria-label="@Loc["TmGantt_WorkloadDisplayMode"]">
+                <button type="button" class="tm-gantt__workload-mode-btn @(DisplayMode == WorkloadDisplayMode.Hours ? "tm-gantt__workload-mode-btn--active" : "")"
+                        aria-pressed="@(DisplayMode == WorkloadDisplayMode.Hours ? "true" : "false")"
+                        data-testid="@TestId("workload-mode-hours")"
+                        @onclick="() => SetModeAsync(WorkloadDisplayMode.Hours)">@Loc["TmGantt_WorkloadHours"]</button>
+                <button type="button" class="tm-gantt__workload-mode-btn @(DisplayMode == WorkloadDisplayMode.Percentage ? "tm-gantt__workload-mode-btn--active" : "")"
+                        aria-pressed="@(DisplayMode == WorkloadDisplayMode.Percentage ? "true" : "false")"
+                        data-testid="@TestId("workload-mode-percent")"
+                        @onclick="() => SetModeAsync(WorkloadDisplayMode.Percentage)">@Loc["TmGantt_WorkloadPercent"]</button>
+            </div>
+        </div>
+    }
+    <div class="@(HasRange ? "tm-gantt__workload-scroller" : "tm-gantt__workload-plain")" @ref="_scroller">
     @if (!assigneeIds.Any())
     {
         <div class="tm-gantt__workload-empty">
@@ -66,6 +92,22 @@
                         }
                     </div>
                 }
+            }
+        </div>
+    }
+    </div>
+    @if (HasRange)
+    {
+        <div class="tm-gantt__workload-footer">
+            <ul class="tm-gantt__workload-legend">
+                <li class="tm-gantt__workload-legend-item"><span class="tm-gantt__workload-legend-dot tm-gantt__workload-legend-dot--ok" aria-hidden="true"></span>@Loc["TmGantt_WorkloadLegendOk"]</li>
+                <li class="tm-gantt__workload-legend-item"><span class="tm-gantt__workload-legend-dot tm-gantt__workload-legend-dot--over" aria-hidden="true"></span>@Loc["TmGantt_Overloaded"]</li>
+                <li class="tm-gantt__workload-legend-item"><span class="tm-gantt__workload-legend-dot tm-gantt__workload-legend-dot--empty" aria-hidden="true"></span>@Loc["TmGantt_WorkloadNoAllocation"]</li>
+            </ul>
+            <span class="tm-gantt__workload-range" data-testid="@TestId("workload-range-info")">@Loc["TmGantt_WorkloadRangeInfo", RangeStart!.Value.ToString("d", Loc.Culture), RangeEnd!.Value.ToString("d", Loc.Culture)]</span>
+            @if (RangeTruncated)
+            {
+                <span class="tm-gantt__workload-truncated" role="note" data-testid="@TestId("workload-range-truncated")">@Loc["TmGantt_WorkloadRangeTruncated", MaxDockedDays]</span>
             }
         </div>
     }

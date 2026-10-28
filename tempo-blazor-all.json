@@ -23229,6 +23229,13 @@
               "description": "Activity history entries to display in the history drawer."
             },
             {
+              "name": "HistoryDrawerPlacement",
+              "type": "GanttHistoryDrawerPlacement",
+              "isRequired": false,
+              "default": "GanttHistoryDrawerPlacement.Component",
+              "description": "What the history drawer is positioned against: Component (default) pins it to the right edge of this Gantt; Viewport restores the pre-redesign full-viewport-height panel."
+            },
+            {
               "name": "Items",
               "type": "IReadOnlyList<TmWorkItem>",
               "isRequired": false,
@@ -23342,6 +23349,24 @@
               "type": "EventCallback<TmNotification>",
               "isRequired": false,
               "description": "Fires when a notification condition is met (assign, mention, deadline)."
+            },
+            {
+              "name": "OnReportDelete",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Delete in a report card's menu. The menu item (and the menu) exist only when this is handled."
+            },
+            {
+              "name": "OnReportDuplicate",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Duplicate in a report card's menu. The menu item (and the menu) exist only when this is handled."
+            },
+            {
+              "name": "OnReportEdit",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Edit in a report card's menu. The menu item (and the menu) exist only when this is handled."
             },
             {
               "name": "OnReportRun",
@@ -23492,10 +23517,17 @@
               "isRequired": false
             },
             {
+              "name": "ShowToolbar",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the command toolbar is not rendered (a nested Gantt of the portfolio, a host that drives the chart through its own chrome). The panel tabs / sidebar are switched off separately by ShowSidebar."
+            },
+            {
               "name": "ShowWorkloadPanel",
               "type": "bool",
               "isRequired": false,
-              "description": "When true, shows the workload panel below the Gantt timeline."
+              "description": "Computes the workload overload that drives the warning icons next to a task's assignees (nothing is drawn by this flag itself; the docked panel is switched on with WorkloadPlacement). Unchanged."
             },
             {
               "name": "SidebarMode",
@@ -23558,6 +23590,19 @@
               "isRequired": false,
               "default": "WorkloadDisplayMode.Hours",
               "description": "Whether workload is displayed in hours or as a percentage of capacity."
+            },
+            {
+              "name": "WorkloadDisplayModeChanged",
+              "type": "EventCallback<WorkloadDisplayMode>",
+              "isRequired": false,
+              "description": "Raised when the user flips the Hours | Percent segment of the docked workload panel (arg = the new mode; two-way with WorkloadDisplayMode)."
+            },
+            {
+              "name": "WorkloadPlacement",
+              "type": "GanttWorkloadPlacement",
+              "isRequired": false,
+              "default": "GanttWorkloadPlacement.View",
+              "description": "Where the workload is shown. View (default) keeps the alternate Workload view; Docked adds a panel under the timeline that shares the Gantt's date range and scrolls horizontally with it. The panel renders whatever ShowWorkloadPanel says - that flag only switches on the overload computation behind the warning icons; its semantics are unchanged."
             },
             {
               "name": "ZoomPreset",
@@ -23661,13 +23706,19 @@
               "name": "OnClose",
               "type": "EventCallback",
               "isRequired": false,
-              "description": "Fires when the drawer should close."
+              "description": "Fires when the drawer should close (close button or Escape)."
             },
             {
               "name": "OnRollbackRequested",
               "type": "EventCallback<TmActivityEntry>",
               "isRequired": false,
-              "description": "Fires when the user requests rollback to a specific history entry."
+              "description": "Fires when the user confirms the rollback of a history entry (the drawer asks for confirmation first)."
+            },
+            {
+              "name": "OnTaskSelected",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires when the user clicks the task of an entry (arg = task id)."
             },
             {
               "name": "OnTimeTravelRequested",
@@ -23676,10 +23727,88 @@
               "description": "Fires when the user requests time-travel to a specific timestamp."
             },
             {
+              "name": "Placement",
+              "type": "GanttHistoryDrawerPlacement",
+              "isRequired": false,
+              "default": "GanttHistoryDrawerPlacement.Component",
+              "description": "What the drawer is positioned against: the Gantt component (default) or the viewport."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<TmWorkItem>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Tasks the entries refer to: resolves the task titles shown (and linked) in each entry."
+            },
+            {
               "name": "TimeZone",
               "type": "TimeZoneInfo?",
               "isRequired": false,
               "description": "Zone the entry timestamps are shown in. Defaults to the machine's local zone; TmGantt passes the user's display zone."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttHistoryList",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the audit-log feed shared by the sidebar History panel and the history drawer - a typed icon, the change type, the task (a link when it is still in the chart), the author, a relative time and, in the drawer, Time travel / Rollback. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttHistoryList.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "History",
+              "type": "IReadOnlyList<TmActivityEntry>?",
+              "isRequired": false,
+              "description": "Activity entries, newest first when rendered."
+            },
+            {
+              "name": "OnRollbackRequested",
+              "type": "EventCallback<TmActivityEntry>",
+              "isRequired": false,
+              "description": "Fires when the user asks to roll back an entry; the drawer confirms first."
+            },
+            {
+              "name": "OnTaskSelected",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires when the user clicks a task title (arg = task id)."
+            },
+            {
+              "name": "OnTimeTravelRequested",
+              "type": "EventCallback<DateTime>",
+              "isRequired": false,
+              "description": "Fires when the user asks to travel to an entry's time."
+            },
+            {
+              "name": "ShowActions",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true each entry carries the Time travel and Rollback buttons (the drawer)."
+            },
+            {
+              "name": "Take",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Maximum number of entries rendered (newest first)."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<TmWorkItem>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Tasks the entries refer to (resolves the task title and makes it a link)."
+            },
+            {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Zone the times are judged and shown in."
             }
           ]
         },
@@ -23803,11 +23932,29 @@
               "description": "Additional CSS classes appended to the root element."
             },
             {
+              "name": "OnProjectSelected",
+              "type": "EventCallback<GanttPortfolioProject>",
+              "isRequired": false,
+              "description": "Fires when the user clicks a project's name. Without a handler the name is plain text."
+            },
+            {
+              "name": "ProjectActions",
+              "type": "RenderFragment<GanttPortfolioProject>?",
+              "isRequired": false,
+              "description": "Host content at the end of each card header (a menu, a status chip); the project is the context."
+            },
+            {
+              "name": "ProjectMaxHeight",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Maximum height of the Gantt area of a card as a CSS length (e.g. 400px). Default: the stylesheet value (15rem)."
+            },
+            {
               "name": "Projects",
               "type": "IReadOnlyList<GanttPortfolioProject>",
               "isRequired": false,
               "default": "[]",
-              "description": "Projects to show; each card draws the project's Tasks and Dependencies in its own Gantt."
+              "description": "Projects to show; each card is collapsible and shows the project's date range, task count and weighted completion above its own Gantt."
             }
           ]
         },
@@ -23829,6 +23976,24 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Fires when the user asks for a new report. The panel has no report editor of its own, so the \"New report\" button is only rendered when the host handles this callback."
+            },
+            {
+              "name": "OnReportDelete",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Delete in a card's menu. The menu offers an entry only for a callback the host handles."
+            },
+            {
+              "name": "OnReportDuplicate",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Duplicate in a card's menu. The menu offers an entry only for a callback the host handles."
+            },
+            {
+              "name": "OnReportEdit",
+              "type": "EventCallback<GanttReport>",
+              "isRequired": false,
+              "description": "Fires when the user picks Edit in a card's menu. The menu offers an entry only for a callback the host handles."
             },
             {
               "name": "OnReportRun",
@@ -23920,11 +24085,36 @@
               "description": "All tasks for parent selection."
             },
             {
+              "name": "BaselineTask",
+              "type": "GanttBaselineTask?",
+              "isRequired": false,
+              "description": "The task's entry in the active baseline; when set the Progress section shows the start / end deviation from it (read-only)."
+            },
+            {
+              "name": "Breadcrumb",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional breadcrumb shown above the task title in the panel header."
+            },
+            {
               "name": "Dependencies",
               "type": "IReadOnlyList<GanttDependency>",
               "isRequired": false,
               "default": "[]",
               "description": "Existing dependencies."
+            },
+            {
+              "name": "IsOverloaded",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the Progress section states that one of the task's assignees is over capacity (read-only).",
+              "default": "false"
+            },
+            {
+              "name": "OnAction",
+              "type": "EventCallback<GanttTaskAction>",
+              "isRequired": false,
+              "description": "Fires when the user picks a command of the Actions section (mark done, add above / below / child, duplicate, delete). The section renders only when the host handles this callback."
             },
             {
               "name": "OnAttachmentRemoved",
@@ -23967,6 +24157,12 @@
               "type": "EventCallback<string?>",
               "isRequired": false,
               "description": "Fires when the description textarea changes (live)."
+            },
+            {
+              "name": "OnStatusChanged",
+              "type": "EventCallback<(string TaskId, TmWorkItemStatus NewStatus)>",
+              "isRequired": false,
+              "description": "Fires on Save when the Status field was changed (arg = task id + the new status); like the priority, the status is a draft until Save and Cancel reverts it. TmGantt applies it to the task and raises its own OnStatusChanged."
             },
             {
               "name": "OnTaskUpdated",
@@ -24074,13 +24270,40 @@
               "name": "DisplayMode",
               "type": "WorkloadDisplayMode",
               "isRequired": false,
-              "default": "WorkloadDisplayMode.Hours"
+              "default": "WorkloadDisplayMode.Hours",
+              "description": "Whether cells show hours or a percentage of the day's capacity."
+            },
+            {
+              "name": "DisplayModeChanged",
+              "type": "EventCallback<WorkloadDisplayMode>",
+              "isRequired": false,
+              "description": "Raised by the Hours | Percent segment of the docked header (arg = the new mode)."
+            },
+            {
+              "name": "Docked",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Docked presentation: a card with a header (title, Hours | Percent segment), a continuous date axis over RangeStart..RangeEnd, a legend and a range note. Default false keeps the sparse alternate-view grid.",
+              "default": "false"
+            },
+            {
+              "name": "RangeEnd",
+              "type": "DateTime?",
+              "isRequired": false,
+              "description": "Last day of the docked date axis (the Gantt's range end)."
+            },
+            {
+              "name": "RangeStart",
+              "type": "DateTime?",
+              "isRequired": false,
+              "description": "First day of the docked date axis (the Gantt's range start)."
             },
             {
               "name": "Tasks",
               "type": "IReadOnlyList<TmWorkItem>",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Tasks whose assignees' workload is shown."
             },
             {
               "name": "Today",
@@ -24092,7 +24315,8 @@
             {
               "name": "WorkingSchedule",
               "type": "WorkingSchedule",
-              "isRequired": true
+              "isRequired": true,
+              "description": "Working days and hours per day (the capacity)."
             }
           ]
         },
@@ -29555,6 +29779,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/gantt-scroll-link.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/layout-observer.test.mjs",
           "kind": "JavaScript"
         },
@@ -29628,11 +29856,11 @@
         }
       ],
       "summary": {
-        "itemCount": 397,
-        "manualItemCount": 397,
-        "generatedItemCount": 389,
+        "itemCount": 398,
+        "manualItemCount": 398,
+        "generatedItemCount": 390,
         "generatedOnlyItemCount": 0,
-        "componentCount": 212,
+        "componentCount": 213,
         "publicApiTypeCount": 177
       }
     },
@@ -83379,6 +83607,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "GanttHistoryDrawerPlacement",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "What the Gantt history drawer is positioned against: the Gantt component (default) or the viewport.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHistoryDrawerPlacement.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "GanttImportAuthException",
           "kind": "Class",
           "category": "Models",
@@ -83573,6 +83811,16 @@
           ]
         },
         {
+          "itemName": "GanttTaskAction",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "GanttTaskNameLocation",
           "kind": "Enum",
           "category": "Models",
@@ -83725,6 +83973,16 @@
               "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
             }
           ]
+        },
+        {
+          "itemName": "GanttWorkloadPlacement",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "Where the Gantt shows its workload: as the alternate Workload view (default) or as a panel docked under the timeline.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttWorkloadPlacement.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "GanttZoomPreset",
@@ -105485,12 +105743,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1495,
-        "manualItemCount": 1495,
-        "generatedItemCount": 1478,
+        "itemCount": 1498,
+        "manualItemCount": 1498,
+        "generatedItemCount": 1481,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1478
+        "publicApiTypeCount": 1481
       }
     },
     {
@@ -122471,10 +122729,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3318,
-    "manualItemCount": 3318,
+    "itemCount": 3322,
+    "manualItemCount": 3322,
     "generatedOnlyItemCount": 0,
-    "componentCount": 495,
-    "publicApiTypeCount": 2770
+    "componentCount": 496,
+    "publicApiTypeCount": 2773
   }
 }

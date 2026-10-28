@@ -1,9 +1,9 @@
-/* Portfolio View */
+/* Portfolio View: one card per project. */
 .tm-gantt-portfolio {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 12px;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-3);
 }
 .tm-gantt-portfolio__project {
     border: 1px solid var(--tm-border-color);
@@ -14,14 +14,78 @@
     overflow: hidden;
 }
 .tm-gantt-portfolio__project-header {
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-primary);
-    font-weight: 600;
-    font-size: 0.9rem;
     border-bottom: 1px solid var(--tm-border-color);
+}
+.tm-gantt-portfolio__project-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    padding: 0;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+.tm-gantt-portfolio__project-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+.tm-gantt-portfolio__project-toggle:focus-visible,
+.tm-gantt-portfolio__project-name--link:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+.tm-gantt-portfolio__project-name {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: var(--tm-font-size-md);
+    color: var(--tm-text-primary);
+}
+.tm-gantt-portfolio__project-name--link {
+    padding: 0;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: none;
+    font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+.tm-gantt-portfolio__project-name--link:hover {
+    text-decoration: underline;
+}
+.tm-gantt-portfolio__project-meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    margin-inline-start: auto;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+.tm-gantt-portfolio__project-progress {
+    flex: 0 1 8rem;
+    min-width: 4rem;
+}
+.tm-gantt-portfolio__project-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
 }
 .tm-gantt-portfolio__project-summary {
     overflow: hidden;
-    max-height: 240px;
+    max-height: 15rem;
+}
+
+.tm-gantt-portfolio__project-range,
+.tm-gantt-portfolio__project-count {
+    white-space: nowrap;
 }

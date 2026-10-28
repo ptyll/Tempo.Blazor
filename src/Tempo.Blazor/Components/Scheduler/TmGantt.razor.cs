@@ -47,6 +47,7 @@ public partial class TmGantt : IDisposable
     private bool _exportDialogOpen;
     private bool _importDialogOpen;
     internal bool _historyDrawerOpen;
+    private TmWorkItem? _pendingDelete;
 
     // Phase 5 state
     internal HashSet<string> _overloadedAssigneeIds = [];
@@ -241,6 +242,30 @@ public partial class TmGantt : IDisposable
     /// <summary>Whether workload is displayed in hours or as a percentage of capacity.</summary>
     [Parameter] public WorkloadDisplayMode WorkloadDisplayMode { get; set; } = WorkloadDisplayMode.Hours;
 
+    /// <summary>Raised when the user flips the Hours | Percent segment of the docked workload panel (arg = the new mode; two-way with <see cref="WorkloadDisplayMode"/>).</summary>
+    [Parameter] public EventCallback<WorkloadDisplayMode> WorkloadDisplayModeChanged { get; set; }
+
+    /// <summary>
+    /// Where the workload is shown. <see cref="GanttWorkloadPlacement.View"/> (default) keeps today's alternate
+    /// <c>GanttView.Workload</c> view; <see cref="GanttWorkloadPlacement.Docked"/> adds a panel under the timeline that
+    /// shares the Gantt's date range and scrolls horizontally with it (the panel renders whatever
+    /// <see cref="ShowWorkloadPanel"/> says - that flag only switches on the overload computation behind the warning icons).
+    /// </summary>
+    [Parameter] public GanttWorkloadPlacement WorkloadPlacement { get; set; } = GanttWorkloadPlacement.View;
+
+    /// <summary>
+    /// What the history drawer is positioned against: <see cref="GanttHistoryDrawerPlacement.Component"/> (default) pins it
+    /// to the right edge of this Gantt; <see cref="GanttHistoryDrawerPlacement.Viewport"/> restores the pre-redesign
+    /// full-viewport-height panel.
+    /// </summary>
+    [Parameter] public GanttHistoryDrawerPlacement HistoryDrawerPlacement { get; set; } = GanttHistoryDrawerPlacement.Component;
+
+    /// <summary>
+    /// When false the command toolbar is not rendered (a nested Gantt of the portfolio, a host that drives the chart
+    /// through its own chrome). The panel tabs / sidebar are switched off separately by <see cref="ShowSidebar"/>. Default true.
+    /// </summary>
+    [Parameter] public bool ShowToolbar { get; set; } = true;
+
     /// <summary>Optional real-time SignalR connection for live task updates.</summary>
     [Parameter] public IGanttRealtimeConnection? RealtimeConnection { get; set; }
 
@@ -315,6 +340,15 @@ public partial class TmGantt : IDisposable
 
     /// <summary>Fires when the user clicks "Run" on a report.</summary>
     [Parameter] public EventCallback<GanttReport> OnReportRun { get; set; }
+
+    /// <summary>Fires when the user picks Edit in a report card's menu. The menu item (and the menu) exist only when this is handled.</summary>
+    [Parameter] public EventCallback<GanttReport> OnReportEdit { get; set; }
+
+    /// <summary>Fires when the user picks Delete in a report card's menu. The menu item (and the menu) exist only when this is handled.</summary>
+    [Parameter] public EventCallback<GanttReport> OnReportDelete { get; set; }
+
+    /// <summary>Fires when the user picks Duplicate in a report card's menu. The menu item (and the menu) exist only when this is handled.</summary>
+    [Parameter] public EventCallback<GanttReport> OnReportDuplicate { get; set; }
 
     /// <summary>
     /// Fires when the user asks for a new report from the Reports panel. The Gantt has no report editor,
@@ -1078,9 +1112,15 @@ public partial class TmGantt : IDisposable
     private async Task DeleteTaskAsync()
     {
         if (_contextMenuTask is null) return;
-        var removedId = _contextMenuTask.Id;
-        await RaiseTaskRemovedAsync(removedId);
+        var task = _contextMenuTask;
+        await DeleteTaskCoreAsync(task);
         HideContextMenu();
+    }
+
+    private async Task DeleteTaskCoreAsync(TmWorkItem task)
+    {
+        var removedId = task.Id;
+        await RaiseTaskRemovedAsync(removedId);
 
         if (SelectedTask?.Id == removedId)
         {
@@ -1088,6 +1128,136 @@ public partial class TmGantt : IDisposable
             await OnTaskSelected.InvokeAsync(null!);
         }
     }
+
+    /// <summary>The context menu's Duplicate entry.</summary>
+    private async Task DuplicateContextTaskAsync()
+    {
+        if (_contextMenuTask is null) return;
+        var task = _contextMenuTask;
+        HideContextMenu();
+        var copy = await DuplicateTaskCoreAsync(task);
+        await SelectTaskAsync(copy);
+    }
+
+    /// <summary>
+    /// A copy of <paramref name="source"/> placed below it: same plan (dates, parent, colour, priority, assignees,
+    /// estimate), no progress, no logged time, comments or attachments. Raises <c>OnTaskInserted</c> and <c>OnTaskAdded</c>
+    /// exactly like an inserted task.
+    /// </summary>
+    private async Task<TmWorkItem> DuplicateTaskCoreAsync(TmWorkItem source)
+    {
+        var copy = new TmWorkItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            Title = $"{source.Title} {Loc["TmGantt_DuplicateSuffix"]}",
+            Description = source.Description,
+            Start = source.Start,
+            End = source.End,
+            DueDate = source.DueDate,
+            IsMilestone = source.IsMilestone,
+            Priority = source.Priority,
+            ParentId = source.ParentId,
+            Color = source.Color,
+            EstimationHours = source.EstimationHours,
+            BudgetHours = source.BudgetHours,
+            UseManualDates = source.UseManualDates,
+            Assignees = source.Assignees.ToList(),
+            Tags = source.Tags.ToList(),
+            CustomFields = new Dictionary<string, string?>(source.CustomFields),
+            PercentComplete = 0,
+        };
+
+        await OnTaskInserted.InvokeAsync(new GanttTaskInsertedArgs
+        {
+            Task = copy,
+            ReferenceTaskId = source.Id,
+            Position = GanttInsertPosition.Below,
+        });
+        await RaiseTaskAddedAsync(copy);
+        return copy;
+    }
+
+    // ── Task panel hand-offs (status, actions, overload, baseline) ──────
+
+    /// <summary>The panel's Status field: the board's path - the task changes now, the host hears <c>OnStatusChanged</c>; Save then persists the whole task.</summary>
+    private Task OnTaskPanelStatusChangedAsync((string TaskId, TmWorkItemStatus NewStatus) change)
+        => ChangeBoardStatusAsync(change.TaskId, change.NewStatus);
+
+    private async Task OnTaskPanelActionAsync(GanttTaskAction action)
+    {
+        var task = SelectedTask;
+        if (task is null) return;
+
+        switch (action)
+        {
+            case GanttTaskAction.MarkDone:
+                task.PercentComplete = 100;
+                await ChangeBoardStatusAsync(task.Id, TmWorkItemStatus.Done);
+                await RaiseTaskUpdatedAsync(task);
+                break;
+            case GanttTaskAction.AddAbove:
+                await InsertAtSelectionAsync(GanttInsertPosition.Above);
+                break;
+            case GanttTaskAction.AddBelow:
+                await InsertAtSelectionAsync(GanttInsertPosition.Below);
+                break;
+            case GanttTaskAction.AddChild:
+                await InsertAtSelectionAsync(GanttInsertPosition.Child);
+                break;
+            case GanttTaskAction.Duplicate:
+                await SelectTaskAsync(await DuplicateTaskCoreAsync(task));
+                break;
+            case GanttTaskAction.Delete:
+                // Destructive: confirmed first (the same pattern as the history rollback).
+                _pendingDelete = task;
+                break;
+        }
+    }
+
+    private async Task ConfirmDeleteAsync(bool? confirmed)
+    {
+        var task = _pendingDelete;
+        _pendingDelete = null;
+        if (confirmed == true && task is not null)
+        {
+            await DeleteTaskCoreAsync(task);
+        }
+    }
+
+    /// <summary>True when one of the selected task's assignees is over capacity on some day (read-only note of the task panel).</summary>
+    private bool SelectedTaskOverloaded =>
+        SelectedTask is { } task && task.Assignees.Any(a => _overloadedAssigneeIds.Contains(a.Id));
+
+    /// <summary>The selected task's entry in the active baseline, for the panel's read-only deviation note.</summary>
+    private GanttBaselineTask? SelectedTaskBaseline =>
+        SelectedTask is { } task && ActiveBaselineId is not null
+            ? Baselines.FirstOrDefault(b => b.Id == ActiveBaselineId)?.Tasks.FirstOrDefault(b => b.TaskId == task.Id)
+            : null;
+
+    /// <summary>A history entry's task link: select the task and open its panel.</summary>
+    internal async Task OpenTaskByIdAsync(string taskId)
+    {
+        var task = Data.FirstOrDefault(t => t.Id == taskId);
+        if (task is null) return;
+        await ActivateTaskAsync(task);
+    }
+
+    private async Task OnWorkloadModeChangedAsync(WorkloadDisplayMode mode)
+    {
+        WorkloadDisplayMode = mode;
+        await WorkloadDisplayModeChanged.InvokeAsync(mode);
+    }
+
+    /// <summary>The attributes the Reports panel carries as the tab panel of its tab (<see cref="GanttSidebarMode.Tabs"/>); none for the icon rail.</summary>
+    private Dictionary<string, object> ReportsPanelAttributes => SidebarMode == GanttSidebarMode.Tabs
+        ? new() { ["role"] = "tabpanel", ["id"] = PanelDomId(GanttSidebarPanel.Reports), ["aria-labelledby"] = TabDomId(GanttSidebarPanel.Reports) }
+        : [];
+
+    /// <summary>The Reports inspector is the right-hand panel while the Reports tab / rail button is active; the task panel yields to it (one right panel at a time).</summary>
+    private bool ReportsPanelOpen => _activeSidebarPanel == GanttSidebarPanel.Reports;
+
+    /// <summary>The docked workload lines up with the timeline above it, so it exists only under the views that render one (Day / Week / Month).</summary>
+    private bool DockedWorkload => WorkloadPlacement == GanttWorkloadPlacement.Docked && View is GanttView.Day or GanttView.Week or GanttView.Month;
 
     // ── Drag & Drop ──────────────────────────────────────────────
 
@@ -1601,7 +1771,7 @@ public partial class TmGantt : IDisposable
         BuildNonWorkingRects(timelineStart, timelineEnd, pixelPerDay);
 
         // Compute overloaded assignees when workload panel is active
-        if (ShowWorkloadPanel)
+        if (ShowWorkloadPanel || WorkloadPlacement == GanttWorkloadPlacement.Docked)
         {
             var entries = WorkloadCalculator.Calculate(Data, WorkingSchedule);
             _overloadedAssigneeIds = new HashSet<string>(

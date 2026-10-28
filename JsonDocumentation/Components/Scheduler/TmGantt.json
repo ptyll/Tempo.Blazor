@@ -387,7 +387,7 @@
       "name": "ShowWorkloadPanel",
       "type": "bool",
       "isRequired": false,
-      "description": "When true, shows the workload panel below the Gantt timeline."
+      "description": "Computes the workload overload that drives the warning icons next to a task's assignees (nothing is drawn by this flag itself; the docked panel is switched on with WorkloadPlacement). Unchanged."
     },
     {
       "name": "ViewSettings",
@@ -444,6 +444,51 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Fires when the user removes an attachment of the selected task in the task panel (argument = attachment id)."
+    },
+    {
+      "name": "WorkloadDisplayModeChanged",
+      "type": "EventCallback<WorkloadDisplayMode>",
+      "isRequired": false,
+      "description": "Raised when the user flips the Hours | Percent segment of the docked workload panel (arg = the new mode; two-way with WorkloadDisplayMode)."
+    },
+    {
+      "name": "WorkloadPlacement",
+      "type": "GanttWorkloadPlacement",
+      "isRequired": false,
+      "default": "GanttWorkloadPlacement.View",
+      "description": "Where the workload is shown. View (default) keeps the alternate Workload view; Docked adds a panel under the timeline that shares the Gantt's date range and scrolls horizontally with it. The panel renders whatever ShowWorkloadPanel says - that flag only switches on the overload computation behind the warning icons; its semantics are unchanged."
+    },
+    {
+      "name": "HistoryDrawerPlacement",
+      "type": "GanttHistoryDrawerPlacement",
+      "isRequired": false,
+      "default": "GanttHistoryDrawerPlacement.Component",
+      "description": "What the history drawer is positioned against: Component (default) pins it to the right edge of this Gantt; Viewport restores the pre-redesign full-viewport-height panel."
+    },
+    {
+      "name": "ShowToolbar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false the command toolbar is not rendered (a nested Gantt of the portfolio, a host that drives the chart through its own chrome). The panel tabs / sidebar are switched off separately by ShowSidebar."
+    },
+    {
+      "name": "OnReportEdit",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Edit in a report card's menu. The menu item (and the menu) exist only when this is handled."
+    },
+    {
+      "name": "OnReportDelete",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Delete in a report card's menu. The menu item (and the menu) exist only when this is handled."
+    },
+    {
+      "name": "OnReportDuplicate",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Duplicate in a report card's menu. The menu item (and the menu) exist only when this is handled."
     }
   ]
 }

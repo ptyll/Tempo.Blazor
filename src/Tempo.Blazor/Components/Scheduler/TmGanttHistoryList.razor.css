@@ -1,0 +1,159 @@
+/* The audit-log feed shared by the sidebar History panel and the history drawer. */
+
+.tm-gantt__history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-10) var(--tm-space-4);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-gantt__history-entry {
+    display: flex;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) 0;
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-gantt__history-entry:last-child {
+    border-bottom: none;
+}
+
+/* The type icon: a circle tinted by the kind of change. Every pair is a subtle wash with its AA text step. */
+.tm-gantt__history-entry-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__history-entry-icon--created {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-gantt__history-entry-icon--status {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success-text);
+}
+
+.tm-gantt__history-entry-icon--dates {
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
+}
+
+.tm-gantt__history-entry-icon--assignee {
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-gantt__history-entry-icon--edit {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-gantt__history-entry-icon--comment {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+.tm-gantt__history-entry-icon--dependency {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__history-entry-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    flex: 1;
+}
+
+.tm-gantt__history-entry-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-gantt__history-entry-type {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__history-entry-time {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+}
+
+/* The task the entry is about: a link when it is still in the chart. */
+.tm-gantt__history-entry-task {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    text-align: left;
+}
+
+button.tm-gantt__history-entry-task {
+    color: var(--tm-color-primary-text);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+button.tm-gantt__history-entry-task:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-gantt__history-entry-author {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__history-entry-values {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__history-old {
+    color: var(--tm-color-danger-text);
+    text-decoration: line-through;
+}
+
+.tm-gantt__history-new {
+    color: var(--tm-color-success-text);
+    font-weight: 500;
+}
+
+/* Time travel | Rollback: small secondary buttons at the full width of the entry. */
+.tm-gantt__history-entry-actions {
+    display: flex;
+    gap: var(--tm-space-2);
+    margin-top: var(--tm-space-1);
+}

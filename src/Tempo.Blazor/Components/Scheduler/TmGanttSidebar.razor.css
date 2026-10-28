@@ -130,34 +130,6 @@
 
 .tm-gantt__sidebar-workload-pct--over { color: var(--tm-color-danger); font-weight: 600; }
 
-/* History panel */
-.tm-gantt__sidebar-history-row {
-    display: flex;
-    flex-direction: column;
-    padding: 5px 12px;
-    border-bottom: 1px solid var(--tm-color-border-subtle);
-    font-size: 0.75rem;
-    gap: 2px;
-}
-
-.tm-gantt__sidebar-history-action {
-    font-weight: 600;
-    color: var(--tm-text-primary);
-    text-transform: capitalize;
-}
-
-.tm-gantt__sidebar-history-task {
-    color: var(--tm-text-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-gantt__sidebar-history-date {
-    color: var(--tm-text-secondary);
-    font-size: 0.68rem;
-}
-
 /* ── Left Sidebar Navigation (F5.13) ──────────────────── */
 .tm-gantt__sidebar {
     width: 48px;

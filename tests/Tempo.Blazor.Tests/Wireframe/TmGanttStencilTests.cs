@@ -51,12 +51,24 @@ public class TmGanttStencilTests
         schema.Props.Single(p => p.Name == "sidebarMode").Options.Should().Equal("rail", "tabs");
     }
 
-    private static async Task<string> RenderAsync(params (string Key, object? Value)[] props)
+    [Fact]
+    public async Task Portfolio_Stencil_Renders_Cards_With_Count_And_Weighted_Progress()
+    {
+        var svg = await RenderAsync("TmGanttPortfolio", ("projectCount", 2));
+
+        svg.Should().Contain(">Project 1<").And.Contain(">Project 2<");
+        svg.Should().Contain(">Tasks: 5<", "each card states its task count");
+        svg.Should().Contain(">30%<").And.Contain(">50%<", "each card carries its weighted completion");
+        svg.Should().Contain("M20,50 L24,54 L28,50", "the collapse chevron of the card header");
+    }
+    private static Task<string> RenderAsync(params (string Key, object? Value)[] props) => RenderAsync("TmGantt", props);
+
+    private static async Task<string> RenderAsync(string type, params (string Key, object? Value)[] props)
     {
         var registry = new WireframeComponentRegistry();
         registry.RegisterProvider(new BuiltInStencilPackProvider());
-        var def = registry.GetDef("TmGantt") ?? throw new InvalidOperationException("Missing definition for TmGantt.");
-        var element = new WireframeElement { Id = "sut", Type = "TmGantt", W = def.DefaultWidth, H = def.DefaultHeight };
+        var def = registry.GetDef(type) ?? throw new InvalidOperationException($"Missing definition for {type}.");
+        var element = new WireframeElement { Id = "sut", Type = type, W = def.DefaultWidth, H = def.DefaultHeight };
         foreach (var (key, value) in props)
             element.SetProp(key, value);
 

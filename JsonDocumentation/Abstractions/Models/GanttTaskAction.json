@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttTaskAction"
+}

@@ -20,7 +20,4 @@ public partial class TmGanttSidebar : TmGanttPart
 
     private string? PanelLabelledBy(GanttSidebarPanel panel) => TabsMode ? Owner.TabDomId(panel) : null;
 
-    private Dictionary<string, object> ReportsPanelAttributes => TabsMode
-        ? new() { ["role"] = "tabpanel", ["id"] = Owner.PanelDomId(GanttSidebarPanel.Reports), ["aria-labelledby"] = Owner.TabDomId(GanttSidebarPanel.Reports) }
-        : [];
 }

@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Dropdowns
 
 <div class="tm-gantt-reports-panel" data-testid="@TestId("gantt-reports-panel")" @attributes="AdditionalAttributes">
     <div class="tm-gantt-reports-panel__header">
@@ -25,17 +26,42 @@
         <ul class="tm-gantt-reports-panel__list">
             @foreach (var report in Reports)
             {
+                var current = report;
                 <li class="tm-gantt-reports-panel__item" data-testid="@($"report-item-{report.Id}")">
+                    <span class="tm-gantt-reports-panel__item-icon" data-icon="@IconFor(report.Type)" aria-hidden="true">
+                        <TmIcon Name="@IconFor(report.Type)" Size="IconSize.Md" />
+                    </span>
                     <div class="tm-gantt-reports-panel__item-info">
                         <span class="tm-gantt-reports-panel__item-name">@report.Name</span>
                         <span class="tm-gantt-reports-panel__item-type">@Loc[$"GanttReportType_{report.Type}"]</span>
                     </div>
-                    <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
+                    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary"
                               data-testid="@($"report-run-{report.Id}")"
-                              OnClick="() => RunReportAsync(report)">
+                              OnClick="() => RunReportAsync(current)">
                         <TmIcon Name="play" Size="IconSize.Xs" />
                         @Loc["TmGantt_RunReport"]
                     </TmButton>
+                    @if (HasMenu)
+                    {
+                        <span data-testid="@($"report-menu-{report.Id}")">
+                            <TmDropdown Text="" ShowChevron="false" Icon="more-vertical" Align="OverlayAlign.End"
+                                        AriaLabel="@Loc["TmGantt_ReportActions", report.Name]"
+                                        OnSelect="action => OnMenuSelectAsync(current, action)">
+                                @if (OnReportEdit.HasDelegate)
+                                {
+                                    <TmDropdownItem Value="edit" Icon="edit">@Loc["TmGantt_ReportEdit"]</TmDropdownItem>
+                                }
+                                @if (OnReportDuplicate.HasDelegate)
+                                {
+                                    <TmDropdownItem Value="duplicate" Icon="copy">@Loc["TmGantt_ReportDuplicate"]</TmDropdownItem>
+                                }
+                                @if (OnReportDelete.HasDelegate)
+                                {
+                                    <TmDropdownItem Value="delete" Icon="trash-2">@Loc["TmGantt_ReportDelete"]</TmDropdownItem>
+                                }
+                            </TmDropdown>
+                        </span>
+                    }
                 </li>
             }
         </ul>

@@ -51,14 +51,8 @@
 }
 
 <!-- Sidebar drawers -->
-@if (Owner._activeSidebarPanel == GanttSidebarPanel.Reports)
-{
-    <TmGanttReportsPanel Reports="Owner.Reports"
-                         @attributes="ReportsPanelAttributes"
-                         OnReportRun="Owner.OnReportRun"
-                         OnNewReportRequested="Owner.OnNewReportRequested" />
-}
-else if (Owner._activeSidebarPanel == GanttSidebarPanel.Tasks)
+@* The Reports panel is not a drawer of the rail: it is the right-hand inspector TmGantt renders (one right panel at a time). *@
+@if (Owner._activeSidebarPanel == GanttSidebarPanel.Tasks)
 {
     <div class="tm-gantt__sidebar-drawer" data-testid="@TestId("sidebar-panel-tasks")"
          role="@PanelRole" id="@PanelId(GanttSidebarPanel.Tasks)" aria-labelledby="@PanelLabelledBy(GanttSidebarPanel.Tasks)">
@@ -116,18 +110,9 @@ else if (Owner._activeSidebarPanel == GanttSidebarPanel.History)
             <span class="tm-gantt__sidebar-drawer-title">@Loc["TmGantt_SidebarHistory"]</span>
         </div>
         <div class="tm-gantt__sidebar-drawer-body">
-            @if (!Owner.History.Any())
-            {
-                <div class="tm-gantt__sidebar-empty">@Loc["TmGantt_HistoryEmpty"]</div>
-            }
-            @foreach (var entry in Owner.History.OrderByDescending(h => h.Timestamp).Take(50))
-            {
-                <div class="tm-gantt__sidebar-history-row">
-                    <span class="tm-gantt__sidebar-history-action">@GanttLabels.ChangeType(Loc, entry.Action)</span>
-                    <span class="tm-gantt__sidebar-history-task">@(Owner.Data.FirstOrDefault(t => t.Id == entry.EntityRef.EntityId)?.Title ?? entry.EntityRef.EntityId)</span>
-                    <span class="tm-gantt__sidebar-history-date">@GanttLabels.Timestamp(entry.Timestamp, Loc.Culture, Owner.DisplayZone)</span>
-                </div>
-            }
+            <TmGanttHistoryList History="Owner.History" Tasks="Owner.Data" TimeZone="Owner.DisplayZone" Take="50"
+                                TestIdPrefix="@Owner.TestIdPrefix"
+                                OnTaskSelected="Owner.OpenTaskByIdAsync" />
         </div>
     </div>
 }

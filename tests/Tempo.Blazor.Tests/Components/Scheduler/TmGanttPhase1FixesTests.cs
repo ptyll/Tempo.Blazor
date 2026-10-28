@@ -231,7 +231,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.History, [new TmActivityEntry { Id = "e1", Action = "TaskChanged", Timestamp = timestamp }]));
 
         var expected = timestamp.ToLocalTime().ToString("g", CultureInfo.GetCultureInfo("en"));
-        cut.Find(".tm-gantt__history-entry-time").TextContent.Trim().Should().Be(expected);
+        cut.Find(".tm-gantt__history-entry-time").GetAttribute("title").Should().Be(expected, "the absolute time is the tooltip of the relative stamp");
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
 
         cut.Find("[data-testid='sidebar-btn-history']").Click();
 
-        cut.Find(".tm-gantt__sidebar-history-action").TextContent.Trim().Should().Be("Status changed");
+        cut.Find(".tm-gantt__history-entry-type").TextContent.Trim().Should().Be("Status changed");
     }
 
     [Fact]
@@ -645,7 +645,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.History, [new TmActivityEntry { Id = "e1", Action = "TaskChanged", Timestamp = timestamp }]));
 
         var expected = TimeZoneInfo.ConvertTime(timestamp, zone).ToString("g", CultureInfo.GetCultureInfo("en"));
-        cut.Find(".tm-gantt__history-entry-time").TextContent.Trim().Should().Be(expected);
+        cut.Find(".tm-gantt__history-entry-time").GetAttribute("title").Should().Be(expected, "the absolute time is the tooltip of the relative stamp");
     }
 
     [Fact]

@@ -29,6 +29,24 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the user asks for a new report. The panel has no report editor of its own, so the \"New report\" button is only rendered when the host handles this callback."
+    },
+    {
+      "name": "OnReportEdit",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Edit in a card's menu. The menu offers an entry only for a callback the host handles."
+    },
+    {
+      "name": "OnReportDelete",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Delete in a card's menu. The menu offers an entry only for a callback the host handles."
+    },
+    {
+      "name": "OnReportDuplicate",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Duplicate in a card's menu. The menu offers an entry only for a callback the host handles."
     }
   ]
 }

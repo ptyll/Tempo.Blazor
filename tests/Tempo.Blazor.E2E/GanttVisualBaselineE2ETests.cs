@@ -215,19 +215,22 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Gantt CSS isolation: the history drawer is fixed to the right edge")]
-    public async Task Gantt_Css_HistoryDrawer_IsFixedRight()
+    [Description("Gantt CSS isolation: the history drawer sits on the right edge of the Gantt component (not the viewport)")]
+    public async Task Gantt_Css_HistoryDrawer_IsAbsoluteRightOfTheComponent()
     {
         var page = await OpenGanttAsync();
         await MainGantt(page).Locator("button[data-testid='gantt-history-btn']").ClickAsync();
         var drawer = page.Locator(".tm-gantt__history-drawer");
         await drawer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        Assert.AreEqual("fixed|0px", await StyleAsync(drawer, "position", "right"),
-            "the history drawer is a fixed panel on the right edge");
+        Assert.AreEqual("absolute|0px", await StyleAsync(drawer, "position", "right"),
+            "the history drawer is positioned against the Gantt root, on its right edge");
         var box = await drawer.BoundingBoxAsync();
+        var root = await MainGantt(page).BoundingBoxAsync();
         Assert.IsNotNull(box);
-        Assert.IsTrue(box!.Height >= 800, $"the drawer spans the viewport height, got {box.Height}");
+        Assert.IsNotNull(root);
+        Assert.IsTrue(Math.Abs(box!.Height - root!.Height) <= 2, $"the drawer spans the component height ({root.Height}), got {box.Height}");
+        Assert.IsTrue(Math.Abs((box.X + box.Width) - (root.X + root.Width)) <= 2, "the drawer ends at the component's right edge");
     }
 
     [TestMethod]
@@ -286,7 +289,8 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
         var header = project.Locator(".tm-gantt-portfolio__project-header");
         Assert.AreNotEqual("rgba(0, 0, 0, 0)", await StyleAsync(header, "background-color"),
             "the project header has its own surface");
-        Assert.AreEqual("600", await StyleAsync(header, "font-weight"));
+        // The header now also holds the range, the task count and the progress bar; only the project name is bold.
+        Assert.AreEqual("600", await StyleAsync(header.Locator(".tm-gantt-portfolio__project-name"), "font-weight"));
 
         var gantt = project.Locator(".tm-gantt");
         var box = await gantt.BoundingBoxAsync();
@@ -308,8 +312,8 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
         var swatch = MainGantt(page).Locator(".tm-gantt__panel-color-swatch").First;
         await swatch.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        Assert.AreEqual("20px|20px|50%", await StyleAsync(swatch, "width", "height", "border-radius"),
-            "the swatch is a 20px circle");
+        Assert.AreEqual("32px|32px|50%", await StyleAsync(swatch, "width", "height", "border-radius"),
+            "the swatch is a 32px circle");
     }
 
     [TestMethod]

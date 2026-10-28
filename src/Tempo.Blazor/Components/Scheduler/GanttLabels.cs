@@ -53,6 +53,10 @@ internal static class GanttLabels
         "TaskChanged" => loc["GanttHistory_TaskChanged"],
         "StatusChanged" => loc["GanttHistory_StatusChanged"],
         "PriorityChanged" => loc["GanttHistory_PriorityChanged"],
+        "Created" => loc["GanttHistory_Created"],
+        "AssigneeChanged" or "AssigneeAdded" => loc["GanttHistory_AssigneeChanged"],
+        "DatesChanged" or "DeadlineSet" => loc["GanttHistory_DatesChanged"],
+        "CommentAdded" => loc["GanttHistory_CommentAdded"],
         "DependencyChanged" => loc["GanttHistory_DependencyChanged"],
         _ => changeType,
     };

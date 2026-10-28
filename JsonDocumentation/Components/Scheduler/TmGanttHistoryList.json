@@ -1,0 +1,64 @@
+{
+  "itemName": "TmGanttHistoryList",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the audit-log feed shared by the sidebar History panel and the history drawer - a typed icon, the change type, the task (a link when it is still in the chart), the author, a relative time and, in the drawer, Time travel / Rollback. Place TmGantt, not this component.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttHistoryList.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "History",
+      "type": "IReadOnlyList<TmActivityEntry>?",
+      "isRequired": false,
+      "description": "Activity entries, newest first when rendered."
+    },
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<TmWorkItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Tasks the entries refer to (resolves the task title and makes it a link)."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Zone the times are judged and shown in."
+    },
+    {
+      "name": "Take",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum number of entries rendered (newest first)."
+    },
+    {
+      "name": "ShowActions",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true each entry carries the Time travel and Rollback buttons (the drawer)."
+    },
+    {
+      "name": "OnTaskSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the user clicks a task title (arg = task id)."
+    },
+    {
+      "name": "OnTimeTravelRequested",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false,
+      "description": "Fires when the user asks to travel to an entry's time."
+    },
+    {
+      "name": "OnRollbackRequested",
+      "type": "EventCallback<TmActivityEntry>",
+      "isRequired": false,
+      "description": "Fires when the user asks to roll back an entry; the drawer confirms first."
+    }
+  ]
+}

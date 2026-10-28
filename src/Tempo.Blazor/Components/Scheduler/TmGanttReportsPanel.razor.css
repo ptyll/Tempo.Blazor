@@ -1,11 +1,12 @@
 .tm-gantt-reports-panel {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-3, 12px);
-    padding: var(--tm-space-4, 16px);
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
     background: var(--tm-bg-surface);
     border-left: 1px solid var(--tm-border-color);
-    width: 280px;
+    width: 340px;
+    flex-shrink: 0;
     min-height: 100%;
     overflow-y: auto;
 }
@@ -14,19 +15,19 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--tm-space-2, 8px);
+    gap: var(--tm-space-2);
 }
 
 .tm-gantt-reports-panel__title {
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    font-weight: 600;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-primary);
 }
 
 .tm-gantt-reports-panel__empty {
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-size: var(--tm-font-size-sm);
     color: var(--tm-text-secondary);
-    padding: var(--tm-space-4, 16px) 0;
+    padding: var(--tm-space-4) 0;
     text-align: center;
 }
 
@@ -36,18 +37,19 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2, 8px);
+    gap: var(--tm-space-2);
 }
 
+/* One card per report: type icon | name + type | Run | kebab. */
 .tm-gantt-reports-panel__item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    background: var(--tm-bg-surface-secondary);
-    border-radius: var(--tm-radius-md, 6px);
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border-radius: var(--tm-radius-md);
     border: 1px solid var(--tm-border-color);
+    box-shadow: var(--tm-shadow-sm);
     transition: background 0.15s ease;
 }
 
@@ -55,23 +57,34 @@
     background: var(--tm-color-surface-hover);
 }
 
+.tm-gantt-reports-panel__item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-10);
+    height: var(--tm-space-10);
+    flex-shrink: 0;
+    background: var(--tm-bg-surface-secondary);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-text-secondary);
+}
+
 .tm-gantt-reports-panel__item-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--tm-space-0-5);
     min-width: 0;
+    flex: 1;
 }
 
 .tm-gantt-reports-panel__item-name {
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    font-weight: 500;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
 }
 
 .tm-gantt-reports-panel__item-type {
-    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-size: var(--tm-font-size-xs);
     color: var(--tm-text-secondary);
 }

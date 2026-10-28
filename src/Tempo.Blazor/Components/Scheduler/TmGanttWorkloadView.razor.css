@@ -79,3 +79,137 @@
 .tm-gantt__workload-cell--empty {
     color: var(--tm-text-secondary);
 }
+
+/* ─── Docked panel (GA2): a card under the timeline, sharing its date axis ─────── */
+
+.tm-gantt__workload--docked {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+.tm-gantt__workload-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__workload-title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__workload-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-gantt__workload-mode-btn {
+    min-height: 1.75rem;
+    padding: 0 var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__workload-mode-btn:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__workload-mode-btn--active {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
+    font-weight: var(--tm-font-weight-semibold);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-gantt__workload-mode-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The scroller of the docked grid: the one element that scrolls horizontally (linked to the timeline in gantt.js). */
+.tm-gantt__workload-scroller {
+    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* The plain (alternate-view) wrapper is layout-neutral: the grid keeps scrolling inside .tm-gantt__workload as before. */
+.tm-gantt__workload-plain {
+    display: contents;
+}
+
+.tm-gantt__workload-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__workload-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-gantt__workload-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-gantt__workload-legend-dot {
+    width: var(--tm-space-3);
+    height: var(--tm-space-3);
+    border-radius: 50%;
+    border: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__workload-legend-dot--ok {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-gantt__workload-legend-dot--over {
+    background: var(--tm-color-danger-subtle);
+    border-color: var(--tm-color-danger);
+}
+
+.tm-gantt__workload-legend-dot--empty {
+    background: var(--tm-bg-muted);
+}
+
+/* The dock: the card under the timeline, separated from the chart. */
+.tm-gantt__workload-range {
+    white-space: nowrap;
+}
+.tm-gantt__workload-truncated {
+    flex-basis: 100%;
+    color: var(--tm-text-secondary);
+}

@@ -216,7 +216,7 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
         var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()).Add(c => c.History, history));
         cut.Find("[data-testid='sidebar-btn-history']").Click();
 
-        cut.Find(".tm-gantt__sidebar-history-date").TextContent.Trim().Should().Be(
+        cut.Find("[data-testid='sidebar-panel-history'] .tm-gantt__history-entry-time").GetAttribute("title").Should().Be(
             TimeZoneInfo.ConvertTime(timestamp, prague).ToString("g", CultureInfo.GetCultureInfo("en")),
             "22:30 UTC is already the next day in Prague");
     }
@@ -235,7 +235,7 @@ public class TmGanttUserTimeZoneTests : LocalizationTestBase
         var cut = Render<TmGantt>(p => p.Add(c => c.Items, Items()).Add(c => c.History, history));
         cut.Find("[data-testid='gantt-history-btn']").Click();
 
-        cut.Find(".tm-gantt__history-entry-time").TextContent.Trim().Should().Be(
+        cut.Find("[data-testid='gantt-history-drawer'] .tm-gantt__history-entry-time").GetAttribute("title").Should().Be(
             TimeZoneInfo.ConvertTime(timestamp, prague).ToString("g", CultureInfo.GetCultureInfo("en")));
     }
     /// <summary>A fake clock whose local zone is the one the test pins. FakeTimeProvider.LocalTimeZone is read-only.</summary>
