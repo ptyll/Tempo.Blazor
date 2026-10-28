@@ -73,14 +73,16 @@
     min-height: 0;
 }
 
-/* The dock row: a bounded fraction of the canvas column (32%, clamped 10rem–20rem). The embedded
+/* The dock row: a bounded fraction of the canvas column (32%, clamped 14rem–20rem). The embedded
    viewer's own chrome (page tabs, header bar, toolbar, status bar) needs its own minority of the
    column — the preview row keeps a 16rem MINIMUM so the diagram stays usable (a 720px-tall
    editor leaves ~464px for the canvas row even with the dock at its 20rem cap, and the diagram
-   area stays ≥320px at the 1440x900/1280x800 baselines). The list scrolls inside whatever row
-   the dock gets; the header toggle collapses it entirely. */
+   area stays ≥320px at the 1440x900/1280x800 baselines). The 14rem floor (review fix, phase 5)
+   keeps ≥2 FULL rows visible in the mixed scenario too — its recommendation box makes the rows
+   taller than the uniform stress list. The list scrolls inside whatever row the dock gets; the
+   header toggle collapses it entirely. */
 .tm-modeling-editor__canvas-body--issues-open {
-    grid-template-rows: minmax(calc(var(--tm-space-16) * 4), 1fr) clamp(calc(var(--tm-space-16) * 2.5), 32%, calc(var(--tm-space-16) * 5));
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 4), 1fr) clamp(calc(var(--tm-space-16) * 3.5), 32%, calc(var(--tm-space-16) * 5));
 }
 
 .tm-modeling-editor__panel-tabs {

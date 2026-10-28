@@ -15,31 +15,58 @@ public sealed class ModelingIssuesDockPhase5E2ETests : WasmTestBase
     private const string ModelingEditorUrl = "/modeling-editor";
 
     [TestMethod]
-    [Description("The issues dock collapses to its header and expands again, keeping aria-expanded in sync")]
+    [Description("The issues dock collapses to its header (body hidden, rows unfocusable) and expands again, keeping aria-expanded in sync")]
     public async Task IssuesDock_CollapseAndExpand_KeepsAriaExpanded()
     {
-        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+        // The uniform 500-row stress list keeps the geometry assertions free of the mixed
+        // scenario's taller recommendation-box rows.
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-500");
 
         var toggle = page.Locator("[data-testid='modeling-issues-toggle']");
         Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"), "The dock starts expanded.");
         await ExpectVisibleAsync(page, "[data-testid='modeling-issue-list']");
+        var expandedPreviewHeight = await PreviewHeightAsync(page);
 
         await toggle.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
         // The body STAYS in the DOM under [hidden] (a11y review, phase 5) — aria-controls always
-        // points at a real id; assert the hidden state instead of a detached list.
+        // points at a real id; wait for the HIDDEN state instead of a detached list.
         await page.Locator("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        var collapsedHidden = await page.EvaluateAsync<bool>(
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
+        var collapsedState = await page.EvaluateAsync<CollapseProbe>(
             """
             () => {
-                const body = document.querySelector("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content");
+                const panel = document.querySelector("[data-testid='modeling-issue-panel']");
+                const body = panel?.querySelector('.tm-modeling-issue-panel__content');
+                const header = panel?.querySelector('.tm-modeling-issue-panel__header');
                 const toggle = document.querySelector("[data-testid='modeling-issues-toggle']");
-                return !!body && body.hasAttribute('hidden')
-                    && toggle?.getAttribute('aria-controls') === body.id;
+                const display = body ? getComputedStyle(body).display : '';
+                const focusable = body
+                    ? [...body.querySelectorAll('button, [href], input, select, textarea, [tabindex]')]
+                        .some(el => el.getBoundingClientRect().height > 0)
+                    : false;
+                return {
+                    hasHiddenAttribute: !!body && body.hasAttribute('hidden'),
+                    bodyDisplay: display,
+                    hasVisibleFocusable: focusable,
+                    ariaControlsMatches: toggle?.getAttribute('aria-controls') === body?.id,
+                    dockHeight: panel?.getBoundingClientRect().height ?? 0,
+                    headerHeight: header?.getBoundingClientRect().height ?? 0
+                };
             }
             """);
-        Assert.IsTrue(collapsedHidden, "The collapsed dock hides its body and keeps the aria-controls target.");
+        Assert.IsTrue(collapsedState.HasHiddenAttribute, "The collapsed dock hides its body under [hidden].");
+        Assert.AreEqual("none", collapsedState.BodyDisplay, "The collapsed body computes display:none ([hidden] must win over display:grid).");
+        Assert.IsFalse(collapsedState.HasVisibleFocusable, "No row of the collapsed dock stays visible/focusable.");
+        Assert.IsTrue(collapsedState.AriaControlsMatches, "The aria-controls target keeps its id.");
         Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"), "The collapsed dock hides the list.");
+
+        // Review fix (phase 5): the collapsed dock is its header — the parent's auto row gives the
+        // panel exactly the header height (plus the panel's own border), so the canvas row GROWS.
+        Assert.IsTrue(collapsedState.DockHeight <= collapsedState.HeaderHeight + 2,
+            $"The collapsed dock is ≈ its header (dock {collapsedState.DockHeight:0.#}px, header {collapsedState.HeaderHeight:0.#}px).");
+        var collapsedPreviewHeight = await PreviewHeightAsync(page);
+        Assert.IsTrue(collapsedPreviewHeight > expandedPreviewHeight,
+            $"The preview grows when the dock collapses (was {expandedPreviewHeight:0.#}px, now {collapsedPreviewHeight:0.#}px).");
 
         // The state is the session's: an unrelated re-render (a viewport nudge) must not re-open it.
         await page.Mouse.WheelAsync(0, -10);
@@ -154,6 +181,21 @@ public sealed class ModelingIssuesDockPhase5E2ETests : WasmTestBase
             """,
             expectedCount,
             new PageWaitForFunctionOptions { Timeout = 10000 });
+    }
+
+    /// <summary>The preview row's height — the section above the dock grows when the dock collapses.</summary>
+    private static Task<double> PreviewHeightAsync(IPage page) =>
+        page.EvaluateAsync<double>(
+            "() => document.querySelector(\"[data-testid='modeling-preview-panel']\")?.getBoundingClientRect().height ?? 0");
+
+    private sealed class CollapseProbe
+    {
+        public bool HasHiddenAttribute { get; set; }
+        public string BodyDisplay { get; set; } = string.Empty;
+        public bool HasVisibleFocusable { get; set; }
+        public bool AriaControlsMatches { get; set; }
+        public double DockHeight { get; set; }
+        public double HeaderHeight { get; set; }
     }
 
     private static Task<bool> IssuesDockOverlapsPreviewAsync(IPage page) =>

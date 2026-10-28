@@ -94,6 +94,14 @@
     min-height: 0;
 }
 
+/* Review fix (phase 5): the rule above overrides the UA sheet's `[hidden] { display: none }`,
+   so a COLLAPSED dock still painted its body and its rows stayed in the tab order. Restate
+   the attribute's display:none explicitly — the body stays in the DOM (aria-controls) but is
+   genuinely hidden and unfocusable while collapsed. */
+.tm-modeling-issue-panel__content[hidden] {
+    display: none;
+}
+
 /* Count-only badge (gap #12): the visible text is the bare number; the localized
    "Issues: {0}" formulation lives on the aria-label. */
 .tm-modeling-issue-panel__count {

@@ -233,6 +233,29 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Phase 5 review fix: the collapsed issues dock — the issues-500 scenario with the
+    /// dock collapsed to its header — so the collapsed state (the canvas body's auto row plus the
+    /// `[hidden]` dock body) is pinned as a baseline at the primary desktop viewport.</summary>
+    [TestMethod]
+    [Description("Captures issues-collapsed-1440x900: the issues-500 scenario with the dock collapsed to its header")]
+    public async Task Capture_IssuesCollapsed()
+    {
+        var page = await OpenThemedModelingPageAsync("?scenario=issues-500", "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-issues-toggle']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "issues-collapsed-1440x900");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     [TestMethod]
     [Description("Captures the selected-element state (tree selection + inspector detail) at 1440x900")]
     public async Task Capture_ElementSelected()

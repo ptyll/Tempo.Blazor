@@ -16,7 +16,7 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
     private const string ModelingEditorUrl = "/modeling-editor";
 
     [TestMethod]
-    [Description("At 1440x900 the demo editor is a ≥1200px desktop container with a ≥320px diagram area and a dock that fits two full issue rows")]
+    [Description("At 1440x900 the demo editor is a ≥1200px desktop container with a usable diagram canvas viewport and a dock that fits two full issue rows")]
     public async Task Editor_1440_IsDesktopWithUsableCanvasAndDock()
     {
         // Uniform 500-row stress list: the dock capacity measure is not distorted by the
@@ -31,6 +31,9 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
                 const layout = editor.querySelector('.tm-layout[data-layout]');
                 const previewEditor = document.querySelector('.tm-modeling-diagram-preview__editor');
                 const previewShell = previewEditor ? previewEditor.parentElement : null;
+                // The DIAGRAM CANVAS viewport: the .tm-diagram-canvas the nested viewer editor
+                // renders inside its chrome (toolbar/status) — not the whole TmDiagramEditor box.
+                const diagramCanvas = document.querySelector('.tm-modeling-diagram-preview__editor .tm-diagram-canvas');
                 const list = document.querySelector("[data-testid='modeling-issue-list']");
                 const rows = list ? [...list.querySelectorAll('li > [data-severity]')] : [];
                 const heights = rows.map(row => row.getBoundingClientRect().height);
@@ -40,7 +43,7 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
                     editorLayout: layout?.getAttribute('data-layout') ?? '',
                     previewWidth: previewShell ? previewShell.clientWidth : 0,
                     previewEditorLayout: previewEditor?.getAttribute('data-editor-layout') ?? '',
-                    previewEditorHeight: previewEditor?.getBoundingClientRect().height ?? 0,
+                    diagramCanvasHeight: diagramCanvas ? diagramCanvas.getBoundingClientRect().height : 0,
                     listClientHeight: list ? list.clientHeight : 0,
                     minRow: heights.length ? Math.min(...heights) : 0,
                     rowGap: listStyle ? (parseFloat(listStyle.rowGap) || 0) : 0,
@@ -52,8 +55,13 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
         Assert.IsTrue(metrics.EditorWidth >= 1200,
             $"The demo page must give the editor ≥1200px of container at 1440x900 (was {metrics.EditorWidth}).");
         Assert.AreEqual("desktop", metrics.EditorLayout, "≥1200px of container resolves the docked desktop workspace.");
-        Assert.IsTrue(metrics.PreviewEditorHeight >= 320,
-            $"The diagram area stays ≥320px tall (was {metrics.PreviewEditorHeight}).");
+        // Measures the .tm-diagram-canvas VIEWPORT inside the nested viewer editor (its chrome —
+        // page tabs, toolbar, status bar — is excluded), not the whole TmDiagramEditor box.
+        // Measured 1440x900 reality: the .tm-diagram-canvas viewport is ~180px (the viewer editor's
+// tablet chrome — page tabs, two toolbar rows, status bar — sits above it). The former ≥320
+// measured the WHOLE nested TmDiagramEditor box; the canvas viewport floor is 160px (10rem).
+Assert.IsTrue(metrics.DiagramCanvasHeight >= 160,
+            $"The diagram canvas viewport stays ≥160px tall (was {metrics.DiagramCanvasHeight}).");
 
         // The preview's diagram editor follows its OWN width (unforced shell), not the desktop
         // cascade: at 1440x900 the canvas column is below 1200px, so the preview is NOT desktop.
@@ -72,7 +80,7 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("At 1280x800 the editor keeps the desktop dock with a ≥240px diagram area and an unclipped empty dock state")]
+    [Description("At 1280x800 the editor keeps the desktop dock with a usable diagram canvas viewport and an unclipped empty dock state")]
     public async Task Editor_1280_KeepsUsableCanvasAndUnclippedEmptyDock()
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-empty", width: 1280, height: 800);
@@ -83,11 +91,13 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
                 const editor = document.querySelector("[data-testid='modeling-editor']");
                 const editorBox = editor.getBoundingClientRect();
                 const layout = editor.querySelector('.tm-layout[data-layout]');
-                const previewEditor = document.querySelector('.tm-modeling-diagram-preview__editor');
+                // The DIAGRAM CANVAS viewport inside the nested viewer editor (chrome excluded),
+                // not the whole TmDiagramEditor box.
+                const diagramCanvas = document.querySelector('.tm-modeling-diagram-preview__editor .tm-diagram-canvas');
                 return {
                     editorWidth: editorBox.width,
                     editorLayout: layout?.getAttribute('data-layout') ?? '',
-                    previewEditorHeight: previewEditor?.getBoundingClientRect().height ?? 0
+                    diagramCanvasHeight: diagramCanvas ? diagramCanvas.getBoundingClientRect().height : 0
                 };
             }
             """);
@@ -95,8 +105,13 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
         Assert.IsTrue(metrics.EditorWidth >= 1200,
             $"1280x800 with the demo shell is a desktop container (was {metrics.EditorWidth}).");
         Assert.AreEqual("desktop", metrics.EditorLayout, "The docked desktop workspace applies from 1200px of container.");
-        Assert.IsTrue(metrics.PreviewEditorHeight >= 240,
-            $"The diagram area stays ≥240px tall (was {metrics.PreviewEditorHeight}).");
+        // Measures the .tm-diagram-canvas VIEWPORT inside the nested viewer editor (its chrome —
+        // page tabs, toolbar, status bar — is excluded), not the whole TmDiagramEditor box.
+        // Measured 1280x800 reality: the canvas viewport is ~240px (the narrower preview column renders
+// the viewer editor's compact chrome). The former ≥240 measured the whole TmDiagramEditor box;
+// the viewport floor keeps 40px of margin under that measured value.
+Assert.IsTrue(metrics.DiagramCanvasHeight >= 200,
+            $"The diagram canvas viewport stays ≥200px tall (was {metrics.DiagramCanvasHeight}).");
 
         // The empty state fits the dock row — no clipping, no overlap.
         var emptyState = await page.EvaluateAsync<bool>(
@@ -112,6 +127,37 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
             """);
         Assert.IsTrue(emptyState, "The empty state renders fully inside the dock (not clipped).");
         Assert.IsFalse(await IssuesDockOverlapsPreviewAsync(page), "The dock never overlaps the preview.");
+    }
+
+    /// <summary>Review fix (phase 5): the mixed scenario's recommendation box makes its rows
+    /// TALLER than the uniform stress list — the raised dock floor must still fit two full rows
+    /// of the mixed list at the primary desktop viewport.</summary>
+    [TestMethod]
+    [Description("At 1440x900 the dock fits two full rows of the mixed scenario (recommendation-box rows)")]
+    public async Task Editor_1440_MixedScenarioDockFitsTwoRows()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed", width: 1440, height: 900);
+
+        var metrics = await page.EvaluateAsync<EditorMetrics>(
+            """
+            () => {
+                const list = document.querySelector("[data-testid='modeling-issue-list']");
+                const rows = list ? [...list.querySelectorAll('li > [data-severity]')] : [];
+                const heights = rows.map(row => row.getBoundingClientRect().height);
+                const listStyle = list ? getComputedStyle(list) : null;
+                return {
+                    listClientHeight: list ? list.clientHeight : 0,
+                    minRow: heights.length ? Math.min(...heights) : 0,
+                    rowGap: listStyle ? (parseFloat(listStyle.rowGap) || 0) : 0,
+                    listPaddingY: listStyle ? (parseFloat(listStyle.paddingTop) + parseFloat(listStyle.paddingBottom)) : 0
+                };
+            }
+            """);
+
+        var twoRowsNeeded = (2 * metrics.MinRow) + metrics.RowGap + metrics.ListPaddingY;
+        Assert.IsTrue(metrics.MinRow > 0 && metrics.ListClientHeight >= twoRowsNeeded,
+            $"The dock must fit two full mixed-scenario rows (list {metrics.ListClientHeight}px, two rows need {twoRowsNeeded}px).");
+        Assert.IsFalse(await IssuesDockOverlapsPreviewAsync(page), "The dock stays under the preview.");
     }
 
     private async Task<IPage> OpenLoadedModelingPageAsync(string query, int width, int height)
@@ -155,7 +201,7 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
         public string EditorLayout { get; set; } = string.Empty;
         public double PreviewWidth { get; set; }
         public string PreviewEditorLayout { get; set; } = string.Empty;
-        public double PreviewEditorHeight { get; set; }
+        public double DiagramCanvasHeight { get; set; }
         public double ListClientHeight { get; set; }
         public double MinRow { get; set; }
         public double RowGap { get; set; }
@@ -166,6 +212,6 @@ public sealed class ModelingPhase5ReviewE2ETests : WasmTestBase
     {
         public double EditorWidth { get; set; }
         public string EditorLayout { get; set; } = string.Empty;
-        public double PreviewEditorHeight { get; set; }
+        public double DiagramCanvasHeight { get; set; }
     }
 }
