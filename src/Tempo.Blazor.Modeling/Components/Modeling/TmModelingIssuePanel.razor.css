@@ -1,8 +1,11 @@
+/* MO1 (desktop restructure): the dock height belongs to the PARENT — the editor's canvas body
+   grid owns the collapsed/expanded row (auto vs a clamped block), so the panel itself only
+   stays shrinkable (the former min/max-height pair is gone). The root grid keeps the header
+   pinned above the scrollable body. */
 .tm-modeling-issue-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    min-height: calc(var(--tm-space-16) * 3);
-    max-height: calc(var(--tm-space-16) * 5);
+    min-height: 0;
     border-top: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
@@ -26,6 +29,51 @@
     line-height: var(--tm-line-height-tight);
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* The collapse toggle: an icon-only native button that meets the coarse-pointer target and
+   keeps its visible label for assistive tech through the sr-only span. NO pointer cursor —
+   the pointer affordance is bound to navigable ISSUE rows only (M13 contract), the toggle
+   signals itself through the hover/focus affordances below. */
+.tm-modeling-issue-panel__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+}
+
+.tm-modeling-issue-panel__toggle:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-modeling-issue-panel__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Reduced motion: the chevron flips as a plain swap (no rotation transition) — nothing to
+   disable, kept explicit so the reduced-motion audit sees the subject. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-issue-panel__toggle-icon {
+        transition: none;
+    }
+}
+
+/* The collapsible body wrapper: min-height 0 keeps the row contract (the list scrolls inside
+   the height the parent's grid row gives the panel). */
+.tm-modeling-issue-panel__content {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
 }
 
 /* Count-only badge (gap #12): the visible text is the bare number; the localized

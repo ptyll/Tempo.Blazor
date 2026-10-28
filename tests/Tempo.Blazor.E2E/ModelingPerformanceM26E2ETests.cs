@@ -95,6 +95,11 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     {
         var page = await OpenPerformanceModelAsync();
 
+        // Phase 5 (MO1): the reload button lives in the inspector's Source tab on the docked layout.
+        await page.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        await page.Locator("[data-testid='modeling-source-load-button']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
         var loadMs = await MeasureReloadAsync(page);
         Assert.IsTrue(loadMs < 3000, $"Reloading the 200 element model should stay under 3000 ms. Actual: {loadMs:0.0} ms.");
         await ExpectEditorMetricAsync(page, "data-element-count", 200);

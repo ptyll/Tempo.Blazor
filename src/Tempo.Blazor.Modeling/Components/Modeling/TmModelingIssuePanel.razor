@@ -16,18 +16,41 @@
             <span aria-hidden="true">@Issues.Count</span>
             <span class="tm-sr-only">@Loc["TmModelingIssuePanel_Count", Issues.Count]</span>
         </span>
+        @* MO1 (desktop restructure): the dock under the preview collapses to this header. The
+           toggle is a native button (one activation per press), carries aria-expanded +
+           aria-controls and rotates its chevron with the state; the collapsed state is the
+           host's — the editor drives the dock row height from it. *@
+        <button type="button"
+                class="tm-modeling-issue-panel__toggle"
+                data-testid="@TestId("modeling-issues-toggle")"
+                aria-expanded="@((!Collapsed).ToString().ToLowerInvariant())"
+                aria-controls="@_bodyId"
+                title="@ToggleLabel"
+                @onclick="ToggleCollapsedAsync">
+            <span class="tm-sr-only">@ToggleLabel</span>
+            <span class="tm-modeling-issue-panel__toggle-icon" aria-hidden="true">
+                <TmIcon Name="@(Collapsed ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Sm" />
+            </span>
+        </button>
     </header>
 
-    @if (Issues.Count == 0)
+    @if (Collapsed)
     {
-        <div class="tm-modeling-issue-panel__empty" data-testid="@TestId("modeling-issue-empty")">
-            <strong>@Loc["TmModelingIssuePanel_EmptyTitle"]</strong>
-            <span>@Loc["TmModelingIssuePanel_EmptyText"]</span>
+        @* A collapsed dock renders the header only — the body (and its scroll) does not exist. *@
+    }
+    else if (Issues.Count == 0)
+    {
+        <div id="@_bodyId" class="tm-modeling-issue-panel__content">
+            <div class="tm-modeling-issue-panel__empty" data-testid="@TestId("modeling-issue-empty")">
+                <strong>@Loc["TmModelingIssuePanel_EmptyTitle"]</strong>
+                <span>@Loc["TmModelingIssuePanel_EmptyText"]</span>
+            </div>
         </div>
     }
     else
     {
-        <ol class="tm-modeling-issue-panel__list" data-testid="@TestId("modeling-issue-list")">
+        <div id="@_bodyId" class="tm-modeling-issue-panel__content">
+            <ol class="tm-modeling-issue-panel__list" data-testid="@TestId("modeling-issue-list")">
             @foreach (var issue in Issues.Select((value, index) => (value, index)))
             {
                 <li role="listitem">
@@ -62,7 +85,8 @@
                     }
                 </li>
             }
-        </ol>
+            </ol>
+        </div>
     }
 </section>
 

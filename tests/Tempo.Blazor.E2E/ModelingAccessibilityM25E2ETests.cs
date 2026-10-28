@@ -45,10 +45,20 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
 
+        // Phase 5 (MO1): the reload control lives in the inspector's Source tab on the docked
+        // layout — open it first, then the tab walk reaches the button.
+        await page.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        await page.Locator("[data-testid='modeling-source-load-button']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
         await FocusByTabAsync(page, "modeling-source-load-button", 120);
         await page.Keyboard.PressAsync("Enter");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Back to the Properties tab: only the ACTIVE inspector tab renders its body (MO1), and
+        // the inspector assertions below read the Properties body.
+        await page.Locator("[data-testid='modeling-tab-properties']").ClickAsync(new LocatorClickOptions { Timeout = 15000 });
 
         await FocusByTabAsync(page, "modeling-generate-diagram-button", 160);
         await page.Keyboard.PressAsync("Enter");

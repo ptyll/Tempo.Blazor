@@ -132,6 +132,7 @@
         string.Equals(Scenario, "issues-mixed", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "issues-empty", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "issues-many", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Scenario, "issues-500", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "invalid-relationship", StringComparison.OrdinalIgnoreCase);
 
     private bool HasInspectorScenario =>
@@ -988,6 +989,31 @@
                     SourceElementId = index % 2 == 0 ? "bpmn-validate-order" : "bpmn-ship-order",
                     Message = $"Scenario issue {index:000} keeps the issue list scrollable without changing the surrounding panels.",
                     SuggestedFix = index % 5 == 0 ? "Review the generated mapping and apply the suggested model correction." : string.Empty
+                });
+            }
+
+            return;
+        }
+
+        // Phase 5 (MO1) edge case: 500 issues must scroll INSIDE the dock (the canvas body owns
+        // the height) without overlapping the preview above it.
+        if (string.Equals(Scenario, "issues-500", StringComparison.OrdinalIgnoreCase))
+        {
+            model.Issues.Clear();
+            for (var index = 0; index < 500; index++)
+            {
+                model.Issues.Add(new ModelingIssueDto
+                {
+                    Id = $"issue-500-{index:000}",
+                    Category = index % 2 == 0 ? "Validation" : "Generator",
+                    Severity = index % 3 == 0
+                        ? ModelingIssueSeverity.Error
+                        : index % 3 == 1
+                            ? ModelingIssueSeverity.Warning
+                            : ModelingIssueSeverity.Info,
+                    SourceElementId = index % 2 == 0 ? "bpmn-validate-order" : "bpmn-ship-order",
+                    Message = $"Stress issue {index:000}: the dock row height caps the panel and the list scrolls internally.",
+                    SuggestedFix = index % 7 == 0 ? "Apply the suggested model correction." : string.Empty
                 });
             }
 

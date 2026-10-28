@@ -2,7 +2,7 @@
   "itemName": "TmModelingEditor",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Loads a semantic modeling source and presents an initial modeling editor shell. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
+  "description": "Loads a semantic modeling source and presents a modeling editor workspace. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. Below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
@@ -102,6 +102,34 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-899, desktop from 900 — the docked shell needs tree + inspector + the canvas minimum at once); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell; the compact layout keeps the panel-tab workspace."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The mode rendered before the first measurement of an Auto editor (SSR, prerender and the first frame). Desktop markup degrades acceptably through the data-layout CSS."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-899, desktop from 900). Only the markup branch moves; stylesheets keep the shared literals."
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "The editor's block size (any CSS height). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) and the shell inside fills the box."
     }
   ],
   "cssClasses": [
@@ -136,6 +164,22 @@
     {
       "name": "tm-modeling-editor__open-editor-diagram",
       "description": "The embedded TmDiagramEditor inside the dialog body; fills the body height."
+    },
+    {
+      "name": "tm-modeling-editor__shell",
+      "description": "Class applied to the core TmEditorShell root on the docked layouts; fills the editor box and neutralizes the shell's generic header/status/canvas padding so the modeling chrome owns its own rhythm."
+    },
+    {
+      "name": "tm-modeling-editor__canvas-body",
+      "description": "The docked canvas surface: a grid with the preview row (minmax(0,1fr)) and the issues dock row (auto). Also the focusWithin surface containing the open-editor trigger and dialog."
+    },
+    {
+      "name": "tm-modeling-editor__canvas-body--issues-open",
+      "description": "Modifier rendered while the Issues dock is expanded; the dock row becomes a token clamp (min 12rem, preferred 38%, cap 20rem of the canvas region) so the list scrolls inside the dock and the preview keeps its row."
+    },
+    {
+      "name": "tm-modeling-editor__inspector",
+      "description": "The inspector wrapper inside the shell's right dock; carries the frozen modeling-inspector-panel test id and the Properties | Source TmTabs (sticky tab strip)."
     }
   ]
 }

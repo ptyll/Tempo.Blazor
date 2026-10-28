@@ -1,8 +1,10 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Icons;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Modeling;
 
@@ -45,7 +47,17 @@ public partial class TmModelingEditor : IAsyncDisposable
     private bool _shouldFocusOpenEditorCloseButton;
     private bool _shouldRestoreOpenButtonFocus;
     private ModelingInteropModule? _interopModule;
-    private ElementReference _editorRoot;
+    private ElementReference _canvasSurface;
+
+    // ── Fáze 5 (MO1): docked-layout state ────────────────────────────────────
+    // The shell's two-way state lives on the editor so a layout flip cannot disagree with it.
+    private bool _shellLeftOpen = true;
+    private bool _shellRightOpen = true;
+    private EditorShellPanel _shellCollapsed;
+    private bool _issuesCollapsed;
+
+    /// <summary>The selected inspector tab of the docked layout: "properties" (default) or "source".</summary>
+    private string _inspectorTab = "properties";
 
     /// <summary>Stable, test-id-independent focus hook of the open-editor overlay trigger.</summary>
     internal const string OpenInEditorFocusSelector = "[data-modeling-focus='open-in-editor']";
@@ -62,6 +74,15 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// the shared 640/1024 pair would drop it to tablet inside a desktop dialog.
     /// </summary>
     private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1024);
+
+    /// <summary>
+    /// Layout thresholds of the editor's own container (Fáze 5, MO1): the docked workspace
+    /// (TmEditorShell) needs the tree, the inspector AND the canvas minimum at the same time, so
+    /// desktop starts at 900px of container width (220px tree + 280px inspector + the 400px
+    /// canvas minimum the shell enforces); below the 768px mobile threshold the compact
+    /// panel-tab workspace renders; 768–899px is the shell's tablet dock (one expanded panel).
+    /// </summary>
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints ModelingBreakpoints = new(768, 900);
 
     /// <summary>The TestIdPrefix the cached attribute dictionaries were built with.</summary>
     private string? _cachedTestIdPrefix;
@@ -191,10 +212,107 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>Additional CSS class applied to the editor root.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// How the editor resolves its presentation (Fáze 5, MO1). <see cref="TmLayoutMode.Auto"/>
+    /// (default) measures the editor's own container with the shared observer; a forced mode
+    /// renders that layout without any measurement so tests and hosts can pin it. The docked
+    /// layouts render through the core <see cref="TmEditorShell"/>; the compact layout keeps the
+    /// panel-tab workspace.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The mode rendered before the first measurement of an Auto editor (SSR, prerender).</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Per-instance thresholds for the editor's own container. Null keeps the Modeling pair
+    /// (mobile below 768px of container, tablet 768–899, desktop from 900) — the docked shell
+    /// needs tree + inspector + the canvas minimum at once from 900px of container.
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? LayoutBreakpoints { get; set; }
+
+    /// <summary>
+    /// The editor's block size (any CSS height). Default <c>null</c> keeps the stylesheet contract
+    /// <c>min(768px, 100vh - 32px)</c> (the token pair on <c>.tm-modeling-editor</c>). When set,
+    /// the editor renders exactly this height (the token min-height floor is dropped with an
+    /// inline <c>min-height: 0</c>) — the host owns the sizing. The shell inside fills the box.
+    /// </summary>
+    [Parameter] public string? Height { get; set; }
+
     /// <summary>Optional loader used by host pages or tests to supply a model without registering a provider.</summary>
     [Parameter] public Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>? ModelLoaderOverride { get; set; }
 
     private string RootClass => string.Join(" ", new[] { "tm-modeling-editor", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    /// <summary>The editor's breakpoints: the explicit pair, else the Modeling default.</summary>
+    private TmLayoutBreakpoints EffectiveBreakpoints => LayoutBreakpoints ?? ModelingBreakpoints;
+
+    /// <summary>
+    /// The inline style of the height contract: default <c>null</c> (the stylesheet owns
+    /// <c>min(768px, 100vh - 32px)</c>), an explicit <see cref="Height"/> becomes the block size
+    /// and drops the token floor so the host value wins exactly.
+    /// </summary>
+    private string? HeightStyle => Height is null ? null : $"height: {Height}; min-height: 0;";
+
+    /// <summary>
+    /// Whether the four-region workspace is mounted (as opposed to a full-surface state screen).
+    /// A force reload over a live model keeps the workspace mounted (the reload budget contract).
+    /// </summary>
+    private bool WorkspaceMounted => _state switch
+    {
+        ModelingEditorState.Empty => false,
+        ModelingEditorState.Error => false,
+        ModelingEditorState.Loading => _model is not null,
+        _ => true
+    };
+
+    /// <summary>
+    /// The canvas body class: the issues dock row is a clamped block while the panel is expanded
+    /// and <c>auto</c> (header only) while collapsed. The class — not an inline style — keeps the
+    /// sizes in the stylesheet.
+    /// </summary>
+    private string CanvasBodyClass => _issuesCollapsed
+        ? "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-collapsed"
+        : "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-open";
+
+    /// <summary>
+    /// The Source tab's indicator text: a neutral dot while the loaded metadata is stale
+    /// (MO1 — "stale source marks the Source tab"), empty (no badge) otherwise.
+    /// </summary>
+    private string SourceTabBadge => SourceIsStale ? "\u2022" : string.Empty;
+
+    /// <summary>Whether the loaded model's metadata exists and is marked stale.</summary>
+    private bool SourceIsStale => _model?.Metadata is { } metadata && !metadata.IsFresh;
+
+    /// <summary>The Properties tab button attributes: the frozen tab test id.</summary>
+    private IReadOnlyDictionary<string, object>? PropertiesTabAttributes
+        => new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["data-testid"] = TestId("modeling-tab-properties")
+        };
+
+    /// <summary>
+    /// The Source tab button attributes: the frozen tab test id plus the localized stale hint as
+    /// title/aria-label while the indicator shows (never overriding the visible tab label).
+    /// </summary>
+    private IReadOnlyDictionary<string, object>? SourceTabAttributes
+    {
+        get
+        {
+            var attributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-tab-source")
+            };
+
+            if (SourceIsStale)
+            {
+                attributes["title"] = Loc["TmModelingEditor_SourceStaleHint"];
+                attributes["aria-label"] = Loc["TmModelingEditor_SourceStaleHint"];
+            }
+
+            return attributes;
+        }
+    }
 
     private string StateName => _state switch
     {
@@ -741,18 +859,64 @@ public partial class TmModelingEditor : IAsyncDisposable
     }
 
     /// <summary>
-    /// Moves DOM focus to the element matching <paramref name="selector"/> INSIDE this editor's
-    /// root (the overlay close button, or the overlay trigger on focus return). Progressive
-    /// enhancement: every failure is swallowed and the editor keeps working without it.
+    /// Moves DOM focus to the element matching <paramref name="selector"/> INSIDE the editor's
+    /// canvas surface (the open-editor overlay close button, or the overlay trigger on focus
+    /// return — the surface element contains both in every layout). Progressive enhancement:
+    /// every failure is swallowed and the editor keeps working without it.
     /// </summary>
     private async Task FocusWithinAsync(string selector)
     {
-        await Interop.InvokeVoidSafeAsync("focusWithin", _editorRoot, selector);
+        await Interop.InvokeVoidSafeAsync("focusWithin", _canvasSurface, selector);
     }
 
     private Task ActivatePanelAsync(ModelingEditorPanel panel)
     {
         _activePanel = panel;
+        return Task.CompletedTask;
+    }
+
+    // ── Fáze 5 (MO1): docked-shell state handlers ────────────────────────────
+    // The shell raises every state change; the editor stores it (host state is the truth). The
+    // layout-flip restore policy arrives with the tablet/mobile phases — the fields just mirror
+    // what the user picked so a re-render cannot undo it.
+
+    private Task OnShellLeftOpenChanged(bool open)
+    {
+        _shellLeftOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnShellRightOpenChanged(bool open)
+    {
+        _shellRightOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnShellCollapsedPanelsChanged(EditorShellPanel collapsed)
+    {
+        _shellCollapsed = collapsed;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Selects the docked inspector tab ("properties" | "source").</summary>
+    private Task SelectInspectorTab(string tabId)
+    {
+        _inspectorTab = tabId;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Stores the issues dock state (the EventCallback receiver re-renders the editor, which then
+    /// re-renders the panel with the new Collapsed value — the panel itself owns no state).
+    /// </summary>
+    private Task SetIssuesCollapsedAsync(bool collapsed)
+    {
+        if (_issuesCollapsed == collapsed)
+        {
+            return Task.CompletedTask;
+        }
+
+        _issuesCollapsed = collapsed;
         return Task.CompletedTask;
     }
 

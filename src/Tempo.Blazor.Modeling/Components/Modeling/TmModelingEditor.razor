@@ -1,11 +1,21 @@
 @using Tempo.Blazor.Components.Diagram.Models
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.Diagram
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Modeling
 
+@* Fáze 5 (MO1): the editor resolves its presentation from ITS OWN container (TmLayoutObserver)
+   and renders the desktop workspace through the core TmEditorShell — Header (the phase 3
+   header), Left (model tree), Canvas (diagram preview with the collapsible issues dock under
+   it), Right (inspector with Properties | Source tabs) and StatusBar. The compact layout (below
+   the editor's own mobile threshold) keeps today's panel-tab workspace until the mobile phase;
+   its DOM (data-testid panels, data-active-panel, aside/section semantics — never a <main>) is
+   the frozen contract both branches preserve. The section is the editor's OWN root element (the
+   frozen data-* contract and the scoped root chrome live here — a child component's root would
+   not carry this stylesheet's scope attribute); the observer fills it and hosts the branch. *@
 <section class="@RootClass"
          data-testid="@TestId("modeling-editor")"
-         @ref="_editorRoot"
          data-state="@StateName"
          data-load-count="@_completedLoadCount"
          data-generation-count="@_completedGenerationCount"
@@ -20,8 +30,136 @@
          data-diagram-edge-count="@(_document?.Edges.Count ?? 0)"
          data-issue-count="@IssueCount"
          data-active-panel="@ActivePanelName"
-         data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())">
-    <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">
+         data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())"
+         style="@HeightStyle">
+    <TmLayoutObserver LayoutMode="LayoutMode"
+                      InitialMode="InitialMode"
+                      Breakpoints="EffectiveBreakpoints"
+                      IsContainer="true"
+                      Class="tm-modeling-editor__layout">
+        <LayoutContent Context="layout">
+        @if (layout.IsMobile)
+        {
+            @* ── Compact layout (the editor container is below the mobile threshold) ───────── *@
+            <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@EditorHeaderContent</header>
+
+            @* keepLoadedSurface reloads (force reload over an already loaded model) keep _model alive
+               while _state flips back to Loading — rendering the single-state screen here would tear down
+               the whole workspace DOM (tree, preview, issue panel) only to rebuild it a moment later,
+               which dominates the reload budget on large models. The workspace stays mounted and the
+               source panel shows its IsLoading affordance instead. *@
+            @if (_state == ModelingEditorState.Loading && _model is null)
+            {
+                @SingleStateContent
+            }
+            else if (_state == ModelingEditorState.Empty)
+            {
+                @SingleStateContent
+            }
+            else if (_state == ModelingEditorState.Error)
+            {
+                @SingleStateContent
+            }
+            else
+            {
+                <nav class="tm-modeling-editor__panel-tabs"
+                     data-testid="@TestId("modeling-panel-tabs")"
+                     aria-label="@Loc["TmModelingEditor_Panels"]">
+                    <button type="button"
+                            class="@GetPanelTabClass(ModelingEditorPanel.Tree)"
+                            data-testid="@TestId("modeling-panel-tab-tree")"
+                            aria-pressed="@(_activePanel == ModelingEditorPanel.Tree).ToString().ToLowerInvariant()"
+                            @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Tree)">
+                        @Loc["TmModelingEditor_ModelTree"]
+                    </button>
+                    <button type="button"
+                            class="@GetPanelTabClass(ModelingEditorPanel.Preview)"
+                            data-testid="@TestId("modeling-panel-tab-preview")"
+                            aria-pressed="@(_activePanel == ModelingEditorPanel.Preview).ToString().ToLowerInvariant()"
+                            @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Preview)">
+                        @Loc["TmModelingEditor_Preview"]
+                    </button>
+                    <button type="button"
+                            class="@GetPanelTabClass(ModelingEditorPanel.Inspector)"
+                            data-testid="@TestId("modeling-panel-tab-inspector")"
+                            aria-pressed="@(_activePanel == ModelingEditorPanel.Inspector).ToString().ToLowerInvariant()"
+                            @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Inspector)">
+                        @Loc["TmModelingEditor_Inspector"]
+                    </button>
+                </nav>
+
+                <div class="tm-modeling-editor__workspace" @ref="_canvasSurface">
+                    @* Force reload over a live model keeps the workspace mounted (see the single-state
+                       branch above). The workspace alone must not lose the loading affordance: this badge
+                       surfaces the same modeling-editor-loading contract while the reload runs. *@
+                    @if (_state == ModelingEditorState.Loading)
+                    {
+                        @ReloadIndicatorContent
+                    }
+                    <aside class="@GetPanelClass(ModelingEditorPanel.Tree, "tm-modeling-editor__panel tm-modeling-editor__tree")" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
+                        @ModelTreeContent
+                    </aside>
+
+                    @* N190: a labelled <section> region — the host layout owns the page's single
+                       <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
+                    <section class="@GetPanelClass(ModelingEditorPanel.Preview, "tm-modeling-editor__panel tm-modeling-editor__preview")" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
+                        @PreviewContent
+                    </section>
+
+                    <aside class="@GetPanelClass(ModelingEditorPanel.Inspector, "tm-modeling-editor__panel tm-modeling-editor__inspector")" data-testid="@TestId("modeling-inspector-panel")" aria-label="@Loc["TmModelingEditor_Inspector"]">
+                        @CompactInspectorContent
+                    </aside>
+
+                    @* The open-editor dialog lives INSIDE the canvas surface element on purpose: the
+                       focusWithin scope (an ElementReference over this region) must contain both the
+                       trigger and the dialog. TmModal paints fixed, so it stays out of the grid flow. *@
+                    @OpenEditorModalContent
+                </div>
+
+                <footer class="tm-modeling-editor__status"
+                        data-testid="@TestId("modeling-status-strip")"
+                        aria-label="@Loc["TmModelingEditor_Status"]"
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true">
+                    @StatusStripContent
+                </footer>
+            }
+        }
+        else
+        {
+            @* ── Docked layouts (tablet and desktop): the core editor shell owns the chrome ───── *@
+            <TmEditorShell Class="tm-modeling-editor__shell"
+                           LayoutMode="layout.Resolved"
+                           InitialMode="TmLayoutMode.Desktop"
+                           LeftTitle="@Loc["TmModelingEditor_ModelTree"]"
+                           RightTitle="@Loc["TmModelingEditor_Inspector"]"
+                           CanvasTitle="@Loc["TmModelingEditor_Preview"]"
+                           LeftOpen="_shellLeftOpen" LeftOpenChanged="OnShellLeftOpenChanged"
+                           RightOpen="_shellRightOpen" RightOpenChanged="OnShellRightOpenChanged"
+                           CollapsedPanels="_shellCollapsed" CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
+                           LeftWidth="220px" MinLeftWidth="200" MaxLeftWidth="360"
+                           RightWidth="280px" MinRightWidth="240" MaxRightWidth="440"
+                           PersistWidthsKey="modeling-editor">
+                <Header>
+                    <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@EditorHeaderContent</header>
+                </Header>
+                <Left>@TreeSlot</Left>
+                <Canvas>@CanvasSlot</Canvas>
+                <Right>@RightSlot</Right>
+                <StatusBar>@StatusBarSlot</StatusBar>
+            </TmEditorShell>
+        }
+        </LayoutContent>
+    </TmLayoutObserver>
+</section>
+
+@code {
+    /// <summary>
+    /// The header (title + state badge + one provider/notation/viewpoint group — phase 3). One
+    /// fragment for both layouts so the chrome cannot drift between the shell and the compact DOM.
+    /// </summary>
+    private RenderFragment EditorHeaderContent => @<text>
         <div class="tm-modeling-editor__title-group">
             <h2 class="tm-modeling-editor__title">@Loc["TmModelingEditor_Title"]</h2>
             @* Phase 2 (gap #1): the state is a colored badge NEXT TO the title, not a plain
@@ -68,166 +206,147 @@
                                     OnNotationChanged="ChangeNotationAsync"
                                     OnViewpointChanged="ChangeViewpointAsync" />
         </div>
-    </header>
+    </text>;
 
-    @* keepLoadedSurface reloads (force reload over an already loaded model) keep _model alive
-       while _state flips back to Loading — rendering the single-state screen here would tear down
-       the whole workspace DOM (tree, preview, issue panel) only to rebuild it a moment later,
-       which dominates the reload budget on large models. The workspace stays mounted and the
-       source panel shows its IsLoading affordance instead. *@
-    @if (_state == ModelingEditorState.Loading && _model is null)
-    {
-        <div class="tm-modeling-editor__single-state" data-testid="@TestId("modeling-editor-loading")" aria-live="polite">
-            <TmSpinner Size="SpinnerSize.Lg" />
-            <div>
-                <h3>@Loc["TmModelingEditor_LoadingTitle"]</h3>
-                <p>@Loc["TmModelingEditor_LoadingText"]</p>
-                @if (_showLongLoadingMessage)
-                {
-                    <p class="tm-modeling-editor__detail" data-testid="@TestId("modeling-editor-timeout-message")">@Loc["TmModelingEditor_LongLoadingText"]</p>
-                }
-            </div>
-        </div>
-    }
-    else if (_state == ModelingEditorState.Empty)
-    {
-        <div class="tm-modeling-editor__single-state" data-testid="@TestId("modeling-editor-empty")" aria-live="polite">
-            @* Phase 2 (gap #7): state marks are icons, not text glyphs ("0" / "!"). *@
-            <div class="tm-modeling-editor__state-mark" aria-hidden="true">
-                <TmIcon Name="@StateMarkIcon" Size="IconSize.Lg" />
-            </div>
-            <div>
-                <h3>@Loc["TmModelingEditor_EmptyTitle"]</h3>
-                <p>@Loc["TmModelingEditor_EmptyText"]</p>
-            </div>
-        </div>
-    }
-    else if (_state == ModelingEditorState.Error)
-    {
-        <div class="tm-modeling-editor__single-state tm-modeling-editor__single-state--error" data-testid="@TestId("modeling-editor-error")" role="alert">
-            <div class="tm-modeling-editor__state-mark" aria-hidden="true">
-                <TmIcon Name="@StateMarkIcon" Size="IconSize.Lg" />
-            </div>
-            <div>
-                <h3>@Loc["TmModelingEditor_ErrorTitle"]</h3>
-                <p>@Loc["TmModelingEditor_ErrorText"]</p>
-                @if (!string.IsNullOrWhiteSpace(_errorMessage))
-                {
-                    <p class="tm-modeling-editor__detail">@_errorMessage</p>
-                }
-            </div>
-        </div>
-    }
-    else
-    {
-        <nav class="tm-modeling-editor__panel-tabs"
-             data-testid="@TestId("modeling-panel-tabs")"
-             aria-label="@Loc["TmModelingEditor_Panels"]">
-            <button type="button"
-                    class="@GetPanelTabClass(ModelingEditorPanel.Tree)"
-                    data-testid="@TestId("modeling-panel-tab-tree")"
-                    aria-pressed="@(_activePanel == ModelingEditorPanel.Tree).ToString().ToLowerInvariant()"
-                    @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Tree)">
-                @Loc["TmModelingEditor_ModelTree"]
-            </button>
-            <button type="button"
-                    class="@GetPanelTabClass(ModelingEditorPanel.Preview)"
-                    data-testid="@TestId("modeling-panel-tab-preview")"
-                    aria-pressed="@(_activePanel == ModelingEditorPanel.Preview).ToString().ToLowerInvariant()"
-                    @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Preview)">
-                @Loc["TmModelingEditor_Preview"]
-            </button>
-            <button type="button"
-                    class="@GetPanelTabClass(ModelingEditorPanel.Inspector)"
-                    data-testid="@TestId("modeling-panel-tab-inspector")"
-                    aria-pressed="@(_activePanel == ModelingEditorPanel.Inspector).ToString().ToLowerInvariant()"
-                    @onclick="() => ActivatePanelAsync(ModelingEditorPanel.Inspector)">
-                @Loc["TmModelingEditor_Inspector"]
-            </button>
-        </nav>
-
-        <div class="tm-modeling-editor__workspace">
-            @* Force reload over a live model keeps the workspace mounted (see the single-state
-               branch above). The workspace alone must not lose the loading affordance: this badge
-               surfaces the same modeling-editor-loading contract while the reload runs. *@
-            @if (_state == ModelingEditorState.Loading)
-            {
-                @* Carry-forward (phase 2 review): the state text is NOT repeated here — the
-                   title badge owns it. The indicator keeps the spinner and an sr-only
-                   announcement for assistive tech. *@
-                <div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
-                    <TmSpinner Size="SpinnerSize.Sm" />
-                    <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
+    /// <summary>The single-state screens (loading without a model, empty, error) — shared by both layouts.</summary>
+    private RenderFragment SingleStateContent => @<text>
+        @if (_state == ModelingEditorState.Loading && _model is null)
+        {
+            <div class="tm-modeling-editor__single-state" data-testid="@TestId("modeling-editor-loading")" aria-live="polite">
+                <TmSpinner Size="SpinnerSize.Lg" />
+                <div>
+                    <h3>@Loc["TmModelingEditor_LoadingTitle"]</h3>
+                    <p>@Loc["TmModelingEditor_LoadingText"]</p>
+                    @if (_showLongLoadingMessage)
+                    {
+                        <p class="tm-modeling-editor__detail" data-testid="@TestId("modeling-editor-timeout-message")">@Loc["TmModelingEditor_LongLoadingText"]</p>
+                    }
                 </div>
-            }
-            <aside class="@GetPanelClass(ModelingEditorPanel.Tree, "tm-modeling-editor__panel tm-modeling-editor__tree")" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
-                <TmModelingModelTree Elements="@VisibleTreeElements"
-                                     SelectedElement="@_selectedElement"
-                                     @bind-CollapsedGroups="_collapsedGroups"
-                                     OnElementSelected="SelectElementAsync"
-                                     OnElementDragStarted="HandleElementDragStartedAsync"
-                                     OnElementDragEnded="HandleElementDragEndedAsync" />
-            </aside>
+            </div>
+        }
+        else if (_state == ModelingEditorState.Empty)
+        {
+            <div class="tm-modeling-editor__single-state" data-testid="@TestId("modeling-editor-empty")" aria-live="polite">
+                @* Phase 2 (gap #7): state marks are icons, not text glyphs ("0" / "!"). *@
+                <div class="tm-modeling-editor__state-mark" aria-hidden="true">
+                    <TmIcon Name="@StateMarkIcon" Size="IconSize.Lg" />
+                </div>
+                <div>
+                    <h3>@Loc["TmModelingEditor_EmptyTitle"]</h3>
+                    <p>@Loc["TmModelingEditor_EmptyText"]</p>
+                </div>
+            </div>
+        }
+        else if (_state == ModelingEditorState.Error)
+        {
+            <div class="tm-modeling-editor__single-state tm-modeling-editor__single-state--error" data-testid="@TestId("modeling-editor-error")" role="alert">
+                <div class="tm-modeling-editor__state-mark" aria-hidden="true">
+                    <TmIcon Name="@StateMarkIcon" Size="IconSize.Lg" />
+                </div>
+                <div>
+                    <h3>@Loc["TmModelingEditor_ErrorTitle"]</h3>
+                    <p>@Loc["TmModelingEditor_ErrorText"]</p>
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <p class="tm-modeling-editor__detail">@_errorMessage</p>
+                    }
+                </div>
+            </div>
+        }
+    </text>;
 
-            @* N190: a labelled <section> region — the host layout owns the page's single
-               <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
-            <section class="@GetPanelClass(ModelingEditorPanel.Preview, "tm-modeling-editor__panel tm-modeling-editor__preview")" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
-                <TmModelingDiagramPreview Document="@_document"
-                                          DocumentChanged="UpdatePreviewDocumentAsync"
-                                          ActiveDraggedElement="@_draggedElement"
-                                          AllowNodeDrop="@AllowNodeDrop"
-                                          OpenInEditorTriggerId="@_openEditorTriggerId"
-                                          OnNodeDropped="HandleNodeDroppedAsync"
-                                          OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
-                                          OnRelationshipSelected="SelectRelationshipAsync"
-                                          OnOpenInEditor="OpenGeneratedDiagramAsync" />
-            </section>
+    /// <summary>The reload affordance (mounted workspace, loading state) — shared by both layouts.</summary>
+    private RenderFragment ReloadIndicatorContent => @<div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
+        @* Carry-forward (phase 2 review): the state text is NOT repeated here — the
+           title badge owns it. The indicator keeps the spinner and an sr-only
+           announcement for assistive tech. *@
+        <TmSpinner Size="SpinnerSize.Sm" />
+        <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
+    </div>;
 
-            <aside class="@GetPanelClass(ModelingEditorPanel.Inspector, "tm-modeling-editor__panel tm-modeling-editor__inspector")" data-testid="@TestId("modeling-inspector-panel")" aria-label="@Loc["TmModelingEditor_Inspector"]">
-                <TmModelingSourcePanel Metadata="@_model?.Metadata"
-                                       IsLoading="@(_state == ModelingEditorState.Loading || _isReloading)"
-                                       OnLoadRequested="ReloadModelAsync" />
-                <TmModelingInspector Element="@_selectedElement"
-                                     Relationship="@_selectedRelationship"
-                                     Elements="@LoadedElements" />
-                <TmModelingIssuePanel Issues="@DisplayIssues"
-                                      OnIssueSelected="SelectIssueAsync" />
-            </aside>
-        </div>
+    /// <summary>The model tree. CollapsedGroups stays bound to the editor's own field: the tree may
+    /// remount when the layout flips, and the editor — not the tree instance — owns the state.</summary>
+    private RenderFragment ModelTreeContent => @<TmModelingModelTree Elements="@VisibleTreeElements"
+                                                                     SelectedElement="@_selectedElement"
+                                                                     @bind-CollapsedGroups="_collapsedGroups"
+                                                                     OnElementSelected="SelectElementAsync"
+                                                                     OnElementDragStarted="HandleElementDragStartedAsync"
+                                                                     OnElementDragEnded="HandleElementDragEndedAsync" />;
 
-        <footer class="tm-modeling-editor__status"
-                data-testid="@TestId("modeling-status-strip")"
-                aria-label="@Loc["TmModelingEditor_Status"]"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true">
-            @* Review fix (phase 3): the counts lead the strip; the state/last-loaded item is
-               pushed to its trailing edge (margin-inline-start:auto). The state label stays
-               available to screen readers — an sr-only "Loaded – " leads the last-loaded time
-               (visible text alone would be just the time). *@
-            <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Elements"]: <strong>@(_model?.Elements.Count ?? 0)</strong></span>
-            <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Relationships"]: <strong>@(_model?.Relationships.Count ?? 0)</strong></span>
-            <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramNodes"]: <strong>@(_document?.Nodes.Count ?? 0)</strong></span>
-            <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramEdges"]: <strong>@(_document?.Edges.Count ?? 0)</strong></span>
-            <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
-                <span class="tm-modeling-editor__status-icon" aria-hidden="true">
-                    <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
-                </span>
-                @if (_model?.Metadata.LoadedAt is { } lastLoadedAt && lastLoadedAt != default)
-                {
-                    <span class="tm-sr-only">@Loc[StateLabelKey] – </span>
-                }
-                @StatusStripStateText
+    /// <summary>The generated diagram preview — shared by both layouts.</summary>
+    private RenderFragment PreviewContent => @<TmModelingDiagramPreview Document="@_document"
+                                                                        DocumentChanged="UpdatePreviewDocumentAsync"
+                                                                        ActiveDraggedElement="@_draggedElement"
+                                                                        AllowNodeDrop="@AllowNodeDrop"
+                                                                        OpenInEditorTriggerId="@_openEditorTriggerId"
+                                                                        OnNodeDropped="HandleNodeDroppedAsync"
+                                                                        OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
+                                                                        OnRelationshipSelected="SelectRelationshipAsync"
+                                                                        OnOpenInEditor="OpenGeneratedDiagramAsync" />;
+
+    /// <summary>
+    /// The issues dock — MO1 places it UNDER the preview, collapsed to its header on demand. The
+    /// collapsed state is bound to the editor (the canvas grid owns the row height); the panel
+    /// keeps its own min/max-height-free sizing.
+    /// </summary>
+    private RenderFragment IssuesDockContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
+                                                                       OnIssueSelected="SelectIssueAsync"
+                                                                       Collapsed="@_issuesCollapsed"
+                                                                       CollapsedChanged="SetIssuesCollapsedAsync" />;
+
+    /// <summary>The source panel (the inspector's "Source" tab on the docked layouts).</summary>
+    private RenderFragment SourcePanelContent => @<TmModelingSourcePanel Metadata="@_model?.Metadata"
+                                                                         IsLoading="@(_state == ModelingEditorState.Loading || _isReloading)"
+                                                                         OnLoadRequested="ReloadModelAsync" />;
+
+    /// <summary>The element/relationship inspector (read-only, MO2).</summary>
+    private RenderFragment InspectorContent => @<TmModelingInspector Element="@_selectedElement"
+                                                                     Relationship="@_selectedRelationship"
+                                                                     Elements="@LoadedElements" />;
+
+    /// <summary>
+    /// The compact inspector keeps today's stacked column (source above properties above issues);
+    /// the tabbed inspector is the docked-layout presentation. The mobile phase owns the compact
+    /// restyle — until then the compact DOM stays byte-compatible with the pre-shell editor.
+    /// </summary>
+    private RenderFragment CompactInspectorContent => @<text>
+        @SourcePanelContent
+        @InspectorContent
+        @IssuesDockContent
+    </text>;
+
+    /// <summary>The status strip — shared by both layouts.</summary>
+    private RenderFragment StatusStripContent => @<text>
+        @* Review fix (phase 3): the counts lead the strip; the state/last-loaded item is
+           pushed to its trailing edge (margin-inline-start:auto). The state label stays
+           available to screen readers — an sr-only "Loaded – " leads the last-loaded time
+           (visible text alone would be just the time). *@
+        <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Elements"]: <strong>@(_model?.Elements.Count ?? 0)</strong></span>
+        <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Relationships"]: <strong>@(_model?.Relationships.Count ?? 0)</strong></span>
+        <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramNodes"]: <strong>@(_document?.Nodes.Count ?? 0)</strong></span>
+        <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramEdges"]: <strong>@(_document?.Edges.Count ?? 0)</strong></span>
+        <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
+            <span class="tm-modeling-editor__status-icon" aria-hidden="true">
+                <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
             </span>
-        </footer>
+            @if (_model?.Metadata.LoadedAt is { } lastLoadedAt && lastLoadedAt != default)
+            {
+                <span class="tm-sr-only">@Loc[StateLabelKey] – </span>
+            }
+            @StatusStripStateText
+        </span>
+    </text>;
 
-        @* Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned
-           dialog with a scrim, a public focus scope and Escape, sized ~90vw × 90vh on the
-           desktop through TmModelingEditor.razor.css. The TmModal header owns the title
-           (document title with the "Open in editor" fallback) and the close; the embedded
-           diagram editor renders with ShowTitle="false" so the dialog has ONE header. The
-           diagram editor keeps every panel and the Full toolbar preset; changes keep
-           propagating live (G8 — no footer), so the scrim is not a close affordance. *@
+    /// <summary>
+    /// Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned
+    /// dialog with a scrim, a public focus scope and Escape, sized ~90vw × 90vh on the
+    /// desktop through TmModelingEditor.razor.css. The TmModal header owns the title
+    /// (document title with the "Open in editor" fallback) and the close; the embedded
+    /// diagram editor renders with ShowTitle="false" so the dialog has ONE header. The
+    /// diagram editor keeps every panel and the Full toolbar preset; changes keep
+    /// propagating live (G8 — no footer), so the scrim is not a close affordance.
+    /// </summary>
+    private RenderFragment OpenEditorModalContent => @<text>
         @if (_openedEditorDocument is not null)
         {
             <TmModal Show="true"
@@ -265,5 +384,72 @@
                 </ChildContent>
             </TmModal>
         }
+    </text>;
+
+    // ── Docked (shell) slots ─────────────────────────────────────────────────
+
+    /// <summary>The tree panel content for the shell's left dock; the shell aside carries the
+    /// landmark, this wrapper carries the frozen panel test id.</summary>
+    private RenderFragment? TreeSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__panel tm-modeling-editor__tree" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
+        @ModelTreeContent
+    </div> : null;
+
+    /// <summary>The canvas slot: a state screen while no workspace is mounted, otherwise the
+    /// preview with the collapsible issues dock under it (and the open-editor dialog inside the
+    /// same surface element, so the focusWithin scope contains the trigger and the dialog).</summary>
+    private RenderFragment? CanvasSlot
+    {
+        get
+        {
+            if (!WorkspaceMounted)
+            {
+                return SingleStateContent;
+            }
+
+            return @<text>
+                @if (_state == ModelingEditorState.Loading)
+                {
+                    @ReloadIndicatorContent
+                }
+                <div class="@CanvasBodyClass" @ref="_canvasSurface">
+                    @* N190: the preview keeps its labelled <section> region; the issues dock is the
+                       sibling row under it (the shell canvas region never emits a <main>). *@
+                    <section class="tm-modeling-editor__preview" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
+                        @PreviewContent
+                    </section>
+                    @IssuesDockContent
+                    @OpenEditorModalContent
+                </div>
+            </text>;
+        }
     }
-</section>
+
+    /// <summary>The inspector panel for the shell's right dock: "Properties | Source" tabs (MO1).
+    /// Only the active tab renders its body (TmTabs contract, M26 budget); a stale source marks
+    /// the Source tab with a neutral indicator.</summary>
+    private RenderFragment? RightSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__inspector" data-testid="@TestId("modeling-inspector-panel")">
+        <TmTabs ActiveTabId="@_inspectorTab" ActiveTabIdChanged="SelectInspectorTab" Class="tm-modeling-editor__inspector-tabs">
+            <TmTabPanel Id="properties"
+                        Title="@Loc["TmModelingEditor_Properties"]"
+                        TabAttributes="@PropertiesTabAttributes">
+                @InspectorContent
+            </TmTabPanel>
+            <TmTabPanel Id="source"
+                        Title="@Loc["TmModelingEditor_Source"]"
+                        Badge="@SourceTabBadge"
+                        TabAttributes="@SourceTabAttributes">
+                @SourcePanelContent
+            </TmTabPanel>
+        </TmTabs>
+    </div> : null;
+
+    /// <summary>The status strip for the shell's status bar region.</summary>
+    private RenderFragment? StatusBarSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__status"
+            data-testid="@TestId("modeling-status-strip")"
+            aria-label="@Loc["TmModelingEditor_Status"]"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true">
+        @StatusStripContent
+    </div> : null;
+}

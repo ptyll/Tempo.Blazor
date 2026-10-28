@@ -153,6 +153,38 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Phase 5: the same themed set at 1280x800 — the second desktop width of the
+    /// shell workspace (light/dark x default/indigo), so the docked MO1 layout is pinned on both
+    /// desktop baselines.</summary>
+    [TestMethod]
+    [DataRow("light", 1280, 800)]
+    [DataRow("dark", 1280, 800)]
+    [DataRow("indigo", 1280, 800)]
+    [DataRow("indigo-dark", 1280, 800)]
+    [Description("Captures default / issues-mixed / stale-source at 1280x800 for light, dark, indigo and indigo-dark")]
+    public async Task Capture_Themed1280x800(string theme, int width, int height)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
     [TestMethod]
     [Description("Captures the selected-element state (tree selection + inspector detail) at 1440x900")]
     public async Task Capture_ElementSelected()
@@ -267,17 +299,19 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
                     await WaitForLoadedStateAsync(page);
                 }
 
-                // Below 640 px the issue panel and the source panel live behind the mobile
-                // "Inspector" panel tab — the baseline must show the screen a user reaches them
-                // through (otherwise the mobile stale-source shot is indistinguishable from default).
-                if (inspectorTabOnMobile && width < 640)
+                // Phase 5 (MO1): the compact layout (the editor container below its own mobile
+                // threshold — 1024x768 and the phones here) keeps the issue and source panels
+                // behind the "Inspector" panel tab; the docked layouts render them directly. The
+                // baseline must show the screen a user reaches them through, so the tab opens
+                // whenever the compact tabs are visible (not by viewport width).
+                if (inspectorTabOnMobile && await IsCompactLayoutAsync(page))
                 {
                     await OpenMobileInspectorTabAsync(page, waitForIssuePanel: false);
                 }
 
                 if (withIssuePanelShots)
                 {
-                    if (width < 640)
+                    if (await IsCompactLayoutAsync(page))
                     {
                         await OpenMobileInspectorTabAsync(page, waitForIssuePanel: true);
                     }
@@ -309,9 +343,16 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Whether the compact panel-tab workspace rendered (the tab is visible then).</summary>
+    private static async Task<bool> IsCompactLayoutAsync(IPage page)
+    {
+        var tab = page.Locator("[data-testid='modeling-panel-tab-inspector']");
+        return await tab.CountAsync() > 0 && await tab.IsVisibleAsync(new LocatorIsVisibleOptions { Timeout = 2000 });
+    }
+
     /// <summary>
-    /// Opens the mobile-only "Inspector" panel tab. When <paramref name="waitForIssuePanel"/> is
-    /// set the issue panel must be visible afterwards, otherwise the source panel (stale badge).
+    /// Opens the compact layout's "Inspector" panel tab. When <paramref name="waitForIssuePanel"/>
+    /// is set the issue panel must be visible afterwards, otherwise the source panel (stale badge).
     /// </summary>
     private static async Task OpenMobileInspectorTabAsync(IPage page, bool waitForIssuePanel)
     {

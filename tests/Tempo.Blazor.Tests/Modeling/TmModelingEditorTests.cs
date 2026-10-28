@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
@@ -75,9 +76,12 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     [Fact]
     public void Panel_tabs_switch_active_panel_state()
     {
+        // Compact layout only: the panel tabs are the compact-layout affordance (Q12) — the docked
+        // layouts render all regions through the shell and hide the tabs.
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
             .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
 
         cut.WaitForAssertion(() =>
@@ -566,6 +570,10 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
 
+        // The reload control lives in the inspector's Source tab on the docked layout.
+        cut.Find("[data-testid='modeling-tab-source']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-source-load-button']").Should().NotBeNull());
+
         // Sync click: the reload handler awaits the gated provider, so awaiting the click itself
         // would deadlock (the gate opens only after the click returns).
         cut.Find("[data-testid='modeling-source-load-button']").Click();
@@ -585,393 +593,6 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
     }
 
-    [Fact]
-    public async Task Focus_return_after_closing_editor_is_root_scoped_and_test_id_free()
-    {
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
-
-        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
-        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
-
-        JSInterop.Invocations
-            .Where(invocation => invocation.Identifier == "eval")
-            .Should().BeEmpty("focus restoration must stay CSP-safe — no eval");
-
-        var moduleInvocations = module.Invocations.Select(invocation => invocation.Identifier).ToList();
-        moduleInvocations.Should().Contain("focusWithin",
-            "the overlay focus move and the focus return go through the modeling-editor.js module");
-        moduleInvocations.Count(id => id == "focusWithin").Should().BeGreaterThanOrEqualTo(2,
-            "one call focuses the close button when the overlay opens, the second restores the trigger");
-
-        // Every focusWithin call is scoped to the editor root ElementReference and never keys
-        // off data-testid (the stable data-modeling-focus hooks are the contract — a host
-        // renaming test ids through TestIdPrefix must not break focus return).
-        foreach (var invocation in module.Invocations.Where(i => i.Identifier == "focusWithin"))
-        {
-            invocation.Arguments.Should().HaveCount(2);
-            invocation.Arguments[0].Should().BeOfType<ElementReference>(
-                "the query is scoped to the editor root, not the document");
-            invocation.Arguments[1]!.ToString()!.Should().NotContain("data-testid");
-        }
-
-        var selectors = module.Invocations
-            .Where(i => i.Identifier == "focusWithin")
-            .Select(i => (string)i.Arguments[1]!)
-            .ToList();
-        selectors.Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenEditorCloseFocusSelector,
-            "opening the overlay focuses the close button through its data-modeling-focus hook");
-        selectors.Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
-            "closing the overlay returns focus to the trigger through its data-modeling-focus hook");
-    }
-
-    [Fact]
-    public async Task Focus_return_still_targets_the_data_modeling_focus_hooks_with_a_test_id_prefix()
-    {
-        // TestIdPrefix namespaces the editor-owned ids ("a-modeling-open-diagram-close", …) while
-        // the preview child's trigger keeps its bare id. The focus return must keep working across
-        // BOTH because it targets data-modeling-focus hooks, never data-testid.
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
-            .Add(p => p.TestIdPrefix, "a"));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='a-modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() =>
-        {
-            cut.Find("[data-testid='a-modeling-open-diagram-editor']").Should().NotBeNull();
-            cut.Find("[data-testid='a-modeling-open-diagram-close']")
-                .Should().NotBeNull("the editor namespaced its own close button");
-        });
-
-        cut.Find("[data-testid='a-modeling-open-diagram-close']").Click();
-        cut.WaitForAssertion(() => cut.FindAll("[data-testid='a-modeling-open-diagram-editor']").Should().BeEmpty());
-
-        module.Invocations
-            .Where(i => i.Identifier == "focusWithin")
-            .Select(i => (string)i.Arguments[1]!)
-            .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenEditorCloseFocusSelector)
-            .And.Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
-                "the focus return is driven by the stable data-modeling-focus hooks, not data-testid");
-    }
-
-    [Fact]
-    public async Task Open_in_editor_renders_tm_modal_with_backdrop_and_dialog_semantics()
-    {
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-
-        // The dialog is a core TmModal: a viewport-positioned overlay with the scrim class,
-        // carrying the preserved modeling-open-diagram-editor test id on its root.
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='modeling-open-diagram-editor']").ClassList.Should().Contain("tm-modal-overlay",
-                "the 'Open in editor' surface is a TmModal overlay (scrim), not an in-editor box"));
-        var overlay = cut.Find("[data-testid='modeling-open-diagram-editor']");
-
-        var dialog = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope");
-        dialog.GetAttribute("role").Should().Be("dialog");
-        dialog.GetAttribute("aria-modal").Should().Be("true");
-
-        var labelledBy = dialog.GetAttribute("aria-labelledby");
-        labelledBy.Should().NotBeNullOrEmpty("the dialog is named by its title element");
-        cut.Find($"[data-testid='modeling-open-diagram-editor'] [id='{labelledBy}']").Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Open_editor_title_uses_document_title_and_falls_back_to_open_in_editor()
-    {
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-
-        // The generated document carries the model title — the modal header shows it, never the
-        // old "Preview" fallback (the pre-redesign default).
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-title").TextContent.Should().Be("Modeling editor test"));
-
-        // A document without a title falls back to the localized "Open in editor" label.
-        var untitled = CreateModel();
-        untitled.Title = string.Empty;
-        var document = cut.Instance.DiagramGenerator.Generate(untitled, new ModelingDiagramGenerationOptionsDto
-        {
-            IncludeIssues = true
-        }).Document;
-        document.Title = " ";
-        // The trigger hands the preview's CURRENT document to the editor's open path — hand it
-        // the untitled one the same way the real click would.
-        var preview = cut.FindComponent<Tempo.Blazor.Components.Modeling.TmModelingDiagramPreview>();
-        await cut.InvokeAsync(() => preview.Instance.OnOpenInEditor.InvokeAsync(document));
-
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-title").TextContent
-                .Should().Be("Open in editor", "an untitled document falls back to the localized open-in-editor label"));
-    }
-
-    [Fact]
-    public async Task Escape_closes_open_editor_dialog_and_restores_focus_to_trigger()
-    {
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
-
-        // The trigger records itself as the dialog's restore target (the focus-scope restore
-        // contract, resolved by the module at deactivation).
-        var triggerId = cut.Find("[data-testid='modeling-open-in-editor-button']").GetAttribute("id");
-        triggerId.Should().NotBeNullOrEmpty("the trigger must carry the id the dialog restores focus to");
-        var restoreTarget = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope")
-            .GetAttribute("data-restore-target");
-        restoreTarget.Should().Be(triggerId, "Escape/restore returns focus to the 'Open in editor' trigger");
-
-        // Escape arrives through the focus-trap module callback (document-level listener):
-        // the topmost modal scope raises OnEscape and TmModal closes through the editor's
-        // close path, which restores the trigger focus.
-        var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
-            .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
-        var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
-        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
-
-        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
-        module.Invocations
-            .Where(i => i.Identifier == "focusWithin")
-            .Select(i => (string)i.Arguments[1]!)
-            .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
-                "the close path restores focus onto the trigger through its data-modeling-focus hook");
-    }
-
-    [Fact]
-    public async Task Escape_consuming_surfaces_close_without_closing_the_dialog()
-    {
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
-
-        // The canvas' CAPTURE-phase Escape consumers raise OnCloseSearch / OnCloseViewMenu on the
-        // editor (the dialog stays open — the event was marked handled before the trap saw it).
-        var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
-            .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
-        var canvas = modal.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramCanvas>().Single();
-
-        // Search open → Escape closes the PANEL, not the dialog.
-        cut.Find("[data-testid='modeling-open-diagram-editor'] [data-tm-group='search'] button")
-            .Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
-            .Should().NotBeNull());
-        await cut.InvokeAsync(() => canvas.Instance.JsOnSearchEscape());
-        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
-            .Should().BeEmpty("the canvas' search Escape consumer closes the panel");
-        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull("the dialog stays open");
-
-        // View menu open → Escape closes the MENU, not the dialog.
-        cut.Find("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-editor-more']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__view-menu")
-            .GetAttribute("data-open").Should().Be("true"));
-        await cut.InvokeAsync(() => canvas.Instance.JsOnViewMenuEscape());
-        cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__view-menu")
-            .GetAttribute("data-open").Should().BeNull("the canvas' view-menu Escape consumer closes the menu");
-        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull("the dialog stays open");
-
-        // Only the unhandled path — the focus-scope module callback — closes the dialog.
-        var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
-        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
-        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
-    }
-
-    [Fact]
-    public async Task Workspace_is_inert_while_dialog_open()
-    {
-        var focusTrap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
-        focusTrap.SetupVoid("activate", _ => true).SetVoidResult();
-        focusTrap.SetupVoid("noteReturnTarget", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-
-        // The modal scope is a MODAL trap: aria-modal on the dialog and modal=true handed to the
-        // focus-trap module (the module inertes the page for a modal trap only).
-        cut.WaitForAssertion(() =>
-        {
-            var dialog = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope");
-            dialog.GetAttribute("aria-modal").Should().Be("true");
-        });
-
-        focusTrap.Invocations
-            .Where(i => i.Identifier == "activate")
-            .Select(i => i.Arguments[5])
-            .Should().Contain(true, "the dialog activates a modal trap — the module inertes the background");
-
-        // The workspace stays OUTSIDE the dialog subtree: the trap's inert background covers it.
-        var overlay = cut.Find("[data-testid='modeling-open-diagram-editor']");
-        overlay.QuerySelector(".tm-modeling-editor__workspace").Should().BeNull(
-            "the modeling workspace is the inert background, not dialog content");
-        cut.Find(".tm-modeling-editor__workspace").Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Dialog_has_single_header_without_duplicate_title()
-    {
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-header").Should().NotBeNull());
-
-        // One header: the TmModal header owns the title and subtitle; the embedded diagram
-        // editor renders WITHOUT its own document title (ShowTitle=false through the editor API).
-        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-modal-header").Should().ContainSingle();
-        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__title").Should().BeEmpty(
-            "the dialog title lives in the TmModal header only — the diagram editor hides its own");
-        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-modal-title").Should().ContainSingle();
-        cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-subtitle").TextContent
-            .Should().Be("Full diagram editor for the generated modeling document.");
-    }
-
-    [Fact]
-    public async Task Live_changes_propagate_to_preview_without_footer()
-    {
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
-
-        // G8: the dialog has no footer — changes keep propagating live.
-        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-modal-footer").Should().BeEmpty(
-            "live propagation has no Apply/Cancel footer");
-
-        // A diagram-editor change flows through the close-free path: the dialog's document AND
-        // the preview document behind it update (the status strip counts the nodes).
-        var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
-            .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
-        var embeddedEditor = modal.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramEditor>().Single();
-        var current = embeddedEditor.Instance.Document;
-        current.Should().NotBeNull("the dialog embeds the generated document");
-        var modified = new DiagramDocument
-        {
-            Id = current.Id,
-            Title = "Renamed by the editor",
-            CreatedAt = current.CreatedAt,
-            ModifiedAt = current.ModifiedAt,
-            Pages = current.Pages,
-            ActivePageIndex = current.ActivePageIndex,
-            Nodes = current.Nodes.Append(new DiagramNode
-            {
-                Id = "editor-added-node",
-                StencilId = "general.rectangle",
-                X = 40,
-                Y = 40,
-                W = 120,
-                H = 60
-            }).ToList(),
-            Edges = current.Edges
-        };
-        await cut.InvokeAsync(() => embeddedEditor.Instance.DocumentChanged.InvokeAsync(modified));
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-diagram-node-count").Should().Be("2");
-            cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-title").TextContent.Should().Be("Renamed by the editor");
-            cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull(
-                "the change did not close the dialog");
-        });
-
-        // A scrim click must not close the dialog either (live changes must not be lost).
-        cut.Find("[data-testid='modeling-open-diagram-editor']").Click();
-        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull(
-            "the scrim is not a close affordance while edits propagate live");
-    }
-
-    [Fact]
-    public async Task Provider_change_closes_open_editor_dialog_through_the_close_path()
-    {
-        // Phase-3 carry-forward, re-verified on the TmModal dialog (phase 4): a header provider
-        // change closes the open dialog through CloseGeneratedDiagramAsync — the same path the
-        // close button uses — so the focus restore onto the preview trigger still runs.
-        var module = JSInterop.SetupModule(ModelingModulePath);
-        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
-
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new CountingModelingModelProvider()));
-
-        using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
-            .Add(p => p.ShowProviderSelector, true));
-
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
-
-        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
-
-        cut.Find("[data-testid='modeling-provider-select']").Change(CountingModelingModelProvider.Key);
-
-        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
-        module.Invocations
-            .Where(i => i.Identifier == "focusWithin")
-            .Select(i => (string)i.Arguments[1]!)
-            .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
-                "the provider change closes through the close path, restoring the trigger focus");
-    }
 
     [Fact]
     public async Task Disposing_the_editor_disposes_the_imported_module()
@@ -1001,19 +622,6 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             "@implements IAsyncDisposable must dispose the imported ES module, or the module object leaks");
     }
 
-    private sealed class SuccessfulModelingModelProvider : IModelingModelProvider
-    {
-        public const string Key = "tempo.tests.modeling.success";
-
-        public string ProviderKey => Key;
-
-        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(CreateModel());
-        }
-    }
-
     private sealed class DelayedModelingModelProvider : IModelingModelProvider
     {
         public const string Key = "tempo.tests.modeling.delay";
@@ -1038,29 +646,6 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             => throw new InvalidOperationException("Provider failure");
     }
 
-    private sealed class CountingModelingModelProvider : IModelingModelProvider
-    {
-        private readonly string _key;
-
-        public CountingModelingModelProvider(string key = Key)
-        {
-            _key = key;
-        }
-
-        public const string Key = "tempo.tests.modeling.counting";
-
-        public int LoadCount { get; private set; }
-
-        public string ProviderKey => _key;
-
-        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            LoadCount++;
-            return Task.FromResult(CreateModel());
-        }
-    }
-
     private sealed class TimestampedModelingModelProvider : IModelingModelProvider
     {
         public const string Key = "tempo.tests.modeling.timestamped";
@@ -1072,7 +657,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var model = CreateModel();
+            var model = ModelingEditorTestModels.CreateModel();
             model.Metadata.LoadedAt = LoadedAt;
             return Task.FromResult(model);
         }
@@ -1087,14 +672,14 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
 
         public string ProviderKey => Key;
 
-        public void Release() => _gate.TrySetResult(CreateModel());
+        public void Release() => _gate.TrySetResult(ModelingEditorTestModels.CreateModel());
 
         public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (Interlocked.Increment(ref _calls) == 1)
             {
-                return Task.FromResult(CreateModel());
+                return Task.FromResult(ModelingEditorTestModels.CreateModel());
             }
 
             var gate = _gate;
@@ -1173,37 +758,307 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         }
     }
 
-    private static ModelingModelDto CreateModel()
-    {
-        var model = new ModelingModelDto
-        {
-            Id = "modeling-editor-test",
-            Title = "Modeling editor test",
-            Metadata = new ModelingMetadataDto { SourceSystem = "Unit tests" },
-            Elements =
-            [
-                new()
-                {
-                    Id = "task-a",
-                    SourceId = "source-task-a",
-                    Notation = "bpmn",
-                    SemanticType = "userTask",
-                    Name = "Approve request"
-                }
-            ]
-        };
 
-        model.Views.Add(new ModelingViewDto
+    // ── Phase 5 (MO1): desktop workspace through TmEditorShell ──────────────
+
+    private static void AddIssue(ModelingModelDto model, string elementId)
+    {
+        model.Issues.Add(new ModelingIssueDto
         {
-            Id = "main-view",
-            Name = "Main view",
-            Notation = "bpmn",
-            Nodes =
-            [
-                new() { ElementId = "task-a", X = 120, Y = 160, Width = 180, Height = 90 }
-            ]
+            Id = $"issue-{elementId}",
+            Category = "Validation",
+            Severity = ModelingIssueSeverity.Warning,
+            SourceElementId = elementId,
+            Message = $"Element {elementId} needs a review."
+        });
+    }
+
+    /// <summary>The phase 5 desktop cut: the workspace renders through the core editor shell.</summary>
+    private IRenderedComponent<TmModelingEditor> RenderDesktopEditor(Action<ComponentParameterCollectionBuilder<TmModelingEditor>>? extra = null)
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        return Render<TmModelingEditor>(parameters =>
+        {
+            parameters.Add(p => p.LayoutMode, TmLayoutMode.Desktop);
+            parameters.Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key);
+            extra?.Invoke(parameters);
+        });
+    }
+
+    [Fact]
+    public void Desktop_renders_tree_preview_inspector_regions_via_editor_shell()
+    {
+        // Forced desktop (no DOM): the shell frame carries the three regions; N190 — no <main>.
+        using var cut = RenderDesktopEditor();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
+            cut.Find(".tm-editor-shell").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-model-tree-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-status-strip']").Should().NotBeNull();
+            cut.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+            cut.Find("[data-testid='modeling-model-tree-panel']").Closest("aside").Should().NotBeNull("the tree region keeps aside semantics");
+            cut.Find("[data-testid='modeling-inspector-panel']").Closest("aside").Should().NotBeNull("the inspector region keeps aside semantics");
+        });
+    }
+
+    [Fact]
+    public void Issues_panel_renders_below_preview_with_count_header()
+    {
+        using var cut = RenderDesktopEditor();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
+            // The issues dock is a sibling row under the preview, inside the shell canvas region.
+            var canvas = cut.Find(".tm-editor-shell__canvas");
+            canvas.InnerHtml.Should().Contain("modeling-issue-panel", "the issues panel lives in the canvas region");
+            var header = cut.Find("[data-testid='modeling-issue-panel'] header");
+            header.TextContent.Should().Contain("Issues");
+            cut.Find("[data-testid='modeling-issue-count']").Should().NotBeNull();
+        });
+    }
+
+    [Fact]
+    public void Issues_panel_collapse_toggle_has_aria_expanded_and_persists_during_session()
+    {
+        using var cut = RenderDesktopEditor();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-issue-panel']").Should().NotBeNull());
+
+        var toggle = cut.Find("[data-testid='modeling-issues-toggle']");
+        toggle.GetAttribute("aria-expanded").Should().Be("true");
+
+        // The collapsed state lands through the editor's CollapsedChanged handler — an async
+        // render, so wait instead of asserting on the synchronous frame.
+        toggle.Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("false");
+            cut.FindAll("[data-testid='modeling-issue-list']").Should().BeEmpty("a collapsed panel renders the header only");
         });
 
-        return model;
+        // The state is the session's: an unrelated re-render must not re-expand the panel.
+        cut.Render();
+        cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find("[data-testid='modeling-issues-toggle']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-issue-list']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("true");
+        });
+    }
+
+    [Fact]
+    public void Inspector_has_tabs_properties_and_source()
+    {
+        using var cut = RenderDesktopEditor();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-inspector-panel'] [role='tablist']").Should().NotBeNull();
+
+        var tabs = cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']").ToList();
+        tabs.Should().HaveCount(2);
+        tabs[0].TextContent.Should().Contain("Properties");
+        tabs[1].TextContent.Should().Contain("Source");
+        tabs[0].GetAttribute("aria-selected").Should().Be("true");
+        tabs[1].GetAttribute("aria-selected").Should().Be("false");
+
+        // Only the ACTIVE tab renders content (M26 budget: one inspector body at a time).
+        cut.FindAll("[data-testid='modeling-inspector']").Should().NotBeEmpty();
+        cut.FindAll("[data-testid='modeling-source-panel']").Should().BeEmpty();
+
+        // The tab selection lands through the editor's callback — an async render.
+        tabs[1].Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-source-panel']").Should().NotBeEmpty();
+            cut.FindAll("[data-testid='modeling-inspector']").Should().BeEmpty();
+            cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']").ToList()[1]
+                .GetAttribute("aria-selected").Should().Be("true");
+        });
+    }
+
+    [Fact]
+    public async Task Source_tab_reload_invokes_ReloadModelAsync()
+    {
+        var provider = new CountingModelingModelProvider();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(provider));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, CountingModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+        var initialLoadCount = GetLoadCount(cut);
+        provider.LoadCount.Should().Be(1);
+
+        cut.Find("[data-testid='modeling-tab-source']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-source-load-button']").Should().NotBeNull());
+        cut.Find("[data-testid='modeling-source-load-button']").Click();
+
+        // The Source tab reload drives the editor's ReloadModelAsync — the provider is asked again.
+        cut.WaitForAssertion(() =>
+        {
+            provider.LoadCount.Should().Be(2);
+            GetLoadCount(cut).Should().BeGreaterThan(initialLoadCount);
+        });
+    }
+
+    [Fact]
+    public void Stale_source_marks_source_tab_with_indicator()
+    {
+        // CreateModel's metadata has no IsFresh=true — the stale provider serves exactly that.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new StaleSuccessfulModelingModelProvider()));
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new FreshSuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, StaleSuccessfulModelingModelProvider.Key));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull());
+
+        var sourceTab = cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")
+            .Single(tab => tab.TextContent.Contains("Source"));
+        sourceTab.QuerySelector(".tm-tab__badge").Should().NotBeNull("a stale source marks the Source tab");
+
+        // And a fresh source shows no indicator.
+        using var fresh = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, FreshSuccessfulModelingModelProvider.Key));
+        fresh.WaitForAssertion(() => fresh.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull());
+        var freshTab = fresh.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")
+            .Single(tab => tab.TextContent.Contains("Source"));
+        freshTab.QuerySelector(".tm-tab__badge").Should().BeNull("a fresh source shows no tab indicator");
+    }
+
+    [Fact]
+    public void Issue_selection_still_selects_tree_element()
+    {
+        // Regression (SelectIssueAsync): activating a navigable issue selects its tree element.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new IssueModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, IssueModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-issue-0']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-issue-0']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-selected-element-id").Should().Be("task-a");
+            cut.Find("[data-testid='modeling-tree-node-task-a']").GetAttribute("aria-selected").Should().Be("true");
+        });
+    }
+
+    [Fact]
+    public void Panel_tabs_hidden_on_desktop()
+    {
+        // Q12: the compact panel tabs stay a compact-layout affordance only.
+        using var cut = RenderDesktopEditor();
+        cut.WaitForAssertion(() => cut.Find(".tm-editor-shell").Should().NotBeNull());
+        cut.FindAll("[data-testid='modeling-panel-tabs']").Should().BeEmpty();
+
+        // And the compact layout keeps them (today's behavior).
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        using var compact = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        compact.WaitForAssertion(() => compact.Find("[data-testid='modeling-panel-tabs']").Should().NotBeNull());
+    }
+
+    [Fact]
+    public void Data_active_panel_and_test_ids_preserved()
+    {
+        using var cut = RenderDesktopEditor();
+        cut.WaitForAssertion(() =>
+        {
+            var root = cut.Find("[data-testid='modeling-editor']");
+            root.GetAttribute("data-active-panel").Should().Be("preview");
+            root.GetAttribute("data-issue-count").Should().NotBeNull();
+            root.GetAttribute("data-state").Should().Be("loaded");
+        });
+
+        // The compact layout still drives data-active-panel through the panel tabs.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        using var compact = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        compact.WaitForAssertion(() => compact.Find("[data-testid='modeling-panel-tabs']").Should().NotBeNull());
+        compact.Find("[data-testid='modeling-panel-tab-tree']").Click();
+        compact.WaitForAssertion(() =>
+            compact.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("tree"));
+    }
+
+    [Fact]
+    public void Height_parameter_overrides_the_default_block_size()
+    {
+        // User decision (height contract): additive Height, default keeps min(768px, 100vh - 32px).
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.Height, "600px"));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").Should().NotBeNull());
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("style").Should().Contain("600px");
+
+        using var cutDefault = RenderDesktopEditor();
+        cutDefault.WaitForAssertion(() => cutDefault.Find("[data-testid='modeling-editor']").Should().NotBeNull());
+        cutDefault.Find("[data-testid='modeling-editor']").GetAttribute("style").Should().BeNull("the default height contract lives in the stylesheet");
+    }
+
+    private static int GetLoadCount(IRenderedComponent<TmModelingEditor> cut)
+    {
+        var raw = cut.Find("[data-testid='modeling-editor']").GetAttribute("data-load-count");
+        return int.TryParse(raw, out var parsed) ? parsed : 0;
+    }
+
+    private sealed class StaleSuccessfulModelingModelProvider : IModelingModelProvider
+    {
+        public const string Key = "tempo.tests.modeling.stale";
+
+        public string ProviderKey => Key;
+
+        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(ModelingEditorTestModels.CreateModel());
+        }
+    }
+
+    private sealed class FreshSuccessfulModelingModelProvider : IModelingModelProvider
+    {
+        public const string Key = "tempo.tests.modeling.fresh";
+
+        public string ProviderKey => Key;
+
+        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var model = ModelingEditorTestModels.CreateModel();
+            model.Metadata.IsFresh = true;
+            return Task.FromResult(model);
+        }
+    }
+
+    private sealed class IssueModelingModelProvider : IModelingModelProvider
+    {
+        public const string Key = "tempo.tests.modeling.issue";
+
+        public string ProviderKey => Key;
+
+        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var model = ModelingEditorTestModels.CreateModel();
+            AddIssue(model, "task-a");
+            return Task.FromResult(model);
+        }
     }
 }

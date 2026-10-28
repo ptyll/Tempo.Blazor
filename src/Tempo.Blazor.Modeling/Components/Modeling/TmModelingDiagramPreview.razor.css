@@ -100,7 +100,11 @@
 }
 
 ::deep .tm-modeling-diagram-preview__editor {
-    min-height: calc(var(--tm-space-16) * 6);
+    /* Fáze 5 (MO1): the issues dock takes a clamped row of the canvas column, so the preview's
+       floor drops from 24rem to 12rem — a 1280x720 editor gives the shell canvas ~14rem after
+       the dock, and the old 24rem floor overflowed the canvas shell (clipping the diagram and
+       swallowing the pan/zoom gestures). The canvas shell clips whatever remains. */
+    min-height: calc(var(--tm-space-16) * 3);
     height: 100%;
     border-radius: var(--tm-radius-md);
 }

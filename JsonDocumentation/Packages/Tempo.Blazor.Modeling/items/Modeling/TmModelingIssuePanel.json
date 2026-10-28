@@ -2,7 +2,7 @@
   "itemName": "TmModelingIssuePanel",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Displays validation and generation issues for a modeling document.",
+  "description": "Displays validation and generation issues for a modeling document. MO1 places it as the collapsible dock under the preview: the header carries the neutral count-only badge and the collapse toggle (aria-expanded + aria-controls); a collapsed panel renders the header only. The dock height belongs to the host's grid row (the panel's own min/max-height pair is gone), and the two-way Collapsed state is the session's.",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingIssuePanel.razor",
@@ -29,9 +29,30 @@
       "type": "EventCallback<ModelingIssueDto>",
       "isRequired": false,
       "description": "Raised when the user selects an issue that points to a model element or relationship."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the panel body (the issue list or the empty state) is collapsed to the header. Two-way bindable - the host owns the dock height around the collapsed/expanded row. Default false (expanded); the state is the session's and survives re-renders."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user toggles the panel through the header button; enables @bind-Collapsed."
     }
   ],
   "cssClasses": [
+    {
+      "name": "tm-modeling-issue-panel__toggle",
+      "description": "The header collapse toggle - an icon-only native button at the coarse-pointer target with aria-expanded/aria-controls and a state-aware sr-only label."
+    },
+    {
+      "name": "tm-modeling-issue-panel__content",
+      "description": "The collapsible body wrapper (the list or the empty state); min-height 0 keeps the parent-owned row contract."
+    },
     {
       "name": "tm-modeling-issue-panel__title",
       "description": "Panel title heading."

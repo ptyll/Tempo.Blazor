@@ -16,10 +16,34 @@ public partial class TmModelingIssuePanel
     /// <summary>Raised when the user selects an issue that points to a model element or relationship.</summary>
     [Parameter] public EventCallback<ModelingIssueDto> OnIssueSelected { get; set; }
 
+    /// <summary>
+    /// Whether the panel body (the issue list or the empty state) is collapsed to the header.
+    /// Two-way bindable — the host owns the dock height around the collapsed/expanded row, so the
+    /// state has to reach it. Default false (expanded); the state is the session's and survives
+    /// re-renders.
+    /// </summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Raised when the user toggles the panel through the header button.</summary>
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+
     /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
 
-    private string RootClass => string.Join(" ", new[] { "tm-modeling-issue-panel", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    /// <summary>Per-instance DOM id of the collapsible body — the toggle's aria-controls target.</summary>
+    private readonly string _bodyId = $"tm-modeling-issues-body-{Guid.NewGuid():N}";
+
+    private string RootClass => string.Join(" ", new[]
+    {
+        "tm-modeling-issue-panel",
+        Collapsed ? "tm-modeling-issue-panel--collapsed" : null,
+        Class
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    /// <summary>The localized accessible name of the header toggle (state-aware).</summary>
+    private string ToggleLabel => Collapsed ? Loc["TmModelingIssuePanel_Expand"] : Loc["TmModelingIssuePanel_Collapse"];
+
+    private Task ToggleCollapsedAsync() => CollapsedChanged.InvokeAsync(!Collapsed);
 
     /// <summary>
     /// An issue is navigable only when it points at a model element or relationship —
