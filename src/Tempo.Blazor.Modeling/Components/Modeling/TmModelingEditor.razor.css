@@ -32,11 +32,12 @@
 
 /* Review fix (phase 3): the provider field/chip and the notation/viewpoint selector are one
    right-aligned group. It owns the leftover toolbar width and wraps as a whole when the title
-   takes the row, so the labeled fields keep their baseline alignment (align-items: flex-end). */
+   takes the row. Items align to the START: the Viewpoint hint under the disabled select grows
+   that field downward without shifting the provider label's baseline. */
 .tm-modeling-editor__context {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: flex-end;
     gap: var(--tm-space-3);
     min-width: 0;
@@ -74,12 +75,13 @@
 }
 
 /* MO3: the header provider select mirrors the TmModelingViewSelector fields (label above the
-   field, --tm-input-height-md) so the three labeled selects read as one row. The field may
-   shrink to its minimum inside the wrapping context group (review fix, phase 3). */
+   field, --tm-input-height-md) so the three labeled selects read as one row. The field grows
+   with the leftover context width (review fix, phase 3) so longer provider names are not
+   truncated; the token max-width still caps it next to the view selector. */
 .tm-modeling-editor__field {
     display: grid;
     gap: var(--tm-space-1);
-    flex: 0 1 calc(var(--tm-space-16) * 4);
+    flex: 1 1 calc(var(--tm-space-16) * 4);
     min-width: calc(var(--tm-space-16) * 3);
     max-width: calc(var(--tm-space-16) * 8);
 }

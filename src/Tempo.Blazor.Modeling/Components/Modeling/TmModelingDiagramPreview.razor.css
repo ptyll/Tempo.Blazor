@@ -144,4 +144,12 @@
         justify-content: flex-start;
         width: 100%;
     }
+
+    /* Regression fix (phase 3): under the column header the desktop flex-grow values become
+       HEIGHT on the stacked rows and squeeze the preview canvas — the mobile rows size to
+       content again. */
+    .tm-modeling-diagram-preview__title-group,
+    .tm-modeling-diagram-preview__actions {
+        flex: 0 0 auto;
+    }
 }
