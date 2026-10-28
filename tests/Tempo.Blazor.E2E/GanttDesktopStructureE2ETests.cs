@@ -321,16 +321,21 @@ public sealed class GanttDesktopStructureE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Gantt phase 4 edge: a narrow container (900px) keeps every toolbar control reachable (the bar wraps, nothing is clipped)")]
+    [Description("Gantt phase 4 edge (phase 7 contract): a narrow container (900px) is a TABLET container - two toolbar rows whose commands overflow into More, nothing clipped")]
     public async Task Gantt_Toolbar_Wraps_Instead_Of_Clipping_When_Narrow()
     {
         var page = await OpenAsync(width: 900, height: 900);
         var gantt = Gantt(page);
+        await page.WaitForFunctionAsync("() => document.querySelector('.tm-gantt')?.getAttribute('data-layout') === 'tablet'", null, new PageWaitForFunctionOptions { Timeout = 20_000 });
         var toolbar = gantt.Locator(".tm-gantt__toolbar");
         var box = (await toolbar.BoundingBoxAsync())!;
         var ganttBox = (await gantt.BoundingBoxAsync())!;
-        var overflow = await toolbar.Locator("[role='toolbar']").EvaluateAsync<bool>("el => el.scrollWidth > el.clientWidth + 1");
-        Assert.IsFalse(overflow, "the toolbar wraps its groups instead of scrolling or clipping");
+        Assert.AreEqual(2, await toolbar.Locator("[role='toolbar']").CountAsync(), "the tablet toolbar is two rows");
+        foreach (var row in await toolbar.Locator("[role='toolbar']").AllAsync())
+        {
+            Assert.IsFalse(await row.EvaluateAsync<bool>("el => el.scrollWidth > el.clientWidth + 1"), "a toolbar row neither scrolls nor clips");
+        }
+
         Assert.IsTrue(box.Width <= ganttBox.Width + 1);
         await ShootAsync(page, "gantt-desktop-narrow-900-light");
     }

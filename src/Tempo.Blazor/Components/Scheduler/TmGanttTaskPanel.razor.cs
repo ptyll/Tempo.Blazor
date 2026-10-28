@@ -37,6 +37,39 @@ public partial class TmGanttTaskPanel
     private string? _currentTaskId;
     private TmWorkItemStatus _editStatus;
     private TmWorkItemPriority _editPriority;
+    private string _tab = "detail";
+
+    /// <summary>The audit entries of the edited task (an entry belongs to a task through its entity id).</summary>
+    private IReadOnlyList<TmActivityEntry> TaskHistory =>
+        (History ?? []).Where(e => e?.EntityRef is not null && string.Equals(e.EntityRef.EntityId, Task?.Id, StringComparison.Ordinal)).ToList();
+
+    /// <summary>The single scrolling form shows every section; a tabbed panel shows the one of the active tab.</summary>
+    private bool ShowSection(string tab) => !Tabbed || _tab == tab;
+
+    private void SelectTab(string tab) => _tab = tab;
+
+    private static string? CountBadge(int count) => count > 0 ? count.ToString(CultureInfo.InvariantCulture) : null;
+
+    /// <summary>True while an edit field differs from the task: the tabs keep the draft, the Detail tab says so.</summary>
+    private bool IsDirty => Task is not null
+        && (_editTitle != Task.Title
+            || _editStart != Task.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            || _editEnd != Task.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            || (_editDeadline ?? string.Empty) != (Task.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty)
+            || (_editPercent ?? 0) != Task.PercentComplete
+            || _editIsMilestone != Task.IsMilestone
+            || _editParentId != Task.ParentId
+            || _editStatus != Task.Status
+            || _editPriority != Task.Priority
+            || _editColor != Task.Color
+            || _editEstimation != Task.EstimationHours
+            || _editLoggedHours != Task.LoggedHours
+            || _editBudgetHours != Task.BudgetHours
+            || _editActualCost != Task.ActualCost
+            || (_editDescription ?? string.Empty) != (Task.Description ?? string.Empty));
+
+    /// <summary>The dirty-draft state for <see cref="TmGantt"/>'s close guard: closing the task sheet over an unsaved edit asks first (Discard / Keep editing).</summary>
+    internal bool IsDraftDirty => IsDirty;
 
     // The task values the edit fields were last synchronised with: a change made OUTSIDE the panel (the board,
     // "Mark done", a realtime update) re-syncs the field instead of leaving a stale copy behind.
@@ -69,6 +102,25 @@ public partial class TmGanttTaskPanel
 
     /// <summary>The task being edited.</summary>
     [Parameter] public TmWorkItem? Task { get; set; }
+
+    /// <summary>True when the task can move one place up among its siblings. Disables the Move up command; both move flags false hide the pair (there is nothing a move could do without a reorder handler upstream).</summary>
+    [Parameter] public bool CanMoveUp { get; set; }
+
+    /// <summary>True when the task can move one place down among its siblings. Disables the Move down command.</summary>
+    [Parameter] public bool CanMoveDown { get; set; }
+
+    /// <summary>
+    /// The tabbed presentation (the side sheet of a tablet container): the panel draws no header (the sheet owns the title and
+    /// the close button) and splits its sections into the tabs Detail | Attachments | Comments | History. Default false: the single
+    /// scrolling form of the desktop panel.
+    /// </summary>
+    [Parameter] public bool Tabbed { get; set; }
+
+    /// <summary>Audit entries; the History tab shows those whose <c>EntityRef.EntityId</c> is the edited task.</summary>
+    [Parameter] public IReadOnlyList<TmActivityEntry> History { get; set; } = [];
+
+    /// <summary>Zone the History tab shows its times in. Null: the machine zone.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
 
     /// <summary>All tasks for parent selection.</summary>
     [Parameter] public IReadOnlyList<TmWorkItem> AllTasks { get; set; } = [];
@@ -138,6 +190,7 @@ public partial class TmGanttTaskPanel
         if (Task is not null && Task.Id != _currentTaskId)
         {
             _currentTaskId = Task.Id;
+            _tab = "detail";
             _editTitle = Task.Title;
             _editStart = Task.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             _editEnd = Task.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);

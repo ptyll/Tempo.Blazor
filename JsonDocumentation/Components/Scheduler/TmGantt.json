@@ -30,7 +30,7 @@
       "type": "GanttFilterPanelMode",
       "isRequired": false,
       "default": "GanttFilterPanelMode.Inline",
-      "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto will pick by container width (until then it is inline). Active filters also show as removable chips under the toolbar."
+      "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto picks by the Gantt's own container (a dialog on a tablet or narrower container, the inline strip on a desktop one). Active filters also show as removable chips under the toolbar."
     },
     {
       "name": "SidebarMode",
@@ -114,7 +114,14 @@
     {
       "name": "ShowTaskPanel",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Whether the task panel is shown. The Gantt never assigns this parameter: internal changes update the internal open state and raise ShowTaskPanelChanged (two-way), and a changed incoming value re-seeds it."
+    },
+    {
+      "name": "ShowTaskPanelChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the task panel's open state changes through an internal path (open on selection, toolbar toggle, sheet close). Pair with ShowTaskPanel for two-way binding."
     },
     {
       "name": "OnTaskAdded",
@@ -426,9 +433,28 @@
       "name": "ContainerWidth",
       "type": "double?",
       "isRequired": false,
-      "description": "Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser; set it to override the measurement (tests, prerendering)."
+      "description": "Obsolete: use LayoutMode. Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser. While LayoutMode is Auto, a width set here is also classified into a layout (below 640 mobile, below 1024 tablet, otherwise desktop)."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the Gantt renders. Auto (default) measures the Gantt's own container (desktop from 1024 px, tablet from 640 px, otherwise mobile); a forced value, or a forced cascading TmLayoutContext ancestor, pins it. Tablet renders a two-row toolbar with a More overflow, a narrower task tree and finger-sized targets; the layout is stamped as data-layout on the root."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes (never for the initial value). Do not pair it with LayoutMode."
+    },
+    {
+      "name": "TaskPanelMode",
+      "type": "GanttTaskPanelMode",
+      "isRequired": false,
+      "default": "GanttTaskPanelMode.Inline",
+      "description": "How the task panel and the Reports inspector are presented: Inline (default) is the in-flow column at every width, Overlay a TmSidePanel side sheet with the tabs Detail | Attachments | Comments | History, Auto the in-flow panel on a desktop container and the side sheet on a tablet or narrower one. On a narrow container at most one right-hand surface (task panel, reports, history) is open."
+    },    {
       "name": "OnNewReportRequested",
       "type": "EventCallback",
       "isRequired": false,

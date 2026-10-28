@@ -14,6 +14,9 @@
     overflow: hidden;
     /* The history drawer is positioned against the component, not the viewport. */
     position: relative;
+    /* The Gantt is its own size container (docs/responsive-conventions.md): descendants query tm-gantt, never the viewport. */
+    container-type: inline-size;
+    container-name: tm-gantt;
     /* Component knob: the minimum width of the title column (header and cells share it). */
     --tm-gantt-title-min: 12rem;
 }
@@ -108,6 +111,9 @@
 
 .tm-gantt__context-menu {
     position: absolute;
+    /* The menu grows with the finger-sized rows and the Move entries: it scrolls instead of leaving the screen. */
+    max-height: calc(100% - var(--tm-space-4));
+    overflow-y: auto;
     min-width: 180px;
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
@@ -418,4 +424,52 @@
     max-height: 40%;
     display: flex;
     flex-direction: column;
+}
+
+/* ─── Tablet and touch (phase 7) ───────────────────────────────── */
+
+/* The layout modifiers set the one component knob a narrower container changes: the minimum width of the title column. */
+.tm-gantt--desktop {
+    --tm-gantt-title-min: 12rem;
+}
+
+.tm-gantt--tablet,
+.tm-gantt--mobile {
+    --tm-gantt-title-min: 9rem;
+}
+
+/* The instruction for the touch gestures: only where a finger is the pointer. */
+.tm-gantt__touch-hint {
+    display: none;
+    margin: 0;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__touch-hint {
+        display: block;
+    }
+
+    /* A finger needs the same target the toolbar has: the menu rows are 44px. */
+    .tm-gantt__context-menu-item {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__context-menu {
+        max-height: calc(100% - var(--tm-space-4));
+    }
+}
+
+.tm-gantt__context-menu-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* The task panel / reports sheet is a core TmSidePanel (a TmDrawer): the chart stays where it is, the sheet slides over it. */
+.tm-gantt ::deep .tm-gantt__sheet {
+    --tm-drawer-width: clamp(22rem, 50vw, 40rem);
 }

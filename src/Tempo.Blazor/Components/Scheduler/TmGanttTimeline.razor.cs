@@ -8,9 +8,9 @@ namespace Tempo.Blazor.Components.Scheduler;
 
 /// <summary>
 /// The timeline of <see cref="TmGantt"/>: the two-row header, the grid, the non-working overlays, the today
-/// and current-time markers, the dependency lines, the baseline ghosts and the task bars. The pan / wheel /
-/// dependency-drag handlers are the owner's (mouse events, unchanged; pointer events arrive with the touch
-/// phase); this component draws their results and skips a render pass that changes nothing it draws.
+/// and current-time markers, the dependency lines, the baseline ghosts and the task bars. The pan, the dependency drag and the
+/// long-press are pointer sessions of the core pointer-drag.js attached by the owner (gantt.js); this component renders the
+/// hooks they read (data-task-id, the dependency handles) and skips a render pass that changes nothing it draws.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public partial class TmGanttTimeline : TmGanttPart
@@ -29,7 +29,6 @@ public partial class TmGanttTimeline : TmGanttPart
         object NonWorking,
         double Width,
         int Rows,
-        bool Panning,
         string? SelectedTaskId,
         string? SelectedDependencyId,
         string? ActiveTimerTaskId,
@@ -51,7 +50,7 @@ public partial class TmGanttTimeline : TmGanttPart
     /// <inheritdoc />
     protected override object? RenderState => new TimelineState(
         Owner.DrawVersion, Owner.TaskFingerprint(), Owner._taskBars, Owner._lowerHeaders, Owner._visibleDependencies, Owner._nonWorkingRects,
-        Owner._totalTimelineWidth, Owner._visibleNodes.Count, Owner._isPanning, Owner.SelectedTask?.Id,
+        Owner._totalTimelineWidth, Owner._visibleNodes.Count, Owner.SelectedTask?.Id,
         Owner._selectedDependencyId, Owner.ActiveTimerTaskId, Owner.ShowOverdueHighlight, Owner.ShowCriticalPath,
         Owner.ActiveBaselineId, Owner.AllowDependencyCreation, Owner.GetEffectiveZoomPreset(),
         Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ViewSettings.ShowProgressLabel,

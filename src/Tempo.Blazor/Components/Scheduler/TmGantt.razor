@@ -5,9 +5,17 @@
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Abstractions.Layout
 @inject ITmLocalizer Loc
 
-<div class="tm-gantt @GetThemeClass() @Class" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
+@* The Gantt measures its OWN container (F1): the observer is the outer element, the chart root sits inside it and is the
+   CSS size container the descendants query. IsContainer=false: the observer root is a plain block that only reports a width. *@
+<TmLayoutObserver LayoutMode="EffectiveLayoutMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false"
+                  Style="display: flex; flex-direction: column; height: 100%; min-height: 0">
+<LayoutContent Context="lay">
+@{ _layout = lay.Resolved; }
+<div class="tm-gantt @LayoutClass(lay) @GetThemeClass() @Class" data-layout="@lay.CssModifier" data-density="@DensityAttribute" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
 
     @if (HasHeader)
     {
@@ -44,6 +52,12 @@
     }
 
     <TmGanttFilterBar Owner="this" />
+
+    @* Tablet: the long-press / dependency-dot instruction, shown on a coarse pointer only (CSS). *@
+    @if (IsTabletLayout)
+    {
+        <p class="tm-gantt__touch-hint" data-testid="@TestId("gantt-touch-hint")">@Loc["TmGantt_TouchHint"]</p>
+    }
 
     <!-- Content area: sidebar + views -->
     <div class="tm-gantt__content">
@@ -265,56 +279,36 @@
         @viewArea
     }
 
-    @* One right-hand panel at a time: the Reports inspector takes the place of the task panel while it is open. *@
-    @if (ReportsPanelOpen)
-    {
-        <TmGanttReportsPanel Reports="Reports"
-                             @attributes="ReportsPanelAttributes"
-                             OnReportRun="OnReportRun"
-                             OnReportEdit="OnReportEdit"
-                             OnReportDelete="OnReportDelete"
-                             OnReportDuplicate="OnReportDuplicate"
-                             OnNewReportRequested="OnNewReportRequested" />
+    @* One right-hand surface at a time: the Reports inspector takes the place of the task panel while it is open. On a
+       tablet / narrower container (TaskPanelMode Auto) or with TaskPanelMode Overlay the surface is a core TmSidePanel
+       side sheet (modal, Escape / backdrop / close) — the SHEETS render as siblings of the chart root, after it (see
+       the bottom of this file): .tm-gantt is a CSS size container (inline-size), and a container is the containing
+       block of fixed-position descendants, which would confine and clip them. The in-flow panel stays in the content
+       column. *@
+    @{
+        RenderFragment reportsPanel = @<TmGanttReportsPanel Reports="Reports" @attributes="ReportsPanelAttributes"
+                                                            OnReportRun="OnReportRun" OnReportEdit="OnReportEdit" OnReportDelete="OnReportDelete"
+                                                            OnReportDuplicate="OnReportDuplicate" OnNewReportRequested="OnNewReportRequested" />;
+        RenderFragment taskPanel = @<TmGanttTaskPanel @ref="_taskPanel" Task="SelectedTask" Tabbed="PanelsAsSheets" History="History" TimeZone="@DisplayZone"
+                                                      AllTasks="Data" Dependencies="Dependencies"
+                                                      CanMoveUp="CanMoveSelected(-1)" CanMoveDown="CanMoveSelected(1)"
+                                                      OnTaskUpdated="OnTaskUpdated" OnDependencyAdded="OnDependencyAdded" OnDependencyRemoved="OnDependencyRemoved"
+                                                      OnCommentAdded="HandleTaskCommentAddedAsync" ActiveTimerTaskId="@ActiveTimerTaskId"
+                                                      OnTimerStarted="OnTimerStarted" OnTimerStopped="OnTimerStopped"
+                                                      OnDescriptionChanged="OnDescriptionChanged" OnAttachmentUpload="OnAttachmentUpload" OnAttachmentRemoved="OnAttachmentRemoved"
+                                                      OnStatusChanged="OnTaskPanelStatusChangedAsync" OnAction="OnTaskPanelActionAsync"
+                                                      IsOverloaded="SelectedTaskOverloaded" BaselineTask="SelectedTaskBaseline"
+                                                      OnClose="@(PanelsAsSheets ? default : EventCallback.Factory.Create(this, () => SetTaskPanelOpen(false)))" />;
     }
-    else if (ShowTaskPanel)
+    @if (ReportsPanelOpen && !PanelsAsSheets)
     {
-        <TmGanttTaskPanel Task="SelectedTask"
-                          AllTasks="Data"
-                          Dependencies="Dependencies"
-                          OnTaskUpdated="OnTaskUpdated"
-                          OnDependencyAdded="OnDependencyAdded"
-                          OnDependencyRemoved="OnDependencyRemoved"
-                          OnCommentAdded="HandleTaskCommentAddedAsync"
-                          ActiveTimerTaskId="@ActiveTimerTaskId"
-                          OnTimerStarted="OnTimerStarted"
-                          OnTimerStopped="OnTimerStopped"
-                          OnDescriptionChanged="OnDescriptionChanged"
-                          OnAttachmentUpload="OnAttachmentUpload"
-                          OnAttachmentRemoved="OnAttachmentRemoved"
-                          OnStatusChanged="OnTaskPanelStatusChangedAsync"
-                          OnAction="OnTaskPanelActionAsync"
-                          IsOverloaded="SelectedTaskOverloaded"
-                          BaselineTask="SelectedTaskBaseline"
-                          OnClose="() => ShowTaskPanel = false" />
+        @reportsPanel
     }
-    </div> @* tm-gantt__content *@
-
-    <!-- Export Dialog -->
-    @if (_exportDialogOpen)
+    else if (_taskPanelOpen && !PanelsAsSheets)
     {
-        <TmGanttExportDialog IsOpen="_exportDialogOpen"
-                             OnExport="HandleExportAsync"
-                             OnClose="CloseExportDialog" />
+        @taskPanel
     }
-
-    <!-- Import Dialog -->
-    @if (_importDialogOpen)
-    {
-        <TmGanttImportDialog IsOpen="_importDialogOpen"
-                             OnImportCompleted="HandleImportCompletedAsync"
-                             OnImportError="HandleImportErrorAsync"
-                             OnClose="CloseImportDialog" />
-    }
+</div> @* tm-gantt__content *@
 
     <!-- History Drawer -->
     @if (_historyDrawerOpen)
@@ -330,54 +324,128 @@
                               OnClose="ToggleHistoryDrawer" />
     }
 
-    @* The task panel's Delete asks first; rendered only while a delete is pending (the default markup is unchanged). *@
-    @if (_pendingDelete is not null)
-    {
-        <TmDialog Show="true" Type="DialogType.Confirm" Variant="DialogVariant.Warning" IsDangerous="true"
-                  Title="@Loc["TmGantt_DeleteConfirmTitle"]"
-                  Message="@Loc["TmGantt_DeleteConfirmMessage", _pendingDelete.Title]"
-                  OkButtonText="@Loc["TmGantt_DeleteTask"]"
-                  OnResult="ConfirmDeleteAsync" />
-    }
-
-    <!-- Context Menu -->
-    @if (_contextMenuVisible && _contextMenuTask is not null)
-    {
-        <div class="tm-gantt__context-menu-overlay" @onclick="HideContextMenu">
-            <div class="tm-gantt__context-menu"
-                 style="left: @(_contextMenuX)px; top: @(_contextMenuY)px;"
-                 @onclick:stopPropagation>
-                <button type="button" class="tm-gantt__context-menu-item"
-                        @onclick="() => InsertTaskAsync(GanttInsertPosition.Above)">
-                    <TmIcon Name="arrow-up" Size="IconSize.Sm" />
-                    <span>@Loc["TmGantt_AddTaskAbove"]</span>
-                </button>
-                <button type="button" class="tm-gantt__context-menu-item"
-                        @onclick="() => InsertTaskAsync(GanttInsertPosition.Below)">
-                    <TmIcon Name="arrow-down" Size="IconSize.Sm" />
-                    <span>@Loc["TmGantt_AddTaskBelow"]</span>
-                </button>
-                <button type="button" class="tm-gantt__context-menu-item"
-                        @onclick="() => InsertTaskAsync(GanttInsertPosition.Child)">
-                    <TmIcon Name="corner-down-right" Size="IconSize.Sm" />
-                    <span>@Loc["TmGantt_AddTaskChild"]</span>
-                </button>
-                @if (ViewSettings.ShowAdvancedContextButtons)
-                {
-                    <div class="tm-gantt__context-menu-divider"></div>
-                    <button type="button" class="tm-gantt__context-menu-item"
-                            @onclick="DuplicateContextTaskAsync">
-                        <TmIcon Name="copy" Size="IconSize.Sm" />
-                        <span>@Loc["TmGantt_DuplicateTask"]</span>
-                    </button>
-                }
-                <div class="tm-gantt__context-menu-divider"></div>
-                <button type="button" class="tm-gantt__context-menu-item tm-gantt__context-menu-item--danger"
-                        @onclick="DeleteTaskAsync">
-                    <TmIcon Name="trash-2" Size="IconSize.Sm" />
-                    <span>@Loc["TmGantt_DeleteTask"]</span>
-                </button>
-            </div>
-        </div>
-    }
 </div>
+@* Polite live region: a keyboard / menu reorder is announced here (WCAG 4.1.3). Always rendered (a region inserted together with its text is often not announced) and a sibling of the chart root, so the chart's own children stay as they were. *@
+<div class="tm-sr-only" role="status" aria-live="polite" data-testid="@TestId("gantt-announcer")">@_announcement</div>
+
+@* ── Overlays — SIBLINGS of .tm-gantt, never descendants ─────────────────────────────────
+   The chart root is a CSS size container (`container-type: inline-size`), and a container is the
+   containing block of every fixed-position descendant: the context menu (anchored at clientX/Y),
+   the TmSidePanel sheets, the TmModal dialogs and the confirm dialogs would be confined to (and
+   clipped by) the chart. They render here, inside the TmLayoutObserver LayoutContent, whose root
+   is `tm-layout--no-container` (a plain block that only reports a width). *@
+@if (ReportsPanelOpen && PanelsAsSheets)
+{
+    <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="HandleReportsSheetOpenChanged"
+                 Title="@Loc["TmGantt_Reports"]" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-reports-sheet")">@reportsPanel</TmSidePanel>
+}
+else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
+{
+    <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="HandleTaskSheetOpenChanged"
+                 Title="@SelectedTask.Title" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-task-sheet")">@taskPanel</TmSidePanel>
+}
+
+<!-- Export Dialog -->
+@if (_exportDialogOpen)
+{
+    <TmGanttExportDialog IsOpen="_exportDialogOpen"
+                         OnExport="HandleExportAsync"
+                         OnClose="CloseExportDialog" />
+}
+
+<!-- Import Dialog -->
+@if (_importDialogOpen)
+{
+    <TmGanttImportDialog IsOpen="_importDialogOpen"
+                         OnImportCompleted="HandleImportCompletedAsync"
+                         OnImportError="HandleImportErrorAsync"
+                         OnClose="CloseImportDialog" />
+}
+
+<!-- Filter Dialog (FilterPanelMode Dialog / Auto on a narrow container): always mounted, the TmModal toggles with Show,
+     which lets it restore the focus to the trigger when it closes (a modal unmounted while open cannot). -->
+@if (FilterPanelAsDialog)
+{
+    <TmGanttFilterPanel AsDialog="true"
+                        Show="_filterPanelOpen"
+                        DataTestId="@TestId("gantt-filter-panel")"
+                        Filters="ActiveFiltersSnapshot()"
+                        OnFiltersChanged="async filters => await ApplyFiltersAsync(filters)"
+                        OnClose="CloseFilterPanel" />
+}
+
+@* The task panel's Delete asks first; rendered only while a delete is pending (the default markup is unchanged). *@
+@if (_pendingDelete is not null)
+{
+    <TmDialog Show="true" Type="DialogType.Confirm" Variant="DialogVariant.Warning" IsDangerous="true"
+              Title="@Loc["TmGantt_DeleteConfirmTitle"]"
+              Message="@Loc["TmGantt_DeleteConfirmMessage", _pendingDelete.Title]"
+              OkButtonText="@Loc["TmGantt_DeleteTask"]"
+              OnResult="ConfirmDeleteAsync" />
+}
+
+@* Closing the task sheet over a dirty draft (Escape / backdrop / close) keeps the sheet open and asks first:
+   Discard throws the draft away and closes the sheet, Keep editing returns to the fields. *@
+@if (_discardPromptOpen)
+{
+    <TmDialog Show="true" Type="DialogType.Confirm" Variant="DialogVariant.Warning"
+              Title="@Loc["TmGantt_DiscardChangesTitle"]"
+              Message="@Loc["TmGantt_DiscardChangesMessage"]"
+              OkButtonText="@Loc["TmGantt_DiscardChangesDiscard"]"
+              CancelButtonText="@Loc["TmGantt_DiscardChangesKeep"]"
+              OnResult="ConfirmDiscardAsync" />
+}
+
+<!-- Context Menu -->
+@if (_contextMenuVisible && _contextMenuTask is not null)
+{
+    <div class="tm-gantt__context-menu-overlay" @onclick="HideContextMenuFromOverlay">
+        <div class="tm-gantt__context-menu"
+             style="left: min(@(F(_contextMenuX))px, calc(100% - 13rem)); top: min(@(F(_contextMenuY))px, calc(100% - 20rem));"
+             @onclick:stopPropagation>
+            <button type="button" class="tm-gantt__context-menu-item"
+                    @onclick="() => InsertTaskAsync(GanttInsertPosition.Above)">
+                <TmIcon Name="arrow-up" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_AddTaskAbove"]</span>
+            </button>
+            <button type="button" class="tm-gantt__context-menu-item"
+                    @onclick="() => InsertTaskAsync(GanttInsertPosition.Below)">
+                <TmIcon Name="arrow-down" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_AddTaskBelow"]</span>
+            </button>
+            <button type="button" class="tm-gantt__context-menu-item"
+                    @onclick="() => InsertTaskAsync(GanttInsertPosition.Child)">
+                <TmIcon Name="corner-down-right" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_AddTaskChild"]</span>
+            </button>
+            @if (ViewSettings.ShowAdvancedContextButtons)
+            {
+                <div class="tm-gantt__context-menu-divider"></div>
+                <button type="button" class="tm-gantt__context-menu-item"
+                        @onclick="DuplicateContextTaskAsync">
+                    <TmIcon Name="copy" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_DuplicateTask"]</span>
+                </button>
+            }
+            <div class="tm-gantt__context-menu-divider"></div>
+            <button type="button" class="tm-gantt__context-menu-item" data-testid="@TestId("gantt-context-move-up")"
+                    disabled="@(!CanMoveContextTask(-1))" @onclick="() => MoveContextTaskAsync(-1)">
+                <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_MoveUp"]</span>
+            </button>
+            <button type="button" class="tm-gantt__context-menu-item" data-testid="@TestId("gantt-context-move-down")"
+                    disabled="@(!CanMoveContextTask(1))" @onclick="() => MoveContextTaskAsync(1)">
+                <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_MoveDown"]</span>
+            </button>
+            <div class="tm-gantt__context-menu-divider"></div>
+            <button type="button" class="tm-gantt__context-menu-item tm-gantt__context-menu-item--danger"
+                    @onclick="DeleteTaskAsync">
+                <TmIcon Name="trash-2" Size="IconSize.Sm" />
+                <span>@Loc["TmGantt_DeleteTask"]</span>
+            </button>
+        </div>
+    </div>
+}
+</LayoutContent>
+</TmLayoutObserver>

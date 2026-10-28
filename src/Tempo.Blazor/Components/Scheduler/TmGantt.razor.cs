@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Buttons;
@@ -17,7 +18,7 @@ using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
 
-public partial class TmGantt : IDisposable
+public partial class TmGantt : IDisposable, IAsyncDisposable
 {
     internal ElementReference _timelineContainerRef;
     internal ElementReference _timelineBodyRef;
@@ -82,11 +83,6 @@ public partial class TmGantt : IDisposable
         new() { Key = GanttColumnKey.Priority, Visible = false, Order = 7, Width = 90 },
     };
 
-    internal bool _isPanning;
-    private double _panStartX;
-    private double _panStartY;
-    private double _panStartScrollLeft;
-    private double _panStartScrollTop;
     private bool _isSyncingScroll;
     internal bool _viewSettingsOpen;
 
@@ -95,6 +91,8 @@ public partial class TmGantt : IDisposable
     private double _contextMenuX;
     private double _contextMenuY;
     private TmWorkItem? _contextMenuTask;
+    private long _touchMenuOpenedAt;
+    private string? _announcement;
 
     // Drag & drop state
     internal string? _draggedTaskId;
@@ -104,14 +102,128 @@ public partial class TmGantt : IDisposable
 
     private const int ComfortableRowHeight = 40;
     private const int CompactRowHeight = 28;
+    private const int TouchRowHeight = 44;
     private const int DayWidth = 40;
 
-    internal int RowHeight => ViewSettings.ViewDensity == GanttViewDensity.Compact ? CompactRowHeight : ComfortableRowHeight;
+    /// <summary>The density hook of the stylesheets (the tree rows read it); the default comfortable density renders no attribute.</summary>
+    private string? DensityAttribute => ViewSettings.ViewDensity switch
+    {
+        GanttViewDensity.Compact => "compact",
+        GanttViewDensity.Touch => "touch",
+        _ => null,
+    };
+
+    /// <summary>The row height in pixels, one value for the tree rows and the timeline rows (the bar tops are computed from it).</summary>
+    internal int RowHeight => ViewSettings.ViewDensity switch
+    {
+        GanttViewDensity.Compact => CompactRowHeight,
+        GanttViewDensity.Touch => TouchRowHeight,
+        _ => ComfortableRowHeight,
+    };
 
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     /// <summary>Service provider for the optional user-zone lookups (never a required dependency).</summary>
     [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    // ── Layout (container-owned, F1) ─────────────────────────────
+
+    /// <summary>The layout the observer last resolved (the markup writes it every render, before any part reads it).</summary>
+    private TmLayoutMode _layout = TmLayoutMode.Desktop;
+
+    /// <summary>What the observer is asked for: the forced <see cref="LayoutMode"/>, else the obsolete <see cref="ContainerWidth"/> alias, else a measurement.</summary>
+    private TmLayoutMode EffectiveLayoutMode
+    {
+        get
+        {
+            if (LayoutMode != TmLayoutMode.Auto) return LayoutMode;
+#pragma warning disable CS0618 // the alias is this property's whole point
+            var width = ContainerWidth;
+#pragma warning restore CS0618
+            return width is { } w && double.IsFinite(w) && w >= 0 ? TmBreakpoints.Classify(w) : TmLayoutMode.Auto;
+        }
+    }
+
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        _layout = mode;
+        ReconcilePanels();
+        return ResolvedLayoutChanged.InvokeAsync(mode);
+    }
+
+    /// <summary>
+    /// The right-hand surfaces exclude each other on a narrow container / in a sheet presentation, and that must also hold when the
+    /// LAYOUT (a resize, a rotation) or <see cref="TaskPanelMode"/> changes while several are open: the task panel keeps the place, the
+    /// history drawer and the Reports inspector close. (A panel that was open in-flow stays open as the sheet; it is not re-raised later.)
+    /// Runs when the resolved layout changes and when the host-driven <see cref="ShowTaskPanel"/> value changes — not on every parameter set.
+    /// </summary>
+    private void ReconcilePanels()
+    {
+        if (!(IsNarrowLayout || PanelsAsSheets) || !_taskPanelOpen) return;
+        _historyDrawerOpen = false;
+        if (_activeSidebarPanel == GanttSidebarPanel.Reports) _activeSidebarPanel = null;
+    }
+
+    private static string LayoutClass(TmLayoutContext layout) => layout.Resolved switch
+    {
+        TmLayoutMode.Tablet => "tm-gantt--tablet",
+        TmLayoutMode.Mobile => "tm-gantt--mobile",
+        _ => "tm-gantt--desktop",
+    };
+
+    /// <summary>True on a tablet or narrower container (not desktop): the toolbar is two rows and the panels exclude each other.</summary>
+    internal bool IsNarrowLayout => _layout != TmLayoutMode.Desktop;
+
+    /// <summary>True when the layout is tablet (the two-row toolbar).</summary>
+    internal bool IsTabletLayout => _layout == TmLayoutMode.Tablet;
+
+    /// <summary>True when the task panel and the Reports inspector render as <c>TmSidePanel</c> side sheets.</summary>
+    private bool PanelsAsSheets => TaskPanelMode == GanttTaskPanelMode.Overlay
+        || (TaskPanelMode == GanttTaskPanelMode.Auto && _layout != TmLayoutMode.Desktop);
+
+    private const string SheetWidth = "clamp(22rem, 50vw, 40rem)";
+
+    /// <summary>True while the "Discard changes?" dialog of a dirty task sheet is on screen (the sheet itself stays open).</summary>
+    private bool _discardPromptOpen;
+
+    /// <summary>The rendered task panel (sheet or in-flow): the close path reads its dirty-draft state.</summary>
+    private TmGanttTaskPanel? _taskPanel;
+
+    private void HandleTaskSheetOpenChanged(bool open)
+    {
+        if (open) return;
+        // A dirty draft survives the close attempt (Escape / backdrop / close): the sheet stays open
+        // and the user decides — Discard closes it, Keep editing returns to the fields.
+        if (_taskPanel is { IsDraftDirty: true })
+        {
+            _discardPromptOpen = true;
+            return;
+        }
+
+        CloseTaskSheet();
+    }
+
+    /// <summary>Closes the task sheet for real: the panel state goes down and focus returns to the row of the task.</summary>
+    private void CloseTaskSheet()
+    {
+        _discardPromptOpen = false;
+        SetTaskPanelOpen(false);
+        // Focus back where the user was: the row of the task (a bar or a finger tap leaves no focused opener behind).
+        if (SelectedTask is not null) RequestFocus(GanttFocusTarget.Row, SelectedTask.Id);
+    }
+
+    /// <summary>The "Discard changes?" answer: Discard closes the sheet (the draft is thrown away with the panel), Keep editing keeps it open.</summary>
+    private Task ConfirmDiscardAsync(bool? discard)
+    {
+        _discardPromptOpen = false;
+        if (discard == true) CloseTaskSheet();
+        return Task.CompletedTask;
+    }
+
+    private void HandleReportsSheetOpenChanged(bool open)
+    {
+        if (!open) _activeSidebarPanel = null;
+    }
 
     // ── Parameters ───────────────────────────────────────────────
 
@@ -141,7 +253,36 @@ public partial class TmGantt : IDisposable
     [Parameter] public EventCallback<GanttView> ViewChanged { get; set; }
     [Parameter] public TmWorkItem? SelectedTask { get; set; }
     [Parameter] public EventCallback<TmWorkItem> OnTaskSelected { get; set; }
+
+    /// <summary>
+    /// Whether the task panel is shown. The Gantt NEVER assigns this parameter (assigning a parameter
+    /// from inside the component is lost on the next render and fights a two-way host binding): internal
+    /// changes (toolbar toggle, task selection, panel close) update <see cref="_taskPanelOpen"/> and raise
+    /// <see cref="ShowTaskPanelChanged"/>, and a changed incoming value re-seeds the field. Two-way with
+    /// <see cref="ShowTaskPanelChanged"/>.
+    /// </summary>
     [Parameter] public bool ShowTaskPanel { get; set; }
+
+    /// <summary>Raised when the task panel's open state changes through an internal path (open on selection, toolbar toggle, sheet close). Pair with <see cref="ShowTaskPanel"/> for two-way binding.</summary>
+    [Parameter] public EventCallback<bool> ShowTaskPanelChanged { get; set; }
+
+    /// <summary>The live task-panel open state. Seeded from <see cref="ShowTaskPanel"/> whenever the parameter value changes; every internal change goes through <see cref="SetTaskPanelOpen"/>.</summary>
+    private bool _taskPanelOpen;
+
+    /// <summary>The open state as the parts read it (the toolbar toggle's pressed state).</summary>
+    internal bool TaskPanelOpen => _taskPanelOpen;
+
+    private bool _lastShowTaskPanel;
+    private bool _panelStateSeeded;
+
+    /// <summary>Internal open-state change: never touches the <see cref="ShowTaskPanel"/> parameter; raises <see cref="ShowTaskPanelChanged"/> instead.</summary>
+    private void SetTaskPanelOpen(bool open)
+    {
+        if (_taskPanelOpen == open) return;
+        _taskPanelOpen = open;
+        _ = ShowTaskPanelChanged.InvokeAsync(open);
+    }
+
     [Parameter] public EventCallback<TmWorkItem> OnTaskUpdated { get; set; }
     [Parameter] public EventCallback<GanttDependency> OnDependencyAdded { get; set; }
     [Parameter] public EventCallback<string> OnDependencyRemoved { get; set; }
@@ -317,8 +458,8 @@ public partial class TmGantt : IDisposable
     /// <summary>
     /// How the filter editor is presented: <see cref="GanttFilterPanelMode.Inline"/> (default) is a strip under the
     /// toolbar, <see cref="GanttFilterPanelMode.Dialog"/> a modal dialog (a bottom sheet on a mobile viewport) whose
-    /// footer is Clear all | Cancel | Apply, and <see cref="GanttFilterPanelMode.Auto"/> will pick by container width
-    /// (until then it is inline).
+    /// footer is Clear all | Cancel | Apply, and <see cref="GanttFilterPanelMode.Auto"/> picks by the Gantt's own container:
+    /// a dialog on a tablet or narrower container, the inline strip on a desktop one.
     /// </summary>
     [Parameter] public GanttFilterPanelMode FilterPanelMode { get; set; } = GanttFilterPanelMode.Inline;
 
@@ -379,11 +520,31 @@ public partial class TmGantt : IDisposable
 
     /// <summary>
     /// Width in pixels the <b>Fit to screen</b> action fits the timeline into. When <c>null</c> (default)
-    /// the width of the timeline element is measured in the browser; set it to override the measurement
-    /// (tests, server-side prerendering, a host that knows the width). A later release replaces this with
-    /// the container <c>LayoutMode</c>.
+    /// the width of the timeline element is measured in the browser. Obsolete alias: while <see cref="LayoutMode"/> is
+    /// <see cref="TmLayoutMode.Auto"/> a width set here is classified like a measurement (below 640 mobile, below 1024
+    /// tablet, otherwise desktop), so a host that knew its width keeps working; new code sets <see cref="LayoutMode"/>.
     /// </summary>
+    [Obsolete("Use LayoutMode: the Gantt measures its own container. ContainerWidth stays as an alias that is classified into a layout and still overrides the Fit to screen measurement.")]
     [Parameter] public double? ContainerWidth { get; set; }
+
+    /// <summary>
+    /// The layout the Gantt renders. <see cref="TmLayoutMode.Auto"/> (default) measures the Gantt's OWN container
+    /// (desktop from 1024 px, tablet from 640 px, otherwise mobile); a forced value (or a forced cascading
+    /// <c>TmLayoutContext</c> ancestor) pins it. Tablet renders the toolbar as two rows with a "More" overflow, a narrower
+    /// task tree and finger-sized targets; the layout is also stamped as <c>data-layout</c> on the root.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Raised when the resolved layout changes (never raised for the initial value). Do not pair it with <see cref="LayoutMode"/>.</summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>
+    /// How the task panel (and the Reports inspector) is presented: <see cref="GanttTaskPanelMode.Inline"/> (default) is the
+    /// in-flow column at every width, <see cref="GanttTaskPanelMode.Overlay"/> a <c>TmSidePanel</c> side sheet with the tabs
+    /// Detail | Attachments | Comments | History, and <see cref="GanttTaskPanelMode.Auto"/> picks the in-flow panel on a
+    /// desktop container and the side sheet on a tablet or narrower one.
+    /// </summary>
+    [Parameter] public GanttTaskPanelMode TaskPanelMode { get; set; } = GanttTaskPanelMode.Inline;
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>Returns active columns sorted by Order.</summary>
@@ -453,6 +614,65 @@ public partial class TmGantt : IDisposable
                 await _userZoneObserver.ProbeAsync();
             }
         }
+
+        await AttachGesturesAsync();
+    }
+
+    // ── Pointer gestures (core pointer-drag.js, wired by gantt.js) ───────────────────────────
+
+    private readonly string _gestureId = "tm-gantt-" + Guid.NewGuid().ToString("N");
+    private DotNetObjectReference<TmGantt>? _dotNetRef;
+    private string? _attachedGestureKey;
+    private bool _disposed;
+
+    /// <summary>
+    /// Registers the timeline (pan with a mouse — a finger or a pen scrolls natively, dependency drag, long-press)
+    /// and the tree (long-press, Alt+Up/Down) sessions with <c>gantt.js</c>. The elements exist only while the chart
+    /// area is shown (a Board / Calendar view replaces them) and are replaced when the docked workload wraps them, so
+    /// the registration is repeated whenever that key changes. The key is recorded only after every attach/detach
+    /// call succeeded AND the JS side reported the sessions registered (<c>false</c> = the helpers were unavailable),
+    /// so a failed attempt is retried on a later render instead of being remembered as done.
+    /// </summary>
+    private async Task AttachGesturesAsync()
+    {
+        if (_disposed) return;
+        var hasChart = View is not (GanttView.Workload or GanttView.Calendar or GanttView.Board or GanttView.Dashboard or GanttView.People);
+        var key = hasChart ? (DockedWorkload ? "docked" : "chart") + (View == GanttView.List ? "-list" : string.Empty) : null;
+        if (key == _attachedGestureKey) return;
+
+        try
+        {
+            if (key is null)
+            {
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachTree", _gestureId);
+                _attachedGestureKey = key;
+                return;
+            }
+
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            var attached = true;
+            if (View != GanttView.List)
+            {
+                attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTimeline", _gestureId, _timelineContainerRef, _timelineBodyRef, _treeBodyRef, _dotNetRef);
+            }
+            else
+            {
+                // The List view has no timeline: release the registration of the one that was there.
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
+            }
+
+            attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTree", _gestureId, _treeBodyRef, _dotNetRef) && attached;
+
+            // Only a fully registered set is remembered: a false (helpers unavailable) or a thrown
+            // exception leaves the key unset, so the next render tries again.
+            if (attached) _attachedGestureKey = key;
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+        {
+            // The gestures are an enhancement over the buttons and the keyboard: a missing script never breaks the chart.
+            // The key stays unset, so a later render retries the registration.
+        }
     }
 
     private Task RefreshAfterZoneChange() => InvokeAsync(() =>
@@ -464,6 +684,17 @@ public partial class TmGantt : IDisposable
 
     protected override void OnParametersSet()
     {
+        // The open state is seeded ONLY when the host-driven parameter value actually changed: an internal
+        // change (which raised ShowTaskPanelChanged instead of assigning the parameter) must survive the
+        // re-render a host without the two-way binding triggers next.
+        if (!_panelStateSeeded || ShowTaskPanel != _lastShowTaskPanel)
+        {
+            _panelStateSeeded = true;
+            _lastShowTaskPanel = ShowTaskPanel;
+            _taskPanelOpen = ShowTaskPanel;
+            ReconcilePanels();
+        }
+
         if (WorkItemSource is null)
             ApplyState();
     }
@@ -632,6 +863,31 @@ public partial class TmGantt : IDisposable
         InvokeAsync(StateHasChanged);
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // The C# unsubscriptions first (a JS callback racing the detach could still reach a live object),
+        // then the JS detach, then the reference.
+        Dispose();
+
+        try
+        {
+            if (_attachedGestureKey is not null)
+            {
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachTree", _gestureId);
+            }
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+        {
+        }
+
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+    }
+
     public void Dispose()
     {
         if (_themeService is not null)
@@ -641,6 +897,7 @@ public partial class TmGantt : IDisposable
         }
 
         _userZoneObserver?.Dispose();
+        _userZoneObserver = null;
         if (_subscribedConnection is not null)
         {
             _subscribedConnection.OnTaskUpdated -= HandleRealtimeTaskUpdated;
@@ -705,11 +962,25 @@ public partial class TmGantt : IDisposable
     internal void ToggleViewSettings() => _viewSettingsOpen = !_viewSettingsOpen;
 
     internal void ToggleSidebarPanel(GanttSidebarPanel panel)
-        => _activeSidebarPanel = _activeSidebarPanel == panel ? null : panel;
+    {
+        _activeSidebarPanel = _activeSidebarPanel == panel ? null : panel;
+        YieldToReportsPanel();
+    }
 
     /// <summary>Tab strip (<see cref="GanttSidebarMode.Tabs"/>): select a panel; the Tasks tab is the Gantt itself, so it clears the drawer.</summary>
     internal void SelectSidebarTab(GanttSidebarPanel panel)
-        => _activeSidebarPanel = panel == GanttSidebarPanel.Tasks ? null : panel;
+    {
+        _activeSidebarPanel = panel == GanttSidebarPanel.Tasks ? null : panel;
+        YieldToReportsPanel();
+    }
+
+    /// <summary>On a narrow container the Reports inspector is the one open right-hand surface: the task panel and the history drawer close.</summary>
+    private void YieldToReportsPanel()
+    {
+        if (_activeSidebarPanel != GanttSidebarPanel.Reports || !(IsNarrowLayout || PanelsAsSheets)) return;
+        SetTaskPanelOpen(false);
+        _historyDrawerOpen = false;
+    }
 
     /// <summary>Stable per-instance token for element ids that must not collide between Gantts on one page.</summary>
     internal string InstanceId { get; } = Guid.NewGuid().ToString("N")[..8];
@@ -898,11 +1169,25 @@ public partial class TmGantt : IDisposable
     }
 
     /// <summary>Toolbar: show / hide the task panel.</summary>
-    internal void ToggleTaskPanel() => ShowTaskPanel = !ShowTaskPanel;
+    internal void ToggleTaskPanel()
+    {
+        if (_taskPanelOpen) SetTaskPanelOpen(false);
+        else OpenTaskPanelExclusive();
+    }
 
     /// <summary>Bulk bar: clear the checkbox selection.</summary>
     internal void ClearBulkSelection() => _selectedTaskIds = [];
     // ── Interaction ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Pointer type of the last <c>pointerup</c> on a row or a bar (recorded by the parts). The sheet tap gesture
+    /// reads it: a finger or a pen tap opens the task sheet, a mouse click must not (the sheet would cover the
+    /// chart and swallow the double-click's second click, which is the row's inline edit).
+    /// </summary>
+    internal string? _lastPointerType;
+
+    /// <summary>The parts' <c>@onpointerup</c> land here before the click opens the panel.</summary>
+    internal void NotePointerUp(PointerEventArgs e) => _lastPointerType = e.PointerType;
 
     internal async Task ToggleExpandAsync(TmWorkItem task)
     {
@@ -917,11 +1202,39 @@ public partial class TmGantt : IDisposable
         await OnTaskSelected.InvokeAsync(task);
     }
 
+    /// <summary>
+    /// A tap / click on a row or a bar: selects the task and, when the task panel is a side sheet AND the pointer was not
+    /// a mouse (<see cref="_lastPointerType"/>), opens it — a mouse double-click must stay an inline edit of the row, not
+    /// raise a modal sheet over the chart the second click lands on. Keyboard / "open" activation uses
+    /// <see cref="ActivateTaskAsync"/> and always opens the panel; an in-flow panel is already there or toggled.
+    /// Programmatic selections (Add, Duplicate, the Board, the Calendar) use <see cref="SelectTaskAsync"/> and never raise
+    /// a modal sheet over the toolbar the user is working with.
+    /// </summary>
+    internal async Task TapTaskAsync(TmWorkItem task)
+    {
+        if (PanelsAsSheets && _lastPointerType != "mouse") OpenTaskPanelExclusive();
+        await SelectTaskAsync(task);
+    }
+
     /// <summary>Keyboard / "open" activation: selects the task and shows the task panel.</summary>
     internal async Task ActivateTaskAsync(TmWorkItem task)
     {
-        ShowTaskPanel = true;
+        OpenTaskPanelExclusive();
         await SelectTaskAsync(task);
+    }
+
+    /// <summary>
+    /// Opens the task panel. On a tablet or narrower container (or with a sheet presentation) at most one right-hand
+    /// surface is open: the Reports inspector and the history drawer yield to it.
+    /// </summary>
+    private void OpenTaskPanelExclusive()
+    {
+        SetTaskPanelOpen(true);
+        if (IsNarrowLayout || PanelsAsSheets)
+        {
+            _historyDrawerOpen = false;
+            if (_activeSidebarPanel == GanttSidebarPanel.Reports) _activeSidebarPanel = null;
+        }
     }
 
     // ── Treegrid keyboard (rows) and bar focus ───────────────────
@@ -1075,6 +1388,117 @@ public partial class TmGantt : IDisposable
         _contextMenuTask = null;
     }
 
+    /// <summary>
+    /// The click-away scrim. A touch long-press opens the menu while the finger is still down, so the compatibility
+    /// <c>click</c> of the lifting finger lands on the scrim: it is ignored for a moment after a touch open.
+    /// </summary>
+    private void HideContextMenuFromOverlay()
+    {
+        if (_touchMenuOpenedAt != 0 && Environment.TickCount64 - _touchMenuOpenedAt < 600) return;
+        HideContextMenu();
+    }
+
+    /// <summary>
+    /// Long-press (touch hold) on a bar or a tree row: opens the same context menu a right-click opens, anchored at the
+    /// finger. Called by the pointer helper in <c>gantt.js</c>.
+    /// </summary>
+    [JSInvokable]
+    public Task OnLongPressContextMenu(string taskId, double x, double y)
+        => InvokeAsync(() =>
+        {
+            var task = Data.FirstOrDefault(t => t.Id == taskId);
+            if (task is null) return;
+            _contextMenuX = x;
+            _contextMenuY = y;
+            _contextMenuTask = task;
+            _contextMenuVisible = true;
+            _touchMenuOpenedAt = Environment.TickCount64;
+            StateHasChanged();
+        });
+
+    // ── Reorder without dragging (WCAG 2.5.7): Alt+Up/Down on a row and "Move up / down" in the menus ─────────────
+
+    /// <summary>Sets the polite live-region text; an identical repeat is made distinct (a trailing no-break space) so it is announced again.</summary>
+    private void Announce(string message)
+    {
+        _announcement = message == _announcement?.TrimEnd('\u00A0') ? _announcement + "\u00A0" : message;
+    }
+
+    private bool CanMoveContextTask(int step) => _contextMenuTask is not null && CanMove(_contextMenuTask, step);
+
+    /// <summary>The move items need a host that applies the reorder; without an <see cref="OnTaskReordered"/> handler they are disabled (a no-op must not announce success).</summary>
+    internal bool CanReorder => OnTaskReordered.HasDelegate;
+
+    /// <summary>The task panel's move flags for the currently selected task (false without a selection and when reordering is unavailable — both false hide the pair).</summary>
+    private bool CanMoveSelected(int step) => SelectedTask is not null && CanMove(SelectedTask, step);
+
+    internal bool CanMove(TmWorkItem task, int step)
+    {
+        if (!CanReorder) return false;
+        var siblings = SiblingsOf(task);
+        var index = siblings.FindIndex(t => t.Id == task.Id);
+        var target = index + step;
+        return index >= 0 && target >= 0 && target < siblings.Count;
+    }
+
+    /// <summary>The VISIBLE tasks that share the task's parent, in the order the tree shows them (a task hidden by a filter, the quick search or "show closed" is never the neighbour).</summary>
+    private List<TmWorkItem> SiblingsOf(TmWorkItem task)
+        => _visibleNodes.Select(n => n.Task).Where(t => t.ParentId == task.ParentId).ToList();
+
+    private async Task MoveContextTaskAsync(int step)
+    {
+        var task = _contextMenuTask;
+        HideContextMenu();
+        if (task is not null) await MoveTaskAsync(task, step);
+    }
+
+    /// <summary>
+    /// Moves a task one place up (<paramref name="step"/> -1) or down (+1) among its siblings through the SAME
+    /// <see cref="OnTaskReordered"/> path the drag-and-drop uses, and announces it. Does nothing at the first / last place.
+    /// </summary>
+    internal async Task MoveTaskAsync(TmWorkItem task, int step)
+    {
+        if (!CanReorder) return;
+        var siblings = SiblingsOf(task);
+        var index = siblings.FindIndex(t => t.Id == task.Id);
+        var target = index + step;
+        if (index < 0 || target < 0 || target >= siblings.Count) return;
+
+        var neighbour = siblings[target];
+        await OnTaskReordered.InvokeAsync(new GanttTaskReorderedArgs
+        {
+            TaskId = task.Id,
+            TargetTaskId = neighbour.Id,
+            Position = step < 0 ? GanttDropPosition.Before : GanttDropPosition.After,
+        });
+        Announce(Loc[step < 0 ? "TmGantt_MovedUp" : "TmGantt_MovedDown", task.Title, neighbour.Title]);
+        _focusedRowId = task.Id;
+        // A modal side sheet is open over the chart: the row behind it cannot take the focus.
+        if (!(_taskPanelOpen && PanelsAsSheets)) RequestFocus(GanttFocusTarget.Row, task.Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Alt+Up / Alt+Down on a focused tree row (called by <c>gantt.js</c>; the browser's Back / Forward chord is cancelled there).</summary>
+    [JSInvokable]
+    public Task OnTreeKeyboardMove(string taskId, int step)
+        => InvokeAsync(async () =>
+        {
+            var task = Data.FirstOrDefault(t => t.Id == taskId);
+            if (task is not null && step is -1 or 1) await MoveTaskAsync(task, step);
+        });
+
+    // ── Dependency drag (finger, mouse and pen: one pointer session in gantt.js) ─────────────────────────────────
+
+    /// <summary>A dependency handle was dragged onto another bar. Commits through the same path as <see cref="OnDepDrop"/>.</summary>
+    [JSInvokable]
+    public Task OnDependencyDragCompleted(string fromId, bool fromEnd, string toId)
+        => InvokeAsync(async () =>
+        {
+            if (!AllowDependencyCreation || string.IsNullOrEmpty(fromId) || string.IsNullOrEmpty(toId) || fromId == toId) return;
+            StartDepDrag(fromId, fromEnd);
+            await CommitDependencyAsync(toId);
+        });
+
     private async Task InsertTaskAsync(GanttInsertPosition position)
     {
         if (_contextMenuTask is null) return;
@@ -1215,6 +1639,12 @@ public partial class TmGantt : IDisposable
                 break;
             case GanttTaskAction.Duplicate:
                 await SelectTaskAsync(await DuplicateTaskCoreAsync(task));
+                break;
+            case GanttTaskAction.MoveUp:
+                await MoveTaskAsync(task, -1);
+                break;
+            case GanttTaskAction.MoveDown:
+                await MoveTaskAsync(task, 1);
                 break;
             case GanttTaskAction.Delete:
                 // Destructive: confirmed first (the same pattern as the history rollback).
@@ -1443,7 +1873,9 @@ public partial class TmGantt : IDisposable
         _depDragFromEnd = fromEnd;
     }
 
-    public async void OnDepDrop(string targetId)
+    public async void OnDepDrop(string targetId) => await CommitDependencyAsync(targetId);
+
+    private async Task CommitDependencyAsync(string targetId)
     {
         if (_depDragFromId is null || _depDragFromId == targetId)
         {
@@ -1593,10 +2025,11 @@ public partial class TmGantt : IDisposable
     internal int ActiveFilterCount => _activeFilters.Count;
 
     /// <summary>
-    /// True when the filter editor renders as a dialog. <see cref="GanttFilterPanelMode.Auto"/> is inline until the
-    /// container layout (a later phase) can say the Gantt is narrow.
+    /// True when the filter editor renders as a dialog. <see cref="GanttFilterPanelMode.Auto"/> is a dialog on a tablet or
+    /// narrower container and an inline strip on a desktop one.
     /// </summary>
-    internal bool FilterPanelAsDialog => FilterPanelMode == GanttFilterPanelMode.Dialog;
+    internal bool FilterPanelAsDialog => FilterPanelMode == GanttFilterPanelMode.Dialog
+        || (FilterPanelMode == GanttFilterPanelMode.Auto && _layout != TmLayoutMode.Desktop);
 
     /// <summary>The active filters as chips: each carries the filter it was built from, so removing a chip removes exactly that rule.</summary>
     internal IEnumerable<(GanttFilter Source, ActiveFilter Chip)> FilterChips() =>
@@ -1688,7 +2121,16 @@ public partial class TmGantt : IDisposable
     // (which already closes it) and then OnClose again, so a toggle would reopen it.
     private void CloseExportDialog()     => _exportDialogOpen   = false;
     private void CloseImportDialog()     => _importDialogOpen   = false;
-    internal void ToggleHistoryDrawer()  => _historyDrawerOpen  = !_historyDrawerOpen;
+    internal void ToggleHistoryDrawer()
+    {
+        _historyDrawerOpen = !_historyDrawerOpen;
+        // One right-hand surface at a time on a narrow container: the history drawer replaces the task panel / reports.
+        if (_historyDrawerOpen && (IsNarrowLayout || PanelsAsSheets))
+        {
+            SetTaskPanelOpen(false);
+            if (_activeSidebarPanel == GanttSidebarPanel.Reports) _activeSidebarPanel = null;
+        }
+    }
 
     private async Task HandleExportAsync(GanttExportOptions opts)
     {
@@ -1725,45 +2167,15 @@ public partial class TmGantt : IDisposable
     }
 
     // ── Panning ──────────────────────────────────────────────────
-
-    internal async Task OnTimelineMouseDown(MouseEventArgs e)
-    {
-        if (e.Button != 0) return;
-        _isPanning = true;
-        _panStartX = e.ClientX;
-        _panStartY = e.ClientY;
-        _panStartScrollLeft = await GetTimelineScrollLeftAsync();
-        _panStartScrollTop = await GetTimelineBodyScrollTopAsync();
-    }
-
-    internal async Task OnTimelineMouseMove(MouseEventArgs e)
-    {
-        if (!_isPanning) return;
-        var deltaX = _panStartX - e.ClientX;
-        await SetTimelineScrollLeftAsync(_panStartScrollLeft + deltaX);
-        var deltaY = _panStartY - e.ClientY;
-        var newTop = _panStartScrollTop + deltaY;
-        await SetTimelineBodyScrollTopAsync(newTop);
-        await SetTreeBodyScrollTopAsync(newTop);
-    }
-
-    internal void OnTimelineMouseUp(MouseEventArgs e) => _isPanning = false;
+    // The pan (mouse only - a finger or a pen scrolls the timeline natively) and the finger gestures are pointer
+    // sessions of the core pointer-drag.js, attached by gantt.js after the first render (see AttachGesturesAsync);
+    // the edge auto-scroll belongs to the dependency drag, not to the pan.
 
     private async Task<double> GetTimelineScrollLeftAsync() =>
         await JSRuntime.InvokeAsync<double>("tmGantt.getScrollLeft", _timelineContainerRef);
 
     private async Task SetTimelineScrollLeftAsync(double value) =>
         await JSRuntime.InvokeVoidAsync("tmGantt.setScrollLeft", _timelineContainerRef, value);
-
-    private async Task<double> GetTimelineBodyScrollTopAsync() =>
-        await JSRuntime.InvokeAsync<double>("tmGantt.getScrollTop", _timelineBodyRef);
-
-    private async Task SetTimelineBodyScrollTopAsync(double value) =>
-        await JSRuntime.InvokeVoidAsync("tmGantt.setScrollTop", _timelineBodyRef, value);
-
-    private async Task SetTreeBodyScrollTopAsync(double value) =>
-        await JSRuntime.InvokeVoidAsync("tmGantt.setScrollTop", _treeBodyRef, value);
-
     // ── Wheel ────────────────────────────────────────────────────
 
     internal async Task OnTimelineWheel(WheelEventArgs e)

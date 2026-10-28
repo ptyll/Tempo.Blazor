@@ -23186,7 +23186,7 @@
               "name": "ContainerWidth",
               "type": "double?",
               "isRequired": false,
-              "description": "Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser; set it to override the measurement (tests, prerendering)."
+              "description": "Obsolete: use LayoutMode. Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser. While LayoutMode is Auto, a width set here is also classified into a layout (below 640 mobile, below 1024 tablet, otherwise desktop)."
             },
             {
               "name": "CustomFields",
@@ -23207,7 +23207,7 @@
               "type": "GanttFilterPanelMode",
               "isRequired": false,
               "default": "GanttFilterPanelMode.Inline",
-              "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto will pick by container width (until then it is inline). Active filters also show as removable chips under the toolbar."
+              "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto picks by the Gantt's own container (a dialog on a tablet or narrower container, the inline strip on a desktop one). Active filters also show as removable chips under the toolbar."
             },
             {
               "name": "Filters",
@@ -23248,6 +23248,13 @@
               "isRequired": false,
               "default": "[]",
               "description": "In-memory work items. Used when WorkItemSource is null."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the Gantt renders. Auto (default) measures the Gantt's own container (desktop from 1024 px, tablet from 640 px, otherwise mobile); a forced value, or a forced cascading TmLayoutContext ancestor, pins it. Tablet renders a two-row toolbar with a More overflow, a narrower task tree and finger-sized targets; the layout is stamped as data-layout on the root."
             },
             {
               "name": "NotificationSettings",
@@ -23474,6 +23481,12 @@
               "description": "Report definitions shown in the Reports sidebar panel."
             },
             {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the resolved layout changes (never for the initial value). Do not pair it with LayoutMode."
+            },
+            {
               "name": "ResourceCalendars",
               "type": "IReadOnlyList<GanttResourceCalendar>",
               "isRequired": false,
@@ -23521,7 +23534,14 @@
             {
               "name": "ShowTaskPanel",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the task panel is shown. The Gantt never assigns this parameter: internal changes update the internal open state and raise ShowTaskPanelChanged (two-way), and a changed incoming value re-seeds it."
+            },
+            {
+              "name": "ShowTaskPanelChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the task panel's open state changes through an internal path (open on selection, toolbar toggle, sheet close). Pair with ShowTaskPanel for two-way binding."
             },
             {
               "name": "ShowToolbar",
@@ -23548,6 +23568,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Secondary header line under the Title."
+            },
+            {
+              "name": "TaskPanelMode",
+              "type": "GanttTaskPanelMode",
+              "isRequired": false,
+              "default": "GanttTaskPanelMode.Inline",
+              "description": "How the task panel and the Reports inspector are presented: Inline (default) is the in-flow column at every width, Overlay a TmSidePanel side sheet with the tabs Detail | Attachments | Comments | History, Auto the in-flow panel on a desktop container and the side sheet on a tablet or narrower one. On a narrow container at most one right-hand surface (task panel, reports, history) is open."
             },
             {
               "name": "Title",
@@ -24154,11 +24181,32 @@
               "description": "Optional breadcrumb shown above the task title in the panel header."
             },
             {
+              "name": "CanMoveDown",
+              "type": "bool",
+              "isRequired": false,
+              "description": "True when the task can move one place down among its siblings. Disables the Move down command.",
+              "default": "false"
+            },
+            {
+              "name": "CanMoveUp",
+              "type": "bool",
+              "isRequired": false,
+              "description": "True when the task can move one place up among its siblings. Disables the Move up command; both move flags false hide the pair (there is nothing a move could do without a reorder handler upstream).",
+              "default": "false"
+            },
+            {
               "name": "Dependencies",
               "type": "IReadOnlyList<GanttDependency>",
               "isRequired": false,
               "default": "[]",
               "description": "Existing dependencies."
+            },
+            {
+              "name": "History",
+              "type": "IReadOnlyList<TmActivityEntry>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Audit entries; the History tab shows those whose EntityRef.EntityId is the edited task."
             },
             {
               "name": "IsOverloaded",
@@ -24240,10 +24288,23 @@
               "description": "Fires when the user stops the timer (arg = taskId + completed log entry)."
             },
             {
+              "name": "Tabbed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "The tabbed presentation (the side sheet of a tablet container): the panel draws no header (the sheet owns the title and the close button) and splits its sections into the tabs Detail | Attachments | Comments | History. Default false is the single scrolling form of the desktop panel.",
+              "default": "false"
+            },
+            {
               "name": "Task",
               "type": "TmWorkItem?",
               "isRequired": false,
               "description": "The task being edited."
+            },
+            {
+              "name": "TimeZone",
+              "type": "TimeZoneInfo?",
+              "isRequired": false,
+              "description": "Zone the History tab shows its times in. Null: the machine zone."
             }
           ]
         },
@@ -29829,6 +29890,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-resize.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/gantt-pointer.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -83654,7 +83719,7 @@
           "kind": "Enum",
           "category": "Models",
           "namespace": "Tempo.Blazor.Abstractions.Models",
-          "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (meant to pick by container width; behaves as Inline until the container layout lands in a later phase, subject to change).",
+          "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (picks by the Gantt's own container: a dialog on a tablet or narrower container, the inline strip on a desktop one).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilterPanelMode.cs",
           "documentationStatus": "merged"
@@ -83878,7 +83943,7 @@
           "kind": "Enum",
           "category": "Models",
           "namespace": "Tempo.Blazor.Abstractions.Models",
-          "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete).",
+          "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete, move up / down among the siblings).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
           "documentationStatus": "merged"
@@ -83901,6 +83966,16 @@
           "description": "A node in the Gantt task tree.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHelper.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "GanttTaskPanelMode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "How the Gantt presents its task panel: Inline (default, the in-flow column), Overlay (a TmSidePanel side sheet with tabs at every width) or Auto (in-flow on a desktop container, side sheet on a tablet or narrower one).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskPanelMode.cs",
           "documentationStatus": "merged"
         },
         {
@@ -83960,7 +84035,7 @@
           "kind": "Enum",
           "category": "Models",
           "namespace": "Tempo.Blazor.Abstractions.Models",
-          "description": "Controls row height density in the Gantt grid.",
+          "description": "Controls row height density in the Gantt grid: Comfortable (40 px), Compact (28 px) or Touch (44 px finger-sized rows).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttViewDensity.cs",
           "documentationStatus": "merged"
@@ -105806,12 +105881,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1499,
-        "manualItemCount": 1499,
-        "generatedItemCount": 1482,
+        "itemCount": 1500,
+        "manualItemCount": 1500,
+        "generatedItemCount": 1483,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1482
+        "publicApiTypeCount": 1483
       }
     },
     {
@@ -122792,10 +122867,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3324,
-    "manualItemCount": 3324,
+    "itemCount": 3325,
+    "manualItemCount": 3325,
     "generatedOnlyItemCount": 0,
     "componentCount": 497,
-    "publicApiTypeCount": 2774
+    "publicApiTypeCount": 2775
   }
 }

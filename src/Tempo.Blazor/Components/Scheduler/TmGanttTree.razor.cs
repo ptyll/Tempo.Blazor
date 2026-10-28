@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Abstractions.WorkItems;
 
 namespace Tempo.Blazor.Components.Scheduler;
@@ -43,7 +44,8 @@ public partial class TmGanttTree : TmGanttPart
         string Culture,
         string? FocusRow,
         int FocusSeq,
-        bool WbsInTitle);
+        bool WbsInTitle,
+        bool Narrow);
 
     /// <inheritdoc />
     protected override object? RenderState => new TreeState(
@@ -52,20 +54,34 @@ public partial class TmGanttTree : TmGanttPart
         Owner._inlineEditTaskId, Owner._inlineEditColumn, Owner._inlineEditCustomFieldId, Owner._inlineEditValue,
         Owner.ShowOverdueHighlight, Owner._today, Owner.ActiveBaselineId, Owner._overloadedAssigneeIds.Count,
         Owner.TestIdPrefix, Loc.Culture.Name,
-        Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle);
+        Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle, Owner.IsNarrowLayout);
 
     /// <summary>
     /// Duration and Priority do not fit the 420px default, so the grid sizes to the columns it shows (the header and
     /// the cells share one flex row; a narrower grid would clip the last column and misalign them). With neither
     /// column - today's grid - nothing is written and the stylesheet width stands.
     /// </summary>
-    private string? TreeStyle => TreeWidth is { } width ? $"width: {width}px; max-width: 70%; flex-shrink: 0" : null;
+    /// <summary>
+    /// The columns the grid shows. A tablet or narrower container keeps the four that identify and schedule a task - Task, Status, Start,
+    /// End - so the timeline keeps its room (the other columns and the custom fields are one desktop width away).
+    /// </summary>
+    private IEnumerable<GanttColumnDefinition> ShownColumns => Owner.IsNarrowLayout
+        ? Owner.EffectiveColumns.Where(c => c.Visible && c.Key is GanttColumnKey.Title or GanttColumnKey.Status or GanttColumnKey.Start or GanttColumnKey.End)
+        : Owner.EffectiveColumns.Where(c => c.Visible);
+
+    /// <summary>The custom-field columns; none on a narrow container.</summary>
+    private IReadOnlyList<TmCustomFieldDefinition> ShownCustomFields => Owner.IsNarrowLayout ? [] : Owner.CustomFields;
+
+    private string? TreeStyle => Owner.IsNarrowLayout ? null : TreeWidth is { } width ? $"width: {width}px; max-width: 70%; flex-shrink: 0" : null;
 
     /// <summary>The grid's full width in pixels, or null when the stylesheet width stands.</summary>
     private int? TreeWidth
     {
         get
         {
+            // A tablet or narrower container shows only the identifying columns (ShownColumns) in the width it has: no computed minimum.
+            if (Owner.IsNarrowLayout) return null;
+
             var visible = Owner.EffectiveColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
             if (!visible.Contains(GanttColumnKey.Duration) && !visible.Contains(GanttColumnKey.Priority)) return null;
 

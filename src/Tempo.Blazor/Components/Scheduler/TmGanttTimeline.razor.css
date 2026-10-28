@@ -11,6 +11,8 @@
     position: relative;
     cursor: grab;
     background: var(--tm-bg-surface);
+    /* A finger scrolls the timeline natively; the mouse / pen pan is a pointer session of pointer-drag.js (gantt.js). */
+    touch-action: pan-x pan-y;
 }
 
 .tm-gantt__timeline--panning {
@@ -541,4 +543,42 @@
 .tm-gantt__milestone:focus-visible {
     outline: 2px solid transparent;
     box-shadow: var(--tm-focus-ring);
+}
+
+/* ─── Pointer sessions and touch (phase 7) ─────────────────────── */
+
+/* The bar under a dragged dependency line. */
+.tm-gantt__bar--dep-target,
+.tm-gantt__milestone.tm-gantt__bar--dep-target {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The handle is the one place a touch drags immediately (a link), so it owns its touch on EVERY device that has a finger (a touch laptop's primary pointer is fine). */
+@media (any-pointer: coarse) {
+    .tm-gantt__dep-handle {
+        touch-action: none;
+    }
+}
+
+@media (pointer: coarse) {
+    /* A finger has no hover: the handles are always there. The handle is the one place a finger drags immediately (a link), so it
+       owns its touch (touch-action: none, a press never scrolls); everywhere else on the timeline a swipe scrolls natively. The hit
+       area grows around the dot only a little (36px), or the handles of neighbouring bars would cover the scrollable surface. */
+    .tm-gantt__dep-handle {
+        opacity: 1;
+        width: 16px;
+        height: 16px;
+        touch-action: none;
+    }
+
+    .tm-gantt__dep-handle::after {
+        content: "";
+        position: absolute;
+        inset: -10px;
+    }
+
+    .tm-gantt__dep-handle--start { left: -8px; }
+
+    .tm-gantt__dep-handle--end { right: -8px; }
 }

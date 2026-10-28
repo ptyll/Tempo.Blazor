@@ -19,41 +19,19 @@ public class TmGanttPanTests : LocalizationTestBase
     };
 
     /// <summary>
-    /// Dragging on the timeline background should invoke JS to update scrollLeft.
+    /// Phase 7: the pan (mouse / pen) is a pointer session of the core pointer-drag.js, not Blazor mouse events (no awaited
+    /// interop per move). The timeline renders NO @onmouse* handlers; gantt.js is told about it after the first render.
     /// </summary>
     [Fact]
-    public void TmGantt_Pan_Dragging_Moves_Scroll()
+    public void TmGantt_Timeline_Renders_No_Mouse_Handlers_And_Registers_The_Pointer_Pan()
     {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
+        var cut = Render<TmGantt>(p => p.Add(c => c.Items, GetSampleTasks()));
 
-        var timeline = cut.Find(".tm-gantt__timeline");
-
-        // Mouse down on timeline background starts panning
-        timeline.MouseDown(new MouseEventArgs
-        {
-            ClientX = 100,
-            Button = 0
-        });
-
-        // Mouse move triggers scrollLeft update via JS interop
-        timeline.MouseMove(new MouseEventArgs
-        {
-            ClientX = 200,
-            Button = 0
-        });
-
-        // Assert that JS interop was invoked for scrollLeft
-        var invocations = JSInterop.Invocations
-            .Where(i => i.Identifier is "tmGantt.getScrollLeft" or "tmGantt.setScrollLeft")
-            .ToList();
-
-        invocations.Should().NotBeEmpty("panning should invoke JS helpers to read or write scrollLeft");
+        cut.Markup.Should().NotContain("onmousedown").And.NotContain("onmousemove").And.NotContain("onmouseup");
+        JSInterop.Invocations.Select(i => i.Identifier).Should().Contain("tmGantt.attachTimeline");
     }
 
-    /// <summary>
-    /// Clicking a task bar should NOT initiate panning — it should select the task instead.
-    /// </summary>
+    /// <summary>Clicking a task bar selects the task and never enters a panning state.</summary>
     [Fact]
     public void TmGantt_Pan_ClickOnBar_DoesNotPan()
     {
@@ -62,49 +40,20 @@ public class TmGanttPanTests : LocalizationTestBase
             .Add(c => c.Items, GetSampleTasks())
             .Add(c => c.OnTaskSelected, t => selected = t));
 
-        var bar = cut.Find(".tm-gantt__bar");
+        cut.Find(".tm-gantt__bar").Click();
 
-        // Click the bar to trigger selection
-        bar.Click();
-
-        // Assert task was selected
         selected.Should().NotBeNull("clicking a bar should select the task");
-        selected!.Id.Should().Be("1"); // Project is first visible bar
-
-        // Assert timeline does not enter panning state after clicking a bar
-        var timeline = cut.Find(".tm-gantt__timeline");
-        timeline.ClassList.Should().NotContain("tm-gantt__timeline--panning", "timeline should not enter panning mode when a bar is clicked");
+        selected!.Id.Should().Be("1");
+        cut.Find(".tm-gantt__timeline").ClassList.Should().NotContain("tm-gantt__timeline--panning");
     }
 
-    /// <summary>
-    /// Timeline gets the --panning modifier class while panning is active.
-    /// </summary>
+    /// <summary>Bars and milestones name their task for the pointer sessions (long-press, dependency target).</summary>
     [Fact]
-    public void TmGantt_Pan_Adds_Panning_Class()
+    public void TmGantt_Bars_And_Milestones_Carry_Data_Task_Id()
     {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
+        var cut = Render<TmGantt>(p => p.Add(c => c.Items, GetSampleTasks()));
 
-        var timeline = cut.Find(".tm-gantt__timeline");
-
-        timeline.ClassList.Should().NotContain("tm-gantt__timeline--panning", "before mousedown panning class should not be present");
-
-        timeline.MouseDown(new MouseEventArgs
-        {
-            ClientX = 100,
-            Button = 0
-        });
-
-        timeline = cut.Find(".tm-gantt__timeline");
-        timeline.ClassList.Should().Contain("tm-gantt__timeline--panning", "during panning the modifier class should be present");
-
-        timeline.MouseUp(new MouseEventArgs
-        {
-            ClientX = 200,
-            Button = 0
-        });
-
-        timeline = cut.Find(".tm-gantt__timeline");
-        timeline.ClassList.Should().NotContain("tm-gantt__timeline--panning", "after mouseup panning class should be removed");
+        cut.FindAll(".tm-gantt__bar").Select(b => b.GetAttribute("data-task-id")).Should().Contain(["1", "2", "3"]);
+        cut.Find(".tm-gantt__milestone").GetAttribute("data-task-id").Should().Be("4");
     }
 }

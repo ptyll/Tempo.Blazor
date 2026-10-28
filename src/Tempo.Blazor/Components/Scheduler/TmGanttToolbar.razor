@@ -9,222 +9,273 @@
    Create | Structure | Time | Panels | Data | Settings. Every item states its Priority so the tablet / mobile
    phases can switch the bar to Overflow=Menu without re-sorting the buttons; the desktop bar keeps everything
    visible and wraps. *@
-<div class="tm-gantt__toolbar">
-    <TmToolbar Class="tm-gantt__toolbar-bar" AriaLabel="@Loc["TmGantt_Toolbar"]" Labels="Owner.ToolbarLabels">
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupCreate"]" data-tm-group="create">
-            <TmSplitButton Text="@Loc["TmGantt_AddTask"]" Icon="@IconNames.Plus" Size="ButtonSize.Sm" Variant="ButtonVariant.Primary"
-                           OnClick="Owner.AddTaskAsync"
-                           ToggleAriaLabel="@Loc["TmGantt_AddTaskMore"]" SheetTitle="@Loc["TmGantt_AddTaskMore"]"
-                           PrimaryAttributes="@AddTaskAttributes"
-                           data-testid="@TestId("gantt-add-task-split")">
-                <TmContextMenuItem Label="@Loc["TmGantt_AddTaskAbove"]" Icon="arrow-up" Disabled="@(Owner.SelectedTask is null)"
-                                   OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Above)" />
-                <TmContextMenuItem Label="@Loc["TmGantt_AddTaskBelow"]" Icon="arrow-down" Disabled="@(Owner.SelectedTask is null)"
-                                   OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Below)" />
-                <TmContextMenuItem Label="@Loc["TmGantt_AddTaskChild"]" Icon="corner-down-right" Disabled="@(Owner.SelectedTask is null)"
-                                   OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Child)" />
-            </TmSplitButton>
-        </TmToolbarGroup>
-        <TmToolbarDivider />
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupStructure"]" data-tm-group="structure">
-            <TmToolbarButton Icon="chevrons-down" Text="@Loc["TmGantt_ExpandAll"]" Tooltip="@Loc["TmGantt_ExpandAll"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.ExpandAllAsync" data-testid="@TestId("gantt-expand-all")" />
-            <TmToolbarButton Icon="chevrons-up" Text="@Loc["TmGantt_CollapseAll"]" Tooltip="@Loc["TmGantt_CollapseAll"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.CollapseAllAsync" data-testid="@TestId("gantt-collapse-all")" />
-            <TmToolbarButton Icon="list-ordered" Text="@Loc["TmGantt_CascadeSort"]" Tooltip="@Loc["TmGantt_CascadeSort"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.CascadeSortAsync" data-testid="@TestId("gantt-cascade-sort")" />
-        </TmToolbarGroup>
-        <TmToolbarDivider />
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupTime"]" data-tm-group="time">
-            <div class="tm-gantt__segment" role="group" aria-label="@Loc["TmGantt_ViewSwitcher"]">
-                <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Day) ? "tm-gantt__segment-btn--active" : "")"
-                        data-tm-toolbar-control
-                        aria-pressed="@(Owner.IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")"
-                        @onclick="() => Owner.SetViewAsync(GanttView.Day)">@Loc["TmGantt_DayView"]</button>
-                <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Week) ? "tm-gantt__segment-btn--active" : "")"
-                        data-tm-toolbar-control
-                        aria-pressed="@(Owner.IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")"
-                        @onclick="() => Owner.SetViewAsync(GanttView.Week)">@Loc["TmGantt_WeekView"]</button>
-                <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Month) ? "tm-gantt__segment-btn--active" : "")"
-                        data-tm-toolbar-control
-                        aria-pressed="@(Owner.IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")"
-                        @onclick="() => Owner.SetViewAsync(GanttView.Month)">@Loc["TmGantt_MonthView"]</button>
-            </div>
-            <TmToolbarButton Icon="maximize-2" Text="@Loc["TmGantt_FitToScreen"]" Tooltip="@Loc["TmGantt_FitToScreen"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.FitToScreenAsync" data-testid="@TestId("gantt-fit-to-screen")" />
-            <TmToolbarButton Icon="zoom-out" Text="@Loc["TmGantt_ZoomOut"]" Tooltip="@Loc["TmGantt_ZoomOut"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
-                             OnClick="Owner.ZoomOutAsync" data-testid="@TestId("gantt-zoom-out")" />
-            <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
-                   aria-label="@Loc["TmGantt_ZoomLevel"]"
-                   min="50" max="200" step="25" value="@Owner._zoomLevel"
-                   @onchange="Owner.SetZoomLevel" />
-            <span class="tm-gantt__zoom-level">@(Owner._zoomLevel)%</span>
-            <TmToolbarButton Icon="zoom-in" Text="@Loc["TmGantt_ZoomIn"]" Tooltip="@Loc["TmGantt_ZoomIn"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
-                             OnClick="Owner.ZoomInAsync" data-testid="@TestId("gantt-zoom-in")" />
-        </TmToolbarGroup>
-        <TmToolbarDivider />
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupPanels"]" data-tm-group="panels">
-            <TmToolbarButton Icon="edit" Text="@Loc["TmGantt_ToggleTaskPanel"]" Tooltip="@Loc["TmGantt_ToggleTaskPanel"]" Pressed="@Owner.ShowTaskPanel"
-                             OnClick="Owner.ToggleTaskPanel" data-testid="@TestId("gantt-toggle-task-panel")" />
-            <TmToolbarButton Icon="filter" Text="@Loc["TmGantt_Filter"]" Tooltip="@FilterLabel" Badge="@FilterBadge"
-                             Variant="@(Owner._filterPanelOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
-                             OnClick="Owner.ToggleFilterPanel" aria-haspopup="true" aria-expanded="@(Owner._filterPanelOpen ? "true" : "false")"
-                             data-testid="@TestId("gantt-filter-btn")" />
-            <TmToolbarButton Icon="clock" Text="@Loc["TmGantt_History"]" Tooltip="@Loc["TmGantt_History"]" Priority="ToolbarButtonPriority.Secondary"
-                             Variant="@(Owner._historyDrawerOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
-                             OnClick="Owner.ToggleHistoryDrawer" aria-haspopup="true" aria-expanded="@(Owner._historyDrawerOpen ? "true" : "false")"
-                             data-testid="@TestId("gantt-history-btn")" />
-        </TmToolbarGroup>
-        <TmToolbarDivider />
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupData"]" data-tm-group="data">
-            <TmToolbarButton Icon="download" Text="@Loc["TmGantt_Export"]" Tooltip="@Loc["TmGantt_Export"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.ToggleExportDialog" data-testid="@TestId("gantt-export-btn")" />
-            <TmToolbarButton Icon="upload" Text="@Loc["TmGantt_Import"]" Tooltip="@Loc["TmGantt_Import"]" Priority="ToolbarButtonPriority.Secondary"
-                             OnClick="Owner.ToggleImportDialog" data-testid="@TestId("gantt-import-btn")" />
-        </TmToolbarGroup>
-        <TmToolbarDivider />
-        <TmToolbarGroup Label="@Loc["TmGantt_GroupSettings"]" data-tm-group="settings">
-            <TmColumnPicker Class="tm-gantt__column-picker" data-testid="@TestId("gantt-column-menu")" IconOnly="@(Owner.ToolbarLabels == ToolbarLabels.Icons)"
-                            Columns="Owner.ColumnMenuItems()" OnToggleColumn="Owner.ToggleColumnAsync" OnReset="Owner.ResetColumnsAsync" />
-            <div class="tm-gantt__view-settings-wrapper">
-                <TmToolbarButton Icon="settings" Text="@Loc["TmGantt_ViewSettings"]" Tooltip="@Loc["TmGantt_ViewSettings"]" Priority="ToolbarButtonPriority.Secondary"
-                                 OnClick="Owner.ToggleViewSettings" aria-haspopup="true" aria-expanded="@(Owner._viewSettingsOpen ? "true" : "false")"
-                                 data-testid="@TestId("gantt-view-settings-btn")" />
-                @if (Owner._viewSettingsOpen)
-                {
-                    <div class="tm-gantt__view-settings-overlay" @onclick="Owner.ToggleViewSettings"></div>
-                    <div class="tm-gantt__view-settings-menu" @onclick:stopPropagation>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox" data-testid="@TestId("vset-show-today")"
-                                   checked="@Owner.ViewSettings.ShowTodayMarker"
-                                   @onchange="e => Owner.SetShowTodayMarker((bool)e.Value!)" />
-                            <span>@Loc["TmGantt_ShowTodayMarker"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox" data-testid="@TestId("vset-show-daysoff")"
-                                   checked="@Owner.ViewSettings.ShowDaysOff"
-                                   @onchange="e => Owner.SetShowDaysOff((bool)e.Value!)" />
-                            <span>@Loc["TmGantt_ShowDaysOff"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox" data-testid="@TestId("vset-show-progress")"
-                                   checked="@Owner.ViewSettings.ShowProgressLabel"
-                                   @onchange="e => Owner.SetShowProgressLabel((bool)e.Value!)" />
-                            <span>@Loc["TmGantt_ShowProgressLabel"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="checkbox" data-testid="@TestId("vset-show-closed")"
-                                   checked="@Owner.ViewSettings.ShowClosedTasks"
-                                   @onchange="e => Owner.SetShowClosedTasks((bool)e.Value!)" />
-                            <span>@Loc["TmGantt_ShowClosedTasks"]</span>
-                        </label>
-                        <div class="tm-gantt__view-settings-divider"></div>
-                        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_TaskNameLocation"]</div>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="InsideBar"
-                                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.InsideBar)"
-                                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.InsideBar)" />
-                            <span>@Loc["TmGantt_TaskNameInside"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="NextToBar"
-                                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.NextToBar)"
-                                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.NextToBar)" />
-                            <span>@Loc["TmGantt_TaskNameBeside"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="Hidden"
-                                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.Hidden)"
-                                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.Hidden)" />
-                            <span>@Loc["TmGantt_TaskNameHidden"]</span>
-                        </label>
-                        <div class="tm-gantt__view-settings-divider"></div>
-                        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_ViewDensity"]</div>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="density-@Owner.GetHashCode()" value="Comfortable"
-                                   checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Comfortable)"
-                                   @onchange="() => Owner.SetViewDensity(GanttViewDensity.Comfortable)" />
-                            <span>@Loc["TmGantt_ViewComfortable"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="density-@Owner.GetHashCode()" value="Compact"
-                                   checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Compact)"
-                                   @onchange="() => Owner.SetViewDensity(GanttViewDensity.Compact)" />
-                            <span>@Loc["TmGantt_ViewCompact"]</span>
-                        </label>
-                        <div class="tm-gantt__view-settings-divider"></div>
-                        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Theme"]</div>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="theme-@Owner.GetHashCode()" value="Auto"
-                                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Auto)"
-                                   @onchange="() => Owner.SetTheme(GanttTheme.Auto)" />
-                            <span>@Loc["TmGantt_ThemeAuto"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="theme-@Owner.GetHashCode()" value="Light"
-                                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Light)"
-                                   @onchange="() => Owner.SetTheme(GanttTheme.Light)" />
-                            <span>@Loc["TmGantt_ThemeLight"]</span>
-                        </label>
-                        <label class="tm-gantt__view-settings-item">
-                            <input type="radio" name="theme-@Owner.GetHashCode()" value="Dark"
-                                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Dark)"
-                                   @onchange="() => Owner.SetTheme(GanttTheme.Dark)" />
-                            <span>@Loc["TmGantt_ThemeDark"]</span>
-                        </label>
-
-                    @if (Owner.NotificationSettings is not null)
-                    {
-                        <div class="tm-gantt__view-settings-divider"></div>
-                        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
-                        <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
-                            <label class="tm-gantt__view-settings-item">
-                                <input type="checkbox"
-                                       checked="@Owner.NotificationSettings.EmailOnAssign"
-                                       @onchange="e => Owner.UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
-                                <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
-                            </label>
-                            <label class="tm-gantt__view-settings-item">
-                                <input type="checkbox"
-                                       checked="@Owner.NotificationSettings.EmailOnMention"
-                                       @onchange="e => Owner.UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
-                                <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
-                            </label>
-                            <label class="tm-gantt__view-settings-item">
-                                <input type="checkbox"
-                                       checked="@Owner.NotificationSettings.PushOnAssign"
-                                       @onchange="e => Owner.UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
-                                <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
-                            </label>
-                            <label class="tm-gantt__view-settings-item">
-                                <input type="checkbox"
-                                       checked="@Owner.NotificationSettings.PushOnMention"
-                                       @onchange="e => Owner.UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
-                                <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
-                            </label>
-                            <label class="tm-gantt__view-settings-item">
-                                <input type="checkbox"
-                                       checked="@Owner.NotificationSettings.PushOnDeadline"
-                                       @onchange="e => Owner.UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
-                                <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
-                            </label>
-                        </div>
-                    }
-                    </div>
-                }
-            </div>
-        </TmToolbarGroup>
-        @if (Owner.ShowQuickSearch)
-        {
-            <div class="tm-gantt__quick-search" data-testid="@TestId("gantt-quick-search")">
-                <TmSearchInput Value="@Owner._quickSearchText" ValueChanged="Owner.SetQuickSearchAsync" DebounceMs="300"
-                               Placeholder="@Loc["TmGantt_SearchTasks"]" />
-            </div>
-        }
-    </TmToolbar>
+@* The command row: a core TmToolbar (roving tab stop, label mechanism) with the commands grouped by task -
+   Create | Structure | Time | Panels | Data | Settings. Every item states its Priority. On a DESKTOP container one bar
+   keeps everything visible and wraps; on a TABLET container it is two rows (row 1 create / structure / time, row 2
+   panels / data / settings), each an Overflow=Menu bar whose lowest-priority commands leave into "More". *@
+<div class="@(Tablet ? "tm-gantt__toolbar tm-gantt__toolbar--two-rows" : "tm-gantt__toolbar")">
+    @if (Tablet)
+    {
+        <TmToolbar Class="tm-gantt__toolbar-bar tm-gantt__toolbar-bar--primary" AriaLabel="@Loc["TmGantt_Toolbar"]" Labels="Owner.ToolbarLabels"
+                   Overflow="ToolbarOverflow.Menu" OverflowLabel="@Loc["Tm_More"]">
+            @CreateGroup
+            <TmToolbarDivider />
+            @StructureGroup
+            <TmToolbarDivider />
+            @TimeGroup
+        </TmToolbar>
+        <TmToolbar Class="tm-gantt__toolbar-bar tm-gantt__toolbar-bar--secondary" AriaLabel="@Loc["TmGantt_ToolbarMore"]" Labels="Owner.ToolbarLabels"
+                   Overflow="ToolbarOverflow.Menu" OverflowLabel="@Loc["Tm_More"]">
+            @PanelsGroup
+            <TmToolbarDivider />
+            @DataGroup
+            <TmToolbarDivider />
+            @SettingsGroup
+            @SearchBox
+        </TmToolbar>
+    }
+    else
+    {
+        <TmToolbar Class="tm-gantt__toolbar-bar" AriaLabel="@Loc["TmGantt_Toolbar"]" Labels="Owner.ToolbarLabels">
+            @CreateGroup
+            <TmToolbarDivider />
+            @StructureGroup
+            <TmToolbarDivider />
+            @TimeGroup
+            <TmToolbarDivider />
+            @PanelsGroup
+            <TmToolbarDivider />
+            @DataGroup
+            <TmToolbarDivider />
+            @SettingsGroup
+            @SearchBox
+        </TmToolbar>
+    }
 </div>
 
 @code {
+    private bool Tablet => Owner.IsTabletLayout;
+
+    private RenderFragment CreateGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupCreate"]" data-tm-group="create">
+    <TmSplitButton Text="@Loc["TmGantt_AddTask"]" Icon="@IconNames.Plus" Size="ButtonSize.Sm" Variant="ButtonVariant.Primary"
+                   OnClick="Owner.AddTaskAsync"
+                   ToggleAriaLabel="@Loc["TmGantt_AddTaskMore"]" SheetTitle="@Loc["TmGantt_AddTaskMore"]"
+                   PrimaryAttributes="@AddTaskAttributes"
+                   data-testid="@TestId("gantt-add-task-split")">
+        <TmContextMenuItem Label="@Loc["TmGantt_AddTaskAbove"]" Icon="arrow-up" Disabled="@(Owner.SelectedTask is null)"
+                           OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Above)" />
+        <TmContextMenuItem Label="@Loc["TmGantt_AddTaskBelow"]" Icon="arrow-down" Disabled="@(Owner.SelectedTask is null)"
+                           OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Below)" />
+        <TmContextMenuItem Label="@Loc["TmGantt_AddTaskChild"]" Icon="corner-down-right" Disabled="@(Owner.SelectedTask is null)"
+                           OnClick="() => Owner.InsertAtSelectionAsync(GanttInsertPosition.Child)" />
+    </TmSplitButton>
+</TmToolbarGroup>;
+
+    private RenderFragment StructureGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupStructure"]" data-tm-group="structure">
+    <TmToolbarButton Icon="chevrons-down" Text="@Loc["TmGantt_ExpandAll"]" Tooltip="@Loc["TmGantt_ExpandAll"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.ExpandAllAsync" data-testid="@TestId("gantt-expand-all")" />
+    <TmToolbarButton Icon="chevrons-up" Text="@Loc["TmGantt_CollapseAll"]" Tooltip="@Loc["TmGantt_CollapseAll"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.CollapseAllAsync" data-testid="@TestId("gantt-collapse-all")" />
+    <TmToolbarButton Icon="list-ordered" Text="@Loc["TmGantt_CascadeSort"]" Tooltip="@Loc["TmGantt_CascadeSort"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.CascadeSortAsync" data-testid="@TestId("gantt-cascade-sort")" />
+</TmToolbarGroup>;
+
+    private RenderFragment TimeGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupTime"]" data-tm-group="time">
+    <div class="tm-gantt__segment" role="group" aria-label="@Loc["TmGantt_ViewSwitcher"]">
+        <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Day) ? "tm-gantt__segment-btn--active" : "")"
+                data-tm-toolbar-control
+                aria-pressed="@(Owner.IsViewActive(GanttView.Day) ? "true" : "false")" data-testid="@TestId("gantt-view-day")"
+                @onclick="() => Owner.SetViewAsync(GanttView.Day)">@Loc["TmGantt_DayView"]</button>
+        <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Week) ? "tm-gantt__segment-btn--active" : "")"
+                data-tm-toolbar-control
+                aria-pressed="@(Owner.IsViewActive(GanttView.Week) ? "true" : "false")" data-testid="@TestId("gantt-view-week")"
+                @onclick="() => Owner.SetViewAsync(GanttView.Week)">@Loc["TmGantt_WeekView"]</button>
+        <button type="button" class="tm-gantt__segment-btn @(Owner.IsViewActive(GanttView.Month) ? "tm-gantt__segment-btn--active" : "")"
+                data-tm-toolbar-control
+                aria-pressed="@(Owner.IsViewActive(GanttView.Month) ? "true" : "false")" data-testid="@TestId("gantt-view-month")"
+                @onclick="() => Owner.SetViewAsync(GanttView.Month)">@Loc["TmGantt_MonthView"]</button>
+    </div>
+    <TmToolbarButton Icon="maximize-2" Text="@Loc["TmGantt_FitToScreen"]" Tooltip="@Loc["TmGantt_FitToScreen"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.FitToScreenAsync" data-testid="@TestId("gantt-fit-to-screen")" />
+    <TmToolbarButton Icon="zoom-out" Text="@Loc["TmGantt_ZoomOut"]" Tooltip="@Loc["TmGantt_ZoomOut"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
+                     OnClick="Owner.ZoomOutAsync" data-testid="@TestId("gantt-zoom-out")" />
+    <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
+           aria-label="@Loc["TmGantt_ZoomLevel"]"
+           min="50" max="200" step="25" value="@Owner._zoomLevel"
+           @onchange="Owner.SetZoomLevel" />
+    <span class="tm-gantt__zoom-level">@(Owner._zoomLevel)%</span>
+    <TmToolbarButton Icon="zoom-in" Text="@Loc["TmGantt_ZoomIn"]" Tooltip="@Loc["TmGantt_ZoomIn"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
+                     OnClick="Owner.ZoomInAsync" data-testid="@TestId("gantt-zoom-in")" />
+</TmToolbarGroup>;
+
+    private RenderFragment PanelsGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupPanels"]" data-tm-group="panels">
+    <TmToolbarButton Icon="edit" Text="@Loc["TmGantt_ToggleTaskPanel"]" Tooltip="@Loc["TmGantt_ToggleTaskPanel"]" Pressed="@Owner.TaskPanelOpen"
+                     OnClick="Owner.ToggleTaskPanel" data-testid="@TestId("gantt-toggle-task-panel")" />
+    <TmToolbarButton Icon="filter" Text="@Loc["TmGantt_Filter"]" Tooltip="@FilterLabel" Badge="@FilterBadge"
+                     Variant="@(Owner._filterPanelOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
+                     OnClick="Owner.ToggleFilterPanel" aria-haspopup="true" aria-expanded="@(Owner._filterPanelOpen ? "true" : "false")"
+                     data-testid="@TestId("gantt-filter-btn")" />
+    <TmToolbarButton Icon="clock" Text="@Loc["TmGantt_History"]" Tooltip="@Loc["TmGantt_History"]" Priority="ToolbarButtonPriority.Secondary"
+                     Variant="@(Owner._historyDrawerOpen ? ButtonVariant.Primary : ButtonVariant.Ghost)"
+                     OnClick="Owner.ToggleHistoryDrawer" aria-haspopup="true" aria-expanded="@(Owner._historyDrawerOpen ? "true" : "false")"
+                     data-testid="@TestId("gantt-history-btn")" />
+</TmToolbarGroup>;
+
+    private RenderFragment DataGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupData"]" data-tm-group="data">
+    <TmToolbarButton Icon="download" Text="@Loc["TmGantt_Export"]" Tooltip="@Loc["TmGantt_Export"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.ToggleExportDialog" data-testid="@TestId("gantt-export-btn")" />
+    <TmToolbarButton Icon="upload" Text="@Loc["TmGantt_Import"]" Tooltip="@Loc["TmGantt_Import"]" Priority="ToolbarButtonPriority.Secondary"
+                     OnClick="Owner.ToggleImportDialog" data-testid="@TestId("gantt-import-btn")" />
+</TmToolbarGroup>;
+
+    private RenderFragment SettingsGroup => @<TmToolbarGroup Label="@Loc["TmGantt_GroupSettings"]" data-tm-group="settings">
+    <TmColumnPicker Class="tm-gantt__column-picker" data-testid="@TestId("gantt-column-menu")" IconOnly="@(Owner.ToolbarLabels == ToolbarLabels.Icons)"
+                    Columns="Owner.ColumnMenuItems()" OnToggleColumn="Owner.ToggleColumnAsync" OnReset="Owner.ResetColumnsAsync" />
+    <div class="tm-gantt__view-settings-wrapper">
+        <TmToolbarButton Icon="settings" Text="@Loc["TmGantt_ViewSettings"]" Tooltip="@Loc["TmGantt_ViewSettings"]" Priority="ToolbarButtonPriority.Secondary"
+                         OnClick="Owner.ToggleViewSettings" aria-haspopup="true" aria-expanded="@(Owner._viewSettingsOpen ? "true" : "false")"
+                         data-testid="@TestId("gantt-view-settings-btn")" />
+        @if (Owner._viewSettingsOpen)
+        {
+            <div class="tm-gantt__view-settings-overlay" @onclick="Owner.ToggleViewSettings"></div>
+            <div class="tm-gantt__view-settings-menu" @onclick:stopPropagation>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" data-testid="@TestId("vset-show-today")"
+                           checked="@Owner.ViewSettings.ShowTodayMarker"
+                           @onchange="e => Owner.SetShowTodayMarker((bool)e.Value!)" />
+                    <span>@Loc["TmGantt_ShowTodayMarker"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" data-testid="@TestId("vset-show-daysoff")"
+                           checked="@Owner.ViewSettings.ShowDaysOff"
+                           @onchange="e => Owner.SetShowDaysOff((bool)e.Value!)" />
+                    <span>@Loc["TmGantt_ShowDaysOff"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" data-testid="@TestId("vset-show-progress")"
+                           checked="@Owner.ViewSettings.ShowProgressLabel"
+                           @onchange="e => Owner.SetShowProgressLabel((bool)e.Value!)" />
+                    <span>@Loc["TmGantt_ShowProgressLabel"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox" data-testid="@TestId("vset-show-closed")"
+                           checked="@Owner.ViewSettings.ShowClosedTasks"
+                           @onchange="e => Owner.SetShowClosedTasks((bool)e.Value!)" />
+                    <span>@Loc["TmGantt_ShowClosedTasks"]</span>
+                </label>
+                <div class="tm-gantt__view-settings-divider"></div>
+                <div class="tm-gantt__view-settings-label">@Loc["TmGantt_TaskNameLocation"]</div>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="taskloc-@Owner.GetHashCode()" value="InsideBar"
+                           checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.InsideBar)"
+                           @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.InsideBar)" />
+                    <span>@Loc["TmGantt_TaskNameInside"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="taskloc-@Owner.GetHashCode()" value="NextToBar"
+                           checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.NextToBar)"
+                           @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.NextToBar)" />
+                    <span>@Loc["TmGantt_TaskNameBeside"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="taskloc-@Owner.GetHashCode()" value="Hidden"
+                           checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.Hidden)"
+                           @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.Hidden)" />
+                    <span>@Loc["TmGantt_TaskNameHidden"]</span>
+                </label>
+                <div class="tm-gantt__view-settings-divider"></div>
+                <div class="tm-gantt__view-settings-label">@Loc["TmGantt_ViewDensity"]</div>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="density-@Owner.GetHashCode()" value="Comfortable"
+                           checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Comfortable)"
+                           @onchange="() => Owner.SetViewDensity(GanttViewDensity.Comfortable)" />
+                    <span>@Loc["TmGantt_ViewComfortable"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="density-@Owner.GetHashCode()" value="Compact"
+                           checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Compact)"
+                           @onchange="() => Owner.SetViewDensity(GanttViewDensity.Compact)" />
+                    <span>@Loc["TmGantt_ViewCompact"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="density-@Owner.GetHashCode()" value="Touch"
+                           checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Touch)"
+                           @onchange="() => Owner.SetViewDensity(GanttViewDensity.Touch)" />
+                    <span>@Loc["TmGantt_ViewTouch"]</span>
+                </label>
+                <div class="tm-gantt__view-settings-divider"></div>
+                <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Theme"]</div>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="theme-@Owner.GetHashCode()" value="Auto"
+                           checked="@(Owner.ViewSettings.Theme == GanttTheme.Auto)"
+                           @onchange="() => Owner.SetTheme(GanttTheme.Auto)" />
+                    <span>@Loc["TmGantt_ThemeAuto"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="theme-@Owner.GetHashCode()" value="Light"
+                           checked="@(Owner.ViewSettings.Theme == GanttTheme.Light)"
+                           @onchange="() => Owner.SetTheme(GanttTheme.Light)" />
+                    <span>@Loc["TmGantt_ThemeLight"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="radio" name="theme-@Owner.GetHashCode()" value="Dark"
+                           checked="@(Owner.ViewSettings.Theme == GanttTheme.Dark)"
+                           @onchange="() => Owner.SetTheme(GanttTheme.Dark)" />
+                    <span>@Loc["TmGantt_ThemeDark"]</span>
+                </label>
+
+            @if (Owner.NotificationSettings is not null)
+            {
+                <div class="tm-gantt__view-settings-divider"></div>
+                <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
+                <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox"
+                               checked="@Owner.NotificationSettings.EmailOnAssign"
+                               @onchange="e => Owner.UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
+                        <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox"
+                               checked="@Owner.NotificationSettings.EmailOnMention"
+                               @onchange="e => Owner.UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
+                        <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox"
+                               checked="@Owner.NotificationSettings.PushOnAssign"
+                               @onchange="e => Owner.UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
+                        <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox"
+                               checked="@Owner.NotificationSettings.PushOnMention"
+                               @onchange="e => Owner.UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
+                        <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
+                    </label>
+                    <label class="tm-gantt__view-settings-item">
+                        <input type="checkbox"
+                               checked="@Owner.NotificationSettings.PushOnDeadline"
+                               @onchange="e => Owner.UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
+                        <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
+                    </label>
+                </div>
+            }
+            </div>
+        }
+    </div>
+</TmToolbarGroup>;
+
+    private RenderFragment SearchBox => @<text>
+@if (Owner.ShowQuickSearch)
+{
+    <div class="tm-gantt__quick-search" data-testid="@TestId("gantt-quick-search")">
+        <TmSearchInput Value="@Owner._quickSearchText" ValueChanged="Owner.SetQuickSearchAsync" DebounceMs="300"
+                       Placeholder="@Loc["TmGantt_SearchTasks"]" />
+    </div>
+}
+</text>;
+
     private Dictionary<string, object> AddTaskAttributes => new()
     {
         ["data-testid"] = TestId("gantt-add-task"),

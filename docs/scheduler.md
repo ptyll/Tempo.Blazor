@@ -192,3 +192,9 @@ uses the circuit's `ITmUserTimeZone` — the browser's zone, UTC on Blazor Serve
 reports, the runtime's zone on WebAssembly — and the machine-local zone only when no
 `ITmUserTimeZone` is registered. `ResolveTimeZone()` returns the effective zone. Recurrence expansion
 and the "today" of the now indicator both use it; neither reads `DateTime.Now`.
+
+## Gantt tablet and touch
+
+The embedded calendar mode of `TmGantt` renders this scheduler; the Gantt's own tablet layout, the `TaskPanelMode` side sheet and the
+pointer gestures of `gantt.js` (pan, dependency drag, long-press menu, Alt+Up/Down reorder) are described in
+[touch-interaction.md](touch-interaction.md) and in the `CHANGELOG` entry "TmGantt phase 7".

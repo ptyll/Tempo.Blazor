@@ -351,3 +351,43 @@
 .tm-gantt__panel-color-swatch--selected {
     box-shadow: 0 0 0 2px var(--tm-color-primary);
 }
+
+/* ─── Tabbed presentation: the content of the tablet side sheet (phase 7) ─── */
+
+.tm-gantt-task-panel--tabbed {
+    width: 100%;
+    min-width: 0;
+    border-left: 0;
+}
+
+.tm-gantt-task-panel--tabbed ::deep .tm-gantt-task-panel__tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tm-gantt-task-panel--tabbed ::deep .tm-tabs__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tm-gantt-task-panel__dirty {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+@media (pointer: coarse) {
+    .tm-gantt-task-panel__action-list > * {
+        min-height: var(--tm-touch-target);
+    }
+}

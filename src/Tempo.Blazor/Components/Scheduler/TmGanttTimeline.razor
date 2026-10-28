@@ -4,13 +4,9 @@
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Abstractions.WorkItems
 
-<div class="tm-gantt__timeline @(Owner._isPanning ? "tm-gantt__timeline--panning" : "")"
+<div class="tm-gantt__timeline"
      data-testid="@TestId("gantt-timeline")"
      @ref="Owner._timelineContainerRef"
-     @onmousedown="Owner.OnTimelineMouseDown"
-     @onmousemove="Owner.OnTimelineMouseMove"
-     @onmouseup="Owner.OnTimelineMouseUp"
-     @onmouseleave="Owner.OnTimelineMouseUp"
      @onwheel="Owner.OnTimelineWheel">
 
     <!-- Two-row Timeline Header -->
@@ -121,12 +117,13 @@
                              @ref="_barRefs[bar.Task.Id]"
                              role="button" tabindex="-1"
                              aria-label="@MilestoneLabel(bar)"
+                             data-task-id="@bar.Task.Id"
                              style="left: @(F(bar.Left - 6))px"
                              title="@bar.Task.Title"
-                             @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onpointerup="e => Owner.NotePointerUp(e)"
+                             @onclick="() => Owner.TapTaskAsync(bar.Task)"
                              @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
-                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
-                             @onmousedown:stopPropagation="true">
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)">
                         </div>
                     }
                     else
@@ -137,12 +134,13 @@
                              role="button" tabindex="-1"
                              aria-label="@BarLabel(bar)"
                              data-testid="@TestId($"task-bar-{bar.Task.Id}")"
+                             data-task-id="@bar.Task.Id"
                              style="left: @(F(bar.Left))px; width: @(F(bar.Width))px; @GetBarColorStyle(bar)"
                              title="@bar.Task.Title (@bar.Task.PercentComplete%)"
-                             @onclick="() => Owner.SelectTaskAsync(bar.Task)"
+                             @onpointerup="e => Owner.NotePointerUp(e)"
+                             @onclick="() => Owner.TapTaskAsync(bar.Task)"
                              @onkeydown="e => Owner.HandleBarKeyDownAsync(e, bar.Task)"
-                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)"
-                             @onmousedown:stopPropagation="true">
+                             @onkeyup="e => Owner.HandleBarKeyUpAsync(e, bar.Task)">
                             <div class="tm-gantt__bar-progress" style="width: @(bar.Task.PercentComplete)%"></div>
                             @if (ShouldRenderBarLabel(bar))
                             {
@@ -190,14 +188,11 @@
                             <!-- Dep creation handles -->
                             @if (Owner.AllowDependencyCreation)
                             {
+                                @* Pointer sessions of gantt.js (core pointer-drag.js): the handle names its task and which end it starts from. *@
                                 <span class="tm-gantt__dep-handle tm-gantt__dep-handle--start"
-                                      @onmousedown:stopPropagation
-                                      @onmousedown="() => Owner.StartDepDrag(bar.Task.Id, fromEnd: false)"></span>
+                                      data-task-id="@bar.Task.Id" data-dep-end="false"></span>
                                 <span class="tm-gantt__dep-handle tm-gantt__dep-handle--end"
-                                      @onmousedown:stopPropagation
-                                      @onmousedown="() => Owner.StartDepDrag(bar.Task.Id, fromEnd: true)"
-                                      @onmouseup:stopPropagation
-                                      @onmouseup="() => Owner.OnDepDrop(bar.Task.Id)"></span>
+                                      data-task-id="@bar.Task.Id" data-dep-end="true"></span>
                             }
 
                             <!-- Hover tooltip -->

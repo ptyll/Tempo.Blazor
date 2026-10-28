@@ -14,7 +14,7 @@
         {
             <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--checkbox" role="columnheader" aria-label="@Loc["TmGantt_BulkSelectColumn"]"></span>
         }
-        @foreach (var col in Owner.EffectiveColumns.Where(c => c.Visible))
+        @foreach (var col in ShownColumns)
         {
             @if (col.Key == GanttColumnKey.WBS)
             {
@@ -53,7 +53,7 @@
                       data-testid="@TestId("col-header-priority")">@Loc["TmGantt_Priority"]</span>
             }
         }
-        @foreach (var cf in Owner.CustomFields)
+        @foreach (var cf in ShownCustomFields)
         {
             <span class="tm-gantt__tree-header-cell tm-gantt__custom-field-header" role="columnheader"
                   data-testid="@TestId($"custom-col-header-{cf.Id}")">@cf.Name</span>
@@ -71,11 +71,13 @@
                  aria-selected="@(Owner.SelectedTask?.Id == node.Task.Id ? "true" : "false")"
                  tabindex="@(node.Task.Id == focusRowId ? 0 : -1)"
                  data-testid="@TestId($"tree-row-{node.Task.Id}")"
+                 data-task-id="@node.Task.Id"
                  draggable="true"
                  @onfocus="() => Owner.NoteRowFocus(node.Task.Id)"
                  @onkeydown="e => Owner.HandleRowKeyDownAsync(e, node)"
                  @onkeyup="e => Owner.HandleRowKeyUpAsync(e, node)"
-                 @onclick="() => Owner.SelectTaskAsync(node.Task)"
+                 @onpointerup="e => Owner.NotePointerUp(e)"
+                 @onclick="() => Owner.TapTaskAsync(node.Task)"
                  @oncontextmenu="e => Owner.ShowContextMenu(e, node.Task)"
                  @oncontextmenu:preventDefault
                  @ondragstart="() => Owner.OnDragStart(node.Task)"
@@ -93,7 +95,7 @@
                     </span>
                 }
 
-                @foreach (var col in Owner.EffectiveColumns.Where(c => c.Visible))
+                @foreach (var col in ShownColumns)
                 {
                     @if (col.Key == GanttColumnKey.WBS)
                     {
@@ -237,7 +239,7 @@
                     }
                 }
 
-                @foreach (var cf in Owner.CustomFields)
+                @foreach (var cf in ShownCustomFields)
                 {
                     var cfVal = node.Task.CustomFields.TryGetValue(cf.Id, out var v) ? v : null;
                     @if (Owner._inlineEditTaskId == node.Task.Id && Owner._inlineEditCustomFieldId == cf.Id)

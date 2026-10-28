@@ -163,6 +163,9 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_ZoomButtons_ChangeZoomLevel()
     {
         var page = await CreatePageAsync();
+        // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
+        // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -201,6 +204,9 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_ImportDialog_FileChooser_KeyboardAccessible()
     {
         var page = await CreatePageAsync();
+        // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
+        // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 

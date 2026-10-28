@@ -907,3 +907,57 @@ test('the plain Alt+Arrow step reports shift:false', () => {
     assert.equal(steps.length, 1);
     assert.deepEqual({ x: steps[0].x, y: steps[0].y, shift: steps[0].shift }, { x: 1, y: 0, shift: false });
 });
+
+test('accept veto leaves the chord to the browser: not prevented, not reported', () => {
+    // Alt+arrow inside an inline editor belongs to the field (cursor move), not to the row.
+    const el = fakeElement();
+    const steps = [];
+    attachKeyboardMove(el, {
+        accept: event => !event.editorOwns,
+        onStep: (step) => steps.push(step),
+    });
+
+    const owned = { key: 'ArrowDown', altKey: true, editorOwns: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', owned);
+    assert.equal(owned.prevented, undefined, 'accept runs BEFORE preventDefault: a veto never cancels the key');
+    assert.equal(steps.length, 0, 'a vetoed chord is not reported either');
+
+    const row = { key: 'ArrowDown', altKey: true, editorOwns: false, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', row);
+    assert.equal(row.prevented, true, 'an accepted chord behaves as without the option');
+    assert.equal(steps.length, 1);
+});
+
+test('accept runs after the selector match and receives the keydown event', () => {
+    const container = fakeElement();
+    const row = child(container, ['.row']);
+    const elsewhere = child(container, []);
+    const seen = [];
+    attachKeyboardMove(container, {
+        selector: '.row',
+        accept: event => { seen.push(event.target); return true; },
+        onStep: () => {},
+    });
+
+    container.dispatch('keydown', { key: 'ArrowUp', altKey: true, target: row });
+    container.dispatch('keydown', { key: 'ArrowUp', altKey: true, target: elsewhere });
+
+    assert.deepEqual(seen, [row], 'accept only sees keydowns the selector already claimed');
+});
+
+test('accept runs before shift handling reports and never for non-arrow keys', () => {
+    const el = fakeElement();
+    const accepted = [];
+    const steps = [];
+    attachKeyboardMove(el, {
+        shift: true,
+        accept: event => { accepted.push(event.key); return true; },
+        onStep: step => steps.push(step),
+    });
+
+    el.dispatch('keydown', { key: 'Tab', altKey: true, preventDefault() { this.prevented = true; } });
+    el.dispatch('keydown', { key: 'ArrowLeft', altKey: true, shiftKey: true, ctrlKey: true });
+
+    assert.deepEqual(accepted, [], 'accept is consulted only for a chord the helper would take');
+    assert.equal(steps.length, 0);
+});

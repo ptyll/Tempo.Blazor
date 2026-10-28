@@ -56,10 +56,13 @@ const ARROW_STEP = Object.freeze({
  * Pass `shift: true` to also accept Alt+Shift+Arrow (the resize alternative, e.g. a Scheduler
  * event): the step then reports `shift: true`. Without the option Alt+Shift+Arrow stays ignored
  * and unprevented, exactly like every non-arrow chord.
+ * Pass `accept(event)` to veto the chord for keys another control owns (an inline editor's
+ * arrows): it runs before `preventDefault`, so a `false` return leaves the key exactly as it
+ * was — not prevented, not reported.
  *
  * @param {Element|null} element the focused item (or its container, with `selector`)
  * @param {{ onStep?: (step: { key: string, x: number, y: number, shift: boolean, event: Event }) => void,
- *           selector?: string, shift?: boolean }} [options]
+ *           selector?: string, shift?: boolean, accept?: (event: Event) => boolean }} [options]
  * @returns {{ detach: () => void }}
  */
 export function attachKeyboardMove(element, options = {}) {
@@ -67,6 +70,7 @@ export function attachKeyboardMove(element, options = {}) {
 
     const selector = typeof options.selector === 'string' && options.selector ? options.selector : null;
     const allowShift = options.shift === true;
+    const accept = typeof options.accept === 'function' ? options.accept : null;
     const onKeyDown = (event) => {
         if (!event.altKey || event.ctrlKey || event.metaKey) return;
         if (event.shiftKey && !allowShift) return;
@@ -76,6 +80,7 @@ export function attachKeyboardMove(element, options = {}) {
             const target = event.target?.closest?.(selector) ?? null;
             if (!target || !element.contains(target)) return;
         }
+        if (accept && !accept(event)) return;
         event.preventDefault?.();
         options.onStep?.({ key: event.key, x: step.x, y: step.y, shift: event.shiftKey === true, event });
     };

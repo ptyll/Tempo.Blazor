@@ -9,11 +9,16 @@
 @using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Components.Files
 @using Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Abstractions.Shared
 @using Microsoft.AspNetCore.Components.Forms
 
 @if (Task is not null)
 {
-    <div class="tm-gantt-task-panel">
+    <div class="@(Tabbed ? "tm-gantt-task-panel tm-gantt-task-panel--tabbed" : "tm-gantt-task-panel")" data-dirty="@(Tabbed && IsDirty ? "true" : null)">
+        @* Tabbed (the side sheet): the TmSidePanel owns the title and the close button, so the panel draws no header of its own. *@
+        @if (!Tabbed)
+        {
         <div class="tm-gantt-task-panel__header">
             <div class="tm-gantt-task-panel__header-main">
                 @if (Breadcrumb is not null)
@@ -33,9 +38,61 @@
                 </TmButton>
             }
         </div>
-        <div class="tm-gantt-task-panel__scroll">
+        }
+        @if (Tabbed)
+        {
+            <TmTabs ActiveTabId="@_tab" ActiveTabIdChanged="SelectTab" AriaLabel="@Loc["TmGanttTaskPanel_Tabs"]" Class="tm-gantt-task-panel__tabs">
+                <TmTabPanel Id="detail" Title="@Loc["TmGanttTaskPanel_TabDetail"]">@Scroll</TmTabPanel>
+                <TmTabPanel Id="attachments" Title="@Loc["GanttTask_Attachments"]" Badge="@CountBadge(Task.Attachments.Count)">@Scroll</TmTabPanel>
+                <TmTabPanel Id="comments" Title="@Loc["GanttTask_Comments"]" Badge="@CountBadge(Task.Comments.Count)">@Scroll</TmTabPanel>
+                <TmTabPanel Id="history" Title="@Loc["TmGantt_History"]">@Scroll</TmTabPanel>
+            </TmTabs>
+        }
+        else
+        {
+            @Scroll
+        }
+
+        @if (Tabbed && _tab != "detail" && IsDirty)
+        {
+            @* The draft survives a tab switch; this says where it waits. *@
+            <p class="tm-gantt-task-panel__dirty" role="status" data-testid="@TestId("task-dirty")">
+                <TmIcon Name="alert-circle" Size="IconSize.Sm" />
+                <span>@Loc["TmGanttTaskPanel_UnsavedChanges"]</span>
+            </p>
+        }
+
+        @if (!Tabbed || _tab == "detail" || IsDirty)
+        {
+        @if (!string.IsNullOrEmpty(_validationError))
+        {
+            <div class="tm-gantt-task-panel__error tm-gantt-task-panel__error--footer" data-testid="@TestId("task-validation-error")" role="alert">
+                <TmIcon Name="alert-circle" />
+                <span>@_validationError</span>
+            </div>
+        }
+
+        @* The transactional footer is OUTSIDE the scroller: it stays in view while the fields scroll. Cancel first,
+           the primary action last (right), the order of the other inspectors. *@
+        <div class="tm-gantt-task-panel__actions">
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelAsync" data-testid="@TestId("task-cancel")">
+                @Loc["TmGanttTaskPanel_Cancel"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync" data-testid="@TestId("task-save")">
+                @Loc["TmGanttTaskPanel_Save"]
+            </TmButton>
+        </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The scrolling body. In the tabbed presentation every tab renders it and each section shows only on its own tab.</summary>
+    private RenderFragment Scroll => @<div class="tm-gantt-task-panel__scroll">
 
             @* ── Plan: title, dates, duration, deadline ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-plan")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionPlan"]</h3>
                 <div class="tm-gantt-task-panel__grid">
@@ -60,8 +117,11 @@
                     </div>
                 </div>
             </section>
+            }
 
             @* ── Progress: status, priority, percent, hours, assignees (read-only), overload and baseline notes ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-progress")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionProgress"]</h3>
                 <div class="tm-gantt-task-panel__grid">
@@ -125,8 +185,11 @@
                     </div>
                 }
             </section>
+            }
 
             @* ── Structure: milestone, parent ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-structure")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionStructure"]</h3>
                 <div class="tm-gantt-task-panel__grid">
@@ -142,8 +205,11 @@
                     </div>
                 </div>
             </section>
+            }
 
             @* ── Appearance: colour ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-appearance")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionAppearance"]</h3>
                 <div data-testid="@TestId("task-color-picker")">
@@ -162,8 +228,11 @@
                     </div>
                 </div>
             </section>
+            }
 
             @* ── Description ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-description")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Description"]</h3>
                 <div data-testid="@TestId("task-description")">
@@ -175,8 +244,11 @@
                               placeholder="@Loc["GanttTask_DescriptionPlaceholder"]"></textarea>
                 </div>
             </section>
+            }
 
             @* ── Attachments: cards (name; size and date when the model carries them) ── *@
+            @if (ShowSection("attachments"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-attachments")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Attachments"]</h3>
                 <div data-testid="@TestId("attachment-list")">
@@ -205,8 +277,11 @@
                 <TmFileDropZone OnFilesSelected="OnAttachmentFileChangedAsync" Multiple="true"
                                 data-testid="@TestId("attachment-upload")" />
             </section>
+            }
 
             @* ── Comments ── *@
+            @if (ShowSection("comments"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-comments")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Comments"]</h3>
                 <div data-testid="@TestId("comment-list")">
@@ -215,8 +290,11 @@
                                         ShowAddButton="true" />
                 </div>
             </section>
+            }
 
             @* ── Budget & cost ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-budget")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_BudgetSection"]</h3>
                 <div data-testid="@TestId("task-budget-section")">
@@ -232,8 +310,11 @@
                     </div>
                 </div>
             </section>
+            }
 
             @* ── Time log & timer ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-timelog")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGantt_TimeLog"]</h3>
                 <div data-testid="@TestId("task-timelog-section")">
@@ -290,8 +371,11 @@
                     }
                 </div>
             </section>
+            }
 
             @* ── Dependencies ── *@
+            @if (ShowSection("detail"))
+            {
             <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-dependencies")">
                 <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_Dependencies"]</h3>
                 <div class="tm-gantt-task-panel__deps" data-testid="@TestId("task-dependencies")">
@@ -378,12 +462,23 @@
                     }
                 </div>
             </section>
+            }
 
             @* ── Actions: the commands of the task context menu (only when the host handles them) ── *@
-            @if (OnAction.HasDelegate)
+            @* ── History: the audit entries of THIS task (the tabbed presentation) ── *@
+            @if (Tabbed && ShowSection("history"))
+            {
+                <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-history")">
+                    <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGantt_History"]</h3>
+                    <TmGanttHistoryList History="TaskHistory" Tasks="AllTasks" TimeZone="TimeZone"
+                                        TestIdPrefix="@TestIdPrefix" />
+                </section>
+            }
+
+            @if (OnAction.HasDelegate && ShowSection("detail"))
             {
                 <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-actions")">
-                    <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionActions"]</h3>
+                    <h3 class="tm-gantt-task-panel__group-title">@Loc[Tabbed ? "TmGanttTaskPanel_MoreActions" : "TmGanttTaskPanel_SectionActions"]</h3>
                     <div class="tm-gantt-task-panel__action-list">
                         <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="check"
                                   OnClick="() => RaiseActionAsync(GanttTaskAction.MarkDone)"
@@ -403,28 +498,21 @@
                         <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" Icon="trash-2"
                                   OnClick="() => RaiseActionAsync(GanttTaskAction.Delete)"
                                   data-testid="@TestId("task-action-delete")">@Loc["TmGantt_DeleteTask"]</TmButton>
+                        @if (Tabbed && (CanMoveUp || CanMoveDown))
+                        {
+                            @* The non-drag alternative of the tree reorder (WCAG 2.5.7): the panel is reachable by touch and keyboard.
+                               The pair hides when neither move is possible (no reorder handler upstream); a move at the row's edge stays visible but disabled. *@
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="chevron-up"
+                                      Disabled="@(!CanMoveUp)"
+                                      OnClick="() => RaiseActionAsync(GanttTaskAction.MoveUp)"
+                                      data-testid="@TestId("task-action-move-up")">@Loc["TmGantt_MoveUp"]</TmButton>
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="chevron-down"
+                                      Disabled="@(!CanMoveDown)"
+                                      OnClick="() => RaiseActionAsync(GanttTaskAction.MoveDown)"
+                                      data-testid="@TestId("task-action-move-down")">@Loc["TmGantt_MoveDown"]</TmButton>
+                        }
                     </div>
                 </section>
             }
-        </div>
-
-        @if (!string.IsNullOrEmpty(_validationError))
-        {
-            <div class="tm-gantt-task-panel__error tm-gantt-task-panel__error--footer" data-testid="@TestId("task-validation-error")" role="alert">
-                <TmIcon Name="alert-circle" />
-                <span>@_validationError</span>
-            </div>
-        }
-
-        @* The transactional footer is OUTSIDE the scroller: it stays in view while the fields scroll. Cancel first,
-           the primary action last (right), the order of the other inspectors. *@
-        <div class="tm-gantt-task-panel__actions">
-            <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelAsync" data-testid="@TestId("task-cancel")">
-                @Loc["TmGanttTaskPanel_Cancel"]
-            </TmButton>
-            <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync" data-testid="@TestId("task-save")">
-                @Loc["TmGanttTaskPanel_Save"]
-            </TmButton>
-        </div>
-    </div>
+        </div>;
 }

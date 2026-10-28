@@ -1,3 +1,4 @@
+using Tempo.Blazor.Abstractions.Layout;
 using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
@@ -359,9 +360,9 @@ public class TmGanttPhase6FilterTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmGantt_FilterPanelMode_Auto_Is_Inline_Until_The_Container_Layout_Lands()
+    public void TmGantt_FilterPanelMode_Auto_Is_Inline_On_A_Desktop_Container()
     {
-        var cut = Render<TmGantt>(p => p.Add(x => x.Items, Tasks()).Add(x => x.FilterPanelMode, GanttFilterPanelMode.Auto));
+        var cut = Render<TmGantt>(p => p.Add(x => x.Items, Tasks()).Add(x => x.FilterPanelMode, GanttFilterPanelMode.Auto).Add(x => x.LayoutMode, TmLayoutMode.Desktop));
 
         cut.Find("[data-testid='gantt-filter-btn']").Click();
 
@@ -369,6 +370,18 @@ public class TmGanttPhase6FilterTests : LocalizationTestBase
         cut.FindAll(".tm-modal-overlay").Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(TmLayoutMode.Tablet)]
+    [InlineData(TmLayoutMode.Mobile)]
+    public void TmGantt_FilterPanelMode_Auto_Is_A_Dialog_On_A_Tablet_Or_Narrower_Container(TmLayoutMode mode)
+    {
+        var cut = Render<TmGantt>(p => p.Add(x => x.Items, Tasks()).Add(x => x.FilterPanelMode, GanttFilterPanelMode.Auto).Add(x => x.LayoutMode, mode));
+
+        cut.Find("[data-testid='gantt-filter-btn']").Click();
+
+        cut.FindAll(".tm-gantt__filter-panel").Should().BeEmpty();
+        cut.FindAll(".tm-modal-overlay").Should().ContainSingle();
+    }
     [Fact]
     public void TmGantt_FilterPanelMode_Dialog_Renders_TmModal()
     {

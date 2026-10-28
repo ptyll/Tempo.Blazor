@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "How the Gantt presents its task panel: Inline (default, the in-flow column), Overlay (a TmSidePanel side sheet with tabs at every width) or Auto (in-flow on a desktop container, side sheet on a tablet or narrower one).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskPanelMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttTaskPanelMode"
+}

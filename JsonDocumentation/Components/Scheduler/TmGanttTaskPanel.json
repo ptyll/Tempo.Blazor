@@ -18,6 +18,39 @@
       "description": "The task being edited."
     },
     {
+      "name": "CanMoveUp",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "True when the task can move one place up among its siblings. Disables the Move up command; both move flags false hide the pair (there is nothing a move could do without a reorder handler upstream)."
+    },
+    {
+      "name": "CanMoveDown",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "True when the task can move one place down among its siblings. Disables the Move down command."
+    },
+    {
+      "name": "Tabbed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The tabbed presentation (the side sheet of a tablet container): the panel draws no header (the sheet owns the title and the close button) and splits its sections into the tabs Detail | Attachments | Comments | History. Default false is the single scrolling form of the desktop panel."
+    },
+    {
+      "name": "History",
+      "type": "IReadOnlyList<TmActivityEntry>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Audit entries; the History tab shows those whose EntityRef.EntityId is the edited task."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Zone the History tab shows its times in. Null: the machine zone."
+    },    {
       "name": "ActiveTimerTaskId",
       "type": "string?",
       "isRequired": false,

@@ -297,6 +297,8 @@
 
 .tm-gantt__tree-header-cell--checkbox,
 .tm-gantt__tree-cell--checkbox {
+    /* A fixed column: the generic cell is flex: 1, which let the checkbox column swallow the grid once it was narrower than its columns. */
+    flex: 0 0 32px;
     width: 32px;
     flex-shrink: 0;
     display: flex;
@@ -399,4 +401,42 @@
     font-size: 0.7rem;
     margin-left: 2px;
     vertical-align: middle;
+}
+
+/* ─── Density, tablet and touch (phase 7) ──────────────────────── */
+
+/* The row height is one value for the tree and the timeline: Compact 28px, Touch 44px (--tm-touch-target). The bars are laid out
+   from the same number in TmGantt.RowHeight, so a row and its bar can never drift. */
+[data-density="compact"] .tm-gantt__tree-row {
+    height: 28px;
+}
+
+[data-density="touch"] .tm-gantt__tree-row {
+    height: 44px;
+}
+
+/* A tablet container narrows the tree so the timeline keeps room: the grid scrolls inside it past the width. */
+[data-layout="tablet"] .tm-gantt__tree,
+[data-layout="mobile"] .tm-gantt__tree {
+    width: min(28rem, 50%);
+    min-width: 0;
+}
+
+@media (pointer: coarse) {
+    /* The row height is computed in C# (the bars sit on the same grid), so a coarse pointer does not resize a row: the
+       finger-sized hit area of the small controls grows around them instead, and GanttViewDensity.Touch makes the row 44px. */
+    .tm-gantt__expand-btn {
+        position: relative;
+    }
+
+    .tm-gantt__expand-btn::after {
+        content: "";
+        position: absolute;
+        inset: -12px;
+    }
+
+    /* The grip is an HTML5 drag affordance for a mouse; a finger reorders with the row menu / Alt+arrow alternative. */
+    .tm-gantt__drag-handle {
+        display: none;
+    }
 }

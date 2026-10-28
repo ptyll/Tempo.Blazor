@@ -15280,7 +15280,7 @@
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
-      "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (meant to pick by container width; behaves as Inline until the container layout lands in a later phase, subject to change).",
+      "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (picks by the Gantt's own container: a dialog on a tablet or narrower container, the inline strip on a desktop one).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilterPanelMode.cs",
       "documentationStatus": "merged"
@@ -15504,7 +15504,7 @@
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
-      "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete).",
+      "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete, move up / down among the siblings).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
       "documentationStatus": "merged"
@@ -15527,6 +15527,16 @@
       "description": "A node in the Gantt task tree.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHelper.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttTaskPanelMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt presents its task panel: Inline (default, the in-flow column), Overlay (a TmSidePanel side sheet with tabs at every width) or Auto (in-flow on a desktop container, side sheet on a tablet or narrower one).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskPanelMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -15586,7 +15596,7 @@
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
-      "description": "Controls row height density in the Gantt grid.",
+      "description": "Controls row height density in the Gantt grid: Comfortable (40 px), Compact (28 px) or Touch (44 px finger-sized rows).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttViewDensity.cs",
       "documentationStatus": "merged"
@@ -37432,11 +37442,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1499,
-    "manualItemCount": 1499,
-    "generatedItemCount": 1482,
+    "itemCount": 1500,
+    "manualItemCount": 1500,
+    "generatedItemCount": 1483,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1482
+    "publicApiTypeCount": 1483
   }
 }

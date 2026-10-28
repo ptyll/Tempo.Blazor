@@ -188,3 +188,36 @@
     background: var(--tm-bg-muted);
     color: var(--tm-text-primary);
 }
+
+/* ─── Tablet: two rows, each an Overflow=Menu bar (phase 7) ───────── */
+
+/* The bars no longer wrap: a command that does not fit leaves into the bar's own "More" menu, so a 1024px
+   container never grows a horizontal scrollbar on the toolbar. */
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar {
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar .tm-toolbar-start {
+    flex-wrap: nowrap;
+}
+
+/* The search box shares the second row with the panel / data commands: it yields width to them. */
+.tm-gantt__toolbar--two-rows .tm-gantt__quick-search {
+    min-width: 8rem;
+    max-width: 12rem;
+}
+
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar--secondary {
+    border-top: 1px solid var(--tm-border-color);
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__zoom-slider {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__view-settings-item {
+        min-height: var(--tm-touch-target);
+    }
+}

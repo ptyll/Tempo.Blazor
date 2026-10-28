@@ -20,4 +20,10 @@ public enum GanttTaskAction
 
     /// <summary>Removes the task.</summary>
     Delete,
+
+    /// <summary>Moves the task one place up among its siblings (the non-drag alternative of the tree reorder).</summary>
+    MoveUp,
+
+    /// <summary>Moves the task one place down among its siblings (the non-drag alternative of the tree reorder).</summary>
+    MoveDown,
 }

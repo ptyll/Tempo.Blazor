@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Models",
   "namespace": "Tempo.Blazor.Abstractions.Models",
-  "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (meant to pick by container width; behaves as Inline until the container layout lands in a later phase, subject to change).",
+  "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (picks by the Gantt's own container: a dialog on a tablet or narrower container, the inline strip on a desktop one).",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilterPanelMode.cs",
   "documentationStatus": "generated",
