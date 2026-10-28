@@ -28,7 +28,7 @@ public sealed class OverlayInitialFocusE2ETests : WasmTestBase
     private const string Modal = "modal,/modal-dialog,[data-testid='open-basic-modal'],.tm-modal-overlay,.tm-modal-close";
     private const string Dialog = "dialog,/modal-dialog,[data-testid='open-long-dialog'],.tm-modal-overlay,.tm-dialog-btn-cancel";
     private const string Drawer = "drawer,/feedback,[data-testid='open-right-drawer'],.tm-drawer--right,.tm-drawer__close";
-    private const string GanttControl = "gantt-control,/gantt,button[data-testid='gantt-import-btn'],.tm-gantt__dialog-overlay,.tm-gantt__dialog-close";
+    private const string GanttControl = "gantt-control,/gantt,button[data-testid='gantt-import-btn'],.tm-modal-overlay.tm-gantt__import-dialog,.tm-modal-close";
 
     private async Task<IBrowserContext> NewContextAsync(int width, int height, bool touch)
     {

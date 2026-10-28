@@ -378,7 +378,7 @@ public static class GanttHelper
     /// <summary>
     /// Filters a tree of nodes by the given criteria.
     /// A parent node is kept if it or any of its descendants matches all filters.
-    /// Field names: standard props ("Title", "Status", "Priority") or "custom:{fieldId}".
+    /// Field names: standard props ("Title", "Status", "Priority", and the dates "Start", "End", "Deadline") or "custom:{fieldId}".
     /// </summary>
     public static List<GanttTaskNode> ApplyFilters(
         IEnumerable<GanttTaskNode> roots,
@@ -431,7 +431,43 @@ public static class GanttHelper
             "Title"    => ApplyStringOp(task.Title, op, value),
             "Status"   => ApplyStringOp(task.Status.ToString(), op, value),
             "Priority" => ApplyStringOp(task.Priority.ToString(), op, value),
+            "Start"    => ApplyDateOp(task.Start, op, filter.Value),
+            "End"      => ApplyDateOp(task.End, op, filter.Value),
+            "Deadline" => ApplyDateOp(task.DueDate, op, filter.Value),
             _          => true
+        };
+    }
+
+    /// <summary>
+    /// Date comparison on the calendar day. The value is an ISO <c>yyyy-MM-dd</c> date (what a native date input
+    /// writes), parsed culture-invariantly; one that does not parse filters nothing, so a half-edited row cannot
+    /// hide the whole chart. A task without a date (only <c>Deadline</c> can lack one) is neither equal to, before
+    /// nor after any date, and is "not equal" to every one.
+    /// </summary>
+    private static bool ApplyDateOp(DateTime? actual, GanttFilterOperator op, string? expected)
+    {
+        switch (op)
+        {
+            case GanttFilterOperator.IsEmpty: return actual is null;
+            case GanttFilterOperator.IsNotEmpty: return actual is not null;
+        }
+
+        if (!System.DateTime.TryParseExact(expected, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var wanted))
+        {
+            return true;
+        }
+
+        if (actual is null) return op == GanttFilterOperator.NotEquals;
+
+        var day = actual.Value.Date;
+        return op switch
+        {
+            GanttFilterOperator.Equals    => day == wanted.Date,
+            GanttFilterOperator.NotEquals => day != wanted.Date,
+            GanttFilterOperator.Before    => day < wanted.Date,
+            GanttFilterOperator.After     => day > wanted.Date,
+            _                             => true
         };
     }
 

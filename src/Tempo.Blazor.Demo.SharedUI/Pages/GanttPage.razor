@@ -66,6 +66,7 @@ else
         @ToggleChip("Bulk Select",           _allowBulkSelect,         v => _allowBulkSelect = v,         "bg-teal-600")
         @ToggleChip("Dep. Creation",         _allowDependencyCreation, v => _allowDependencyCreation = v, "bg-pink-600")
         @ToggleChip("Panel tabs",            _tabsMode,                v => _tabsMode = v,               "bg-cyan-600")
+        @ToggleChip("Filter dialog",         _filterDialog,            v => _filterDialog = v,           "bg-rose-600")
         @ToggleChip("Toolbar labels",        _toolbarLabels,           v => _toolbarLabels = v,          "bg-lime-600")
     @ToggleChip("Docked workload",       _dockedWorkload,          v => _dockedWorkload = v,         "bg-fuchsia-600")
         @ToggleChip("Adv. Context Menu", _viewSettings.ShowAdvancedContextButtons, v => { _viewSettings.ShowAdvancedContextButtons = v; }, "bg-amber-600")
@@ -110,6 +111,7 @@ else
                  ShowTaskPanel="true"
                  ShowSidebar="true"
                  SidebarMode="@(_tabsMode ? GanttSidebarMode.Tabs : GanttSidebarMode.Rail)"
+                 FilterPanelMode="@(_filterDialog ? GanttFilterPanelMode.Dialog : GanttFilterPanelMode.Inline)"
                  ToolbarLabels="@(_toolbarLabels ? ToolbarLabels.IconsWithText : ToolbarLabels.Icons)"
                  ShowQuickSearch="@_toolbarLabels"
                  ShowWorkloadPanel="@_showWorkloadPanel"
@@ -333,6 +335,7 @@ else
     private bool                  _tabsMode                = true;
     private bool                  _toolbarLabels           = true;
     private bool                  _dockedWorkload;
+    private bool                  _filterDialog;
 
     private IReadOnlyList<GanttFilter> _filters = [];
 

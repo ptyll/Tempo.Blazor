@@ -1,19 +1,19 @@
 .tm-gantt__filter-panel-inner {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--tm-space-2);
 }
 
 .tm-gantt__filter-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: var(--tm-space-1);
 }
 
 .tm-gantt__filter-panel-title {
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -24,10 +24,10 @@
     border: none;
     cursor: pointer;
     color: var(--tm-text-secondary);
-    padding: 2px;
+    padding: var(--tm-space-1);
     display: flex;
     align-items: center;
-    border-radius: 3px;
+    border-radius: var(--tm-radius-sm);
 }
 
 .tm-gantt__filter-panel-close:hover {
@@ -38,21 +38,26 @@
 .tm-gantt__filter-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--tm-space-2);
     flex-wrap: wrap;
 }
 
-.tm-gantt__filter-field,
-.tm-gantt__filter-op {
-    font-size: 0.8rem;
-    height: 28px;
+/* .tm-input is width:100%, which stacks the three controls; the row sizes them explicitly:
+   [Field] [operator] [value ........] [x]. */
+.tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-row .tm-gantt__filter-op {
+    flex: 0 0 9rem;
+    width: auto;
+    font-size: var(--tm-font-size-sm);
+    height: 1.75rem;
 }
 
-.tm-gantt__filter-value {
-    flex: 1;
-    min-width: 120px;
-    font-size: 0.8rem;
-    height: 28px;
+.tm-gantt__filter-row .tm-gantt__filter-value {
+    flex: 1 1 10rem;
+    width: auto;
+    min-width: 7.5rem;
+    font-size: var(--tm-font-size-sm);
+    height: 1.75rem;
 }
 
 .tm-gantt__filter-remove {
@@ -60,8 +65,8 @@
     border: none;
     cursor: pointer;
     color: var(--tm-text-secondary);
-    padding: 2px 4px;
-    border-radius: 3px;
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
     display: flex;
     align-items: center;
 }
@@ -71,9 +76,37 @@
     color: var(--tm-color-danger);
 }
 
+.tm-gantt__filter-add {
+    display: flex;
+    margin-top: var(--tm-space-1);
+}
+
+/* The footer: Clear all (a link) sits on the left, Cancel and Apply on the right. The slot is a plain element of this
+   component, so the rule is scoped in both presentations (the TmModal footer and the inline strip). */
 .tm-gantt__filter-panel-actions {
     display: flex;
-    gap: 6px;
+    gap: var(--tm-space-2);
     align-items: center;
-    margin-top: 4px;
+    justify-content: flex-end;
+    margin-top: var(--tm-space-1);
+}
+
+.tm-gantt__filter-clear-slot {
+    margin-right: auto;
+}
+
+/* The dialog presentation: roomier rows; the TmModal footer takes the actions. */
+.tm-gantt__filter-panel-inner--dialog {
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-op,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-value {
+    height: 2.25rem;
+}
+
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-op {
+    flex-basis: 8.5rem;
 }

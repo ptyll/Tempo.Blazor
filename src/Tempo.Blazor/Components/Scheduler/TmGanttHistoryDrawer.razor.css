@@ -44,3 +44,24 @@
     overflow-y: auto;
     padding: var(--tm-space-3) var(--tm-space-4);
 }
+
+/* The drawer's own close button (it used to borrow the removed dialog shell's .tm-gantt__dialog-close). */
+.tm-gantt__dialog-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--tm-text-secondary);
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    display: flex;
+    align-items: center;
+}
+
+.tm-gantt__dialog-close:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-gantt__dialog-close:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}

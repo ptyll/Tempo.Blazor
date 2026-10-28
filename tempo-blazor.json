@@ -23201,6 +23201,13 @@
           "description": "In-memory dependencies. Used when WorkItemSource is null."
         },
         {
+          "name": "FilterPanelMode",
+          "type": "GanttFilterPanelMode",
+          "isRequired": false,
+          "default": "GanttFilterPanelMode.Inline",
+          "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto will pick by container width (until then it is inline). Active filters also show as removable chips under the toolbar."
+        },
+        {
           "name": "Filters",
           "type": "IReadOnlyList<GanttFilter>",
           "isRequired": false,
@@ -23616,7 +23623,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Dialog for configuring and triggering Gantt export.",
+      "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a preview area.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportDialog.razor",
       "documentationStatus": "merged",
@@ -23641,6 +23648,33 @@
           "type": "EventCallback<GanttExportOptions>",
           "isRequired": false,
           "description": "Fires when the user confirms export with the chosen options."
+        },
+        {
+          "name": "PreviewContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content of the preview area. When null (default) the area shows the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here."
+        }
+      ]
+    },
+    {
+      "itemName": "TmGanttFilterBar",
+      "kind": "Component",
+      "category": "Scheduler",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "Internal part of TmGantt (hidden from the editor): the active-filter chips under the toolbar and the filter editor (inline, or a dialog for FilterPanelMode.Dialog). Place TmGantt, not this component.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttFilterBar.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Scheduler"
+      ],
+      "parameters": [
+        {
+          "name": "Owner",
+          "type": "TmGantt",
+          "isRequired": false,
+          "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
         }
       ]
     },
@@ -23649,7 +23683,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Side panel for building filter rules applied to a TmGantt. Each rule combines a field (Title, Status, Priority), an operator, and a value; rules can be added and removed, and applying them raises a callback with the resulting filter set.",
+      "description": "Editor for the filter rules applied to a TmGantt. Each rule combines a field (Title, Status, Priority, Start, End, Deadline), an operator that fits the field type, and a typed value (an enum select for Status and Priority, a date input for the dates, text for the rest). Transactional: the footer is Clear all | Cancel | Apply and nothing reaches the Gantt until Apply. Renders inline, or as a TmModal with AsDialog.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttFilterPanel.razor",
       "documentationStatus": "merged",
@@ -23658,20 +23692,37 @@
       ],
       "parameters": [
         {
+          "name": "AsDialog",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Presents the editor in a TmModal (a bottom sheet on a mobile viewport) instead of an inline strip: the modal owns the header and the footer, Apply closes it. TmGantt sets it for FilterPanelMode.Dialog.",
+          "default": "false"
+        },
+        {
           "name": "Filters",
           "type": "List<GanttFilter>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "The applied filters. The editor starts from them and goes back to them on Cancel."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Fires when the panel should close: its X button, Cancel, and (in the dialog) Apply and Escape."
         },
         {
           "name": "OnFiltersChanged",
           "type": "EventCallback<IReadOnlyList<GanttFilter>>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Fires with the complete rule set when the user presses Apply."
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the dialog presentation (AsDialog) is shown. TmGantt keeps the panel mounted and toggles this so the modal can return the focus to its trigger on close. Ignored by the inline presentation."
         }
       ]
     },
@@ -23815,7 +23866,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Dialog for importing tasks from Excel, MS Project XML, or JIRA.",
+      "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, and an error TmAlert.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor",
       "documentationStatus": "merged",
@@ -23854,7 +23905,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Dialog for mapping source spreadsheet columns to Gantt task properties.",
+      "description": "Dialog (a core TmModal) for mapping the columns of an imported file to Gantt task properties. Columns are pre-mapped by header name (case- and diacritics-insensitive; English, Czech and French names), optionally seeded by InitialMappings. Import stays disabled until Title, Start and End or Duration are mapped; two columns mapped to one field only raise a warning.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportMappingDialog.razor",
       "documentationStatus": "merged",
@@ -23862,6 +23913,12 @@
         "@using Tempo.Blazor.Components.Scheduler"
       ],
       "parameters": [
+        {
+          "name": "InitialMappings",
+          "type": "IReadOnlyList<GanttColumnMapping>?",
+          "isRequired": false,
+          "description": "Mappings the dialog starts from (a remembered choice, a host's own defaults). A source column is matched case-insensitively; the remaining columns are still mapped by header name, but never onto a field a host mapping already claimed."
+        },
         {
           "name": "IsOpen",
           "type": "bool",
@@ -29261,10 +29318,6 @@
       "kind": "Css"
     },
     {
-      "path": "src/Tempo.Blazor/wwwroot/css/components/_gantt-dialog.css",
-      "kind": "Css"
-    },
-    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_gauge.css",
       "kind": "Css"
     },
@@ -29854,11 +29907,11 @@
     }
   ],
   "summary": {
-    "itemCount": 398,
-    "manualItemCount": 398,
-    "generatedItemCount": 390,
+    "itemCount": 399,
+    "manualItemCount": 399,
+    "generatedItemCount": 391,
     "generatedOnlyItemCount": 0,
-    "componentCount": 213,
+    "componentCount": 214,
     "publicApiTypeCount": 177
   }
 }

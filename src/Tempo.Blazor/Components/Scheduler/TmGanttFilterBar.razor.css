@@ -1,0 +1,24 @@
+/* The filter strip of TmGantt (chips under the toolbar + the inline editor wrapper). The editor's own rows live in
+   TmGanttFilterPanel.razor.css; the dialog presentation is the core TmModal. */
+
+.tm-gantt__filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+.tm-gantt__filter-panel {
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-elevated);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    animation: tm-gantt-slide-in 0.15s ease;
+}
+
+@keyframes tm-gantt-slide-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

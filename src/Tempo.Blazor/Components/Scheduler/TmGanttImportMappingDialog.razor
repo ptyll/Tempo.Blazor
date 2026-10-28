@@ -1,56 +1,60 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Models
 
-@if (IsOpen)
-{
-    <div class="tm-gantt__dialog-overlay" @onclick="OnClose">
-        @* Interim a11y (phase 1): role=dialog + aria-modal + Escape + focus trap through the shared
-           TmFocusScope; the dialog moves to TmModal in phase 6. *@
-        <TmFocusScope Class="tm-gantt__dialog tm-gantt__import-mapping-dialog" Active="@IsOpen"
-                      NoteOpenerOnMount="true" CloseOnEscape="true" OnEscape="OnClose"
-                      AriaLabelledBy="@_titleId" @onclick:stopPropagation>
-            <div class="tm-gantt__dialog-header">
-                <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_ImportMapping"]</span>
-                <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose"
-                        aria-label="@Loc["TmGantt_MappingDialogClose"]">
-                    <TmIcon Name="x" />
-                </button>
+@* G6: the dialog is the core TmModal (top layer, focus trap, Escape, focus return to the trigger). The per-dialog
+   class rides the overlay root; the tm-gantt__mapping-* classes stay on the content. *@
+<TmModal Show="IsOpen"
+         Class="tm-gantt__import-mapping-dialog"
+         Title="@Loc["TmGantt_ImportMapping"]"
+         Subtitle="@Loc["TmGantt_ImportMappingHint"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         OnClose="OnClose">
+    <ChildContent>
+        <div class="tm-gantt__mapping-header" aria-hidden="true">
+            <span>@Loc["TmGantt_ImportSourceColumn"]</span>
+            <span>@Loc["TmGantt_ImportTargetField"]</span>
+        </div>
+        @{
+            var duplicates = DuplicateTargets();
+            var missing = MissingRequired();
+        }
+        @foreach (var column in _columns)
+        {
+            var selectId = SelectId(column);
+            var isDuplicate = _mappings.TryGetValue(column, out var target) && target is { } t && duplicates.Contains(t);
+            <div @key="column" class="tm-gantt__mapping-row @(isDuplicate ? "tm-gantt__mapping-row--duplicate" : "")">
+                <label class="tm-gantt__mapping-source" for="@selectId">@column</label>
+                <TmSelect TValue="GanttColumnKey?" Id="@selectId" Class="tm-gantt__mapping-select"
+                          Value="GetMapping(column)" ValueChanged="@(value => SetMapping(column, value))"
+                          Placeholder="—" PlaceholderSelectable="true"
+                          Options="TargetOptions"
+                          data-testid="@TestId($"mapping-select-{column}")" />
             </div>
+        }
 
-            <div class="tm-gantt__dialog-body">
-                <div class="tm-gantt__mapping-header">
-                    <span>@Loc["TmGantt_ImportSourceColumn"]</span>
-                    <span>@Loc["TmGantt_ImportTargetField"]</span>
-                </div>
-                @foreach (var col in SourceColumns)
-                {
-                    <div class="tm-gantt__mapping-row">
-                        <span class="tm-gantt__mapping-source">@col</span>
-                        <select class="tm-input tm-gantt__mapping-select"
-                                aria-label="@col"
-                                data-testid="@TestId($"mapping-select-{col}")"
-                                value="@GetMappingValue(col)"
-                                @onchange="e => SetMapping(col, e.Value?.ToString())">
-                            <option value="">—</option>
-                            @foreach (var key in AvailableTargets)
-                            {
-                                <option value="@key.ToString()">@GanttLabels.Column(Loc, key)</option>
-                            }
-                        </select>
-                    </div>
-                }
-            </div>
+        @if (duplicates.Count > 0)
+        {
+            <TmAlert Severity="AlertSeverity.Warning" Class="tm-gantt__mapping-duplicate" data-testid="@TestId("mapping-duplicate")">
+                @Loc["TmGantt_ImportMappingDuplicate", string.Join(", ", duplicates.Select(d => GanttLabels.Column(Loc, d)))]
+            </TmAlert>
+        }
 
-            <div class="tm-gantt__dialog-actions">
-                <TmButton Variant="ButtonVariant.Primary" OnClick="ConfirmAsync">
-                    @Loc["TmGantt_Import"]
-                </TmButton>
-                <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
-                    @Loc["Tm_Cancel"]
-                </TmButton>
-            </div>
-        </TmFocusScope>
-    </div>
-}
+        @* Always in the DOM so assistive tech has registered the live region before its text changes. *@
+        <p id="@ValidationId" class="tm-gantt__mapping-validation" role="status" aria-live="polite" data-testid="@TestId("mapping-validation")">@(missing.Count > 0 ? Loc["TmGantt_ImportMappingRequired", string.Join(", ", missing)] : string.Empty)</p>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" data-testid="@TestId("mapping-cancel")">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="ConfirmAsync" Disabled="@(!IsValid)" aria-describedby="@(IsValid ? null : ValidationId)" data-testid="@TestId("mapping-submit")">
+            @Loc["TmGantt_Import"]
+        </TmButton>
+    </Footer>
+</TmModal>

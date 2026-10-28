@@ -1,90 +1,99 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Models
 
-@if (IsOpen)
-{
-    <div class="tm-gantt__dialog-overlay" @onclick="OnClose">
-        @* Interim a11y (phase 1): role=dialog + aria-modal + Escape + focus trap through the shared
-           TmFocusScope; the whole dialog moves to TmModal in phase 6. *@
-        <TmFocusScope Class="tm-gantt__dialog" Active="@IsOpen" NoteOpenerOnMount="true"
-                      CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
-                      @onclick:stopPropagation>
-            <div class="tm-gantt__dialog-header">
-                <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Export"]</span>
-                <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose"
-                        aria-label="@Loc["TmGantt_ExportDialogClose"]">
-                    <TmIcon Name="x" />
-                </button>
-            </div>
-
-            <div class="tm-gantt__dialog-body">
-                <!-- Format selection -->
-                <div class="tm-gantt__export-formats">
-                    <label class="tm-gantt__export-format-option @(_format == GanttExportFormat.Pdf ? "tm-gantt__export-format-option--selected" : "")">
-                        <input type="radio" name="export-format" value="Pdf"
-                               checked="@(_format == GanttExportFormat.Pdf)"
-                               @onchange="() => _format = GanttExportFormat.Pdf" />
-                        <TmIcon Name="file-text" Size="IconSize.Sm" />
-                        <span>@Loc["TmGantt_ExportPdf"]</span>
-                    </label>
-                    <label class="tm-gantt__export-format-option @(_format == GanttExportFormat.Png ? "tm-gantt__export-format-option--selected" : "")">
-                        <input type="radio" name="export-format" value="Png"
-                               checked="@(_format == GanttExportFormat.Png)"
-                               @onchange="() => _format = GanttExportFormat.Png" />
-                        <TmIcon Name="image" Size="IconSize.Sm" />
-                        <span>@Loc["TmGantt_ExportPng"]</span>
-                    </label>
-                    <label class="tm-gantt__export-format-option @(_format == GanttExportFormat.Xlsx ? "tm-gantt__export-format-option--selected" : "")"
-                           data-testid="@TestId("export-format-xlsx")">
-                        <input type="radio" name="export-format" value="Xlsx"
-                               checked="@(_format == GanttExportFormat.Xlsx)"
-                               @onchange="() => _format = GanttExportFormat.Xlsx" />
-                        <TmIcon Name="table" Size="IconSize.Sm" />
-                        <span>@Loc["TmGantt_ExportXlsx"]</span>
-                    </label>
-                    <label class="tm-gantt__export-format-option @(_format == GanttExportFormat.Xml ? "tm-gantt__export-format-option--selected" : "")">
-                        <input type="radio" name="export-format" value="Xml"
-                               checked="@(_format == GanttExportFormat.Xml)"
-                               @onchange="() => _format = GanttExportFormat.Xml" />
-                        <TmIcon Name="code" Size="IconSize.Sm" />
-                        <span>@Loc["TmGantt_ExportXml"]</span>
-                    </label>
-                </div>
-
-                <!-- Options (pdf/png only) -->
-                @if (_format == GanttExportFormat.Pdf || _format == GanttExportFormat.Png)
+@* G6: the dialog is the core TmModal (top layer, focus trap, Escape, focus return to the trigger). The per-dialog
+   class rides the overlay root; the tm-gantt__export-* classes stay on the content. *@
+<TmModal Show="IsOpen"
+         Class="tm-gantt__export-dialog"
+         Title="@Loc["TmGantt_Export"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         OnClose="OnClose">
+    <ChildContent>
+        <div class="tm-gantt__export-section">
+            <h4 id="@_formatLabelId" class="tm-gantt__export-heading">@Loc["TmGantt_ExportFormat"]</h4>
+            <div class="tm-gantt__export-formats" role="radiogroup" aria-labelledby="@_formatLabelId">
+                @foreach (var tile in Tiles)
                 {
-                    <div class="tm-gantt__export-options">
-                        <label class="tm-gantt__export-option-label">@Loc["TmGantt_PaperSize"]</label>
-                        <select class="tm-input tm-gantt__export-select" @onchange="e => _paperSize = e.Value?.ToString()">
-                            <option value="A4" selected="@(_paperSize == "A4")">A4</option>
-                            <option value="A3" selected="@(_paperSize == "A3")">A3</option>
-                            <option value="Letter" selected="@(_paperSize == "Letter")">Letter</option>
-                        </select>
-                        <label class="tm-gantt__export-option-label tm-gantt__export-checkbox-label">
-                            <input type="checkbox" checked="@_landscape" @onchange="e => _landscape = (bool)e.Value!" />
-                            @Loc["TmGantt_Landscape"]
-                        </label>
-                    </div>
+                    <label class="@FormatClass(tile.Format)" data-testid="@TestId($"export-format-{tile.Slug}")">
+                        <input type="radio" class="tm-gantt__export-format-input" name="@_formatName" value="@tile.Format.ToString()"
+                               checked="@(_format == tile.Format)"
+                               @onchange="() => SelectFormat(tile.Format)" />
+                        <span class="tm-gantt__export-format-ring" aria-hidden="true"></span>
+                        <TmIcon Name="@tile.Icon" Size="IconSize.Lg" />
+                        <span class="tm-gantt__export-format-name">@Loc[tile.LabelKey]</span>
+                    </label>
                 }
+            </div>
+        </div>
 
-                <!-- Preview area -->
-                <div class="tm-gantt__export-preview" data-testid="@TestId("export-preview")">
+        @if (IsImage)
+        {
+            <div class="tm-gantt__export-section tm-gantt__export-options">
+                <h4 class="tm-gantt__export-heading">@Loc["TmGantt_ExportOptions"]</h4>
+                <div class="tm-gantt__export-paper-row">
+                    <TmSelect TValue="string" Label="@Loc["TmGantt_PaperSize"]" Class="tm-gantt__export-select"
+                              Value="_paperSize" ValueChanged="SetPaperSize" Options="PaperSizes"
+                              data-testid="@TestId("export-paper-size")" />
+                    <TmCheckbox Label="@Loc["TmGantt_Landscape"]" Value="_landscape" ValueChanged="SetLandscape"
+                                Class="tm-gantt__export-checkbox" data-testid="@TestId("export-landscape")" />
+                </div>
+                <div class="tm-gantt__export-checks">
+                    <TmCheckbox Label="@Loc["TmGantt_ExportIncludeCriticalPath"]" Value="_includeCriticalPath" ValueChanged="SetIncludeCriticalPath"
+                                Class="tm-gantt__export-checkbox" data-testid="@TestId("export-include-critical-path")" />
+                    <TmCheckbox Label="@Loc["TmGantt_ExportIncludeToday"]" Value="_includeToday" ValueChanged="SetIncludeToday"
+                                Class="tm-gantt__export-checkbox" data-testid="@TestId("export-include-today")" />
+                    <TmCheckbox Label="@Loc["TmGantt_ExportIncludeWorkload"]" Value="_includeWorkload" ValueChanged="SetIncludeWorkload"
+                                Class="tm-gantt__export-checkbox" data-testid="@TestId("export-include-workload")" />
+                </div>
+                <TmSelect TValue="int?" Label="@Loc["TmGantt_ExportZoomLevel"]" Class="tm-gantt__export-select"
+                          Value="_zoomLevel" ValueChanged="SetZoomLevel" Options="ZoomLevels"
+                          data-testid="@TestId("export-zoom")" />
+            </div>
+        }
+        else if (_format == GanttExportFormat.Xlsx)
+        {
+            <div class="tm-gantt__export-section tm-gantt__export-options">
+                <h4 id="@_columnsLabelId" class="tm-gantt__export-heading">@Loc["TmGantt_ExportColumns"]</h4>
+                <div class="tm-gantt__export-columns" role="group" aria-labelledby="@_columnsLabelId" data-testid="@TestId("export-columns")">
+                    @foreach (var key in ExportableColumns)
+                    {
+                        var column = key;
+                        <TmCheckbox Label="@GanttLabels.Column(Loc, column)" Value="IsColumnChecked(column)"
+                                    ValueChanged="@(on => SetColumn(column, on))"
+                                    Class="tm-gantt__export-checkbox" data-testid="@TestId($"export-column-{column}")" />
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="tm-gantt__export-section">
+            <h4 class="tm-gantt__export-heading">@Loc["TmGantt_ExportPreview"]</h4>
+            <div class="tm-gantt__export-preview" data-testid="@TestId("export-preview")">
+                @if (PreviewContent is not null)
+                {
+                    @PreviewContent
+                }
+                else
+                {
                     <TmIcon Name="gantt-chart" Size="IconSize.Lg" />
                     <span>@Loc["TmGantt_ExportPreview"]</span>
-                </div>
+                }
             </div>
-
-            <div class="tm-gantt__dialog-actions">
-                <TmButton Variant="ButtonVariant.Primary" OnClick="ExportAsync">
-                    @Loc["TmGantt_Export"]
-                </TmButton>
-                <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
-                    @Loc["Tm_Cancel"]
-                </TmButton>
-            </div>
-        </TmFocusScope>
-    </div>
-}
+        </div>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" data-testid="@TestId("export-cancel")">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="ExportAsync" data-testid="@TestId("export-submit")">
+            @Loc["TmGantt_Export"]
+        </TmButton>
+    </Footer>
+</TmModal>

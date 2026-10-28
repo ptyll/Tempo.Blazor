@@ -9,6 +9,7 @@ using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.DataTable;
+using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
@@ -312,6 +313,14 @@ public partial class TmGantt : IDisposable
     /// into <see cref="Filters"/> (raising <see cref="OnFiltersChanged"/>); emptying the box removes it. Default false.
     /// </summary>
     [Parameter] public bool ShowQuickSearch { get; set; }
+
+    /// <summary>
+    /// How the filter editor is presented: <see cref="GanttFilterPanelMode.Inline"/> (default) is a strip under the
+    /// toolbar, <see cref="GanttFilterPanelMode.Dialog"/> a modal dialog (a bottom sheet on a mobile viewport) whose
+    /// footer is Clear all | Cancel | Apply, and <see cref="GanttFilterPanelMode.Auto"/> will pick by container width
+    /// (until then it is inline).
+    /// </summary>
+    [Parameter] public GanttFilterPanelMode FilterPanelMode { get; set; } = GanttFilterPanelMode.Inline;
 
     /// <summary>
     /// How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon
@@ -1583,6 +1592,68 @@ public partial class TmGantt : IDisposable
 
     internal int ActiveFilterCount => _activeFilters.Count;
 
+    /// <summary>
+    /// True when the filter editor renders as a dialog. <see cref="GanttFilterPanelMode.Auto"/> is inline until the
+    /// container layout (a later phase) can say the Gantt is narrow.
+    /// </summary>
+    internal bool FilterPanelAsDialog => FilterPanelMode == GanttFilterPanelMode.Dialog;
+
+    /// <summary>The active filters as chips: each carries the filter it was built from, so removing a chip removes exactly that rule.</summary>
+    internal IEnumerable<(GanttFilter Source, ActiveFilter Chip)> FilterChips() =>
+        _activeFilters.Select(filter => (filter, new ActiveFilter(
+            filter.Field,
+            FilterFieldLabel(filter.Field),
+            ChipOperator(filter.Operator),
+            filter.Value,
+            FilterChipText(filter))));
+
+    private static FilterOperator ChipOperator(GanttFilterOperator op) => op switch
+    {
+        GanttFilterOperator.Equals => FilterOperator.Equals,
+        GanttFilterOperator.NotEquals => FilterOperator.NotEquals,
+        GanttFilterOperator.Before => FilterOperator.LessThan,
+        GanttFilterOperator.After => FilterOperator.GreaterThan,
+        GanttFilterOperator.IsEmpty => FilterOperator.IsEmpty,
+        GanttFilterOperator.IsNotEmpty => FilterOperator.IsNotEmpty,
+        _ => FilterOperator.Contains,
+    };
+
+    private string FilterFieldLabel(string field) => field switch
+    {
+        "Title" => Loc["TmGantt_FilterFieldTitle"],
+        "Status" => Loc["TmGantt_FilterFieldStatus"],
+        "Priority" => Loc["TmGantt_FilterFieldPriority"],
+        "Start" => Loc["TmGantt_Start"],
+        "End" => Loc["TmGantt_End"],
+        "Deadline" => Loc["TmGanttTaskPanel_Deadline"],
+        _ => field.StartsWith("custom:", StringComparison.OrdinalIgnoreCase) ? field["custom:".Length..] : field,
+    };
+
+    /// <summary>"In Progress" for an equals rule, otherwise "is after 6/5/2024" / "contains ui" / "is empty".</summary>
+    private string FilterChipText(GanttFilter filter)
+    {
+        var value = filter.Field switch
+        {
+            "Status" when Enum.TryParse<TmWorkItemStatus>(filter.Value, true, out var status) => Loc[$"GanttStatus_{status}"],
+            "Priority" when Enum.TryParse<TmWorkItemPriority>(filter.Value, true, out var priority) => Loc[$"GanttPriority_{priority}"],
+            "Start" or "End" or "Deadline" when DateTime.TryParseExact(filter.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+                => date.ToString("d", Loc.Culture),
+            _ => filter.Value ?? string.Empty,
+        };
+
+        return filter.Operator switch
+        {
+            GanttFilterOperator.Equals => value,
+            GanttFilterOperator.IsEmpty or GanttFilterOperator.IsNotEmpty => GanttLabels.FilterOperator(Loc, filter.Operator),
+            _ => $"{GanttLabels.FilterOperator(Loc, filter.Operator)} {value}",
+        };
+    }
+
+    internal List<GanttFilter> ActiveFiltersSnapshot() => _activeFilters.ToList();
+
+    internal Task RemoveFilterChipAsync(GanttFilter filter) =>
+        ApplyFiltersAsync(_activeFilters.Where(f => !ReferenceEquals(f, filter)).ToList());
+
     // ── Phase 3 Methods ──────────────────────────────────────────
 
     public async Task SaveBaselineAsync(string name)
@@ -1608,8 +1679,15 @@ public partial class TmGantt : IDisposable
     }
 
     internal void ToggleFilterPanel()    => _filterPanelOpen    = !_filterPanelOpen;
+    internal void OpenFilterPanel()      => _filterPanelOpen    = true;
+    internal void CloseFilterPanel()     => _filterPanelOpen    = false;
     internal void ToggleExportDialog()   => _exportDialogOpen   = !_exportDialogOpen;
     internal void ToggleImportDialog()   => _importDialogOpen   = !_importDialogOpen;
+
+    // The dialogs' OnClose is an explicit CLOSE (not a toggle): a confirming dialog raises its action callback
+    // (which already closes it) and then OnClose again, so a toggle would reopen it.
+    private void CloseExportDialog()     => _exportDialogOpen   = false;
+    private void CloseImportDialog()     => _importDialogOpen   = false;
     internal void ToggleHistoryDrawer()  => _historyDrawerOpen  = !_historyDrawerOpen;
 
     private async Task HandleExportAsync(GanttExportOptions opts)
@@ -1624,9 +1702,9 @@ public partial class TmGantt : IDisposable
         await OnImportCompleted.InvokeAsync(tasks);
     }
 
+    /// <summary>The host is told; the dialog stays open, because its error alert is the only place the user can read why nothing was imported.</summary>
     private async Task HandleImportErrorAsync(string error)
     {
-        _importDialogOpen = false;
         await OnImportError.InvokeAsync(error);
     }
 

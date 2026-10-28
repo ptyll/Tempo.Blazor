@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
-using Tempo.Blazor.Components.Feedback;
-using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
@@ -14,6 +13,8 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private const string ModulePath = "./_content/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor.js";
 
     private enum ImportTab { Excel, Mpp, Jira }
+
+    private static readonly ImportTab[] Tabs = [ImportTab.Excel, ImportTab.Mpp, ImportTab.Jira];
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -27,12 +28,13 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private bool _isImporting;
     private ElementReference _fileInputWrap;
     private ElementReference _triggerWrapRef;
-    private ElementReference _overlay;
     private IJSObjectReference? _filePickerModule;
+    private readonly Dictionary<ImportTab, ElementReference> _tabRefs = [];
+    private bool _focusSelectedTabAfterRender;
     private bool _wasOpen;
-    private PromotedScopeGate? _gate;
-    private TmFocusScope? _scope;
-    private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
+    private ElementReference _tabListRef;
+    private Guid _inputKey = Guid.NewGuid();
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
 
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -46,22 +48,87 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     /// <summary>Fires when the dialog should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
-    /// <summary>
-    /// The dialog renders inline at the end of the Gantt DOM — behind hundreds of task-tree
-    /// tab stops — so a keyboard user could never reach it by Tab alone. Moving focus inside
-    /// (and trapping it there while open) is the standard modal contract TmModal/TmDialog
-    /// already implement via <c>TmFocusScope</c>.
-    /// </summary>
-    protected override async Task OnParametersSetAsync()
+    /// <inheritdoc />
+    protected override void OnParametersSet()
     {
+        // A dialog that is reopened starts from scratch: the previous file, error, busy flag and tab must not leak
+        // into the next import.
         if (IsOpen && !_wasOpen)
         {
-            _wasOpen = true;
+            ResetFile();
+            _errorMessage = null;
+            _isImporting = false;
+            _tab = ImportTab.Excel;
         }
-        else if (!IsOpen && _wasOpen)
+
+        _wasOpen = IsOpen;
+    }
+
+    private string TabId(ImportTab tab) => $"gantt-import-tab-{_instanceId}-{tab.ToString().ToLowerInvariant()}";
+
+    private string PanelId => $"gantt-import-panel-{_instanceId}";
+
+    private static string TabIcon(ImportTab tab) => tab switch
+    {
+        ImportTab.Excel => "table",
+        ImportTab.Mpp => "calendar",
+        _ => "link",
+    };
+
+    private static string TabLabelKey(ImportTab tab) => tab switch
+    {
+        ImportTab.Excel => "TmGantt_ImportExcel",
+        ImportTab.Mpp => "TmGantt_ImportMpp",
+        _ => "TmGantt_ImportJira",
+    };
+
+    /// <summary>The file extensions the active tab accepts; one string feeds both the input and the hint.</summary>
+    private string SupportedFormats => _tab == ImportTab.Excel ? ".xlsx, .xls" : ".xml, .mpp";
+
+    private void SelectTab(ImportTab tab)
+    {
+        if (tab == _tab)
         {
-            _wasOpen = false;
+            _focusSelectedTabAfterRender = true;
+            return;
         }
+
+        _tab = tab;
+        _focusSelectedTabAfterRender = true;
+        _errorMessage = null;
+        // A chosen .xlsx must never be handed to the MS Project importer (or the other way round), so a tab
+        // switch starts from no file. The recreated input also clears the native value.
+        ResetFile();
+    }
+
+    /// <summary>ARIA tablist keys: Left / Right wrap, Home / End jump; selection and DOM focus move together.</summary>
+    private void HandleTabKeyDown(KeyboardEventArgs e)
+    {
+        var current = Array.IndexOf(Tabs, _tab);
+        var target = e.Key switch
+        {
+            "ArrowRight" => (current + 1) % Tabs.Length,
+            "ArrowLeft" => (current - 1 + Tabs.Length) % Tabs.Length,
+            "Home" => 0,
+            "End" => Tabs.Length - 1,
+            _ => current,
+        };
+
+        if (target == current) return;
+        SelectTab(Tabs[target]);
+    }
+
+    private void ResetFile()
+    {
+        _selectedFile = null;
+        _selectedFileName = null;
+        _inputKey = Guid.NewGuid();
+    }
+
+    private void RemoveFile()
+    {
+        ResetFile();
+        _errorMessage = null;
     }
 
     /// <inheritdoc />
@@ -71,37 +138,44 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         {
             // Cold start: import the focus-trap module and install its document-level opener
             // records NOW, so the FIRST open of the session restores its opener.
-            await FocusTrap.EnsureLoadedAsync(JS);
+            await Tempo.Blazor.Helpers.FocusTrap.EnsureLoadedAsync(JS);
         }
 
-        // Register the NATIVE click listener ahead of the first click — re-attempted on EVERY
-        // render while the trigger element exists, because tab switches (@if/else-if in the
-        // markup) destroy and recreate the file area: a C# "registered once" flag can never see
-        // the fresh button, but the JS dataset.tmFilePickerRegistered marker dedupes per element
-        // so repeat calls on the same element are no-ops. input.click() then runs inside the
-        // browser's own click event with no interop in the gesture chain (N204, review 2026-09-22).
+        if (_focusSelectedTabAfterRender)
+        {
+            _focusSelectedTabAfterRender = false;
+            if (IsOpen && _tabRefs.TryGetValue(_tab, out var tab))
+            {
+                try
+                {
+                    await tab.FocusAsync();
+                }
+                catch (InvalidOperationException)
+                {
+                    // The tab left the DOM with the dialog.
+                }
+            }
+        }
+
+        // The tablist's Home / End / Arrow keys must not also scroll the dialog body (a Blazor handler cannot
+        // preventDefault conditionally); the JS marker dedupes per element, so re-attempting on every render is free.
+        if (IsOpen)
+        {
+            _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            await _filePickerModule.InvokeVoidAsync("registerTablistKeys", _tabListRef);
+        }
+
+        // Register the NATIVE click listener ahead of the first click - re-attempted on EVERY
+        // render while the trigger element exists, because tab switches and "Remove file" destroy and
+        // recreate the file area: a C# "registered once" flag can never see the fresh button, but the JS
+        // dataset.tmFilePickerRegistered marker dedupes per element so repeat calls on the same element
+        // are no-ops. input.click() then runs inside the browser's own click event with no interop in
+        // the gesture chain (N204, review 2026-09-22).
         if (IsOpen && _tab is ImportTab.Excel or ImportTab.Mpp)
         {
             _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
             await _filePickerModule.InvokeVoidAsync(
                 "registerFilePickerTrigger", _triggerWrapRef, _fileInputWrap);
-        }
-
-        // Round 3 (V2): the overlay root is a modal viewport-anchored surface — promote it right
-        // after the render that inserted it. Closing unmounts the subtree; a detached top-layer
-        // element is hidden by the browser automatically, so no demote is needed.
-        //
-        // UX round 4 / c51ddf81 #1: the trap may activate only once the popover root is actually
-        // visible. A popover="manual" root is display:none until showPopover runs, and the tm-sheet
-        // module import can outlast the trap's two-frame rAF retry — activating earlier drops the
-        // initial-focus move (a focus() on a display:none subtree is a no-op) and focus lands on
-        // <body>. The shared gate runs the promote and only then flips the scope active; the
-        // stillOpen + generation guards also drop a promote that completes after the dialog
-        // closed, so the NEXT open cannot ride a stale activation (c51ddf81 #2).
-        _gate ??= new PromotedScopeGate(JS);
-        if (await _gate.AfterRenderAsync(IsOpen, () => IsOpen, _overlay))
-        {
-            StateHasChanged();
         }
     }
 
@@ -117,25 +191,14 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     {
         try
         {
-            if (_scope is not null)
-            {
-                await _scope.DisposeAsync();
-            }
             if (_filePickerModule is not null)
             {
                 await _filePickerModule.DisposeAsync();
-            }
-            if (_gate is not null)
-            {
-                await _gate.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
         {
             // Circuit already gone.
-        }
-        finally
-        {
         }
     }
 
@@ -163,7 +226,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             {
                 if (ResolveGanttExcelImporterType() is not { } importerType)
                 {
-                    // Already-localized guidance — this path never reaches the exception
+                    // Already-localized guidance - this path never reaches the exception
                     // classifier below (it is a supported configuration state, not a failure).
                     _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", Loc["TmGantt_ImportXlsxPackageMissing"]);
                     await OnImportError.InvokeAsync(_errorMessage);
@@ -197,7 +260,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     }
 
     /// <summary>
-    /// Maps an import failure to a LOCALIZED detail — never <see cref="Exception.Message"/>:
+    /// Maps an import failure to a LOCALIZED detail - never <see cref="Exception.Message"/>:
     /// framework messages are English, machine-specific, and can carry file paths, URLs, or
     /// inner-exception details the dialog must not render (review 2026-09-22 carry-forward).
     /// </summary>

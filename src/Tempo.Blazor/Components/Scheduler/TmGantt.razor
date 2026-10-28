@@ -43,16 +43,7 @@
         <TmGanttToolbar Owner="this" />
     }
 
-    <!-- Filter Panel -->
-    @if (_filterPanelOpen)
-    {
-        <div class="tm-gantt__filter-panel" data-testid="@TestId("gantt-filter-panel")">
-            <TmGanttFilterPanel
-                Filters="_activeFilters.ToList()"
-                OnFiltersChanged="async filters => await ApplyFiltersAsync(filters)"
-                OnClose="ToggleFilterPanel" />
-        </div>
-    }
+    <TmGanttFilterBar Owner="this" />
 
     <!-- Content area: sidebar + views -->
     <div class="tm-gantt__content">
@@ -313,7 +304,7 @@
     {
         <TmGanttExportDialog IsOpen="_exportDialogOpen"
                              OnExport="HandleExportAsync"
-                             OnClose="ToggleExportDialog" />
+                             OnClose="CloseExportDialog" />
     }
 
     <!-- Import Dialog -->
@@ -322,7 +313,7 @@
         <TmGanttImportDialog IsOpen="_importDialogOpen"
                              OnImportCompleted="HandleImportCompletedAsync"
                              OnImportError="HandleImportErrorAsync"
-                             OnClose="ToggleImportDialog" />
+                             OnClose="CloseImportDialog" />
     }
 
     <!-- History Drawer -->

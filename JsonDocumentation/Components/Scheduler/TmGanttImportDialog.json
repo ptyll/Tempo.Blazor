@@ -2,7 +2,7 @@
   "itemName": "TmGanttImportDialog",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Dialog for importing tasks from Excel, MS Project XML, or JIRA.",
+  "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, and an error TmAlert.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor",

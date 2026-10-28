@@ -152,13 +152,18 @@
 </svg>
 </button>
 </div>
-<div class="tm-gantt__filter-panel-actions">
-<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="filter-add">
-<span class="tm-btn-label">
+<div class="tm-gantt__filter-add">
+<button type="button" class="tm-btn tm-btn-outline tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="filter-add">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <line x1='12' y1='5' x2='12' y2='19'/>
 <line x1='5' y1='12' x2='19' y2='12'/>
-</svg>Add filter</span>
+</svg>
+<span class="tm-btn-label">Add filter</span>
+</button>
+</div>
+<div class="tm-gantt__filter-panel-actions">
+<button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="filter-cancel">
+<span class="tm-btn-label">Cancel</span>
 </button>
 <button type="button" class="tm-btn tm-btn-primary tm-btn-sm" tabindex="0" blazor:onclick="H" data-testid="filter-apply">
 <span class="tm-btn-label">Apply</span>

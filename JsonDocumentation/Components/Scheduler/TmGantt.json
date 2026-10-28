@@ -26,6 +26,13 @@
       "description": "When true, the toolbar ends with a \"Search tasks…\" box that writes a Title/Contains entry into Filters (raising OnFiltersChanged); emptying the box removes it."
     },
     {
+      "name": "FilterPanelMode",
+      "type": "GanttFilterPanelMode",
+      "isRequired": false,
+      "default": "GanttFilterPanelMode.Inline",
+      "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto will pick by container width (until then it is inline). Active filters also show as removable chips under the toolbar."
+    },
+    {
       "name": "SidebarMode",
       "type": "GanttSidebarMode",
       "isRequired": false,

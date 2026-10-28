@@ -1,66 +1,138 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
 
-<div class="tm-gantt__filter-panel-inner">
-    <div class="tm-gantt__filter-panel-header">
-        <span class="tm-gantt__filter-panel-title">@Loc["TmGantt_Filter"]</span>
-        <button type="button" class="tm-gantt__filter-panel-close" @onclick="@(_ => OnClose.InvokeAsync())"
-                aria-label="@Loc["TmGantt_FilterClose"]">
-            <TmIcon Name="x" Size="IconSize.Sm" />
-        </button>
-    </div>
-
-    @foreach (var filter in _editFilters)
-    {
-        <div class="tm-gantt__filter-row">
-            <select class="tm-input tm-gantt__filter-field" value="@filter.Field"
-                    aria-label="@Loc["TmGantt_FilterField"]"
-                    @onchange="e => UpdateFilterField(filter, e.Value?.ToString() ?? string.Empty)">
-                <option value="Title">@Loc["TmGantt_FilterFieldTitle"]</option>
-                <option value="Status">@Loc["TmGantt_FilterFieldStatus"]</option>
-                <option value="Priority">@Loc["TmGantt_FilterFieldPriority"]</option>
-            </select>
-            <select class="tm-input tm-gantt__filter-op" value="@filter.Operator.ToString()"
-                    aria-label="@Loc["TmGantt_FilterOperator"]"
-                    @onchange="e => UpdateFilterOp(filter, Enum.Parse<GanttFilterOperator>(e.Value?.ToString() ?? nameof(GanttFilterOperator.Equals)))">
-                @foreach (var filterOp in Enum.GetValues<GanttFilterOperator>())
+@{
+    RenderFragment rows = @<text>
+        @foreach (var filter in _editFilters)
+        {
+            var type = TypeOf(filter.Field);
+            <div class="tm-gantt__filter-row">
+                <select class="tm-input tm-gantt__filter-field" value="@filter.Field"
+                        aria-label="@Loc["TmGantt_FilterField"]"
+                        @onchange="e => UpdateFilterField(filter, e.Value?.ToString() ?? string.Empty)">
+                    @foreach (var field in FieldsFor(filter))
+                    {
+                        <option value="@field" selected="@(filter.Field == field)">@FieldLabel(field)</option>
+                    }
+                </select>
+                <select class="tm-input tm-gantt__filter-op" value="@filter.Operator.ToString()"
+                        aria-label="@Loc["TmGantt_FilterOperator"]"
+                        @onchange="e => UpdateFilterOp(filter, Enum.Parse<GanttFilterOperator>(e.Value?.ToString() ?? nameof(GanttFilterOperator.Equals)))">
+                    @foreach (var filterOp in OperatorsFor(filter))
+                    {
+                        <option value="@filterOp.ToString()" selected="@(filter.Operator == filterOp)">@GanttLabels.FilterOperator(Loc, filterOp)</option>
+                    }
+                </select>
+                @if (NeedsValue(filter))
                 {
-                    <option value="@filterOp.ToString()">@GanttLabels.FilterOperator(Loc, filterOp)</option>
+                    if (type == FieldType.Enum)
+                    {
+                        <select class="tm-input tm-gantt__filter-value" value="@filter.Value"
+                                aria-label="@Loc["TmGantt_FilterValue"]"
+                                @onchange="e => UpdateFilterValue(filter, e.Value?.ToString())">
+                            @foreach (var member in EnumValues(filter.Field))
+                            {
+                                <option value="@member" selected="@(filter.Value == member)">@EnumLabel(filter.Field, member)</option>
+                            }
+                            @if (!IsKnownEnumValue(filter))
+                            {
+                                @* A value the host loaded that is not a member (a provider-native label) stays selectable instead of being rewritten. *@
+                                <option value="@filter.Value" selected="selected">@filter.Value</option>
+                            }
+                        </select>
+                    }
+                    else if (type == FieldType.Date)
+                    {
+                        <input type="date" class="tm-input tm-gantt__filter-value"
+                               value="@filter.Value"
+                               aria-label="@Loc["TmGantt_FilterValue"]"
+                               @onchange="e => UpdateFilterValue(filter, e.Value?.ToString())" />
+                    }
+                    else
+                    {
+                        <input type="text" class="tm-input tm-gantt__filter-value"
+                               value="@filter.Value"
+                               aria-label="@Loc["TmGantt_FilterValue"]"
+                               @onchange="e => UpdateFilterValue(filter, e.Value?.ToString())" />
+                    }
                 }
-            </select>
-            @if (filter.Operator is not GanttFilterOperator.IsEmpty and not GanttFilterOperator.IsNotEmpty)
-            {
-                <input type="text" class="tm-input tm-gantt__filter-value"
-                       value="@filter.Value"
-                       aria-label="@Loc["TmGantt_FilterValue"]"
-                       @onchange="e => UpdateFilterValue(filter, e.Value?.ToString())" />
-            }
-            <button type="button" class="tm-gantt__filter-remove"
-                    aria-label="@Loc["TmGantt_FilterRemove"]"
-                    @onclick="() => RemoveFilter(filter)">
-                <TmIcon Name="x" Size="IconSize.Sm" />
-            </button>
-        </div>
-    }
+                <button type="button" class="tm-gantt__filter-remove"
+                        aria-label="@Loc["TmGantt_FilterRemove"]"
+                        @onclick="() => RemoveFilter(filter)">
+                    <TmIcon Name="x" Size="IconSize.Sm" />
+                </button>
+            </div>
+        }
 
-    <div class="tm-gantt__filter-panel-actions">
+        <div class="tm-gantt__filter-add">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outline" Icon="plus"
+                      OnClick="AddFilter" data-testid="@TestId("filter-add")">
+                @Loc["TmGantt_AddFilter"]
+            </TmButton>
+        </div>
+    </text>;
+
+    RenderFragment actions = @<text>
+        @* Transactional footer: Clear all (a link, on the left) | Cancel | Apply. Nothing reaches the Gantt until Apply. *@
+        @if (_editFilters.Count > 0)
+        {
+            <span class="tm-gantt__filter-clear-slot">
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Link" Class="tm-gantt__filter-clear"
+                          OnClick="ClearAll" data-testid="@TestId("filter-clear")">
+                    @Loc["TmGantt_ClearFilters"]
+                </TmButton>
+            </span>
+        }
         <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                  OnClick="AddFilter" data-testid="@TestId("filter-add")">
-            <TmIcon Name="plus" Size="IconSize.Sm" />
-            @Loc["TmGantt_AddFilter"]
+                  OnClick="CancelAsync" data-testid="@TestId("filter-cancel")">
+            @Loc["Tm_Cancel"]
         </TmButton>
         <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary"
                   OnClick="ApplyAsync" data-testid="@TestId("filter-apply")">
             @Loc["TmGantt_ApplyFilters"]
         </TmButton>
-        @if (_editFilters.Count > 0)
-        {
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                      OnClick="ClearAll" data-testid="@TestId("filter-clear")">
-                @Loc["TmGantt_ClearFilters"]
-            </TmButton>
-        }
+    </text>;
+}
+
+@if (AsDialog)
+{
+    @* The dialog presentation: the core TmModal owns the header, the focus trap, Escape and the footer. *@
+    <TmModal Show="Show"
+             Class="tm-gantt__filter-dialog"
+             Title="@Loc["TmGantt_Filter"]"
+             Size="ModalSize.Large"
+             MobilePresentation="MobilePresentation.Auto"
+             FooterLayout="FooterLayout.Inline"
+             OnClose="CancelAsync">
+        <ChildContent>
+            <div class="tm-gantt__filter-panel-inner tm-gantt__filter-panel-inner--dialog" data-testid="@RootTestId("gantt-filter-panel")">
+                @rows
+            </div>
+        </ChildContent>
+        <Footer>
+            @actions
+        </Footer>
+    </TmModal>
+}
+else
+{
+    <div class="tm-gantt__filter-panel-inner">
+        <div class="tm-gantt__filter-panel-header">
+            <span class="tm-gantt__filter-panel-title">@Loc["TmGantt_Filter"]</span>
+            <button type="button" class="tm-gantt__filter-panel-close" @onclick="@(_ => OnClose.InvokeAsync())"
+                    aria-label="@Loc["TmGantt_FilterClose"]">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        </div>
+
+        @rows
+
+        <div class="tm-gantt__filter-panel-actions">
+            @actions
+        </div>
     </div>
-</div>
+}

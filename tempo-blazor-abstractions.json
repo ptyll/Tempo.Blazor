@@ -15276,6 +15276,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "GanttFilterPanelMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (meant to pick by container width; behaves as Inline until the container layout lands in a later phase, subject to change).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilterPanelMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttHelper",
       "kind": "Class",
       "category": "Models",
@@ -37422,11 +37432,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1498,
-    "manualItemCount": 1498,
-    "generatedItemCount": 1481,
+    "itemCount": 1499,
+    "manualItemCount": 1499,
+    "generatedItemCount": 1482,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1481
+    "publicApiTypeCount": 1482
   }
 }

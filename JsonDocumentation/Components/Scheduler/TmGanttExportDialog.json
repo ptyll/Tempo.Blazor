@@ -2,7 +2,7 @@
   "itemName": "TmGanttExportDialog",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Dialog for configuring and triggering Gantt export.",
+  "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a preview area.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportDialog.razor",
@@ -22,6 +22,12 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the dialog should close."
+    },
+    {
+      "name": "PreviewContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content of the preview area. When null (default) the area shows the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here."
     },
     {
       "name": "OnExport",

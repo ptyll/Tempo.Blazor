@@ -69,7 +69,7 @@ public sealed class GanttScopedCssOwnershipTests
 
         string[] moved =
         [
-            "tm-gantt__dialog-overlay", "tm-gantt__dialog", "tm-gantt__export-", "tm-gantt__import-",
+            "tm-gantt__dialog-overlay", "tm-gantt__dialog-actions", "tm-gantt__export-", "tm-gantt__import-",
             "tm-gantt__mapping-", "tm-gantt__history-drawer", "tm-gantt__history-entry", "tm-gantt__history-list",
             "tm-gantt__history-empty", "tm-gantt__history-old", "tm-gantt__history-new", "tm-gantt__filter-row",
             "tm-gantt__filter-field", "tm-gantt__filter-op", "tm-gantt__filter-value", "tm-gantt__filter-remove",
@@ -86,24 +86,49 @@ public sealed class GanttScopedCssOwnershipTests
     }
 
     [Fact]
-    public void TheSharedDialogShell_IsGlobal_And_ImportedByTheBundleEntry()
+    public void TheDialogShell_IsGone_The_Dialogs_Ride_TmModal()
     {
-        // The overlay / card / header / actions are shared by three sub-components and by the history
-        // drawer close button, so they are declared once in a global stylesheet (decision
-        // GANTT-DIALOG-SHELL-GLOBAL) instead of being copied into three scoped files.
-        var shell = File.ReadAllText(Path.Combine(Root, "src/Tempo.Blazor/wwwroot/css/components/_gantt-dialog.css"));
-        foreach (var cls in new[] { "tm-gantt__dialog-overlay", "tm-gantt__dialog", "tm-gantt__dialog-header", "tm-gantt__dialog-title",
-                     "tm-gantt__dialog-close", "tm-gantt__dialog-body", "tm-gantt__dialog-actions" })
-        {
-            shell.Should().Contain("." + cls + " {");
-        }
-
+        // Phase 6 (G6): the export / import / mapping dialogs paint no overlay, card, header or footer of their own,
+        // so the global shell sheet of phase 1 (decision GANTT-DIALOG-SHELL-GLOBAL) is removed.
+        File.Exists(Path.Combine(Root, "src/Tempo.Blazor/wwwroot/css/components/_gantt-dialog.css")).Should().BeFalse();
         File.ReadAllText(Path.Combine(Root, "src/Tempo.Blazor/wwwroot/css/tempo-blazor.css"))
-            .Should().Contain("components/_gantt-dialog.css");
+            .Should().NotContain("_gantt-dialog.css");
         File.ReadAllText(Path.Combine(Root, "src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css"))
-            .Should().Contain(".tm-gantt__dialog-overlay", "the committed bundle must carry the shell");
+            .Should().NotContain(".tm-gantt__dialog-overlay", "the committed bundle carries no dialog overlay any more");
+
+        foreach (var component in new[] { "TmGanttExportDialog", "TmGanttImportDialog", "TmGanttImportMappingDialog" })
+        {
+            var markup = File.ReadAllText(Path.Combine(Root, SchedulerDir, component + ".razor"));
+            markup.Should().Contain("<TmModal", $"{component} is a TmModal");
+            markup.Should().NotContain("tm-gantt__dialog", $"{component} renders no own dialog shell");
+        }
     }
 
+    [Fact]
+    public void NoGanttSource_Paints_Its_Own_Backdrop_Or_Fixed_Surface()
+    {
+        // The DoD line "0 own overlays in the Gantt": a grep over the whole Gantt source for the three tells.
+        var offences = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(Path.Combine(Root, SchedulerDir), "TmGantt*.*")
+                     .Where(p => p.EndsWith(".razor", StringComparison.Ordinal) || p.EndsWith(".razor.css", StringComparison.Ordinal)))
+        {
+            var text = File.ReadAllText(path);
+            if (text.Contains("dialog-overlay", StringComparison.Ordinal)) offences.Add(Path.GetFileName(path) + ": dialog-overlay");
+            if (text.Contains("__backdrop", StringComparison.Ordinal)) offences.Add(Path.GetFileName(path) + ": __backdrop");
+            // Recorded fixed placements: the history drawer's opt-in Viewport placement, and the transparent
+            // click-away scrims of the two menus (TmGantt.razor.css context menu, TmGanttToolbar.razor.css view
+            // settings) - menus, not dialogs; they paint no backdrop.
+            if (Regex.IsMatch(text, @"position:\s*fixed", RegexOptions.None, TimeSpan.FromSeconds(5))
+                && !path.EndsWith("TmGanttHistoryDrawer.razor.css", StringComparison.Ordinal)
+                && !path.EndsWith("TmGantt.razor.css", StringComparison.Ordinal)
+                && !path.EndsWith("TmGanttToolbar.razor.css", StringComparison.Ordinal))
+            {
+                offences.Add(Path.GetFileName(path) + ": position: fixed");
+            }
+        }
+
+        offences.Should().BeEmpty("the dialogs are TmModal, the history drawer (HistoryDrawerPlacement.Viewport) and the two menu click-away scrims are the only recorded fixed placements");
+    }
     [Fact]
     public void EveryClassTheMovedRulesStyle_IsStillRenderedByTheirOwner()
     {

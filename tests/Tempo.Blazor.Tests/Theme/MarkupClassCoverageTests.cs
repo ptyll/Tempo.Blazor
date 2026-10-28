@@ -403,7 +403,9 @@ public sealed class MarkupClassCoverageTests
             // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
             // TmGantt redesign phase 4: the sidebar tab/panel DOM ids ($"tm-gantt-{InstanceId}-tab-…") in
             // the toolbar/sidebar parts add the "tm-gantt-" stem — 50 → 51.
-            ExpectedUnmeasurableStems: 51),
+            // TmGantt redesign phase 6: the import dialog became a TmModal, which owns its title id, so its
+            // "tm-gantt-import-title-{Guid…}" stem is gone — 51 → 50.
+            ExpectedUnmeasurableStems: 50),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

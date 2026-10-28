@@ -116,7 +116,7 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     {
         var page = await OpenGanttAsync();
         await MainGantt(page).Locator("button[data-testid='gantt-export-btn']").ClickAsync();
-        await page.Locator(".tm-gantt__dialog").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.Locator(".tm-gantt__export-dialog .tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await ShootAsync(page, "gantt-export-dialog-1440");
     }
 
@@ -126,7 +126,7 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     {
         var page = await OpenGanttAsync();
         await MainGantt(page).Locator("button[data-testid='gantt-import-btn']").ClickAsync();
-        await page.Locator(".tm-gantt__import-dialog").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.Locator(".tm-gantt__import-dialog .tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await ShootAsync(page, "gantt-import-dialog-1440");
     }
 
@@ -136,7 +136,7 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     {
         var page = await OpenGanttAsync(route: "/gantt-portfolio");
         await page.Locator("[data-testid='gantt-demo-mapping-open']").ClickAsync();
-        await page.Locator(".tm-gantt__import-mapping-dialog").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.Locator(".tm-gantt__import-mapping-dialog .tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         await ShootAsync(page, "gantt-import-mapping-dialog-1440");
     }
 
@@ -200,12 +200,12 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     {
         var page = await OpenGanttAsync();
         await MainGantt(page).Locator("button[data-testid='gantt-export-btn']").ClickAsync();
-        var overlay = page.Locator(".tm-gantt__dialog-overlay");
+        var overlay = page.Locator(".tm-modal-overlay.tm-gantt__export-dialog");
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         Assert.AreEqual("fixed", await StyleAsync(overlay, "position"), "the scrim is viewport-fixed");
 
-        var header = page.Locator(".tm-gantt__dialog-header").First;
+        var header = overlay.Locator(".tm-modal-header").First;
         Assert.AreEqual("flex", await StyleAsync(header, "display"), "the dialog header is a flex row");
 
         var formats = page.Locator(".tm-gantt__export-formats");
@@ -268,13 +268,13 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
     {
         var page = await OpenGanttAsync(route: "/gantt-portfolio");
         await page.Locator("[data-testid='gantt-demo-mapping-open']").ClickAsync();
-        var overlay = page.Locator(".tm-gantt__dialog-overlay");
+        var overlay = page.Locator(".tm-modal-overlay.tm-gantt__import-mapping-dialog");
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         Assert.AreEqual("fixed", await StyleAsync(overlay, "position"));
         Assert.AreEqual("grid", await StyleAsync(page.Locator(".tm-gantt__mapping-row").First, "display"),
             "a mapping row is a two-column grid");
-        Assert.AreEqual("560px", await StyleAsync(page.Locator(".tm-gantt__import-mapping-dialog"), "width"));
+        Assert.AreEqual("680px", await StyleAsync(overlay.Locator(".tm-modal"), "max-width"), "a Large TmModal card");
     }
 
     [TestMethod]
@@ -323,7 +323,7 @@ public sealed class GanttVisualBaselineE2ETests : WasmTestBase
         var page = await OpenGanttAsync();
         await MainGantt(page).Locator("button[data-testid='gantt-import-btn']").ClickAsync();
         var dialog = page.Locator(".tm-gantt__import-dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         var importButton = dialog.Locator("[data-testid='import-submit']");
         Assert.IsTrue(await importButton.IsDisabledAsync(), "Import is disabled until a file is chosen");

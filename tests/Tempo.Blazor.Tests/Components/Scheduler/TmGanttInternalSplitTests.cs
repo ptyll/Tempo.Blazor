@@ -371,7 +371,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     private static readonly string[] ExpectedParameters =
     [
         "ActiveBaselineId", "ActiveTimerTaskId", "AdditionalAttributes", "AllowBulkSelect", "AllowDependencyCreation", "AutoSchedule",
-        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
+        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "FilterPanelMode", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
         "Items", "NotificationSettings", "OnAttachmentRemoved", "OnAttachmentUpload", "OnAutoScheduled", "OnBaselineSaved",
         "OnBulkUpdate", "OnColumnsChanged", "OnCustomFieldChanged", "OnDataSorted", "OnDependencyAdded", "OnDependencyRemoved",
         "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnNewReportRequested",

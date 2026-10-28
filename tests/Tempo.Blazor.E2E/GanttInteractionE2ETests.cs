@@ -209,7 +209,7 @@ public class GanttInteractionE2ETests : WasmTestBase
         await gantt.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
 
         var dialog = page.Locator(".tm-gantt__import-dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         var chooseBtn = dialog.Locator("[data-testid='import-choose-file']");
         await Expect(chooseBtn).ToBeVisibleAsync();

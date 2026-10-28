@@ -152,7 +152,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.Filters, [new GanttFilter("Title", GanttFilterOperator.Contains, "x")]));
 
         var options = cut.FindAll("select.tm-gantt__filter-op option").Select(o => o.TextContent.Trim()).ToList();
-        options.Should().HaveCount(Enum.GetValues<GanttFilterOperator>().Length);
+        options.Should().Equal("obsahuje", "rovná se", "nerovná se", "je prázdné", "není prázdné");
         options.Should().Contain("obsahuje");
         options.Should().NotContain(Enum.GetNames<GanttFilterOperator>(), "enum names are never shown to the user");
     }
@@ -190,7 +190,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.IsOpen, true)
             .Add(x => x.SourceColumns, ["Name"]));
 
-        var options = cut.FindAll("select.tm-gantt__mapping-select option").Select(o => o.TextContent.Trim()).ToList();
+        var options = cut.FindAll(".tm-gantt__mapping-select select option").Select(o => o.TextContent.Trim()).ToList();
         options.Should().Contain(["Úkol", "Začátek", "Konec", "Stav", "Délka", "Priorita", "Průběh", "Termín"]);
         options.Should().NotContain(["Title", "Start", "End", "Progress", "Status", "Priority", "Duration", "Deadline", "Estimation", "TimeLog"]);
     }
@@ -201,15 +201,14 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
         IReadOnlyList<GanttColumnMapping>? confirmed = null;
         var cut = Render<TmGanttImportMappingDialog>(p => p
             .Add(x => x.IsOpen, true)
-            .Add(x => x.SourceColumns, ["Name"])
+            .Add(x => x.SourceColumns, ["Name", "Begin", "Span"])
             .Add(x => x.OnImport, EventCallback.Factory.Create<IReadOnlyList<GanttColumnMapping>>(this, m => confirmed = m)));
 
-        cut.Find("[data-testid='mapping-select-Name']").Change(nameof(GanttColumnKey.Duration));
-        cut.FindAll(".tm-gantt__dialog-actions button")[0].Click();
+        cut.Find("[data-testid='mapping-select-Span'] select").Change(nameof(GanttColumnKey.Duration));
+        cut.Find("[data-testid='mapping-submit']").Click();
 
-        confirmed.Should().ContainSingle().Which.TargetProperty.Should().Be(GanttColumnKey.Duration);
+        confirmed.Should().Contain(m => m.SourceColumn == "Span" && m.TargetProperty == GanttColumnKey.Duration);
     }
-
     [Fact]
     public void TmGanttHistoryDrawer_Empty_Shows_Empty_Text()
     {
@@ -334,7 +333,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
     public void TmGanttImportDialog_Import_Disabled_Until_Jira_Fields_Are_Filled()
     {
         var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
-        cut.FindAll(".tm-gantt__import-tab")[2].Click();
+        cut.FindAll("[role='tab']")[2].Click();
 
         cut.Find("[data-testid='import-submit']").HasAttribute("disabled").Should().BeTrue();
 
@@ -463,13 +462,13 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.IsOpen, true)
             .Add(x => x.OnClose, () => { closed++; }));
 
-        var dialog = cut.Find(".tm-gantt__dialog");
+        var dialog = cut.Find(".tm-modal-overlay .tm-focus-scope");
         dialog.GetAttribute("role").Should().Be("dialog");
         dialog.GetAttribute("aria-modal").Should().Be("true");
         var labelledBy = dialog.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrEmpty();
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("Export");
-        cut.Find(".tm-gantt__dialog-close").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("Export");
+        cut.Find(".tm-modal-close").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
 
         cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
@@ -485,19 +484,19 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
             .Add(x => x.SourceColumns, ["Name"])
             .Add(x => x.OnClose, () => { closed++; }));
 
-        var dialog = cut.Find(".tm-gantt__import-mapping-dialog");
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-gantt__import-mapping-dialog");
+        var dialog = cut.Find(".tm-modal-overlay .tm-focus-scope");
         dialog.GetAttribute("role").Should().Be("dialog");
         dialog.GetAttribute("aria-modal").Should().Be("true");
         var labelledBy = dialog.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrEmpty();
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("Column mapping");
-        cut.Find(".tm-gantt__dialog-close").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("Column mapping");
+        cut.Find(".tm-modal-close").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
 
         cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         closed.Should().Be(1);
     }
-
     // ═══════════════════════════════════════════════════════════════
     // Review round 1
     // ═══════════════════════════════════════════════════════════════

@@ -266,12 +266,11 @@ internal static class GanttCss
     public static IReadOnlyList<(string Name, string Css)> Files()
     {
         var files = Directory.EnumerateFiles(SchedulerDir, "TmGantt*.razor.css")
-            .Append(Path.Combine(Root, "src", "Tempo.Blazor", "wwwroot", "css", "components", "_gantt-dialog.css"))
             .OrderBy(path => path, StringComparer.Ordinal)
             .Select(path => (Path.GetFileName(path), Strip(File.ReadAllText(path))))
             .ToList();
 
-        files.Count.Should().BeGreaterThan(8, "the Gantt owns one stylesheet per sub-component plus the dialog shell");
+        files.Count.Should().BeGreaterThan(8, "the Gantt owns one stylesheet per sub-component");
         return files;
     }
 

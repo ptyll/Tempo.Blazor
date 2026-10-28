@@ -2,7 +2,7 @@
   "itemName": "TmGanttFilterPanel",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Side panel for building filter rules applied to a TmGantt. Each rule combines a field (Title, Status, Priority), an operator, and a value; rules can be added and removed, and applying them raises a callback with the resulting filter set.",
+  "description": "Editor for the filter rules applied to a TmGantt. Each rule combines a field (Title, Status, Priority, Start, End, Deadline), an operator that fits the field type, and a typed value (an enum select for Status and Priority, a date input for the dates, text for the rest). Transactional: the footer is Clear all | Cancel | Apply and nothing reaches the Gantt until Apply. Renders inline, or as a TmModal with AsDialog.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttFilterPanel.razor",
@@ -21,6 +21,20 @@
       "name": "OnFiltersChanged",
       "type": "EventCallback<IReadOnlyList<GanttFilter>>",
       "isRequired": false
+    },
+    {
+      "name": "AsDialog",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Presents the editor in a TmModal (a bottom sheet on a mobile viewport) instead of an inline strip: the modal owns the header and the footer, Apply closes it. TmGantt sets it for FilterPanelMode.Dialog."
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the dialog presentation (AsDialog) is shown. TmGantt keeps the panel mounted and toggles this so the modal can return the focus to its trigger on close. Ignored by the inline presentation."
     },
     {
       "name": "OnClose",

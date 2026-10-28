@@ -1,0 +1,36 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Components.Filters
+
+@* The filter strip of TmGantt: the active filters as removable chips directly under the toolbar (only while a filter
+   exists) and the filter editor - an inline strip, or a TmModal for FilterPanelMode = Dialog. *@
+@if (Owner.ActiveFilterCount > 0)
+{
+    <div class="tm-gantt__filter-chips" role="group" aria-label="@Loc["TmGantt_ActiveFilters"]" data-testid="@TestId("gantt-filter-chips")">
+        @foreach (var chip in Owner.FilterChips())
+        {
+            var source = chip.Source;
+            <TmFilterChip Filter="chip.Chip" OnRemove="() => Owner.RemoveFilterChipAsync(source)" OnEdit="Owner.OpenFilterPanel" />
+        }
+    </div>
+}
+
+@if (Owner.FilterPanelAsDialog)
+{
+    @* Always mounted in the dialog presentation: the TmModal toggles with Show, which lets it restore the focus to the
+       trigger when it closes (a modal that is unmounted while open cannot). *@
+    <TmGanttFilterPanel AsDialog="true"
+                        Show="Owner._filterPanelOpen"
+                        DataTestId="@TestId("gantt-filter-panel")"
+                        Filters="Owner.ActiveFiltersSnapshot()"
+                        OnFiltersChanged="async filters => await Owner.ApplyFiltersAsync(filters)"
+                        OnClose="Owner.CloseFilterPanel" />
+}
+else if (Owner._filterPanelOpen)
+{
+    <div class="tm-gantt__filter-panel" data-testid="@TestId("gantt-filter-panel")">
+        <TmGanttFilterPanel Filters="Owner.ActiveFiltersSnapshot()"
+                            OnFiltersChanged="async filters => await Owner.ApplyFiltersAsync(filters)"
+                            OnClose="Owner.ToggleFilterPanel" />
+    </div>
+}
