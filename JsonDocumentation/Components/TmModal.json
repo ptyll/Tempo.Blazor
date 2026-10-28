@@ -63,6 +63,12 @@
       "default": "true"
     },
     {
+      "name": "CloseButtonAdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Extra attributes splatted onto the built-in close button - a host-owned data-testid or a stable focus hook the host's restore path targets. Rendered only with ShowCloseButton; never overrides the button's type, class, click handler or accessible name."
+    },
+    {
       "name": "ShowFooter",
       "type": "bool",
       "isRequired": false,

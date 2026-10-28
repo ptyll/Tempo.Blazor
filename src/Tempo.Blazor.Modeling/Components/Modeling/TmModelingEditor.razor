@@ -176,6 +176,7 @@
                                           DocumentChanged="UpdatePreviewDocumentAsync"
                                           ActiveDraggedElement="@_draggedElement"
                                           AllowNodeDrop="@AllowNodeDrop"
+                                          OpenInEditorTriggerId="@_openEditorTriggerId"
                                           OnNodeDropped="HandleNodeDroppedAsync"
                                           OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
                                           OnRelationshipSelected="SelectRelationshipAsync"
@@ -220,38 +221,44 @@
             </span>
         </footer>
 
+        @* Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned
+           dialog with a scrim, a public focus scope and Escape, sized ~90vw × 90vh on the
+           desktop through TmModelingEditor.razor.css. The TmModal header owns the title
+           (document title with the "Open in editor" fallback) and the close; the embedded
+           diagram editor renders with ShowTitle="false" so the dialog has ONE header. The
+           diagram editor keeps every panel and the Full toolbar preset; changes keep
+           propagating live (G8 — no footer), so the scrim is not a close affordance. *@
         @if (_openedEditorDocument is not null)
         {
-            <section class="tm-modeling-editor__open-editor"
-                     data-testid="@TestId("modeling-open-diagram-editor")"
-                     role="dialog"
-                     aria-modal="true"
-                     aria-label="@Loc["TmModelingDiagramPreview_OpenInEditor"]">
-                <header class="tm-modeling-editor__open-editor-header">
-                    <div>
-                        <h3>@(_openedEditorDocument.Title ?? Loc["TmModelingEditor_Preview"])</h3>
-                        <span>@Loc["TmModelingDiagramPreview_OpenEditorSummary"]</span>
+            <TmModal Show="true"
+                     Title="@OpenEditorDialogTitle"
+                     Subtitle="@Loc["TmModelingDiagramPreview_OpenEditorSummary"]"
+                     Size="ModalSize.XLarge"
+                     MobilePresentation="MobilePresentation.Dialog"
+                     ShowFooter="false"
+                     ShowDefaultFooterButtons="false"
+                     CloseOnOverlayClick="false"
+                     CloseOnEscape="true"
+                     OnClose="CloseGeneratedDiagramAsync"
+                     RestoreFocusTargetId="@_openEditorTriggerId"
+                     Class="tm-modeling-editor__open-editor-modal"
+                     CloseButtonAdditionalAttributes="@OpenEditorCloseButtonAttributes"
+                     AdditionalAttributes="@OpenEditorModalAttributes">
+                <ChildContent>
+                    <div class="tm-modeling-editor__open-editor-body">
+                        <TmDiagramEditor Document="@_openedEditorDocument"
+                                         DocumentChanged="UpdateOpenedEditorDocumentAsync"
+                                         ToolbarPreset="DiagramToolbarPreset.Full"
+                                         ShowTitle="false"
+                                         ShowToolbox="true"
+                                         ShowPropertiesPanel="true"
+                                         ShowLayersPanel="true"
+                                         ShowMinimap="true"
+                                         ShowToolbar="true"
+                                         Class="tm-modeling-editor__open-editor-diagram" />
                     </div>
-                    <TmButton Variant="ButtonVariant.Secondary"
-                              Size="ButtonSize.Sm"
-                              Icon="@IconNames.X"
-                              OnClick="CloseGeneratedDiagramAsync"
-                              data-modeling-focus="open-editor-close"
-                              data-testid="@TestId("modeling-open-diagram-close")">
-                        @Loc["Tm_Close"]
-                    </TmButton>
-                </header>
-                <div class="tm-modeling-editor__open-editor-body">
-                    <TmDiagramEditor Document="@_openedEditorDocument"
-                                     DocumentChanged="UpdateOpenedEditorDocumentAsync"
-                                     ShowToolbox="true"
-                                     ShowPropertiesPanel="true"
-                                     ShowLayersPanel="true"
-                                     ShowMinimap="true"
-                                     ShowToolbar="true"
-                                     Class="tm-modeling-editor__open-editor-diagram" />
-                </div>
-            </section>
+                </ChildContent>
+            </TmModal>
         }
     }
 </section>

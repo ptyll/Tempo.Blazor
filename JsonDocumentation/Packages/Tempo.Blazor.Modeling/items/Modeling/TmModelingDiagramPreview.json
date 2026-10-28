@@ -67,6 +67,12 @@
       "description": "Raised when the user requests opening the generated document in the full diagram editor."
     },
     {
+      "name": "OpenInEditorTriggerId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "DOM id for the \"Open in editor\" trigger, owned by the hosting editor so its dialog can name the trigger as the focus-scope restore target. Null renders no id (the default)."
+    },
+    {
       "name": "OnRelationshipSelected",
       "type": "EventCallback<string>",
       "isRequired": false,

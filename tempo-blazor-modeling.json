@@ -266,6 +266,12 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Raised when a relationship edge is selected in the generated preview."
+        },
+        {
+          "name": "OpenInEditorTriggerId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "DOM id for the \"Open in editor\" trigger, owned by the hosting editor so its dialog can name the trigger as the focus-scope restore target. Null renders no id (the default)."
         }
       ]
     },
@@ -274,7 +280,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Loads a semantic modeling source and presents an initial modeling editor shell.",
+      "description": "Loads a semantic modeling source and presents an initial modeling editor shell. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
       "documentationStatus": "merged",
@@ -395,6 +401,18 @@
         {
           "name": "tm-modeling-editor__field",
           "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; may shrink to its token minimum inside the wrapping context group (review fix, phase 3)."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-modal",
+          "description": "Class on the open-editor TmModal overlay root; sizes the modal panel to ~90vw x 90vh on the desktop and to a near-fullscreen panel below 48rem."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-body",
+          "description": "Dialog body wrapper filling the TmModal body; hosts the embedded diagram editor."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-diagram",
+          "description": "The embedded TmDiagramEditor inside the dialog body; fills the body height."
         }
       ]
     },

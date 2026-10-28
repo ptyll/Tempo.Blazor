@@ -22,6 +22,12 @@ public partial class TmModelingDiagramPreview
     /// <summary>Raised when the user requests opening the generated document in the full diagram editor.</summary>
     [Parameter] public EventCallback<DiagramDocument> OnOpenInEditor { get; set; }
 
+    /// <summary>
+    /// DOM id for the "Open in editor" trigger, owned by the hosting editor so its dialog can
+    /// name the trigger as the focus-scope restore target. Null renders no id (the default).
+    /// </summary>
+    [Parameter] public string? OpenInEditorTriggerId { get; set; }
+
     /// <summary>Raised when the user requests a fresh diagram generation from the currently loaded model.</summary>
     [Parameter] public EventCallback OnGenerateRequested { get; set; }
 

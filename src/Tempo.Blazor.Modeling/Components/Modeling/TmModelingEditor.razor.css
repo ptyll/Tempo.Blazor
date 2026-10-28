@@ -418,44 +418,20 @@
     color: var(--tm-color-text);
 }
 
-.tm-modeling-editor__open-editor {
-    position: absolute;
-    inset: var(--tm-space-4);
-    z-index: 20;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    overflow: hidden;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface);
-    box-shadow: var(--tm-shadow-xl);
-}
-
-.tm-modeling-editor__open-editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-4);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
-    background: var(--tm-bg-surface-secondary);
-}
-
-.tm-modeling-editor__open-editor-header h3 {
-    margin: 0;
-    font-size: var(--tm-font-size-md);
-    font-weight: var(--tm-font-weight-semibold);
-    line-height: var(--tm-line-height-tight);
-}
-
-.tm-modeling-editor__open-editor-header span {
-    display: block;
-    margin-top: var(--tm-space-1);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+/* Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned dialog
+   with a scrim, a focus scope and Escape. The in-editor overlay box (position:absolute inside
+   the editor root, its own header and close button) is gone; only the dialog BODY styling
+   remains. The size rides on the modal panel through the overlay class: ~90vw × 90vh on the
+   desktop (TmModal's own --xl/--fullscreen caps are intentionally replaced). */
+::deep .tm-modeling-editor__open-editor-modal .tm-modal {
+    width: 90vw;
+    max-width: 90vw;
+    height: 90vh;
+    max-height: 90vh;
 }
 
 .tm-modeling-editor__open-editor-body {
+    height: 100%;
     min-height: 0;
     padding: var(--tm-space-3);
     background: var(--tm-bg-surface-secondary);
@@ -464,6 +440,18 @@
 ::deep .tm-modeling-editor__open-editor-diagram {
     height: 100%;
     min-height: calc(var(--tm-space-16) * 7);
+}
+
+/* Below the desktop breakpoint the dialog keeps the pre-TmModal footprint: a near-fullscreen
+   panel instead of the desktop 90vw × 90vh (the final mobile presentation is phase 7). The
+   overlay's own --tm-space-4 padding stays as the margin around the panel. */
+@media (max-width: 48rem) {
+    ::deep .tm-modeling-editor__open-editor-modal .tm-modal {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        max-height: 100%;
+    }
 }
 
 @media (max-width: 48rem) {
@@ -567,11 +555,6 @@
         display: block;
     }
 
-    .tm-modeling-editor__open-editor {
-        position: fixed;
-        inset: var(--tm-space-3);
-    }
-
     .tm-modeling-editor__status {
         overflow: hidden;
         white-space: nowrap;
@@ -607,22 +590,6 @@
         padding-inline: var(--tm-space-2);
         font-size: var(--tm-font-size-xs);
     }
-
-    .tm-modeling-editor__open-editor {
-        inset: var(--tm-space-2);
-        border-radius: var(--tm-radius-md);
-    }
-
-    .tm-modeling-editor__open-editor-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    /* ::deep is required: .tm-btn is rendered by the TmButton child component, so the owner
-       scope attribute does not sit on the element the selector targets (P21 / 00-cross-cutting §7.4). */
-    .tm-modeling-editor__open-editor-header ::deep .tm-btn {
-        width: 100%;
-    }
 }
 
 @media (forced-colors: active) {
@@ -630,8 +597,6 @@
     .tm-modeling-editor__toolbar,
     .tm-modeling-editor__panel,
     .tm-modeling-editor__status,
-    .tm-modeling-editor__open-editor,
-    .tm-modeling-editor__open-editor-header,
     .tm-modeling-editor__open-editor-body,
     .tm-modeling-editor__panel-tabs {
         border-color: CanvasText;

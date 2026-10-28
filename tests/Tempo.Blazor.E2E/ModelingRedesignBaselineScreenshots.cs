@@ -85,6 +85,33 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Phase 4: the open-editor dialog is a TmModal now — capture it at the two desktop
+    /// widths in light and dark so the scrim, the 90vw × 90vh panel and the dark tokens are
+    /// pinned as the "after" baseline of the dialog rework.</summary>
+    [TestMethod]
+    [DataRow("light", 1440, 900)]
+    [DataRow("light", 1280, 800)]
+    [DataRow("dark", 1440, 900)]
+    [DataRow("dark", 1280, 800)]
+    [Description("Captures the open 'Open in editor' dialog at 1440/1280 in light and dark")]
+    public async Task Capture_OpenInEditorDialog_Themed(string theme, int width, int height)
+    {
+        var page = await OpenThemedModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"open-editor-dialog-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     [TestMethod]
     [Description("Captures the empty state at all four baseline viewports")]
     public async Task Capture_EmptyState()

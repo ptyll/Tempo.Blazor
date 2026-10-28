@@ -70,7 +70,8 @@
                         <button type="button"
                                 class="tm-modal-close"
                                 @onclick="OnClose"
-                                aria-label="@Loc["TmModal_Close"]">
+                                aria-label="@Loc["TmModal_Close"]"
+                                @attributes="CloseButtonAdditionalAttributes">
                             <TmIcon Name="x" Size="IconSize.Sm" />
                         </button>
                     }
@@ -158,6 +159,15 @@
     [Parameter] public bool Animated { get; set; } = true;
     
     [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>
+    /// Extra attributes splatted onto the built-in close button — a host-owned
+    /// <c>data-testid</c> or a stable focus hook the host's restore path targets. Rendered only
+    /// with <see cref="ShowCloseButton"/>; never overrides the button's type, class, click
+    /// handler or accessible name.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? CloseButtonAdditionalAttributes { get; set; }
+
     [Parameter] public bool ShowFooter { get; set; } = true;
     [Parameter] public bool ShowDefaultFooterButtons { get; set; } = false;
     [Parameter] public bool ShowOkButton { get; set; } = true;

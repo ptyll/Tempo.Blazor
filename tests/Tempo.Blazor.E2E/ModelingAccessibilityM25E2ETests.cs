@@ -92,10 +92,17 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         await page.Locator("[data-testid='modeling-open-in-editor-button']").FocusAsync();
         await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
 
+        // Phase 4: the dialog is a core TmModal — the preserved test id rides on the overlay
+        // root, the dialog semantics (role/aria-modal/aria-labelledby) on its .tm-modal panel.
         var overlay = page.Locator("[data-testid='modeling-open-diagram-editor']");
         await Assertions.Expect(overlay).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
-        await Assertions.Expect(overlay).ToHaveAttributeAsync("role", "dialog");
-        await Assertions.Expect(overlay).ToHaveAttributeAsync("aria-modal", "true");
+        var dialog = overlay.Locator(".tm-modal");
+        await Assertions.Expect(dialog).ToHaveAttributeAsync("role", "dialog");
+        await Assertions.Expect(dialog).ToHaveAttributeAsync("aria-modal", "true");
+        var labelledBy = await dialog.GetAttributeAsync("aria-labelledby");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(labelledBy), "The dialog is named by its title element.");
+        await Assertions.Expect(overlay.Locator($"[id='{labelledBy}']")).ToBeVisibleAsync();
+
         await WaitForActiveTestIdAsync(page, "modeling-open-diagram-close");
 
         await page.Locator("[data-testid='modeling-open-diagram-close']").ClickAsync();

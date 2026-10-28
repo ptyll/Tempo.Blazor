@@ -53,6 +53,32 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>Stable, test-id-independent focus hook of the open-editor overlay close button.</summary>
     internal const string OpenEditorCloseFocusSelector = "[data-modeling-focus='open-editor-close']";
 
+    private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
+
+    /// <summary>Attributes of the open-editor TmModal overlay root (the preserved dialog test id).</summary>
+    private Dictionary<string, object> OpenEditorModalAttributes => new(StringComparer.Ordinal)
+    {
+        ["data-testid"] = TestId("modeling-open-diagram-editor")
+    };
+
+    /// <summary>Attributes of the TmModal close button (the preserved test id + the focus hook).</summary>
+    private Dictionary<string, object> OpenEditorCloseButtonAttributes => new(StringComparer.Ordinal)
+    {
+        ["data-testid"] = TestId("modeling-open-diagram-close"),
+        ["data-modeling-focus"] = "open-editor-close"
+    };
+
+    /// <summary>
+    /// Title of the open-editor dialog: the document's title, falling back to the localized
+    /// "Open in editor" label when the document carries none (the pre-redesign default fell
+    /// back to "Preview" — Fáze 4 renames the fallback to the dialog's own label).
+    /// Test seam (InternalsVisibleTo): the modal header renders exactly this value.
+    /// </summary>
+    internal string OpenEditorDialogTitle
+        => string.IsNullOrWhiteSpace(_openedEditorDocument?.Title)
+            ? Loc["TmModelingDiagramPreview_OpenInEditor"]
+            : _openedEditorDocument.Title!;
+
     /// <summary>Scoped accessor for the shared, disposed-guarded module wrapper (the [Inject]
     /// runtime is only available after construction, so the wrapper is created lazily).</summary>
     private ModelingInteropModule Interop => _interopModule ??= new ModelingInteropModule(JSRuntime);
