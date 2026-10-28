@@ -1,5 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Modeling;
@@ -649,14 +651,82 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Insert_action_requires_a_listener_even_when_node_drop_is_allowed()
+    {
+        // Fáze 6 review: the button renders only when the host BOTH allows drops AND listens —
+        // a "+" with no receiver would be a dead control.
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.AllowNodeDrop, true));
+
+        cut.FindAll("[data-testid^='modeling-tree-insert-']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Insert_action_is_out_of_the_tab_order_and_names_its_row()
+    {
+        ModelingElementDto? requested = null;
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, element => requested = element)));
+
+        // The reveal button is a pointer/touch affordance: the KEYBOARD path is the node
+        // treeitem's Insert key (aria-keyshortcuts), so the button itself stays tabindex=-1.
+        var button = cut.Find("[data-testid='modeling-tree-insert-task-approve']");
+        button.GetAttribute("tabindex").Should().Be("-1");
+        button.GetAttribute("aria-label").Should().Be("Insert Approve request into preview",
+            "the per-row name carries the element's display name");
+        button.GetAttribute("title").Should().Be("Insert Approve request into preview");
+
+        // The keyboard path: Insert on the node treeitem raises the same request.
+        var node = cut.Find("[data-testid='modeling-tree-node-task-approve']");
+        node.KeyDown(new KeyboardEventArgs { Key = "Insert" });
+        cut.WaitForAssertion(() => requested.Should().NotBeNull());
+        requested!.Id.Should().Be("task-approve");
+        node.GetAttribute("aria-keyshortcuts").Should().Be("Insert");
+    }
+
+    [Fact]
+    public async Task Ctrl_Enter_on_a_node_raises_the_insert_request_exactly_once()
+    {
+        var requested = 0;
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, _ => requested++)));
+
+        var node = cut.Find("[data-testid='modeling-tree-node-task-approve']");
+        await cut.InvokeAsync(() => node.KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
+        requested.Should().Be(1, "Ctrl+Enter is the mnemonic twin of Insert");
+
+        // A plain Enter stays the NATIVE selection click (the node is a real button) — the
+        // emulated path must not fire on top of it.
+        await cut.InvokeAsync(() => node.KeyDown(new KeyboardEventArgs { Key = "Enter" }));
+        requested.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Repeated_insert_key_does_not_repeat_the_request()
+    {
+        var requested = 0;
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, _ => requested++)));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-tree-node-task-approve']")
+            .KeyDown(new KeyboardEventArgs { Key = "Insert", Repeat = true }));
+        requested.Should().Be(0, "auto-repeat must not fire the insert path");
+    }
+
+    [Fact]
     public void Insert_action_stays_reachable_without_hover_and_names_itself()
     {
         using var cut = Render<TmModelingModelTree>(parameters => parameters
-            .Add(p => p.Elements, CreateElements()));
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnInsertIntoPreview, EventCallback.Factory.Create<ModelingElementDto>(this, _ => { })));
 
         var button = cut.Find("[data-testid='modeling-tree-insert-task-approve']");
         button.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace(
-            "an icon-only action names itself (the localized 'Insert into preview' label)");
+            "an icon-only action names itself (the localized 'Insert {0} into preview' label)");
         button.GetAttribute("title").Should().NotBeNullOrWhiteSpace();
 
         // The reveal contract (docs/responsive-conventions.md) is the CORE class pair: the
@@ -667,12 +737,76 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         button.ParentElement!.ClassList.Should().Contain("tm-reveal-host",
             "the row is the reveal host (hover or focus anywhere in the row reveals the action)");
 
-        var css = File.ReadAllText(FindTreeCssPath());
-        css.Should().NotContain("@media (hover:", "the reveal contract lives in the core breakpoints.css, not here");
+        // Fáze 6 review: on a FINE pointer the action no longer reserves a grid column — the
+        // row is a single full-width track (the pre-phase-6 name truncation) and the action
+        // floats over its trailing edge (the ONLY component-local media query; the reveal
+        // CLASS pair itself stays the core contract). On a coarse pointer it keeps the column
+        // and reaches the 44px target both ways. Line endings normalized (item: exact
+        // multi-line strings).
+        var css = File.ReadAllText(FindTreeCssPath()).Replace("\r\n", "\n", StringComparison.Ordinal);
         css.Should().Contain("@media (pointer: coarse)",
             "the coarse-pointer block pins the 44px targets");
         css.Should().Contain(".tm-modeling-model-tree__node,\n    .tm-modeling-model-tree__insert {\n        min-height: var(--tm-touch-target)",
             "tree nodes and the insert action meet the 44px target on a coarse pointer");
+        css.Should().Contain(".tm-modeling-model-tree__insert {\n        min-width: var(--tm-touch-target)",
+            "the insert action is 44px WIDE on a coarse pointer too (E2E Tablet_1024_TouchTargets_Measure44px)");
+        css.Should().Contain("@media (hover: hover) and (pointer: fine)",
+            "the fine-pointer block drops the reserved column");
+        css.Should().MatchRegex(
+            @"@media \(hover: hover\) and \(pointer: fine\) \{[^}]*tm-modeling-model-tree__node-row \{[^}]*grid-template-columns: minmax\(0, 1fr\);",
+            "fine pointers render the row as one full-width track (the pre-phase-6 truncation)");
+    }
+
+    // ── Two-way filter text (Fáze 6 review fix) ──────────────────────────────
+
+    [Fact]
+    public async Task Filter_text_round_trips_through_a_real_bind()
+    {
+        using var cut = Render<FilterBindHost>();
+
+        // A user edit filters, updates the host field and comes back through the binding…
+        cut.Find("[data-testid='modeling-tree-search']").Input("approve");
+        await cut.InvokeAsync(() => { });
+        cut.Instance.Filter.Should().Be("approve", "FilterTextChanged carries the edit to the host");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("1");
+
+        // …and the echoed parameter value keeps the state (the input renders it, the filter
+        // still applies) — a layout flip remounts the tree, the FIELD lives with the host.
+        cut.Find("[data-testid='modeling-tree-search']").GetAttribute("value").Should().Be("approve");
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Filter_text_seeds_from_the_host_parameter()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.FilterText, (string?)"approve"));
+
+        cut.Find("[data-testid='modeling-tree-search']").GetAttribute("value").Should().Be("approve");
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(1,
+            "the seeded filter applies from the first render");
+    }
+
+    /// <summary>A minimal host that really binds <c>@bind-FilterText</c> — the field is the
+    /// host's, the tree never assigns the parameter (the two-way contract under test).</summary>
+    private sealed class FilterBindHost : ComponentBase
+    {
+        public string? Filter { get; private set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmModelingModelTree>(0);
+            builder.AddAttribute(1, nameof(TmModelingModelTree.Elements), CreateElements());
+            builder.AddAttribute(2, nameof(TmModelingModelTree.FilterText), Filter);
+            builder.AddAttribute(3, nameof(TmModelingModelTree.FilterTextChanged),
+                EventCallback.Factory.Create<string?>(this, value =>
+                {
+                    Filter = value;
+                    InvokeAsync(StateHasChanged);
+                }));
+            builder.CloseComponent();
+        }
     }
 
     private static string FindTreeCssPath()

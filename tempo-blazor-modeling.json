@@ -198,7 +198,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the center of the diagram viewport — the page center in the fit view — through the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
+      "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the CENTER OF THE VIEWPORT through the embedded editor's GetViewport() (the page center while no viewport is known — SSR, prerender, bUnit) via the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramPreview.razor",
       "documentationStatus": "merged",
@@ -622,7 +622,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays semantic modeling elements grouped by type with live filtering and selection. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the viewport center.",
+      "description": "Displays semantic modeling elements grouped by type with live filtering and selection. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the CENTER of the diagram viewport. The action names its row (\"Insert {0} into preview\"), stays out of the tab order (tabindex=-1) — the keyboard path is the node treeitem's Insert / Ctrl+Enter (aria-keyshortcuts) — and renders only when AllowNodeDrop is set AND a listener is bound to OnInsertIntoPreview. FilterText/FilterTextChanged optionally two-way bind the live filter so the hosting editor can own the value across tree remounts.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
       "documentationStatus": "merged",
@@ -661,6 +661,18 @@
           "isRequired": false,
           "default": "[]",
           "description": "Elements rendered by the tree. They are grouped by SemanticType."
+        },
+        {
+          "name": "FilterText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS the internal filter whenever the host hands over a new value and is never assigned inside the component — user edits update the working copy, clear the transient filter-collapse set and raise FilterTextChanged. The hosting editor owns the field, so the filter survives a tree remount (a layout flip)."
+        },
+        {
+          "name": "FilterTextChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling @bind-FilterText."
         },
         {
           "name": "OnElementDragEnded",

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Modeling;
@@ -173,6 +174,111 @@ public sealed class TmModelingEditorTabletTests : LocalizationTestBase
 
         cut.Find("[data-testid='modeling-sheet-close']").Click();
         cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-inspector-sheet']").Should().BeEmpty());
+    }
+
+    // ── Sheets start closed (Fáze 6 review fix) ──────────────────────────────
+
+    [Fact]
+    public void Tablet_sheets_start_closed_and_issues_dock_collapsed()
+    {
+        using var cut = RenderTabletEditor();
+        WaitForLoaded(cut);
+
+        // Both sheets start closed: the preview is alone until the user opens one (the same
+        // defaults the wireframe editor uses). The compact `_activePanel` is a different machine.
+        cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty();
+        cut.FindAll("[data-testid='modeling-inspector-sheet']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
+
+        // The tabs agree: both disclosures closed, Preview aria-pressed (the preview-only state).
+        cut.Find("[data-testid='modeling-panel-tab-tree']").GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find("[data-testid='modeling-panel-tab-inspector']").GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find("[data-testid='modeling-panel-tab-preview']").GetAttribute("aria-pressed").Should().Be("true");
+
+        // The issues dock starts collapsed on the tablet band (its own tablet flag).
+        cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public async Task Leaving_the_tablet_never_resets_the_desktop_dock_flags()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
+        module.SetupVoid("observe", invocation => true);
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        WaitForLoaded(cut);
+
+        var observer = () => cut.FindComponents<TmLayoutObserver>()
+            .Single(component => component.Instance.Class == "tm-modeling-editor__layout");
+
+        // The user collapsed the desktop tree dock BEFORE touching the band (the shell's own
+        // collapse toggle rails it).
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("desktop"));
+        cut.Find(".tm-editor-shell__panel-toggle--left").Click();
+        cut.WaitForAssertion(() => cut.Find(".tm-editor-shell__rail--left").Should().NotBeNull());
+
+        // Tablet: its sheets start closed and the docked chrome is gone.
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("tablet"));
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty();
+            cut.FindAll(".tm-editor-shell__rail").Should().BeEmpty("the tablet band replaces the dock with overlays");
+        });
+
+        // Back to desktop: the pre-tablet dock state survives — the collapse is NOT reset to open.
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("desktop"));
+        cut.WaitForAssertion(() => cut.Find(".tm-editor-shell__rail--left").Should().NotBeNull(
+            "leaving the tablet must hand the dock back exactly as the user left it"));
+        cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty();
+    }
+
+    // ── Resolved-layout tracking (Fáze 6 review fix: the editor's OWN observer) ──
+
+    [Fact]
+    public async Task Auto_editor_tracks_its_own_container_and_desktop_selection_stays_docked()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
+        module.SetupVoid("observe", invocation => true);
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        WaitForLoaded(cut);
+
+        var observer = () => cut.FindComponents<TmLayoutObserver>()
+            .Single(component => component.Instance.Class == "tm-modeling-editor__layout");
+
+        // Tablet → mobile → desktop: the editor must follow its OWN observer (the shell's raise
+        // is only an idempotent duplicate), not run a raise behind.
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("tablet"));
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("mobile"));
+        await cut.InvokeAsync(() => observer().Instance.OnLayoutModeChanged("desktop"));
+
+        cut.WaitForAssertion(() =>
+        {
+            // The docked workspace is back; selecting a tree node keeps the tree DOCKED (no
+            // tablet sheet may open from a desktop selection — a stale _resolvedLayout would).
+            cut.Find("[data-testid='modeling-model-tree-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-tree-node-task-a']").Click();
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-selected-element-id").Should().Be("task-a");
+            cut.Find("[data-testid='modeling-model-tree-panel']").Should().NotBeNull("the tree stays docked on desktop");
+            cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty();
+            cut.FindAll("[data-testid='modeling-inspector-sheet']").Should().BeEmpty();
+        });
+
+        // The open-editor dialog body decides the embedded editor's layout — it is NOT pinned to
+        // the editor's resolved mode, so a desktop dialog body must never report tablet.
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+        cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout]")
+            .GetAttribute("data-editor-layout").Should().NotBe("tablet",
+                "the dialog DE resolves from the dialog body (Auto + 768/1100), not from the editor's resolved mode");
     }
 
     // ── Non-drag alternative (WCAG 2.5.7) ────────────────────────────────────

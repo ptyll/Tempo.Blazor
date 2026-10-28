@@ -3062,6 +3062,7 @@
   "TmModelingEditor_ToggleInspector": "Zobraziť alebo skryť inšpektor",
   "TmModelingEditor_PreviewOnly": "Zobraziť iba náhľad",
   "TmModelingModelTree_InsertIntoPreview": "Vložiť do náhľadu",
+  "TmModelingModelTree_InsertIntoPreviewNamed": "Vložiť {0} do náhľadu",
   "TmModelingModelTree_NoResultsTitle": "Žiadne zodpovedajúce prvky",
   "TmModelingModelTree_SearchLabel": "Hľadať",
   "TmModelingModelTree_SearchPlaceholder": "Filtrovať prvky...",

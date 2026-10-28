@@ -72,9 +72,8 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             try
             {
                 await WaitForLoadedStateAsync(page);
-                // Fáze 6: on the tablet band the inspector sheet starts open and overlays the
-                // preview header — a finger closes it before reaching the trigger underneath.
-                await CloseInspectorSheetOnTabletAsync(page);
+                // Fáze 6 review fix: the tablet sheets start CLOSED — the dialog trigger is
+                // reachable without a close-first workaround.
                 await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
                 await page.Locator("[data-testid='modeling-open-diagram-editor']")
                     .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -328,9 +327,7 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         try
         {
             await WaitForLoadedStateAsync(page);
-            // Fáze 6: the inspector sheet starts open on the tablet and overlays the trigger —
-            // close it the way a finger would, then open the dialog.
-            await CloseInspectorSheetOnTabletAsync(page);
+            // Fáze 6 review fix: the tablet sheets start CLOSED — no close-first workaround.
             await page.Locator("[data-testid='modeling-open-in-editor-button']").TapAsync();
             await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -357,7 +354,9 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         try
         {
             await WaitForLoadedStateAsync(page);
-            // The inspector sheet starts open on a tablet; select the Source tab inside it.
+            // Fáze 6 review fix: the sheets start closed — open the inspector sheet, then the
+            // Source tab inside it.
+            await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync();
             await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
                 .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
             await page.Locator("[data-testid='modeling-source-panel']")
@@ -553,6 +552,17 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
                     {
                         await OpenMobileInspectorTabAsync(page, waitForIssuePanel: true);
                     }
+                    else if (await IsTabletLayoutAsync(page))
+                    {
+                        // Fáze 6 review fix: the tablet band starts with the dock COLLAPSED —
+                        // expand it first, or the rows are hidden behind the dock header.
+                        await page.Locator("[data-testid='modeling-issues-toggle']")
+                            .TapAsync(new LocatorTapOptions { Timeout = 10000 });
+                        await page.WaitForFunctionAsync(
+                            "() => !document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden')",
+                            null,
+                            new PageWaitForFunctionOptions { Timeout = 10_000 });
+                    }
 
                     // Scroll the sourceless orphan row into view so the panel element shot and the
                     // viewport shot both contain the non-interactive issue row (index 3).
@@ -592,26 +602,63 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     private static Task<bool> IsTabletLayoutAsync(IPage page) => page.EvaluateAsync<bool>(
         "() => document.querySelector('.tm-modeling-editor .tm-layout')?.getAttribute('data-layout') === 'tablet'");
 
-    /// <summary>Fáze 6: the inspector sheet starts open on a tablet and overlays the preview
-    /// header — close it the way a finger would (a no-op on the other layouts).</summary>
-    private static async Task CloseInspectorSheetOnTabletAsync(IPage page)
+    /// <summary>
+    /// Fáze 6 review: the tablet tree drawer baseline — the drawer OPEN (tap the Tree tab; the
+    /// sheets start closed, so this is the tablet band's only tree state) in light and dark at
+    /// both tablet viewports. The zoom label is polled to a STABLE value first: the canvas' fit
+    /// settles asynchronously, and a light/dark capture pair taken on different fit states
+    /// differs in the diagram's rendered size.
+    /// </summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures tree-drawer-tablet-{theme}-{w}x{h}: the tree drawer open on the tablet band (touch)")]
+    public async Task Capture_TreeDrawer_Tablet(string theme, int width, int height)
     {
-        if (!await IsTabletLayoutAsync(page))
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
         {
-            return;
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await page.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"tree-drawer-tablet-{theme}-{width}x{height}");
         }
-
-        var close = page.Locator("[data-testid='modeling-sheet-close']");
-        if (await close.CountAsync() > 0)
+        finally
         {
-            await close.TapAsync();
+            await page.Context.CloseAsync();
         }
-
-        await page.WaitForFunctionAsync(
-            "() => !document.querySelector(\"[data-testid='modeling-inspector-sheet']\")",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 10_000 });
     }
+
+    /// <summary>
+    /// Waits until the embedded diagram editor's zoom label stops changing (two identical
+    /// samples ~250ms apart) — the JS fit pass is asynchronous, so a plain "nodes rendered"
+    /// wait still races it. Gives up after ~8s and lets the capture proceed (the zoom label
+    /// may legitimately be absent in a future chrome).
+    /// </summary>
+    private static async Task WaitForStableZoomLabelAsync(IPage page)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(8);
+        var last = await ReadZoomLabelAsync(page);
+        while (DateTime.UtcNow < deadline)
+        {
+            await page.WaitForTimeoutAsync(250);
+            var current = await ReadZoomLabelAsync(page);
+            if (!string.IsNullOrEmpty(current) && current == last)
+            {
+                return;
+            }
+
+            last = current;
+        }
+    }
+
+    private static Task<string?> ReadZoomLabelAsync(IPage page) => page.EvaluateAsync<string?>(
+        "() => document.querySelector('.tm-modeling-diagram-preview .tm-diagram-editor__zoom-label')?.textContent?.trim() ?? null");
 
     /// <summary>
     /// Opens the compact layout's "Inspector" panel tab. When <paramref name="waitForIssuePanel"/>
@@ -627,10 +674,12 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
     }
 
-    /// <summary>Fáze 6: on a tablet the source panel lives in the inspector SHEET behind the
-    /// Properties tab — select the sheet's Source tab and wait for the panel.</summary>
+    /// <summary>Fáze 6 (review fix): the source panel lives in the inspector SHEET — the sheets
+    /// start closed, so open the sheet first, then select its Source tab.</summary>
     private static async Task OpenTabletSourceTabAsync(IPage page)
     {
+        await page.Locator("[data-testid='modeling-panel-tab-inspector']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10000 });
         await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
         await page.Locator("[data-testid='modeling-source-panel']")

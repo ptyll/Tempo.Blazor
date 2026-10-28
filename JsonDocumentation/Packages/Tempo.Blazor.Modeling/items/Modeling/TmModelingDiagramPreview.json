@@ -2,7 +2,7 @@
  "itemName": "TmModelingDiagramPreview",
  "kind": "Component",
  "category": "Modeling",
- "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the center of the diagram viewport — the page center in the fit view — through the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
+ "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the CENTER OF THE VIEWPORT through the embedded editor's GetViewport() (the page center while no viewport is known — SSR, prerender, bUnit) via the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
  "packageId": "Tempo.Blazor.Modeling",
  "namespace": "Tempo.Blazor.Components.Modeling",
  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramPreview.razor",

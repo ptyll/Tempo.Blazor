@@ -174,3 +174,39 @@
         flex: 0 0 auto;
     }
 }
+
+/* Fáze 6 review: the preview is ALSO its own container when hosted standalone (a host page
+   embedding just the preview): the header stacks below 640px of the PREVIEW's own width — the
+   same stacking the editor's tm-modeling-editor container applies for the embedded case. The
+   editor container query above still wins for a preview inside the editor (both may match; the
+   rules are identical), and a narrow standalone preview inside a wide page behaves as the
+   narrow preview it is. */
+.tm-modeling-diagram-preview {
+    container: tm-modeling-diagram-preview / inline-size;
+}
+
+@container tm-modeling-diagram-preview (width < 640px) {
+    .tm-modeling-diagram-preview__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .tm-modeling-diagram-preview__actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .tm-modeling-diagram-preview__title-group,
+    .tm-modeling-diagram-preview__actions {
+        flex: 0 0 auto;
+    }
+}
+
+/* Fáze 6 review: the tablet band's canvas floor. A tablet editor is tall but its chrome (header,
+   panel tabs, status strip, the issues dock row) stacks up — without a floor the preview's
+   canvas shell collapsed to a sliver at 768px-tall windows and the touch gestures had nowhere
+   to land. The editor's tablet scope raises the embedded editor's block floor (the compact
+   band keeps the smaller one); the shell main region fills the rest. */
+[data-layout='tablet'] ::deep .tm-modeling-diagram-preview__editor {
+    min-block-size: calc(var(--tm-space-16) * 5);
+}

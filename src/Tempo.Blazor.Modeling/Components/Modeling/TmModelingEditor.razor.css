@@ -692,6 +692,19 @@
     border-bottom: 0;
 }
 
+/* Fáze 6 review: the tablet canvas floor. The shell canvas row is a minmax(0,1fr) track that
+   collapses under the stacked tablet chrome (header, panel tabs, status strip, the issues dock
+   row) — the preview's inner floor alone cannot grow a minmax(0,…) track. On the tablet band
+   the preview row keeps a usable floor (the shell main region fills the rest); the compact
+   band and the desktop dock keep their own sizing. */
+[data-layout='tablet'] .tm-modeling-editor__canvas-body {
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 5), 1fr) auto;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__canvas-body--issues-open {
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 5), 1fr) clamp(calc(var(--tm-space-16) * 3.5), 32%, calc(var(--tm-space-16) * 5));
+}
+
 /* Fáze 6 (touch): every control the phase names reaches --tm-touch-target on a coarse
    pointer — the panel tabs and the selects (the editor's own field and the view selector's
    fields, the latter a child component hence ::deep). The tree nodes and group headers, the

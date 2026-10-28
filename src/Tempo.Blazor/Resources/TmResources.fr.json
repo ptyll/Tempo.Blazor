@@ -3047,6 +3047,7 @@
   "TmModelingEditor_ToggleInspector": "Afficher ou masquer l'inspecteur",
   "TmModelingEditor_PreviewOnly": "Afficher uniquement l'aperçu",
   "TmModelingModelTree_InsertIntoPreview": "Insérer dans l'aperçu",
+  "TmModelingModelTree_InsertIntoPreviewNamed": "Insérer {0} dans l'aperçu",
   "TmModelingModelTree_NoResultsTitle": "Aucun élément correspondant",
   "TmModelingModelTree_SearchLabel": "Rechercher",
   "TmModelingModelTree_SearchPlaceholder": "Filtrer les éléments...",

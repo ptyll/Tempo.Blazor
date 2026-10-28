@@ -51,10 +51,13 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     // ── Fáze 5 (MO1): docked-layout state ────────────────────────────────────
     // The shell's two-way state lives on the editor so a layout flip cannot disagree with it.
+    // Fáze 6 review fix: the TABLET sheets carry their own flags (starting closed) so entering
+    // the tablet band never forces the desktop dock open — see TmModelingEditor.Tablet.cs.
     private bool _shellLeftOpen = true;
     private bool _shellRightOpen = true;
     private EditorShellPanel _shellCollapsed;
     private bool _issuesCollapsed;
+
 
     /// <summary>The resolved layout of the editor's own container (Fáze 6): the compact branch
     /// keeps the panel-tab state, the docked branch uses it for the tablet sheet rules. A forced
@@ -80,22 +83,14 @@ public partial class TmModelingEditor : IAsyncDisposable
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
 
     /// <summary>
-    /// Layout thresholds of the EMBEDDED open-editor diagram editor: 768 / 1024 so the dialog body
-    /// (not the viewport) decides the editor's <c>data-editor-layout</c>. The dialog is ~90vw ×
-    /// 90vh, so a 1024–1280 px viewport renders a sub-1024px body that must resolve desktop —
-    /// the shared 640/1024 pair would drop it to tablet inside a desktop dialog.
+    /// Layout thresholds of the EMBEDDED open-editor diagram editor: 768 / 1100 (Fáze 6 review
+    /// fix) so the dialog body — NOT the editor's resolved mode — decides the editor's
+    /// <c>data-editor-layout</c>. The dialog is ~90vw × 90vh: a 1024 or 1180 viewport renders a
+    /// 922/1062px body, which must resolve tablet, while a desktop body (≥1100px) resolves
+    /// desktop — the shared 640/1024 pair would flip the embedded editor at both ends, and the
+    /// old 768/1024 pair pinned a 1180 tablet dialog to desktop.
     /// </summary>
-    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1024);
-
-    /// <summary>
-    /// The layout of the EMBEDDED open-editor diagram editor: on the editor's tablet band the
-    /// dialog body presents the DE's tablet layout at BOTH tablet widths (the 1180 body would
-    /// otherwise cross the DE's 1024 desktop threshold — the reference shows the tablet
-    /// presentation in the dialog), so the editor's resolved mode pins it; every other layout
-    /// keeps the body-decided Auto resolution (the phase-4 contract).
-    /// </summary>
-    private TmLayoutMode OpenEditorDiagramLayoutMode
-        => _resolvedLayout == TmLayoutMode.Tablet ? TmLayoutMode.Tablet : TmLayoutMode.Auto;
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1100);
 
     /// <summary>
     /// Layout thresholds of the editor's own container (Fáze 5, MO1): the same pair as the
@@ -324,7 +319,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// and <c>auto</c> (header only) while collapsed. The class — not an inline style — keeps the
     /// sizes in the stylesheet.
     /// </summary>
-    private string CanvasBodyClass => _issuesCollapsed
+    private string CanvasBodyClass => IssuesCollapsed
         ? "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-collapsed"
         : "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-open";
 
@@ -504,12 +499,12 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        // A forced layout is the host's decision: adopt it before the first render so the tablet
-        // sheet rules hold from the first frame (the same pattern the wireframe editor uses).
-        if (LayoutMode != TmLayoutMode.Auto)
-        {
-            _resolvedLayout = LayoutMode;
-        }
+        // The resolved layout seeds BEFORE the first render — from a forced mode, else the
+        // InitialMode an Auto editor renders pre-measurement (Fáze 6 review fix: seeding through
+        // <see cref="ApplyResolvedLayout"/> also arms the tablet entry defaults — sheets start
+        // closed, the issues dock collapsed). The outer observer (and the shell's idempotent
+        // duplicate) keep it current afterwards.
+        ApplyResolvedLayout(LayoutMode != TmLayoutMode.Auto ? LayoutMode : InitialMode);
     }
 
     /// <inheritdoc />
@@ -755,14 +750,12 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// </summary>
     private Task OpenInspectorOnTabletAsync()
     {
-        if (_resolvedLayout != TmLayoutMode.Tablet || _shellRightOpen)
+        if (!IsTablet || InspectorSheetOpen)
         {
             return Task.CompletedTask;
         }
 
-        _shellRightOpen = true;
-        _shellLeftOpen = false;
-        return Task.CompletedTask;
+        return OnShellRightOpenChanged(true);
     }
 
     private Task HandleElementDragStartedAsync(ModelingElementDto element)
@@ -1003,10 +996,18 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>
     /// Stores the issues dock state (the EventCallback receiver re-renders the editor, which then
-    /// re-renders the panel with the new Collapsed value — the panel itself owns no state).
+    /// re-renders the panel with the new Collapsed value — the panel itself owns no state). The
+    /// tablet band keeps its own flag, so a tablet toggle never writes the desktop state (Fáze 6
+    /// review fix).
     /// </summary>
     private Task SetIssuesCollapsedAsync(bool collapsed)
     {
+        if (IsTablet)
+        {
+            _tabletIssuesCollapsed = collapsed;
+            return Task.CompletedTask;
+        }
+
         if (_issuesCollapsed == collapsed)
         {
             return Task.CompletedTask;
@@ -1030,9 +1031,9 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         var active = panel switch
         {
-            ModelingEditorPanel.Tree => _shellLeftOpen,
-            ModelingEditorPanel.Inspector => _shellRightOpen,
-            _ => !_shellLeftOpen && !_shellRightOpen
+            ModelingEditorPanel.Tree => TreeSheetOpen,
+            ModelingEditorPanel.Inspector => InspectorSheetOpen,
+            _ => !TreeSheetOpen && !InspectorSheetOpen
         };
         return active
             ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"

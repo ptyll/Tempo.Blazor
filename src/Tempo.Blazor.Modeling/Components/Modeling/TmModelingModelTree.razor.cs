@@ -23,6 +23,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private readonly HashSet<string> _collapsedGroups = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _filterCollapsedGroups = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyCollection<string>? _lastCollapsedGroupsParameter;
+    private string? _lastFilterTextParameter;
     private ModelingElementDto? _lastSelectedElementParameter;
     private string? _activeTreeItemId;
     private bool _pendingCollapsedGroupsChanged;
@@ -89,6 +90,18 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
     /// <summary>Raised when the user collapses or expands a group (not while a filter drives the transient state).</summary>
     [Parameter] public EventCallback<IReadOnlyCollection<string>> CollapsedGroupsChanged { get; set; }
+
+    /// <summary>
+    /// Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS
+    /// the internal filter whenever the host hands over a new value and is never assigned inside
+    /// the component — user edits update the working copy, clear the transient filter-collapse
+    /// set and raise <see cref="FilterTextChanged"/>. The hosting editor owns the field, so the
+    /// filter survives a tree remount (a layout flip).
+    /// </summary>
+    [Parameter] public string? FilterText { get; set; }
+
+    /// <summary>Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling <c>@bind-FilterText</c>.</summary>
+    [Parameter] public EventCallback<string?> FilterTextChanged { get; set; }
 
     /// <summary>Additional CSS class applied to the tree root.</summary>
     [Parameter] public string? Class { get; set; }
@@ -174,6 +187,33 @@ public partial class TmModelingModelTree : IAsyncDisposable
         => activeTreeItemId == $"element:{elementId}" ? "0" : "-1";
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Fáze 6 review fix (M26): the editor's two-way echo of our own
+    /// <see cref="FilterTextChanged"/> raise arrives as a <see cref="FilterText"/> parameter
+    /// equal to the internal filter. Rewriting that ONE parameter to its previous value keeps
+    /// the render-tree diff at "no change", so the 200-row tree is not re-rendered a second
+    /// time per keystroke (the tree's own input-event render already painted it). A genuinely
+    /// new host value takes the normal path (and re-seeds through <see cref="OnParametersSet"/>).
+    /// </remarks>
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        if (parameters.TryGetValue<string?>(nameof(FilterText), out var incoming)
+            && string.Equals(incoming, _filterText, StringComparison.Ordinal))
+        {
+            var current = FilterText;
+            var rewritten = new Dictionary<string, object>(StringComparer.Ordinal);
+            foreach (var entry in parameters)
+            {
+                rewritten[entry.Name] = entry.Name == nameof(FilterText) ? current : entry.Value;
+            }
+
+            return base.SetParametersAsync(ParameterView.FromDictionary(rewritten));
+        }
+
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
@@ -194,6 +234,15 @@ public partial class TmModelingModelTree : IAsyncDisposable
                     }
                 }
             }
+        }
+
+        // Two-way filter text (Fáze 6 review fix): seed the working copy whenever the host hands
+        // over a new value — a host edit (or the editor's own field) wins; user edits flow OUT
+        // through FilterTextChanged and come back as the same value (no re-seed).
+        if (!string.Equals(FilterText, _lastFilterTextParameter, StringComparison.Ordinal))
+        {
+            _lastFilterTextParameter = FilterText;
+            _filterText = FilterText ?? string.Empty;
         }
 
         // External selection inside a collapsed group auto-reveals it, so the scroll target can
@@ -254,12 +303,14 @@ public partial class TmModelingModelTree : IAsyncDisposable
         await ScrollSelectedElementIntoViewAsync(SelectedElement.Id);
     }
 
-    private void HandleFilterChanged(ChangeEventArgs args)
+    private async Task HandleFilterChanged(ChangeEventArgs args)
     {
         _filterText = args.Value?.ToString() ?? string.Empty;
         // The filter view has its own transient collapse state: editing the filter starts a new
-        // transient session instead of inheriting the previous one.
+        // transient session instead of inheriting the previous one (a USER edit only — a host
+        // re-seed goes through OnParametersSet and keeps the session).
         _filterCollapsedGroups.Clear();
+        await FilterTextChanged.InvokeAsync(_filterText);
     }
 
     private async Task SelectElementAsync(ModelingElementDto element)
@@ -356,9 +407,16 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
     }
 
+    /// <summary>Whether the non-drag "Insert into preview" action is offered: the same gate the
+    /// row button follows (the host's AllowNodeDrop switch AND a listener for the request).</summary>
+    private bool CanInsertIntoPreview => AllowNodeDrop && OnInsertIntoPreview.HasDelegate;
+
     /// <summary>Keys on a NODE treeitem: Up/Down/Home/End traverse the flat list, Left focuses
     /// the node's group header. Right is a no-op. Enter/Space stay NATIVE (the node is a real
-    /// button) — the stopPropagation fence keeps them away from the emulating group treeitem.</summary>
+    /// button) — the stopPropagation fence keeps them away from the emulating group treeitem.
+    /// Fáze 6 review: Insert (and Ctrl+Enter) on a node is the keyboard path of the non-drag
+    /// "Insert into preview" action — the row button is a reveal-on-hover sibling, so a keyboard
+    /// user must not have to tab to it (WCAG 2.5.7).</summary>
     private async Task HandleNodeKeyDownAsync(ModelingElementDto element, KeyboardEventArgs args)
     {
         switch (args.Key)
@@ -377,6 +435,23 @@ public partial class TmModelingModelTree : IAsyncDisposable
                 break;
             case "ArrowLeft":
                 await FocusGroupHeaderAsync(NormalizeGroupKey(element.SemanticType));
+                break;
+            case "Insert":
+                if (!args.Repeat && CanInsertIntoPreview)
+                {
+                    await HandleInsertRequestedAsync(element);
+                }
+
+                break;
+            case "Enter" when args.CtrlKey:
+                // Ctrl+Enter is the mnemonic twin of Insert (a node's plain Enter stays the
+                // NATIVE selection click). Emulated here because a native button never
+                // activates on Ctrl+Enter.
+                if (!args.Repeat && CanInsertIntoPreview)
+                {
+                    await HandleInsertRequestedAsync(element);
+                }
+
                 break;
         }
     }
@@ -538,6 +613,12 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
     private string GetNodeAriaLabel(ModelingElementDto element)
         => $"{GetDisplayName(element)}, {GetNodeMetadata(element)}, {element.SemanticType}".Trim();
+
+    /// <summary>The per-row "Insert into preview" name: the localized "{0}" pattern carries the
+    /// element's display name (Fáze 6 review fix — the generic label could not tell two rows
+    /// apart for a screen reader).</summary>
+    private string GetInsertAriaLabel(ModelingElementDto element)
+        => string.Format(CultureInfo.CurrentCulture, Loc["TmModelingModelTree_InsertIntoPreviewNamed"], GetDisplayName(element));
 
     private string GetGroupAriaLabel(ModelingElementGroup group)
         => $"{group.Label}, {Loc.Plural("TmModelingModelTree_Count", group.Elements.Count)}";

@@ -3032,6 +3032,7 @@
   "TmModelingEditor_ToggleInspector": "Show or hide the inspector",
   "TmModelingEditor_PreviewOnly": "Show the preview only",
   "TmModelingModelTree_InsertIntoPreview": "Insert into preview",
+  "TmModelingModelTree_InsertIntoPreviewNamed": "Insert {0} into preview",
   "TmModelingModelTree_NoResultsTitle": "No matching elements",
   "TmModelingModelTree_SearchLabel": "Search",
   "TmModelingModelTree_SearchPlaceholder": "Filter elements...",

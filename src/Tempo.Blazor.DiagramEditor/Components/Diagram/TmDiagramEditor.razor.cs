@@ -126,6 +126,18 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private TmDiagramCanvas? _canvas;
     private ElementReference _downloadAnchor;
 
+    /// <summary>
+    /// Returns the current canvas viewport in document-space coordinates — the visible window of
+    /// the page the user is looking at (additive, Fáze 6 review fix). Delegates to the embedded
+    /// <see cref="TmDiagramCanvas.GetViewport"/>; a zeroed tuple means the JS engine has not
+    /// reported a viewport yet (SSR, prerender, bUnit) and callers should fall back to the page
+    /// center. Hosts use it to place generated content at the center of what the user SEES
+    /// (e.g. the Modeling preview's non-drag "Insert into preview" path) instead of the page
+    /// center, which can sit outside the visible rect after a fit.
+    /// </summary>
+    public (double X, double Y, double W, double H) GetViewport()
+        => _canvas?.GetViewport() ?? (0, 0, 0, 0);
+
     // ── Command stack ────────────────────────────────────────────────────────
     // One isolated stack per page so undo/redo is scoped to the active page.
 

@@ -282,6 +282,69 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             "the frozen group attribute is a host/E2E hook, never a Modeling CSS selector");
     }
 
+    // ── Viewport-center insert (Fáze 6 review fix) ───────────────────────────
+
+    [Fact]
+    public async Task Insert_at_viewport_center_uses_the_embedded_editor_viewport()
+    {
+        var document = CreateDocument(nodeCount: 1);
+        ModelingNodeDroppedEventArgs? dropped = null;
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.OnNodeDropped, EventCallback.Factory.Create<ModelingNodeDroppedEventArgs>(this, value => dropped = value)));
+
+        // The embedded canvas reports its viewport (the JS engine's contract, driven here):
+        // visible window x=100..500, y=200..500 in document space → center (300, 350).
+        var canvas = cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramCanvas>().Single();
+        await cut.InvokeAsync(() => canvas.Instance.OnViewportChanged(100, 200, 400, 300));
+
+        await cut.InvokeAsync(() => cut.Instance.InsertAtViewportCenterAsync(CreateElement("task-vp", "source/task-vp")));
+
+        dropped.Should().NotBeNull("the insert routes through the OnNodeDropped contract");
+        // The center (300, 350) minus the default template's half-size (80, 44) — no clamp on
+        // the 3000x2000 page and no collision with the node at 120..260/140..212.
+        dropped!.Point.X.Should().Be(300 - 80);
+        dropped.Point.Y.Should().Be(350 - 44);
+    }
+
+    [Fact]
+    public async Task Insert_at_viewport_center_falls_back_to_the_page_center_without_a_viewport()
+    {
+        var document = CreateDocument(nodeCount: 0);
+        ModelingNodeDroppedEventArgs? dropped = null;
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.OnNodeDropped, EventCallback.Factory.Create<ModelingNodeDroppedEventArgs>(this, value => dropped = value)));
+
+        // No OnViewportChanged: the JS engine has not reported anything (bUnit/SSR) — the
+        // insert lands at the page center (the pre-review fallback).
+        await cut.InvokeAsync(() => cut.Instance.InsertAtViewportCenterAsync(CreateElement("task-vp", "source/task-vp")));
+
+        dropped.Should().NotBeNull();
+        dropped!.Point.X.Should().Be(1500 - 80, "the 3000px page's center minus the template half-width");
+        dropped.Point.Y.Should().Be(1000 - 44, "the 2000px page's center minus the template half-height");
+    }
+
+    [Fact]
+    public void Preview_is_its_own_container_and_floors_the_canvas_on_the_tablet_band()
+    {
+        var css = File.ReadAllText(FindPreviewCssPath()).Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        // Fáze 6 review: a STANDALONE preview (a host embedding just the preview) resolves its
+        // own header stacking from its own container; the editor-container query stays for the
+        // embedded case.
+        css.Should().Contain("container: tm-modeling-diagram-preview / inline-size");
+        css.Should().Contain("@container tm-modeling-diagram-preview (width < 640px)");
+        css.Should().MatchRegex(
+            @"@container tm-modeling-diagram-preview \(width < 640px\) \{[^}]*flex-direction: column;",
+            "the standalone fallback stacks the header like the editor container does");
+
+        // The tablet canvas floor lives on the embedded editor's block size (the real class is
+        // the editor root the preview renders — never an editor-internal selector).
+        css.Should().Contain("[data-layout='tablet'] ::deep .tm-modeling-diagram-preview__editor");
+        css.Should().Contain("min-block-size: calc(var(--tm-space-16) * 5)");
+    }
+
     /// <summary>Returns the body of the first CSS rule whose selector line starts with <paramref name="selector"/>.</summary>
     private static string ExtractRule(string css, string selector)
     {

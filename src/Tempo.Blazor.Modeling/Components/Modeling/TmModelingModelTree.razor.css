@@ -171,6 +171,12 @@
     .tm-modeling-model-tree__insert {
         min-height: var(--tm-touch-target);
     }
+
+    /* Fáze 6 review: the insert action is a 44x44 target on a coarse pointer — the row is wide
+       enough for the reserved column, so the height alone would leave a narrow pill. */
+    .tm-modeling-model-tree__insert {
+        min-width: var(--tm-touch-target);
+    }
 }
 
 .tm-modeling-model-tree__nodes {
@@ -297,6 +303,26 @@
     background: transparent;
     color: var(--tm-text-secondary);
     cursor: pointer;
+}
+
+/* Fáze 6 review: on a FINE pointer the reserved trailing column is gone — the row is a single
+   full-width track again (tree names truncate exactly as they did before phase 6) and the action
+   floats over the row's trailing edge, revealed on hover/focus of the row (the core reveal
+   pair). Coarse pointers keep the reserved column: an always-visible 44px target cannot share
+   the row with the name without pushing it, so the grid keeps both tracks there. */
+@media (hover: hover) and (pointer: fine) {
+    .tm-modeling-model-tree__node-row {
+        position: relative;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-model-tree__insert {
+        position: absolute;
+        inset-inline-end: var(--tm-space-1);
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        background: var(--tm-color-surface);
+    }
 }
 
 .tm-modeling-model-tree__insert:hover {

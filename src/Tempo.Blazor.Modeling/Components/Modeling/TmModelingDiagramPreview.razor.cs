@@ -112,13 +112,19 @@ public partial class TmModelingDiagramPreview
         await InsertElementAsync(ActiveDraggedElement, args.OffsetX, args.OffsetY);
     }
 
+    /// <summary>The embedded viewer — the <see cref="GetViewport"/> source for the viewport-center insert.</summary>
+    private Tempo.Blazor.Components.Diagram.TmDiagramEditor? _editor;
+
     /// <summary>
     /// The non-drag alternative (Fáze 6, WCAG 2.5.7): reuses <paramref name="element"/> as a new
-    /// preview node at the CENTER of the diagram viewport through the same path the drop uses.
-    /// The preview renders the page fitted (the viewer keeps the whole page visible and the
-    /// Modeling chrome owns no pan/zoom state in Blazor), so the viewport center is the page's
-    /// center — the same clamp/collision logic then places the node exactly as a real drop.
-    /// Public so the hosting editor can route the model tree's "Insert into preview" action here.
+    /// preview node at the CENTER OF THE VIEWPORT through the same path the drop uses (Fáze 6
+    /// review fix: the embedded editor's <c>GetViewport()</c> reports the visible window in
+    /// document space, so the insert lands where the user is looking — a fit view may have
+    /// shrunk the visible rect away from the page center, and a node dropped at the page center
+    /// could sit outside it). Falls back to the page center while no viewport is known (SSR,
+    /// prerender, bUnit). The preview owns the node creation, the document mutation and the
+    /// <see cref="OnNodeDropped"/> contract; the same clamp/collision logic places the node
+    /// exactly as a real drop.
     /// </summary>
     public async Task InsertAtViewportCenterAsync(ModelingElementDto element)
     {
@@ -129,7 +135,16 @@ public partial class TmModelingDiagramPreview
 
         Document.EnsurePages();
         var page = Document.ActivePage;
-        await InsertElementAsync(element, page.Width / 2d, page.Height / 2d);
+        var offsetX = page.Width / 2d;
+        var offsetY = page.Height / 2d;
+        var viewport = _editor?.GetViewport() ?? default;
+        if (viewport.W > 0)
+        {
+            offsetX = viewport.X + viewport.W / 2;
+            offsetY = viewport.Y + viewport.H / 2;
+        }
+
+        await InsertElementAsync(element, offsetX, offsetY);
     }
 
     /// <summary>The shared drop/insert core: create the node at the given point, mutate the document and raise the contract.</summary>

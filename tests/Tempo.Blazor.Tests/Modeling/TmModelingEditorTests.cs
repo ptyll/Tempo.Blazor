@@ -842,7 +842,9 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
             cut.Find(".tm-editor-shell").Should().NotBeNull("the tablet band renders through the shell");
             cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
-            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull("the inspector sheet starts open");
+            cut.FindAll("[data-testid='modeling-inspector-sheet']").Should().BeEmpty(
+                "the tablet sheets start CLOSED — the preview is alone until the user opens one");
+            cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty();
             cut.FindAll(".tm-editor-shell__panel").Should().BeEmpty("the tablet sides are overlays, not docked columns");
         });
     }

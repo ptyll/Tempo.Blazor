@@ -32,9 +32,13 @@
          data-active-panel="@ActivePanelName"
          data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())"
          style="@HeightStyle">
+    @* Fáze 6 review fix: the editor tracks its OWN container through this observer (the shell's
+       duplicate is an idempotent echo of the same box) — without it an Auto editor's tablet
+       sheet rules ran one raise behind. *@
     <TmLayoutObserver LayoutMode="LayoutMode"
                       InitialMode="InitialMode"
                       Breakpoints="EffectiveBreakpoints"
+                      ResolvedLayoutChanged="OnShellResolvedLayoutChanged"
                       IsContainer="true"
                       Class="tm-modeling-editor__layout">
         <LayoutContent Context="layout">
@@ -150,8 +154,8 @@
                            LeftTitle="@Loc["TmModelingEditor_ModelTree"]"
                            RightTitle="@Loc["TmModelingEditor_Inspector"]"
                            CanvasTitle="@Loc["TmModelingEditor_Preview"]"
-                           LeftOpen="_shellLeftOpen" LeftOpenChanged="OnShellLeftOpenChanged"
-                           RightOpen="_shellRightOpen" RightOpenChanged="OnShellRightOpenChanged"
+                           LeftOpen="@TreeSheetOpen" LeftOpenChanged="OnShellLeftOpenChanged"
+                           RightOpen="@InspectorSheetOpen" RightOpenChanged="OnShellRightOpenChanged"
                            CollapsedPanels="_shellCollapsed" CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
                            LeftWidth="220px" MinLeftWidth="200" MaxLeftWidth="360"
                            RightWidth="280px" MinRightWidth="240" MaxRightWidth="440"
@@ -170,8 +174,8 @@
                             <button type="button"
                                     class="@GetTabletPanelTabClass(ModelingEditorPanel.Tree)"
                                     data-testid="@TestId("modeling-panel-tab-tree")"
-                                    aria-expanded="@_shellLeftOpen.ToString().ToLowerInvariant()"
-                                    aria-controls="@(_shellLeftOpen ? _shell?.LeftPanelId : null)"
+                                    aria-expanded="@TreeSheetOpen.ToString().ToLowerInvariant()"
+                                    aria-controls="@(TreeSheetOpen ? _shell?.LeftPanelId : null)"
                                     title="@Loc["TmModelingEditor_ToggleTree"]"
                                     @onclick="ToggleTreeSheetAsync">
                                 @Loc["TmModelingEditor_ModelTree"]
@@ -179,6 +183,7 @@
                             <button type="button"
                                     class="@GetTabletPanelTabClass(ModelingEditorPanel.Preview)"
                                     data-testid="@TestId("modeling-panel-tab-preview")"
+                                    aria-pressed="@((!TreeSheetOpen && !InspectorSheetOpen).ToString().ToLowerInvariant())"
                                     title="@Loc["TmModelingEditor_PreviewOnly"]"
                                     @onclick="ShowPreviewOnlyAsync">
                                 @Loc["TmModelingEditor_Preview"]
@@ -186,8 +191,8 @@
                             <button type="button"
                                     class="@GetTabletPanelTabClass(ModelingEditorPanel.Inspector)"
                                     data-testid="@TestId("modeling-panel-tab-inspector")"
-                                    aria-expanded="@_shellRightOpen.ToString().ToLowerInvariant()"
-                                    aria-controls="@(_shellRightOpen ? _shell?.RightPanelId : null)"
+                                    aria-expanded="@InspectorSheetOpen.ToString().ToLowerInvariant()"
+                                    aria-controls="@(InspectorSheetOpen ? _shell?.RightPanelId : null)"
                                     title="@Loc["TmModelingEditor_ToggleInspector"]"
                                     @onclick="ToggleInspectorSheetAsync">
                                 @Loc["TmModelingEditor_Inspector"]
@@ -315,18 +320,29 @@
         <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
     </div>;
 
-    /// <summary>The model tree. CollapsedGroups stays bound to the editor's own field: the tree may
-    /// remount when the layout flips, and the editor — not the tree instance — owns the state.
-    /// AllowNodeDrop follows the editor's switch; the non-drag "Insert into preview" action routes
-    /// back through <see cref="HandleInsertIntoPreviewAsync"/> (the preview's drop path).</summary>
-    private RenderFragment ModelTreeContent => @<TmModelingModelTree Elements="@VisibleTreeElements"
-                                                                     SelectedElement="@_selectedElement"
-                                                                     AllowNodeDrop="@AllowNodeDrop"
-                                                                     OnInsertIntoPreview="HandleInsertIntoPreviewAsync"
-                                                                     @bind-CollapsedGroups="_collapsedGroups"
-                                                                     OnElementSelected="SelectElementAsync"
-                                                                     OnElementDragStarted="HandleElementDragStartedAsync"
-                                                                     OnElementDragEnded="HandleElementDragEndedAsync" />;
+    /// <summary>The model tree. CollapsedGroups and FilterText stay bound to the editor's own
+    /// fields: the tree may remount when the layout flips, and the editor — not the tree instance
+    /// — owns the state. AllowNodeDrop follows the editor's switch; the non-drag "Insert into
+    /// preview" action routes back through <see cref="HandleInsertIntoPreviewAsync"/> (the
+    /// preview's drop path).</summary>
+    private RenderFragment ModelTreeContent
+    {
+        get
+        {
+            var (selected, dragStarted, dragEnded, insert, collapsedChanged) = TreeCallbacks;
+            return @<TmModelingModelTree Elements="@VisibleTreeElements"
+                                         SelectedElement="@_selectedElement"
+                                         AllowNodeDrop="@AllowNodeDrop"
+                                         OnInsertIntoPreview="@insert"
+                                         CollapsedGroups="@_collapsedGroups"
+                                         CollapsedGroupsChanged="@collapsedChanged"
+                                         FilterText="@_treeFilterHolder.Value"
+                                         FilterTextChanged="@TreeFilterChanged"
+                                         OnElementSelected="@selected"
+                                         OnElementDragStarted="@dragStarted"
+                                         OnElementDragEnded="@dragEnded" />;
+        }
+    }
 
     /// <summary>The generated diagram preview — shared by both layouts.</summary>
     private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
@@ -347,7 +363,7 @@
     /// </summary>
     private RenderFragment IssuesDockContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
                                                                        OnIssueSelected="SelectIssueAsync"
-                                                                       Collapsed="@_issuesCollapsed"
+                                                                       Collapsed="@IssuesCollapsed"
                                                                        CollapsedChanged="SetIssuesCollapsedAsync" />;
 
     /// <summary>The source panel (the inspector's "Source" tab on the docked layouts).</summary>
@@ -421,18 +437,19 @@
                      AdditionalAttributes="@OpenEditorModalAttributes">
                 <ChildContent>
                     <div class="tm-modeling-editor__open-editor-body">
-                        @* The dialog body is its own layout scope: the breakpoints ride on the
-                           editor instance (768/1024) so the embedded editor resolves desktop from
-                           the dialog body, not the viewport — the `data-editor-layout` contract
-                           the baselines and the E2E assert. Fáze 6: on the editor's tablet band
-                           the dialog body presents the diagram editor's TABLET layout at BOTH
-                           tablet widths (the 1180 body is wider than the DE's 1024 desktop
-                           threshold, so the editor's resolved mode pins it — the reference shows
-                           the tablet presentation in the dialog); every other layout keeps the
-                           body-decided resolution. *@
+                        @* The dialog body is its own layout scope: the embedded editor resolves
+                           AUTO from the dialog body (its own container) — NOT pinned to the
+                           editor's resolved mode (Fáze 6 review fix: the pin went stale the
+                           moment the editor's container and the ~90vw dialog body disagreed).
+                           The dialog breakpoints are 768/1100 so BOTH tablet viewports (the 90vw
+                           body of a 1024 or 1180 window is 922/1062px — below the 1100 desktop
+                           threshold) present the DE tablet layout, while a desktop dialog body
+                           (≥1100px) still resolves desktop. The floating minimap starts expanded
+                           — the DE exposes no "start collapsed" knob for the tablet overlay
+                           (noted for the DE plan). *@
                         <TmDiagramEditor Document="@_openedEditorDocument"
                                          DocumentChanged="UpdateOpenedEditorDocumentAsync"
-                                         LayoutMode="@OpenEditorDiagramLayoutMode"
+                                         LayoutMode="TmLayoutMode.Auto"
                                          LayoutBreakpoints="@OpenEditorBreakpoints"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
                                          ShowTitle="false"

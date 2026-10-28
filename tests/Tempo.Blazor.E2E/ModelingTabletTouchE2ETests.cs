@@ -27,8 +27,12 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
         {
             await AssertTabletBandAsync(page);
             Assert.IsTrue(await SidePanelsVisibleAsync(page) <= 1,
-                "the tablet layout shows the preview plus at most ONE side panel (the shell closes the other)");
+                "the tablet layout shows the preview plus at most ONE side panel (the sheets start closed)");
             Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "the tablet layout must not overflow horizontally");
+
+            // The tablet canvas floor (review fix): the touch canvas keeps a usable block size.
+            var canvasHeight = await CanvasHeightAsync(page);
+            Assert.IsTrue(canvasHeight >= 240, $".tm-diagram-canvas must reach 240px on a tablet (measured {canvasHeight})");
 
             await SaveStableScreenshotAsync(page, "modeling-tablet-1024x768.png");
         }
@@ -105,31 +109,25 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("1024x768 touch: the issues dock collapses and expands under the preview")]
+    [Description("1024x768 touch: the issues dock starts collapsed on a tablet and expands and collapses under the preview")]
     public async Task Tablet_1024_IssuesDock_CollapsesAndExpands()
     {
         var page = await OpenLoadedTabletPageAsync(1024, 768, scenario: "issues-mixed");
         try
         {
-            // The inspector sheet starts open and overlays the canvas' trailing edge — a finger
-            // closes it before reaching the dock toggle underneath.
-            await page.Locator("[data-testid='modeling-sheet-close']").TapAsync();
-            await page.WaitForFunctionAsync(
-                "() => !document.querySelector(\"[data-testid='modeling-inspector-sheet']\")",
-                null,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
-
+            // The tablet band starts with the dock COLLAPSED (its own tablet flag — the desktop
+            // dock state is untouched), so a finger expands it first.
             await page.Locator("[data-testid='modeling-issues-toggle']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
             await page.Locator("[data-testid='modeling-issues-toggle']").TapAsync();
             await page.WaitForFunctionAsync(
-                "() => document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden') === true",
+                "() => !document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden')",
                 null,
                 new PageWaitForFunctionOptions { Timeout = 10_000 });
 
             await page.Locator("[data-testid='modeling-issues-toggle']").TapAsync();
             await page.WaitForFunctionAsync(
-                "() => !document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden')",
+                "() => document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden') === true",
                 null,
                 new PageWaitForFunctionOptions { Timeout = 10_000 });
             Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "the dock toggle must not introduce overflow");
@@ -147,15 +145,7 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
         var page = await OpenLoadedTabletPageAsync(1024, 768);
         try
         {
-            // The inspector sheet starts open and overlays the preview header: a finger closes
-            // it first (the sheet is a transient surface — the trigger underneath is not
-            // tappable through it).
-            await page.Locator("[data-testid='modeling-sheet-close']").TapAsync();
-            await page.WaitForFunctionAsync(
-                "() => !document.querySelector(\"[data-testid='modeling-inspector-sheet']\")",
-                null,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
-
+            // The sheets start closed: the trigger is reachable without a close-first workaround.
             await page.Locator("[data-testid='modeling-open-in-editor-button']").TapAsync();
             await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
@@ -222,6 +212,11 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
             var insertHeight = await page.Locator("[data-testid='modeling-tree-insert-bpmn-validate-order']")
                 .EvaluateAsync<double>("el => el.getBoundingClientRect().height");
             Assert.IsTrue(insertHeight >= 44, $"the non-drag action must reach the 44px target (measured {insertHeight})");
+
+            // Fáze 6 review: the insert action is a full 44x44 target on a coarse pointer.
+            var insertWidth = await page.Locator("[data-testid='modeling-tree-insert-bpmn-validate-order']")
+                .EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+            Assert.IsTrue(insertWidth >= 44, $"the non-drag action must be 44px wide too (measured {insertWidth})");
         }
         finally
         {
@@ -246,6 +241,10 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
                 new PageWaitForFunctionOptions { Timeout = 10_000 });
             Assert.AreEqual(0, await page.Locator("[data-testid='modeling-inspector-sheet']").CountAsync(),
                 "opening the drawer closed the sheet at 1180");
+
+            // The tablet canvas floor (review fix) holds on the wider band too.
+            var canvasHeight = await CanvasHeightAsync(page);
+            Assert.IsTrue(canvasHeight >= 240, $".tm-diagram-canvas must reach 240px on a tablet (measured {canvasHeight})");
 
             await SaveStableScreenshotAsync(page, "modeling-tablet-1180x820.png");
         }
@@ -339,6 +338,10 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
     private static Task<int> ReadNumericAttributeAsync(IPage page, string selector, string attributeName) => page.EvaluateAsync<int>(
         "([selector, attributeName]) => Number(document.querySelector(selector)?.getAttribute(attributeName) ?? '0')",
         new[] { selector, attributeName });
+
+    /// <summary>The preview canvas' rendered block size (the review fix's tablet floor contract).</summary>
+    private static Task<double> CanvasHeightAsync(IPage page) => page.EvaluateAsync<double>(
+        "() => document.querySelector('.tm-modeling-diagram-preview .tm-diagram-canvas')?.getBoundingClientRect().height ?? 0");
 
     private static Task WaitForPreviewNodeCountAtLeastAsync(IPage page, int minimumCount) => page.WaitForFunctionAsync(
         """

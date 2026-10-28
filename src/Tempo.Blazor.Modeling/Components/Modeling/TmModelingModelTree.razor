@@ -100,6 +100,7 @@
                                             aria-posinset="@nodePosition"
                                             aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
                                             aria-label="@GetNodeAriaLabel(element)"
+                                            aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert" : null)"
                                             title="@GetDisplayName(element)"
                                             tabindex="@GetNodeTabIndex(element.Id, activeTreeItemId)"
                                             @onclick="() => SelectElementAsync(element)"
@@ -119,22 +120,26 @@
                                             <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
                                         </span>
                                     </button>
-                                    @if (AllowNodeDrop)
+                                    @if (CanInsertIntoPreview)
                                     {
                                         @* Fáze 6 (WCAG 2.5.7): the non-drag alternative to dragging the
                                            node into the preview — a SIBLING button (a button must never
                                            nest inside a button). The core .tm-reveal-on-hover pair
                                            hides it until hover on a fine pointer only; it stays
                                            visible on (hover: none) and under :focus-within
-                                           (docs/responsive-conventions.md). The HOST computes the
-                                           drop geometry (the preview's viewport center) and routes
-                                           the request through the preview's existing drop path —
-                                           the tree raises the request only. *@
+                                           (docs/responsive-conventions.md). tabindex="-1": the
+                                           keyboard path is the NODE treeitem's Insert / Ctrl+Enter
+                                           (aria-keyshortcuts above) — the button itself is a
+                                           pointer/touch affordance and stays out of the tab order.
+                                           The HOST computes the drop geometry (the preview's viewport
+                                           center) and routes the request through the preview's
+                                           existing drop path — the tree raises the request only. *@
                                         <button type="button"
                                                 class="tm-modeling-model-tree__insert tm-reveal-on-hover"
                                                 data-testid="@($"modeling-tree-insert-{element.Id}")"
-                                                aria-label="@Loc["TmModelingModelTree_InsertIntoPreview"]"
-                                                title="@Loc["TmModelingModelTree_InsertIntoPreview"]"
+                                                tabindex="-1"
+                                                aria-label="@GetInsertAriaLabel(element)"
+                                                title="@GetInsertAriaLabel(element)"
                                                 @onclick="() => HandleInsertRequestedAsync(element)">
                                             <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
                                         </button>

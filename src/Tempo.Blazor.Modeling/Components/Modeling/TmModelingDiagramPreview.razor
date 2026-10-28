@@ -64,8 +64,11 @@
             }
             @* The viewer keeps ONE toolbar row through the editor's own API: the Viewer group set
                minus export (a preview never exports) — the explicit flags override the preset,
-               so no export group folds into a second row. Never CSS on the editor's internals. *@
-            <TmDiagramEditor Document="@Document"
+               so no export group folds into a second row. Never CSS on the editor's internals.
+               The @ref backs GetViewport: the non-drag "Insert into preview" path targets the
+               center of what the user SEES, not the page center. *@
+            <TmDiagramEditor @ref="_editor"
+                             Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
                              ReadOnly="true"
                              ToolbarPreset="DiagramToolbarPreset.Viewer"
