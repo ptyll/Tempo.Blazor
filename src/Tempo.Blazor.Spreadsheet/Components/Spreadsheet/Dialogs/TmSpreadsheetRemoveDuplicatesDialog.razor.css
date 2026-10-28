@@ -1,125 +1,65 @@
-.tm-spreadsheet-dedup__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-}
-
-.tm-spreadsheet-dedup {
-    width: 440px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-xl);
-    padding: 16px;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-dedup__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.tm-spreadsheet-dedup__title {
-    font-weight: 600;
-    font-size: var(--tm-text-md);
-}
-
-.tm-spreadsheet-dedup__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
-}
+/* Remove Duplicates CONTENT only — the card, overlay, header, footer bar and mobile presentation
+   belong to the core TmModal (redesign phase 3). */
 
 .tm-spreadsheet-dedup__hint {
-    margin: 0 0 12px;
+    margin: 0 0 var(--tm-space-3);
+    font-size: var(--tm-text-sm);
     color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-dedup__toolbar {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 10px;
+    gap: var(--tm-space-4);
+    margin-bottom: var(--tm-space-3);
+    flex-wrap: wrap;
 }
 
 .tm-spreadsheet-dedup__toggle {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--tm-space-1-5);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
     cursor: pointer;
 }
 
 .tm-spreadsheet-dedup__select-actions {
     display: flex;
-    gap: 12px;
-    margin-bottom: 6px;
+    gap: var(--tm-space-3);
+    margin-bottom: var(--tm-space-2);
 }
 
 .tm-spreadsheet-dedup__link {
+    padding: 0;
     border: none;
     background: transparent;
-    padding: 0;
-    cursor: pointer;
     color: var(--tm-color-primary);
-    font-size: var(--tm-text-xs);
-}
-
-.tm-spreadsheet-dedup__link:hover {
+    font-size: var(--tm-text-sm);
+    cursor: pointer;
     text-decoration: underline;
 }
 
 .tm-spreadsheet-dedup__columns {
-    max-height: 260px;
-    overflow-y: auto;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    padding: 8px;
-    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    max-height: 40vh;
+    overflow: auto;
 }
 
 .tm-spreadsheet-dedup__column {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 4px;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
     cursor: pointer;
-    border-radius: var(--tm-radius-control);
-}
-
-.tm-spreadsheet-dedup__column:hover {
-    background: var(--tm-color-surface-hover);
 }
 
 .tm-spreadsheet-dedup__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-}
-
-.tm-spreadsheet-dedup__btn {
-    padding: 7px 16px;
-    border-radius: var(--tm-radius-control);
-    border: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-dedup__btn--ok {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-}
-
-.tm-spreadsheet-dedup__btn--ok:disabled {
-    opacity: 0.5;
-    cursor: default;
+    gap: var(--tm-space-2);
 }

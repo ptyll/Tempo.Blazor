@@ -1,22 +1,23 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
-<div class="tm-spreadsheet-pastespecial__backdrop" @onclick="Close">
-    <div class="tm-spreadsheet-pastespecial"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_PasteSpecial_Title"]"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-pastespecial__header">
-            <span class="tm-spreadsheet-pastespecial__title">@Loc["TmSpreadsheet_PasteSpecial_Title"]</span>
-            <button type="button" class="tm-spreadsheet-pastespecial__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="Close">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
+@* Paste Special on the one core dialog frame (G6). *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_PasteSpecial_Title"]"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@FirstContentDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-pastespecial"
+         OnClose="Close">
+    <ChildContent>
         <fieldset class="tm-spreadsheet-pastespecial__group">
             <legend>@Loc["TmSpreadsheet_PasteSpecial_Paste"]</legend>
-            <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.All)" @onchange="() => SetContent(SpreadsheetPasteContent.All)" /> @Loc["TmSpreadsheet_PasteSpecial_All"]</label>
+            <label><input type="radio" id="@FirstContentDomId" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.All)" @onchange="() => SetContent(SpreadsheetPasteContent.All)" /> @Loc["TmSpreadsheet_PasteSpecial_All"]</label>
             <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Values)" @onchange="() => SetContent(SpreadsheetPasteContent.Values)" /> @Loc["TmSpreadsheet_PasteSpecial_Values"]</label>
             <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Formulas)" @onchange="() => SetContent(SpreadsheetPasteContent.Formulas)" /> @Loc["TmSpreadsheet_PasteSpecial_Formulas"]</label>
             <label><input type="radio" name="ps-content" checked="@IsContent(SpreadsheetPasteContent.Formats)" @onchange="() => SetContent(SpreadsheetPasteContent.Formats)" /> @Loc["TmSpreadsheet_PasteSpecial_Formats"]</label>
@@ -26,7 +27,7 @@
 
         <fieldset class="tm-spreadsheet-pastespecial__group">
             <legend>@Loc["TmSpreadsheet_PasteSpecial_Operation"]</legend>
-            <select @bind="_operation" class="tm-spreadsheet-pastespecial__op">
+            <select @bind="_operation" class="tm-spreadsheet-pastespecial__op" aria-label="@Loc["TmSpreadsheet_PasteSpecial_Operation"]">
                 <option value="@SpreadsheetPasteOperation.None">@Loc["TmSpreadsheet_PasteSpecial_OpNone"]</option>
                 <option value="@SpreadsheetPasteOperation.Add">@Loc["TmSpreadsheet_PasteSpecial_OpAdd"]</option>
                 <option value="@SpreadsheetPasteOperation.Subtract">@Loc["TmSpreadsheet_PasteSpecial_OpSubtract"]</option>
@@ -39,10 +40,11 @@
             <label><input type="checkbox" checked="@_skipBlanks" @onchange="e => _skipBlanks = e.Value is bool b && b" /> @Loc["TmSpreadsheet_PasteSpecial_SkipBlanks"]</label>
             <label><input type="checkbox" checked="@_transpose" @onchange="e => _transpose = e.Value is bool b2 && b2" /> @Loc["TmSpreadsheet_PasteSpecial_Transpose"]</label>
         </div>
-
+    </ChildContent>
+    <Footer>
         <div class="tm-spreadsheet-pastespecial__actions">
-            <button type="button" class="tm-spreadsheet-pastespecial__btn tm-spreadsheet-pastespecial__btn--cancel" @onclick="Close">@Loc["TmSpreadsheet_PasteSpecial_Cancel"]</button>
-            <button type="button" class="tm-spreadsheet-pastespecial__btn tm-spreadsheet-pastespecial__btn--ok" @onclick="Apply">@Loc["TmSpreadsheet_PasteSpecial_Ok"]</button>
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="Close" Class="tm-spreadsheet-pastespecial__btn tm-spreadsheet-pastespecial__btn--cancel">@Loc["TmSpreadsheet_PasteSpecial_Cancel"]</TmButton>
+            <TmButton OnClick="Apply" Class="tm-spreadsheet-pastespecial__btn tm-spreadsheet-pastespecial__btn--ok">@Loc["TmSpreadsheet_PasteSpecial_Ok"]</TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>

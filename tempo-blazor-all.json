@@ -11378,7 +11378,7 @@
               "type": "MobilePresentation",
               "isRequired": false,
               "default": "MobilePresentation.Auto",
-              "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
+              "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface: a fullscreen panel on mobile, the centred dialog otherwise. A forced value renders that presentation without measuring."
             },
             {
               "name": "OkButtonText",
@@ -11498,6 +11498,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether the trap is active. An inactive scope renders its content without trapping."
+            },
+            {
+              "name": "AriaDescribedBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element that describes the scope, wired to aria-describedby. A surface whose body text is the point of the surface (an alertdialog message) names it here."
             },
             {
               "name": "AriaLabel",
@@ -11624,6 +11630,12 @@
               "default": "true"
             },
             {
+              "name": "AriaDescribedBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element that describes the modal, wired to the scope's aria-describedby — used by an alertdialog, whose body text is the description."
+            },
+            {
               "name": "CancelButtonText",
               "type": "string?",
               "isRequired": false,
@@ -11650,6 +11662,13 @@
               "type": "bool",
               "isRequired": false,
               "default": "true"
+            },
+            {
+              "name": "DialogRole",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"dialog\"",
+              "description": "The role of the trapped surface. dialog (the default) for a normal modal; alertdialog for a surface whose message IS the content and whose actions are the only way out."
             },
             {
               "name": "Footer",
@@ -11693,7 +11712,7 @@
               "type": "MobilePresentation",
               "isRequired": false,
               "default": "MobilePresentation.Auto",
-              "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
+              "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface (a tabbed form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a sheet would clip it. A forced Sheet, Fullscreen or Dialog renders that presentation without measuring, so a test can render it without a DOM."
             },
             {
               "name": "OkButtonDisabled",
@@ -11739,6 +11758,13 @@
               "type": "EventCallback<TmLayoutMode>",
               "isRequired": false,
               "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
+            },
+            {
+              "name": "RestoreFocus",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether closing the modal restores the focus it took. Defaults to true; false leaves the focus where the close action put it."
             },
             {
               "name": "RestoreFocusTarget",
@@ -44928,6 +44954,13 @@
               "description": "The kind of filter (text/number/date)."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetColumnFilter?>",
               "isRequired": false,
@@ -44938,6 +44971,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -44955,6 +44994,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnClose",
               "type": "EventCallback",
               "isRequired": false
@@ -44963,6 +45009,12 @@
               "name": "OnSave",
               "type": "EventCallback<SpreadsheetDataValidation>",
               "isRequired": false
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Validation",
@@ -45077,6 +45129,13 @@
               "description": "Initial search options used to seed the panel."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the panel renders. Auto reads the app-level viewport scope — never the panel's own container, which is position-absolute on the desktop layout, so measuring it would flip the mode on every render — and keeps the floating panel when the host provides no scope. Mobile renders the non-modal bottom sheet, Desktop and Tablet the floating panel; a forced value never imports an observer script."
+            },
+            {
               "name": "MatchCount",
               "type": "int",
               "isRequired": false,
@@ -45140,6 +45199,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetCellStyle>",
               "isRequired": true,
@@ -45150,6 +45216,12 @@
               "type": "EventCallback",
               "isRequired": true,
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Style",
@@ -45246,7 +45318,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef, NamedRange.",
+          "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef and NamedRange (named ranges come from the workbook). The dialog rides the core TmModal frame: the initial focus is the target field (\"hl-target\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId). Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The target field switches its inputmode with the kind (url / email). The form-field ids (#hl-type, #hl-target, #hl-subject, #hl-display, #hl-tooltip) are a published E2E contract and one dialog is open at a time.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetHyperlinkDialog.razor",
           "documentationStatus": "merged",
@@ -45260,6 +45332,13 @@
               "isRequired": false,
               "description": "The existing hyperlink to edit, or null for a new one.",
               "editorRequired": true
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
             },
             {
               "name": "OnCancel",
@@ -45289,12 +45368,59 @@
           ]
         },
         {
+          "itemName": "TmSpreadsheetInsertImageDialog",
+          "kind": "Component",
+          "category": "Spreadsheet",
+          "subcategory": "Dialogs",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
+          "description": "The Insert Image dialog: one URL field plus a Cancel / Apply footer. It used to be inline markup inside TmSpreadsheet; it now rides the core TmModal frame, which owns the overlay, the dialog role, the initial focus on the URL field, the document-level Escape, the focus restore (to the grid) and the mobile sheet. The URL is validated with Uri.TryCreate and only an absolute http(s) address or a data: URI can be applied — Apply stays disabled and the field carries aria-invalid plus an inline alert until then. Enter applies from the field; applying raises the URL, which the spreadsheet writes to the active cell's ImageUrl (the canvas paints it).",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetInsertImageDialog.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
+          ],
+          "parameters": [
+            {
+              "name": "ImageUrl",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The URL the field starts with (an existing cell image, when the host edits one)."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
+              "name": "OnApply",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the accepted image URL."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+            }
+          ]
+        },
+        {
           "itemName": "TmSpreadsheetNamedRangeEditDialog",
           "kind": "Component",
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Dialog for creating or editing a named range. Validates name syntax and required fields.",
+          "description": "Dialog for creating or editing a named range. Validates name syntax and the required fields, with an inline error per field (aria-invalid + role=\"alert\") and the first invalid field taking the focus after a failed save. The dialog rides the core TmModal frame: the initial focus is the name field (\"nr-name\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId) or to the Name Manager it was opened from, so a stacked dialog never strands the keyboard. Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The form-field ids (#nr-name, #nr-refers, #nr-scope, #nr-sheet, #nr-comment) are a published E2E contract and one dialog is open at a time.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNamedRangeEditDialog.razor",
           "documentationStatus": "merged",
@@ -45303,16 +45429,23 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnCancel",
               "type": "EventCallback",
               "isRequired": false,
-              "description": "Raised when the dialog is dismissed."
+              "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
             },
             {
               "name": "OnSave",
               "type": "EventCallback<SpreadsheetNamedRange>",
               "isRequired": false,
-              "description": "Raised when the user saves the dialog."
+              "description": "Raised when the user saves the dialog (the save button or Ctrl+Enter)."
             },
             {
               "name": "Range",
@@ -45320,6 +45453,12 @@
               "isRequired": false,
               "description": "The range to edit, or null when creating a new one.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — typically the grid root, or the Name Manager the editor was opened from. Null falls back to the opener."
             },
             {
               "name": "Workbook",
@@ -45344,6 +45483,13 @@
             "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -45406,6 +45552,13 @@
               "editorRequired": true
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetRemoveDuplicatesOptions>",
               "isRequired": false,
@@ -45423,6 +45576,12 @@
               "isRequired": true,
               "description": "The range being deduplicated.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -45510,6 +45669,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetSortSpec>",
               "isRequired": false,
@@ -45528,6 +45694,12 @@
               "isRequired": true,
               "description": "The range being sorted.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -45546,6 +45718,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetPasteSpecialOptions>",
               "isRequired": false,
@@ -45556,6 +45735,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -45608,6 +45793,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetTextToColumnsResult>",
               "isRequired": false,
@@ -45619,6 +45811,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "SourceRows",
@@ -46058,7 +46256,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "The Spreadsheet validation alert used for both the Stop-style error and the Warning/Information confirm. It is a modal alertdialog: the core TmFocusScope supplies the role, aria-modal, the accessible name (aria-labelledby) and description (aria-describedby), the initial focus on the primary action, the document-level Escape and the focus restore on close. A Stop alert is a hard block — the value is rejected and only the primary action or Escape dismisses it (a backdrop click does nothing); the confirm also cancels on the backdrop or the cancel action. Ids are per instance and not a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
+          "description": "The Spreadsheet validation alert, shared by the Stop-style error and the Warning / Information confirm. It rides the core TmModal frame: the modal owns the overlay, role=\"alertdialog\", aria-modal, the accessible name (the title) and description (the message, wired to aria-describedby), the initial focus on the primary action, the document-level Escape, the focus restore on close and the mobile presentation (a sheet on a narrow viewport). The severity decides the icon (--tm-color-danger / --tm-color-warning / --tm-color-info), the default words and the exit paths: Stop is a hard block (a single acknowledge action, a backdrop click does nothing, Escape acknowledges), while Warning and Information offer 'Cancel' plus 'Use anyway' and also close on a backdrop click. Element ids are per instance and are NOT a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetValidationAlert.razor",
           "documentationStatus": "merged",
@@ -46070,19 +46268,20 @@
               "name": "CancelText",
               "type": "string?",
               "isRequired": false,
-              "description": "Label of the cancel action. Only rendered when ShowCancel is true."
+              "description": "Label of the cancel action. Null falls back to the localized \"Cancel\"."
             },
             {
-              "name": "IsStop",
-              "type": "bool",
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
               "isRequired": false,
-              "description": "True for the Stop style: the value is blocked, so a backdrop click does nothing and there is no cancel path."
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the alert renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
             },
             {
               "name": "Message",
               "type": "string?",
               "isRequired": false,
-              "description": "The alert body text (the rule's own message, or the localized default)."
+              "description": "The alert body text (the rule's own message). Null falls back to the severity's localized default."
             },
             {
               "name": "OnCancel",
@@ -46100,7 +46299,7 @@
               "name": "PrimaryText",
               "type": "string?",
               "isRequired": false,
-              "description": "Label of the primary action (Confirm / Yes)."
+              "description": "Label of the primary action. Null falls back to the severity's localized default (\"Got it\" for Stop, \"Use anyway\" for Warning/Information)."
             },
             {
               "name": "RestoreFocus",
@@ -46116,16 +46315,23 @@
               "description": "The id of the element focus returns to when the alert closes — the host spreadsheet passes its grid root, so focus lands on the grid rather than the toolbar button that opened the alert. Null falls back to the element focused before the alert opened."
             },
             {
-              "name": "ShowCancel",
-              "type": "bool",
+              "name": "Severity",
+              "type": "SpreadsheetValidationErrorStyle",
               "isRequired": false,
-              "description": "Whether a cancel action exists. False for a Stop alert, true for the confirm."
+              "default": "SpreadsheetValidationErrorStyle.Stop",
+              "description": "How severe the message is. Stop blocks the value (a single acknowledge action, a backdrop click does nothing); Warning and Information ask whether the value should be kept. Defaults to Stop."
+            },
+            {
+              "name": "ShowCancel",
+              "type": "bool?",
+              "isRequired": false,
+              "description": "Whether a cancel action exists. Null falls back to the severity: a Stop alert has none (it is a hard block), a Warning or Information confirm always offers one."
             },
             {
               "name": "Title",
               "type": "string?",
               "isRequired": false,
-              "description": "The alert title (the rule's own title, or the localized default)."
+              "description": "The alert title (the rule's own title). Null falls back to the severity's localized default (\"Invalid value\" / \"Value outside the recommended range\" / \"Note\")."
             }
           ]
         }
@@ -46166,11 +46372,11 @@
         }
       ],
       "summary": {
-        "itemCount": 76,
-        "manualItemCount": 76,
-        "generatedItemCount": 75,
+        "itemCount": 77,
+        "manualItemCount": 77,
+        "generatedItemCount": 76,
         "generatedOnlyItemCount": 0,
-        "componentCount": 19,
+        "componentCount": 20,
         "publicApiTypeCount": 56
       }
     },
@@ -122297,10 +122503,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3312,
-    "manualItemCount": 3312,
+    "itemCount": 3313,
+    "manualItemCount": 3313,
     "generatedOnlyItemCount": 0,
-    "componentCount": 490,
+    "componentCount": 491,
     "publicApiTypeCount": 2769
   }
 }

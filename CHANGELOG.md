@@ -100,20 +100,20 @@
   <!-- after: shared overlay wrappers + core focus scope; the alert ignores the backdrop -->
   <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-hyperlink__backdrop">
     <div class="tm-focus-scope" role="dialog" aria-modal="true"
-         aria-labelledby="spreadsheet-hyperlink-title-1a2b3c4d"
-         data-restore-target="spreadsheet-grid-1a2b3c4d">
+         aria-labelledby="spreadsheet-hyperlink-title-{suffix}"
+         data-restore-target="spreadsheet-grid-{suffix}">
       <div class="tm-spreadsheet-dialog tm-spreadsheet-hyperlink">
-        <h2 class="tm-spreadsheet-hyperlink__title" id="spreadsheet-hyperlink-title-1a2b3c4d">Hyperlink</h2>
+        <h2 class="tm-spreadsheet-hyperlink__title" id="spreadsheet-hyperlink-title-{suffix}">Hyperlink</h2>
       </div>
     </div>
   </div>
   <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-validation-alert__backdrop">
     <div class="tm-focus-scope" role="alertdialog" aria-modal="true"
-         aria-labelledby="spreadsheet-validation-alert-title-1a2b3c4d"
-         aria-describedby="spreadsheet-validation-alert-message-1a2b3c4d"
-         data-restore-target="spreadsheet-grid-1a2b3c4d">
+         aria-labelledby="spreadsheet-validation-alert-title-{suffix}"
+         aria-describedby="spreadsheet-validation-alert-message-{suffix}"
+         data-restore-target="spreadsheet-grid-{suffix}">
       <div class="tm-spreadsheet-dialog tm-spreadsheet-alert">
-        <h2 class="tm-spreadsheet-alert__title" id="spreadsheet-validation-alert-title-1a2b3c4d">Invalid value</h2>
+        <h2 class="tm-spreadsheet-alert__title" id="spreadsheet-validation-alert-title-{suffix}">Invalid value</h2>
         <div class="tm-spreadsheet-alert__actions"><button class="tm-btn tm-btn-primary tm-btn-md">Confirm</button></div>
       </div>
     </div>
@@ -168,7 +168,7 @@
   </div>
 
   <!-- after: the container is named but not focusable; the selected OPTION is the tab stop -->
-  <div class="tm-fcd__listbox" role="listbox" aria-labelledby="spreadsheet-fcd-category-label-1a2b3c4d">
+  <div class="tm-fcd__listbox" role="listbox" aria-labelledby="spreadsheet-fcd-category-label-{suffix}">
     <div class="tm-fcd__listbox-item tm-fcd__listbox-item--selected"
          role="option" tabindex="0" aria-selected="true">General</div>
     <div class="tm-fcd__listbox-item" role="option" tabindex="-1" aria-selected="false">Number</div>
@@ -176,6 +176,77 @@
   ```
 
 - **The Spreadsheet dialogs' element ids are per instance — except the form fields the E2E lane keys off.** Every id this phase adds (dialog titles, the validation alert's title / message / primary / cancel, the listbox label, the Name Manager title / New button / rows, the insert-image title and URL field) is stamped with a per-instance suffix and may change between builds, so none of them is a selector contract; key off the roles (`[role='dialog']`, `[role='alertdialog']`, `[role='listbox'] [role='option']`) instead. The **pre-existing** form-field ids `#nr-name`, `#nr-refers`, `#nr-scope`, `#nr-sheet`, `#nr-comment`, `#hl-type`, `#hl-target`, `#hl-subject`, `#hl-display` and `#hl-tooltip` stay stable on purpose — the published E2E lane fills them — and at most one instance of each dialog is open at a time, so they cannot collide.
+
+- **Every Spreadsheet dialog rides the core `TmModal` — the package no longer paints a backdrop of its own.** Before, the package shipped **three** dialog families: five dialogs with their own scoped backdrop (`__backdrop` + `position: fixed` + `z-index` in the component stylesheet: Sort, Custom Filter, Remove Duplicates, Paste Special, Text to Columns), three dialogs on an interim shared `.tm-spreadsheet-dialog-backdrop` / `.tm-spreadsheet-dialog` wrapper (Name Manager, Named Range Edit, Hyperlink), and three inline blocks inside `TmSpreadsheet.razor` (`tm-fcd` Format Cells, `tm-dvd` Data Validation, and the Insert Image markup plus both validation alerts). Each family had its own header, its own close affordance, its own Escape handling and its own stacking band — two open dialogs dimmed the page twice and Escape depended on focus-trap ordering. After, **all of them** render `TmModal` (the same primitive as the rest of the library): the modal owns the fixed overlay, the dialog role, `aria-modal`, the accessible name, the initial focus, the document-level Escape, the focus restore and the mobile presentation. Gone from the package stylesheets: `.tm-spreadsheet-dialog-backdrop`, `.tm-spreadsheet-dialog`, `.tm-spreadsheet-dialog__title/__body/__actions/__label/__input`, `.tm-spreadsheet-dialog-scope`, the six `__backdrop` hooks and every dialog-card rule (`width`, `padding`, `box-shadow`, `border-radius`). The last two, the canvas grid's **column width** and **row height** dialogs (`.tm-spreadsheet-resize-dialog`, opened from the cell context menu), had kept a private `.tm-spreadsheet-resize-dialog-backdrop` with a literal `z-index` and no focus trap; they now render the same frame (`Title` = the old label, the numeric input in the body, Cancel / Apply in the footer, `RestoreFocusTargetId` = the grid root) and keep the `.tm-spreadsheet-resize-dialog__input` / `__btn--ok` / `__btn--cancel` hooks. The dialog's own root class moved from the card to the **overlay** — `.tm-spreadsheet-sort`, `.tm-spreadsheet-custom-filter`, `.tm-spreadsheet-dedup`, `.tm-spreadsheet-pastespecial`, `.tm-spreadsheet-t2c`, `.tm-spreadsheet-name-manager`, `.tm-spreadsheet-named-range-edit`, `.tm-spreadsheet-hyperlink`, `.tm-fcd`, `.tm-dvd`, the new `.tm-spreadsheet-insert-image` and `.tm-spreadsheet-alert` — so a host or an E2E spec that located a dialog by that class still finds exactly one element per dialog (now the fixed overlay instead of the card). The **card** is the modal's: `.tm-modal` inside that root; the title is `.tm-modal-title` inside `.tm-modal-header`; the close affordance is `.tm-modal-close`; the footer bar is `.tm-modal-footer`.
+
+  ```razor
+  <!-- before: the package's own overlay wrapper; the card carried the dialog class -->
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-name-manager__backdrop">
+    <TmFocusScope ...><div class="tm-spreadsheet-dialog tm-spreadsheet-name-manager">…</div></TmFocusScope>
+  </div>
+
+  <!-- after: the core frame; the dialog class sits on the modal overlay -->
+  <TmModal Show="true" Title="…" Size="ModalSize.Large" Class="tm-spreadsheet-name-manager" …>
+      <ChildContent>…</ChildContent><Footer>…</Footer>
+  </TmModal>
+  ```
+
+  Migration for a host that styled or selected the old markup:
+  | before | after |
+  | --- | --- |
+  | `.tm-spreadsheet-<dialog>__backdrop { … }` | `.tm-modal-overlay.tm-spreadsheet-<dialog>` |
+  | `.tm-spreadsheet-<dialog>__title` | `.tm-spreadsheet-<dialog> .tm-modal-title` |
+  | `.tm-spreadsheet-<dialog>__close` | `.tm-spreadsheet-<dialog> .tm-modal-close` |
+  | `.tm-spreadsheet-<dialog>{ width/padding/border-radius }` | the modal's `Size` (`ModalSize.Small/Medium/Large`) |
+  | `.tm-spreadsheet-<dialog>__actions` (footer bar) | the same class now holds only the buttons, inside `.tm-modal-footer` |
+  | `#tm-fcd-…` / hardcoded card widths | `.tm-fcd` (overlay) + `Size="ModalSize.Large"` |
+  | backdrop click handler on the old wrapper | `TmModal.OnClose` (`CloseOnOverlayClick`, false for a Stop alert) |
+
+- **All Spreadsheet dialogs have a mobile presentation, and the three tall surfaces go fullscreen.** Before, a dialog was the same fixed card at every width (the only narrow rule was `.tm-spreadsheet-dialog { min-width: 100% }`, which never matched the `tm-fcd`/`tm-dvd` cards). After, each dialog renders the frame's mobile presentation: **a bottom sheet for the short forms** (Sort, Custom Filter, Remove Duplicates, Paste Special, Hyperlink, Named Range Edit, Data Validation, Insert Image, validation alerts) and **a fullscreen panel for the tall ones** (Format Cells, Text to Columns, Name Manager), where a sheet would clip the tabs, the preview or the table. The presentation is the core frame's own resolution from the viewport scope it lives in, so a Spreadsheet embedded in a narrow Notion block/modal gets the same treatment; a new `LayoutMode` parameter on each dialog pins the mode for tests and hosts. A `Dialog_...` assertion that measured the desktop card still finds it: a forced or measured desktop layout renders `tm-modal--dialog`.
+
+  ```razor
+  <!-- pin the desktop card in a narrow host (tests, a kiosk layout) -->
+  <TmSpreadsheetFormatCellsDialog LayoutMode="TmLayoutMode.Desktop" … />
+  ```
+
+- **`TmSpreadsheetValidationAlert` is severity-driven, and its buttons say what they do.** Before, the component took `IsStop` (bool), `PrimaryText`/`CancelText`/`ShowCancel` and both the warning and the information style shared one path with the same default title ("Invalid value") and the same "Confirm"/"Yes" labels, with no severity icon. After, it takes `Severity` (`SpreadsheetValidationErrorStyle`: `Stop`, `Warning`, `Information`): the severity paints its own icon in `--tm-color-danger` / `--tm-color-warning` / `--tm-color-info` with a matching 3px rail on the card, and it picks the default words — `TmSpreadsheet_Validation_DefaultWarningTitle/Message` ("Value outside the recommended range" / "Keep the value anyway?") and `…DefaultInfoTitle/Message` ("Note" / "Just so you know.") — so an **Information** message no longer reads as a warning. A host that relied on a Warning or Information rule **without** its own `ErrorAlert.Title/Message` therefore sees the severity's own default text instead of "Invalid value". The Stop style keeps the hard block: one primary action labelled `TmSpreadsheet_Validation_Acknowledge` ("Got it"), no cancel path, a backdrop click does nothing, Escape acknowledges. Warning/Information offer `Tm_Cancel` plus `TmSpreadsheet_Validation_KeepValue` ("Use anyway"), and a backdrop click cancels. `ShowCancel` is now `bool?`: `null` (default) follows the severity. `IsStop` is **removed**; a host that set it migrates to `Severity`:
+
+  ```razor
+  <!-- before -->
+  <TmSpreadsheetValidationAlert IsStop="false" ShowCancel="true"
+                                PrimaryText="Yes" CancelText="Cancel" … />
+  <!-- after: the severity decides the icon, the defaults and the exit paths -->
+  <TmSpreadsheetValidationAlert Severity="SpreadsheetValidationErrorStyle.Warning" … />
+  ```
+
+  The alert's title moved to the frame header (`.tm-modal-title`); `.tm-spreadsheet-alert__title` matches nothing now. `.tm-spreadsheet-alert`, `__icon`, `__message` and `__actions` remain (the last one now wraps the buttons inside the frame's footer).
+
+- **The Insert Image dialog is a component of its own.** Before, the URL field, its label and both buttons were inline markup inside `TmSpreadsheet.razor`, with no URL validation — any non-empty string reached the canvas `<img>`. After, `TmSpreadsheetInsertImageDialog` (`Tempo.Blazor.Components.Spreadsheet.Dialogs`) renders through the shared frame with the initial focus on the field, `inputmode="url"`, Enter applying from the field, and the URL validated with `Uri.TryCreate` against absolute `http`/`https`/`data:` only: Apply is disabled (and the field carries `aria-invalid` plus a `role="alert"` message using `TmSpreadsheet_InsertImage_InvalidUrl`) until the address can actually be painted. A host that re-implemented the inline markup mounts the component instead.
+
+- **Find & Replace stays non-modal and becomes a non-modal bottom sheet on a narrow container (Q5).** Before, the panel was a floating `position: absolute` card at every width, overlapping the grid's first rows on a phone. After, the DESKTOP layout keeps the floating panel (the grid must stay usable and the highlighted matches visible — it is deliberately NOT a modal), and a mobile layout renders the same panel inside `TmDrawer` with `Modal="false"`, so there is no backdrop, the grid keeps working, the sheet has a grabber and Escape closes it. The `LayoutMode` parameter forces either presentation. Nothing else changed: `Ctrl+F`/`Ctrl+H`, Enter / Shift+Enter / Escape and every `.tm-spreadsheet-find__*` class are the same, and the panel keeps its own `role="dialog"` (non-modal). A host that positioned `.tm-spreadsheet-find` with its own absolute offsets must scope that rule to the desktop panel — the mobile sheet hosts it in `.tm-spreadsheet-find-host`.
+
+- **The Data validation DIALOG title lost its ellipsis.** The toolbar command keeps `TmSpreadsheet_Data_DataValidation` ("Data validation..." — it opens something), but the dialog now titles itself with the new `TmSpreadsheet_Validation_Title` ("Data validation", cs "Ověření dat", sk "Validácia údajov", fr "Validation des données"). Render `Title` from your own resource if you localize the surface yourself; `.tm-dvd .tm-modal-title` is still the selector, only the text changed.
+
+- **Core (visual change): `--tm-modal-stacked-scrim` — two stacked modals no longer dim the page twice.** `TmModal`/`TmDialog` paint `rgba(0, 0, 0, 0.5)` (light) / `0.7` (dark) on every overlay, so a dialog opened over another one reached **0.75 / 0.91** over the page and read almost black. Now the FIRST overlay paints the full page scrim and a second one (a later sibling `.tm-modal-overlay` under the same parent; a modal nested inside another modal's content still paints the full scrim) paints the light `--tm-modal-stacked-scrim` — 40 % of the same scrim colour, derived with `color-mix` from `--tm-bg-overlay`, so both themes follow automatically — and no backdrop blur. The lower dialog keeps a depth cue instead of being dimmed out, and a single modal is byte-identical to before.
+
+  ```css
+  /* restore the pre-2.10 look (two full scrims) … */
+  :root { --tm-modal-stacked-scrim: var(--tm-bg-overlay); }
+  /* … or no scrim at all on the stacked surface */
+  :root { --tm-modal-stacked-scrim: transparent; }
+  ```
+
+- **Core (additive): `MobilePresentation.AutoFullscreen`.** A tall surface (Format Cells, Text to Columns, Name Manager) would be clipped by a bottom sheet, so the enum gained a fourth value: it follows the viewport scope like `Auto` but resolves to a fullscreen panel on a mobile layout and to the centred dialog everywhere else. `Auto` is untouched, so every existing consumer keeps its sheet, and `TmModal`/`TmDialog` only extend their resolution switch.
+
+  ```razor
+  <!-- a tabbed form, a table or a preview: fullscreen on a phone -->
+  <TmModal MobilePresentation="MobilePresentation.AutoFullscreen" … />
+  ```
+
+- **Core (additive): `TmModal.RestoreFocus`.** `bool`, default `true` — the frame's focus restore can now be switched off so a host that owns the destination itself (a surface whose close action moves the focus deliberately) does not fight it. The value is forwarded to the existing `TmFocusScope.RestoreFocus`, so the default path is byte-identical to before; `false` renders `data-restore-focus="false"` and leaves the focus where the close action put it.
+
+- **Core (additive): `TmModal.DialogRole` and `TmModal.AriaDescribedBy`, `TmFocusScope.AriaDescribedBy`.** A surface that IS a message (the Spreadsheet validation alert) can now render `role="alertdialog"` and point `aria-describedby` at its message through the shared frame, instead of dropping out of `TmModal` to hand-roll an `alertdialog`. Both default to the previous behaviour (`"dialog"`, unset), so nothing else changes.
+
 
 ### Added
 

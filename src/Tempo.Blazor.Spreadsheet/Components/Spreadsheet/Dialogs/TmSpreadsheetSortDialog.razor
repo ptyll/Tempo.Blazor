@@ -2,21 +2,26 @@
 @using Tempo.Blazor.Components.Spreadsheet.Data
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-<div class="tm-spreadsheet-sort__backdrop" @onclick="Close">
-    <div class="tm-spreadsheet-sort"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_Sort_Title"]"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-sort__header">
-            <span class="tm-spreadsheet-sort__title">@Loc["TmSpreadsheet_Sort_Title"]</span>
-            <button type="button" class="tm-spreadsheet-sort__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="Close">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
+@* The sort dialog rides the one core dialog frame (G6): TmModal owns the fixed overlay, the dialog
+   role, aria-modal, the initial focus, the document-level Escape, the focus restore and the mobile
+   presentation. The package contributes the level table, the toolbar and the footer actions. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_Sort_Title"]"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@AddLevelDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-sort"
+         OnClose="Close">
+    <ChildContent>
         <div class="tm-spreadsheet-sort__toolbar">
-            <button type="button" class="tm-spreadsheet-sort__tool" @onclick="AddLevel">+ @Loc["TmSpreadsheet_Sort_AddLevel"]</button>
+            <button type="button" class="tm-spreadsheet-sort__tool" id="@AddLevelDomId" @onclick="AddLevel">
+                <TmIcon Name="plus" /> @Loc["TmSpreadsheet_Sort_AddLevel"]
+            </button>
             <label class="tm-spreadsheet-sort__header-toggle">
                 <input type="checkbox" checked="@_hasHeader" @onchange="e => _hasHeader = e.Value is bool b && b" />
                 <span>@Loc["TmSpreadsheet_Sort_HasHeader"]</span>
@@ -68,17 +73,28 @@
                         <td>
                             <button type="button" class="tm-spreadsheet-sort__remove"
                                     title="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
+                                    aria-label="@Loc["TmSpreadsheet_Sort_DeleteLevel"]"
                                     disabled="@(_levels.Count <= 1)"
-                                    @onclick="() => RemoveLevel(index)">✕</button>
+                                    @onclick="() => RemoveLevel(index)">
+                                <TmIcon Name="x" Size="IconSize.Sm" />
+                            </button>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
-
+    </ChildContent>
+    <Footer>
         <div class="tm-spreadsheet-sort__actions">
-            <button type="button" class="tm-spreadsheet-sort__btn tm-spreadsheet-sort__btn--cancel" @onclick="Close">@Loc["TmSpreadsheet_Sort_Cancel"]</button>
-            <button type="button" class="tm-spreadsheet-sort__btn tm-spreadsheet-sort__btn--ok" @onclick="Apply">@Loc["TmSpreadsheet_Sort_Ok"]</button>
+            <TmButton Variant="ButtonVariant.Ghost"
+                      OnClick="Close"
+                      Class="tm-spreadsheet-sort__btn tm-spreadsheet-sort__btn--cancel">
+                @Loc["TmSpreadsheet_Sort_Cancel"]
+            </TmButton>
+            <TmButton OnClick="Apply"
+                      Class="tm-spreadsheet-sort__btn tm-spreadsheet-sort__btn--ok">
+                @Loc["TmSpreadsheet_Sort_Ok"]
+            </TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -10,13 +11,25 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetHyperlinkDialog
 {
-    // Per-instance title id (never a selector); the form-field ids below predate this phase and stay
-    // constant because the published E2E lane keys off them (#hl-type, #hl-target, …).
-    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
-
-    private string TitleDomId => $"spreadsheet-hyperlink-title-{_idSuffix}";
-
+    // The form-field ids predate the redesign and stay constant: the published E2E lane keys off
+    // them (#hl-type, #hl-target, …) and one dialog is open at a time, so they cannot collide.
     private string TargetInputDomId => "hl-target";
+
+    private string TypeSelectDomId => "hl-type";
+
+    private string EmailSubjectDomId => "hl-subject";
+
+    private string DisplayInputDomId => "hl-display";
+
+    private string TooltipInputDomId => "hl-tooltip";
+
+    /// <summary>A web address takes a URL keyboard on a phone, a mailbox an e-mail one.</summary>
+    private string TargetInputMode => _kind switch
+    {
+        SpreadsheetHyperlinkKind.Email => "email",
+        SpreadsheetHyperlinkKind.Web => "url",
+        _ => "text"
+    };
 
     private SpreadsheetHyperlinkKind _kind = SpreadsheetHyperlinkKind.Web;
     private string _target = string.Empty;
@@ -37,6 +50,12 @@ public partial class TmSpreadsheetHyperlinkDialog
 
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>
     /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
@@ -92,9 +111,6 @@ public partial class TmSpreadsheetHyperlinkDialog
     }
 
     private void OnCancelClick() => OnCancel.InvokeAsync();
-
-    /// <summary>Raised by the focus scope's document-level Escape listener.</summary>
-    private Task OnEscapeHandler() => OnCancel.InvokeAsync();
 
     private void OnKeyDown(KeyboardEventArgs e)
     {

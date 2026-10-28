@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetValidationAlert",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "The Spreadsheet validation alert used for both the Stop-style error and the Warning/Information confirm. It is a modal alertdialog: the core TmFocusScope supplies the role, aria-modal, the accessible name (aria-labelledby) and description (aria-describedby), the initial focus on the primary action, the document-level Escape and the focus restore on close. A Stop alert is a hard block — the value is rejected and only the primary action or Escape dismisses it (a backdrop click does nothing); the confirm also cancels on the backdrop or the cancel action. Ids are per instance and not a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
+  "description": "The Spreadsheet validation alert, shared by the Stop-style error and the Warning / Information confirm. It rides the core TmModal frame: the modal owns the overlay, role=\"alertdialog\", aria-modal, the accessible name (the title) and description (the message, wired to aria-describedby), the initial focus on the primary action, the document-level Escape, the focus restore on close and the mobile presentation (a sheet on a narrow viewport). The severity decides the icon (--tm-color-danger / --tm-color-warning / --tm-color-info), the default words and the exit paths: Stop is a hard block (a single acknowledge action, a backdrop click does nothing, Escape acknowledges), while Warning and Information offer 'Cancel' plus 'Use anyway' and also close on a backdrop click. Element ids are per instance and are NOT a selector contract; key off [role='alertdialog'] inside .tm-spreadsheet.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetValidationAlert.razor",
@@ -13,40 +13,46 @@
   "subcategory": "Dialogs",
   "parameters": [
     {
+      "name": "Severity",
+      "type": "SpreadsheetValidationErrorStyle",
+      "isRequired": false,
+      "description": "How severe the message is. Stop blocks the value (a single acknowledge action, a backdrop click does nothing); Warning and Information ask whether the value should be kept. Defaults to Stop."
+    },
+    {
       "name": "Title",
       "type": "string",
       "isRequired": false,
-      "description": "The alert title (the rule's own title, or the localized default)."
+      "description": "The alert title (the rule's own title). Null falls back to the severity's localized default (\"Invalid value\" / \"Value outside the recommended range\" / \"Note\")."
     },
     {
       "name": "Message",
       "type": "string",
       "isRequired": false,
-      "description": "The alert body text (the rule's own message, or the localized default)."
-    },
-    {
-      "name": "IsStop",
-      "type": "bool",
-      "isRequired": false,
-      "description": "True for the Stop style: the value is blocked, so a backdrop click does nothing and there is no cancel path."
+      "description": "The alert body text (the rule's own message). Null falls back to the severity's localized default."
     },
     {
       "name": "PrimaryText",
       "type": "string",
       "isRequired": false,
-      "description": "Label of the primary action (Confirm / Yes)."
+      "description": "Label of the primary action. Null falls back to the severity's localized default (\"Got it\" for Stop, \"Use anyway\" for Warning/Information)."
     },
     {
       "name": "CancelText",
       "type": "string",
       "isRequired": false,
-      "description": "Label of the cancel action. Only rendered when ShowCancel is true."
+      "description": "Label of the cancel action. Null falls back to the localized \"Cancel\"."
     },
     {
       "name": "ShowCancel",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Whether a cancel action exists. Null falls back to the severity: a Stop alert has none (it is a hard block), a Warning or Information confirm always offers one."
+    },
+    {
+      "name": "RestoreFocus",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether a cancel action exists. False for a Stop alert, true for the confirm."
+      "description": "Whether closing the alert restores the focus it took. Defaults to true."
     },
     {
       "name": "RestoreFocusTargetId",
@@ -55,10 +61,10 @@
       "description": "The id of the element focus returns to when the alert closes — the host spreadsheet passes its grid root, so focus lands on the grid rather than the toolbar button that opened the alert. Null falls back to the element focused before the alert opened."
     },
     {
-      "name": "RestoreFocus",
-      "type": "bool",
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
       "isRequired": false,
-      "description": "Whether closing the alert restores the focus it took. Defaults to true."
+      "description": "The layout the alert renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     },
     {
       "name": "OnPrimary",

@@ -64,6 +64,12 @@
       "type": "EventCallback<SpreadsheetSearchOptions>",
       "isRequired": false,
       "description": "Raised whenever the query or any option changes; carries the full current options."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the panel renders. Auto reads the app-level viewport scope — never the panel\u0027s own container, which is position-absolute on the desktop layout, so measuring it would flip the mode on every render — and keeps the floating panel when the host provides no scope. Mobile renders the non-modal bottom sheet, Desktop and Tablet the floating panel; a forced value never imports an observer script."
     }
   ],
   "subcategory": "Dialogs"

@@ -2137,6 +2137,7 @@ public abstract class LocalizationTestBase : BunitContext
 
         // Phase 5 — data validation
         ["TmSpreadsheet_Data_DataValidation"] = "Data validation...",
+        ["TmSpreadsheet_Validation_Title"] = "Data validation",
         ["TmSpreadsheet_Data_CircleInvalidData"] = "Circle invalid data",
         ["TmSpreadsheet_Data_ClearValidationCircles"] = "Clear validation circles",
         ["TmSpreadsheet_Validation_TabSettings"] = "Settings",
@@ -2175,6 +2176,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSpreadsheet_Validation_Style_Warning"] = "Warning",
         ["TmSpreadsheet_Validation_Style_Information"] = "Information",
         ["TmSpreadsheet_Validation_DefaultErrorTitle"] = "Invalid value",
+        ["TmSpreadsheet_Validation_Acknowledge"] = "Got it",
+        ["TmSpreadsheet_Validation_KeepValue"] = "Use anyway",
+        ["TmSpreadsheet_Validation_DefaultWarningTitle"] = "Value outside the recommended range",
+        ["TmSpreadsheet_Validation_DefaultWarningMessage"] = "Keep the value anyway?",
+        ["TmSpreadsheet_Validation_DefaultInfoTitle"] = "Note",
+        ["TmSpreadsheet_Validation_DefaultInfoMessage"] = "Just so you know.",
+        ["TmSpreadsheet_InsertImage_InvalidUrl"] = "Enter an http(s) address or a data URL of an image.",
         ["TmSpreadsheet_Validation_DefaultErrorMessage"] = "The value you entered is not valid.",
         ["TmSpreadsheet_Dedup_Title"] = "Remove duplicates",
         ["TmSpreadsheet_Dedup_Hint"] = "Select the columns to check for duplicate values.",

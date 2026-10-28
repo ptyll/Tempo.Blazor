@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet;
 
@@ -10,6 +10,22 @@ public partial class TmSpreadsheetDataValidationDialog
     [Parameter] public SpreadsheetDataValidation? Validation { get; set; }
     [Parameter] public EventCallback<SpreadsheetDataValidation> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private string TypeSelectDomId => $"spreadsheet-dv-type-{_idSuffix}";
 
     private string _activeTab = "Settings";
 
@@ -66,11 +82,21 @@ public partial class TmSpreadsheetDataValidationDialog
         _showInputMessage = v.InputMessage is not null;
         _inputTitle = v.InputMessage?.Title ?? string.Empty;
         _inputMessage = v.InputMessage?.Message ?? string.Empty;
-        _showErrorAlert = v.ErrorAlert is not null;
+        // A NEW rule (nothing configured yet) starts with the error alert ON: Excel's default, and
+        // otherwise a user who picks the Warning style would silently get a rule with no ErrorAlert,
+        // which the engine treats as Stop. An existing rule that deliberately has no alert keeps it off.
+        _showErrorAlert = v.ErrorAlert is not null || IsBlankRule(v);
         _errorStyle = v.ErrorAlert?.Style ?? SpreadsheetValidationErrorStyle.Stop;
         _errorTitle = v.ErrorAlert?.Title ?? string.Empty;
         _errorMessage = v.ErrorAlert?.Message ?? string.Empty;
     }
+
+    /// <summary>A rule the dialog has never configured — the state the host passes for a new rule.</summary>
+    private static bool IsBlankRule(SpreadsheetDataValidation rule)
+        => rule.Type == SpreadsheetValidationType.Any
+            && string.IsNullOrEmpty(rule.Formula1)
+            && rule.ErrorAlert is null
+            && rule.InputMessage is null;
 
     private void OnTypeChanged(ChangeEventArgs e)
         => _validationType = Enum.TryParse<SpreadsheetValidationType>(e.Value?.ToString(), out var t) ? t : SpreadsheetValidationType.Any;
@@ -104,10 +130,4 @@ public partial class TmSpreadsheetDataValidationDialog
     }
 
     private async Task OnCancel() => await OnClose.InvokeAsync();
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await OnClose.InvokeAsync();
-    }
 }

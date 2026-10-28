@@ -207,11 +207,14 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
     /// </summary>
     private static async Task AssertDialogFloatsOverGridAsync(
         IPage page,
-        ILocator dialog,
-        ILocator backdrop,
+        ILocator dialogRoot,
         ILocator grid,
         double gridDocumentTopBefore)
     {
+        // The dialog's root class sits on the core TmModal overlay; the CARD is the focus-scope
+        // panel inside it (.tm-modal), and the overlay itself is the backdrop.
+        var dialog = dialogRoot.Locator(".tm-modal").First;
+        var backdrop = dialogRoot;
         var box = await dialog.BoundingBoxAsync();
         Assert.IsNotNull(box, "the dialog must have a box");
         var viewport = page.ViewportSize!;
@@ -257,14 +260,13 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await OpenNameManagerAsync(page);
 
         var dialog = page.Locator(".tm-spreadsheet-name-manager");
-        await AssertDialogFloatsOverGridAsync(
-            page, dialog, page.Locator(".tm-spreadsheet-name-manager__backdrop"), grid, gridDocumentTopBefore);
+        await AssertDialogFloatsOverGridAsync(page, page.Locator(".tm-modal-overlay.tm-spreadsheet-name-manager"), grid, gridDocumentTopBefore);
 
-        var scope = page.Locator(".tm-spreadsheet-dialog-backdrop [role='dialog']").First;
+        var scope = page.Locator(".tm-spreadsheet-name-manager [role='dialog']").First;
         Assert.AreEqual("true", await scope.GetAttributeAsync("aria-modal"));
         var labelledBy = await scope.GetAttributeAsync("aria-labelledby");
         Assert.IsFalse(string.IsNullOrWhiteSpace(labelledBy));
-        StringAssert.Contains(await page.Locator($"#{labelledBy}").TextContentAsync() ?? string.Empty,
+        StringAssert.Contains(await page.Locator($"[id='{labelledBy}']").TextContentAsync() ?? string.Empty,
             "Name Manager");
 
         // Populate the list so the screenshot shows the table (and the selected row) rather than
@@ -304,8 +306,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await OpenNameManagerAsync(page);
 
         var dialog = page.Locator(".tm-spreadsheet-name-manager");
-        await AssertDialogFloatsOverGridAsync(
-            page, dialog, page.Locator(".tm-spreadsheet-name-manager__backdrop"), grid, gridDocumentTopBefore);
+        await AssertDialogFloatsOverGridAsync(page, page.Locator(".tm-modal-overlay.tm-spreadsheet-name-manager"), grid, gridDocumentTopBefore);
 
         var empty = dialog.Locator(".tm-spreadsheet-name-manager__empty");
         await empty.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -332,13 +333,12 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(200);
 
-        await AssertDialogFloatsOverGridAsync(
-            page, dialog, page.Locator(".tm-spreadsheet-named-range-edit__backdrop"), grid, gridDocumentTopBefore);
+        await AssertDialogFloatsOverGridAsync(page, page.Locator(".tm-modal-overlay.tm-spreadsheet-named-range-edit"), grid, gridDocumentTopBefore);
 
-        var scope = page.Locator(".tm-spreadsheet-named-range-edit__backdrop [role='dialog']").First;
+        var scope = page.Locator(".tm-spreadsheet-named-range-edit [role='dialog']").First;
         Assert.AreEqual("true", await scope.GetAttributeAsync("aria-modal"));
         var labelledBy = await scope.GetAttributeAsync("aria-labelledby");
-        StringAssert.Contains(await page.Locator($"#{labelledBy}").TextContentAsync() ?? string.Empty, "New Name");
+        StringAssert.Contains(await page.Locator($"[id='{labelledBy}']").TextContentAsync() ?? string.Empty, "New Name");
 
         await SaveScreenshotAsync(page, "named-range-edit-dialog-desktop");
 
@@ -375,8 +375,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await error.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         StringAssert.Contains(await error.TextContentAsync() ?? string.Empty, "not valid");
 
-        await AssertDialogFloatsOverGridAsync(
-            page, dialog, page.Locator(".tm-spreadsheet-named-range-edit__backdrop"), grid, gridDocumentTopBefore);
+        await AssertDialogFloatsOverGridAsync(page, page.Locator(".tm-modal-overlay.tm-spreadsheet-named-range-edit"), grid, gridDocumentTopBefore);
 
         await SaveScreenshotAsync(page, "named-range-edit-dialog-error-desktop");
 
@@ -395,13 +394,12 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         await OpenHyperlinkDialogAsync(page);
 
         var dialog = page.Locator(".tm-spreadsheet-hyperlink");
-        await AssertDialogFloatsOverGridAsync(
-            page, dialog, page.Locator(".tm-spreadsheet-hyperlink__backdrop"), grid, gridDocumentTopBefore);
+        await AssertDialogFloatsOverGridAsync(page, page.Locator(".tm-modal-overlay.tm-spreadsheet-hyperlink"), grid, gridDocumentTopBefore);
 
-        var scope = page.Locator(".tm-spreadsheet-hyperlink__backdrop [role='dialog']").First;
+        var scope = page.Locator(".tm-spreadsheet-hyperlink [role='dialog']").First;
         Assert.AreEqual("true", await scope.GetAttributeAsync("aria-modal"));
         var labelledBy = await scope.GetAttributeAsync("aria-labelledby");
-        StringAssert.Contains(await page.Locator($"#{labelledBy}").TextContentAsync() ?? string.Empty, "Hyperlink");
+        StringAssert.Contains(await page.Locator($"[id='{labelledBy}']").TextContentAsync() ?? string.Empty, "Hyperlink");
 
         await SaveScreenshotAsync(page, "hyperlink-dialog-desktop");
 
@@ -423,10 +421,10 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
 
         // An empty list has no roving stop, so the focus scope puts the initial focus on the New
         // button (declared as data-initial-focus on the scope root).
-        var managerScope = page.Locator(".tm-spreadsheet-name-manager__backdrop [role='dialog']").First;
+        var managerScope = page.Locator(".tm-spreadsheet-name-manager [role='dialog']").First;
         var initialFocusId = await managerScope.GetAttributeAsync("data-initial-focus");
         Assert.IsFalse(string.IsNullOrWhiteSpace(initialFocusId));
-        var newButton = page.Locator($"#{initialFocusId}");
+        var newButton = page.Locator($"[id='{initialFocusId}']");
         StringAssert.Contains(await newButton.TextContentAsync() ?? string.Empty, "New");
         await page.WaitForTimeoutAsync(300);
         Assert.IsTrue(await newButton.EvaluateAsync<bool>("el => el === document.activeElement"),
@@ -552,8 +550,8 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
         var describedBy = await alert.GetAttributeAsync("aria-describedby");
         Assert.IsFalse(string.IsNullOrWhiteSpace(labelledBy), "the alertdialog needs an accessible name");
         Assert.IsFalse(string.IsNullOrWhiteSpace(describedBy), "the alertdialog needs a description");
-        Assert.IsFalse(string.IsNullOrWhiteSpace(await page.Locator($"#{labelledBy}").TextContentAsync()));
-        Assert.IsFalse(string.IsNullOrWhiteSpace(await page.Locator($"#{describedBy}").TextContentAsync()));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(await page.Locator($"[id='{labelledBy}']").TextContentAsync()));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(await page.Locator($"[id='{describedBy}']").TextContentAsync()));
 
         // Focus moved to the primary action.
         var primaryId = await page.EvaluateAsync<string>(
@@ -618,7 +616,7 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
             $"the card must not exceed the viewport height, was {cardBox.Height} of {viewport.Height}");
 
         // The middle scrolls, and the sticky header still exists inside it.
-        var scroller = dialog.Locator(".tm-spreadsheet-name-manager__table-wrap");
+        var scroller = page.Locator(".tm-spreadsheet-name-manager .tm-modal-body");
         var scrollRange = await scroller.EvaluateAsync<double>("el => el.scrollHeight - el.clientHeight");
         Assert.IsTrue(scrollRange > 0, "a 30-row list must overflow its scroller in a 500px viewport");
 

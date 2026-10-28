@@ -19,7 +19,7 @@ public class TmSpreadsheetNameManagerDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNameManagerDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        cut.Find(".tm-spreadsheet-name-manager__title").TextContent.Should().Be("Name Manager");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("Name Manager");
         cut.FindAll("th").Count.Should().Be(5);
     }
 

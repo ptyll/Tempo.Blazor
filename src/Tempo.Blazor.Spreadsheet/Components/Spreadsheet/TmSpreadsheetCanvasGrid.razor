@@ -79,56 +79,70 @@ else
             </div>
         }
 
+        @* The two resize dialogs are dialogs of the package too, so they ride the same core frame as
+           the other twelve surfaces (phase 3, G6): TmModal owns the overlay, the card, the dialog role,
+           the initial focus, Escape and the focus restore to the grid. The package keeps the input's
+           and the buttons' class hooks (the published tests key off them) and the numeric bounds. *@
         @if (_showColWidthDialog)
         {
-            <div class="tm-spreadsheet-resize-dialog-backdrop"
-                 @onclick="() => _showColWidthDialog = false"
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation>
-                <div class="tm-spreadsheet-resize-dialog"
-                     @onclick:stopPropagation
-                     @onmousedown:stopPropagation
-                     @onpointerdown:stopPropagation>
-                    <div class="tm-spreadsheet-resize-dialog__label">@Loc["TmSpreadsheet_SetColumnWidth"]</div>
+            <TmModal Show="true"
+                     Title="@Loc["TmSpreadsheet_SetColumnWidth"]"
+                     Size="ModalSize.Small"
+                     MobilePresentation="MobilePresentation.Auto"
+                     FooterLayout="FooterLayout.Inline"
+                     CloseOnEscape="true"
+                     CloseOnOverlayClick="true"
+                     InitialFocusTargetId="@ColWidthInputDomId"
+                     RestoreFocusTargetId="@RootDomId"
+                     Class="tm-spreadsheet-resize-dialog"
+                     OnClose="CloseColumnWidthDialog">
+                <ChildContent>
                     <input class="tm-spreadsheet-resize-dialog__input"
+                           id="@ColWidthInputDomId"
                            type="number" min="16" max="1000"
+                           aria-label="@Loc["TmSpreadsheet_SetColumnWidth"]"
                            value="@_colWidthInputValue"
                            @oninput="e => _colWidthInputValue = e.Value?.ToString() ?? _colWidthInputValue"
                            @onkeydown="OnColWidthInputKeyDown" />
-                    <div class="tm-spreadsheet-resize-dialog__actions">
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
-                                @onclick="() => _showColWidthDialog = false">@Loc["Tm_Cancel"]</button>
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
-                                @onclick="ApplyColWidth">@Loc["Tm_Apply"]</button>
-                    </div>
-                </div>
-            </div>
+                </ChildContent>
+                <Footer>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                            @onclick="CloseColumnWidthDialog">@Loc["Tm_Cancel"]</button>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                            @onclick="ApplyColWidth">@Loc["Tm_Apply"]</button>
+                </Footer>
+            </TmModal>
         }
 
         @if (_showRowHeightDialog)
         {
-            <div class="tm-spreadsheet-resize-dialog-backdrop"
-                 @onclick="() => _showRowHeightDialog = false"
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation>
-                <div class="tm-spreadsheet-resize-dialog"
-                     @onclick:stopPropagation
-                     @onmousedown:stopPropagation
-                     @onpointerdown:stopPropagation>
-                    <div class="tm-spreadsheet-resize-dialog__label">@Loc["TmSpreadsheet_SetRowHeight"]</div>
+            <TmModal Show="true"
+                     Title="@Loc["TmSpreadsheet_SetRowHeight"]"
+                     Size="ModalSize.Small"
+                     MobilePresentation="MobilePresentation.Auto"
+                     FooterLayout="FooterLayout.Inline"
+                     CloseOnEscape="true"
+                     CloseOnOverlayClick="true"
+                     InitialFocusTargetId="@RowHeightInputDomId"
+                     RestoreFocusTargetId="@RootDomId"
+                     Class="tm-spreadsheet-resize-dialog"
+                     OnClose="CloseRowHeightDialog">
+                <ChildContent>
                     <input class="tm-spreadsheet-resize-dialog__input"
+                           id="@RowHeightInputDomId"
                            type="number" min="8" max="500"
+                           aria-label="@Loc["TmSpreadsheet_SetRowHeight"]"
                            value="@_rowHeightInputValue"
                            @oninput="e => _rowHeightInputValue = e.Value?.ToString() ?? _rowHeightInputValue"
                            @onkeydown="OnRowHeightInputKeyDown" />
-                    <div class="tm-spreadsheet-resize-dialog__actions">
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
-                                @onclick="() => _showRowHeightDialog = false">@Loc["Tm_Cancel"]</button>
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
-                                @onclick="ApplyRowHeight">@Loc["Tm_Apply"]</button>
-                    </div>
-                </div>
-            </div>
+                </ChildContent>
+                <Footer>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                            @onclick="CloseRowHeightDialog">@Loc["Tm_Cancel"]</button>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                            @onclick="ApplyRowHeight">@Loc["Tm_Apply"]</button>
+                </Footer>
+            </TmModal>
         }
     </div>
 }

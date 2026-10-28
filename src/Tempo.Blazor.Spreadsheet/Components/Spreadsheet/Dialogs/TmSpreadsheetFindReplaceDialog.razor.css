@@ -1,13 +1,17 @@
+/* The floating desktop panel. The width, the offset from the grid's top-right corner and the spacing
+   are component knobs (`--tm-spreadsheet-find-*`, read through var() with the historical fallback), so
+   a host can widen the panel without editing the package. The mobile presentation is NOT this card:
+   inside the TmDrawer sheet the panel becomes in-flow content (see _spreadsheet.css). */
 .tm-spreadsheet-find {
     position: absolute;
-    top: 8px;
-    right: 16px;
+    top: var(--tm-space-2);
+    right: var(--tm-space-4);
     z-index: var(--tm-z-popover);
-    width: 320px;
+    width: var(--tm-spreadsheet-find-width);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);

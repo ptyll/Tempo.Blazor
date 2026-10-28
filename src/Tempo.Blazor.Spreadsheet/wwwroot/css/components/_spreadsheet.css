@@ -31,9 +31,15 @@
     --tm-spreadsheet-ref-3: var(--tm-category-2);
     --tm-spreadsheet-ref-4: var(--tm-category-3);
     --tm-spreadsheet-ref-5: var(--tm-category-8);
+    /* Find & Replace panel knobs: the floating desktop card reads these, so a host can widen or move
+       it without overriding the panel's scoped rules. */
+    --tm-spreadsheet-find-width: 20rem;
 
     display: flex;
     flex-direction: column;
+    /* The containing block of an INLINE sheet (Find & Replace on a narrow container renders a
+       TmDrawer Modal=false, whose panel is position:absolute; inset:0). */
+    position: relative;
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
@@ -480,34 +486,8 @@
 }
 
 /* ── Resize Dialog ── */
-.tm-spreadsheet-resize-dialog-backdrop {
-    position: fixed;
-    inset: 0;
-    background: var(--tm-bg-overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--tm-z-modal);
-}
-
-.tm-spreadsheet-resize-dialog {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    box-shadow: var(--tm-shadow-lg);
-    padding: var(--tm-space-3);
-    min-width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-2);
-}
-
-.tm-spreadsheet-resize-dialog__label {
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    color: var(--tm-color-text);
-}
-
+/* The dialog rides the core TmModal frame now (phase 3, G6): the frame owns the overlay and the
+   card, so only the field and the two footer buttons are styled here. */
 .tm-spreadsheet-resize-dialog__input {
     padding: 5px 8px;
     border: 1px solid var(--tm-color-border);
@@ -523,12 +503,6 @@
 .tm-spreadsheet-resize-dialog__input:focus {
     border-color: var(--tm-color-primary);
     box-shadow: var(--tm-shadow-focus);
-}
-
-.tm-spreadsheet-resize-dialog__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--tm-space-2);
 }
 
 .tm-spreadsheet-resize-dialog__btn {
@@ -621,191 +595,13 @@
     margin: 4px 0;
 }
 
-/* ── Dialog ── */
-.tm-spreadsheet-dialog-backdrop {
-    /* Component-local knobs for the card widths; a host overrides either one on the overlay root. */
-    --tm-spreadsheet-dialog-width-lg: 55rem;    /* 880px */
-    --tm-spreadsheet-dialog-width-md: 28.75rem; /* 460px */
-    position: fixed;
-    inset: 0;
-    background: var(--tm-bg-overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--tm-z-modal);
-    padding: var(--tm-space-4);
-}
-
-.tm-spreadsheet-dialog {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    min-width: min(360px, 100%);
-    max-width: 100%;
-    padding: var(--tm-space-4);
-}
-
-.tm-spreadsheet-dialog__title {
-    margin: 0 0 var(--tm-space-3);
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-dialog__body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-3);
-    margin-bottom: var(--tm-space-4);
-}
-
-.tm-spreadsheet-dialog__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--tm-space-2);
-}
-
-.tm-spreadsheet-dialog__label {
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-dialog__input {
-    padding: 6px 10px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    outline: none;
-    transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
-}
-
-.tm-spreadsheet-dialog__input:focus {
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
-}
-
-/* ── Dialogs: Name Manager / Named Range Edit / Hyperlink / Validation alert ─────────────
-   INTERIM — replaced by the core TmModal in redesign phase 3. Everything here reuses the shared
-   .tm-spreadsheet-dialog-backdrop / .tm-spreadsheet-dialog wrappers declared above and adds only
-   per-dialog deltas: the dialogs used to render as an unstyled block in the document flow UNDER the
-   grid. The overlay root also defines the two width knobs the cards consume, so a host can override
-   either one level up. */
-
-/* The scope wrapper is the flex item inside the fixed backdrop: it must pass the viewport limit
-   down to the card, or a long list (or a short window) pushes the footer off screen. */
-.tm-spreadsheet-dialog-scope {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    max-width: 100%;
-    max-height: 100%;
-}
-
-/* Card deltas: the shared wrapper supplies the surface, the border, the radius and the shadow.
-   The card is a column: header and footer are fixed, the scrollable middle absorbs the height. */
-.tm-spreadsheet-name-manager,
-.tm-spreadsheet-named-range-edit,
-.tm-spreadsheet-hyperlink {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    width: 100%;
-    min-height: 0;
-    max-height: 100%;
-}
-
-/* Header, toolbar and footer keep their natural height inside the column. */
-.tm-spreadsheet-name-manager__header,
-.tm-spreadsheet-named-range-edit__header,
-.tm-spreadsheet-hyperlink__header,
-.tm-spreadsheet-name-manager__toolbar,
-.tm-spreadsheet-name-manager__actions,
-.tm-spreadsheet-named-range-edit__actions,
-.tm-spreadsheet-hyperlink__actions {
-    flex: none;
-}
-
-/* The scrollable middle: the table wrap / the form body. */
-.tm-spreadsheet-name-manager__table-wrap,
-.tm-spreadsheet-named-range-edit__body,
-.tm-spreadsheet-hyperlink__body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-}
-
-.tm-spreadsheet-name-manager {
-    width: var(--tm-spreadsheet-dialog-width-lg);
-}
-
-.tm-spreadsheet-named-range-edit,
-.tm-spreadsheet-hyperlink {
-    width: var(--tm-spreadsheet-dialog-width-md);
-}
-
-/* Headers with the close affordance */
-.tm-spreadsheet-name-manager__header,
-.tm-spreadsheet-named-range-edit__header,
-.tm-spreadsheet-hyperlink__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-3);
-    padding: var(--tm-space-4) var(--tm-space-4) 0;
-}
-
-.tm-spreadsheet-name-manager__title,
-.tm-spreadsheet-named-range-edit__title,
-.tm-spreadsheet-hyperlink__title {
-    margin: 0;
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-name-manager__close,
-.tm-spreadsheet-named-range-edit__close,
-.tm-spreadsheet-hyperlink__close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--tm-space-8);
-    height: var(--tm-space-8);
-    padding: 0;
-    border: 0;
-    border-radius: var(--tm-radius-md);
-    background: transparent;
-    color: var(--tm-color-text-muted);
-    cursor: pointer;
-}
-
-.tm-spreadsheet-name-manager__close:hover,
-.tm-spreadsheet-named-range-edit__close:hover,
-.tm-spreadsheet-hyperlink__close:hover {
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-name-manager__close:focus-visible,
-.tm-spreadsheet-named-range-edit__close:focus-visible,
-.tm-spreadsheet-hyperlink__close:focus-visible,
-.tm-spreadsheet-name-manager__tool:focus-visible,
-.tm-spreadsheet-name-manager__filter:focus-visible,
-.tm-spreadsheet-name-manager__btn:focus-visible,
-.tm-spreadsheet-named-range-edit__btn:focus-visible,
-.tm-spreadsheet-named-range-edit__input:focus-visible,
-.tm-spreadsheet-named-range-edit__select:focus-visible,
-.tm-spreadsheet-hyperlink__btn:focus-visible,
-.tm-spreadsheet-hyperlink__input:focus-visible,
-.tm-spreadsheet-hyperlink__select:focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: var(--tm-focus-ring);
-}
+/* ── Dialogs: CONTENT only ────────────────────────────────────────────────────────────────
+   Every Spreadsheet dialog rides the core TmModal (redesign phase 3), which owns the overlay, the
+   card, the header with its close button, the footer bar and the mobile presentation (sheet or
+   fullscreen). Nothing here paints a card, a backdrop or a footer: these rules style the elements the
+   dialog components themselves render inside the modal body. The dialog's own root class sits on the
+   overlay (e.g. .tm-spreadsheet-name-manager), so a host or an E2E spec still finds one element per
+   dialog. */
 
 /* Name Manager toolbar */
 .tm-spreadsheet-name-manager__toolbar {
@@ -813,13 +609,14 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--tm-space-2);
-    padding: 0 var(--tm-space-4);
+    margin-bottom: var(--tm-space-3);
 }
 
 .tm-spreadsheet-name-manager__tool {
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-1);
+    min-height: var(--tm-touch-target);
     padding: var(--tm-space-2) var(--tm-space-3);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
@@ -840,10 +637,21 @@
     cursor: not-allowed;
 }
 
+.tm-spreadsheet-name-manager__tool:focus-visible,
+.tm-spreadsheet-name-manager__filter:focus-visible,
+.tm-spreadsheet-named-range-edit__input:focus-visible,
+.tm-spreadsheet-named-range-edit__select:focus-visible,
+.tm-spreadsheet-hyperlink__input:focus-visible,
+.tm-spreadsheet-hyperlink__select:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
 .tm-spreadsheet-name-manager__filter {
     flex: 1 1 auto;
     min-width: var(--tm-space-20);
     margin-left: auto;
+    min-height: var(--tm-touch-target);
     padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
@@ -859,10 +667,7 @@
 
 /* Name Manager table */
 .tm-spreadsheet-name-manager__table-wrap {
-    flex: 1 1 auto;
-    min-height: 0;
     overflow: auto;
-    padding: 0 var(--tm-space-4);
 }
 
 .tm-spreadsheet-name-manager__table {
@@ -906,7 +711,7 @@
 /* The selected row is not signalled by a tint alone: the primary rail on the leading cell keeps it
    distinguishable in forced-colors and for a colour-blind reader. */
 .tm-spreadsheet-name-manager__row--selected td:first-child {
-    box-shadow: inset 3px 0 0 var(--tm-color-primary);
+    box-shadow: inset var(--tm-space-0-5) 0 0 var(--tm-color-primary);
 }
 
 .tm-spreadsheet-name-manager__table tbody tr:focus-visible {
@@ -921,48 +726,13 @@
     font-size: var(--tm-text-sm);
 }
 
-/* Footers */
+/* Footers: the modal already paints the bar; the wrapper only lays the actions out. */
 .tm-spreadsheet-name-manager__actions,
 .tm-spreadsheet-named-range-edit__actions,
 .tm-spreadsheet-hyperlink__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-top: 1px solid var(--tm-color-border);
-}
-
-.tm-spreadsheet-name-manager__btn,
-.tm-spreadsheet-named-range-edit__btn,
-.tm-spreadsheet-hyperlink__btn {
-    padding: var(--tm-space-2) var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    cursor: pointer;
-}
-
-.tm-spreadsheet-name-manager__btn--close:hover,
-.tm-spreadsheet-named-range-edit__btn--cancel:hover,
-.tm-spreadsheet-hyperlink__btn--cancel:hover {
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-primary);
-}
-
-.tm-spreadsheet-named-range-edit__btn--ok,
-.tm-spreadsheet-hyperlink__btn--ok {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-}
-
-.tm-spreadsheet-named-range-edit__btn--ok:hover,
-.tm-spreadsheet-hyperlink__btn--ok:hover {
-    border-color: var(--tm-color-primary-hover);
-    background: var(--tm-color-primary-hover);
 }
 
 /* Form bodies */
@@ -971,8 +741,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
-    padding: var(--tm-space-4);
-    overflow: auto;
 }
 
 .tm-spreadsheet-named-range-edit__field,
@@ -994,6 +762,7 @@
 .tm-spreadsheet-hyperlink__input,
 .tm-spreadsheet-hyperlink__select {
     width: 100%;
+    min-height: var(--tm-touch-target);
     padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
@@ -1020,7 +789,6 @@
     color: var(--tm-color-danger);
 }
 
-
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .tm-spreadsheet-grid {
@@ -1031,9 +799,6 @@
         font-size: var(--tm-font-size-xs);
     }
 
-    .tm-spreadsheet-dialog {
-        min-width: 100%;
-    }
 }
 
 /* ── Formula-point mode ── */
@@ -1054,33 +819,11 @@
 
 /* ── Format Cells Dialog ── */
 
-.tm-fcd {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    width: min(640px, 100%);
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.tm-fcd__header {
-    padding: var(--tm-space-4) var(--tm-space-4) 0;
-}
-
-.tm-fcd__title {
-    margin: 0 0 var(--tm-space-2);
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
+/* Format Cells: CONTENT only — the card, header and footer bar belong to the core TmModal. */
 .tm-fcd__tabs {
     display: flex;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--tm-color-border);
-    padding: 0 var(--tm-space-4);
     gap: var(--tm-space-1);
 }
 
@@ -1107,14 +850,12 @@
 }
 
 .tm-fcd__body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--tm-space-4);
+    padding: var(--tm-space-4) 0;
     min-height: 240px;
 }
 
 .tm-fcd__preview-section {
-    padding: 0 var(--tm-space-4) var(--tm-space-3);
+    padding: var(--tm-space-3) 0 0;
     border-top: 1px solid var(--tm-color-border);
 }
 
@@ -1140,8 +881,6 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-top: 1px solid var(--tm-color-border);
 }
 
 /* Form layout */
@@ -1342,11 +1081,13 @@
     gap: var(--tm-space-2);
 }
 
-/* ── Transparent backdrop (for dropdowns that close on outside click) ── */
-.tm-spreadsheet-dialog-backdrop--transparent {
+/* ── Popup backdrop (an in-cell dropdown that closes on an outside click; NOT a dialog — the
+   dialogs all ride the core TmModal) ── */
+.tm-spreadsheet-popup-backdrop {
+    position: fixed;
+    inset: 0;
     background: transparent;
-    align-items: flex-start;
-    justify-content: flex-start;
+    z-index: var(--tm-z-modal);
 }
 
 /* ── Validation in-cell dropdown ── */
@@ -1383,32 +1124,11 @@
 }
 
 /* ── Validation dialog ── */
-.tm-dvd {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    width: min(420px, 100%);
-    display: flex;
-    flex-direction: column;
-}
-
-.tm-dvd__header {
-    padding: var(--tm-space-4) var(--tm-space-4) 0;
-}
-
-.tm-dvd__title {
-    margin: 0;
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
+/* Data Validation: CONTENT only — the card, header and footer bar belong to the core TmModal. */
 .tm-dvd__tabs {
     display: flex;
-    padding: 0 var(--tm-space-4);
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--tm-color-border);
-    margin-top: var(--tm-space-3);
     gap: var(--tm-space-1);
 }
 
@@ -1430,7 +1150,7 @@
 }
 
 .tm-dvd__body {
-    padding: var(--tm-space-4);
+    padding: var(--tm-space-4) 0;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
@@ -1488,46 +1208,64 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-top: 1px solid var(--tm-color-border);
 }
 
-/* ── Validation error alert ── */
+/* ── Validation alert (Stop / Warning / Information) ──
+   The severity paints the icon on the modal body's leading edge and the tint of the severity rail;
+   the card, the title and the footer bar belong to the core TmModal. The tint comes from a token per
+   severity, never a literal colour. */
 .tm-spreadsheet-alert {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: 100%;
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    /* A definite width: the card sits inside a shrink-to-fit flex item (the focus scope), so a
-       percentage min-width would resolve against a width the card itself determines and collapse
-       to the content width. The knob is declared on .tm-spreadsheet-dialog-backdrop. */
-    width: var(--tm-spreadsheet-dialog-width-md);
-    min-width: min(320px, 100%);
-    max-width: min(480px, 100%);
-    padding: var(--tm-space-4);
+    --tm-spreadsheet-alert-ink: var(--tm-color-danger);
 }
 
-.tm-spreadsheet-alert__title {
-    margin: 0 0 var(--tm-space-2);
-    font-size: var(--tm-text-md);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
+.tm-spreadsheet-alert--warning {
+    --tm-spreadsheet-alert-ink: var(--tm-color-warning);
+}
+
+.tm-spreadsheet-alert--information {
+    --tm-spreadsheet-alert-ink: var(--tm-color-info);
+}
+
+.tm-spreadsheet-alert__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tm-spreadsheet-alert-ink);
+    margin-bottom: var(--tm-space-2);
 }
 
 .tm-spreadsheet-alert__message {
-    margin: 0 0 var(--tm-space-4);
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text-muted);
+    margin: 0;
+    font-size: var(--tm-text-md);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-alert__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
+}
+
+/* The severity rail on the modal's own body: the icon's colour repeated as a rule, so the severity
+   reads even for a reader who cannot see the icon. The thickness is the token, not a literal px. */
+.tm-spreadsheet-alert .tm-modal-body {
+    border-inline-start: var(--tm-space-0-5) solid var(--tm-spreadsheet-alert-ink);
+    padding-inline-start: var(--tm-space-4);
+}
+
+/* Find & Replace on the mobile layout: the panel becomes the content of the non-modal bottom sheet,
+   so it drops the floating card chrome and fills the sheet. The two extra ancestors are deliberate —
+   the panel's own scoped rule (`.tm-spreadsheet-find[b-…]`) is a two-class specificity and ships in
+   the scoped bundle that loads AFTER this file, so a plain descendant selector loses and the phone
+   kept rendering the 20rem floating card inside the sheet. */
+.tm-drawer.tm-spreadsheet-find-host .tm-drawer__panel .tm-spreadsheet-find {
+    position: static;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
@@ -1544,7 +1282,6 @@
   .tm-spreadsheet-col-resizer,
   .tm-spreadsheet-context-menu__item,
   .tm-spreadsheet-corner,
-  .tm-spreadsheet-dialog__input,
   .tm-spreadsheet-find__btn,
   .tm-spreadsheet-formula-bar__display,
   .tm-spreadsheet-formula-bar__input,

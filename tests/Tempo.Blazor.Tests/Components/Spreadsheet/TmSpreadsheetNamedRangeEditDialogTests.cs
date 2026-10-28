@@ -17,7 +17,7 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        cut.Find(".tm-spreadsheet-named-range-edit__title").TextContent.Should().Be("New Name");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("New Name");
         cut.Find("#nr-name").GetAttribute("value").Should().BeNullOrEmpty();
         cut.Find("#nr-refers").GetAttribute("value").Should().BeNullOrEmpty();
     }
@@ -33,7 +33,7 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
                 .Add(p => p.Workbook, workbook)
                 .Add(p => p.Range, range));
 
-        cut.Find(".tm-spreadsheet-named-range-edit__title").TextContent.Should().Be("Edit Name");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("Edit Name");
         cut.Find("#nr-name").GetAttribute("value").Should().Be("Sales");
         cut.Find("#nr-refers").GetAttribute("value").Should().Be("A1:A10");
     }
@@ -193,7 +193,9 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
         cut.Find("#nr-name").Input("Total");
         cut.Find("#nr-refers").Input("B1:B10");
 
-        var close = cut.Find(".tm-spreadsheet-named-range-edit__close");
+        // The close button is the shared frame's: outside the form's Ctrl+Enter wrapper, so its
+        // keydown carries no handler and only its native click cancels.
+        var close = cut.Find(".tm-modal-close");
         Assert.Throws<MissingEventHandlerException>(() => close.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
         close.Click();
 

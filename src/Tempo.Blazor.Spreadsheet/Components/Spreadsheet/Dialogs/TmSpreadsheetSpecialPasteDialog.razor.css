@@ -1,103 +1,60 @@
-.tm-spreadsheet-pastespecial__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-}
-
-.tm-spreadsheet-pastespecial {
-    width: 360px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-xl);
-    padding: 16px;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-pastespecial__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.tm-spreadsheet-pastespecial__title {
-    font-weight: 600;
-    font-size: var(--tm-text-md);
-}
-
-.tm-spreadsheet-pastespecial__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
-}
+/* Paste Special CONTENT only — the card, overlay, header, footer bar and mobile presentation belong
+   to the core TmModal (redesign phase 3). */
 
 .tm-spreadsheet-pastespecial__group {
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    padding: 10px 12px;
-    margin: 0 0 12px;
+    margin: 0 0 var(--tm-space-4);
+    padding: 0;
+    border: none;
 }
 
 .tm-spreadsheet-pastespecial__group legend {
-    font-weight: 600;
-    padding: 0 4px;
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-text-xs);
+    padding: 0;
+    margin-bottom: var(--tm-space-2);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-pastespecial__group label {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 3px 0;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
     cursor: pointer;
 }
 
 .tm-spreadsheet-pastespecial__op {
     width: 100%;
-    padding: 6px;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-pastespecial__toggles {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 14px;
+    gap: var(--tm-space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--tm-space-2);
 }
 
 .tm-spreadsheet-pastespecial__toggles label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
     cursor: pointer;
 }
 
 .tm-spreadsheet-pastespecial__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-}
-
-.tm-spreadsheet-pastespecial__btn {
-    padding: 7px 16px;
-    border-radius: var(--tm-radius-control);
-    border: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-pastespecial__btn--ok {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
+    gap: var(--tm-space-2);
 }

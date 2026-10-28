@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetNamedRangeEditDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Dialog for creating or editing a named range. Validates name syntax and required fields.",
+  "description": "Dialog for creating or editing a named range. Validates name syntax and the required fields, with an inline error per field (aria-invalid + role=\"alert\") and the first invalid field taking the focus after a failed save. The dialog rides the core TmModal frame: the initial focus is the name field (\"nr-name\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId) or to the Name Manager it was opened from, so a stacked dialog never strands the keyboard. Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The form-field ids (#nr-name, #nr-refers, #nr-scope, #nr-sheet, #nr-comment) are a published E2E contract and one dialog is open at a time.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNamedRangeEditDialog.razor",
@@ -19,23 +19,35 @@
       "editorRequired": true
     },
     {
-      "name": "OnCancel",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when the dialog is dismissed."
-    },
-    {
-      "name": "OnSave",
-      "type": "EventCallback<SpreadsheetNamedRange>",
-      "isRequired": false,
-      "description": "Raised when the user saves the dialog."
-    },
-    {
       "name": "Range",
       "type": "SpreadsheetNamedRange?",
       "isRequired": true,
       "description": "The range to edit, or null when creating a new one.",
       "editorRequired": true
+    },
+    {
+      "name": "OnSave",
+      "type": "EventCallback<SpreadsheetNamedRange>",
+      "isRequired": false,
+      "description": "Raised when the user saves the dialog (the save button or Ctrl+Enter)."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — typically the grid root, or the Name Manager the editor was opened from. Null falls back to the opener."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     }
   ],
   "subcategory": "Dialogs"

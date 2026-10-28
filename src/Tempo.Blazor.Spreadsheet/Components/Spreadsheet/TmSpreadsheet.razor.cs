@@ -35,14 +35,11 @@ public partial class TmSpreadsheet
     private SpreadsheetCellStyle? _formatPainterStyle;
     private bool _formatPainterActive;
     private bool _formatPainterSticky;
-    private string? _insertImageUrl;
-    private ElementReference _insertImageUrlRef;
 
     // Per-instance id suffix: every id rendered by this instance is stamped with it, so two
     // spreadsheets on one page (or two alerts) never collide and no id is a selector contract.
     private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
 
-    private string InsertImageTitleDomId => $"spreadsheet-insert-image-title-{_idSuffix}";
 
     /// <summary>
     /// The focusable grid root's id: every overlay names it as its focus-restore target, so closing a
@@ -1366,47 +1363,24 @@ public partial class TmSpreadsheet
         StateHasChanged();
     }
 
-    /// <summary>The id of the insert-image url field, targeted by its <c>&lt;label for&gt;</c>.</summary>
-    private string InsertImageUrlInputDomId => $"spreadsheet-insert-image-url-{_idSuffix}";
-
-    private void OnImageUrlInput(ChangeEventArgs e) => _insertImageUrl = e.Value?.ToString();
-
-    /// <summary>
-    /// Enter applies the typed url. The handler sits on the url field itself: "confirm what was
-    /// typed" belongs to the owning input, not to the dialog container, whose Enter would otherwise
-    /// also answer bubbled keydowns from the footer buttons and activate them a second time on top
-    /// of their native click (docs/keyboard-activation-convention.md). Escape is the surface's own
-    /// dismissal and belongs to the dialog (the focus scope's document-level listener).
-    /// </summary>
-    private async Task OnInsertImageUrlKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            await ApplyInsertImage();
-        }
-    }
-
     /// <summary>
     /// Dismisses the insert-image dialog. Every close path (Cancel, Escape, a backdrop click) goes
-    /// through here; the dialog's focus scope restores focus to the grid.
+    /// through here; the dialog's frame restores focus to the grid.
     /// </summary>
     private void CloseInsertImageDialog()
     {
         _showInsertImageDialog = false;
     }
 
-    private void ShowInsertImageDialog()
-    {
-        _insertImageUrl = null;
-        _showInsertImageDialog = true;
-    }
+    private void ShowInsertImageDialog() => _showInsertImageDialog = true;
 
-    private async Task ApplyInsertImage()
+    /// <summary>Applies the URL the insert-image dialog validated and raised.</summary>
+    private async Task ApplyInsertImage(string imageUrl)
     {
-        if (_workbook.ActiveSheet is null || string.IsNullOrWhiteSpace(_insertImageUrl)) return;
+        if (_workbook.ActiveSheet is null || string.IsNullOrWhiteSpace(imageUrl)) return;
         var cellRef = _workbook.ActiveSheet.ActiveCellRef ?? "A1";
         var cell = _workbook.ActiveSheet.Cells.GetValueOrDefault(cellRef) ?? new SpreadsheetCell();
-        cell.ImageUrl = _insertImageUrl.Trim();
+        cell.ImageUrl = imageUrl.Trim();
         _workbook.ActiveSheet.Cells[cellRef] = cell;
         InvalidateRenderedCells(new[] { cellRef });
         await SyncCanvasJsEngineCellsAsync(new[] { cellRef });
@@ -1441,6 +1415,12 @@ public partial class TmSpreadsheet
         _commandManager?.Execute(cmd);
         StateHasChanged();
     }
+
+    /// <summary>
+    /// Closes the named-range editor without saving. The editor restores focus to the control that
+    /// opened it inside the still-open Name Manager (never to the grid behind two inert surfaces).
+    /// </summary>
+    private void CloseNamedRangeEditDialog() => _showNamedRangeEditDialog = false;
 
     private void OnNamedRangeEditSave(SpreadsheetNamedRange range)
     {

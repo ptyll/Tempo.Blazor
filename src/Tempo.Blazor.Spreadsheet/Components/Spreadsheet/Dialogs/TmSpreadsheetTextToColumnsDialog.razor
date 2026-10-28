@@ -1,19 +1,21 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
-<div class="tm-spreadsheet-t2c__backdrop" @onclick="Close">
-    <div class="tm-spreadsheet-t2c"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_TextToColumns_Title"]"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-t2c__header">
-            <span class="tm-spreadsheet-t2c__title">@Loc["TmSpreadsheet_TextToColumns_Title"]</span>
-            <button type="button" class="tm-spreadsheet-t2c__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="Close">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
+@* Text to Columns on the one core dialog frame (G6). The wizard is a TALL surface, so it asks the
+   frame for MobilePresentation.AutoFullscreen — a fullscreen panel on a phone, the centred dialog
+   everywhere else (a sheet would clip the preview). *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_TextToColumns_Title"]"
+         Size="ModalSize.Large"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-t2c"
+         OnClose="Close">
+    <ChildContent>
         <ol class="tm-spreadsheet-t2c__steps">
             <li class="@(_step == 1 ? "tm-spreadsheet-t2c__step--active" : "")">1</li>
             <li class="@(_step == 2 ? "tm-spreadsheet-t2c__step--active" : "")">2</li>
@@ -57,13 +59,13 @@
                         <label><input type="checkbox" checked="@_options.Space" @onchange="e => _options.Space = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimSpace"]</label>
                         <label class="tm-spreadsheet-t2c__delim-other">
                             <input type="checkbox" checked="@_useOther" @onchange="e => _useOther = e.Value is bool b && b" /> @Loc["TmSpreadsheet_TextToColumns_DelimOther"]
-                            <input type="text" maxlength="1" class="tm-spreadsheet-t2c__other-input" value="@_otherDelimiter" @oninput="e => _otherDelimiter = e.Value?.ToString() ?? string.Empty" />
+                            <input type="text" maxlength="1" class="tm-spreadsheet-t2c__other-input" aria-label="@Loc["TmSpreadsheet_TextToColumns_DelimOther"]" value="@_otherDelimiter" @oninput="e => _otherDelimiter = e.Value?.ToString() ?? string.Empty" />
                         </label>
                     </div>
                     <div class="tm-spreadsheet-t2c__row">
                         <label class="tm-spreadsheet-t2c__inline">
                             @Loc["TmSpreadsheet_TextToColumns_TextQualifier"]
-                            <select @bind="_qualifier">
+                            <select @bind="_qualifier" aria-label="@Loc["TmSpreadsheet_TextToColumns_TextQualifier"]">
                                 <option value="&quot;">"</option>
                                 <option value="'">'</option>
                                 <option value="">@Loc["TmSpreadsheet_TextToColumns_QualifierNone"]</option>
@@ -113,25 +115,26 @@
                 <p class="tm-spreadsheet-t2c__warning">@Loc["TmSpreadsheet_TextToColumns_OverwriteWarning"]</p>
             </div>
         }
-
+    </ChildContent>
+    <Footer>
         <div class="tm-spreadsheet-t2c__actions">
-            <button type="button" class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--cancel" @onclick="Close">@Loc["TmSpreadsheet_TextToColumns_Cancel"]</button>
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="Close" Class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--cancel">@Loc["TmSpreadsheet_TextToColumns_Cancel"]</TmButton>
             <span class="tm-spreadsheet-t2c__spacer"></span>
             @if (_step > 1)
             {
-                <button type="button" class="tm-spreadsheet-t2c__btn" @onclick="Back">@Loc["TmSpreadsheet_TextToColumns_Back"]</button>
+                <TmButton Variant="ButtonVariant.Secondary" OnClick="Back" Class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--back">@Loc["TmSpreadsheet_TextToColumns_Back"]</TmButton>
             }
             @if (_step < 3)
             {
-                <button type="button" class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--ok" @onclick="Next">@Loc["TmSpreadsheet_TextToColumns_Next"]</button>
+                <TmButton OnClick="Next" Class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--ok">@Loc["TmSpreadsheet_TextToColumns_Next"]</TmButton>
             }
             else
             {
-                <button type="button" class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--ok" @onclick="Finish">@Loc["TmSpreadsheet_TextToColumns_Finish"]</button>
+                <TmButton OnClick="Finish" Class="tm-spreadsheet-t2c__btn tm-spreadsheet-t2c__btn--ok">@Loc["TmSpreadsheet_TextToColumns_Finish"]</TmButton>
             }
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>
 
 @code {
     private RenderFragment RenderPreview(bool showFormatHeader) => builder =>

@@ -2,6 +2,7 @@ using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -29,8 +30,6 @@ public partial class TmSpreadsheetNamedRangeEditDialog
     private ElementReference _nameInputRef;
     private ElementReference _refersToInputRef;
     private ElementReference? _pendingErrorFocus;
-
-    private string TitleDomId => $"spreadsheet-named-range-edit-title-{_idSuffix}";
 
     private string NameErrorDomId => $"spreadsheet-named-range-edit-name-error-{_idSuffix}";
 
@@ -60,6 +59,18 @@ public partial class TmSpreadsheetNamedRangeEditDialog
 
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes the grid root (or
+    /// the Name Manager the editor was opened from). Null falls back to the opener.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     protected override void OnParametersSet()
     {
@@ -145,9 +156,6 @@ public partial class TmSpreadsheetNamedRangeEditDialog
     }
 
     private void OnCancelClick() => OnCancel.InvokeAsync();
-
-    /// <summary>Raised by the focus scope's document-level Escape listener.</summary>
-    private Task OnEscapeHandler() => OnCancel.InvokeAsync();
 
     private void OnKeyDown(KeyboardEventArgs e)
     {

@@ -1,97 +1,61 @@
-.tm-spreadsheet-custom-filter__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-}
-
-.tm-spreadsheet-custom-filter {
-    width: 380px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-xl);
-    padding: 16px;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-custom-filter__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.tm-spreadsheet-custom-filter__title {
-    font-weight: 600;
-    font-size: var(--tm-text-md);
-}
-
-.tm-spreadsheet-custom-filter__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
-}
+/* Custom filter CONTENT only — the card, overlay, header, footer bar and mobile presentation belong
+   to the core TmModal (redesign phase 3). */
 
 .tm-spreadsheet-custom-filter__row {
     display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-bottom: var(--tm-space-3);
+    flex-wrap: wrap;
 }
 
-.tm-spreadsheet-custom-filter__op {
-    flex: 0 0 45%;
-    padding: 6px 8px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-control);
-    font-size: var(--tm-text-sm);
-}
-
+.tm-spreadsheet-custom-filter__op,
 .tm-spreadsheet-custom-filter__value {
-    flex: 1 1 auto;
+    flex: 1 1 8rem;
     min-width: 0;
-    padding: 6px 8px;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     font-size: var(--tm-text-sm);
+}
+
+.tm-spreadsheet-custom-filter__op:focus,
+.tm-spreadsheet-custom-filter__value:focus {
+    outline: 2px solid transparent;
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-spreadsheet-custom-filter__join {
     display: flex;
-    gap: 24px;
-    margin: 8px 0;
+    align-items: center;
+    gap: var(--tm-space-3);
+    margin-bottom: var(--tm-space-3);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-custom-filter__join label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--tm-space-1-5);
     cursor: pointer;
 }
 
 .tm-spreadsheet-custom-filter__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 16px;
+    gap: var(--tm-space-2);
 }
 
-.tm-spreadsheet-custom-filter__btn {
-    padding: 7px 16px;
-    border-radius: var(--tm-radius-control);
-    border: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-custom-filter__btn--ok {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
+/* Stacked criteria on a narrow dialog body (container query: the spreadsheet embeds in a Notion
+   block/modal, so the viewport does not decide). */
+@container (max-width: 420px) {
+    .tm-spreadsheet-custom-filter__row {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

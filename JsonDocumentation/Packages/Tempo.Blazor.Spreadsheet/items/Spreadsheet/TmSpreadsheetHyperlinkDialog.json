@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetHyperlinkDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef, NamedRange.",
+  "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef and NamedRange (named ranges come from the workbook). The dialog rides the core TmModal frame: the initial focus is the target field (\"hl-target\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId). Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The target field switches its inputmode with the kind (url / email). The form-field ids (#hl-type, #hl-target, #hl-subject, #hl-display, #hl-tooltip) are a published E2E contract and one dialog is open at a time.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetHyperlinkDialog.razor",
@@ -42,6 +42,12 @@
       "type": "string",
       "isRequired": false,
       "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     }
   ],
   "subcategory": "Dialogs"

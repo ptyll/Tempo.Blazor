@@ -1,43 +1,5 @@
-.tm-spreadsheet-t2c__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-}
-
-.tm-spreadsheet-t2c {
-    width: 560px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-xl);
-    padding: 16px;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-t2c__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.tm-spreadsheet-t2c__title {
-    font-weight: 600;
-    font-size: var(--tm-text-md);
-}
-
-.tm-spreadsheet-t2c__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
-}
-
+/* TmModal owns the overlay, the card, the header and the footer (phase 3, G6): only the dialog's
+   own content is styled here. The old card/backdrop/header/title/close rules are gone. */
 .tm-spreadsheet-t2c__steps {
     display: flex;
     gap: 8px;

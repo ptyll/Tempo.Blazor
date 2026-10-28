@@ -70,10 +70,24 @@ public partial class SpreadsheetE2ETests
         ILocator grid,
         string cellRef,
         string min,
-        string max)
+        string max,
+        bool viaNameBox = false)
     {
-        var pt = await GetCanvasCellCenterAsync(grid, cellRef);
-        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
+        if (viaNameBox)
+        {
+            // The name box selects the cell through the component's own navigation path, so the test
+            // does not depend on the canvas hit test of a touch viewport (coarse-pointer density
+            // changes the geometry the click maths would have to mirror).
+            await page.FillAsync(".tm-spreadsheet-formula-bar__ref", cellRef);
+            await page.Keyboard.PressAsync("Enter");
+            await page.WaitForTimeoutAsync(150);
+        }
+        else
+        {
+            var pt = await GetCanvasCellCenterAsync(grid, cellRef);
+            await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
+        }
+
         await WaitForCanvasActiveRefAsync(grid, cellRef);
 
         await DataTab(page).ClickAsync();

@@ -37,7 +37,7 @@ public class TmSpreadsheetValidationCommitTests : LocalizationTestBase
         await cut.InvokeAsync(() => grid.Instance.OnCanvasCellEditCommitted(0, 0, "99"));
 
         cut.FindAll(".tm-spreadsheet-alert").Should().HaveCount(1, "error alert should appear");
-        cut.Find(".tm-spreadsheet-alert__title").TextContent.Should().Be("Bad input");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("Bad input");
         cut.Find(".tm-spreadsheet-alert__message").TextContent.Should().Be("Must be 1–10.");
 
         // Cell must NOT have been written
@@ -97,9 +97,9 @@ public class TmSpreadsheetValidationCommitTests : LocalizationTestBase
         var grid = cut.FindComponent<TmSpreadsheetCanvasGrid>();
         await cut.InvokeAsync(() => grid.Instance.OnCanvasCellEditCommitted(0, 0, "99"));
 
-        // Confirmation dialog should appear (not an error — it has a Yes button)
+        // Confirmation dialog should appear (not an error — it asks whether to keep the value)
         cut.FindAll(".tm-spreadsheet-alert").Should().HaveCount(1, "confirm dialog should appear");
-        cut.Markup.Should().Contain("Yes", "confirm dialog should have a Yes button");
+        cut.Markup.Should().Contain("Use anyway", "a Warning confirm offers the keep-the-value action");
 
         // Value not yet written
         sheet.Cells.ContainsKey("A1").Should().BeFalse("value should not be committed before confirmation");
@@ -125,7 +125,7 @@ public class TmSpreadsheetValidationCommitTests : LocalizationTestBase
         var grid = cut.FindComponent<TmSpreadsheetCanvasGrid>();
         await cut.InvokeAsync(() => grid.Instance.OnCanvasCellEditCommitted(0, 0, "99"));
 
-        // Click "Yes" to confirm
+        // Click "Use anyway" to keep the value
         await cut.InvokeAsync(() => cut.FindAll(".tm-spreadsheet-alert button").Last().Click());
 
         // Value should now be written

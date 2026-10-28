@@ -46,6 +46,17 @@
   overflow: visible;
 }
 
+/* Stacked modals (spreadsheet phase 3, two dialogs at a time). The FIRST overlay paints the full
+   scrim over the page; a second one, opened over it, paints only the light stacked scrim
+   (--tm-modal-stacked-scrim) and no blur. Two full scrims reached rgba(0,0,0,.75) and the page read
+   almost black; the light one dims the lower dialog just enough to keep the hierarchy. The rule keys
+   off document order, so it holds for any number of nested modals and changes nothing while only one
+   is open. A host restores the old behaviour by overriding the token. */
+.tm-modal-overlay ~ .tm-modal-overlay {
+  background: var(--tm-modal-stacked-scrim);
+  backdrop-filter: none;
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;

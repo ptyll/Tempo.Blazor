@@ -9,7 +9,8 @@
 @inject ILogger<TmModal> Logger
 @inject ILogger<OverlayLayout> LayoutLogger
 
-@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
+@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto
+    && MobilePresentation is MobilePresentation.Auto or MobilePresentation.AutoFullscreen)
 {
     @* No viewport scope: measure the fixed overlay itself, so the first frame is not stuck on the
        initial mode. The probe is an internal component, so it is opened from C# — a tag in markup
@@ -33,9 +34,12 @@
                           Active="@(_gate?.ScopeActive == true)"
                           NoteOpenerOnMount="true"
                           Class="@ScopeClass"
+                          DialogRole="@DialogRole"
                           AriaLabelledBy="@_titleId"
+                          AriaDescribedBy="@AriaDescribedBy"
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
+                          RestoreFocus="RestoreFocus"
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId"
                           InitialFocusTargetId="@InitialFocusTargetId">
@@ -132,8 +136,12 @@
 
     /// <summary>
     /// How the modal presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> follows the
-    /// viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that
-    /// presentation without measuring, so a test can render it without a DOM.
+    /// viewport scope: a sheet on mobile, a dialog otherwise.
+    /// <see cref="MobilePresentation.AutoFullscreen"/> is the same choice for a TALL surface (a tabbed
+    /// form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a
+    /// sheet would clip it. A forced <see cref="MobilePresentation.Sheet"/>,
+    /// <see cref="MobilePresentation.Fullscreen"/> or <see cref="MobilePresentation.Dialog"/> renders
+    /// that presentation without measuring, so a test can render it without a DOM.
     /// </summary>
     [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
 
@@ -197,6 +205,25 @@
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
 
+    /// <summary>
+    /// Whether closing the modal restores the focus it took. Defaults to true; false leaves the focus
+    /// where the close action put it (the close path then owns the destination).
+    /// </summary>
+    [Parameter] public bool RestoreFocus { get; set; } = true;
+
+    /// <summary>
+    /// The role of the trapped surface. <c>dialog</c> (the default) for a normal modal;
+    /// <c>alertdialog</c> for a surface whose message IS the content and whose actions are the only
+    /// way out.
+    /// </summary>
+    [Parameter] public string DialogRole { get; set; } = "dialog";
+
+    /// <summary>
+    /// The id of the element that describes the modal, wired to the scope's
+    /// <c>aria-describedby</c> — used by an <c>alertdialog</c>, whose body text is the description.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
     /// <summary>The viewport's layout. A modal is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
@@ -247,9 +274,13 @@
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
-    private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
-        ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
-        : MobilePresentation;
+    private MobilePresentation ResolvedPresentation => MobilePresentation switch
+    {
+        MobilePresentation.Auto => Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog,
+        // A tall surface: fullscreen on a phone, the centred dialog everywhere else.
+        MobilePresentation.AutoFullscreen => Context.IsMobile ? MobilePresentation.Fullscreen : MobilePresentation.Dialog,
+        _ => MobilePresentation
+    };
 
     private string ScopeClass => $"tm-modal {GetModalClasses()}{(IsSheet ? " tm-sheet__panel" : "")}";
 

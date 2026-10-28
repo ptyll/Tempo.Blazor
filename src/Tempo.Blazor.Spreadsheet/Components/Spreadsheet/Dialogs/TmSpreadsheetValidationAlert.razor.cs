@@ -1,26 +1,26 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Spreadsheet.Data;
+using Tempo.Blazor.Components.Icons;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
 /// <summary>
-/// The Spreadsheet validation alert, used for both the Stop-style error (a hard block: only the
-/// primary action or Escape dismisses it) and the Warning/Information confirm (which also cancels
-/// on a backdrop click).
+/// The Spreadsheet validation alert, shared by the Stop-style error (a hard block: only the primary
+/// action or Escape dismisses it) and the Warning / Information confirm (which also cancels on a
+/// backdrop click or the cancel action).
 /// </summary>
 /// <remarks>
-/// The dialog contract — <c>role="alertdialog"</c>, <c>aria-modal</c>, <c>aria-labelledby</c> /
-/// <c>aria-describedby</c>, initial focus on the primary action, document-level Escape and the
-/// focus restore on close — is delegated to the core <c>TmFocusScope</c>; the package only decides
-/// the words and whether a cancel path exists. All element ids are per-instance, so two alerts (or
-/// two spreadsheets) on one page never collide. Phase 3 of the redesign plan swaps the card for the
-/// core <c>TmModal</c> and keeps this public surface.
+/// The dialog contract — <c>role="alertdialog"</c>, <c>aria-modal</c>, the accessible name (the
+/// title) and description (the message), the initial focus on the primary action, the document-level
+/// Escape and the focus restore on close — comes from the core <c>TmModal</c> + <c>TmFocusScope</c>;
+/// the package only decides the severity, the words and whether a cancel path exists. Every element
+/// id is per-instance, so two alerts (or two spreadsheets) on one page never collide.
 /// </remarks>
 public partial class TmSpreadsheetValidationAlert
 {
     // Per-instance id suffix: the ids below are implementation detail, never a selector contract.
     private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
-
-    private string TitleDomId => $"spreadsheet-validation-alert-title-{_idSuffix}";
 
     private string MessageDomId => $"spreadsheet-validation-alert-message-{_idSuffix}";
 
@@ -28,26 +28,36 @@ public partial class TmSpreadsheetValidationAlert
 
     private string CancelActionDomId => $"spreadsheet-validation-alert-cancel-{_idSuffix}";
 
-    /// <summary>The alert title (the rule's own title, or the localized default).</summary>
-    [Parameter] public string? Title { get; set; }
-
-    /// <summary>The alert body text (the rule's own message, or the localized default).</summary>
-    [Parameter] public string? Message { get; set; }
+    /// <summary>
+    /// How severe the message is. <see cref="SpreadsheetValidationErrorStyle.Stop"/> blocks the value
+    /// (a single acknowledge action, a backdrop click does nothing); Warning and Information ask
+    /// whether the value should be kept.
+    /// </summary>
+    [Parameter] public SpreadsheetValidationErrorStyle Severity { get; set; } = SpreadsheetValidationErrorStyle.Stop;
 
     /// <summary>
-    /// True for the Stop style: the value is blocked, so a backdrop click does nothing and there is
-    /// no cancel path — the alert only closes through its primary action or Escape.
+    /// The alert title (the rule's own title). Null falls back to the severity's localized default
+    /// ("Invalid value" / "Value outside the recommended range" / "Note").
     /// </summary>
-    [Parameter] public bool IsStop { get; set; }
+    [Parameter] public string? Title { get; set; }
 
-    /// <summary>Label of the primary action (Confirm / Yes).</summary>
+    /// <summary>
+    /// The alert body text (the rule's own message). Null falls back to the severity's localized
+    /// default.
+    /// </summary>
+    [Parameter] public string? Message { get; set; }
+
+    /// <summary>Label of the primary action. Null falls back to the severity's localized default.</summary>
     [Parameter] public string? PrimaryText { get; set; }
 
-    /// <summary>Label of the cancel action. Only rendered when <see cref="ShowCancel"/> is true.</summary>
+    /// <summary>Label of the cancel action. Null falls back to the localized "Cancel".</summary>
     [Parameter] public string? CancelText { get; set; }
 
-    /// <summary>Whether a cancel action exists. False for a Stop alert, true for the confirm.</summary>
-    [Parameter] public bool ShowCancel { get; set; }
+    /// <summary>
+    /// Whether a cancel action exists. Null falls back to the severity: a Stop alert has none (it is
+    /// a hard block), a Warning or Information confirm always offers one.
+    /// </summary>
+    [Parameter] public bool? ShowCancel { get; set; }
 
     /// <summary>Whether closing the alert restores the focus it took. Defaults to true.</summary>
     [Parameter] public bool RestoreFocus { get; set; } = true;
@@ -59,20 +69,71 @@ public partial class TmSpreadsheetValidationAlert
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
-    /// <summary>Raised when the user accepts the alert (the only close path of a Stop alert).</summary>
+    /// <summary>
+    /// The layout the alert renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Raised when the user accepts the alert.</summary>
     [Parameter] public EventCallback OnPrimary { get; set; }
 
-    /// <summary>Raised when the user cancels the alert (a backdrop click or the cancel action).</summary>
+    /// <summary>Raised when the user cancels the alert (the cancel action or a backdrop click).</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    /// <summary>
-    /// A Stop alert ignores the backdrop click: the value stays blocked, and the click only steals
-    /// focus for a moment (the focus trap belongs to the scope, so Escape keeps working).
-    /// </summary>
-    private Task OnBackdropClick()
-        => IsStop ? Task.CompletedTask : OnCancel.InvokeAsync();
+    private bool IsStop => Severity == SpreadsheetValidationErrorStyle.Stop;
 
-    /// <summary>Escape closes the alert — the same path as the cancel action.</summary>
-    private Task OnEscapeHandler()
-        => IsStop ? OnPrimary.InvokeAsync() : OnCancel.InvokeAsync();
+    private string RootClass => Severity switch
+    {
+        SpreadsheetValidationErrorStyle.Warning => "tm-spreadsheet-alert tm-spreadsheet-alert--warning",
+        SpreadsheetValidationErrorStyle.Information => "tm-spreadsheet-alert tm-spreadsheet-alert--information",
+        _ => "tm-spreadsheet-alert tm-spreadsheet-alert--stop"
+    };
+
+    /// <summary>Each severity paints its own icon; only the Stop style blocks.</summary>
+    private string IconName => Severity switch
+    {
+        SpreadsheetValidationErrorStyle.Warning => IconNames.AlertTriangle,
+        SpreadsheetValidationErrorStyle.Information => IconNames.Info,
+        _ => IconNames.AlertCircle
+    };
+
+    // A rule that carries an EMPTY title/message (the Data validation dialog seeds both as "") must
+    // still explain itself: an empty string would render no title at all, which also breaks the
+    // frame's aria-labelledby (it would point at a missing element).
+    private string ResolvedTitle => string.IsNullOrWhiteSpace(Title) ? Severity switch
+    {
+        SpreadsheetValidationErrorStyle.Warning => Loc["TmSpreadsheet_Validation_DefaultWarningTitle"],
+        SpreadsheetValidationErrorStyle.Information => Loc["TmSpreadsheet_Validation_DefaultInfoTitle"],
+        _ => Loc["TmSpreadsheet_Validation_DefaultErrorTitle"]
+    } : Title;
+
+    private string ResolvedMessage => string.IsNullOrWhiteSpace(Message) ? Severity switch
+    {
+        SpreadsheetValidationErrorStyle.Warning => Loc["TmSpreadsheet_Validation_DefaultWarningMessage"],
+        SpreadsheetValidationErrorStyle.Information => Loc["TmSpreadsheet_Validation_DefaultInfoMessage"],
+        _ => Loc["TmSpreadsheet_Validation_DefaultErrorMessage"]
+    } : Message;
+
+    private bool ResolvedShowCancel => ShowCancel ?? !IsStop;
+
+    /// <summary>
+    /// A Stop alert offers the single acknowledge action; the confirm styles offer "Cancel" plus the
+    /// "use the value anyway" action.
+    /// </summary>
+    private string ResolvedPrimaryText => PrimaryText ?? (IsStop
+        ? Loc["TmSpreadsheet_Validation_Acknowledge"]
+        : Loc["TmSpreadsheet_Validation_KeepValue"]);
+
+    private string ResolvedCancelText => CancelText ?? Loc["Tm_Cancel"];
+
+    /// <summary>
+    /// Escape dismisses the alert. A Stop alert is a hard block, so Escape takes the SAME path as the
+    /// acknowledge action (the value stays rejected); a Warning/Information confirm cancels instead.
+    /// </summary>
+    private Task OnDismiss() => IsStop ? OnPrimary.InvokeAsync() : OnCancel.InvokeAsync();
+
+    private Task OnPrimaryAction() => OnPrimary.InvokeAsync();
+
+    private Task OnCancelAction() => OnCancel.InvokeAsync();
 }

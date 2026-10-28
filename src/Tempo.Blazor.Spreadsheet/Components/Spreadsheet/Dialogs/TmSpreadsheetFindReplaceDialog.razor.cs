@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
+using Tempo.Blazor.Components.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -44,6 +47,34 @@ public partial class TmSpreadsheetFindReplaceDialog
 
     /// <summary>Raised when the panel should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The layout the panel renders. <see cref="TmLayoutMode.Auto"/> reads the app-level VIEWPORT
+    /// scope (never the panel's own container — the panel is position-absolute on the desktop layout,
+    /// so measuring it would flip the mode on every render) and keeps the floating panel when the host
+    /// provides no scope; <see cref="TmLayoutMode.Mobile"/> renders the non-modal bottom sheet,
+    /// <see cref="TmLayoutMode.Desktop"/> and <see cref="TmLayoutMode.Tablet"/> the floating panel.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the panel presents as the non-modal bottom sheet. A forced <see cref="LayoutMode"/> wins;
+    /// <see cref="TmLayoutMode.Auto"/> reads the app-level viewport scope and keeps the floating panel
+    /// when the host has none (a modal must not be measured from a box its own content sizes).
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
+
+    /// <summary>The sheet reports a swipe / Escape close: the host closes the panel.</summary>
+    private Task OnSheetOpenChanged(bool open) => open ? Task.CompletedTask : OnClose.InvokeAsync();
 
     private string CounterText => MatchCount > 0
         ? Loc["TmSpreadsheet_Find_MatchCounter", MatchIndex, MatchCount]

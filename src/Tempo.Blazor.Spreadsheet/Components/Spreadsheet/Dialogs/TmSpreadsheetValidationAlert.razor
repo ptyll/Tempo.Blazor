@@ -1,34 +1,39 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
+@using Tempo.Blazor.Components.Spreadsheet.Data
 
-@* The Spreadsheet validation alert (Stop-style error and Warning/Information confirm).
-   The surface is the core TmFocusScope, which owns the dialog role, aria-modal, the
-   aria-labelledby/aria-describedby wiring, the initial focus on the primary action, the
-   document-level Escape and the focus restore on close — a package does not re-implement
-   those. The card itself is interim: the redesign plan (phase 3) replaces the markup with
-   the core TmModal and keeps this component's public surface. *@
-<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-validation-alert__backdrop"
-     @onclick="OnBackdropClick"
-     @onclick:stopPropagation>
-    <TmFocusScope Active="true"
-                  DialogRole="alertdialog"
-                  AriaLabelledBy="@TitleDomId"
-                  aria-describedby="@MessageDomId"
-                  InitialFocusTargetId="@PrimaryActionDomId"
-                  CloseOnEscape="true"
-                  OnEscape="OnEscapeHandler"
-                  RestoreFocus="RestoreFocus"
-                  RestoreFocusTargetId="@RestoreFocusTargetId"
-                  Class="tm-spreadsheet-dialog-scope">
-        <div class="tm-spreadsheet-dialog tm-spreadsheet-alert">
-            <h2 class="tm-spreadsheet-alert__title" id="@TitleDomId">@Title</h2>
-            <p class="tm-spreadsheet-alert__message" id="@MessageDomId">@Message</p>
-            <div class="tm-spreadsheet-alert__actions">
-                @if (ShowCancel)
-                {
-                    <TmButton Variant="ButtonVariant.Secondary" id="@CancelActionDomId" OnClick="OnCancel">@CancelText</TmButton>
-                }
-                <TmButton id="@PrimaryActionDomId" OnClick="OnPrimary">@PrimaryText</TmButton>
-            </div>
+@* The Spreadsheet validation alert (Stop / Warning / Information) on the one core dialog frame (G6).
+   TmModal owns the overlay, the alertdialog role, aria-modal, the aria-describedby wiring of the
+   message, the initial focus on the primary action, the document-level Escape and the focus restore
+   on close. The package decides the severity icon, the words and whether a cancel path exists. *@
+<TmModal Show="true"
+         Title="@ResolvedTitle"
+         Size="ModalSize.Small"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         DialogRole="alertdialog"
+         AriaDescribedBy="@MessageDomId"
+         InitialFocusTargetId="@PrimaryActionDomId"
+         RestoreFocus="@RestoreFocus"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="@(Severity != SpreadsheetValidationErrorStyle.Stop)"
+         ShowCloseButton="false"
+         Class="@RootClass"
+         OnClose="OnDismiss">
+    <ChildContent>
+        <div class="tm-spreadsheet-alert__icon" aria-hidden="true">
+            <TmIcon Name="@IconName" Size="IconSize.Lg" />
         </div>
-    </TmFocusScope>
-</div>
+        <p class="tm-spreadsheet-alert__message" id="@MessageDomId">@ResolvedMessage</p>
+    </ChildContent>
+    <Footer>
+        <div class="tm-spreadsheet-alert__actions">
+            @if (ResolvedShowCancel)
+            {
+                <TmButton Variant="ButtonVariant.Ghost" id="@CancelActionDomId" OnClick="OnCancelAction">@ResolvedCancelText</TmButton>
+            }
+            <TmButton id="@PrimaryActionDomId" OnClick="OnPrimaryAction">@ResolvedPrimaryText</TmButton>
+        </div>
+    </Footer>
+</TmModal>

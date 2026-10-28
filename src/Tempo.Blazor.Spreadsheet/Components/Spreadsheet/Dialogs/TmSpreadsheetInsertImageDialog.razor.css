@@ -1,0 +1,46 @@
+/* Insert Image CONTENT only — the card, overlay, header, footer bar and mobile presentation belong
+   to the core TmModal (redesign phase 3). */
+
+.tm-spreadsheet-insert-image__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-spreadsheet-insert-image__label {
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-medium);
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet-insert-image__input {
+    width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font-size: var(--tm-text-sm);
+    outline: none;
+}
+
+.tm-spreadsheet-insert-image__input:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-spreadsheet-insert-image__input[aria-invalid="true"] {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-spreadsheet-insert-image__error {
+    font-size: var(--tm-text-xs);
+    color: var(--tm-color-danger);
+}
+
+.tm-spreadsheet-insert-image__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}

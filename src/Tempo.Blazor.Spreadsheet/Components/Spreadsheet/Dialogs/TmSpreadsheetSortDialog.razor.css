@@ -1,128 +1,110 @@
-.tm-spreadsheet-sort__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-}
-
-.tm-spreadsheet-sort {
-    width: 560px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface);
-    border-radius: var(--tm-radius-card);
-    box-shadow: var(--tm-shadow-xl);
-    padding: 16px;
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text);
-}
-
-.tm-spreadsheet-sort__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.tm-spreadsheet-sort__title {
-    font-weight: 600;
-    font-size: var(--tm-text-md);
-}
-
-.tm-spreadsheet-sort__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
-}
+/* The sort dialog's CONTENT only — the card, the overlay, the header, the footer bar and the mobile
+   presentation belong to the core TmModal (redesign phase 3). Component-scoped rules reach only the
+   elements this component renders, so nothing here styles the modal's own parts. */
 
 .tm-spreadsheet-sort__toolbar {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: var(--tm-space-4);
+    margin-bottom: var(--tm-space-3);
+    flex-wrap: wrap;
 }
 
 .tm-spreadsheet-sort__tool {
-    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     cursor: pointer;
     font-size: var(--tm-text-sm);
+}
+
+.tm-spreadsheet-sort__tool:hover {
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
 }
 
 .tm-spreadsheet-sort__header-toggle {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--tm-space-1-5);
     cursor: pointer;
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-sort__table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 12px;
+    margin-bottom: var(--tm-space-2);
 }
 
 .tm-spreadsheet-sort__table th {
     text-align: left;
-    font-weight: 600;
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text-muted);
-    padding: 4px 6px;
+    padding: var(--tm-space-1) var(--tm-space-1-5);
     font-size: var(--tm-text-xs);
 }
 
 .tm-spreadsheet-sort__table td {
-    padding: 4px 6px;
+    padding: var(--tm-space-1) var(--tm-space-1-5);
 }
 
 .tm-spreadsheet-sort__table select {
     width: 100%;
-    padding: 5px 6px;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-1-5);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-sort__rowlabel {
     color: var(--tm-color-text-muted);
     white-space: nowrap;
-}
-
-.tm-spreadsheet-sort__remove {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted);
     font-size: var(--tm-text-sm);
 }
 
+.tm-spreadsheet-sort__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+}
+
+.tm-spreadsheet-sort__remove:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
 .tm-spreadsheet-sort__remove:disabled {
-    opacity: 0.3;
+    opacity: var(--tm-opacity-disabled);
     cursor: default;
 }
 
 .tm-spreadsheet-sort__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 8px;
+    gap: var(--tm-space-2);
 }
 
-.tm-spreadsheet-sort__btn {
-    padding: 7px 16px;
-    border-radius: var(--tm-radius-control);
-    border: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-    font-size: var(--tm-text-sm);
-}
-
-.tm-spreadsheet-sort__btn--ok {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
+/* A container query, not a media query: the dialog is embedded in a Notion block/modal, so its own
+   body width decides (the mobile sheet is ~320-390px wide). */
+@container (max-width: 420px) {
+    .tm-spreadsheet-sort__rowlabel {
+        display: none;
+    }
 }

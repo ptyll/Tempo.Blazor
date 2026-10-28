@@ -117,7 +117,7 @@
       "type": "MobilePresentation",
       "isRequired": false,
       "default": "Auto",
-      "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
+      "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface: a fullscreen panel on mobile, the centred dialog otherwise. A forced value renders that presentation without measuring."
     },
     {
       "name": "FooterLayout",

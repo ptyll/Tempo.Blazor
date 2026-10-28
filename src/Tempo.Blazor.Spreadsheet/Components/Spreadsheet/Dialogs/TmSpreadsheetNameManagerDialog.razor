@@ -1,28 +1,24 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-@* Modal overlay: the card paints on the --tm-z-modal band above the grid instead of falling into
-   the document flow under it. The dialog contract (role, aria-modal, aria-labelledby, initial
-   focus, document-level Escape, focus restore) is the core TmFocusScope's; this interim markup is
-   replaced by the core TmModal in phase 3 of the redesign plan. *@
-<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-name-manager__backdrop" @onclick="OnCloseClick">
-    <TmFocusScope Active="true"
-                  DialogRole="dialog"
-                  AriaLabelledBy="@TitleDomId"
-                  InitialFocusTargetId="@InitialFocusDomId"
-                  CloseOnEscape="true"
-                  OnEscape="OnEscapeHandler"
-                  RestoreFocusTargetId="@RestoreFocusTargetId"
-                  Class="tm-spreadsheet-dialog-scope">
-        <div class="tm-spreadsheet-dialog tm-spreadsheet-name-manager" @onclick:stopPropagation>
-            <div class="tm-spreadsheet-name-manager__header">
-                <h2 class="tm-spreadsheet-name-manager__title" id="@TitleDomId">@Loc["TmSpreadsheet_Names_Title"]</h2>
-                <button type="button" class="tm-spreadsheet-name-manager__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="OnCloseClick">
-                    <TmIcon Name="close" />
-                </button>
-            </div>
-
-            <div class="tm-spreadsheet-name-manager__toolbar">
+@* Name Manager on the one core dialog frame (G6). TmModal owns the overlay, the dialog role, the
+   initial focus, Escape, the focus restore to the grid and the presentation (a FULLSCREEN panel on a
+   phone — the table is a tall surface). The package owns the grid, its roving tabindex and the
+   toolbar. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_Names_Title"]"
+         Size="ModalSize.Large"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@InitialFocusDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-name-manager"
+         OnClose="OnCloseClick">
+    <ChildContent>
+        <div class="tm-spreadsheet-name-manager__toolbar">
                 <button type="button" class="tm-spreadsheet-name-manager__tool" id="@NewButtonDomId" @onclick="OnNewClick">
                     <TmIcon Name="add" /> @Loc["TmSpreadsheet_Names_New"]
                 </button>
@@ -95,10 +91,10 @@
                     <div class="tm-spreadsheet-name-manager__empty">@Loc["TmSpreadsheet_Names_NoResults"]</div>
                 }
             </div>
-
-            <div class="tm-spreadsheet-name-manager__actions">
-                <button type="button" class="tm-spreadsheet-name-manager__btn tm-spreadsheet-name-manager__btn--close" @onclick="OnCloseClick">@Loc["Tm_Close"]</button>
-            </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-spreadsheet-name-manager__actions">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnCloseClick" Class="tm-spreadsheet-name-manager__btn tm-spreadsheet-name-manager__btn--close">@Loc["Tm_Close"]</TmButton>
         </div>
-    </TmFocusScope>
-</div>
+    </Footer>
+</TmModal>

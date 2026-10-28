@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 
 namespace Tempo.Blazor.Components.Spreadsheet;
 
@@ -16,6 +18,20 @@ public partial class TmSpreadsheetFormatCellsDialog
     [Parameter, EditorRequired] public SpreadsheetCellStyle Style { get; set; } = new();
     [Parameter, EditorRequired] public EventCallback<SpreadsheetCellStyle> OnApply { get; set; }
     [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope (a
+    /// fullscreen panel on the narrow one); a forced value pins the mode without measuring, so a test
+    /// can render that presentation without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
 
     private SpreadsheetCellStyle _workingStyle = new();
 
@@ -263,21 +279,15 @@ public partial class TmSpreadsheetFormatCellsDialog
         OnApply.InvokeAsync(_workingStyle);
     }
 
+    /// <summary>
+    /// The dialog's Ctrl+Enter -> Apply shortcut. Escape is the modal's own: the shared frame owns the
+    /// document-level listener and the focus trap, so the package never re-handles it.
+    /// </summary>
     private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape")
-            OnClose.InvokeAsync();
-        else if (e.Key == "Enter" && e.CtrlKey)
+        if (e.Key == "Enter" && e.CtrlKey)
+        {
             Apply();
-    }
-
-    // The dialog's Ctrl+Enter -> Apply shortcut lives on the root; the chrome
-    // (tabs, footer buttons) isolates its keydowns so Enter/Ctrl+Enter on a
-    // button runs only the button's native click. Escape is re-handled here
-    // so it still closes while focus sits on those controls.
-    private void OnChromeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            OnClose.InvokeAsync();
+        }
     }
 }

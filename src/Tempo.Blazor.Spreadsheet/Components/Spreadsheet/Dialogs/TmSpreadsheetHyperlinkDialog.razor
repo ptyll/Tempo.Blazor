@@ -1,36 +1,28 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
-@* Modal overlay. The dialog contract (role, aria-modal, aria-labelledby, initial focus on the
-   address field, document-level Escape, focus restore) is the core TmFocusScope's; this interim
-   markup is replaced by the core TmModal in phase 3 of the redesign plan. *@
-<div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-hyperlink__backdrop" @onclick="OnCancelClick">
-    <TmFocusScope Active="true"
-                  DialogRole="dialog"
-                  AriaLabelledBy="@TitleDomId"
-                  InitialFocusTargetId="@TargetInputDomId"
-                  CloseOnEscape="true"
-                  OnEscape="OnEscapeHandler"
-                  RestoreFocusTargetId="@RestoreFocusTargetId"
-                  Class="tm-spreadsheet-dialog-scope">
-    <div class="tm-spreadsheet-dialog tm-spreadsheet-hyperlink"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown"
-         @onkeydown:stopPropagation="true">
-        <div class="tm-spreadsheet-hyperlink__header">
-            <h2 class="tm-spreadsheet-hyperlink__title" id="@TitleDomId">@Loc["TmSpreadsheet_Hyperlink_Title"]</h2>
-            @* Native <button>: its keydown must not reach the dialog's
-               Ctrl+Enter -> save shortcut on top of the button's own click. *@
-            <button type="button" class="tm-spreadsheet-hyperlink__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]"
-                    @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
-        <div class="tm-spreadsheet-hyperlink__body">
+@* Hyperlink on the one core dialog frame (G6). TmModal owns the overlay, the dialog role, the initial
+   focus on the address field, Escape and the focus restore; the form and its Ctrl+Enter shortcut stay
+   the package's. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_Hyperlink_Title"]"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@TargetInputDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-hyperlink"
+         OnClose="OnCancelClick">
+    <ChildContent>
+        @* Ctrl+Enter applies from any field. The footer buttons are the modal's own and sit outside
+           this wrapper, so their keydown never reaches the shortcut. *@
+        <div class="tm-spreadsheet-hyperlink__body" @onkeydown="OnKeyDown">
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="hl-type">@Loc["TmSpreadsheet_Hyperlink_Type"]</label>
-                <select id="hl-type" @bind="_kind" class="tm-spreadsheet-hyperlink__select">
+                <label for="@TypeSelectDomId">@Loc["TmSpreadsheet_Hyperlink_Type"]</label>
+                <select id="@TypeSelectDomId" @bind="_kind" class="tm-spreadsheet-hyperlink__select">
                     <option value="@SpreadsheetHyperlinkKind.Web">@Loc["TmSpreadsheet_Hyperlink_TypeWeb"]</option>
                     <option value="@SpreadsheetHyperlinkKind.Email">@Loc["TmSpreadsheet_Hyperlink_TypeEmail"]</option>
                     <option value="@SpreadsheetHyperlinkKind.InternalRef">@Loc["TmSpreadsheet_Hyperlink_TypeInternal"]</option>
@@ -39,10 +31,10 @@
             </div>
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="hl-target">@Loc["TmSpreadsheet_Hyperlink_Target"]</label>
+                <label for="@TargetInputDomId">@Loc["TmSpreadsheet_Hyperlink_Target"]</label>
                 @if (_kind == SpreadsheetHyperlinkKind.NamedRange)
                 {
-                    <select id="hl-target" @bind="_target" class="tm-spreadsheet-hyperlink__select">
+                    <select id="@TargetInputDomId" @bind="_target" class="tm-spreadsheet-hyperlink__select">
                         <option value="">@Loc["TmSpreadsheet_Hyperlink_SelectNamedRange"]</option>
                         @foreach (var nr in Workbook.NamedRanges)
                         {
@@ -52,37 +44,33 @@
                 }
                 else
                 {
-                    <input id="hl-target" type="text" @bind="_target" @bind:event="oninput" class="tm-spreadsheet-hyperlink__input" />
+                    <input id="@TargetInputDomId" type="text" inputmode="@TargetInputMode" @bind="_target" @bind:event="oninput" class="tm-spreadsheet-hyperlink__input" />
                 }
             </div>
 
             @if (_kind == SpreadsheetHyperlinkKind.Email)
             {
                 <div class="tm-spreadsheet-hyperlink__field">
-                    <label for="hl-subject">@Loc["TmSpreadsheet_Hyperlink_EmailSubject"]</label>
-                    <input id="hl-subject" type="text" @bind="_emailSubject" class="tm-spreadsheet-hyperlink__input" />
+                    <label for="@EmailSubjectDomId">@Loc["TmSpreadsheet_Hyperlink_EmailSubject"]</label>
+                    <input id="@EmailSubjectDomId" type="text" @bind="_emailSubject" class="tm-spreadsheet-hyperlink__input" />
                 </div>
             }
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="hl-display">@Loc["TmSpreadsheet_Hyperlink_Display"]</label>
-                <input id="hl-display" type="text" @bind="_display" class="tm-spreadsheet-hyperlink__input" />
+                <label for="@DisplayInputDomId">@Loc["TmSpreadsheet_Hyperlink_Display"]</label>
+                <input id="@DisplayInputDomId" type="text" @bind="_display" class="tm-spreadsheet-hyperlink__input" />
             </div>
 
             <div class="tm-spreadsheet-hyperlink__field">
-                <label for="hl-tooltip">@Loc["TmSpreadsheet_Hyperlink_Tooltip"]</label>
-                <input id="hl-tooltip" type="text" @bind="_tooltip" class="tm-spreadsheet-hyperlink__input" />
+                <label for="@TooltipInputDomId">@Loc["TmSpreadsheet_Hyperlink_Tooltip"]</label>
+                <input id="@TooltipInputDomId" type="text" @bind="_tooltip" class="tm-spreadsheet-hyperlink__input" />
             </div>
         </div>
-
-        @* Native <button>s: the group bars their keydown so Ctrl+Enter on a button runs only that
-           button's own click instead of also firing the dialog's save shortcut. Escape is not
-           handled here — the focus scope's document-level listener dismisses the dialog. *@
-        <div class="tm-spreadsheet-hyperlink__actions"
-             @onkeydown:stopPropagation="true">
-            <button type="button" class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--cancel" @onclick="OnCancelClick">@Loc["TmSpreadsheet_Hyperlink_Cancel"]</button>
-            <button type="button" class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--ok" @onclick="OnSaveClick">@Loc["TmSpreadsheet_Hyperlink_Save"]</button>
+    </ChildContent>
+    <Footer>
+        <div class="tm-spreadsheet-hyperlink__actions">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnCancelClick" Class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--cancel">@Loc["TmSpreadsheet_Hyperlink_Cancel"]</TmButton>
+            <TmButton OnClick="OnSaveClick" Class="tm-spreadsheet-hyperlink__btn tm-spreadsheet-hyperlink__btn--ok">@Loc["TmSpreadsheet_Hyperlink_Save"]</TmButton>
         </div>
-    </div>
-    </TmFocusScope>
-</div>
+    </Footer>
+</TmModal>

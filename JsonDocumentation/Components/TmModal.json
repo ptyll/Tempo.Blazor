@@ -142,7 +142,7 @@
       "type": "MobilePresentation",
       "isRequired": false,
       "default": "Auto",
-      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
+      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface (a tabbed form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a sheet would clip it. A forced Sheet, Fullscreen or Dialog renders that presentation without measuring, so a test can render it without a DOM."
     },
     {
       "name": "FooterLayout",
@@ -193,6 +193,24 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false
+    },
+    {
+      "name": "DialogRole",
+      "type": "string",
+      "isRequired": false,
+      "description": "The role of the trapped surface. dialog (the default) for a normal modal; alertdialog for a surface whose message IS the content and whose actions are the only way out."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element that describes the modal, wired to the scope's aria-describedby — used by an alertdialog, whose body text is the description."
+    },
+    {
+      "name": "RestoreFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether closing the modal restores the focus it took. Defaults to true; false leaves the focus where the close action put it."
     }
   ],
   "cssClasses": [

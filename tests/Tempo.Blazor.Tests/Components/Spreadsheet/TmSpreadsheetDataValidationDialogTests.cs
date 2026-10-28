@@ -32,6 +32,32 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
         tabs[2].TextContent.Trim().Should().Be("Error alert");
     }
 
+    [Fact]
+    public void NewRule_DefaultsTheErrorAlertOn_SoTheWarningStyleSurvives()
+    {
+        // A new rule used to seed "Show error alert" OFF, so a user who picked the Warning style got a
+        // rule with no ErrorAlert — which the engine treats as Stop. The severity silently vanished.
+        SpreadsheetDataValidation? applied = null;
+        var cut = Render<TmSpreadsheetDataValidationDialog>(p => p
+            .Add(c => c.Validation, new SpreadsheetDataValidation())
+            .Add(c => c.OnSave, EventCallback.Factory.Create<SpreadsheetDataValidation>(this, v => applied = v)));
+
+        // Settings: a whole-number rule between 1 and 10 (fills the values the rule needs).
+        cut.Find(".tm-dvd__select").Change("Whole");
+        cut.FindAll(".tm-dvd__input")[0].Change("1");
+        cut.FindAll(".tm-dvd__input")[1].Change("10");
+
+        // Error alert: the severity select (the only select on that tab) picks Warning.
+        cut.FindAll(".tm-dvd__tab")[2].Click();
+        cut.Find(".tm-dvd__body .tm-dvd__select").Change("Warning");
+        cut.FindAll(".tm-dvd__actions button").Last().Click();
+
+        applied.Should().NotBeNull();
+        applied!.ErrorAlert.Should().NotBeNull("a new rule keeps the error alert on by default");
+        applied.ErrorAlert!.Style.Should().Be(SpreadsheetValidationErrorStyle.Warning,
+            "the picked severity must reach the rule, not fall back to Stop");
+    }
+
     // ── Tab navigation ────────────────────────────────────────────────────────
 
     [Fact]

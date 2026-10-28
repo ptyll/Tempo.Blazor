@@ -281,6 +281,8 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private string ActiveCellDomId => $"tm-spreadsheet-canvas-active-{GetHashCode():x}";
     private string LiveRegionDomId => $"tm-spreadsheet-canvas-live-{GetHashCode():x}";
     private string CanvasAccessibilityDescriptionDomId => $"tm-spreadsheet-canvas-a11y-{GetHashCode():x}";
+    private string ColWidthInputDomId => $"tm-spreadsheet-canvas-col-width-{GetHashCode():x}";
+    private string RowHeightInputDomId => $"tm-spreadsheet-canvas-row-height-{GetHashCode():x}";
     private string ActiveCellAriaText => $"{Sheet?.ActiveCellRef ?? "A1"} {GetActiveCellDisplayValue()}".Trim();
     private string LiveRegionText => ActiveCellAriaText;
     private int ActiveCellAriaRowIndex => GetActiveCellCoordinates().row + 1;
@@ -1958,17 +1960,22 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _showRowHeightDialog = false;
     }
 
+    // Enter commits from the field itself (the "confirm what was typed" contract). Escape is NOT
+    // handled here: the core TmModal owns the document-level dismissal and closes through
+    // CloseColumnWidthDialog / CloseRowHeightDialog, so the field does not dismiss twice.
     private void OnColWidthInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") ApplyColWidth();
-        else if (e.Key == "Escape") _showColWidthDialog = false;
     }
 
     private void OnRowHeightInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") ApplyRowHeight();
-        else if (e.Key == "Escape") _showRowHeightDialog = false;
     }
+
+    private void CloseColumnWidthDialog() => _showColWidthDialog = false;
+
+    private void CloseRowHeightDialog() => _showRowHeightDialog = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

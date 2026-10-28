@@ -2,6 +2,8 @@ using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -24,8 +26,6 @@ public partial class TmSpreadsheetNameManagerDialog
     // to, so the active row's reference is focused after the render that moved the tabindex.
     private readonly Dictionary<SpreadsheetNamedRange, ElementReference> _rowElements = [];
     private SpreadsheetNamedRange? _pendingFocus;
-
-    private string TitleDomId => $"spreadsheet-name-manager-title-{_idSuffix}";
 
     private string NewButtonDomId => $"spreadsheet-name-manager-new-{_idSuffix}";
 
@@ -51,6 +51,15 @@ public partial class TmSpreadsheetNameManagerDialog
     /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope (a
+    /// fullscreen panel on the narrow one); a forced value pins the mode without measuring, so a test
+    /// can render that presentation without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    protected override void OnParametersSet() => EnsureSelection();
 
     private IReadOnlyList<SpreadsheetNamedRange> FilteredRanges =>
         string.IsNullOrWhiteSpace(_filter)
@@ -93,8 +102,6 @@ public partial class TmSpreadsheetNameManagerDialog
 
     private string GetRowClass(SpreadsheetNamedRange range)
         => IsSelected(range) ? "tm-spreadsheet-name-manager__row--selected" : string.Empty;
-
-    protected override void OnParametersSet() => EnsureSelection();
 
     /// <summary>
     /// The grid always has exactly one roving tab stop and the toolbar acts only on a visible row:
@@ -199,8 +206,6 @@ public partial class TmSpreadsheetNameManagerDialog
     private Task OnDeleteClick() => DeleteSelectedAsync();
 
     private Task OnCloseClick() => OnClose.InvokeAsync();
-
-    private Task OnEscapeHandler() => OnClose.InvokeAsync();
 
     /// <summary>A click selects a row and hands it the DOM focus, so the keyboard works right after it.</summary>
     private void OnRowClick(SpreadsheetNamedRange range)

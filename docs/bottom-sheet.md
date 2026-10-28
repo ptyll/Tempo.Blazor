@@ -4,6 +4,11 @@ A bottom sheet is a `TmDrawer` with `Position="DrawerPosition.Bottom"`. `TmModal
 present as a sheet on a narrow viewport, but a host that wants a sheet composes the drawer. The modal
 and dialog sheets size to their content and dismiss; they do not snap.
 
+`MobilePresentation.Auto` gives a sheet on the narrow viewport and the centred dialog otherwise.
+`MobilePresentation.AutoFullscreen` is the same choice for a TALL surface (a tabbed form, a table, a
+preview): a fullscreen panel on the narrow viewport, the centred dialog everywhere else — a sheet would
+clip it. A forced `Sheet` / `Fullscreen` / `Dialog` still renders that presentation at every width.
+
 ## Snaps and content height
 
 `SnapPoints` is a list of fractions, ascending, each between 0 and 1. The default is half and full

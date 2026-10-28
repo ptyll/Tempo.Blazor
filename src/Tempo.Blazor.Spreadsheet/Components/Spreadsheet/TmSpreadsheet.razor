@@ -198,52 +198,26 @@
 
     @if (_showNamedRangeEditDialog)
     {
+        @* Opened from the Name Manager, which stays open underneath: the editor restores the focus to
+           its OPENER inside the manager (the frame's default), never to the grid behind two inert
+           surfaces. When the manager closes, ITS restore target is the grid. *@
         <TmSpreadsheetNamedRangeEditDialog Workbook="_workbook"
                                            Range="_editNamedRange"
                                            OnSave="OnNamedRangeEditSave"
-                                           OnCancel="() => _showNamedRangeEditDialog = false" />
+                                           OnCancel="CloseNamedRangeEditDialog" />
     }
 
     @if (_showInsertImageDialog)
     {
-        <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-insert-image__backdrop" @onclick="CloseInsertImageDialog">
-            <TmFocusScope Active="true"
-                          DialogRole="dialog"
-                          AriaLabelledBy="@InsertImageTitleDomId"
-                          InitialFocusTarget="@_insertImageUrlRef"
-                          CloseOnEscape="true"
-                          OnEscape="CloseInsertImageDialog"
-                          RestoreFocusTargetId="@GridRootDomId"
-                          Class="tm-spreadsheet-dialog-scope">
-                <div class="tm-spreadsheet-dialog" @onclick:stopPropagation>
-                    <h2 class="tm-spreadsheet-dialog__title" id="@InsertImageTitleDomId">@Loc["TmSpreadsheet_InsertImage"]</h2>
-                    <div class="tm-spreadsheet-dialog__body">
-                        <label class="tm-spreadsheet-dialog__label" for="@InsertImageUrlInputDomId">@Loc["TmSpreadsheet_ImageUrl"]</label>
-                        @* Enter applies from the url field itself: the field owns the "confirm what was
-                           typed" contract (docs/keyboard-activation-convention.md — a container-level
-                           Enter handler would also answer bubbled keydowns from the footer buttons and
-                           double-activate on top of their click). Escape is the surface's own dismissal,
-                           handled by the focus scope's document-level listener. *@
-                        <input id="@InsertImageUrlInputDomId"
-                               class="tm-spreadsheet-dialog__input"
-                               @ref="_insertImageUrlRef"
-                               value="@_insertImageUrl"
-                               @oninput="OnImageUrlInput"
-                               @onkeydown="OnInsertImageUrlKeyDown"
-                               placeholder="https://..." />
-                    </div>
-                    <div class="tm-spreadsheet-dialog__actions">
-                        <TmButton Variant="ButtonVariant.Secondary" OnClick="CloseInsertImageDialog">@Loc["Tm_Cancel"]</TmButton>
-                        <TmButton OnClick="ApplyInsertImage">@Loc["Tm_Apply"]</TmButton>
-                    </div>
-                </div>
-            </TmFocusScope>
-        </div>
+        <TmSpreadsheetInsertImageDialog RestoreFocusTargetId="@GridRootDomId"
+                                        OnApply="ApplyInsertImage"
+                                        OnCancel="CloseInsertImageDialog" />
     }
 
     @if (_showFormatCellsDialog)
     {
         <TmSpreadsheetFormatCellsDialog Style="_formatCellsStyle"
+                                        RestoreFocusTargetId="@GridRootDomId"
                                         OnApply="OnFormatCellsApply"
                                         OnClose="() => _showFormatCellsDialog = false" />
     }
@@ -267,6 +241,7 @@
     {
         <TmSpreadsheetCustomFilterDialog ColumnIndex="customCol"
                                          Kind="_customFilterKind"
+                                         RestoreFocusTargetId="@GridRootDomId"
                                          OnApply="ApplyColumnFilter"
                                          OnClose="() => _showCustomFilterDialog = false" />
     }
@@ -274,6 +249,7 @@
     @if (_showSortDialog && _sortDialogRange is { } sortRange)
     {
         <TmSpreadsheetSortDialog Range="sortRange"
+                                 RestoreFocusTargetId="@GridRootDomId"
                                  OnApply="ApplySortSpec"
                                  OnClose="() => _showSortDialog = false" />
     }
@@ -282,6 +258,7 @@
     {
         <TmSpreadsheetRemoveDuplicatesDialog Range="dedupRange"
                                              HeaderLabels="_dedupHeaderLabels"
+                                             RestoreFocusTargetId="@GridRootDomId"
                                              OnApply="ApplyRemoveDuplicates"
                                              OnClose="() => _showRemoveDuplicatesDialog = false" />
     }
@@ -289,26 +266,29 @@
     @if (_showTextToColumnsDialog)
     {
         <TmSpreadsheetTextToColumnsDialog SourceRows="_t2cSourceRows"
+                                          RestoreFocusTargetId="@GridRootDomId"
                                           OnApply="ApplyTextToColumns"
                                           OnClose="() => _showTextToColumnsDialog = false" />
     }
 
     @if (_showPasteSpecialDialog)
     {
-        <TmSpreadsheetSpecialPasteDialog OnApply="ApplyPasteSpecial"
+        <TmSpreadsheetSpecialPasteDialog RestoreFocusTargetId="@GridRootDomId"
+                                         OnApply="ApplyPasteSpecial"
                                          OnClose="() => _showPasteSpecialDialog = false" />
     }
 
     @if (_showValidationDialog && _pendingValidation is not null)
     {
         <TmSpreadsheetDataValidationDialog Validation="_pendingValidation"
+                                           RestoreFocusTargetId="@GridRootDomId"
                                            OnSave="ApplyDataValidation"
                                            OnClose="CloseValidationDialog" />
     }
 
     @if (_showValidationDropdown)
     {
-        <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-dialog-backdrop--transparent" @onclick="CloseValidationDropdown">
+        <div class="tm-spreadsheet-popup-backdrop" @onclick="CloseValidationDropdown">
             <div class="tm-spreadsheet-vd" style="left: @(_validationDropdownX)px; top: @(_validationDropdownY)px;" @onclick:stopPropagation>
                 @foreach (var item in _validationDropdownItems)
                 {
@@ -321,18 +301,18 @@
         </div>
     }
 
-    @* Both validation alerts are the shared TmSpreadsheetValidationAlert: a Stop-style error is a
-       hard block (only its primary action or Escape dismisses it, a backdrop click does nothing),
-       the Warning/Information confirm also cancels on a backdrop click. The alertdialog contract
-       (role, aria-modal, aria-labelledby/aria-describedby, initial focus, Escape, focus restore)
-       lives in the core TmFocusScope that component wraps. *@
+    @* Both validation alerts are the shared TmSpreadsheetValidationAlert on the core TmModal frame.
+       The severity drives the icon, the default words and the exit paths: Stop is a hard block (only
+       its acknowledge action or Escape dismisses it, a backdrop click does nothing), Warning and
+       Information offer "Cancel" plus "use the value anyway" and also close on a backdrop click. The
+       alertdialog contract (role, aria-modal, name + description, initial focus, Escape, focus
+       restore) is the frame's. *@
     @if (_showValidationError)
     {
         <TmSpreadsheetValidationAlert Title="@_validationErrorTitle"
                                       Message="@_validationErrorMessage"
-                                      IsStop="true"
+                                      Severity="@_validationErrorStyle"
                                       RestoreFocusTargetId="@GridRootDomId"
-                                      PrimaryText="@Loc["Tm_Confirm"]"
                                       OnPrimary="DismissValidationError" />
     }
 
@@ -340,11 +320,8 @@
     {
         <TmSpreadsheetValidationAlert Title="@_validationConfirmTitle"
                                       Message="@_validationConfirmMessage"
-                                      IsStop="false"
+                                      Severity="@_validationConfirmStyle"
                                       RestoreFocusTargetId="@GridRootDomId"
-                                      ShowCancel="true"
-                                      CancelText="@Loc["Tm_Cancel"]"
-                                      PrimaryText="@Loc["Tm_Yes"]"
                                       OnPrimary="ConfirmValidationWarning"
                                       OnCancel="DismissValidationConfirm" />
     }

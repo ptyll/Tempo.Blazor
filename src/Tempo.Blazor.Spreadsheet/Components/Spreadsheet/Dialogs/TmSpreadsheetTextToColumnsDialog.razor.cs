@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -29,6 +31,20 @@ public partial class TmSpreadsheetTextToColumnsDialog
 
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope (a
+    /// fullscreen panel on the narrow one); a forced value pins the mode without measuring, so a test
+    /// can render that presentation without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
 
     /// <summary>The number of preview rows shown (capped for readability).</summary>
     private const int MaxPreviewRows = 8;
@@ -106,10 +122,4 @@ public partial class TmSpreadsheetTextToColumnsDialog
     }
 
     private Task Close() => OnClose.InvokeAsync();
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await Close();
-    }
 }

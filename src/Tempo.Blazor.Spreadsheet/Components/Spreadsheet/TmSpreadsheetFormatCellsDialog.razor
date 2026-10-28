@@ -2,17 +2,25 @@
 @using Tempo.Blazor.Components.Spreadsheet.Models
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 
-<div class="tm-spreadsheet-dialog-backdrop" @onclick="OnClose">
-    <div class="tm-fcd" @onclick:stopPropagation @onkeydown="OnKeyDown">
-        <div class="tm-fcd__header">
-            <h3 class="tm-fcd__title">@Loc["TmSpreadsheet_FormatCells"]</h3>
-        </div>
-
+@* Format Cells on the one core dialog frame (G6). The dialog is a TALL surface, so it asks the
+   frame for MobilePresentation.AutoFullscreen — a fullscreen panel on a phone, the centred dialog
+   everywhere else (a sheet would clip the tabs, the body and the preview). *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_FormatCells"]"
+         Size="ModalSize.Large"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-fcd"
+         OnClose="OnClose">
+    <ChildContent>
         <!-- Tab bar — native <button>s: their keydowns must not reach the
              dialog's Ctrl+Enter -> Apply shortcut on top of the tab's own
-             click. Escape is re-handled locally so it still closes. -->
-        <div class="tm-fcd__tabs" role="tablist"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
+             click. Escape is the modal's own dismissal. -->
+        <div class="tm-fcd__tabs" role="tablist">
             @foreach (var tab in _tabs)
             {
                 <button class="tm-fcd__tab @(_activeTab == tab ? "tm-fcd__tab--active" : "")"
@@ -24,8 +32,9 @@
             }
         </div>
 
-        <!-- Tab content -->
-        <div class="tm-fcd__body">
+        <!-- Tab content. Ctrl+Enter applies from any control in the form; the tabs and the footer
+             buttons are outside this wrapper, so their own activation never doubles. -->
+        <div class="tm-fcd__body" @onkeydown="OnKeyDown">
             @if (_activeTab == "Number")
             {
                 @RenderNumberTab()
@@ -55,17 +64,14 @@
                 @_previewText
             </div>
         </div>
-
-        <!-- Actions — native <button>s: their keydowns must not reach the
-             dialog's Ctrl+Enter -> Apply shortcut on top of each button's own
-             click. Escape is re-handled locally so it still closes. -->
-        <div class="tm-fcd__actions"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
-            <TmButton Variant="ButtonVariant.Secondary" OnClick="OnClose">@Loc["Tm_Cancel"]</TmButton>
-            <TmButton OnClick="Apply">@Loc["Tm_Apply"]</TmButton>
+    </ChildContent>
+    <Footer>
+        <div class="tm-fcd__actions">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" Class="tm-fcd__btn--cancel">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton OnClick="Apply" Class="tm-fcd__btn--ok">@Loc["Tm_Apply"]</TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>
 
 @code {
     private readonly string[] _tabs = ["Number", "Alignment", "Font", "Border", "Fill"];

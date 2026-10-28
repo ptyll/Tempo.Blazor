@@ -20,7 +20,22 @@ const SOURCE = readFileSync(CANVAS_SCRIPT, 'utf8');
  */
 function loadCanvas(tokens = {}) {
     const root = { __tokens: tokens };
+    // The guard helpers check `target instanceof Element`. Node has no DOM, so the sandbox gets a
+    // minimal Element base plus the fixtures below; `closest` answers from a plain ancestor list.
+    class StubElement {
+        constructor(ancestors = []) {
+            this.ancestors = ancestors;
+        }
+        closest(selector) {
+            const wanted = selector.split(',').map(part => part.trim());
+            for (const candidate of ['self', ...this.ancestors]) {
+                if (wanted.includes(candidate)) return { selector: candidate };
+            }
+            return null;
+        }
+    }
     const sandbox = {
+        Element: StubElement,
         window: {},
         getComputedStyle: element => ({
             getPropertyValue: name => (element?.__tokens?.[name] ?? '').trim(),
@@ -336,4 +351,39 @@ test('resolveDensityFromModel_WithoutFrameScales_FallsBackToTheJsRule', () => {
 
     const compact = internals.resolveDensityFromModel({ density: 'Auto', pointerCoarse: false });
     assert.equal(compact.rowScale, 1);
+});
+
+// ── Grid guards: dialogs own their own keys and wheel ───────────────────────────────────────────
+
+function guards(tokens = {}) {
+    return loadCanvas(tokens).internals;
+}
+
+test('isEditableKeyTarget_And_overlayGuard_ExportsExist', () => {
+    const internals = guards();
+    assert.equal(typeof internals.isEditableKeyTarget, 'function',
+        'the grid keydown guard must be testable from the node lane');
+    assert.equal(typeof internals.isSpreadsheetOverlayTarget, 'function');
+});
+
+test('isSpreadsheetOverlayTarget_RecognisesTheModalOverlaySelector', () => {
+    // The selector list is the contract: a dialog rendered inside the grid root (the column-width /
+    // row-height dialogs, every TmModal surface) must be recognised so Enter/Tab/Escape and wheel
+    // never reach the grid's listeners. The node lane has no DOM, so the source is asserted instead
+    // of a live element: the guard is a one-line closest() over exactly this list.
+    const source = readFileSync(CANVAS_SCRIPT, 'utf8');
+    const match = source.match(/function isSpreadsheetOverlayTarget\(target\) \{[\s\S]*?closest\(([^)]*)\)/);
+    assert.ok(match, 'isSpreadsheetOverlayTarget must stay a closest() guard');
+    assert.match(match[1], /\.tm-modal-overlay/, 'a core TmModal surface must count as an overlay');
+    assert.match(match[1], /\.tm-spreadsheet-resize-dialog\b/);
+    assert.doesNotMatch(match[1], /\.tm-spreadsheet-resize-dialog-backdrop/,
+        'the package backdrop is gone — the selector is dead');
+    const keydown = source.match(/const onKeyDown = ev => \{([\s\S]*?)\n\s{12}if \(s\.editor\)/);
+    assert.ok(keydown, 'onKeyDown must stay findable');
+    assert.match(keydown[1], /isEditableKeyTarget\(ev\.target\) \|\| isSpreadsheetOverlayTarget\(ev\.target\)/,
+        'the keydown guard must skip editable fields AND overlay targets');
+    const wheel = source.match(/const onWheel = ev => \{([\s\S]*?)\n\s{12}\/\/ Ctrl \+ wheel/);
+    assert.ok(wheel, 'onWheel must stay findable');
+    assert.match(wheel[1], /isSpreadsheetOverlayTarget\(ev\.target\)/,
+        'a wheel over an open dialog must not scroll the grid behind it');
 });

@@ -4628,9 +4628,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return !!target.closest("input, textarea, select, [contenteditable=''], [contenteditable='true'], .tm-spreadsheet-canvas-grid__editor");
     }
 
+    // Anything the spreadsheet opened OVER the grid: the context menu, a legacy in-grid popup, or a
+    // core TmModal surface (every package dialog, incl. the column-width / row-height dialogs, which
+    // render inside the grid root). The grid's own key and wheel listeners must not answer those:
+    // Enter/Tab on a dialog button and Escape inside a dialog belong to the dialog.
     function isSpreadsheetOverlayTarget(target) {
         return target instanceof Element
-            && !!target.closest(".tm-spreadsheet-context-menu, .tm-spreadsheet-resize-dialog, .tm-spreadsheet-resize-dialog-backdrop");
+            && !!target.closest(".tm-spreadsheet-context-menu, .tm-spreadsheet-resize-dialog, .tm-modal-overlay");
     }
 
     function removeFormulaEditorChrome(editor) {
@@ -5275,6 +5279,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         };
         const onWheel = ev => {
             if (!s.model) return;
+            // A wheel over an open dialog scrolls the dialog's own body, never the grid behind it.
+            if (isSpreadsheetOverlayTarget(ev.target)) return;
 
             // Ctrl + wheel zooms the grid; the zoom factor itself lives in .NET state.
             if (ev.ctrlKey || ev.metaKey) {
@@ -5652,7 +5658,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
         };
         const onKeyDown = ev => {
-            if (isEditableKeyTarget(ev.target)) return;
+            if (isEditableKeyTarget(ev.target) || isSpreadsheetOverlayTarget(ev.target)) return;
             if (s.editor) return;
             if (handleNavigationKey(root, ev)) return;
             handleCommandKey(root, ev);
@@ -8111,6 +8117,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         resolveHeaderHighlight,
         resolveHeaderStrips,
         withAlpha,
-        isHighlightedIndex
+        isHighlightedIndex,
+        isEditableKeyTarget,
+        isSpreadsheetOverlayTarget
     };
 })();

@@ -26,6 +26,32 @@
     </div>
 </section>
 
+<!-- Dialogs on the shared frame (redesign phase 3) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Dialogs</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Core TmModal</span>
+    </div>
+
+    <div class="p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl mb-4">
+        <p class="text-sm text-sky-800 dark:text-sky-200">
+            Every dialog of the grid rides the core <code>TmModal</code>: Sort, Custom filter, Remove duplicates,
+            Paste special and Text to columns (Data tab), Insert link and Insert image (Insert tab),
+            Format Cells (cell context menu), Name Manager, Data validation and the validation alerts.
+            Each one traps the focus, closes on Escape and returns focus to the grid. On a narrow
+            container the short forms present as a bottom sheet and Format Cells, Text to Columns and the
+            Name Manager take the whole viewport. Find &amp; Replace (Ctrl+F) stays a non-modal panel so the
+            highlighted matches stay visible.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmSpreadsheet RowsCount="30"
+                       ColumnsCount="12"
+                       Height="500px" />
+    </div>
+</section>
+
 <!-- Basic Spreadsheet -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">

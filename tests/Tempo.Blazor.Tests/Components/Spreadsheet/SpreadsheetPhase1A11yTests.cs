@@ -45,21 +45,18 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNameManagerDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        // The overlay wraps the card, so the dialog paints above the grid instead of in the flow.
-        var backdrop = cut.Find(".tm-spreadsheet-name-manager__backdrop");
-        backdrop.QuerySelector(".tm-spreadsheet-name-manager").Should()
-            .NotBeNull("the dialog card must be a child of the fixed overlay");
+        // The dialog rides the core TmModal: its root class sits on the shared fixed overlay, so the
+        // dialog paints above the grid instead of in the flow, and no package backdrop exists.
+        var overlay = cut.Find(".tm-modal-overlay");
+        overlay.ClassList.Should().Contain("tm-spreadsheet-name-manager");
 
-        // The dialog contract belongs to the core focus scope that wraps the card.
+        // The dialog contract belongs to the core focus scope inside the overlay.
         var dialog = cut.Find("[role='dialog']");
         dialog.GetAttribute("aria-modal").Should().Be("true");
 
         var labelledBy = dialog.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrWhiteSpace("the dialog needs an accessible name pointing at its title");
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("Name Manager");
-
-        // The card keeps its own class for styling and for the E2E lane.
-        dialog.QuerySelector(".tm-spreadsheet-name-manager").Should().NotBeNull();
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("Name Manager");
     }
 
     [Fact]
@@ -68,17 +65,14 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetNamedRangeEditDialog>(parameters => parameters
             .Add(p => p.Workbook, new SpreadsheetWorkbook()));
 
-        cut.Find(".tm-spreadsheet-named-range-edit__backdrop")
-            .QuerySelector(".tm-spreadsheet-named-range-edit").Should()
-            .NotBeNull("the dialog card must be a child of the fixed overlay");
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-spreadsheet-named-range-edit");
 
         var dialog = cut.Find("[role='dialog']");
         dialog.GetAttribute("aria-modal").Should().Be("true");
 
         var labelledBy = dialog.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrWhiteSpace();
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("New Name");
-        dialog.QuerySelector(".tm-spreadsheet-named-range-edit").Should().NotBeNull();
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("New Name");
     }
 
     [Fact]
@@ -87,17 +81,14 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetHyperlinkDialog>(parameters => parameters
             .Add(p => p.Workbook, new SpreadsheetWorkbook()));
 
-        cut.Find(".tm-spreadsheet-hyperlink__backdrop")
-            .QuerySelector(".tm-spreadsheet-hyperlink").Should()
-            .NotBeNull("the dialog card must be a child of the fixed overlay");
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-spreadsheet-hyperlink");
 
         var dialog = cut.Find("[role='dialog']");
         dialog.GetAttribute("aria-modal").Should().Be("true");
 
         var labelledBy = dialog.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrWhiteSpace();
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("Hyperlink");
-        dialog.QuerySelector(".tm-spreadsheet-hyperlink").Should().NotBeNull();
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("Hyperlink");
     }
 
     [Fact]
@@ -177,21 +168,29 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// "No unstyled dialog" is only true while the stylesheet actually carries a fixed, modal-z-index
-    /// overlay rule for each of the three cards, so the DoD is guarded from the source side too.
+    /// "No dialog paints its own backdrop" is guarded from the source side: the Shared frame (the core
+    /// TmModal) owns the fixed, modal-z-index overlay, and the package stylesheet carries no dialog
+    /// backdrop of its own — only the CONTENT classes of each dialog.
     /// </summary>
     [Fact]
     public void DialogOverlays_HaveFixedModalRulesInThePackageStylesheet()
     {
-        var css = File.ReadAllText(Path.Combine(
-            RepositoryRoot(), "src", "Tempo.Blazor.Spreadsheet", "wwwroot", "css", "components", "_spreadsheet.css"));
-
-        var overlay = RuleBody(css, ".tm-spreadsheet-dialog-backdrop");
-        overlay.Should().NotBeNull("the shared overlay wrapper must be styled");
+        var root = RepositoryRoot();
+        var coreCss = File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+        var overlay = RuleBody(coreCss, ".tm-modal-overlay");
+        overlay.Should().NotBeNull("the shared frame owns the fixed overlay");
         overlay.Should().Contain("position: fixed");
-        overlay.Should().Contain("z-index: var(--tm-z-modal)");
+        overlay.Should().Contain("z-index: var(--tm-z-modal", "the frame paints on the modal band");
+        RuleBody(coreCss, ".tm-modal").Should().Contain("max-height",
+            "the frame caps the card to the viewport, so a long list never pushes the footer off screen");
 
-        // The per-dialog backdrops are the shared wrapper plus a hook class — no duplicated rules.
+        var css = File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor.Spreadsheet", "wwwroot", "css", "components", "_spreadsheet.css"));
+
+        // No dialog backdrop left in the package…
+        RuleBody(css, ".tm-spreadsheet-dialog-backdrop").Should().BeNull(
+            "the package no longer paints a dialog backdrop — the core TmModal does");
         foreach (var hook in new[]
                  {
                      "tm-spreadsheet-name-manager__backdrop",
@@ -199,43 +198,30 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
                      "tm-spreadsheet-hyperlink__backdrop",
                  })
         {
-            RuleBody(css, "." + hook).Should().BeNull(
-                $"'.{hook}' must not duplicate the shared overlay rule");
+            RuleBody(css, "." + hook).Should().BeNull($"'.{hook}' is gone with the interim overlay");
         }
 
-        foreach (var card in new[]
-                 {
-                     "tm-spreadsheet-name-manager",
-                     "tm-spreadsheet-named-range-edit",
-                     "tm-spreadsheet-hyperlink",
-                 })
+        // … and no per-dialog CARD chrome either: the card, its header and its footer are the modal's.
+        foreach (var card in new[] { ".tm-fcd", ".tm-dvd", ".tm-spreadsheet-sort" })
         {
-            RuleBody(css, "." + card).Should().NotBeNull($"'.{card}' (the dialog card) must be styled");
+            RuleBody(css, card).Should().BeNull(
+                $"{card} must not restyle the modal card (the frame owns it)");
         }
 
-        // The sticky header of the Name Manager table and the selected-row highlight.
+        // The CONTENT that is still the package's is styled.
         RuleBody(css, ".tm-spreadsheet-name-manager__table th").Should().NotBeNull("the table header sticks");
         RuleBody(css, ".tm-spreadsheet-name-manager__row--selected")
             .Should().NotBeNull("the selected row must be highlighted");
         css.Should().Contain("--tm-color-primary-subtle", "the selected row uses the primary-subtle token");
-
-        // A long list must not push the footer out of the viewport: the height limit has to propagate
-        // from the fixed backdrop through the focus-scope wrapper into the card, whose middle scrolls.
-        var scope = RuleBody(css, ".tm-spreadsheet-dialog-scope");
-        scope.Should().NotBeNull("the focus-scope wrapper is part of the height chain");
-        scope.Should().Contain("min-height: 0");
-        scope.Should().Contain("max-height: 100%");
-
-        var managerCard = RuleBody(css, ".tm-spreadsheet-name-manager");
-        managerCard.Should().NotBeNull();
-        managerCard.Should().Contain("flex-direction: column");
-        managerCard.Should().Contain("max-height: 100%");
-        managerCard.Should().Contain("min-height: 0");
-
         RuleBody(css, ".tm-spreadsheet-name-manager__table-wrap").Should().Contain("overflow: auto",
-            "the table wrap is the scrollable middle of the card");
-        RuleBody(css, ".tm-spreadsheet-name-manager__actions").Should().Contain("flex: none",
-            "the footer keeps its natural height inside the column");
+            "the table wrap scrolls inside the modal body");
+        // The extracted dialog keeps its content in its own scoped stylesheet.
+        var insertImageCss = File.ReadAllText(Path.Combine(
+            root, "src", "Tempo.Blazor.Spreadsheet", "Components", "Spreadsheet", "Dialogs",
+            "TmSpreadsheetInsertImageDialog.razor.css"));
+        RuleBody(insertImageCss, ".tm-spreadsheet-insert-image__error").Should().NotBeNull(
+            "the invalid-URL message is the insert-image dialog's own content");
+        RuleBody(insertImageCss, ".tm-spreadsheet-insert-image__input").Should().Contain("min-height");
     }
 
     // ── Text to Columns: localized fixed-width placeholder ──
@@ -313,12 +299,13 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         var cut = Render<TmSpreadsheet>();
         OpenInsertImageDialog(cut);
 
-        var input = cut.Find(".tm-spreadsheet-dialog__input");
+        var input = cut.Find(".tm-spreadsheet-insert-image__input");
         var id = input.GetAttribute("id");
         id.Should().NotBeNullOrWhiteSpace("the url input needs an id so its label can point at it");
 
-        cut.Find($".tm-spreadsheet-dialog__label[for='{id}']").TextContent.Trim()
+        cut.Find($".tm-spreadsheet-insert-image__label[for='{id}']").TextContent.Trim()
             .Should().Be("Image URL");
+        input.GetAttribute("inputmode").Should().Be("url");
     }
 
     [Fact]
@@ -332,22 +319,22 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         // Escape is the surface's own dismissal, wired to the focus scope (which installs the
         // document-level listener); bUnit has no JS module, so the scope's JSInvokable is driven.
-        var input = cut.Find(".tm-spreadsheet-dialog__input");
+        var input = cut.Find(".tm-spreadsheet-insert-image__input");
         input.Input("https://example.com/pic.png");
-        var scope = cut.FindComponent<TmFocusScope>();
+        var scope = cut.FindComponents<TmFocusScope>().Last();
         scope.Instance.CloseOnEscape.Should().BeTrue();
         await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
 
-        cut.FindAll(".tm-spreadsheet-dialog").Should().BeEmpty("Escape must cancel the dialog");
+        cut.FindAll(".tm-spreadsheet-insert-image").Should().BeEmpty("Escape must cancel the dialog");
         sheet.Cells.TryGetValue("B2", out var untouched).Should().BeFalse();
 
         // Enter on the same input applies it.
         OpenInsertImageDialog(cut);
-        var again = cut.Find(".tm-spreadsheet-dialog__input");
+        var again = cut.Find(".tm-spreadsheet-insert-image__input");
         again.Input("https://example.com/pic.png");
         again.KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        cut.FindAll(".tm-spreadsheet-dialog").Should().BeEmpty("Enter must apply and close");
+        cut.FindAll(".tm-spreadsheet-insert-image").Should().BeEmpty("Enter must apply and close");
         sheet.Cells.TryGetValue("B2", out var committed).Should().BeTrue();
         committed!.ImageUrl.Should().Be("https://example.com/pic.png");
     }
@@ -368,18 +355,18 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         var labelledBy = alert.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrWhiteSpace();
-        cut.Find($"#{labelledBy}").TextContent.Trim().Should().Be("Bad input");
+        cut.Find($"[id='{labelledBy}']").TextContent.Trim().Should().Be("Bad input");
 
         var describedBy = alert.GetAttribute("aria-describedby");
         describedBy.Should().NotBeNullOrWhiteSpace();
-        cut.Find($"#{describedBy}").TextContent.Trim().Should().Be("Must be 1–10.");
+        cut.Find($"[id='{describedBy}']").TextContent.Trim().Should().Be("Must be 1–10.");
 
         // The initial focus is declared on the scope for the focus-trap module, which resolves the
         // primary action by id when it activates (bUnit has no JS module, so the declaration is the
         // observable contract; the E2E lane asserts the live document.activeElement).
         var initialFocusId = alert.GetAttribute("data-initial-focus");
         initialFocusId.Should().NotBeNullOrWhiteSpace("an alertdialog moves focus to its primary action");
-        cut.Find($"#{initialFocusId}").TextContent.Trim().Should().Be("Confirm");
+        cut.Find($"[id='{initialFocusId}']").TextContent.Trim().Should().Be("Got it");
         alert.QuerySelector(".tm-spreadsheet-alert__actions button:last-of-type")!.Id
             .Should().Be(initialFocusId, "the primary action is the confirm button");
     }
@@ -396,7 +383,7 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         // A Stop alert is a hard block: the backdrop click is ignored (the surface is dismissed only
         // by its primary action or Escape), so it cannot wave the invalid value through.
-        cut.Find(".tm-spreadsheet-dialog-backdrop").Click();
+        cut.Find(".tm-modal-overlay").Click();
 
         cut.FindAll(".tm-spreadsheet-alert").Should().HaveCount(1,
             "a Stop alert only closes through its own primary action");
@@ -418,9 +405,9 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
 
         // The restore is the focus trap's job, not a FocusAsync race against the inert background: the
         // scope names the grid root, and the trap focuses it while it deactivates.
-        var scope = cut.FindComponent<TmFocusScope>();
+        var scope = cut.FindComponents<TmFocusScope>().Last();
         scope.Instance.RestoreFocusTargetId.Should().NotBeNullOrWhiteSpace();
-        cut.Find($"#{scope.Instance.RestoreFocusTargetId}").ClassList
+        cut.Find($"[id='{scope.Instance.RestoreFocusTargetId}']").ClassList
             .Should().Contain("tm-spreadsheet-canvas-grid", "focus must return to the grid");
 
         cut.Find(".tm-spreadsheet-alert__actions button").Click();
@@ -437,7 +424,7 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
             .Instance.OnCanvasCellEditCommitted(0, 0, "99"));
         cut.FindAll(".tm-spreadsheet-alert").Should().HaveCount(1);
 
-        var scope = cut.FindComponent<TmFocusScope>();
+        var scope = cut.FindComponents<TmFocusScope>().Last();
         scope.Instance.CloseOnEscape.Should().BeTrue("the alert closes on Escape");
         await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
 
@@ -684,7 +671,7 @@ public class SpreadsheetPhase1A11yTests : LocalizationTestBase
         cut.FindAll(".tm-spreadsheet-toolbar__button")
             .First(button => button.GetAttribute("title") == "Insert image")
             .Click();
-        cut.FindAll(".tm-spreadsheet-dialog").Should().HaveCount(1);
+        cut.FindAll(".tm-spreadsheet-insert-image").Should().HaveCount(1);
     }
 
     private static void AddStopValidationRule(IRenderedComponent<TmSpreadsheet> cut)

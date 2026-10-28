@@ -17,7 +17,7 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetHyperlinkDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        cut.Find(".tm-spreadsheet-hyperlink__title").TextContent.Should().Be("Hyperlink");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("Hyperlink");
         var options = cut.FindAll("#hl-type option");
         options.Count.Should().Be(4);
     }
@@ -177,7 +177,9 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
                 .Add(p => p.OnSave, _ => saves++)
                 .Add(p => p.OnCancel, () => cancels++));
 
-        var close = cut.Find(".tm-spreadsheet-hyperlink__close");
+        // The close button is the shared frame's: it sits outside the form's Ctrl+Enter wrapper, so
+        // its keydown carries no handler and only its native click cancels.
+        var close = cut.Find(".tm-modal-close");
         Assert.Throws<MissingEventHandlerException>(() => close.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
         close.Click();
 
