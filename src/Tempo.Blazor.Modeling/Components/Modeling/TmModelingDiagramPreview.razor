@@ -51,6 +51,7 @@
         <div class="tm-modeling-diagram-preview__canvas-shell"
              data-testid="@TestId("modeling-diagram-preview-canvas-shell")"
              data-drop-enabled="@AllowNodeDrop.ToString().ToLowerInvariant()"
+             data-dragging="@((ActiveDraggedElement is not null).ToString().ToLowerInvariant())"
              @ondragover="HandleDragOver"
              @ondragover:preventDefault
              @ondrop="HandleDropAsync"
@@ -61,10 +62,14 @@
                     @Loc["TmModelingDiagramPreview_EmptyDiagramHint"]
                 </div>
             }
+            @* The viewer keeps ONE toolbar row through the editor's own API: the Viewer group set
+               minus export (a preview never exports) — the explicit flags override the preset,
+               so no export group folds into a second row. Never CSS on the editor's internals. *@
             <TmDiagramEditor Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
                              ReadOnly="true"
                              ToolbarPreset="DiagramToolbarPreset.Viewer"
+                             ToolbarGroups="DiagramToolbarGroups.Zoom | DiagramToolbarGroups.View | DiagramToolbarGroups.Search"
                              ShowTitle="false"
                              ShowToolbox="false"
                              ShowPropertiesPanel="false"
@@ -75,8 +80,14 @@
                              OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
                              Class="tm-modeling-diagram-preview__editor" />
         </div>
-        <div class="tm-modeling-diagram-preview__drop-hint" data-testid="@TestId("modeling-diagram-preview-drop-hint")">
-            @Loc["TmModelingDiagramPreview_DropHint"]
-        </div>
+        @if (ActiveDraggedElement is not null)
+        {
+            @* Only while a model-tree drag is live (review fix, phase 5): a permanent hint row
+               ate a slice of the canvas column at every viewport, and the dashed drop-zone
+               border read as a permanent affordance. *@
+            <div class="tm-modeling-diagram-preview__drop-hint" data-testid="@TestId("modeling-diagram-preview-drop-hint")">
+                @Loc["TmModelingDiagramPreview_DropHint"]
+            </div>
+        }
     }
 </section>

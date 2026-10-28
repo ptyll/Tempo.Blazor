@@ -55,7 +55,10 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync();
 
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Switch to dark mode" }).Last.ClickAsync();
+        // Review fix (phase 5): the /modeling-editor demo page hides the demo sidebar from 1264px
+        // of viewport up (the editor needs the full width for the 1200px desktop dock), so the
+        // sidebar's toggle is display:none — dispatch the click instead of pointing a cursor at it.
+        await page.Locator("[data-testid='theme-toggle']").Last.DispatchEventAsync("click");
         await page.Locator("div[data-theme='dark']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await page.WaitForTimeoutAsync(300);
 

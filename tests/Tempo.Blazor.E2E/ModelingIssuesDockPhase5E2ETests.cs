@@ -25,8 +25,20 @@ public sealed class ModelingIssuesDockPhase5E2ETests : WasmTestBase
         await ExpectVisibleAsync(page, "[data-testid='modeling-issue-list']");
 
         await toggle.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
-        await page.Locator("[data-testid='modeling-issue-list']")
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10000 });
+        // The body STAYS in the DOM under [hidden] (a11y review, phase 5) — aria-controls always
+        // points at a real id; assert the hidden state instead of a detached list.
+        await page.Locator("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        var collapsedHidden = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const body = document.querySelector("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content");
+                const toggle = document.querySelector("[data-testid='modeling-issues-toggle']");
+                return !!body && body.hasAttribute('hidden')
+                    && toggle?.getAttribute('aria-controls') === body.id;
+            }
+            """);
+        Assert.IsTrue(collapsedHidden, "The collapsed dock hides its body and keeps the aria-controls target.");
         Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"), "The collapsed dock hides the list.");
 
         // The state is the session's: an unrelated re-render (a viewport nudge) must not re-open it.

@@ -6,16 +6,20 @@
          data-issue-count="@Issues.Count"
          aria-label="@Loc["TmModelingIssuePanel_Title"]">
     <header class="tm-modeling-issue-panel__header">
-        <h3 class="tm-modeling-issue-panel__title">@Loc["TmModelingIssuePanel_Title"]</h3>
-        @* Neutral count formulation (B16) rendered as a COUNT-ONLY badge (gap #12): the visible
-           text is the bare number, the localized "Issues: {0}" formulation lives on the
-           visually-hidden span, so no language has to pick a grammatical form in the visible
-           header and the accessible name comes from the real content. *@
-        <span class="tm-modeling-issue-panel__count"
-              data-testid="@TestId("modeling-issue-count")">
-            <span aria-hidden="true">@Issues.Count</span>
-            <span class="tm-sr-only">@Loc["TmModelingIssuePanel_Count", Issues.Count]</span>
-        </span>
+        @* Review fix (phase 5): the count sits NEXT TO the title in one heading wrapper — not
+           pushed against the toggle — so the number reads as part of the heading. *@
+        <div class="tm-modeling-issue-panel__heading">
+            <h3 class="tm-modeling-issue-panel__title">@Loc["TmModelingIssuePanel_Title"]</h3>
+            @* Neutral count formulation (B16) rendered as a COUNT-ONLY badge (gap #12): the visible
+               text is the bare number, the localized "Issues: {0}" formulation lives on the
+               visually-hidden span, so no language has to pick a grammatical form in the visible
+               header and the accessible name comes from the real content. *@
+            <span class="tm-modeling-issue-panel__count"
+                  data-testid="@TestId("modeling-issue-count")">
+                <span aria-hidden="true">@Issues.Count</span>
+                <span class="tm-sr-only">@Loc["TmModelingIssuePanel_Count", Issues.Count]</span>
+            </span>
+        </div>
         @* MO1 (desktop restructure): the dock under the preview collapses to this header. The
            toggle is a native button (one activation per press), carries aria-expanded +
            aria-controls and rotates its chevron with the state; the collapsed state is the
@@ -34,22 +38,20 @@
         </button>
     </header>
 
-    @if (Collapsed)
-    {
-        @* A collapsed dock renders the header only — the body (and its scroll) does not exist. *@
-    }
-    else if (Issues.Count == 0)
-    {
-        <div id="@_bodyId" class="tm-modeling-issue-panel__content">
+    @* The body ALWAYS renders (review fix, phase 5): a collapsed dock keeps the region in the
+       DOM under [hidden], so the toggle's aria-controls never points at a missing id. The
+       canvas-body grid row (auto when collapsed) plus [hidden] keep it out of sight and out of
+       the tab order. *@
+    <div id="@_bodyId" class="tm-modeling-issue-panel__content" hidden="@Collapsed">
+        @if (Issues.Count == 0)
+        {
             <div class="tm-modeling-issue-panel__empty" data-testid="@TestId("modeling-issue-empty")">
                 <strong>@Loc["TmModelingIssuePanel_EmptyTitle"]</strong>
                 <span>@Loc["TmModelingIssuePanel_EmptyText"]</span>
             </div>
-        </div>
-    }
-    else
-    {
-        <div id="@_bodyId" class="tm-modeling-issue-panel__content">
+        }
+        else
+        {
             <ol class="tm-modeling-issue-panel__list" data-testid="@TestId("modeling-issue-list")">
             @foreach (var issue in Issues.Select((value, index) => (value, index)))
             {
@@ -86,8 +88,8 @@
                 </li>
             }
             </ol>
-        </div>
-    }
+        }
+    </div>
 </section>
 
 @code {

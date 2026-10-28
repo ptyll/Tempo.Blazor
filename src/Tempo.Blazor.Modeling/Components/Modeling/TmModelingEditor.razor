@@ -129,9 +129,15 @@
         else
         {
             @* ── Docked layouts (tablet and desktop): the core editor shell owns the chrome ───── *@
+            @* The shell is NOT pinned to the editor's resolved mode: an Auto shell measures its
+               own container (the same Modeling pair), so the nested TmDiagramEditors (preview +
+               open-editor dialog) resolve from THEIR OWN containers instead of inheriting a
+               forced Desktop cascade. The editor's resolved mode only seeds the shell's
+               pre-measure frame; a forced editor still pins the shell (tests/hosts). *@
             <TmEditorShell Class="tm-modeling-editor__shell"
-                           LayoutMode="layout.Resolved"
-                           InitialMode="TmLayoutMode.Desktop"
+                           LayoutMode="LayoutMode"
+                           Breakpoints="EffectiveBreakpoints"
+                           InitialMode="layout.Resolved"
                            LeftTitle="@Loc["TmModelingEditor_ModelTree"]"
                            RightTitle="@Loc["TmModelingEditor_Inspector"]"
                            CanvasTitle="@Loc["TmModelingEditor_Preview"]"
@@ -140,7 +146,7 @@
                            CollapsedPanels="_shellCollapsed" CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
                            LeftWidth="220px" MinLeftWidth="200" MaxLeftWidth="360"
                            RightWidth="280px" MinRightWidth="240" MaxRightWidth="440"
-                           PersistWidthsKey="modeling-editor">
+                           PersistWidthsKey="@EffectivePersistWidthsKey">
                 <Header>
                     <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@EditorHeaderContent</header>
                 </Header>
@@ -426,9 +432,16 @@
 
     /// <summary>The inspector panel for the shell's right dock: "Properties | Source" tabs (MO1).
     /// Only the active tab renders its body (TmTabs contract, M26 budget); a stale source marks
-    /// the Source tab with a neutral indicator.</summary>
+    /// the Source tab with a localized badge and an sr-only hint OUTSIDE the tablist (the tab's
+    /// accessible name stays its visible label — the hint is referenced via aria-describedby).</summary>
     private RenderFragment? RightSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__inspector" data-testid="@TestId("modeling-inspector-panel")">
-        <TmTabs ActiveTabId="@_inspectorTab" ActiveTabIdChanged="SelectInspectorTab" Class="tm-modeling-editor__inspector-tabs">
+        @if (SourceIsStale)
+        {
+            @* aria-describedby target: a sibling of the tablist (a description inside the
+               role="tablist" would break its content model). Per-instance id. *@
+            <span id="@_sourceStaleHintId" class="tm-sr-only">@Loc["TmModelingEditor_SourceStaleHint"]</span>
+        }
+        <TmTabs ActiveTabId="@_inspectorTab" ActiveTabIdChanged="SelectInspectorTab" Class="tm-modeling-editor__inspector-tabs" AriaLabel="@Loc["TmModelingEditor_Inspector"]">
             <TmTabPanel Id="properties"
                         Title="@Loc["TmModelingEditor_Properties"]"
                         TabAttributes="@PropertiesTabAttributes">

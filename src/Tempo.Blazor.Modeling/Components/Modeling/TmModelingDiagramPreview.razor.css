@@ -1,4 +1,5 @@
 .tm-modeling-diagram-preview {
+    position: relative;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     min-height: 0;
@@ -84,7 +85,9 @@
     overflow: hidden;
 }
 
-.tm-modeling-diagram-preview__canvas-shell[data-drop-enabled="true"] {
+/* Review fix (phase 5): the drop-zone stripes are a WHILE-DRAGGING affordance, not permanent
+   chrome — data-dragging rides the canvas shell next to data-drop-enabled. */
+.tm-modeling-diagram-preview__canvas-shell[data-drop-enabled="true"][data-dragging="true"] {
     border-color: var(--tm-color-primary-soft-border);
     background:
         linear-gradient(var(--tm-bg-surface-secondary), var(--tm-bg-surface-secondary)) padding-box,
@@ -95,7 +98,7 @@
         ) border-box;
 }
 
-.tm-modeling-diagram-preview__canvas-shell[data-drop-enabled="true"]:hover {
+.tm-modeling-diagram-preview__canvas-shell[data-drop-enabled="true"][data-dragging="true"]:hover {
     border-color: var(--tm-color-primary);
 }
 
@@ -132,10 +135,20 @@
     pointer-events: none;
 }
 
+/* Review fix (phase 5): the hint is a WHILE-DRAGGING overlay pinned to the canvas's bottom
+   edge — out of the grid flow, so its appearance mid-drag cannot resize the canvas shell and
+   shift the drop coordinates (a grid-row insertion did exactly that), and it never eats canvas
+   height when no drag is live. */
 .tm-modeling-diagram-preview__drop-hint {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 2;
     padding: var(--tm-space-2) var(--tm-space-4);
     border-top: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
+    /* Informational only: a drop must reach the canvas shell UNDER the hint. */
+    pointer-events: none;
 }
 
 @media (max-width: 48rem) {

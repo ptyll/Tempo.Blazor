@@ -76,13 +76,13 @@ public partial class TmModelingEditor : IAsyncDisposable
     private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1024);
 
     /// <summary>
-    /// Layout thresholds of the editor's own container (Fáze 5, MO1): the docked workspace
-    /// (TmEditorShell) needs the tree, the inspector AND the canvas minimum at the same time, so
-    /// desktop starts at 900px of container width (220px tree + 280px inspector + the 400px
-    /// canvas minimum the shell enforces); below the 768px mobile threshold the compact
-    /// panel-tab workspace renders; 768–899px is the shell's tablet dock (one expanded panel).
+    /// Layout thresholds of the editor's own container (Fáze 5, MO1): the same pair as the
+    /// <see cref="TmDiagramEditor"/> (768 / 1200) so the two editors flip layouts at the same
+    /// container width — below the 768px mobile threshold the compact panel-tab workspace
+    /// renders, 768–1199px is the shell's tablet dock (one expanded panel) and from 1200px the
+    /// full docked desktop workspace (tree + inspector + canvas at once).
     /// </summary>
-    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints ModelingBreakpoints = new(768, 900);
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints ModelingBreakpoints = new(768, 1200);
 
     /// <summary>The TestIdPrefix the cached attribute dictionaries were built with.</summary>
     private string? _cachedTestIdPrefix;
@@ -93,22 +93,47 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>Cached attributes of the TmModal close button (the preserved test id + the focus hook).</summary>
     private Dictionary<string, object>? _openEditorCloseButtonAttributes;
 
+    /// <summary>Cached attributes of the docked inspector's Properties tab button (the frozen tab test id).</summary>
+    private Dictionary<string, object>? _propertiesTabAttributes;
+
+    /// <summary>
+    /// Overrides the localStorage key the docked shell persists user-resized panel widths under.
+    /// Null (default) derives the key from <see cref="TmComponentBase.TestIdPrefix"/> —
+    /// <c>{TestIdPrefix}-modeling-editor</c>, or plain <c>modeling-editor</c> without a prefix —
+    /// so two editors on one page share persisted widths only when they share the prefix. Set it
+    /// explicitly to namespace (or intentionally share) the saved layout per instance.
+    /// </summary>
+    [Parameter] public string? PersistKey { get; set; }
+
+    /// <summary>The persistence key handed to the shell's <see cref="TmEditorShell.PersistWidthsKey"/>.</summary>
+    private string EffectivePersistWidthsKey
+        => string.IsNullOrWhiteSpace(PersistKey)
+            ? (string.IsNullOrWhiteSpace(TestIdPrefix) ? "modeling-editor" : $"{TestIdPrefix}-modeling-editor")
+            : PersistKey;
+
     /// <summary>
     /// Attributes of the open-editor TmModal overlay root. Cached per <see cref="TmComponentBase.TestIdPrefix"/>
     /// (the dictionary is re-created only when the prefix changes) so every render of the open dialog
     /// reuses the same instance.
     /// </summary>
     private Dictionary<string, object> OpenEditorModalAttributes
-        => BuildOpenEditorAttributes(ref _openEditorModalAttributes);
+        => BuildCachedAttributes(ref _openEditorModalAttributes);
 
     /// <summary>
     /// Attributes of the TmModal close button. Cached alongside <see cref="OpenEditorModalAttributes"/>.
     /// </summary>
     private Dictionary<string, object> OpenEditorCloseButtonAttributes
-        => BuildOpenEditorAttributes(ref _openEditorCloseButtonAttributes);
+        => BuildCachedAttributes(ref _openEditorCloseButtonAttributes);
 
-    /// <summary>Returns the cached dictionary, rebuilding both when the TestIdPrefix changed.</summary>
-    private Dictionary<string, object> BuildOpenEditorAttributes(ref Dictionary<string, object>? cached)
+    /// <summary>
+    /// Attributes of the Properties tab button (the frozen tab test id). Cached under the same
+    /// TestIdPrefix guard, so one prefix change rebuilds every cached dictionary.
+    /// </summary>
+    private IReadOnlyDictionary<string, object> PropertiesTabAttributes
+        => BuildCachedAttributes(ref _propertiesTabAttributes);
+
+    /// <summary>Returns the cached dictionary, rebuilding all of them when the TestIdPrefix changed.</summary>
+    private Dictionary<string, object> BuildCachedAttributes(ref Dictionary<string, object>? cached)
     {
         if (cached is null || _cachedTestIdPrefix != TestIdPrefix)
         {
@@ -121,6 +146,10 @@ public partial class TmModelingEditor : IAsyncDisposable
             {
                 ["data-testid"] = TestId("modeling-open-diagram-close"),
                 ["data-modeling-focus"] = "open-editor-close"
+            };
+            _propertiesTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-tab-properties")
             };
         }
 
@@ -226,16 +255,18 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>
     /// Per-instance thresholds for the editor's own container. Null keeps the Modeling pair
-    /// (mobile below 768px of container, tablet 768–899, desktop from 900) — the docked shell
-    /// needs tree + inspector + the canvas minimum at once from 900px of container.
+    /// (mobile below 768px of container, tablet 768–1199, desktop from 1200 — the same pair as
+    /// the <see cref="TmDiagramEditor"/>, so hosts embedding both flip them together).
     /// </summary>
     [Parameter] public TmLayoutBreakpoints? LayoutBreakpoints { get; set; }
 
     /// <summary>
-    /// The editor's block size (any CSS height). Default <c>null</c> keeps the stylesheet contract
-    /// <c>min(768px, 100vh - 32px)</c> (the token pair on <c>.tm-modeling-editor</c>). When set,
-    /// the editor renders exactly this height (the token min-height floor is dropped with an
-    /// inline <c>min-height: 0</c>) — the host owns the sizing. The shell inside fills the box.
+    /// The editor's block size (a CSS length only — e.g. <c>600px</c>, <c>100%</c>,
+    /// <c>100dvh</c>; not a keyword or a shorthand). Default <c>null</c> keeps the stylesheet
+    /// contract <c>min(768px, 100vh - 32px)</c> (the token pair on <c>.tm-modeling-editor</c>).
+    /// When set, the editor renders exactly this height (the token min-height floor is dropped
+    /// with an inline <c>min-height: 0</c>) — the host owns the sizing. The shell inside fills
+    /// the box.
     /// </summary>
     [Parameter] public string? Height { get; set; }
 
@@ -276,24 +307,24 @@ public partial class TmModelingEditor : IAsyncDisposable
         : "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-open";
 
     /// <summary>
-    /// The Source tab's indicator text: a neutral dot while the loaded metadata is stale
-    /// (MO1 — "stale source marks the Source tab"), empty (no badge) otherwise.
+    /// The Source tab's badge text: the localized "Stale" label while the loaded metadata is stale
+    /// (MO1 — "stale source marks the Source tab"; a real word, never a bare glyph), empty (no
+    /// badge) otherwise.
     /// </summary>
-    private string SourceTabBadge => SourceIsStale ? "\u2022" : string.Empty;
+    private string SourceTabBadge => SourceIsStale ? Loc["TmModelingSourcePanel_Stale"] : string.Empty;
 
     /// <summary>Whether the loaded model's metadata exists and is marked stale.</summary>
     private bool SourceIsStale => _model?.Metadata is { } metadata && !metadata.IsFresh;
 
-    /// <summary>The Properties tab button attributes: the frozen tab test id.</summary>
-    private IReadOnlyDictionary<string, object>? PropertiesTabAttributes
-        => new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["data-testid"] = TestId("modeling-tab-properties")
-        };
+    /// <summary>Per-instance DOM id of the stale-source hint span the Source tab's
+    /// <c>aria-describedby</c> points at (rendered outside the tablist).</summary>
+    private readonly string _sourceStaleHintId = $"tm-modeling-source-stale-{Guid.NewGuid():N}";
 
     /// <summary>
-    /// The Source tab button attributes: the frozen tab test id plus the localized stale hint as
-    /// title/aria-label while the indicator shows (never overriding the visible tab label).
+    /// The Source tab button attributes: the frozen tab test id plus, while the indicator shows,
+    /// the <c>data-stale</c> hook for the warning-tinted badge CSS, a <c>title</c> tooltip and an
+    /// <c>aria-describedby</c> reference to the hint span rendered outside the tablist (the
+    /// tab's accessible NAME stays the visible "Source" label — no aria-label override).
     /// </summary>
     private IReadOnlyDictionary<string, object>? SourceTabAttributes
     {
@@ -306,8 +337,9 @@ public partial class TmModelingEditor : IAsyncDisposable
 
             if (SourceIsStale)
             {
+                attributes["data-stale"] = "true";
                 attributes["title"] = Loc["TmModelingEditor_SourceStaleHint"];
-                attributes["aria-label"] = Loc["TmModelingEditor_SourceStaleHint"];
+                attributes["aria-describedby"] = _sourceStaleHintId;
             }
 
             return attributes;

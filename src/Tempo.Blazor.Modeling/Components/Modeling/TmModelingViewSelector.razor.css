@@ -1,6 +1,8 @@
 .tm-modeling-view-selector {
     display: flex;
-    align-items: end;
+    /* Review fix (phase 5): fields align to the START so the hint under the disabled Viewpoint
+       select grows that field downward without shifting the notation row. */
+    align-items: start;
     flex-wrap: wrap;
     gap: var(--tm-space-3);
     min-width: 0;

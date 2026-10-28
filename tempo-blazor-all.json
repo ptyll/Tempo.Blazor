@@ -43912,7 +43912,7 @@
           "kind": "Component",
           "category": "Modeling",
           "namespace": "Tempo.Blazor.Components.Modeling",
-          "description": "Loads a semantic modeling source and presents a modeling editor workspace. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. Below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
+          "description": "Loads a semantic modeling source and presents a modeling editor workspace. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop; the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
           "packageId": "Tempo.Blazor.Modeling",
           "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
           "documentationStatus": "merged",
@@ -43937,7 +43937,7 @@
               "name": "Height",
               "type": "string?",
               "isRequired": false,
-              "description": "The editor's block size (any CSS height). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) and the shell inside fills the box.",
+              "description": "The editor's block size (a CSS length only - e.g. 600px, 100%, 100dvh). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) - the host owns the sizing. The shell inside fills the box.",
               "default": "null"
             },
             {
@@ -43951,7 +43951,7 @@
               "name": "LayoutBreakpoints",
               "type": "TmLayoutBreakpoints?",
               "isRequired": false,
-              "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-899, desktop from 900). Only the markup branch moves; stylesheets keep the shared literals.",
+              "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor). Only the markup branch moves; stylesheets keep the shared literals.",
               "default": "null"
             },
             {
@@ -43959,7 +43959,7 @@
               "type": "TmLayoutMode",
               "isRequired": false,
               "default": "TmLayoutMode.Auto",
-              "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-899, desktop from 900 — the docked shell needs tree + inspector + the canvas minimum at once); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell; the compact layout keeps the panel-tab workspace."
+              "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor, so hosts embedding both flip them together); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell - an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers; the compact layout keeps the panel-tab workspace."
             },
             {
               "name": "ModelLoaderOverride",
@@ -44008,6 +44008,12 @@
               "type": "EventCallback<string?>",
               "isRequired": false,
               "description": "Callback raised when the editor viewpoint selection changes."
+            },
+            {
+              "name": "PersistKey",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Overrides the localStorage key the docked shell persists user-resized panel widths under. Null (default) derives the key from TestIdPrefix - {TestIdPrefix}-modeling-editor, or plain modeling-editor without a prefix - so two editors on one page share persisted widths only when they share the prefix. Set it explicitly to namespace (or intentionally share) the saved layout per instance."
             },
             {
               "name": "ProviderDisplayName",

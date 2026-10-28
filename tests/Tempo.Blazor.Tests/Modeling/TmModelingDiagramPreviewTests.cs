@@ -160,6 +160,34 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Drop_hint_and_drop_zone_render_only_while_dragging()
+    {
+        // Review fix (phase 5): the hint row and the dashed drop-zone border are a WHILE-DRAGGING
+        // affordance — a permanent hint ate a slice of the canvas column at every viewport.
+        var document = CreateDocument(nodeCount: 1);
+        var element = CreateElement("task-drop", "source/task-drop");
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document));
+
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty("no hint without a live drag");
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("false");
+
+        cut.Render(parameters => parameters.Add(p => p.ActiveDraggedElement, element));
+
+        cut.Find("[data-testid='modeling-diagram-preview-drop-hint']").Should().NotBeNull();
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("true");
+
+        var css = File.ReadAllText(FindPreviewCssPath());
+        css.Should().Contain(".tm-modeling-diagram-preview__canvas-shell[data-drop-enabled=\"true\"][data-dragging=\"true\"]",
+            "the dashed drop-zone border only paints while dragging");
+
+        cut.Render(parameters => parameters.Add(p => p.ActiveDraggedElement, (ModelingElementDto?)null));
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty("the hint leaves with the drag");
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("false");
+    }
+
+    [Fact]
     public void Preview_uses_viewer_toolbar_preset()
     {
         using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
@@ -171,8 +199,10 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             .Select(g => g.GetAttribute("data-tm-group")!)
             .ToList();
 
-        // The preview is a read-only viewer surface: only the viewer groups may render.
-        groupNames.Should().BeEquivalentTo(["zoom", "view", "search", "export"]);
+        // The preview is a read-only viewer surface: the Viewer group set MINUS export (review
+        // fix, phase 5 — a preview never exports, and the export fold-in cost a second row).
+        groupNames.Should().BeEquivalentTo(["zoom", "view", "search"]);
+        groupNames.Should().NotContain("export", "the preview drops the export group through ToolbarGroups");
         groupNames.Should().NotContain("import", "the preview must not offer imports");
         groupNames.Should().NotContain("templates", "the preview must not offer templates");
         groupNames.Should().NotContain("readonly", "a host-pinned read-only preview cannot be unlocked");

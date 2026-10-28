@@ -73,13 +73,14 @@
     min-height: 0;
 }
 
-/* The dock row: a bounded fraction of the canvas column (18%, capped at 12rem). The embedded
-   viewer's own chrome (page tabs, header bar, toolbar, status bar) is ~12rem tall, so the dock
-   must stay a MINORITY of the column — a 720px-tall editor leaves ~472px for the canvas body
-   and the preview still needs its header, shell padding and viewer chrome. The list scrolls
-   inside whatever row the dock gets; the header toggle collapses it entirely. */
+/* The dock row: a bounded fraction of the canvas column (32%, clamped 10rem–20rem). The embedded
+   viewer's own chrome (page tabs, header bar, toolbar, status bar) needs its own minority of the
+   column — the preview row keeps a 16rem MINIMUM so the diagram stays usable (a 720px-tall
+   editor leaves ~464px for the canvas row even with the dock at its 20rem cap, and the diagram
+   area stays ≥320px at the 1440x900/1280x800 baselines). The list scrolls inside whatever row
+   the dock gets; the header toggle collapses it entirely. */
 .tm-modeling-editor__canvas-body--issues-open {
-    grid-template-rows: minmax(0, 1fr) min(18%, calc(var(--tm-space-16) * 3));
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 4), 1fr) clamp(calc(var(--tm-space-16) * 2.5), 32%, calc(var(--tm-space-16) * 5));
 }
 
 .tm-modeling-editor__panel-tabs {
@@ -435,7 +436,8 @@
 
 /* The docked inspector fills its aside like the tree panel does (one full-height column); the
    tab strip stays reachable while the tab body scrolls inside the shell's aside. No header
-   slots are in use, so the strip is the direct .tm-tabs > .tm-tabs__header child. */
+   slots are in use, so the strip is the direct .tm-tabs > .tm-tabs__header child. The strip's
+   hairline comes from the core .tm-tabs--line rule — no duplicate here. */
 .tm-modeling-editor__inspector {
     min-height: 0;
     height: 100%;
@@ -446,7 +448,25 @@
     top: 0;
     z-index: 1;
     background: var(--tm-color-surface);
-    border-block-end: 1px solid var(--tm-color-border);
+}
+
+/* Review fix (phase 5, double hairline): the tab body sits flush under the strip — the core
+   panel padding and the inner panels' own border-block painted a second rule under the strip. */
+.tm-modeling-editor__inspector ::deep .tm-tabs__panel {
+    padding: 0;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-modeling-inspector,
+.tm-modeling-editor__inspector ::deep .tm-modeling-source-panel {
+    border-block: 0;
+}
+
+/* The stale-source badge on the Source tab (a11y review, phase 5): the warning tokens tint the
+   badge so the marker is colour-plus-text ("Stale"), never a bare glyph. */
+.tm-modeling-editor__inspector ::deep .tm-tab[data-stale="true"] .tm-tab__badge {
+    color: var(--tm-color-warning-text);
+    background: var(--tm-color-warning-soft);
+    border: 1px solid var(--tm-color-warning-soft-border);
 }
 
 .tm-modeling-editor__status {

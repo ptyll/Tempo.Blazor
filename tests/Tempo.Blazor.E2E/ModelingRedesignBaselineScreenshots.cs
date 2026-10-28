@@ -185,6 +185,54 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Phase 5 review: the Source tab as the docked inspector presents it — light at
+    /// 1440x900 (fresh + stale) and dark 1280x800 variants (fresh + stale) — plus the expanded
+    /// issues dock with its list at scrollTop=0 (the dock shows the first two full rows).</summary>
+    [TestMethod]
+    [Description("Captures source-tab-1440x900, stale-source-tab-1440x900, the dark 1280x800 source-tab variants and issues-expanded-1440x900")]
+    public async Task Capture_SourceTab_And_IssuesExpanded()
+    {
+        foreach (var (name, query, theme, width, height) in new[]
+                 {
+                     (Name: "source-tab", Query: string.Empty, Theme: "light", Width: 1440, Height: 900),
+                     (Name: "stale-source-tab", Query: "?fresh=false", Theme: "light", Width: 1440, Height: 900),
+                     (Name: "source-tab", Query: string.Empty, Theme: "dark", Width: 1280, Height: 800),
+                     (Name: "stale-source-tab", Query: "?fresh=false", Theme: "dark", Width: 1280, Height: 800)
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await page.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+                await page.Locator("[data-testid='modeling-source-panel']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+
+        var dock = await OpenThemedModelingPageAsync("?scenario=issues-mixed", "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(dock);
+            // scrollTop=0: the expanded dock shows the first two FULL issue rows (no residual
+            // scroll from an earlier interaction).
+            await dock.EvaluateAsync(
+                "() => { const list = document.querySelector(\"[data-testid='modeling-issue-list']\"); if (list) list.scrollTop = 0; }");
+            await SettleAsync(dock);
+            await SaveViewportScreenshotAsync(dock, "issues-expanded-1440x900");
+        }
+        finally
+        {
+            await dock.Context.CloseAsync();
+        }
+    }
+
     [TestMethod]
     [Description("Captures the selected-element state (tree selection + inspector detail) at 1440x900")]
     public async Task Capture_ElementSelected()
@@ -239,12 +287,14 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
         if (theme.Contains("dark", StringComparison.Ordinal))
         {
-            // The desktop toggle lives in the fixed sidebar (the DOM-first one is the mobile
-            // header's, hidden at ≥1024px).
+            // The desktop toggle lives in the fixed sidebar — which the /modeling-editor demo page
+            // HIDES from 1264px of viewport up (the editor needs the full width for the 1200px
+            // desktop dock). Dispatch the click on the hidden toggle (the wireframe phase-2
+            // pattern); a visible toggle is clicked the normal way.
             var toggle = page.Locator("aside [data-testid='theme-toggle']");
             if (await toggle.CountAsync() > 0)
             {
-                await toggle.First.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+                await toggle.First.DispatchEventAsync("click");
             }
 
             try

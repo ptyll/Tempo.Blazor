@@ -281,7 +281,10 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
             var toggle = page.Locator("aside [data-testid='theme-toggle']");
             if (await toggle.CountAsync() > 0)
             {
-                await toggle.First.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+                // Review fix (phase 5): the demo page hides the sidebar from 1264px of viewport
+                // up — the toggle is display:none, so dispatch the click instead of pointing a
+                // cursor at it (the wireframe phase-2 pattern).
+                await toggle.First.DispatchEventAsync("click");
             }
 
             try

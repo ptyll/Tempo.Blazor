@@ -8,15 +8,39 @@
 
 <PageTitle>@Loc["TmModelingEditor_Title"] - Tempo.Blazor</PageTitle>
 
-<TmModelingEditor ProviderKey="@ResolvedProviderKey"
-                  ShowProviderSelector="true"
-                  ProviderKeyChanged="HandleProviderChanged"
-                  ProviderDisplayName="ResolveDemoProviderDisplayName"
-                  NotationKey="@Notation"
-                  ViewpointKey="@Viewpoint"
-                  AllowNodeDrop="@AllowNodeDrop"
-                  ModelLoaderOverride="@ModelLoaderOverride"
-                  OnDiagramGenerated="HandleDiagramGenerated" />
+@* Demo only: the modeling editor resolves its layout from its own container width (desktop from
+   1200, the DiagramEditor pair). With the 296px demo sidebar a 1440 viewport leaves it ~1080px,
+   so from 1264px up (the 1200px desktop floor + the layout's 2rem side padding) this page
+   collapses the sidebar AND lifts the layout's max-w-7xl (1280px) cap, giving the editor the
+   full width of the viewport as soon as it can afford the desktop dock (a link back to the demo
+   index stays in the header) — the 1280x800 and 1440x900 baselines show the full docked desktop
+   workspace. The library breakpoints are untouched. *@
+<style>
+    @@media (min-width: 1264px) {
+        .demo-shell:has(.modeling-demo-page) aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }
+        .demo-shell:has(.modeling-demo-page) main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+        .demo-shell:has(.modeling-demo-page) main .max-w-7xl { max-width: none !important; }
+    }
+    .modeling-demo-page__index-link { display: none; }
+    @@media (min-width: 1264px) {
+        .modeling-demo-page__index-link { display: inline-block; margin-top: 1rem; scroll-margin-top: 5rem; color: var(--tm-color-primary-700, #1d4ed8); text-decoration: underline; }
+        .dark .modeling-demo-page__index-link, [data-theme="dark"] .modeling-demo-page__index-link { color: var(--tm-color-primary-300, #93c5fd); }
+    }
+</style>
+
+<div class="modeling-demo-page">
+    <a href="./" class="modeling-demo-page__index-link text-sm mb-2" data-testid="modeling-demo-index-link">← All demos</a>
+
+    <TmModelingEditor ProviderKey="@ResolvedProviderKey"
+                      ShowProviderSelector="true"
+                      ProviderKeyChanged="HandleProviderChanged"
+                      ProviderDisplayName="ResolveDemoProviderDisplayName"
+                      NotationKey="@Notation"
+                      ViewpointKey="@Viewpoint"
+                      AllowNodeDrop="@AllowNodeDrop"
+                      ModelLoaderOverride="@ModelLoaderOverride"
+                      OnDiagramGenerated="HandleDiagramGenerated" />
+</div>
 
 @code {
     [SupplyParameterFromQuery(Name = "provider")]

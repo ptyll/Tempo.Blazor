@@ -824,6 +824,78 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Forced_tablet_renders_the_docked_tablet_band()
+    {
+        // User decision (breakpoints): the Modeling pair is now 768/1200 — a forced Tablet editor
+        // is the shell's docked tablet band (at most one expanded panel), NOT the compact panel
+        // workspace: the compact branch stays below the editor's own mobile threshold.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded");
+            cut.Find(".tm-editor-shell").Should().NotBeNull("the docked tablet band renders through the shell");
+            cut.Find("[data-testid='modeling-preview-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull();
+            cut.FindAll("[data-testid='modeling-panel-tabs']").Should().BeEmpty("the compact tabs stay a mobile-threshold affordance");
+        });
+    }
+
+    [Fact]
+    public void Auto_editor_shell_resolves_its_own_container()
+    {
+        // Review fix (phase 5, unforced shell): the docked TmEditorShell is NOT pinned to the
+        // editor's resolved mode — an Auto shell measures its own container with the Modeling
+        // pair, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from THEIR
+        // own containers. Proof: with an Auto editor the editor root AND its shell both register
+        // with the layout-observer script using the Modeling thresholds (768/1200) — the shell's
+        // registration is exactly what a forced shell never makes. A forced editor pins the
+        // shell, and a forced mode never measures, so no observer registers the pair.
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
+        module.SetupVoid("observe", invocation => true);
+
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        using var auto = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        auto.WaitForAssertion(() => auto.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        auto.WaitForAssertion(() =>
+            ModelingPairObservations(module).Should().HaveCountGreaterThanOrEqualTo(2,
+                "the editor root AND its shell classify the Modeling pair (the preview's own editor registers the same pair)"));
+        var autoObservations = ModelingPairObservations(module).Count;
+
+        // A forced editor pins the shell: neither the editor root nor the shell measures, so the
+        // registration count does not grow when a second, forced editor mounts.
+        using var forced = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+        forced.WaitForAssertion(() => forced.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+        ModelingPairObservations(module).Should().HaveCount(autoObservations,
+            "a forced editor never measures (its own root or the shell)");
+    }
+
+    /// <summary>Whether the invocation registers a layout observer with the Modeling pair (768/1200).</summary>
+    private static bool RegistersModelingPair(JSRuntimeInvocation invocation)
+    {
+        if (invocation.Arguments.Count < 4)
+        {
+            return false;
+        }
+
+        // ObserveOptions is an anonymous record; its text form carries the thresholds.
+        var text = invocation.Arguments[3]?.ToString() ?? string.Empty;
+        return text.Contains("sm = 768", StringComparison.Ordinal)
+            && text.Contains("lg = 1200", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<JSRuntimeInvocation> ModelingPairObservations(BunitJSModuleInterop module)
+        => module.Invocations.Where(RegistersModelingPair).ToList();
+
+    [Fact]
     public void Issues_panel_collapse_toggle_has_aria_expanded_and_persists_during_session()
     {
         using var cut = RenderDesktopEditor();
@@ -838,8 +910,14 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
         {
             cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("false");
-            cut.FindAll("[data-testid='modeling-issue-list']").Should().BeEmpty("a collapsed panel renders the header only");
         });
+
+        // The body STAYS in the DOM under [hidden] (a11y review, phase 5): aria-controls never
+        // points at a missing id, but the list is not visible to anyone.
+        var collapsedBody = cut.Find("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content");
+        collapsedBody.GetAttribute("hidden").Should().NotBeNull("a collapsed dock hides its body");
+        cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-controls")
+            .Should().Be(collapsedBody.GetAttribute("id"), "aria-controls targets the persistent body id");
 
         // The state is the session's: an unrelated re-render must not re-expand the panel.
         cut.Render();
@@ -851,6 +929,8 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-issue-list']").Should().NotBeNull();
             cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("true");
         });
+        cut.Find("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
+            .GetAttribute("hidden").Should().BeNull("an expanded dock shows its body");
     }
 
     [Fact]
@@ -923,7 +1003,20 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
 
         var sourceTab = cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")
             .Single(tab => tab.TextContent.Contains("Source"));
-        sourceTab.QuerySelector(".tm-tab__badge").Should().NotBeNull("a stale source marks the Source tab");
+        var badge = sourceTab.QuerySelector(".tm-tab__badge");
+        badge.Should().NotBeNull("a stale source marks the Source tab");
+        badge!.TextContent.Should().Contain("Stale", "the badge is a real word (a11y review, phase 5)");
+        badge.TextContent.Should().NotContain("\u2022", "never a bare glyph");
+        sourceTab.GetAttribute("data-stale").Should().Be("true");
+
+        // The tab's accessible NAME stays its visible label; the stale hint is an sr-only span
+        // OUTSIDE the tablist, referenced through aria-describedby.
+        sourceTab.GetAttribute("aria-label").Should().BeNull();
+        var hintId = sourceTab.GetAttribute("aria-describedby");
+        hintId.Should().NotBeNull();
+        var hint = cut.Find($"#{hintId}");
+        hint.ClassList.Should().Contain("tm-sr-only");
+        hint.TextContent.Should().Contain("stale", "the hint carries the localized SourceStaleHint text");
 
         // And a fresh source shows no indicator.
         using var fresh = Render<TmModelingEditor>(parameters => parameters
@@ -933,6 +1026,8 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         var freshTab = fresh.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")
             .Single(tab => tab.TextContent.Contains("Source"));
         freshTab.QuerySelector(".tm-tab__badge").Should().BeNull("a fresh source shows no tab indicator");
+        freshTab.GetAttribute("data-stale").Should().BeNull();
+        freshTab.GetAttribute("aria-describedby").Should().BeNull();
     }
 
     [Fact]

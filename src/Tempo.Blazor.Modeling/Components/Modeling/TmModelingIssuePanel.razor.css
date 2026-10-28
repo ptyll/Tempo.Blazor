@@ -11,14 +11,25 @@
     color: var(--tm-color-text);
 }
 
+/* Review fix (phase 5): the dock header is a compact strip — 0.5rem/1rem padding keeps more of
+   the clamped dock row for the issue list itself. */
 .tm-modeling-issue-panel__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
-    padding: var(--tm-space-3) var(--tm-space-4);
+    padding: var(--tm-space-2) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
+}
+
+/* The count badge sits next to the title (review fix, phase 5) — one wrapper so the number
+   reads as part of the heading and the toggle keeps its own trailing edge. */
+.tm-modeling-issue-panel__heading {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
 }
 
 .tm-modeling-issue-panel__title {
@@ -40,13 +51,20 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    min-width: var(--tm-touch-target);
-    min-height: var(--tm-touch-target);
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
     padding: 0;
     border: 1px solid transparent;
     border-radius: var(--tm-radius-md);
     background: transparent;
     color: var(--tm-text-secondary);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-issue-panel__toggle {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-modeling-issue-panel__toggle:hover {
@@ -94,12 +112,14 @@
     line-height: var(--tm-line-height-tight);
 }
 
+/* Review fix (phase 5): no min-height floor and tighter padding — the empty state must stay
+   fully visible inside the clamped dock row (1280x800 baseline) instead of being clipped. */
 .tm-modeling-issue-panel__empty {
     display: grid;
     align-content: center;
     gap: var(--tm-space-2);
-    min-height: calc(var(--tm-space-16) * 2);
-    padding: var(--tm-space-4);
+    min-height: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
     line-height: var(--tm-line-height-normal);
@@ -116,7 +136,9 @@
     gap: var(--tm-space-2);
     min-height: 0;
     margin: 0;
-    padding: var(--tm-space-3);
+    /* Review fix (phase 5): the tighter padding keeps two full issue rows inside the clamped
+       dock row at the 1440x900/1280x800 baselines (the dock is a minority of the column). */
+    padding: var(--tm-space-2);
     overflow: auto;
     list-style: none;
 }
