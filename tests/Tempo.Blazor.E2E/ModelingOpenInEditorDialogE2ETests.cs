@@ -6,9 +6,10 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// Modeling redesign phase 4 — the "Open in editor" dialog on the core TmModal. Covers the modal
 /// contracts the phase introduces: the Tab cycle stays inside the dialog (focus trap), Escape
-/// closes it and restores the trigger focus, Escape consumed by the embedded diagram editor
-/// (active search, focus inside the editor container) does NOT close it, a scrim click does not
-/// close it (live changes propagate without a footer), and the dialog shows ONE header — the
+/// closes it and restores the trigger focus, the editor's CAPTURE-phase Escape consumers close
+/// THEIR surface first (open search panel, open context menu) and keep the dialog open, while an
+/// Escape nothing consumes (a focused canvas without a selection) closes it, a scrim click does
+/// not close it (live changes propagate without a footer), and the dialog shows ONE header — the
 /// diagram editor renders without its own document title.
 /// </summary>
 [TestClass]
@@ -54,28 +55,67 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Escape with the diagram editor's search open does not close the dialog — the editor consumes Escape before the dialog layer")]
-    public async Task Escape_with_active_diagram_editor_search_does_not_close_the_dialog()
+    [Description("Escape with the search panel open closes the SEARCH (and keeps the dialog), the second Escape closes the dialog")]
+    public async Task Escape_with_open_search_closes_the_search_first_and_the_dialog_second()
     {
         var page = await OpenPageWithDialogAsync();
 
-        // Open the diagram editor's search, then put the focus ON THE CANVAS — the editor's
-        // canvas layer consumes Escape (draw.io ordering: cancel/search/selection before any
-        // dialog layer), so the focus trap never sees an unhandled Escape.
-        var searchToggle = page.Locator(
-            "[data-testid='modeling-open-diagram-editor'] [data-tm-group='search'] button");
-        await searchToggle.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
-        await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-canvas")
+        // Open the diagram editor's search and focus its INPUT: the editor's capture-phase Escape
+        // consumer owns this Escape (it closes the search surface and marks the event), so the
+        // dialog behind the editor must not close on it.
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        await dialog.Locator("[data-tm-group='search'] button")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        var searchPanel = dialog.Locator(".tm-diagram-search-panel");
+        await searchPanel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await searchPanel.Locator("input").First.FocusAsync();
 
         await page.Keyboard.PressAsync("Escape");
 
-        var overlay = page.Locator("[data-testid='modeling-open-diagram-editor']");
-        await Assertions.Expect(overlay).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
-        await Assertions.Expect(page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel"))
-            .ToHaveCountAsync(1);
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+        await Assertions.Expect(searchPanel).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
+        // The close path moved the focus back onto the canvas (no selection, no session) — the
+        // SECOND Escape is consumed by nobody, so the dialog layer closes.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+    }
+
+    [TestMethod]
+    [Description("Escape on a focused canvas with no selection consumes nothing — the dialog closes")]
+    public async Task Escape_on_empty_canvas_closes_the_dialog()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        // Focus the canvas (a press on the empty canvas area selects nothing) — the canvas Escape
+        // branch has nothing to consume and stays unmarked, so the trap closes the dialog.
+        await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-canvas")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000, Position = new Position { X = 10, Y = 10 } });
+
+        await page.Keyboard.PressAsync("Escape");
+
+        await Assertions.Expect(page.Locator("[data-testid='modeling-open-diagram-editor']"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+    }
+
+    [TestMethod]
+    [Description("Escape with the diagram context menu open closes the MENU and keeps the dialog open")]
+    public async Task Escape_with_open_context_menu_closes_the_menu_and_keeps_the_dialog()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        // Open the editor's custom context menu on a node, then press Escape: the menu's
+        // capture-phase key handler marks the Escape as handled (menu closes), the dialog stays.
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        await dialog.Locator(".tm-diagram-node").First
+            .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000 });
+        var contextMenu = dialog.Locator(".tm-diagram-editor__context-menu");
+        await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        await page.Keyboard.PressAsync("Escape");
+
+        await Assertions.Expect(contextMenu).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
     }
 
     [TestMethod]
@@ -109,13 +149,26 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
     }
 
+    [TestMethod]
+    [Description("The embedded editor resolves DESKTOP from the dialog body at 1280x800 (LayoutBreakpoints 768/1024)")]
+    public async Task Embedded_editor_resolves_desktop_inside_the_dialog_at_1280x800()
+    {
+        // The dialog body (~90vw ≈ 1152px) is its own layout scope: the embedded editor carries
+        // LayoutBreakpoints 768/1024 and must resolve desktop even at a 1280x800 VIEWPORT.
+        var page = await OpenPageWithDialogAsync(1280, 800);
+
+        var editor = page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor");
+        await Assertions.Expect(editor).ToHaveAttributeAsync(
+            "data-editor-layout", "desktop", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+    }
+
     /// <summary>Opens the loaded modeling page and the open-editor dialog.</summary>
-    private async Task<IPage> OpenPageWithDialogAsync()
+    private async Task<IPage> OpenPageWithDialogAsync(int width = 1440, int height = 900)
     {
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1440, 900);
+        await page.SetViewportSizeAsync(width, height);
         await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")

@@ -174,10 +174,14 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
-    /// <summary>Theme setup shared with <c>ModelingAccessibilityM25E2ETests</c>: the dark tokens
-    /// are stamped on the document element after load; the indigo accent is the demo's colour
-    /// theme (localStorage `tm-demo-color-theme=indigo`, consumed by the demo's color-theme.js
-    /// before Blazor boots), seeded through the context init script.</summary>
+    /// <summary>Theme setup shared with <c>ModelingAccessibilityM25E2ETests</c>: the dark theme is
+    /// applied by CLICKING the demo's ThemeToggle — the demo's ThemeService owns the
+    /// <c>.demo-shell</c> <c>data-theme</c> attribute and the Tailwind <c>dark</c> class, so
+    /// stamping <c>&lt;html&gt;</c> was never enough: <c>querySelector('[data-theme]')</code>
+    /// returned the <c>&lt;html&gt;</c> element we had just stamped and <c>.demo-shell</c> stayed
+    /// LIGHT (the dark baselines were mislabeled light shots). The indigo accent is the demo's
+    /// colour theme (localStorage `tm-demo-color-theme=indigo`, consumed by the demo's
+    /// color-theme.js before Blazor boots), seeded through the context init script.</summary>
     private async Task<IPage> OpenThemedModelingPageAsync(string query, string theme, int width, int height)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
@@ -203,15 +207,35 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
         if (theme.Contains("dark", StringComparison.Ordinal))
         {
-            await page.EvaluateAsync(
-                """
-                () => {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    document.documentElement.classList.add('tm-dark', 'dark');
-                    document.body.classList.add('tm-dark', 'dark');
-                    document.querySelector('[data-theme]')?.setAttribute('data-theme', 'dark');
-                }
-                """);
+            // The desktop toggle lives in the fixed sidebar (the DOM-first one is the mobile
+            // header's, hidden at ≥1024px).
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                await toggle.First.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                // Fallback for a lagging circuit: force every data-theme scope dark, including the
+                // document element the tm-* dark token sheets key off.
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
             await page.WaitForTimeoutAsync(300);
         }
 

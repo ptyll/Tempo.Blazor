@@ -246,8 +246,13 @@
                      AdditionalAttributes="@OpenEditorModalAttributes">
                 <ChildContent>
                     <div class="tm-modeling-editor__open-editor-body">
+                        @* The dialog body is its own layout scope: the breakpoints ride on the
+                           editor instance (768/1024) so the embedded editor resolves desktop from
+                           the dialog body, not the viewport — the `data-editor-layout` contract
+                           the baselines and the E2E assert. *@
                         <TmDiagramEditor Document="@_openedEditorDocument"
                                          DocumentChanged="UpdateOpenedEditorDocumentAsync"
+                                         LayoutBreakpoints="@OpenEditorBreakpoints"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
                                          ShowTitle="false"
                                          ShowToolbox="true"

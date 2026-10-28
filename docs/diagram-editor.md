@@ -192,6 +192,29 @@ rails the non-expanded side while `LeftOpen`/`RightOpen` keep meaning *shown*. A
 always re-raises the inspector with the **Properties** tab active — even when the user had railed
 it after switching to Layers (the selection pins the tab; the palette returns to its rail).
 
+## Escape ordering (capture consumers)
+
+The editor is frequently layered inside a host overlay (a `TmModal` dialog). The core
+`tm-focus-trap.js` honors Escape on a document **bubble** keydown listener, so every editor Escape
+consumer registers in the **capture** phase on `document` and runs before any bubble listener —
+the ordering against the trap is deterministic, not registration-order dependent. A consumer that
+actually handles the Escape marks it (`preventDefault()` + `e.tmEscapeHandled = true`, both
+honored by the trap and by later consumers):
+
+- **Open search panel** (and **open "⋯" view menu**, stamped `data-open`): Escape closes that
+  surface — through the additive `TmDiagramCanvas` parameters `OnCloseSearch` / `OnCloseViewMenu`
+  (the editor closes the panel and refocuses the canvas container so the focus does not drop to
+  `body`) — and a host overlay behind the editor stays open. Both consumers only fire while the
+  focus is inside the editor root, so an Escape typed elsewhere is never stolen.
+- **A running gesture or a non-empty selection** (rotate, pending/drawing edge, waypoint or
+  whole-edge drag): the canvas key handler consumes the Escape and cancels the session.
+- **Nothing to consume** (empty canvas, no session): the canvas handler does NOT call
+  `preventDefault()` — the Escape keeps bubbling, which is what lets the host dialog close.
+  (Before the fix the canvas consumed every Escape unconditionally, and whether the editor or a
+  host dialog won depended on listener registration order.)
+- **The custom context menu** closes on Escape through its own capture-phase key handler, which
+  marks the event the same way.
+
 ## Motion
 
 Under `prefers-reduced-motion: reduce` the search-match pulse, template-card hover lift,

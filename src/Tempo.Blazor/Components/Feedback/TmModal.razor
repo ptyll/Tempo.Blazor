@@ -34,6 +34,7 @@
                           NoteOpenerOnMount="true"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
+                          AriaDescribedBy="@(string.IsNullOrEmpty(Subtitle) ? null : _subtitleId)"
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
                           RestoreFocusTarget="RestoreFocusTarget"
@@ -62,16 +63,20 @@
                         }
                         @if (!string.IsNullOrEmpty(Subtitle))
                         {
-                            <p class="tm-modal-subtitle">@Subtitle</p>
+                            <p id="@_subtitleId" class="tm-modal-subtitle">@Subtitle</p>
                         }
                     </div>
                     @if (ShowCloseButton)
                     {
-                        <button type="button"
+                        @* The splat goes FIRST so the built-in type/class/@onclick/aria-label win
+                           over a host-supplied attribute of the same name (last write wins in
+                           Blazor); a host splat may only ADD attributes (a test id, a focus hook).
+                        *@
+                        <button @attributes="CloseButtonAdditionalAttributes"
+                                type="button"
                                 class="tm-modal-close"
                                 @onclick="OnClose"
-                                aria-label="@Loc["TmModal_Close"]"
-                                @attributes="CloseButtonAdditionalAttributes">
+                                aria-label="@Loc["TmModal_Close"]">
                             <TmIcon Name="x" Size="IconSize.Sm" />
                         </button>
                     }
@@ -230,6 +235,9 @@
     private ElementReference _panel;
     private TmSheetHandle? _handle;
     private string _titleId = Guid.NewGuid().ToString("N");
+
+    /// <summary>Id of the subtitle paragraph, the scope's aria-describedby target.</summary>
+    private string _subtitleId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _disposed;

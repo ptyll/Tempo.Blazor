@@ -321,6 +321,7 @@ window.tmDiagramEditor = {
         inst._onContextMenu = (e) => this._onContextMenu(e, inst);
         inst._onDblClick = (e) => this._onDblClick(e, inst);
 
+        inst._onSearchEscape = (e) => this._onSearchEscape(e, inst);
         inst.container.addEventListener('mousedown', inst._onMouseDown);
         inst.container.addEventListener('wheel', inst._onWheel, { passive: false });
         inst.container.addEventListener('drop', inst._onDrop);
@@ -329,7 +330,13 @@ window.tmDiagramEditor = {
         inst.container.addEventListener('dblclick', inst._onDblClick);
         document.addEventListener('mousemove', inst._onMouseMove, true);
         document.addEventListener('mouseup', inst._onMouseUp, true);
-        document.addEventListener('keydown', inst._onKeyDown);
+        // Both keydown listeners run in the CAPTURE phase: the core tm-focus-trap module honors
+        // Escape on a document BUBBLE keydown listener, so a bubble-phase consumer would race it
+        // (registration order would decide the winner). Capture always runs before any bubble
+        // listener; a consumed Escape is marked with preventDefault + tmEscapeHandled so the trap
+        // (and any later consumer) skips it. See _onSearchEscape / _onKeyDown.
+        document.addEventListener('keydown', inst._onSearchEscape, true);
+        document.addEventListener('keydown', inst._onKeyDown, true);
         document.addEventListener('keyup', inst._onKeyUp);
     },
 
@@ -342,8 +349,48 @@ window.tmDiagramEditor = {
         if (inst._onDblClick) inst.container.removeEventListener('dblclick', inst._onDblClick);
         document.removeEventListener('mousemove', inst._onMouseMove, true);
         document.removeEventListener('mouseup', inst._onMouseUp, true);
-        document.removeEventListener('keydown', inst._onKeyDown);
+        if (inst._onSearchEscape) {
+            document.removeEventListener('keydown', inst._onSearchEscape, true);
+            inst._onSearchEscape = null;
+        }
+        document.removeEventListener('keydown', inst._onKeyDown, true);
         document.removeEventListener('keyup', inst._onKeyUp);
+    },
+
+    // ── Order-independent Escape consumers (capture phase) ───────────────────
+    // The host page may layer this editor inside an overlay (a TmModal dialog) whose focus trap
+    // honors Escape on a document BUBBLE keydown listener. Any consumer registered in the bubble
+    // phase would be order-dependent against it, so the editor's Escape consumers run in the
+    // CAPTURE phase and mark an Escape they actually handle (preventDefault + tmEscapeHandled) —
+    // the trap and any later consumer skip a handled one. An Escape NOBODY here consumes must stay
+    // unmarked so it keeps bubbling and closes the host overlay (draw.io ordering: an empty canvas
+    // Escape belongs to the dialog).
+
+    // Escape while the search panel (or the "⋯" view menu) is open closes THAT surface without
+    // closing the host overlay. The panel exists only while open (Blazor renders it conditionally);
+    // the view menu is stamped data-open while open. Both only consume when the focus is inside the
+    // editor root, so an Escape typed elsewhere (another surface of the host page) is not stolen.
+    _onSearchEscape: function (e, inst) {
+        if (!inst.container || !inst.container.closest || !inst.dotNetRef) return;
+        if (!e || e.key !== 'Escape' || e.defaultPrevented || e.tmEscapeHandled) return;
+        const root = inst.container.closest('.tm-diagram-editor');
+        if (!root) return;
+        if (!root.contains(document.activeElement)) return;
+
+        const panel = root.querySelector('.tm-diagram-search-panel');
+        if (panel) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            inst.dotNetRef.invokeMethodAsync('OnSearchEscape');
+            return;
+        }
+
+        const viewMenu = root.querySelector('.tm-diagram-editor__view-menu[data-open]');
+        if (viewMenu) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            inst.dotNetRef.invokeMethodAsync('OnViewMenuEscape');
+        }
     },
 
     _onDrop: function (e, inst) {
@@ -3035,10 +3082,19 @@ window.tmDiagramEditor = {
             return;
         }
 
+        // Escape consumes ONLY what this editor actually handles (a running gesture/session or a
+        // non-empty selection). The preventDefault lives inside each consuming branch: an Escape
+        // with nothing to consume stays unmarked, keeps bubbling and closes a host overlay (a
+        // TmModal dialog) through its own document-level listener — the capture registration plus
+        // _onSearchEscape above make the ordering against that listener deterministic.
         if (e.key === 'Escape') {
-            e.preventDefault();
-            if (inst.isRotating) { this._cancelRotateSession(inst); return; }
+            if (inst.isRotating) {
+                e.preventDefault();
+                this._cancelRotateSession(inst);
+                return;
+            }
             if (inst.isPendingEdgeDraw) {
+                e.preventDefault();
                 inst.isPendingEdgeDraw = false;
                 inst.pendingEdgeStart = null;
                 if (inst.toolMode === 'edge') {
@@ -3048,10 +3104,12 @@ window.tmDiagramEditor = {
                 return;
             }
             if (inst.isDrawingEdge) {
+                e.preventDefault();
                 this._cancelEdgeDraw(inst);
                 return;
             }
             if (inst.isDraggingWaypoint && inst.dotNetRef) {
+                e.preventDefault();
                 inst.isDraggingWaypoint = false;
                 inst.dragWaypointEdgeId = null;
                 inst.dragWaypointIndex = null;
@@ -3061,6 +3119,7 @@ window.tmDiagramEditor = {
                 return;
             }
             if (inst.isDraggingWholeEdge) {
+                e.preventDefault();
                 const edgeId = inst.dragWholeEdgeId;
                 const group = inst.svg.querySelector('g.tm-diagram-edge-group[data-edge-id="' + edgeId + '"]');
                 if (group) {
@@ -3073,9 +3132,12 @@ window.tmDiagramEditor = {
                 inst.container.style.cursor = inst.toolMode === 'pan' ? 'grab' : '';
                 return;
             }
-            inst.selectedIds.clear();
-            this._updateSelection(inst);
-            inst.dotNetRef.invokeMethodAsync('OnClearSelection');
+            if (ids.length > 0) {
+                e.preventDefault();
+                inst.selectedIds.clear();
+                this._updateSelection(inst);
+                inst.dotNetRef.invokeMethodAsync('OnClearSelection');
+            }
             return;
         }
 
@@ -4035,6 +4097,13 @@ window.tmDiagramEditor = {
             };
             inst._menuKeyHandler = function (e) {
                 if (e.key === 'Escape') {
+                    // One gesture closes ONE layer: an Escape an earlier capture consumer already
+                    // handled (the search panel, the view menu) is not re-consumed here.
+                    if (e.defaultPrevented || e.tmEscapeHandled) return;
+                    // Capture-phase consumers (see _onSearchEscape): the open menu owns this
+                    // Escape — mark it so the focus trap (and the canvas handler) never see it.
+                    e.preventDefault();
+                    e.tmEscapeHandled = true;
                     if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
                     self._teardownMenu(inst);
                     return;
@@ -4064,7 +4133,9 @@ window.tmDiagramEditor = {
             // pointerdown in the CAPTURE phase, not mousedown: a touch tap on the canvas must
             // dismiss the menu too, before the pan / edge-draw sessions claim the press.
             document.addEventListener('pointerdown', inst._menuDismissHandler, true);
-            document.addEventListener('keydown', inst._menuKeyHandler);
+            // Escape must beat the bubble-phase focus trap (order-independent consumers):
+            // the key handler runs in the CAPTURE phase too.
+            document.addEventListener('keydown', inst._menuKeyHandler, true);
         }, 0);
     },
 
@@ -4076,7 +4147,7 @@ window.tmDiagramEditor = {
             inst._menuDismissHandler = null;
         }
         if (inst._menuKeyHandler) {
-            document.removeEventListener('keydown', inst._menuKeyHandler);
+            document.removeEventListener('keydown', inst._menuKeyHandler, true);
             inst._menuKeyHandler = null;
         }
         inst._menuOpen = false;

@@ -4278,6 +4278,18 @@
           "description": "Raised when the context menu should be closed (e.g. second right-click)."
         },
         {
+          "name": "OnCloseSearch",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when Escape is consumed by the editor capture-phase consumer because the search panel is open (and the focus is inside the editor). The host closes the panel; the event is marked as handled first, so an overlay behind the editor (a dialog focus trap) does not also close. Additive."
+        },
+        {
+          "name": "OnCloseViewMenu",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when Escape is consumed by the editor capture-phase consumer because the header view menu is open (and the focus is inside the editor). The host closes the menu. Additive."
+        },
+        {
           "name": "OnConnectArrowClicked",
           "type": "EventCallback<(string NodeId, string Direction)>",
           "isRequired": false,
@@ -5703,6 +5715,10 @@
     },
     {
       "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-engine.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-escape.test.mjs",
       "kind": "JavaScript"
     },
     {

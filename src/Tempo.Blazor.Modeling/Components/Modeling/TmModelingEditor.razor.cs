@@ -55,18 +55,56 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
 
-    /// <summary>Attributes of the open-editor TmModal overlay root (the preserved dialog test id).</summary>
-    private Dictionary<string, object> OpenEditorModalAttributes => new(StringComparer.Ordinal)
-    {
-        ["data-testid"] = TestId("modeling-open-diagram-editor")
-    };
+    /// <summary>
+    /// Layout thresholds of the EMBEDDED open-editor diagram editor: 768 / 1024 so the dialog body
+    /// (not the viewport) decides the editor's <c>data-editor-layout</c>. The dialog is ~90vw ×
+    /// 90vh, so a 1024–1280 px viewport renders a sub-1024px body that must resolve desktop —
+    /// the shared 640/1024 pair would drop it to tablet inside a desktop dialog.
+    /// </summary>
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints OpenEditorBreakpoints = new(768, 1024);
 
-    /// <summary>Attributes of the TmModal close button (the preserved test id + the focus hook).</summary>
-    private Dictionary<string, object> OpenEditorCloseButtonAttributes => new(StringComparer.Ordinal)
+    /// <summary>The TestIdPrefix the cached attribute dictionaries were built with.</summary>
+    private string? _cachedTestIdPrefix;
+
+    /// <summary>Cached attributes of the open-editor TmModal overlay root (the preserved dialog test id).</summary>
+    private Dictionary<string, object>? _openEditorModalAttributes;
+
+    /// <summary>Cached attributes of the TmModal close button (the preserved test id + the focus hook).</summary>
+    private Dictionary<string, object>? _openEditorCloseButtonAttributes;
+
+    /// <summary>
+    /// Attributes of the open-editor TmModal overlay root. Cached per <see cref="TmComponentBase.TestIdPrefix"/>
+    /// (the dictionary is re-created only when the prefix changes) so every render of the open dialog
+    /// reuses the same instance.
+    /// </summary>
+    private Dictionary<string, object> OpenEditorModalAttributes
+        => BuildOpenEditorAttributes(ref _openEditorModalAttributes);
+
+    /// <summary>
+    /// Attributes of the TmModal close button. Cached alongside <see cref="OpenEditorModalAttributes"/>.
+    /// </summary>
+    private Dictionary<string, object> OpenEditorCloseButtonAttributes
+        => BuildOpenEditorAttributes(ref _openEditorCloseButtonAttributes);
+
+    /// <summary>Returns the cached dictionary, rebuilding both when the TestIdPrefix changed.</summary>
+    private Dictionary<string, object> BuildOpenEditorAttributes(ref Dictionary<string, object>? cached)
     {
-        ["data-testid"] = TestId("modeling-open-diagram-close"),
-        ["data-modeling-focus"] = "open-editor-close"
-    };
+        if (cached is null || _cachedTestIdPrefix != TestIdPrefix)
+        {
+            _cachedTestIdPrefix = TestIdPrefix;
+            _openEditorModalAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-open-diagram-editor")
+            };
+            _openEditorCloseButtonAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-open-diagram-close"),
+                ["data-modeling-focus"] = "open-editor-close"
+            };
+        }
+
+        return cached;
+    }
 
     /// <summary>
     /// Title of the open-editor dialog: the document's title, falling back to the localized

@@ -12572,6 +12572,12 @@
           "description": "Whether the trap is active. An inactive scope renders its content without trapping."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description. Null renders no attribute."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,

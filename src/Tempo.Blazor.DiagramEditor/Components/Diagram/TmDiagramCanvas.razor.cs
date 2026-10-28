@@ -80,6 +80,21 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Raised when the user presses Ctrl+F.</summary>
     [Parameter] public EventCallback OnShowSearch { get; set; }
 
+    /// <summary>
+    /// Raised when Escape is consumed by the editor's capture-phase consumer because the search
+    /// panel is open (and the focus is inside the editor). The host closes the panel; the event is
+    /// marked as handled first, so an overlay behind the editor (a dialog focus trap) does not also
+    /// close. Additive — hosts that do not bind it keep the previous behavior.
+    /// </summary>
+    [Parameter] public EventCallback OnCloseSearch { get; set; }
+
+    /// <summary>
+    /// Raised when Escape is consumed by the editor's capture-phase consumer because the "⋯" view
+    /// menu is open (and the focus is inside the editor). The host closes the menu. Additive —
+    /// hosts that do not bind it keep the previous behavior.
+    /// </summary>
+    [Parameter] public EventCallback OnCloseViewMenu { get; set; }
+
     /// <summary>Raised when the user presses Ctrl+H (find and replace).</summary>
     [Parameter] public EventCallback OnShowReplace { get; set; }
 
@@ -1263,6 +1278,26 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnShowSearch")]
     public async Task JsOnShowSearch()
         => await OnShowSearch.InvokeAsync();
+
+    /// <summary>
+    /// Raised by the capture-phase Escape consumer when the editor root hosts an OPEN search panel
+    /// (or "⋯" view menu) and the focus is inside the editor: Escape closes THAT surface and must
+    /// not reach a host overlay behind the editor. The consumer marks the event
+    /// (<c>preventDefault</c> + <c>tmEscapeHandled</c>) before invoking, so a document-level bubble
+    /// listener (the TmModal focus trap) skips it regardless of registration order.
+    /// </summary>
+    [JSInvokable("OnSearchEscape")]
+    public async Task JsOnSearchEscape()
+        => await OnCloseSearch.InvokeAsync();
+
+    /// <summary>
+    /// Raised by the same capture-phase Escape consumer while the editor's "⋯" view menu is open
+    /// (<c>data-open</c> on <c>.tm-diagram-editor__view-menu</c>): Escape closes the menu without
+    /// closing a host overlay behind the editor.
+    /// </summary>
+    [JSInvokable("OnViewMenuEscape")]
+    public async Task JsOnViewMenuEscape()
+        => await OnCloseViewMenu.InvokeAsync();
 
     [JSInvokable("OnShowReplace")]
     public async Task JsOnShowReplace()
@@ -2453,6 +2488,15 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await ZoomToRect(node.X, node.Y, node.W, node.H, 40);
         await SetSelection(nodeId);
     }
+
+    /// <summary>
+    /// Moves the focus onto the canvas container. The editor's search-close path uses it so the
+    /// focus does not drop to <c>body</c> when the panel unmounts (the input that held the focus
+    /// dies with it) — the canvas stays the active element and the next Escape reaches the editor
+    /// root's own consumers first.
+    /// </summary>
+    public async Task FocusCanvasAsync()
+        => await _containerRef.FocusAsync();
 
     public async Task FocusOnEdge(string edgeId)
     {

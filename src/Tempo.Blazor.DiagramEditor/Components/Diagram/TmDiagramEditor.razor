@@ -245,7 +245,7 @@
                    even while closed, so the data-tm-group contract stays stable). *@
                 @if (ShowsViewMenu)
                 {
-                    <div class="tm-diagram-editor__view-menu" @onkeydown="OnViewMenuKeyDown">
+                    <div class="tm-diagram-editor__view-menu" data-open="@(_viewMenuOpen ? "true" : null)" @onkeydown="OnViewMenuKeyDown">
                         @if (_viewMenuOpen)
                         {
                             <div class="tm-diagram-editor__view-menu-backdrop" @onclick="CloseViewMenu"></div>
@@ -451,6 +451,8 @@
                                  OnConnectArrowClicked="OnConnectArrowClicked"
                                  OnShowSearch="OpenSearchPanel"
                                  OnShowReplace="OpenReplacePanel"
+                                 OnCloseSearch="HandleSearchEscape"
+                                 OnCloseViewMenu="HandleViewMenuEscape"
                                  OnQuickInsert="HandleQuickInsert"
                                  OnNavigateToCorner="HandleNavigateToCorner"
                                  OnSwitchPage="HandleSwitchPage"

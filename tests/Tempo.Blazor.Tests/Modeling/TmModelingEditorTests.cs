@@ -775,7 +775,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task Escape_is_not_handled_when_diagram_editor_consumes_it()
+    public async Task Escape_consuming_surfaces_close_without_closing_the_dialog()
     {
         var module = JSInterop.SetupModule(ModelingModulePath);
         module.SetupVoid("focusWithin", _ => true).SetVoidResult();
@@ -790,18 +790,32 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
         cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
 
-        // An Escape raised inside the diagram editor surface — its own view-settings menu is a
-        // Blazor consumer (the canvas search/drag consumers are JS-side, same order) — is
-        // consumed by the editor FIRST; the dialog layer must not close on it either.
-        var viewMenu = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__view-menu");
-        viewMenu.TriggerEvent("onkeydown", new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
-
-        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull(
-            "an Escape the diagram editor consumes must not close the dialog through the Blazor layer");
-
-        // Only the unhandled path — the focus-scope module callback — closes the dialog.
+        // The canvas' CAPTURE-phase Escape consumers raise OnCloseSearch / OnCloseViewMenu on the
+        // editor (the dialog stays open — the event was marked handled before the trap saw it).
         var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
             .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
+        var canvas = modal.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramCanvas>().Single();
+
+        // Search open → Escape closes the PANEL, not the dialog.
+        cut.Find("[data-testid='modeling-open-diagram-editor'] [data-tm-group='search'] button")
+            .Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
+            .Should().NotBeNull());
+        await cut.InvokeAsync(() => canvas.Instance.JsOnSearchEscape());
+        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-diagram-search-panel")
+            .Should().BeEmpty("the canvas' search Escape consumer closes the panel");
+        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull("the dialog stays open");
+
+        // View menu open → Escape closes the MENU, not the dialog.
+        cut.Find("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-editor-more']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__view-menu")
+            .GetAttribute("data-open").Should().Be("true"));
+        await cut.InvokeAsync(() => canvas.Instance.JsOnViewMenuEscape());
+        cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor__view-menu")
+            .GetAttribute("data-open").Should().BeNull("the canvas' view-menu Escape consumer closes the menu");
+        cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull("the dialog stays open");
+
+        // Only the unhandled path — the focus-scope module callback — closes the dialog.
         var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
         await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
         cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());

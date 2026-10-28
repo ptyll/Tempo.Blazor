@@ -347,6 +347,97 @@ public class TmModalTests : LocalizationTestBase
 
     #endregion
 
+    #region Close Button Tests
+
+    [Fact]
+    public void Modal_CloseButtonAdditionalAttributes_LandOnTheCloseButton()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.CloseButtonAdditionalAttributes, new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = "host-close",
+                ["data-foo"] = "bar"
+            }));
+
+        // Assert
+        var close = cut.Find(".tm-modal-close");
+        close.GetAttribute("data-testid").Should().Be("host-close");
+        close.GetAttribute("data-foo").Should().Be("bar");
+    }
+
+    [Fact]
+    public void Modal_CloseButtonAdditionalAttributes_DoNotReplaceBuiltins()
+    {
+        // Act — a host splat may only ADD attributes: type, class, @onclick and aria-label win.
+        bool closeCalled = false;
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.OnClose, EventCallback.Factory.Create(this, () => closeCalled = true))
+            .Add(m => m.CloseButtonAdditionalAttributes, new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["type"] = "submit",
+                ["class"] = "host-class",
+                ["aria-label"] = "Host label"
+            }));
+
+        // Assert
+        var close = cut.Find(".tm-modal-close");
+        close.GetAttribute("type").Should().Be("button", "the built-in type wins over the splat");
+        close.ClassList.Should().Contain("tm-modal-close", "the built-in class wins over the splat");
+        close.ClassList.Should().NotContain("host-class");
+        close.GetAttribute("aria-label").Should().NotBe("Host label", "the built-in accessible name wins over the splat");
+
+        close.Click();
+        closeCalled.Should().BeTrue("the built-in click handler survives the splat");
+    }
+
+    [Fact]
+    public void Modal_ShowCloseButtonFalse_RendersNoCloseButton()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.ShowCloseButton, false));
+
+        // Assert
+        cut.FindAll(".tm-modal-close").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Modal_Subtitle_IsTheScopeAriaDescribedByTarget()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.Subtitle, "Described"));
+
+        // Assert
+        var modal = cut.Find(".tm-modal");
+        var describedBy = modal.GetAttribute("aria-describedby");
+        describedBy.Should().NotBeNull("a subtitle describes the dialog for screen readers");
+        cut.Find(".tm-modal-subtitle").GetAttribute("id").Should().Be(describedBy);
+    }
+
+    [Fact]
+    public void Modal_WithoutSubtitle_RendersNoAriaDescribedBy()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test"));
+
+        // Assert
+        cut.Find(".tm-modal").GetAttribute("aria-describedby").Should().BeNull();
+    }
+
+    #endregion
+
     #region Position Tests
 
     [Theory]

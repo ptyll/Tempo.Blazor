@@ -1200,6 +1200,35 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _ = _canvas.SetActiveSearchResult(null);
     }
 
+    /// <summary>
+    /// Escape CONSUMED by the canvas' capture-phase consumer because the search panel is open
+    /// (focus inside the editor root): close the panel and move the focus back onto the canvas —
+    /// the input that held it dies with the panel, and without this the focus would drop to
+    /// <c>body</c>. The consumer marked the event (<c>preventDefault</c> + <c>tmEscapeHandled</c>)
+    /// BEFORE invoking, so a host overlay behind the editor (a dialog's focus trap) does not also
+    /// close on the same Escape. Double focus-restore note: the canvas is the restore target of
+    /// this path, while the TmModal host path restores the dialog trigger — the editor path is the
+    /// fallback that keeps the focus inside the editor when NO dialog sits behind it.
+    /// </summary>
+    private async Task HandleSearchEscape()
+    {
+        CloseSearchPanel();
+        if (_canvas is not null) await _canvas.FocusCanvasAsync();
+    }
+
+    /// <summary>
+    /// Escape CONSUMED by the canvas' capture-phase consumer because the header "⋯" view menu is
+    /// open (<c>data-open</c> on <c>.tm-diagram-editor__view-menu</c>): close the menu and hand the
+    /// focus back to its trigger — the menu items die with the render. The event is marked as
+    /// handled before this runs, so a host overlay behind the editor does not also close.
+    /// </summary>
+    private Task HandleViewMenuEscape()
+    {
+        _viewMenuOpen = false;
+        _viewMenuTriggerFocusPending = true;
+        return Task.CompletedTask;
+    }
+
     private void OnSearchQueryChanged(string query)
     {
         _searchQuery = query;

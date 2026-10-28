@@ -264,15 +264,35 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
 
         if (dark)
         {
-            await page.EvaluateAsync(
-                """
-                () => {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    document.documentElement.classList.add('tm-dark', 'dark');
-                    document.body.classList.add('tm-dark', 'dark');
-                    document.querySelector('[data-theme]')?.setAttribute('data-theme', 'dark');
-                }
-                """);
+            // Click the demo's ThemeToggle (the ThemeService owns .demo-shell's data-theme + the
+            // Tailwind dark class) and WAIT for the dark scope: stamping <html> alone was not
+            // enough — querySelector('[data-theme]') returned the html we had just stamped, so
+            // .demo-shell stayed light and the dark contrast pass measured a light page.
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                await toggle.First.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
             await page.WaitForTimeoutAsync(300);
         }
 

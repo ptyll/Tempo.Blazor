@@ -1352,8 +1352,11 @@ test('context menu a11y: the first enabled item is focused, arrows/Home/End rove
     doc.dispatch('keydown', { key: 'Home', preventDefault() {} });
     assert.equal(doc.activeElement, cut, 'Home returns to the first');
 
-    doc.dispatch('keydown', { key: 'Escape' });
+    const escape = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    doc.dispatch('keydown', escape);
     assert.deepEqual(closeCalls, ['CloseContextMenu'], 'Escape closes the menu');
+    assert.equal(escape.defaultPrevented, true, 'the menu owns the Escape: the capture consumer marks it');
+    assert.equal(escape.tmEscapeHandled, true, 'the bubble-phase focus trap honors the flag');
     assert.equal(doc.count('keydown'), 0, 'the key handler is removed with the menu');
 });
 
