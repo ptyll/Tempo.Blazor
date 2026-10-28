@@ -60,6 +60,50 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Selects_have_visible_labels_above_field()
+    {
+        using var cut = Render<TmModelingViewSelector>(parameters => parameters
+            .Add(p => p.NotationKey, "bpmn"));
+
+        var field = cut.Find("label.tm-modeling-view-selector__field");
+
+        // MO3: the visible label is the FIRST child inside the field — it sits ABOVE the select
+        // (the old markup kept the label text but the phase contract locks the stacking).
+        field.Children.Should().HaveCountGreaterThan(1);
+        field.Children[0].TagName.Should().Be("SPAN", "the label text renders above the field");
+        field.Children[0].TextContent.Should().Contain("Notation");
+        field.Children.Last().TagName.Should().Be("SELECT");
+
+        var viewpointField = cut.FindAll("label.tm-modeling-view-selector__field").ElementAt(1);
+        viewpointField.Children[0].TextContent.Should().Contain("Viewpoint");
+        viewpointField.Children.Last().TagName.Should().Be("SELECT");
+    }
+
+    [Fact]
+    public void Select_field_height_comes_from_the_input_height_token()
+    {
+        var css = File.ReadAllText(FindViewSelectorCssPath());
+
+        css.Should().Contain("var(--tm-input-height-md)",
+            "the select height matches the new provider select (unified header fields, MO3)");
+        css.Should().NotContain("#", "no hardcoded colors — tokens only");
+    }
+
+    private static string FindViewSelectorCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingViewSelector.razor.css");
+    }
+
+    [Fact]
     public void Selecting_viewpoint_emits_selected_value()
     {
         string? selected = null;

@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
@@ -195,6 +196,40 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Open_in_editor_is_primary_and_generate_is_secondary()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.OnGenerateRequested, EventCallback.Factory.Create(this, () => { })));
+
+        var generate = cut.FindComponents<TmButton>()
+            .Single(button => button.Markup.Contains("modeling-generate-diagram-button"));
+        var open = cut.FindComponents<TmButton>()
+            .Single(button => button.Markup.Contains("modeling-open-in-editor-button"));
+
+        open.Instance.Variant.Should().Be(ButtonVariant.Primary,
+            "'Open in editor' is the preview header's primary action (MO3)");
+        generate.Instance.Variant.Should().Be(ButtonVariant.Secondary,
+            "'Generate diagram' is the secondary action (MO3)");
+    }
+
+    [Fact]
+    public void Preview_header_wraps_instead_of_clipping()
+    {
+        var css = File.ReadAllText(FindPreviewCssPath());
+
+        var headerRule = ExtractRule(css, ".tm-modeling-diagram-preview__header");
+        headerRule.Should().Contain("flex-wrap: wrap",
+            "the preview header wraps at narrow columns instead of clipping the actions (carry-forward from phase 2 review)");
+        headerRule.Should().NotContain("nowrap");
+
+        var titleRule = ExtractRule(css, ".tm-modeling-diagram-preview__title-group h3");
+        titleRule.Should().NotContain("white-space: nowrap",
+            "the preview title wraps instead of truncating to 'Dia…' at 1024");
+        titleRule.Should().NotContain("text-overflow: ellipsis");
+    }
+
+    [Fact]
     public void Preview_has_no_positional_toolbar_css()
     {
         var css = File.ReadAllText(FindPreviewCssPath());
@@ -211,6 +246,20 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             "spacer visibility must come from the editor API, not from Modeling CSS");
         css.Should().NotContain("tm-toolbar-btn--active",
             "Modeling must not restyle internal editor toolbar button states");
+        css.Should().NotContain("tm-diagram-editor__",
+            "Modeling must not style ANY diagram editor internal (extended from DiagramEditor Fáze 1 — the toolbar contract is data-tm-group + presets, never CSS)");
+        css.Should().NotContain("data-tm-group",
+            "the frozen group attribute is a host/E2E hook, never a Modeling CSS selector");
+    }
+
+    /// <summary>Returns the body of the first CSS rule whose selector line starts with <paramref name="selector"/>.</summary>
+    private static string ExtractRule(string css, string selector)
+    {
+        var index = css.IndexOf(selector, StringComparison.Ordinal);
+        index.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must style {selector}");
+        var open = css.IndexOf('{', index);
+        var close = css.IndexOf('}', open);
+        return css[(open + 1)..close];
     }
 
     private static string FindPreviewCssPath()

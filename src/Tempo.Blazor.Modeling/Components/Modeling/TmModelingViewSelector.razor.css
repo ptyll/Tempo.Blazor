@@ -21,7 +21,8 @@
 .tm-modeling-view-selector__field select {
     width: 100%;
     min-width: 0;
-    padding: var(--tm-space-2) var(--tm-space-8) var(--tm-space-2) var(--tm-space-3);
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-8) 0 var(--tm-space-3);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);

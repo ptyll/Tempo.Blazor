@@ -39,11 +39,11 @@
                         </div>
                     }
                 </dl>
-                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-description">
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-description")">
                     <h4>@Loc["TmModelingInspector_Description"]</h4>
                     <p>@(string.IsNullOrWhiteSpace(Element.Description) ? Loc["TmModelingInspector_NoDescription"] : Element.Description)</p>
                 </section>
-                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-governance">
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-governance")">
                     <h4>@Loc["TmModelingInspector_Governance"]</h4>
                     <dl class="tm-modeling-inspector__summary">
                         @foreach (var definition in GovernanceDefinitions)
@@ -55,11 +55,11 @@
                         }
                     </dl>
                 </section>
-                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-properties">
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
                     <h4>@Loc["TmModelingInspector_Properties"]</h4>
                     @if (Element.Properties.Count == 0)
                     {
-                        <p class="tm-modeling-inspector__empty-note" data-testid="modeling-inspector-no-properties">@Loc["TmModelingInspector_NoProperties"]</p>
+                        <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
                     }
                     else
                     {
@@ -95,11 +95,11 @@
                         </div>
                     }
                 </dl>
-                <section class="tm-modeling-inspector__section" data-testid="modeling-inspector-properties">
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
                     <h4>@Loc["TmModelingInspector_Properties"]</h4>
                     @if (Relationship.Properties.Count == 0)
                     {
-                        <p class="tm-modeling-inspector__empty-note" data-testid="modeling-inspector-no-properties">@Loc["TmModelingInspector_NoProperties"]</p>
+                        <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
                     }
                     else
                     {

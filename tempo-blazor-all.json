@@ -43311,6 +43311,12 @@
               "description": "Callback raised when the user opens the generated diagram in the full diagram editor."
             },
             {
+              "name": "OnProviderChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised when the editor provider selection changes (semantics of OnNotationChanged for the provider)."
+            },
+            {
               "name": "OnViewpointChanged",
               "type": "EventCallback<string?>",
               "isRequired": false,
@@ -43321,6 +43327,19 @@
               "type": "string?",
               "isRequired": false,
               "description": "Provider key used to select the semantic model provider. Null or empty values render the empty state."
+            },
+            {
+              "name": "ProviderKeyChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised when the user picks a provider in the header selector; enables @bind-ProviderKey. The editor reloads the model with the selected provider."
+            },
+            {
+              "name": "ShowProviderSelector",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders a labeled \"Provider\" select in the editor header that lists every registered IModelingModelProvider (MO3). Default false keeps the pre-selector behavior: the provider stays a labeled value chip and remains host-owned through ProviderKey.",
+              "default": "false"
             },
             {
               "name": "ViewpointKey",
@@ -43336,11 +43355,15 @@
             },
             {
               "name": "tm-modeling-editor__status-item",
-              "description": "One separated status item; the first carries the state icon."
+              "description": "One separated status item; the first carries the state icon (and the last-loaded time when the model carries metadata, MO3)."
             },
             {
               "name": "tm-modeling-editor__status-icon",
               "description": "Leading status icon (check/alert/clock by state), aria-hidden."
+            },
+            {
+              "name": "tm-modeling-editor__field",
+              "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; mirrors the TmModelingViewSelector fields."
             }
           ]
         },

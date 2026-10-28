@@ -7,11 +7,16 @@
     color: var(--tm-color-text);
 }
 
+/* Carry-forward (phase 2 review): in a narrow preview column (1024 viewport) the header used
+   to truncate the title to "Dia…" and clip the Generate/Open buttons — the header now wraps
+   and the title breaks instead of ellipsizing. Tokens only. */
 .tm-modeling-diagram-preview__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
+    row-gap: var(--tm-space-1);
     padding: var(--tm-space-3) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
@@ -25,12 +30,10 @@
 
 .tm-modeling-diagram-preview__title-group h3 {
     margin: 0;
-    overflow: hidden;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: break-word;
 }
 
 .tm-modeling-diagram-preview__title-group span,
@@ -97,13 +100,10 @@
     border-radius: var(--tm-radius-md);
 }
 
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__page-tabs {
-    min-height: calc(var(--tm-space-7) + var(--tm-space-1));
-}
-
-/* Toolbar visibility is decided by TmDiagramEditor's ToolbarPreset/ToolbarGroups API
-   (the preview uses ToolbarPreset.Viewer) — never by hiding internal editor DOM here.
-   The header buttons use the core .tm-btn-primary styling (--tm-color-on-primary token). */
+/* Toolbar (and any internal editor DOM) visibility and sizing are decided by TmDiagramEditor's
+   ToolbarPreset/ToolbarGroups API (the preview uses ToolbarPreset.Viewer) — never by styling
+   internal editor DOM here. The header buttons use the core .tm-btn-primary styling
+   (--tm-color-on-primary token). */
 
 .tm-modeling-diagram-preview__empty-diagram-hint {
     position: absolute;

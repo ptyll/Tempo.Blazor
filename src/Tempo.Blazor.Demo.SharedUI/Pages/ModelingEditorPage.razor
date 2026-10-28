@@ -8,6 +8,8 @@
 <PageTitle>@Loc["TmModelingEditor_Title"] - Tempo.Blazor</PageTitle>
 
 <TmModelingEditor ProviderKey="@ResolvedProviderKey"
+                  ShowProviderSelector="true"
+                  ProviderKeyChanged="HandleProviderChanged"
                   NotationKey="@Notation"
                   ViewpointKey="@Viewpoint"
                   AllowNodeDrop="@AllowNodeDrop"
@@ -34,12 +36,22 @@
     public bool? Fresh { get; set; }
 
     private DiagramDocument? _lastGeneratedDocument;
+    private string? _selectedProvider;
 
     private bool AllowNodeDrop => !string.Equals(Scenario, "drag-readonly", StringComparison.OrdinalIgnoreCase);
 
-    private string? ResolvedProviderKey => string.IsNullOrWhiteSpace(Provider)
-        ? DemoModelingModelProvider.ProviderKeyValue
-        : Provider;
+    // The ?provider= query stays the deep-link source; an in-editor selector change takes
+    // precedence for the session (the editor keeps its own override until the param changes).
+    private string? ResolvedProviderKey => _selectedProvider
+        ?? (string.IsNullOrWhiteSpace(Provider)
+            ? DemoModelingModelProvider.ProviderKeyValue
+            : Provider);
+
+    private Task HandleProviderChanged(string? providerKey)
+    {
+        _selectedProvider = string.IsNullOrWhiteSpace(providerKey) ? null : providerKey;
+        return Task.CompletedTask;
+    }
 
     private Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>? ModelLoaderOverride =>
         string.Equals(Scenario, "error", StringComparison.OrdinalIgnoreCase)

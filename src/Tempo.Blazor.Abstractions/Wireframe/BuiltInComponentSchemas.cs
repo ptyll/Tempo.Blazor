@@ -2680,6 +2680,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("title", "Title", PropType.String, "Model", cat: "Content"),
+                P("showProviderSelector", "Show Provider Selector", PropType.Bool, true, cat: "Content"),
             ]
         };
 

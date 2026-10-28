@@ -60,6 +60,41 @@
     max-width: 100%;
 }
 
+/* MO3: the header provider select mirrors the TmModelingViewSelector fields (label above the
+   field, --tm-input-height-md) so the three labeled selects read as one row. */
+.tm-modeling-editor__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: calc(var(--tm-space-16) * 2);
+    max-width: calc(var(--tm-space-16) * 8);
+}
+
+.tm-modeling-editor__field > span {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-editor__field select {
+    width: 100%;
+    min-width: 0;
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-8) 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-modeling-editor__field select:focus {
+    border-color: var(--tm-color-primary);
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Without the selector the provider stays a single labeled value chip (MO3). */
 .tm-modeling-editor__chips {
     display: flex;
     flex-wrap: wrap;
@@ -413,9 +448,10 @@
         flex-direction: column;
     }
 
+    .tm-modeling-editor__field,
     .tm-modeling-editor__chips {
-        justify-content: flex-start;
         width: 100%;
+        max-width: 100%;
     }
 
     .tm-modeling-editor__chip {
@@ -506,11 +542,6 @@
     .tm-modeling-editor__toolbar {
         gap: var(--tm-space-3);
         padding: var(--tm-space-3);
-    }
-
-    .tm-modeling-editor__chips {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .tm-modeling-editor__chip {

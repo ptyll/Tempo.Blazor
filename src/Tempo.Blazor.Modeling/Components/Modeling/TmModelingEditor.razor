@@ -9,6 +9,7 @@
          data-state="@StateName"
          data-load-count="@_completedLoadCount"
          data-generation-count="@_completedGenerationCount"
+         data-provider="@EffectiveProviderKey"
          data-notation="@EffectiveNotationKey"
          data-viewpoint="@EffectiveViewpointKey"
          data-selected-element-id="@(_selectedElement?.Id ?? string.Empty)"
@@ -19,7 +20,7 @@
          data-diagram-edge-count="@(_document?.Edges.Count ?? 0)"
          data-issue-count="@IssueCount"
          data-active-panel="@ActivePanelName"
-         data-open-editor="@(_openedEditorDocument is not null).ToString().ToLowerInvariant()">
+         data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())">
     <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">
         <div class="tm-modeling-editor__title-group">
             <h2 class="tm-modeling-editor__title">@Loc["TmModelingEditor_Title"]</h2>
@@ -29,24 +30,41 @@
                 <TmBadge Variant="@StateBadgeVariant" Style="BadgeStyle.Subtle" Pill="true">@Loc[StateLabelKey]</TmBadge>
             </span>
         </div>
+        @* MO3: one provider surface. When the selector is enabled the labeled select owns the
+           value (and the model reloads on change); otherwise the provider stays a labeled
+           chip. The notation/viewpoint chips are gone — the labeled selects own those values. *@
+        @if (ShowProviderSelector)
+        {
+            <label class="tm-modeling-editor__field">
+                <span>@Loc["TmModelingEditor_Provider"]</span>
+                <select id="@_providerSelectId"
+                        data-testid="@TestId("modeling-provider-select")"
+                        value="@EffectiveProviderKey"
+                        @onchange="HandleProviderChangedAsync">
+                    @if (string.IsNullOrWhiteSpace(EffectiveProviderKey))
+                    {
+                        <option value="">@Loc["TmModelingEditor_SelectProvider"]</option>
+                    }
+                    @foreach (var option in ProviderOptions)
+                    {
+                        <option value="@option">@option</option>
+                    }
+                </select>
+            </label>
+        }
+        else
+        {
+            <div class="tm-modeling-editor__chips">
+                <span class="tm-modeling-editor__chip">
+                    <span>@Loc["TmModelingEditor_Provider"]</span>
+                    <strong>@DisplayProviderKey</strong>
+                </span>
+            </div>
+        }
         <TmModelingViewSelector NotationKey="@EffectiveNotationKey"
                                 ViewpointKey="@EffectiveViewpointKey"
                                 OnNotationChanged="ChangeNotationAsync"
                                 OnViewpointChanged="ChangeViewpointAsync" />
-        <div class="tm-modeling-editor__chips" aria-label="@Loc["TmModelingEditor_Context"]">
-            <span class="tm-modeling-editor__chip">
-                <span>@Loc["TmModelingEditor_Provider"]</span>
-                <strong>@DisplayProviderKey</strong>
-            </span>
-            <span class="tm-modeling-editor__chip">
-                <span>@Loc["TmModelingEditor_Notation"]</span>
-                <strong>@DisplayNotationKey</strong>
-            </span>
-            <span class="tm-modeling-editor__chip">
-                <span>@Loc["TmModelingEditor_Viewpoint"]</span>
-                <strong>@DisplayViewpointKey</strong>
-            </span>
-        </div>
     </header>
 
     @* keepLoadedSurface reloads (force reload over an already loaded model) keep _model alive
@@ -131,9 +149,12 @@
                surfaces the same modeling-editor-loading contract while the reload runs. *@
             @if (_state == ModelingEditorState.Loading)
             {
+                @* Carry-forward (phase 2 review): the state text is NOT repeated here — the
+                   title badge owns it. The indicator keeps the spinner and an sr-only
+                   announcement for assistive tech. *@
                 <div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
                     <TmSpinner Size="SpinnerSize.Sm" />
-                    <span>@Loc["TmModelingEditor_LoadingTitle"]</span>
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
                 </div>
             }
             <aside class="@GetPanelClass(ModelingEditorPanel.Tree, "tm-modeling-editor__panel tm-modeling-editor__tree")" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
@@ -176,12 +197,14 @@
                 role="status"
                 aria-live="polite"
                 aria-atomic="true">
-            @* Phase 2 (gap #3): a state icon leads the strip and each count is a separated item. *@
+            @* MO3 dedupe: the state text lives only on the title badge — the strip leads with
+               the state icon plus the last-loaded time (when the model carries metadata),
+               falling back to the state label without metadata. *@
             <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
                 <span class="tm-modeling-editor__status-icon" aria-hidden="true">
                     <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
                 </span>
-                @Loc[StateLabelKey]
+                @StatusStripStateText
             </span>
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Elements"]: <strong>@(_model?.Elements.Count ?? 0)</strong></span>
             <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_Relationships"]: <strong>@(_model?.Relationships.Count ?? 0)</strong></span>

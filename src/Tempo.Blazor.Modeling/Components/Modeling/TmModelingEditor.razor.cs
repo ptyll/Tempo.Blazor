@@ -31,8 +31,11 @@ public partial class TmModelingEditor : IAsyncDisposable
     private string? _activeLoadKey;
     private string? _effectiveNotationKey;
     private string? _effectiveViewpointKey;
+    private string? _effectiveProviderKey;
     private string? _lastNotationParameter;
     private string? _lastViewpointParameter;
+    private string? _lastProviderParameter;
+    private string _providerSelectId = $"tm-modeling-editor-{Guid.NewGuid():N}-provider";
     private IReadOnlyList<ModelingElementDto>? _visibleTreeElementsSource;
     private IReadOnlyList<ModelingElementDto> _visibleTreeElements = [];
     private string? _visibleTreeElementsNotationKey;
@@ -77,6 +80,20 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>Provider key used to select the semantic model provider. Null or empty values render the empty state.</summary>
     [Parameter] public string? ProviderKey { get; set; }
+
+    /// <summary>
+    /// Renders a labeled "Provider" select in the editor header that lists every registered
+    /// <see cref="IModelingModelProvider"/> (MO3). Default <c>false</c> keeps the pre-selector
+    /// behavior: the provider stays a labeled value chip and remains host-owned through
+    /// <see cref="ProviderKey"/>.
+    /// </summary>
+    [Parameter] public bool ShowProviderSelector { get; set; }
+
+    /// <summary>Raised when the user picks a provider in the header selector; enables <c>@bind-ProviderKey</c>. The editor reloads the model with the selected provider.</summary>
+    [Parameter] public EventCallback<string?> ProviderKeyChanged { get; set; }
+
+    /// <summary>Raised when the editor provider selection changes (semantics of <see cref="OnNotationChanged"/> for the provider).</summary>
+    [Parameter] public EventCallback<string?> OnProviderChanged { get; set; }
 
     /// <summary>Optional notation key passed to the selected provider and generator.</summary>
     [Parameter] public string? NotationKey { get; set; }
@@ -141,6 +158,23 @@ public partial class TmModelingEditor : IAsyncDisposable
         ? IconNames.AlertCircle
         : IconNames.Box;
 
+    /// <summary>Text of the first status strip item: the last-loaded time when the loaded model
+    /// carries metadata (shared "g" format with <see cref="TmModelingSourcePanel"/>), else the
+    /// state label. The state TEXT itself lives only on the title badge (MO3 dedupe).</summary>
+    private string StatusStripStateText
+    {
+        get
+        {
+            var loadedAt = _model?.Metadata.LoadedAt;
+            return loadedAt is { } timestamp && timestamp != default
+                ? string.Format(
+                    CultureInfo.CurrentCulture,
+                    Loc["TmModelingEditor_LastLoaded"],
+                    timestamp.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
+                : Loc[StateLabelKey];
+        }
+    }
+
     /// <summary>Leading status strip icon: check when loaded, alert on error, clock while loading.</summary>
     private string StatusStripIcon => _state switch
     {
@@ -150,15 +184,40 @@ public partial class TmModelingEditor : IAsyncDisposable
         _ => IconNames.Box
     };
 
-    private string DisplayProviderKey => string.IsNullOrWhiteSpace(ProviderKey) ? Loc["TmModelingEditor_NotSelected"] : ProviderKey!;
+    private string DisplayProviderKey => string.IsNullOrWhiteSpace(EffectiveProviderKey) ? Loc["TmModelingEditor_NotSelected"] : EffectiveProviderKey!;
+
+    /// <summary>The provider the editor loads from: the host parameter until the user picks
+    /// another one in the header selector (the in-editor override wins until the parameter
+    /// itself changes — same pattern as the notation/viewpoint overrides).</summary>
+    private string? EffectiveProviderKey => _effectiveProviderKey ?? ProviderKey;
+
+    /// <summary>Distinct registered provider keys for the header selector, ordered; the current
+    /// key is kept as an option even when no registered provider carries it (unknown-host-key
+    /// edge case) so the select never silently jumps to another value.</summary>
+    private IReadOnlyList<string> ProviderOptions
+    {
+        get
+        {
+            var keys = ModelProviders
+                .Select(provider => provider.ProviderKey)
+                .Where(key => !string.IsNullOrWhiteSpace(key))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(key => key, StringComparer.Ordinal)
+                .ToList();
+
+            var current = EffectiveProviderKey;
+            if (!string.IsNullOrWhiteSpace(current) && !keys.Contains(current, StringComparer.Ordinal))
+            {
+                keys.Insert(0, current);
+            }
+
+            return keys;
+        }
+    }
 
     private string EffectiveNotationKey => _effectiveNotationKey ?? string.Empty;
 
     private string EffectiveViewpointKey => _effectiveViewpointKey ?? string.Empty;
-
-    private string DisplayNotationKey => string.IsNullOrWhiteSpace(EffectiveNotationKey) ? Loc["TmModelingEditor_Default"] : EffectiveNotationKey;
-
-    private string DisplayViewpointKey => string.IsNullOrWhiteSpace(EffectiveViewpointKey) ? Loc["TmModelingEditor_Default"] : EffectiveViewpointKey;
 
     private string ActivePanelName => _activePanel switch
     {
@@ -236,7 +295,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         var loadCts = _loadCts;
         var loadVersion = ++_loadVersion;
 
-        if (string.IsNullOrWhiteSpace(ProviderKey) && ModelLoaderOverride is null)
+        if (string.IsNullOrWhiteSpace(EffectiveProviderKey) && ModelLoaderOverride is null)
         {
             SetEmpty();
             return;
@@ -277,7 +336,7 @@ public partial class TmModelingEditor : IAsyncDisposable
 
             var request = new ModelingModelRequest
             {
-                ProviderKey = ProviderKey ?? provider?.ProviderKey ?? string.Empty,
+                ProviderKey = EffectiveProviderKey ?? provider?.ProviderKey ?? string.Empty,
                 Notation = EffectiveNotationKey,
                 ViewpointKey = EffectiveViewpointKey,
                 Culture = CultureInfo.CurrentUICulture.Name
@@ -361,12 +420,12 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     private IModelingModelProvider? ResolveProvider()
     {
-        if (string.IsNullOrWhiteSpace(ProviderKey))
+        if (string.IsNullOrWhiteSpace(EffectiveProviderKey))
         {
             return null;
         }
 
-        return ModelProviders.FirstOrDefault(provider => string.Equals(provider.ProviderKey, ProviderKey, StringComparison.Ordinal));
+        return ModelProviders.FirstOrDefault(provider => string.Equals(provider.ProviderKey, EffectiveProviderKey, StringComparison.Ordinal));
     }
 
     private string BuildLoadKey()
@@ -377,7 +436,7 @@ public partial class TmModelingEditor : IAsyncDisposable
 
         return string.Join(
             '\u001f',
-            ProviderKey ?? string.Empty,
+            EffectiveProviderKey ?? string.Empty,
             EffectiveNotationKey,
             EffectiveViewpointKey,
             loaderKey);
@@ -510,6 +569,31 @@ public partial class TmModelingEditor : IAsyncDisposable
         RefreshActiveLoadKeyForLoadedModel();
         await OnViewpointChanged.InvokeAsync(_effectiveViewpointKey);
     }
+
+    /// <summary>
+    /// Handles a header provider-selection change (MO3): the in-editor override wins until the
+    /// host parameter itself changes, the model is reloaded through the new provider (keeping
+    /// the loaded workspace mounted, like the source-panel reload) and both callbacks are raised
+    /// — <see cref="ProviderKeyChanged"/> (two-way binding) and <see cref="OnProviderChanged"/>.
+    /// </summary>
+    private async Task ChangeProviderAsync(string? providerKey)
+    {
+        var normalized = string.IsNullOrWhiteSpace(providerKey) ? null : providerKey;
+        if (string.Equals(EffectiveProviderKey, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _effectiveProviderKey = normalized;
+        _openedEditorDocument = null;
+        var reload = LoadModelAsync(force: true);
+        await ProviderKeyChanged.InvokeAsync(_effectiveProviderKey);
+        await OnProviderChanged.InvokeAsync(_effectiveProviderKey);
+        await reload;
+    }
+
+    private Task HandleProviderChangedAsync(ChangeEventArgs args)
+        => ChangeProviderAsync(args.Value?.ToString());
 
     private void RegenerateDiagramFromLoadedModel()
     {
@@ -671,6 +755,12 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _effectiveViewpointKey = string.IsNullOrWhiteSpace(ViewpointKey) ? null : ViewpointKey;
             _lastViewpointParameter = ViewpointKey;
+        }
+
+        if (!string.Equals(_lastProviderParameter, ProviderKey, StringComparison.Ordinal))
+        {
+            _effectiveProviderKey = string.IsNullOrWhiteSpace(ProviderKey) ? null : ProviderKey;
+            _lastProviderParameter = ProviderKey;
         }
     }
 
