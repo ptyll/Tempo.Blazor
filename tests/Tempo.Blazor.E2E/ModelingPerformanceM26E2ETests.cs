@@ -115,7 +115,12 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     [Description("Live tree filtering on 200 elements updates the DOM under 200ms")]
     public async Task TreeFilterLatency_UpdatesDomUnderBudget()
     {
-        var page = await OpenPerformanceModelAsync();
+        // M26 re-review: the tree and its search input only exist while the DOCKED tree panel
+        // renders — the editor resolves the tablet band below ~1280px effective width (the demo
+        // shell's padding + a classic scrollbar eat the 1200px desktop floor), where the drawer
+        // starts CLOSED and the spec would throw "search input was not found". Pin the desktop
+        // viewport the tree budgets are calibrated on (the same pair the baselines capture).
+        var page = await OpenPerformanceModelAsync(width: 1440, height: 900);
 
         var latencyMs = await page.EvaluateAsync<double>(
             """
@@ -141,6 +146,8 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             }
             """);
 
+        // Always logged: the number is the evidence the Performance lane records (DEC-TEMPO-PERF-LANE-BUDGETS).
+        Console.WriteLine($"[perf] tree filter latency={latencyMs:0.0} ms");
         Assert.IsTrue(latencyMs < 200, $"Tree filter latency should stay under 200 ms. Actual: {latencyMs:0.0} ms.");
     }
 
@@ -170,7 +177,8 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     [Description("Switching notation with 200 loaded elements repaints the tree under 1s")]
     public async Task NotationSwitch_RepaintsTreeUnderBudget()
     {
-        var page = await OpenPerformanceModelAsync();
+        // Same desktop pin as the tree filter spec: the tree only exists docked (see above).
+        var page = await OpenPerformanceModelAsync(width: 1440, height: 900);
         await ExpectEditorMetricAsync(page, "data-element-count", 200);
 
         var switchMs = await page.EvaluateAsync<double>(

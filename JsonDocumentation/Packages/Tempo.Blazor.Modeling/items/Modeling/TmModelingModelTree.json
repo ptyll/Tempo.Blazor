@@ -90,6 +90,13 @@
    "type": "EventCallback<ModelingElementDto?>",
    "isRequired": false,
    "description": "Raised when <see cref=\"SelectedElement\"/> changes."
+  },
+  {
+   "name": "ShowTitle",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the tree renders its own heading block (title + element count). Fáze 6 review: the hosting editor hides it inside the tablet drawer, where the shell's sheet title already says \"Model tree\" — the search field always renders (it is the live filter). When the block is absent the role=\"tree\" element is named by aria-label instead of the (dangling) aria-labelledby. Default true."
   }
  ],
  "cssClasses": [

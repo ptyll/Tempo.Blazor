@@ -106,6 +106,15 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// <summary>Additional CSS class applied to the tree root.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Whether the tree renders its own heading block (title + element count). Fáze 6 review:
+    /// the hosting editor hides it inside the tablet drawer, where the shell's sheet title
+    /// already says "Model tree" — the search field always renders (it is the live filter).
+    /// When the block is absent the <c>role="tree"</c> element is named by <c>aria-label</c>
+    /// instead of the (dangling) <c>aria-labelledby</c>. Default <c>true</c>.
+    /// </summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
     private string RootClass => string.Join(" ", new[] { "tm-modeling-model-tree", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private IReadOnlyList<ModelingElementGroup> FilteredGroups
@@ -190,24 +199,21 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// <remarks>
     /// Fáze 6 review fix (M26): the editor's two-way echo of our own
     /// <see cref="FilterTextChanged"/> raise arrives as a <see cref="FilterText"/> parameter
-    /// equal to the internal filter. Rewriting that ONE parameter to its previous value keeps
-    /// the render-tree diff at "no change", so the 200-row tree is not re-rendered a second
-    /// time per keystroke (the tree's own input-event render already painted it). A genuinely
-    /// new host value takes the normal path (and re-seeds through <see cref="OnParametersSet"/>).
+    /// equal to the internal filter — re-seeding from it would be a no-op, but the value IS
+    /// the last one the HOST provided, so it must be recorded as such
+    /// (<see cref="_lastFilterTextParameter"/>) BEFORE the parameter is applied. Otherwise a
+    /// later host RESET to that same value (clearing the filter after the user typed it)
+    /// compares equal to the stale parameter in <see cref="OnParametersSet"/> and never
+    /// re-seeds. The parameter itself flows through unchanged: the working copy already
+    /// matches, and the property must end up holding the host's value for the comparison
+    /// to stay meaningful.
     /// </remarks>
     public override Task SetParametersAsync(ParameterView parameters)
     {
         if (parameters.TryGetValue<string?>(nameof(FilterText), out var incoming)
             && string.Equals(incoming, _filterText, StringComparison.Ordinal))
         {
-            var current = FilterText;
-            var rewritten = new Dictionary<string, object>(StringComparer.Ordinal);
-            foreach (var entry in parameters)
-            {
-                rewritten[entry.Name] = entry.Name == nameof(FilterText) ? current : entry.Value;
-            }
-
-            return base.SetParametersAsync(ParameterView.FromDictionary(rewritten));
+            _lastFilterTextParameter = incoming;
         }
 
         return base.SetParametersAsync(parameters);
@@ -237,8 +243,11 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
 
         // Two-way filter text (Fáze 6 review fix): seed the working copy whenever the host hands
-        // over a new value — a host edit (or the editor's own field) wins; user edits flow OUT
-        // through FilterTextChanged and come back as the same value (no re-seed).
+        // over a new value — the comparison runs against the LAST value seen from the host (the
+        // echo path records it in SetParametersAsync), so a host RESET to that value re-seeds
+        // even though the parameter itself was already the stale one. A host edit (or the
+        // editor's own field) wins; user edits flow OUT through FilterTextChanged and come back
+        // as the same value (no re-seed).
         if (!string.Equals(FilterText, _lastFilterTextParameter, StringComparison.Ordinal))
         {
             _lastFilterTextParameter = FilterText;

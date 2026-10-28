@@ -324,7 +324,9 @@
     /// fields: the tree may remount when the layout flips, and the editor — not the tree instance
     /// — owns the state. AllowNodeDrop follows the editor's switch; the non-drag "Insert into
     /// preview" action routes back through <see cref="HandleInsertIntoPreviewAsync"/> (the
-    /// preview's drop path).</summary>
+    /// preview's drop path). Fáze 6 review: on the tablet band the tree renders inside the
+    /// drawer whose sheet title already says "Model tree", so the tree's own heading block is
+    /// hidden there (the search field stays).</summary>
     private RenderFragment ModelTreeContent
     {
         get
@@ -338,6 +340,7 @@
                                          CollapsedGroupsChanged="@collapsedChanged"
                                          FilterText="@_treeFilterHolder.Value"
                                          FilterTextChanged="@TreeFilterChanged"
+                                         ShowTitle="@(false == IsTablet)"
                                          OnElementSelected="@selected"
                                          OnElementDragStarted="@dragStarted"
                                          OnElementDragEnded="@dragEnded" />;

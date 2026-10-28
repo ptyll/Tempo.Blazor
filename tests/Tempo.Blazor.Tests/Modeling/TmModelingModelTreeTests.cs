@@ -683,7 +683,8 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         node.KeyDown(new KeyboardEventArgs { Key = "Insert" });
         cut.WaitForAssertion(() => requested.Should().NotBeNull());
         requested!.Id.Should().Be("task-approve");
-        node.GetAttribute("aria-keyshortcuts").Should().Be("Insert");
+        node.GetAttribute("aria-keyshortcuts").Should().Be("Insert Control+Enter",
+            "the node names both keyboard insert paths (the gesture twins)");
     }
 
     [Fact]
@@ -728,6 +729,11 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         button.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace(
             "an icon-only action names itself (the localized 'Insert {0} into preview' label)");
         button.GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+
+        // M25 re-review: the NODE treeitem names both keyboard insert paths (Insert is the
+        // gesture twin of Ctrl+Enter) — the row button itself is out of the tab order.
+        cut.Find("[data-testid='modeling-tree-node-task-approve']")
+            .GetAttribute("aria-keyshortcuts").Should().Be("Insert Control+Enter");
 
         // The reveal contract (docs/responsive-conventions.md) is the CORE class pair: the
         // action hides until hover on a fine pointer only, stays visible on (hover: none) and
@@ -788,11 +794,62 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             "the seeded filter applies from the first render");
     }
 
+    [Fact]
+    public async Task Host_reset_of_the_bound_filter_re_seeds_the_tree()
+    {
+        using var cut = Render<FilterBindHost>();
+
+        // The user types; the edit round-trips through the binding (the echo of the raise)…
+        cut.Find("[data-testid='modeling-tree-search']").Input("approve");
+        await cut.InvokeAsync(() => { });
+        cut.Instance.Filter.Should().Be("approve");
+        cut.Find("[data-testid='modeling-tree-search']").GetAttribute("value").Should().Be("approve");
+
+        // …and the host can still RESET the bound value afterwards (M26 re-review): the echo
+        // must not pin the last host-provided value, so a reset to it re-seeds the working
+        // copy — the input clears and every row is visible again.
+        await cut.Instance.SetFilterAsync(null);
+        cut.Find("[data-testid='modeling-tree-search']").GetAttribute("value").Should().Be("", "a reset clears the input");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("3",
+            "all rows are visible again after the reset");
+
+        // A host change to a DIFFERENT value re-seeds the same way.
+        await cut.Instance.SetFilterAsync("review");
+        cut.Find("[data-testid='modeling-tree-search']").GetAttribute("value").Should().Be("review");
+        cut.Find("[data-testid='modeling-model-tree']").GetAttribute("data-visible-count").Should().Be("1");
+    }
+
+    [Fact]
+    public void Tablet_drawer_hides_the_tree_title_but_keeps_the_filter_usable()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.ShowTitle, false));
+
+        cut.FindAll(".tm-modeling-model-tree__title").Should().BeEmpty(
+            "the drawer's sheet title already says 'Model tree'");
+        cut.FindAll(".tm-modeling-model-tree__count").Should().BeEmpty();
+
+        var tree = cut.Find("[role='tree']");
+        tree.GetAttribute("aria-labelledby").Should().BeNull("the named element is not rendered");
+        tree.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace("the tree is still named");
+
+        cut.Find("[data-testid='modeling-tree-search']").Should().NotBeNull("the live filter stays usable");
+    }
+
     /// <summary>A minimal host that really binds <c>@bind-FilterText</c> — the field is the
     /// host's, the tree never assigns the parameter (the two-way contract under test).</summary>
     private sealed class FilterBindHost : ComponentBase
     {
         public string? Filter { get; private set; }
+
+        /// <summary>A HOST-driven change (a reset to null, or a new seed): the field is the
+        /// host's and the tree only ever observes it through the parameter.</summary>
+        public Task SetFilterAsync(string? value)
+        {
+            Filter = value;
+            return InvokeAsync(StateHasChanged);
+        }
 
         protected override void BuildRenderTree(RenderTreeBuilder builder)
         {

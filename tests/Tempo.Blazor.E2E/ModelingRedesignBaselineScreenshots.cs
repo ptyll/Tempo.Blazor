@@ -638,7 +638,8 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     /// Waits until the embedded diagram editor's zoom label stops changing (two identical
     /// samples ~250ms apart) — the JS fit pass is asynchronous, so a plain "nodes rendered"
     /// wait still races it. Gives up after ~8s and lets the capture proceed (the zoom label
-    /// may legitimately be absent in a future chrome).
+    /// may legitimately be absent in a future chrome) — the give-up is logged, so a baseline
+    /// captured on an unsettled fit shows up in the run log instead of flaking silently.
     /// </summary>
     private static async Task WaitForStableZoomLabelAsync(IPage page)
     {
@@ -655,6 +656,8 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
             last = current;
         }
+
+        Console.WriteLine($"[baseline-sweep] WARNING: zoom label did not stabilize before capture (last sample: '{last}').");
     }
 
     private static Task<string?> ReadZoomLabelAsync(IPage page) => page.EvaluateAsync<string?>(

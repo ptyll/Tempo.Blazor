@@ -8,10 +8,13 @@
          data-rendered-count="@RenderedNodeCount"
          aria-label="@Loc["TmModelingModelTree_Title"]">
     <div class="tm-modeling-model-tree__header">
-        <div>
-            <h3 id="@TreeTitleId" class="tm-modeling-model-tree__title">@Loc["TmModelingModelTree_Title"]</h3>
-            <span class="tm-modeling-model-tree__count">@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>
-        </div>
+        @if (ShowTitle)
+        {
+            <div>
+                <h3 id="@TreeTitleId" class="tm-modeling-model-tree__title">@Loc["TmModelingModelTree_Title"]</h3>
+                <span class="tm-modeling-model-tree__count">@Loc.Plural("TmModelingModelTree_Count", Elements.Count)</span>
+            </div>
+        }
         <label class="tm-modeling-model-tree__search">
             <span class="tm-modeling-model-tree__search-label">@Loc["TmModelingModelTree_SearchLabel"]</span>
             <input data-testid="@TestId("modeling-tree-search")"
@@ -39,7 +42,10 @@
     else
     {
         var activeTreeItemId = ResolveActiveTreeItemId();
-        <div class="tm-modeling-model-tree__groups" role="tree" aria-labelledby="@TreeTitleId">
+        <div class="tm-modeling-model-tree__groups"
+             role="tree"
+             aria-labelledby="@(ShowTitle ? TreeTitleId : null)"
+             aria-label="@(ShowTitle ? null : Loc["TmModelingModelTree_Title"])">
             @foreach (var (group, groupPosition) in FilteredGroups.Select((value, index) => (value, index + 1)))
             {
                 var expanded = IsGroupExpanded(group.Key);
@@ -100,7 +106,7 @@
                                             aria-posinset="@nodePosition"
                                             aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
                                             aria-label="@GetNodeAriaLabel(element)"
-                                            aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert" : null)"
+                                            aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert Control+Enter" : null)"
                                             title="@GetDisplayName(element)"
                                             tabindex="@GetNodeTabIndex(element.Id, activeTreeItemId)"
                                             @onclick="() => SelectElementAsync(element)"
