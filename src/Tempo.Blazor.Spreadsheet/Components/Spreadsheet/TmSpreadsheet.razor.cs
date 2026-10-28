@@ -111,6 +111,17 @@ public partial class TmSpreadsheet
     /// <summary>Controls the display and interaction mode of the spreadsheet. Defaults to <see cref="SpreadsheetMode.Full"/>.</summary>
     [Parameter] public SpreadsheetMode Mode { get; set; } = SpreadsheetMode.Full;
 
+    /// <summary>
+    /// How large the canvas draws rows and cell text. Defaults to <see cref="SpreadsheetDensity.Auto"/>,
+    /// which resolves to <see cref="SpreadsheetDensity.Comfortable"/> on a coarse pointer (touch) and to
+    /// <see cref="SpreadsheetDensity.Compact"/> everywhere else.
+    /// </summary>
+    /// <remarks>
+    /// A render scale only: <see cref="RowHeight"/>, a per-row custom height and every XLSX height keep
+    /// their values, so a touch-friendly grid round-trips its workbook byte-identically.
+    /// </remarks>
+    [Parameter] public SpreadsheetDensity Density { get; set; } = SpreadsheetDensity.Auto;
+
     /// <summary>Additional CSS classes to apply to the root element.</summary>
     [Parameter] public string? Class { get; set; }
 

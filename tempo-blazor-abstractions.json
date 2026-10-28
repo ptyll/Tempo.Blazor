@@ -32932,6 +32932,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "SpreadsheetDensity",
+      "kind": "Enum",
+      "category": "Spreadsheet",
+      "namespace": "Tempo.Blazor.Components.Spreadsheet.Enums",
+      "description": "Grid density of a spreadsheet: how large the canvas draws rows and cell text. Auto (0) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else; Compact (1) is the classic 20px row, Comfortable (2) draws rows 1.5x with 1.25x text. The scale is render-only, so the workbook model and every XLSX height keep their values.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Enums/SpreadsheetDensity.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "SpreadsheetDocumentCreateResult",
       "kind": "Record",
       "category": "Spreadsheet",
@@ -37370,11 +37380,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1494,
-    "manualItemCount": 1494,
-    "generatedItemCount": 1477,
+    "itemCount": 1495,
+    "manualItemCount": 1495,
+    "generatedItemCount": 1478,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1477
+    "publicApiTypeCount": 1478
   }
 }

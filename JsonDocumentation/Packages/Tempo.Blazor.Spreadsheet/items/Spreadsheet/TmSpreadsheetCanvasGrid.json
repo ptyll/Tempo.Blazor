@@ -319,6 +319,13 @@
       "isRequired": false,
       "default": "1.0",
       "description": "The zoom factor applied to the grid geometry and fonts (1.0 = 100%)."
+    },
+    {
+      "name": "Density",
+      "type": "SpreadsheetDensity",
+      "isRequired": false,
+      "default": "SpreadsheetDensity.Auto",
+      "description": "Requested grid density. Auto is resolved once per instance from the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts only (the sheet model and every XLSX height keep their values). The root carries data-density so a host style or a test can key off the resolved value."
     }
   ]
 }

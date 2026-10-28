@@ -64,6 +64,9 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private string _rowHeightInputValue = string.Empty;
     private long _canvasInteractionVersion;
     private long _lastCanvasCommandId;
+    private bool _pointerCoarse;
+    private bool _pointerCoarseResolved;
+    private double _geometryDensityRowScale = 1.0;
     private bool _lastShowGridLines = true;
     private bool _lastFormatPainterActive;
     private bool _lastExternalFormulaSessionActive;
@@ -84,6 +87,38 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
     /// <summary>The zoom factor applied to the grid geometry and fonts (1.0 = 100%).</summary>
     [Parameter] public double Zoom { get; set; } = 1.0;
+
+    /// <summary>
+    /// Requested grid density. <see cref="SpreadsheetDensity.Auto"/> is resolved once per instance from
+    /// the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts
+    /// only (the sheet model and every XLSX height keep their values).
+    /// </summary>
+    [Parameter] public SpreadsheetDensity Density { get; set; } = SpreadsheetDensity.Auto;
+
+    /// <summary>The requested density resolved against the browser's pointer kind (SP1).</summary>
+    private SpreadsheetDensityScale DensityScale => SpreadsheetDensityScale.Resolve(Density, _pointerCoarse);
+
+    /// <summary>
+    /// Converts a RENDERED row height (what a canvas resize drag reports) to the model height. The
+    /// geometry draws rows at <c>zoom × density row scale</c>, so a commit in rendered pixels has to be
+    /// divided by both — otherwise a 1.5x comfortable grid writes 1.5x heights (and 150% zoom writes
+    /// 1.5x too) into the workbook and every XLSX export.
+    /// </summary>
+    private double ToModelRowHeight(double renderedHeight)
+    {
+        var scale = Zoom * DensityScale.RowScale;
+        return renderedHeight / (scale > 0.01 ? scale : 1);
+    }
+
+    /// <summary>
+    /// Converts a RENDERED column width to the model width. Columns are not density-scaled, so only the
+    /// zoom factor applies.
+    /// </summary>
+    private double ToModelColumnWidth(double renderedWidth)
+    {
+        var scale = Zoom > 0.01 ? Zoom : 1;
+        return renderedWidth / scale;
+    }
 
     /// <summary>The external formula editor value when reference-picking is driven by the formula bar instead of inline cell editing.</summary>
     [Parameter] public string? ExternalFormulaEditValue { get; set; }
@@ -344,7 +379,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         var structureChanged = HasStructureChanged();
         if (structureChanged)
         {
-            _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom);
+            _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
             RebuildMergedCellCache();
             CaptureStructureSignature();
             _needsRender = true;
@@ -380,6 +415,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         return Math.Abs(_geometryRowHeight - RowHeight) > 0.01
             || Math.Abs(_geometryColumnWidth - ColumnWidth) > 0.01
             || Math.Abs(_geometryZoom - Zoom) > 0.001
+            || Math.Abs(_geometryDensityRowScale - DensityScale.RowScale) > 0.001
             || _geometryRowCount != Sheet.RowCount
             || _geometryColumnCount != Sheet.ColumnCount
             || _geometryRowsMetadataCount != Sheet.Rows.Count
@@ -395,6 +431,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _geometryRowHeight = RowHeight;
         _geometryColumnWidth = ColumnWidth;
         _geometryZoom = Zoom;
+        _geometryDensityRowScale = DensityScale.RowScale;
         _geometryRowCount = Sheet?.RowCount ?? 0;
         _geometryColumnCount = Sheet?.ColumnCount ?? 0;
         _geometryRowsMetadataCount = Sheet?.Rows.Count ?? 0;
@@ -649,7 +686,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             return;
         }
 
-        _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom);
+        _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
 
         var rows = rowIndices?
             .Where(static row => row >= 0)
@@ -1209,7 +1246,11 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
         _geometry.Clear();
         if (OnColumnResizeRequested.HasDelegate)
-            await OnColumnResizeRequested.InvokeAsync((Math.Clamp(colIndex, 0, Sheet.ColumnCount - 1), Math.Max(16, width)));
+        {
+            await OnColumnResizeRequested.InvokeAsync((
+                Math.Clamp(colIndex, 0, Sheet.ColumnCount - 1),
+                Math.Max(16, ToModelColumnWidth(width))));
+        }
         _needsRender = true;
         return true;
     }
@@ -1221,7 +1262,11 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
         _geometry.Clear();
         if (OnRowResizeRequested.HasDelegate)
-            await OnRowResizeRequested.InvokeAsync((Math.Clamp(rowIndex, 0, Sheet.RowCount - 1), Math.Max(8, height)));
+        {
+            await OnRowResizeRequested.InvokeAsync((
+                Math.Clamp(rowIndex, 0, Sheet.RowCount - 1),
+                Math.Max(8, ToModelRowHeight(height))));
+        }
         _needsRender = true;
         return true;
     }
@@ -1536,6 +1581,12 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             TotalHeight = _geometry.ContentHeight + SpreadsheetGridConstants.ColumnHeaderHeight,
             ShowGridLines = sheet.ShowGridLines,
             Zoom = _geometry.Zoom,
+            Density = Density.ToString(),
+            DensityResolved = DensityScale.Resolved.ToString(),
+            DensityRowScale = DensityScale.RowScale,
+            DensityFontScale = DensityScale.FontScale,
+            DensityHandleScale = DensityScale.HandleScale,
+            PointerCoarse = _pointerCoarse,
             FreezeRowCount = Math.Clamp(sheet.FreezeRowCount, 0, sheet.RowCount),
             FreezeColumnCount = Math.Clamp(sheet.FreezeColumnCount, 0, sheet.ColumnCount),
             ActiveCellRef = sheet.ActiveCellRef,
@@ -1857,14 +1908,27 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private void ContextMenuSetColumnWidth()
     {
         CloseContextMenu();
-        _colWidthInputValue = ((int)Math.Round(_geometry.GetColumnWidth(_contextMenuColIndex))).ToString();
+        // The dialog edits the MODEL size, never the rendered one (`GetColumnWidth` multiplies by zoom).
+        var width = Sheet is not null
+            && Sheet.Columns.TryGetValue(_contextMenuColIndex, out var column)
+            && column.Width is { } stored
+                ? stored
+                : ColumnWidth;
+        _colWidthInputValue = ((int)Math.Round(width)).ToString();
         _showColWidthDialog = true;
     }
 
     private void ContextMenuSetRowHeight()
     {
         CloseContextMenu();
-        _rowHeightInputValue = ((int)Math.Round(_geometry.GetRowHeight(_contextMenuRowIndex))).ToString();
+        // The dialog edits the MODEL height, never the rendered one (`GetRowHeight` multiplies by
+        // zoom × density row scale, so showing it wrote the scaled value back on Apply).
+        var height = Sheet is not null
+            && Sheet.Rows.TryGetValue(_contextMenuRowIndex, out var row)
+            && row.Height is { } stored
+                ? stored
+                : RowHeight;
+        _rowHeightInputValue = ((int)Math.Round(height)).ToString();
         _showRowHeightDialog = true;
     }
 
@@ -1935,6 +1999,28 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     {
         if (_registered)
             return;
+
+        // The coarse-pointer media query is the one fact Blazor cannot know: ask the browser once per
+        // grid, before the first frame, so the density it resolves is the one the geometry uses.
+        if (!_pointerCoarseResolved)
+        {
+            _pointerCoarseResolved = true;
+            try { _pointerCoarse = await JS.InvokeAsync<bool>("tmSpreadsheetCanvas.isCoarsePointer"); }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+            catch (NotSupportedException) { }
+
+            // The first render had to assume a fine pointer: re-measure and repaint when the browser
+            // reported a coarse one (the row geometry and the density attribute both change).
+            if (Sheet is not null && Math.Abs(DensityScale.RowScale - _geometryDensityRowScale) > 0.001)
+            {
+                _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
+                RebuildMergedCellCache();
+                CaptureStructureSignature();
+                _needsRender = true;
+                StateHasChanged();
+            }
+        }
 
         _dotNetRef ??= DotNetObjectReference.Create(this);
         try

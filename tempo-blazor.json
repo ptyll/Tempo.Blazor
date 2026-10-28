@@ -26879,10 +26879,19 @@
           "isRequired": false,
           "default": "SpreadsheetMode.Full",
           "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
+        },
+        {
+          "name": "Density",
+          "type": "SpreadsheetDensity",
+          "isRequired": false,
+          "default": "SpreadsheetDensity.Auto",
+          "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
         }
       ],
       "cssClasses": [
         "tm-spreadsheet",
+        "tm-spreadsheet--workspace",
+        "tm-spreadsheet--chrome-flat",
         "tm-spreadsheet-toolbar",
         "tm-spreadsheet-toolbar-tabs",
         "tm-spreadsheet-toolbar-tab",

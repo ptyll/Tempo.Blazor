@@ -44,6 +44,9 @@ jobs:
       - name: Wireframe editor
         run: npm run test:wireframe
 
+      - name: Spreadsheet canvas (palette tokens, density, header highlight)
+        run: npm run test:spreadsheet
+
       - name: Reporting modules
         run: npm run test:reporting-modules
 

@@ -54,7 +54,7 @@
     right: 4px;
     height: 2px;
     background: var(--tm-color-primary);
-    border-radius: 1px 1px 0 0;
+    border-radius: var(--tm-radius-xs) var(--tm-radius-xs) 0 0;
 }
 
 .tm-spreadsheet-toolbar__tab-content {
@@ -156,7 +156,7 @@
 .tm-border-picker-overlay {
     position: fixed;
     inset: 0;
-    z-index: 99;
+    z-index: var(--tm-z-dropdown);
     background: transparent;
 }
 
@@ -168,7 +168,7 @@
 
 .tm-border-picker__chevron {
     width: 16px !important;
-    font-size: 8px !important;
+    font-size: var(--tm-text-xs) !important;
     padding: 0 !important;
 }
 
@@ -176,7 +176,7 @@
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    z-index: 100;
+    z-index: var(--tm-z-dropdown);
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
@@ -220,7 +220,7 @@
     align-items: center;
     justify-content: center;
     width: 18px;
-    font-size: 14px;
+    font-size: var(--tm-text-sm);
     flex-shrink: 0;
     color: var(--tm-color-text-muted);
 }
@@ -241,7 +241,7 @@
 
 .tm-color-picker-inline__chevron {
     width: 16px !important;
-    font-size: 10px !important;
+    font-size: var(--tm-text-xs) !important;
     padding: 0 !important;
     margin-left: -2px;
 }
@@ -250,7 +250,7 @@
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    z-index: 100;
+    z-index: var(--tm-z-dropdown);
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);

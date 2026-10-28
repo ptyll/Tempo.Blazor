@@ -1,22 +1,22 @@
 .tm-spreadsheet-custom-filter__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1100;
+    z-index: var(--tm-z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 23, 42, 0.32);
+    background: var(--tm-bg-overlay);
 }
 
 .tm-spreadsheet-custom-filter {
     width: 380px;
     max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface, #fff);
-    border-radius: 10px;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+    background: var(--tm-color-surface);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-xl);
     padding: 16px;
-    font-size: 13px;
-    color: var(--tm-color-text, #0f172a);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-custom-filter__header {
@@ -28,14 +28,14 @@
 
 .tm-spreadsheet-custom-filter__title {
     font-weight: 600;
-    font-size: 15px;
+    font-size: var(--tm-text-md);
 }
 
 .tm-spreadsheet-custom-filter__close {
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-muted, #64748b);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-custom-filter__row {
@@ -47,18 +47,18 @@
 .tm-spreadsheet-custom-filter__op {
     flex: 0 0 45%;
     padding: 6px 8px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 4px;
-    font-size: 13px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-custom-filter__value {
     flex: 1 1 auto;
     min-width: 0;
     padding: 6px 8px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 4px;
-    font-size: 13px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-custom-filter__join {
@@ -83,15 +83,15 @@
 
 .tm-spreadsheet-custom-filter__btn {
     padding: 7px 16px;
-    border-radius: 4px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    background: var(--tm-color-surface, #fff);
+    border-radius: var(--tm-radius-control);
+    border: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-custom-filter__btn--ok {
-    background: var(--tm-color-primary, #2563eb);
-    border-color: var(--tm-color-primary, #2563eb);
-    color: #fff;
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }

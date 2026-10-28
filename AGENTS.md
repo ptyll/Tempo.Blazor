@@ -109,6 +109,7 @@ npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
 npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
+npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
 ```
 
 ### Package Creation
@@ -862,9 +863,9 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
 
-`.github/workflows/js-node-tests.yml` runs the seven Node lanes on every push/PR (overlay,
-diagram-editor, pdf-viewer, wireframe, reporting-modules, email-templates, document-editor) plus the
-`check:document-editor-bundle` freshness check.
+`.github/workflows/js-node-tests.yml` runs the eight Node lanes on every push/PR (overlay,
+diagram-editor, pdf-viewer, wireframe, spreadsheet, reporting-modules, email-templates,
+document-editor) plus the `check:document-editor-bundle` freshness check.
 
 ## Useful Commands Reference
 

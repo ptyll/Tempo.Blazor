@@ -8,6 +8,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     const maxStyleCacheSize = 1200;
     const maxDisplayValueCacheSize = 10000;
     const defaultCellFontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    // Header labels are UI text, not cell data: the sans stack comes from --tm-spreadsheet-header-font
+    // (the token wins); this is only the fallback when a host loads the canvas without the stylesheet.
+    const defaultHeaderFont = "500 11px system-ui, -apple-system, Segoe UI, sans-serif";
+    // SP1 density render scales. Comfortable is a RENDER scale only — row heights are scaled by the
+    // component's geometry, fonts/handles here; the workbook model and every XLSX height stay exact.
+    const comfortableRowScale = 1.5;
+    const comfortableFontScale = 1.25;
+    const comfortableHandleScale = 1.4;
+    const selectionFillAlphaDefault = 0.12;
     const keyboardRepeatPauseMs = 500;
     const keyboardRepeatAccelerationEnabledDefault = true;
     const defaultLayoutOverscanRows = 4;
@@ -1357,6 +1366,22 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return snapshot;
     }
 
+    /** Paints an opaque token colour at an alpha without leaking the globalAlpha into the next draw. */
+    function fillRectWithAlpha(ctx, color, alpha, x, y, w, h, metrics) {
+        const weight = Number(alpha);
+        if (!color || !Number.isFinite(weight) || weight >= 1 || weight <= 0) {
+            setContextFillStyle(ctx, color, metrics);
+            ctx.fillRect(x, y, w, h);
+            return;
+        }
+
+        const previous = ctx.globalAlpha;
+        ctx.globalAlpha = previous * weight;
+        setContextFillStyle(ctx, color, metrics);
+        ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = previous;
+    }
+
     function addDirtyRect(root, layer, rect) {
         const s = getState(root);
         const renderer = s?.renderer;
@@ -1377,6 +1402,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 s.metrics.contentDirtyRectArea += expanded.width * expanded.height;
             }
         }
+    }
+
+    /** Clamps every dirty rect to the surface and drops empty ones (the header layer clips each one). */
+    function normalizeDirtyRects(rects, width, height) {
+        const normalized = [];
+        for (const rect of rects || []) {
+            const x = Math.max(0, Math.floor(rect.x));
+            const y = Math.max(0, Math.floor(rect.y));
+            const right = Math.min(width, Math.ceil(rect.x + rect.width));
+            const bottom = Math.min(height, Math.ceil(rect.y + rect.height));
+            if (right > x && bottom > y) {
+                normalized.push({ x, y, width: right - x, height: bottom - y });
+            }
+        }
+        return normalized;
     }
 
     function unionRects(rects, width, height) {
@@ -1490,6 +1530,12 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             }
             if (redrawKind === "selection") {
                 syncModelViewport(root, s.model);
+                if (dirty.header || dirty.headerRects.length > 0) {
+                    // A selection change moves the active-row/column tint: repaint ONLY the old and the
+                    // new header strips (the dirty rects addSelectionDirtyRectForChange registered), never
+                    // the whole header layer.
+                    renderHeaderLayer(root, s.model, { dirtyRects: dirty.headerRects, forceFull: dirty.header });
+                }
                 renderSelectionOverlay(root, s.model, { dirtyRects: dirty.selectionRects });
                 if (s.metrics) s.metrics.selectionPaintFrameCount += 1;
             } else if (redrawReason === "scroll" && tryBitmapScrollRedraw(root, s.model, oldScrollLeft, oldScrollTop)) {
@@ -1924,27 +1970,192 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
     }
 
+    /** A token, or the second token when the first is not defined for this host. Never a literal. */
+    function cssToken(root, name, fallbackName) {
+        const value = css(root, name, "");
+        if (value) return value;
+        return fallbackName ? css(root, fallbackName, "") : "";
+    }
+
+    /**
+     * A translucent rgba() built from an OPAQUE token colour. Only hex and rgb()/rgba() tokens are
+     * parsed; any other notation (a relative-colour or color-mix() token) is returned unchanged so the
+     * browser keeps resolving it rather than the canvas receiving garbage.
+     */
+    function withAlpha(color, alpha) {
+        const value = String(color || "").trim();
+        const weight = Number(alpha);
+        if (!value || !Number.isFinite(weight) || weight >= 1) return value;
+
+        const hex = /^#([0-9a-f]{3,8})$/i.exec(value);
+        if (hex) {
+            let digits = hex[1];
+            if (digits.length === 3 || digits.length === 4) {
+                digits = digits.split("").map(ch => ch + ch).join("");
+            }
+            if (digits.length !== 6 && digits.length !== 8) return value;
+            const r = parseInt(digits.slice(0, 2), 16);
+            const g = parseInt(digits.slice(2, 4), 16);
+            const b = parseInt(digits.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${weight})`;
+        }
+
+        const rgb = /^rgba?\(\s*([0-9.]+)[,\s]+([0-9.]+)[,\s]+([0-9.]+)/i.exec(value);
+        if (rgb) {
+            const round = part => Math.round(Number(part) || 0);
+            return `rgba(${round(rgb[1])}, ${round(rgb[2])}, ${round(rgb[3])}, ${weight})`;
+        }
+
+        return value;
+    }
+
+    /**
+     * Every colour the canvas paints. Tokens only: the component tokens declared on .tm-spreadsheet,
+     * each degrading to the core semantic token it derives from. Nothing here is a literal, so light,
+     * dark and the indigo theme reach the canvas (and the node lane can assert it).
+     */
     function buildPalette(root) {
+        const primary = css(root, "--tm-color-primary", "");
+        const warning = cssToken(root, "--tm-color-warning", "--tm-color-warning-strong");
+        const categoryRefs = ["--tm-category-1", "--tm-category-6", "--tm-category-4",
+            "--tm-category-2", "--tm-category-3", "--tm-category-8"];
+        const formulaRefs = categoryRefs.map((fallbackToken, index) => {
+            const stroke = cssToken(root, `--tm-spreadsheet-ref-${index}`, fallbackToken);
+            return { stroke, fill: withAlpha(stroke, 0.08) };
+        });
+        const fillAlpha = Number(css(root, "--tm-spreadsheet-selection-fill-alpha", ""));
+
         return {
-            surface: css(root, "--tm-color-surface", "#ffffff"),
-            elevated: css(root, "--tm-color-surface-elevated", "#f8fafc"),
-            hover: css(root, "--tm-color-surface-hover", "#f1f5f9"),
-            border: css(root, "--tm-color-border", "#cbd5e1"),
-            subtle: css(root, "--tm-color-border-subtle", "#e2e8f0"),
-            text: css(root, "--tm-color-text", "#0f172a"),
-            muted: css(root, "--tm-color-text-muted", "#64748b"),
-            primary: css(root, "--tm-color-primary", "#2563eb"),
-            primarySubtle: css(root, "--tm-color-primary-subtle", "rgba(37, 99, 235, 0.12)"),
-            selectionFill: "rgba(37, 99, 235, 0.12)",
-            formulaRefs: [
-                { stroke: "#1e8fe0", fill: "rgba(30, 143, 224, 0.08)" },
-                { stroke: "#e04030", fill: "rgba(224, 64, 48, 0.08)" },
-                { stroke: "#20a040", fill: "rgba(32, 160, 64, 0.08)" },
-                { stroke: "#a040c0", fill: "rgba(160, 64, 192, 0.08)" },
-                { stroke: "#e08020", fill: "rgba(224, 128, 32, 0.08)" },
-                { stroke: "#208080", fill: "rgba(32, 128, 128, 0.08)" }
-            ]
+            surface: css(root, "--tm-color-surface", ""),
+            elevated: css(root, "--tm-color-surface-elevated", ""),
+            hover: css(root, "--tm-color-surface-hover", ""),
+            border: css(root, "--tm-color-border", ""),
+            subtle: cssToken(root, "--tm-color-border-subtle", "--tm-color-border"),
+            text: cssToken(root, "--tm-color-text", "--tm-text-primary"),
+            muted: cssToken(root, "--tm-color-text-muted", "--tm-text-secondary"),
+            primary,
+            primarySubtle: cssToken(root, "--tm-color-primary-subtle", "--tm-color-primary-soft"),
+            headerBg: cssToken(root, "--tm-spreadsheet-header-bg", "--tm-color-surface-elevated"),
+            headerText: cssToken(root, "--tm-spreadsheet-header-text", "--tm-color-text-muted"),
+            headerActiveBg: cssToken(root, "--tm-spreadsheet-header-active-bg", "--tm-color-primary-subtle"),
+            headerActiveText: cssToken(root, "--tm-spreadsheet-header-active-text", "--tm-color-primary-text"),
+            headerFont: css(root, "--tm-spreadsheet-header-font", defaultHeaderFont),
+            gridline: cssToken(root, "--tm-spreadsheet-gridline", "--tm-color-border-subtle"),
+            selectionBorder: cssToken(root, "--tm-spreadsheet-selection-border", "--tm-color-primary"),
+            selectionFill: cssToken(root, "--tm-spreadsheet-selection-fill", "--tm-color-primary"),
+            selectionFillAlpha: Number.isFinite(fillAlpha) && fillAlpha > 0 && fillAlpha <= 1
+                ? fillAlpha
+                : selectionFillAlphaDefault,
+            hoverFill: withAlpha(cssToken(root, "--tm-color-gray-400", "--tm-color-text-muted"), 0.12),
+            danger: cssToken(root, "--tm-color-danger", "--tm-color-error"),
+            warning,
+            inverseText: cssToken(root, "--tm-color-on-primary", "--tm-text-inverse"),
+            hyperlink: cssToken(root, "--tm-text-link", "--tm-color-primary"),
+            searchMatchFill: withAlpha(warning, 0.3),
+            searchActiveFill: withAlpha(warning, 0.45),
+            searchActiveStroke: cssToken(root, "--tm-color-warning-strong", "--tm-color-warning"),
+            formulaRefs
         };
+    }
+
+    /** A pointer media query cannot be answered without the browser; a host without matchMedia is fine. */
+    function isCoarsePointer() {
+        try {
+            return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * SP1: resolves the requested grid density to the render scales the canvas paints with.
+     * Auto means "comfortable on a coarse pointer (touch), compact elsewhere".
+     */
+    function resolveDensity(density, coarsePointer) {
+        const requested = String(density ?? "").trim().toLowerCase();
+        const coarse = coarsePointer == null ? isCoarsePointer() : !!coarsePointer;
+        const comfortable = requested === "comfortable" || (requested !== "compact" && coarse);
+        return {
+            density: comfortable ? "comfortable" : "compact",
+            comfortable,
+            rowScale: comfortable ? comfortableRowScale : 1,
+            fontScale: comfortable ? comfortableFontScale : 1,
+            handleScale: comfortable ? comfortableHandleScale : 1
+        };
+    }
+
+    /**
+     * The density scales for a frame. The COMPONENT resolved them (`SpreadsheetDensityScale`) and ships
+     * them in the frame, so the canvas paints with exactly the scale the row geometry used; the JS rule
+     * is only the fallback for a frame without them (or a standalone canvas host).
+     */
+    function resolveDensityFromModel(model) {
+        const requested = String(read(model, "Density", "auto"));
+        const coarse = !!read(model, "PointerCoarse", false);
+        const resolved = resolveDensity(requested, coarse);
+        const scale = (value, fallback) => {
+            const number = Number(value);
+            return Number.isFinite(number) && number > 0 ? number : fallback;
+        };
+        return {
+            density: resolved.density,
+            comfortable: resolved.comfortable,
+            rowScale: scale(read(model, "DensityRowScale", 0), resolved.rowScale),
+            fontScale: scale(read(model, "DensityFontScale", 0), resolved.fontScale),
+            handleScale: scale(read(model, "DensityHandleScale", 0), resolved.handleScale)
+        };
+    }
+
+    function getDensityScales(root) {
+        const s = getState(root);
+        const model = s?.model;
+        const key = [
+            read(model, "Density", "auto"),
+            read(model, "PointerCoarse", false) ? 1 : 0,
+            read(model, "DensityRowScale", 0),
+            read(model, "DensityFontScale", 0),
+            read(model, "DensityHandleScale", 0)
+        ].join("|");
+        if (s?.densityScales?.key === key) return s.densityScales;
+        const scales = { key, ...resolveDensityFromModel(model) };
+        if (s) s.densityScales = scales;
+        return scales;
+    }
+
+    /**
+     * The active row/column header ranges of a selection. Pure: the canvas passes the local selection
+     * snapshot (the model's copy lags a drag), the node lane passes a plain object.
+     */
+    function resolveHeaderHighlight(selection) {
+        if (!selection) {
+            return {
+                hasSelection: false,
+                activeRow: -1,
+                activeCol: -1,
+                activeRows: { start: -1, end: -1 },
+                activeColumns: { start: -1, end: -1 }
+            };
+        }
+
+        const number = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+        const activeRow = number(selection.row, -1);
+        const activeCol = number(selection.col, -1);
+        const startRow = number(selection.startRow, activeRow);
+        const startCol = number(selection.startCol, activeCol);
+        const endRow = number(selection.endRow, activeRow);
+        const endCol = number(selection.endCol, activeCol);
+
+        return {
+            hasSelection: true,
+            activeRow,
+            activeCol,
+            activeRows: { start: Math.min(startRow, endRow), end: Math.max(startRow, endRow) },
+            activeColumns: { start: Math.min(startCol, endCol), end: Math.max(startCol, endCol) }
+        };
+    }
+
+    function isHighlightedIndex(range, index) {
+        return !!range && index >= range.start && index <= range.end;
     }
 
     function createDebugMetrics() {
@@ -2779,6 +2990,78 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         for (const rect of [beforeRect, afterRect]) {
             if (rect) addDirtyRect(root, "selection", rect);
         }
+
+        // The header highlight follows the selection, so the old and the new active row/column strips
+        // belong to the same repaint. Only the strips are dirty — the header layer is never repainted
+        // as a whole for a selection change.
+        for (const snapshot of [before, after]) {
+            for (const rect of headerHighlightDirtyRects(root, snapshot)) {
+                addDirtyRect(root, "header", rect);
+            }
+        }
+    }
+
+    /**
+     * The column-header strip and the row-header strip a selection highlights, intersected with the
+     * VISIBLE frames. A selection that extends past the viewport highlights the strips of the rows and
+     * columns that are ON screen (a bounding rect between two off-screen corners would be empty, and the
+     * visible part of the highlight would go stale).
+     */
+    function resolveHeaderStrips(bounds, rows, columns, rowHeaderWidth, columnHeaderHeight) {
+        if (!bounds || !Array.isArray(rows) || !Array.isArray(columns)) return [];
+
+        const visibleRows = rows.filter(frame => {
+            const index = Number(read(frame, "Index", -1));
+            return index >= bounds.minRow && index <= bounds.maxRow;
+        });
+        const visibleColumns = columns.filter(frame => {
+            const index = Number(read(frame, "Index", -1));
+            return index >= bounds.minCol && index <= bounds.maxCol;
+        });
+
+        const strips = [];
+        if (visibleColumns.length > 0) {
+            let left = Infinity;
+            let right = -Infinity;
+            for (const frame of visibleColumns) {
+                left = Math.min(left, read(frame, "x", 0));
+                right = Math.max(right, read(frame, "x", 0) + read(frame, "width", 0));
+            }
+            if (right > left) {
+                strips.push({ x: left, y: 0, width: right - left, height: columnHeaderHeight });
+            }
+        }
+
+        if (visibleRows.length > 0) {
+            let top = Infinity;
+            let bottom = -Infinity;
+            for (const frame of visibleRows) {
+                top = Math.min(top, read(frame, "y", 0));
+                bottom = Math.max(bottom, read(frame, "y", 0) + read(frame, "height", 0));
+            }
+            if (bottom > top) {
+                strips.push({ x: 0, y: top, width: rowHeaderWidth, height: bottom - top });
+            }
+        }
+
+        return strips;
+    }
+
+    /** The dirty rects the header highlight moved off and onto, in screen space. */
+    function headerHighlightDirtyRects(root, snapshot) {
+        const s = getState(root);
+        const model = s?.model;
+        if (!model || !snapshot) return [];
+
+        const width = Math.max(1, root.clientWidth || read(model, "ViewportWidth", 1));
+        const height = Math.max(1, root.clientHeight || read(model, "ViewportHeight", 1));
+        const layout = getVisibleLayout(root, model, width, height);
+        return resolveHeaderStrips(
+            selectionBounds(snapshot),
+            layout.rows,
+            layout.columns,
+            layout.rowHeaderWidth,
+            layout.columnHeaderHeight);
     }
 
     function getFormulaReferenceCells(root, model) {
@@ -3954,6 +4237,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
 
         const changed = applyPatchesLocally(root, patches, "autofill");
         const target = selectionBounds(preview);
+        const beforeSelection = getSelectionSnapshot(root);
         setSheetSelection(root, target.endRow, target.endCol, target.startRow, target.startCol, target.endRow, target.endCol);
         const model = getState(root)?.model;
         write(model, "ActiveCellRef", toCellRef(target.endRow, target.endCol));
@@ -3963,6 +4247,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         write(selection, "EndRow", target.endRow);
         write(selection, "EndCol", target.endCol);
         write(model, "Selection", selection);
+        addSelectionDirtyRectForChange(root, beforeSelection, getSelectionSnapshot(root));
         requestPaint(root, "autofill", "selection");
         debounceSelectionSync(root, 90);
         return changed;
@@ -5776,6 +6061,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 const endRow = Number(read(selection, "EndRow", row)) || row;
                 const endCol = Number(read(selection, "EndCol", col)) || col;
                 const activeRef = read(payload, "ActiveCellRef", toCellRef(row, col));
+                // The header highlight follows the selection — including a programmatic move (name box,
+                // Find, MoveActiveCellByAsync, formula restore), which must not leave the old strip lit.
+                const beforeSelection = getSelectionSnapshot(root);
                 setSheetSelection(root, row, col, startRow, startCol, endRow, endCol);
                 write(model, "ActiveCellRef", activeRef);
                 write(model, "activeCellRef", activeRef);
@@ -5786,6 +6074,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 write(selectionModel, "EndCol", endCol);
                 write(model, "Selection", selectionModel);
                 const scrolled = ensureCellVisibleLocal(root, row, col);
+                addSelectionDirtyRectForChange(root, beforeSelection, getSelectionSnapshot(root));
                 syncEditorAccessibility(root);
                 syncAccessibilityState(root, false);
                 requestCanvasRedraw(root, "sync-selection", scrolled ? "full" : "selection");
@@ -6698,12 +6987,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const ctx = canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         resetContextState(ctx);
-        const dirtyRect = settings.forceFull ? null : unionRects(settings.dirtyRects, width, height);
-        if (dirtyRect) {
-            ctx.clearRect(dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+        const rects = settings.forceFull ? [] : normalizeDirtyRects(settings.dirtyRects, width, height);
+        if (rects.length > 0) {
+            // Every dirty rect is cleared and the union of them clipped in ONE pass: the header highlight
+            // touches the old and the new row/column strip of a selection, which are usually far apart,
+            // and a single bounding rect between them would repaint (almost) the whole layer.
+            for (const rect of rects) ctx.clearRect(rect.x, rect.y, rect.width, rect.height);
             contextSave(ctx, s.metrics);
             ctx.beginPath();
-            ctx.rect(dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+            for (const rect of rects) ctx.rect(rect.x, rect.y, rect.width, rect.height);
             contextClip(ctx, s.metrics);
             drawHeaders(ctx, root, model, s.palette || buildPalette(root), width, height);
             contextRestore(ctx, s.metrics);
@@ -6782,38 +7074,52 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const rowHeaderWidth = read(model, "RowHeaderWidth", 40);
         const columnHeaderHeight = read(model, "ColumnHeaderHeight", 20);
         const layout = getVisibleLayout(root, model, width, height);
+        // The LOCAL selection snapshot, not the model's copy: during a drag the model lags a frame and
+        // the header must highlight the same range the selection layer draws.
+        const highlight = resolveHeaderHighlight(getSelectionSnapshot(root));
 
-        setContextFillStyle(ctx, palette.elevated, metrics);
+        setContextFillStyle(ctx, palette.headerBg, metrics);
         ctx.fillRect(0, 0, width, columnHeaderHeight);
         ctx.fillRect(0, 0, rowHeaderWidth, height);
         setContextStrokeStyle(ctx, palette.border, metrics);
         ctx.strokeRect(0.5, 0.5, rowHeaderWidth - 0.5, columnHeaderHeight - 0.5);
 
-        setContextFont(ctx, "500 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", metrics);
+        setContextFont(ctx, palette.headerFont, metrics);
         setContextTextAlign(ctx, "center", metrics);
         setContextTextBaseline(ctx, "middle", metrics);
-        setContextFillStyle(ctx, palette.muted, metrics);
 
         for (const col of layout.columns) {
             const x = col.x;
             const w = col.width;
-            setContextFillStyle(ctx, palette.elevated, metrics);
+            const active = isHighlightedIndex(highlight.activeColumns, read(col, "Index", -1));
+            setContextFillStyle(ctx, active ? palette.headerActiveBg : palette.headerBg, metrics);
             ctx.fillRect(x, 0, w, columnHeaderHeight);
             setContextStrokeStyle(ctx, palette.border, metrics);
             ctx.strokeRect(Math.floor(x) + 0.5, 0.5, w, columnHeaderHeight - 0.5);
-            setContextFillStyle(ctx, palette.muted, metrics);
+            setContextFillStyle(ctx, active ? palette.headerActiveText : palette.headerText, metrics);
             ctx.fillText(col.label, x + w / 2, columnHeaderHeight / 2);
+            if (active) {
+                // The accent rail sits on the grid edge of the gutter, the way the reference marks the
+                // active column: the tint alone must not be the only signal (forced-colors, colour vision).
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(Math.floor(x), columnHeaderHeight - 2, w, 2);
+            }
         }
 
         for (const row of layout.rows) {
             const y = row.y;
             const h = row.height;
-            setContextFillStyle(ctx, palette.elevated, metrics);
+            const active = isHighlightedIndex(highlight.activeRows, row.index);
+            setContextFillStyle(ctx, active ? palette.headerActiveBg : palette.headerBg, metrics);
             ctx.fillRect(0, y, rowHeaderWidth, h);
             setContextStrokeStyle(ctx, palette.border, metrics);
             ctx.strokeRect(0.5, Math.floor(y) + 0.5, rowHeaderWidth - 0.5, h);
-            setContextFillStyle(ctx, palette.muted, metrics);
+            setContextFillStyle(ctx, active ? palette.headerActiveText : palette.headerText, metrics);
             ctx.fillText(String(row.index + 1), rowHeaderWidth / 2, y + h / 2);
+            if (active) {
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(rowHeaderWidth - 2, Math.floor(y), 2, h);
+            }
         }
     }
 
@@ -6936,8 +7242,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return metrics;
     }
 
-    function filterButtonRect(x, y, w, h) {
-        const size = Math.min(16, Math.max(11, h - 4), Math.max(0, w - 2));
+    function filterButtonRect(x, y, w, h, scale) {
+        // Comfortable raises the cap so the funnel stays a touch target on the taller header row.
+        const maxSize = Math.round(16 * (Number(scale) > 0 ? Number(scale) : 1));
+        const size = Math.min(maxSize, Math.max(11, h - 4), Math.max(0, w - 2));
         return { x: x + w - size - 1, y: y + (h - size) / 2, w: size, h: size };
     }
 
@@ -6970,7 +7278,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (w <= 0 || h <= 0) continue;
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height) continue;
 
-            const btn = filterButtonRect(x, y, w, h);
+            const btn = filterButtonRect(x, y, w, h, getDensityScales(root).handleScale);
             if (btn.w <= 0 || btn.x < rowHeaderWidth || btn.y < columnHeaderHeight) continue;
 
             const active = !!read(filter, "Active", false);
@@ -6982,7 +7290,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ctx.strokeRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
 
             // funnel glyph (triangle pointing down)
-            ctx.fillStyle = active ? "#ffffff" : palette.muted;
+            ctx.fillStyle = active ? palette.inverseText : palette.muted;
             const cx = btn.x + btn.w / 2;
             const cy = btn.y + btn.h / 2;
             ctx.beginPath();
@@ -7013,8 +7321,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return null;
     }
 
-    function validationDropButtonRect(x, y, w, h) {
-        const size = Math.min(16, Math.max(11, h - 4), Math.max(0, w - 2));
+    function validationDropButtonRect(x, y, w, h, scale) {
+        const maxSize = Math.round(16 * (Number(scale) > 0 ? Number(scale) : 1));
+        const size = Math.min(maxSize, Math.max(11, h - 4), Math.max(0, w - 2));
         return { x: x + w - size - 1, y: y + (h - size) / 2, w: size, h: size };
     }
 
@@ -7050,19 +7359,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (w <= 8 || h <= 4) continue;
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height) continue;
 
-            const btn = validationDropButtonRect(x, y, w, h);
+            const btn = validationDropButtonRect(x, y, w, h, getDensityScales(root).handleScale);
             if (btn.w <= 0 || btn.x < rowHeaderWidth || btn.y < columnHeaderHeight) continue;
             s.validationDropButtons.push({ row, col, x: btn.x, y: btn.y, w: btn.w, h: btn.h });
 
             ctx.save();
-            ctx.fillStyle = palette.elevated ?? "#f5f5f5";
-            ctx.strokeStyle = palette.border ?? "#bbb";
+            ctx.fillStyle = palette.elevated;
+            ctx.strokeStyle = palette.border;
             ctx.lineWidth = 1;
             ctx.fillRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
             ctx.strokeRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
 
             // Down-arrow glyph
-            ctx.fillStyle = palette.muted ?? "#666";
+            ctx.fillStyle = palette.muted;
             const cx = btn.x + btn.w / 2;
             const cy = btn.y + btn.h / 2;
             ctx.beginPath();
@@ -7107,7 +7416,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const canvasHeight = root.clientHeight;
 
         ctx.save();
-        ctx.strokeStyle = "#e53935";
+        ctx.strokeStyle = palette.danger;
         ctx.lineWidth = 2;
 
         for (const ref of refs) {
@@ -7151,6 +7460,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const layout = getVisibleLayout(root, model, width, height);
         const rows = layout.rows;
         const columns = layout.columns;
+        // Comfortable draws a bigger fill handle: a 6px square is untouchable on a coarse pointer.
+        const handleScale = getDensityScales(root).handleScale || 1;
+        const handleSize = Math.round(6 * handleScale);
+        const handleInset = Math.round(4 * handleScale);
         const active = parseCellRef(read(model, "ActiveCellRef", "A1"));
         const selection = read(model, "Selection", {});
         const startRow = read(selection, "StartRow", active.row);
@@ -7174,19 +7487,18 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height || w <= 0 || h <= 0) return;
 
             if (drawFill && !formulaPoint) {
-                setContextFillStyle(ctx, palette.selectionFill, metrics);
-                ctx.fillRect(x, y, w, h);
+                fillRectWithAlpha(ctx, palette.selectionFill, palette.selectionFillAlpha, x, y, w, h, metrics);
             }
 
             if (drawActive) {
-                setContextStrokeStyle(ctx, palette.primary, metrics);
+                setContextStrokeStyle(ctx, palette.selectionBorder, metrics);
                 setContextLineWidth(ctx, 2, metrics);
                 ctx.strokeRect(Math.floor(x) + 1, Math.floor(y) + 1, Math.max(0, w - 2), Math.max(0, h - 2));
             }
 
             if (drawHandle) {
-                setContextFillStyle(ctx, palette.primary, metrics);
-                ctx.fillRect(x + w - 4, y + h - 4, 6, 6);
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(x + w - handleInset, y + h - handleInset, handleSize, handleSize);
             }
         };
 
@@ -7212,7 +7524,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 const w = read(hoverCol, "Width", 0);
                 const h = read(hoverRow, "Height", 0);
                 if (x + w >= rowHeaderWidth && y + h >= columnHeaderHeight && x <= width && y <= height && w > 0 && h > 0) {
-                    setContextFillStyle(ctx, "rgba(148, 163, 184, 0.12)", metrics);
+                    setContextFillStyle(ctx, palette.hoverFill, metrics);
                     ctx.fillRect(x, y, w, h);
                 }
             }
@@ -7304,10 +7616,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                     const h = read(rowFrame, "Height", 0);
                     if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height || w <= 0 || h <= 0) continue;
                     const isActive = searchHighlights.active === key;
-                    setContextFillStyle(ctx, isActive ? "rgba(245, 158, 11, 0.45)" : "rgba(250, 204, 21, 0.30)", metrics);
+                    setContextFillStyle(ctx, isActive ? palette.searchActiveFill : palette.searchMatchFill, metrics);
                     ctx.fillRect(x, y, w, h);
                     if (isActive) {
-                        setContextStrokeStyle(ctx, "rgb(217, 119, 6)", metrics);
+                        setContextStrokeStyle(ctx, palette.searchActiveStroke, metrics);
                         setContextLineWidth(ctx, 2, metrics);
                         ctx.strokeRect(Math.floor(x) + 1, Math.floor(y) + 1, Math.max(0, w - 2), Math.max(0, h - 2));
                     }
@@ -7358,7 +7670,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const rowHeaderWidth = layout.rowHeaderWidth;
         const columnHeaderHeight = layout.columnHeaderHeight;
 
-        setContextStrokeStyle(ctx, palette.subtle, metrics);
+        setContextStrokeStyle(ctx, palette.gridline, metrics);
         setContextLineWidth(ctx, 1, metrics);
         ctx.beginPath();
         const verticalLines = new Set();
@@ -7492,7 +7804,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
 
         const font = getCanvasFont(root, style);
-        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * getRenderZoom(root);
+        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * getRenderScale(root);
         setContextFont(ctx, font, debugMetrics);
         setContextFillStyle(ctx, paint.foreColor || palette.text, debugMetrics);
         setContextTextBaseline(ctx, paint.verticalBaseline, debugMetrics);
@@ -7575,14 +7887,20 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return zoom > 0 ? zoom : 1;
     }
 
+    /** Zoom × the density font scale: the cell text follows the grid density (SP1). */
+    function getRenderScale(root) {
+        const fontScale = getDensityScales(root).fontScale || 1;
+        return getRenderZoom(root) * fontScale;
+    }
+
     function getCanvasFont(root, style) {
-        const zoom = getRenderZoom(root);
+        const scale = getRenderScale(root);
         const key = [
             read(style, "FontFamily", null) || "",
             read(style, "FontSize", 10),
             read(style, "Bold", false) ? 1 : 0,
             read(style, "Italic", false) ? 1 : 0,
-            zoom
+            scale
         ].join("|");
         const s = getState(root);
         const cache = s?.fontStringCache;
@@ -7591,7 +7909,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (cached) return cached;
         }
 
-        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * zoom;
+        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * scale;
         const fontFamily = read(style, "FontFamily", null) || defaultCellFontFamily;
         const weight = read(style, "Bold", false) ? "700" : "400";
         const italic = read(style, "Italic", false) ? "italic " : "";
@@ -7627,7 +7945,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const hasHyperlink = !!read(cell, "Hyperlink", null);
         const paint = {
             backgroundColor: read(style, "BackgroundColor", null),
-            foreColor: hasHyperlink ? "#2563EB" : (read(style, "ForeColor", null) || palette.text),
+            foreColor: hasHyperlink ? palette.hyperlink : (read(style, "ForeColor", null) || palette.text),
             horizontalAlignValue,
             verticalAlignValue,
             horizontalAlign: horizontalAlign(horizontalAlignValue),
@@ -7775,4 +8093,24 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         if (align === "center") return x - width / 2;
         return x;
     }
+
+    /** Whether the browser reports a coarse pointer; a media query cannot be answered server-side. */
+    window.tmSpreadsheetCanvas.isCoarsePointer = function () {
+        return isCoarsePointer();
+    };
+
+    /**
+     * Node-test seam for the PURE helpers (npm run test:spreadsheet loads this file in a `vm` sandbox):
+     * the palette the tokens produce, the density resolution and the header highlight ranges. The
+     * interaction surface stays the public functions above and is exercised by the E2E lane.
+     */
+    window.tmSpreadsheetCanvas._internals = {
+        buildPalette,
+        resolveDensity,
+        resolveDensityFromModel,
+        resolveHeaderHighlight,
+        resolveHeaderStrips,
+        withAlpha,
+        isHighlightedIndex
+    };
 })();

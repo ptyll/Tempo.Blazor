@@ -71,7 +71,7 @@
     color: var(--tm-color-text-muted);
     cursor: pointer;
     border-radius: var(--tm-radius-sm);
-    font-size: 10px;
+    font-size: var(--tm-text-xs);
     transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
 }
 

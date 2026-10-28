@@ -2909,8 +2909,14 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(result.KeyboardLogicalScrolls > 0, $"Expected keyboard path to use logical scroll. Count: {result.KeyboardLogicalScrolls}.");
     }
 
+    /// <summary>
+    /// An ArrowDown inside the viewport repaints the selection layer AND the two header strips the
+    /// active-row/column highlight moved off and onto — and nothing else (no content repaint). The
+    /// pre-phase-2 assertion was "header layer is never touched", which the header highlight
+    /// deliberately invalidates: the old expectation would have guarded the old behaviour.
+    /// </summary>
     [TestMethod]
-    public async Task CanvasRenderer_ArrowDownInViewportPaintsOnlySelectionLayer()
+    public async Task CanvasRenderer_ArrowDownInViewportPaintsSelectionAndOneHeaderStrip()
     {
         var page = await CreatePageAsync();
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
@@ -2948,7 +2954,8 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.AreEqual(1, result.PaintFrames, $"Expected one local paint frame. Frames: {result.PaintFrames}.");
         Assert.AreEqual(0, result.ContentPaintFrames, $"ArrowDown inside viewport should not paint content. Frames: {result.ContentPaintFrames}.");
         Assert.AreEqual(0, result.ContentLayerPaints, $"ArrowDown inside viewport should not touch the content layer. Paints: {result.ContentLayerPaints}.");
-        Assert.AreEqual(0, result.HeaderLayerPaints, $"ArrowDown inside viewport should not touch the header layer. Paints: {result.HeaderLayerPaints}.");
+        Assert.AreEqual(1, result.HeaderLayerPaints,
+            $"ArrowDown inside viewport repaints exactly one header-layer pass for the moved highlight strips. Paints: {result.HeaderLayerPaints}.");
         Assert.IsTrue(result.SelectionPaintFrames > 0, $"Expected selection paint frame. Frames: {result.SelectionPaintFrames}.");
         Assert.IsTrue(result.SelectionLayerPaints > 0, $"Expected selection layer paint. Paints: {result.SelectionLayerPaints}.");
         Assert.IsTrue(result.SelectionDirtyRects > 0, $"Expected selection dirty rects. Count: {result.SelectionDirtyRects}.");

@@ -4027,7 +4027,9 @@ Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, mu
 
 | Třída | Popis |
 |-------|-------|
-| `tm-spreadsheet` | Kořenový kontejner |
+| `tm-spreadsheet` | Kořenový kontejner (nese komponentové tokeny `--tm-spreadsheet-*`) |
+| `tm-spreadsheet--workspace` | `Mode=Full`: pracovní plocha `--tm-bg-workspace` + ribbon/formula bar/mřížka/záložky/status bar jako karty |
+| `tm-spreadsheet--chrome-flat` | `Mode=Embedded` (Notion blok, modal): plochý chrome bez karet |
 | `tm-spreadsheet-toolbar` | Ribbon toolbar |
 | `tm-spreadsheet-toolbar-tabs` | Záložky toolbaru (File, Home, Insert, Format, View) |
 | `tm-spreadsheet-toolbar-tab` | Jedna záložka |
@@ -4058,6 +4060,19 @@ Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, mu
 | `tm-spreadsheet-color-picker` | Color picker v toolbaru |
 | `tm-spreadsheet-number-format-tool` | Dropdown formátu čísel |
 
+#### Komponentové tokeny
+
+Všechny jsou deklarované na `.tm-spreadsheet` a odvozené z core sémantických tokenů, takže je respektuje light, dark i indigo téma. Canvas je čte přes `buildPalette` (`spreadsheet-canvas.js`); host může kterýkoli přepsat na `.tm-spreadsheet`.
+
+| Token | Význam |
+|-------|--------|
+| `--tm-spreadsheet-header-bg` / `-header-text` | Výchozí pozadí a písmo hlaviček řádků/sloupců |
+| `--tm-spreadsheet-header-active-bg` / `-header-active-text` | Zvýraznění hlavičky aktivního řádku/sloupce |
+| `--tm-spreadsheet-header-font` | Font hlaviček (UI sans, ne mono) |
+| `--tm-spreadsheet-gridline` | Barva mřížky |
+| `--tm-spreadsheet-selection-border` / `-selection-fill` / `-selection-fill-alpha` | Rámeček výběru a jeho výplň (barva + síla) |
+| `--tm-spreadsheet-ref-0..5` | Barvy odkazů ve režimu bodování formule (kategorická paleta) |
+
 #### Klíčové parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -4069,6 +4084,8 @@ Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, mu
 | `ColumnsCount` | `int` | `50` | Počet sloupců |
 | `RowHeight` | `double` | `20` | Výška řádku v px |
 | `ColumnWidth` | `double` | `64` | Šířka sloupce v px |
+| `Density` | `SpreadsheetDensity` | `Auto` | Hustota mřížky: `Auto` = `Comfortable` na dotyku (`pointer: coarse`) a `Compact` jinde; `Comfortable` kreslí řádky 1,5× a písmo 1,25× (jen render — `RowHeight` ani XLSX výšky se nemění) |
+| `Mode` | `SpreadsheetMode` | `Full` | `Full` = ribbon + formula bar + workspace chrome, `Embedded` = plochý grid jen pro čtení |
 | `OnChange` | `EventCallback<SpreadsheetChangeEventArgs>` | — | Změna hodnoty buňky |
 | `OnSelect` | `EventCallback<SpreadsheetSelectEventArgs>` | — | Změna výběru |
 | `OnCellEdit` | `EventCallback<SpreadsheetCellEditEventArgs>` | — | Editace buňky |

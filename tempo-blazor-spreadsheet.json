@@ -1572,6 +1572,13 @@
           "description": "XLSX file data to load into the spreadsheet."
         },
         {
+          "name": "Density",
+          "type": "SpreadsheetDensity",
+          "isRequired": false,
+          "default": "SpreadsheetDensity.Auto",
+          "description": "How large the canvas draws rows and cell text. Defaults to Auto, which resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else."
+        },
+        {
           "name": "Height",
           "type": "string?",
           "isRequired": false,
@@ -1728,6 +1735,13 @@
           "isRequired": false,
           "default": "64",
           "description": "Default column width in pixels."
+        },
+        {
+          "name": "Density",
+          "type": "SpreadsheetDensity",
+          "isRequired": false,
+          "default": "SpreadsheetDensity.Auto",
+          "description": "Requested grid density. Auto is resolved once per instance from the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts only (the sheet model and every XLSX height keep their values). The root carries data-density so a host style or a test can key off the resolved value."
         },
         {
           "name": "ExternalFormulaEditValue",
@@ -3273,6 +3287,10 @@
     },
     {
       "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
       "kind": "JavaScript"
     }
   ],

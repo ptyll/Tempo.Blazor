@@ -2,13 +2,85 @@
    Spreadsheet — TmSpreadsheet, TmSpreadsheetGrid
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Component tokens ──────────────────────────────────────────────────────────
+   Derived from the core semantic tokens only (never a literal), so light mode, dark mode and the
+   indigo theme all recompute them. The canvas reads them through buildPalette
+   (wwwroot/js/spreadsheet-canvas.js); a host overrides any single one on .tm-spreadsheet. */
 .tm-spreadsheet {
+    /* The header strip is a table-header surface, not the cell surface: it uses the same token the
+       core data table's header row uses (gray-50 in light, #0f172a in dark, so it is always distinct
+       from --tm-color-surface = the cell background). */
+    --tm-spreadsheet-header-bg: var(--tm-color-surface-secondary);
+    --tm-spreadsheet-header-text: var(--tm-color-text-muted);
+    --tm-spreadsheet-header-active-bg: var(--tm-color-primary-subtle);
+    --tm-spreadsheet-header-active-text: var(--tm-color-primary-text);
+    /* Canvas font shorthand: the canvas font parser needs a resolved length, so this token carries px
+       rather than a --tm-text-* scale reference (a rem in a font shorthand is not honoured everywhere). */
+    --tm-spreadsheet-header-font: var(--tm-font-medium) 11px var(--tm-font-sans);
+    --tm-spreadsheet-gridline: var(--tm-color-border-subtle);
+    --tm-spreadsheet-selection-border: var(--tm-color-primary);
+    /* The selection wash is a COLOUR plus a strength, not a pre-mixed rgba(): the canvas paints the
+       colour at selection-fill-alpha through globalAlpha (a color-mix()/rgba() string is not a colour
+       every canvas backend parses). Both stay overridable one level up. */
+    --tm-spreadsheet-selection-fill: var(--tm-color-primary);
+    --tm-spreadsheet-selection-fill-alpha: 0.12;
+    /* Six formula-reference colours mapped onto the categorical palette (dark lifts them to 400-tones). */
+    --tm-spreadsheet-ref-0: var(--tm-category-1);
+    --tm-spreadsheet-ref-1: var(--tm-category-6);
+    --tm-spreadsheet-ref-2: var(--tm-category-4);
+    --tm-spreadsheet-ref-3: var(--tm-category-2);
+    --tm-spreadsheet-ref-4: var(--tm-category-3);
+    --tm-spreadsheet-ref-5: var(--tm-category-8);
+
     display: flex;
     flex-direction: column;
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
     overflow: hidden;
+}
+
+/* ── Chrome (mode-scoped) ──────────────────────────────────────────────────────
+   Mode=Full paints the workspace and lifts the ribbon, the formula bar, the grid, the sheet tabs and
+   the status bar as cards. Mode=Embedded (Notion block, modal host) stays flat: the grid is the
+   surface and the chrome rows carry no card. The double class beats the child components' scoped
+   selectors (class + scope attribute) on specificity, so the mode always wins. */
+.tm-spreadsheet.tm-spreadsheet--workspace {
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-workspace);
+}
+
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-toolbar,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-formula-bar,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-canvas-grid,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-sheet-tabs,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-statusbar {
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+}
+
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-canvas-grid {
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-spreadsheet.tm-spreadsheet--chrome-flat {
+    gap: 0;
+    padding: 0;
+    background: var(--tm-color-surface);
+    border-radius: var(--tm-radius-control);
+    box-shadow: none;
+}
+
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-toolbar,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-formula-bar,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-canvas-grid,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-sheet-tabs,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-statusbar {
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* ── Grid ── */
@@ -109,12 +181,20 @@
     z-index: 3;
     box-sizing: border-box;
     border: 2px solid var(--tm-color-primary);
+    /* The 2px primary border IS the focus indicator; the editor is created already focused, so a host
+       `*:focus-visible` ring would double it. The explicit :focus/:focus-visible rules below win on
+       specificity (class + pseudo-class) over a host universal selector. */
     outline: none;
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: inherit;
     font-size: inherit;
     padding: 0 var(--tm-space-1);
+}
+
+.tm-spreadsheet-canvas-grid__editor:focus,
+.tm-spreadsheet-canvas-grid__editor:focus-visible {
+    outline: none;
 }
 
 .tm-spreadsheet-canvas-grid__formula-suggestions,
@@ -135,7 +215,7 @@
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-spreadsheet-canvas-grid__formula-suggestion {
@@ -165,7 +245,7 @@
 
 .tm-spreadsheet-canvas-grid__formula-suggestion-signature {
     color: var(--tm-color-text-muted);
-    font-size: 11px;
+    font-size: var(--tm-text-xs);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint {
@@ -176,7 +256,7 @@
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-elevated);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint-name {
@@ -187,8 +267,8 @@
 .tm-spreadsheet-canvas-grid__formula-hint-signature,
 .tm-spreadsheet-canvas-grid__formula-hint-summary {
     color: var(--tm-color-text-muted);
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: var(--tm-text-xs);
+    line-height: var(--tm-line-height-snug);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint-arg--active {
@@ -468,7 +548,7 @@
 
 .tm-spreadsheet-resize-dialog__btn--ok {
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
     border-color: var(--tm-color-primary);
 }
 
@@ -963,13 +1043,14 @@
     cursor: crosshair;
 }
 
-/* Six highlight colours for referenced cells / ranges */
-.tm-spreadsheet-cell--formula-ref-0 { outline: 2px solid #1e8fe0; outline-offset: -1px; background: rgba(30, 143, 224, 0.08); }
-.tm-spreadsheet-cell--formula-ref-1 { outline: 2px solid #e04030; outline-offset: -1px; background: rgba(224, 64, 48, 0.08); }
-.tm-spreadsheet-cell--formula-ref-2 { outline: 2px solid #20a040; outline-offset: -1px; background: rgba(32, 160, 64, 0.08); }
-.tm-spreadsheet-cell--formula-ref-3 { outline: 2px solid #a040c0; outline-offset: -1px; background: rgba(160, 64, 192, 0.08); }
-.tm-spreadsheet-cell--formula-ref-4 { outline: 2px solid #e08020; outline-offset: -1px; background: rgba(224, 128, 32, 0.08); }
-.tm-spreadsheet-cell--formula-ref-5 { outline: 2px solid #208080; outline-offset: -1px; background: rgba(32, 128, 128, 0.08); }
+/* Six highlight colours for referenced cells / ranges — the same --tm-spreadsheet-ref-* tokens the
+   canvas palette reads, so the DOM cell and the painted cell can never disagree. */
+.tm-spreadsheet-cell--formula-ref-0 { outline: 2px solid var(--tm-spreadsheet-ref-0); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-0) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-1 { outline: 2px solid var(--tm-spreadsheet-ref-1); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-1) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-2 { outline: 2px solid var(--tm-spreadsheet-ref-2); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-2) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-3 { outline: 2px solid var(--tm-spreadsheet-ref-3); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-3) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-4 { outline: 2px solid var(--tm-spreadsheet-ref-4); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-4) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-5 { outline: 2px solid var(--tm-spreadsheet-ref-5); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-5) 8%, transparent); }
 
 /* ── Format Cells Dialog ── */
 
@@ -1164,7 +1245,7 @@
 
 .tm-fcd__listbox-item--selected {
     background: var(--tm-color-primary);
-    color: white;
+    color: var(--tm-color-on-primary);
 }
 
 .tm-fcd__btn-group {
@@ -1192,7 +1273,7 @@
 
 .tm-fcd__btn--active {
     background: var(--tm-color-primary);
-    color: white;
+    color: var(--tm-color-on-primary);
     border-color: var(--tm-color-primary);
 }
 
@@ -1226,10 +1307,10 @@
     width: 24px;
     height: 24px;
     border: 1px solid var(--tm-color-border);
-    border-radius: 2px;
+    border-radius: var(--tm-radius-xs);
     cursor: pointer;
     padding: 0;
-    font-size: 10px;
+    font-size: var(--tm-text-xs);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1248,10 +1329,10 @@
 .tm-fcd__palette-cell--transparent {
     background: repeating-linear-gradient(
         45deg,
-        #ccc 0px,
-        #ccc 3px,
-        white 3px,
-        white 6px
+        var(--tm-color-border) 0px,
+        var(--tm-color-border) 3px,
+        var(--tm-color-surface) 3px,
+        var(--tm-color-surface) 6px
     );
 }
 

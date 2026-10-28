@@ -140,6 +140,59 @@
     </div>
 </section>
 
+<!-- Grid density (SP1) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Grid Density</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Touch Comfort</span>
+    </div>
+
+    <div class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl mb-4">
+        <p class="text-sm text-amber-800 dark:text-amber-200">
+            <code>Density</code> scales what the canvas RENDERS — rows, cell text, the fill handle and the header
+            filter buttons. The workbook model (row heights, XLSX dimensions) is untouched.
+            <code>Auto</code> (the default) picks Comfortable on a touch screen and Compact elsewhere.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-density-compact">
+            <TmSpreadsheet Density="SpreadsheetDensity.Compact"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="430px" />
+        </div>
+        <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-density-comfortable">
+            <TmSpreadsheet Density="SpreadsheetDensity.Comfortable"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="430px" />
+        </div>
+    </div>
+</section>
+
+<!-- Embedded mode: the flat chrome (Notion block / modal host) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Embedded Mode</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full">Flat chrome</span>
+    </div>
+
+    <div class="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl mb-4">
+        <p class="text-sm text-slate-700 dark:text-slate-300">
+            <code>Mode="SpreadsheetMode.Embedded"</code> keeps the grid flat — no ribbon, no formula bar, no card
+            chrome (<code>tm-spreadsheet--chrome-flat</code>) — for a Notion block or a modal host.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-embedded">
+        <TmSpreadsheet Mode="SpreadsheetMode.Embedded"
+                       RowsCount="12"
+                       ColumnsCount="8"
+                       Height="260px" />
+    </div>
+</section>
+
 @code {
     private TmSpreadsheet _basicSpreadsheet = null!;
     private TmSpreadsheet _formulaSpreadsheet = null!;

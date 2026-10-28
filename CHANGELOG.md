@@ -120,6 +120,33 @@
   </div>
   ```
 
+- **`TmSpreadsheet` paints from tokens: the canvas, the dialogs and the chrome follow the palette, dark mode and the indigo theme.** Before, the package shipped literals that are what rendered, so no theme reached the grid: `buildPalette` kept a hardcoded blue selection wash (`rgba(37, 99, 235, 0.12)`) and six hardcoded formula-reference colours, the active auto-filter glyph was `#ffffff`, the validation circles `#e53935`, a hyperlink's ink `#2563EB`, and seven scoped dialog stylesheets carried hex colours plus hex fallbacks (`var(--tm-color-surface, #fff)`) with `z-index: 1100` and `font-size: 13px`. After, the root declares the component tokens (`--tm-spreadsheet-header-bg/-text/-active-bg/-active-text/-font`, `--tm-spreadsheet-gridline`, `--tm-spreadsheet-selection-border/-fill/-fill-alpha`, `--tm-spreadsheet-ref-0..5`) derived from core semantic tokens only — the header gutter reads `--tm-color-surface-secondary` (the same token the data table header row uses, gray-50 in light and #0f172a in dark), so the header strip is a surface of its own instead of the white cell background, and the canvas reads them through `buildPalette` — so the selection wash follows `--tm-color-primary` (dark and indigo included), the formula references follow the categorical palette, and the header labels use `--tm-font-sans` instead of a monospace literal. A host overrides any single token on `.tm-spreadsheet`; nothing in the package is a literal any more (the strict token audit's package baseline is **0**). The dialog deltas are tokenized 1:1 (radius `--tm-radius-card`/`--tm-radius-control`, text `--tm-text-*`, layers `--tm-z-modal`/`--tm-z-dropdown`/`--tm-z-popover`), and the Find/Replace input's soft glow (`--tm-shadow-focus`, 1.62:1) became the two-layer `--tm-focus-ring` (5.17:1) with a forced-colors outline.
+
+  ```css
+  /* before: the fallback is what renders, forever */
+  .tm-spreadsheet-sort { background: var(--tm-color-surface, #fff); border-radius: 10px; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28); }
+
+  /* after: a component token on the root, derived from the core token */
+  .tm-spreadsheet { --tm-spreadsheet-header-bg: var(--tm-color-surface-elevated); }
+  .tm-spreadsheet-sort { background: var(--tm-color-surface); border-radius: var(--tm-radius-card); box-shadow: var(--tm-shadow-xl); }
+  ```
+
+- **`TmSpreadsheet` now has a grid density, and its default changes the look on a touch device.** New `Density` parameter (`SpreadsheetDensity.Auto` default, `Compact`, `Comfortable`). `Auto` resolves to `Comfortable` on a coarse pointer (`pointer: coarse`) and to `Compact` everywhere else, so a tablet or phone renders taller rows (1.5x), larger cell text (1.25x), a bigger fill handle and larger header filter buttons **without any host code** — this is the visual change a mouse host does not see. The scale is render-only: `RowHeight`, a per-row custom height, `SpreadsheetSheet.DefaultRowHeight` and every XLSX height keep their values, so a workbook round-trips untouched. A host that must keep the old look on touch pins it:
+
+  ```razor
+  <!-- before: the only density there was -->
+  <TmSpreadsheet RowHeight="20" />
+
+  <!-- after: opt out of the touch comfort -->
+  <TmSpreadsheet Density="SpreadsheetDensity.Compact" />
+  ```
+
+  The canvas grid root carries `data-density="compact|comfortable"` so a test or a host style can key off the resolved density. A host that reads pixel geometry must expect 30px rows on a touch device instead of 20px (zoom 100%). A row resize (the drag in the row header and the "Set row height" dialog) converts back to model pixels — `rendered ÷ (zoom × density row scale)`, the dialog shows the stored model height — so a comfortable grid never writes 1.5x heights into the workbook (the 150% zoom variant of the same bug is fixed alongside).
+
+- **`TmSpreadsheet` highlights the active row and column header.** Before, every header painted the same elevated surface and the selection was only visible inside the grid. After, the row/column headers of the selection are tinted with `--tm-spreadsheet-header-active-bg`, their labels use `--tm-spreadsheet-header-active-text`, and a 2px `--tm-spreadsheet-selection-border` rail sits on the grid edge of each (a second, non-colour signal for forced-colors and colour-blind readers). The tint follows the selection range, and a selection change repaints ONLY the old and the new header strips (two dirty rects, one header-layer pass) — the header layer is never repainted wholesale for a selection. A host that overrode `.tm-spreadsheet-header-cell` colours now has to override the tokens: `.tm-spreadsheet-header-cell` is the DOM grid's class, the canvas header is painted from the tokens above.
+
+- **`TmSpreadsheet` Full mode paints the workspace and lifts its chrome as cards.** Before, `Mode=Full` and `Mode=Embedded` shared one flat surface with 1px separators. After, the Full root carries `tm-spreadsheet--workspace` (background `--tm-bg-workspace`, a small gap and padding) and the ribbon, formula bar, grid, sheet tabs and status bar become cards (`--tm-radius-card`, `--tm-shadow-card`), while `Mode=Embedded` (the Notion block, a modal host) carries `tm-spreadsheet--chrome-flat` and keeps the flat, gapless chrome. A host selector that matched `.tm-spreadsheet` to override the background keeps working (the modifier is a second class, not a wrapper); a host that measured the grid's offset from the root must expect the workspace padding (8px) to be part of it.
+
 - **The Spreadsheet Custom Filter's first operator select is named by its own role, not by the dialog title.** Before, that `<select>` carried `aria-label="Custom filter"` (the dialog title repeated on a control), so a screen-reader user heard the same name on the dialog and on the field. After, it reads `TmSpreadsheet_CustomFilter_FirstOperator` ("First condition operator"), and the four operand fields and the second operator carry their own names (`…_FirstValue`, `…_FirstValueTo`, `…_SecondOperator`, `…_SecondValue`, `…_SecondValueTo`). A host that overrode the visible dialog title to reword that select must override the new key instead; an automated check that asserted `aria-label="Custom filter"` on the select now matches the dialog container only.
 
   ```html

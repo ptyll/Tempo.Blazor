@@ -2,7 +2,7 @@
     position: absolute;
     top: 8px;
     right: 16px;
-    z-index: 40;
+    z-index: var(--tm-z-popover);
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -63,9 +63,11 @@
 }
 
 .tm-spreadsheet-find__input:focus {
-    outline: none;
+    /* The two-layer ring (5.17:1) instead of the soft glow (1.62:1), with a transparent outline
+       that forced-colors paints in the system colour. */
+    outline: 2px solid transparent;
     border-color: var(--tm-color-primary);
-    box-shadow: 0 0 0 2px var(--tm-color-primary-soft, rgba(59, 130, 246, 0.25));
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-spreadsheet-find__counter {

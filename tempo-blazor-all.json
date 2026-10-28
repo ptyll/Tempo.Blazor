@@ -26881,10 +26881,19 @@
               "isRequired": false,
               "default": "SpreadsheetMode.Full",
               "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
+            },
+            {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
             }
           ],
           "cssClasses": [
             "tm-spreadsheet",
+            "tm-spreadsheet--workspace",
+            "tm-spreadsheet--chrome-flat",
             "tm-spreadsheet-toolbar",
             "tm-spreadsheet-toolbar-tabs",
             "tm-spreadsheet-toolbar-tab",
@@ -44434,6 +44443,13 @@
               "description": "XLSX file data to load into the spreadsheet."
             },
             {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "How large the canvas draws rows and cell text. Defaults to Auto, which resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else."
+            },
+            {
               "name": "Height",
               "type": "string?",
               "isRequired": false,
@@ -44590,6 +44606,13 @@
               "isRequired": false,
               "default": "64",
               "description": "Default column width in pixels."
+            },
+            {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "Requested grid density. Auto is resolved once per instance from the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts only (the sheet model and every XLSX height keep their values). The root carries data-density so a host style or a test can key off the resolved value."
             },
             {
               "name": "ExternalFormulaEditValue",
@@ -46135,6 +46158,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
           "kind": "JavaScript"
         }
       ],
@@ -100836,6 +100863,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "SpreadsheetDensity",
+          "kind": "Enum",
+          "category": "Spreadsheet",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Enums",
+          "description": "Grid density of a spreadsheet: how large the canvas draws rows and cell text. Auto (0) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else; Compact (1) is the classic 20px row, Comfortable (2) draws rows 1.5x with 1.25x text. The scale is render-only, so the workbook model and every XLSX height keep their values.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Enums/SpreadsheetDensity.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "SpreadsheetDocumentCreateResult",
           "kind": "Record",
           "category": "Spreadsheet",
@@ -105274,12 +105311,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1494,
-        "manualItemCount": 1494,
-        "generatedItemCount": 1477,
+        "itemCount": 1495,
+        "manualItemCount": 1495,
+        "generatedItemCount": 1478,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1477
+        "publicApiTypeCount": 1478
       }
     },
     {
@@ -122260,10 +122297,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3311,
-    "manualItemCount": 3311,
+    "itemCount": 3312,
+    "manualItemCount": 3312,
     "generatedOnlyItemCount": 0,
     "componentCount": 490,
-    "publicApiTypeCount": 2768
+    "publicApiTypeCount": 2769
   }
 }

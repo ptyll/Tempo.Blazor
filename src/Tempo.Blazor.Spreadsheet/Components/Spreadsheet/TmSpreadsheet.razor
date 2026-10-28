@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Dialogs
 
-<div class="tm-spreadsheet @Class"
+<div class="tm-spreadsheet @(Mode == SpreadsheetMode.Full ? "tm-spreadsheet--workspace" : "tm-spreadsheet--chrome-flat") @Class"
      style="width: @(Width ?? "100%"); height: @(Height ?? "600px");"
      data-formula-point-mode="@(HostFormulaPointMode ? "true" : null)"
      data-formula-guard-active="@(_formulaReferencePickingGuardActive ? "true" : "false")"
@@ -102,6 +102,7 @@
                                  Sheet="_workbook.ActiveSheet"
                                  RowHeight="RowHeight"
                                  ColumnWidth="ColumnWidth"
+                                 Density="Density"
                                  Zoom="Zoom"
                                  IsReadonly="@(Mode == SpreadsheetMode.Embedded)"
                                  ExternalFormulaSessionActive="@(IsFormulaBarPointSessionActive || _formulaReferencePickingGuardActive || (_formulaOriginSheetIndex >= 0 && _formulaOriginCellRef is not null))"

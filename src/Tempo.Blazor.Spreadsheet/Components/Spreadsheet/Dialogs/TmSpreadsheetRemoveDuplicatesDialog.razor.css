@@ -1,22 +1,22 @@
 .tm-spreadsheet-dedup__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1100;
+    z-index: var(--tm-z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 23, 42, 0.32);
+    background: var(--tm-bg-overlay);
 }
 
 .tm-spreadsheet-dedup {
     width: 440px;
     max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface, #fff);
-    border-radius: 10px;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+    background: var(--tm-color-surface);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-xl);
     padding: 16px;
-    font-size: 13px;
-    color: var(--tm-color-text, #0f172a);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-dedup__header {
@@ -28,19 +28,19 @@
 
 .tm-spreadsheet-dedup__title {
     font-weight: 600;
-    font-size: 15px;
+    font-size: var(--tm-text-md);
 }
 
 .tm-spreadsheet-dedup__close {
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-muted, #64748b);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-dedup__hint {
     margin: 0 0 12px;
-    color: var(--tm-color-text-muted, #64748b);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-dedup__toolbar {
@@ -68,8 +68,8 @@
     background: transparent;
     padding: 0;
     cursor: pointer;
-    color: var(--tm-color-primary, #2563eb);
-    font-size: 12px;
+    color: var(--tm-color-primary);
+    font-size: var(--tm-text-xs);
 }
 
 .tm-spreadsheet-dedup__link:hover {
@@ -79,8 +79,8 @@
 .tm-spreadsheet-dedup__columns {
     max-height: 260px;
     overflow-y: auto;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 6px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     padding: 8px;
     margin-bottom: 12px;
 }
@@ -91,11 +91,11 @@
     gap: 8px;
     padding: 4px 4px;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--tm-radius-control);
 }
 
 .tm-spreadsheet-dedup__column:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-spreadsheet-dedup__actions {
@@ -106,17 +106,17 @@
 
 .tm-spreadsheet-dedup__btn {
     padding: 7px 16px;
-    border-radius: 4px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    background: var(--tm-color-surface, #fff);
+    border-radius: var(--tm-radius-control);
+    border: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-dedup__btn--ok {
-    background: var(--tm-color-primary, #2563eb);
-    border-color: var(--tm-color-primary, #2563eb);
-    color: #fff;
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-spreadsheet-dedup__btn--ok:disabled {
