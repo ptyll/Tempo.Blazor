@@ -345,8 +345,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
         // A FORCED layout is the resolution: the shell reports changes only, and the initial
         // resolution is not a change — so a host (or test) that pins Tablet/Desktop/Mobile must
-        // see the tablet presentation from the first frame. Under Auto the shell's callback owns
-        // this state (it fires on the first container measurement).
+        // see the tablet presentation from the first frame. The initial value is not a change,
+        // except that an Auto observer which inherits a non-Desktop resolution from a cascading
+        // parent reports it once so late-mounted consumers adopt it. Under Auto the shell's
+        // callback owns this state (it fires on the first container measurement, or on that
+        // inherited first resolution).
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
         {
             ApplyResolvedLayout(LayoutMode);

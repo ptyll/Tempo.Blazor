@@ -3039,6 +3039,7 @@
   "TmModelingSourcePanel_StaleWarning": "Source data may be out of date. Load the model again before using this view for decisions.",
   "TmModelingSourcePanel_Title": "Data source",
   "TmModelingSourcePanel_Unknown": "Unknown",
+  "TmModelingViewSelector_NoViewpoint": "None",
   "TmModelingViewSelector_NoViewpoints": "No viewpoints are available for this notation.",
   "TmModelingViewSelector_Notation": "Notation",
   "TmModelingViewSelector_SelectNotation": "Select notation",

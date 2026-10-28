@@ -3054,6 +3054,7 @@
   "TmModelingSourcePanel_StaleWarning": "Les données source sont peut-être obsolètes. Rechargez le modèle avant d'utiliser cette vue pour prendre des décisions.",
   "TmModelingSourcePanel_Title": "Source de données",
   "TmModelingSourcePanel_Unknown": "Inconnu",
+  "TmModelingViewSelector_NoViewpoint": "Aucun",
   "TmModelingViewSelector_NoViewpoints": "Aucun point de vue disponible pour cette notation.",
   "TmModelingViewSelector_Notation": "Notation",
   "TmModelingViewSelector_SelectNotation": "Sélectionner une notation",

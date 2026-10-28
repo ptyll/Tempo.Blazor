@@ -56,7 +56,9 @@
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>
-    /// Raised when the rendered layout changes. The initial value is not a change. Never pair
+    /// Raised when the rendered layout changes. The initial value is not a change, except that an
+    /// <see cref="TmLayoutMode.Auto"/> observer which inherits a non-Desktop resolution from a
+    /// cascading parent reports it once so late-mounted consumers adopt it. Never pair
     /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
     /// would pin that mode.
     /// </summary>
@@ -155,11 +157,16 @@
             _resolvedInitialised = true;
             // A consumer mounted AFTER an ancestor observer has already resolved a mode (a lazy
             // editor inside a loaded page under the viewport scope) starts from its own desktop
-            // default and would only ever hear about CHANGES — a first measurement that agrees
+            // default and would only ever hear about CHANGES — a first resolution that agrees
             // with the inherited mode would raise nothing and the consumer would stay desktop.
-            // Report a non-desktop first resolution once, so the consumer adopts it; consumers
-            // that already read the cascaded context treat the raise as a no-op.
-            if (resolved != TmLayoutMode.Desktop)
+            // Report an INHERITED non-desktop first resolution once, so the consumer adopts it;
+            // consumers that already read the cascaded context treat the raise as a no-op.
+            // The guard pins the inherited case: an Auto observer that has not measured yet and
+            // has a parent resolves the PARENT's mode (see TmLayout.Resolve) — a forced
+            // LayoutMode is the host's decision and a parentless Auto falls back to InitialMode,
+            // so both keep the no-initial-raise semantics.
+            if (LayoutMode == TmLayoutMode.Auto && _measured is null && Parent is not null
+                && resolved != TmLayoutMode.Desktop)
                 await ResolvedLayoutChanged.InvokeAsync(resolved);
             return;
         }

@@ -46,7 +46,7 @@
                     aria-describedby="@ViewpointHintId">
                 @* Review fix (phase 3): the disabled empty select keeps one disabled placeholder
                    option so screen readers announce a value slot instead of an empty listbox. *@
-                <option value="" disabled>—</option>
+                <option value="" disabled>@Loc["TmModelingViewSelector_NoViewpoint"]</option>
             </select>
             <span id="@ViewpointHintId" class="tm-modeling-view-selector__hint">@ViewpointEmptyText</span>
         </div>

@@ -20748,7 +20748,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered layout changes. The initial value is not a change."
+          "description": "Raised when the rendered layout changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it."
         },
         {
           "name": "Right",
@@ -20995,7 +20995,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered mode changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
+          "description": "Raised when the rendered mode changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "Style",

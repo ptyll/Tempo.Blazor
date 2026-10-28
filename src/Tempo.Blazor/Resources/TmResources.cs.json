@@ -3069,6 +3069,7 @@
   "TmModelingSourcePanel_StaleWarning": "Zdrojová data mohou být zastaralá. Před rozhodováním model znovu načtěte.",
   "TmModelingSourcePanel_Title": "Datový zdroj",
   "TmModelingSourcePanel_Unknown": "Neznámé",
+  "TmModelingViewSelector_NoViewpoint": "Žádný",
   "TmModelingViewSelector_NoViewpoints": "Pro tuto notaci nejsou dostupné žádné pohledy.",
   "TmModelingViewSelector_Notation": "Notace",
   "TmModelingViewSelector_SelectNotation": "Vyberte notaci",

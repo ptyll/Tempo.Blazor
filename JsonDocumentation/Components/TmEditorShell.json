@@ -307,7 +307,7 @@
       "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the rendered layout changes. The initial value is not a change."
+      "description": "Raised when the rendered layout changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it."
     },
     {
       "name": "Class",

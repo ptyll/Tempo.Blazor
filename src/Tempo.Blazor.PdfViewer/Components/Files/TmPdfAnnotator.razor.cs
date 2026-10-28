@@ -451,7 +451,8 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         // A FORCED layout is the resolution: the embedded shell reports changes only, and the
         // initial resolution is not a change — so a host (or test) that pins a mode must see
         // that presentation from the first frame. Under Auto the shell's callback owns this
-        // state (it fires on the first container measurement). Awaited, so the mobile sheet
+        // state (it fires on the first container measurement, or on an inherited non-Desktop
+        // first resolution). Awaited, so the mobile sheet
         // default lands before the first frame renders.
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolved)
         {

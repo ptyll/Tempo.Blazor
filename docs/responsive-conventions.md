@@ -120,10 +120,12 @@ that frame has no measurement yet.
 - Children read the cascaded `TmLayoutContext` (`Mode`, `Resolved`, `IsMobile`, `IsTablet`,
   `IsDesktop`, `CssModifier`). The root also carries `tm-layout--{mode}` and `data-layout`, so CSS
   can branch without the context.
-- `ResolvedLayoutChanged` fires when the rendered mode changes. The initial value is not a change.
-  Never pair `LayoutMode` with `ResolvedLayoutChanged`: the callback reports the resolved mode, and a
-  two-way bind would pin that mode. An owner that must branch its own markup uses `LayoutContent`,
-  which receives the context; it does not keep a copy of the mode.
+- `ResolvedLayoutChanged` fires when the rendered mode changes. The initial value is not a change,
+  except that an Auto observer which inherits a non-Desktop resolution from a cascading parent
+  reports it once so late-mounted consumers adopt it. Never pair `LayoutMode` with
+  `ResolvedLayoutChanged`: the callback reports the resolved mode, and a two-way bind would pin that
+  mode. An owner that must branch its own markup uses `LayoutContent`, which receives the context; it
+  does not keep a copy of the mode.
 - What a surface resolves from depends on what it is positioned against.
   - Positioned against the viewport — a modal, a dialog, a modal bottom sheet, a dropdown or popover
     presented as a sheet, an action bar with `Placement=FixedViewport` — resolves

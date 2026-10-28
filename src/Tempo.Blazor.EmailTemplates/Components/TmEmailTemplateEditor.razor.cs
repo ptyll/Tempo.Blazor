@@ -175,8 +175,10 @@ public partial class TmEmailTemplateEditor
 
     /// <summary>
     /// Raised when the shell's RESOLVED layout changes (the container crossed a breakpoint, or the host
-    /// forced another <see cref="LayoutMode"/>). The initial value is not a change. Never bind this to
-    /// <see cref="LayoutMode"/> — that would pin the layout and stop the shell from measuring.
+    /// forced another <see cref="LayoutMode"/>). The initial value is not a change, except that an Auto
+    /// observer which inherits a non-Desktop resolution from a cascading parent reports it once so
+    /// late-mounted consumers adopt it. Never bind this to <see cref="LayoutMode"/> — that would pin
+    /// the layout and stop the shell from measuring.
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
