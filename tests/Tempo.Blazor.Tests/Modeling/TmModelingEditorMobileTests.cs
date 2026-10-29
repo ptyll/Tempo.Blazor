@@ -21,6 +21,8 @@ namespace Tempo.Blazor.Tests.Modeling;
 /// </summary>
 public sealed class TmModelingEditorMobileTests : LocalizationTestBase
 {
+    private const string ModelingModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
+
     public TmModelingEditorMobileTests()
     {
         Services.AddTempoBlazorModeling();
@@ -320,6 +322,15 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
 
         card.TextContent.Should().Contain("Last loaded:", "the card shows the loaded time");
 
+        // Fáze 7 re-review: the compact card is ONE row — the count is the visible content and
+        // each label is an sr-only span (the number row returns the height to the canvas).
+        foreach (var tile in tiles)
+        {
+            tile.QuerySelector(".tm-sr-only").Should().NotBeNull("each tile label is an sr-only span");
+            tile.TextContent.Should().Contain(tile.QuerySelector("strong")!.TextContent.Trim(),
+                "the count stays the visible content of the tile");
+        }
+
         // The mobile layout replaces the desktop status strip — no duplicate count surfaces.
         cut.FindAll("[data-testid='modeling-status-strip']").Should().BeEmpty();
     }
@@ -398,6 +409,99 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-inspector-panel']").TextContent.Should().Contain("Approve request",
                 "the inspector shows the selected element");
         });
+    }
+
+    // ── Fáze 7 re-review: selection focus on mobile ──────────────────────────
+
+    [Fact]
+    public void Mobile_tree_tap_stays_on_the_tree_tab()
+    {
+        // G2 browsing: tapping a model tree element is a browse action — it must NOT yank the
+        // user to the Inspector tab. Only issue/edge selections switch the panel there.
+        using var cut = RenderMobileEditor();
+        WaitForLoaded(cut);
+
+        cut.Find("[data-testid='modeling-panel-tab-tree']").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("tree"));
+
+        cut.Find("[data-testid='modeling-tree-node-task-a']").Click();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("tree",
+                "a tree tap stays on the Tree tab (G2 browsing)"));
+        cut.Find("[data-testid='modeling-editor']").GetAttribute("data-selected-element-id").Should().Be("task-a",
+            "the selection itself still happened — only the panel switch is suppressed");
+    }
+
+    [Fact]
+    public void Mobile_issue_tap_moves_focus_to_the_inspector_panel_hook()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new NavigableIssueMobileModelingModelProvider()));
+
+        using var cut = RenderMobileEditorWithProvider(NavigableIssueMobileModelingModelProvider.Key);
+        WaitForLoaded(cut);
+
+        cut.Find("[data-testid='modeling-panel-tab-issues']").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("issues"));
+
+        cut.Find("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-0']").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("inspector"));
+
+        module.Invocations
+            .Where(invocation => invocation.Identifier == "focusWithin")
+            .Select(invocation => (string)invocation.Arguments[1]!)
+            .Should().Contain(Tempo.Blazor.Components.Modeling.TmModelingEditor.InspectorPanelFocusSelector,
+                "the tab switch moves focus onto the inspector panel through its data-modeling-focus hook");
+    }
+
+    [Fact]
+    public async Task Mobile_header_overflow_dialog_returns_focus_to_the_header_trigger_and_resets()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+
+        using var cut = RenderMobileEditor();
+        WaitForLoaded(cut);
+
+        // Open the dialog from the compact header "⋯" (its "Open in editor" menu entry).
+        var more = cut.Find("[data-testid='modeling-editor-toolbar'] .tm-modeling-editor__more");
+        more.QuerySelector(".tm-dropdown-trigger")!.Click();
+        cut.WaitForAssertion(() => more.QuerySelectorAll("button[role='menuitem']").Should().NotBeEmpty());
+        more.QuerySelectorAll("button[role='menuitem']")
+            .Single(item => item.TextContent.Contains("Open in editor"))
+            .Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+
+        module.Invocations
+            .Where(invocation => invocation.Identifier == "focusWithin")
+            .Select(invocation => (string)invocation.Arguments[1]!)
+            .Should().Contain(selector => selector.Contains(Tempo.Blazor.Components.Modeling.TmModelingEditor.MobileHeaderTriggerSelector, StringComparison.Ordinal),
+                "closing the dialog returns focus to the header ⋯ trigger that opened it");
+
+        // The close RESETS the return selector: a later dialog opened WITHOUT a mobile trigger
+        // (the preview's direct OnOpenInEditor path) must restore the default host, not inherit
+        // the stale header trigger selector.
+        var preview = cut.FindComponent<Tempo.Blazor.Components.Modeling.TmModelingDiagramPreview>();
+        await cut.InvokeAsync(() => preview.Instance.OnOpenInEditor.InvokeAsync(preview.Instance.Document!));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+
+        module.Invocations
+            .Where(invocation => invocation.Identifier == "focusWithin")
+            .Select(invocation => (string)invocation.Arguments[1]!)
+            .Last().Should().Be(Tempo.Blazor.Components.Modeling.TmModelingEditor.OpenInEditorFocusSelector,
+                "the close reset the return selector — the header trigger selector is not reused");
     }
 
     // ── G2 scope: no drag on mobile ──────────────────────────────────────────

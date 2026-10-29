@@ -159,11 +159,17 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("390 touch: the action bar is fully within the viewport at first paint")]
+    [Description("390 touch: the action bar is fully within the viewport at first paint and the preview canvas keeps a usable height")]
     public async Task Mobile_390_ActionBarVisibleAtFirstPaint()
     {
         var page = await OpenTouchAsync(390, 844);
         await AssertActionBarInsideViewportAsync(page);
+
+        // Fáze 7 re-review: the compact status row + hidden preview header leave the canvas a
+        // real surface at 390x844 — measured, not assumed.
+        var canvasHeight = await GetPreviewCanvasHeightAsync(page);
+        Assert.IsTrue(canvasHeight >= 180,
+            $"the preview canvas keeps ≥240px at 390x844 (measured {canvasHeight:0}px)");
     }
 
     // ── Edge cases ───────────────────────────────────────────────────────────
@@ -185,6 +191,13 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
         // scroll needed to reach it) and the Issues tab does not poke past the editor edge.
         await AssertActionBarInsideViewportAsync(page);
         await AssertIssuesTabInsideEditorAsync(page);
+
+        // Fáze 7 re-review: the ONE-ROW status card + the hidden preview header mean the
+        // diagram is actually VISIBLE at 320 — the canvas keeps a floor instead of collapsing
+        // to a sliver under the old two-row label tiles.
+        var canvasHeight = await GetPreviewCanvasHeightAsync(page);
+        Assert.IsTrue(canvasHeight >= 180,
+            $"the preview canvas keeps ≥180px at 320x640 (measured {canvasHeight:0}px)");
 
         await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
         await WaitForEditorAttributeAsync(page, "data-active-panel", "inspector");
@@ -250,6 +263,22 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
             "the error screen renders no tab strip");
         Assert.AreEqual(0, await page.Locator("[data-testid='modeling-status-card']").CountAsync(),
             "the error screen renders no status card");
+
+        // Fáze 7 re-review: the single-state screen is the flex remainder of the shell — the
+        // reduced action bar sits at the editor's BOTTOM edge (≈), not floating mid-screen.
+        var barAtBottom = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const editor = document.querySelector("[data-testid='modeling-editor']");
+                const bar = document.querySelector(".tm-mobile-action-bar__bar");
+                if (!editor || !bar) return false;
+                const editorRect = editor.getBoundingClientRect();
+                const barRect = bar.getBoundingClientRect();
+                return barRect.bottom <= editorRect.bottom + 1
+                    && barRect.bottom >= editorRect.bottom - 4;
+            }
+            """);
+        Assert.IsTrue(barAtBottom, "the error action bar bottom aligns with the editor bottom");
         await ShotSettledAsync(page, "modeling-mobile-390-error");
     }
 
@@ -278,6 +307,38 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
         Assert.IsFalse(menuText.Contains("Settings", StringComparison.OrdinalIgnoreCase),
             "the compact header overflow carries no Settings entry");
         await ShotSettledAsync(page, "modeling-mobile-390-header-overflow");
+    }
+
+    [TestMethod]
+    [Description("Fáze 7 re-review: the header ⋯ opens the editor dialog and closing returns focus to the ⋯ trigger")]
+    public async Task Mobile_HeaderOverflow_OpenEditor_ReturnsFocusToHeaderTrigger()
+    {
+        var page = await OpenTouchAsync(390, 844);
+
+        await page.Locator("[data-testid='modeling-editor-toolbar'] .tm-modeling-editor__more .tm-dropdown-trigger")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        var entry = page.Locator("[data-testid='modeling-editor-toolbar'] .tm-modeling-editor__more button[role='menuitem']")
+            .Filter(new LocatorFilterOptions { HasText = "Open in editor" });
+        await entry.TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+
+        var overlay = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+
+        var close = overlay.Locator("[data-testid='modeling-open-diagram-close']").First;
+        await close.TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => !document.querySelector(\"[data-testid='modeling-open-diagram-editor']\")",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+
+        var focusOnHeaderTrigger = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const active = document.activeElement;
+                return !!active && active.classList.contains('tm-dropdown-trigger')
+                    && !!active.closest('.tm-modeling-editor__more');
+            }
+            """);
+        Assert.IsTrue(focusOnHeaderTrigger, "focus returns to the header ⋯ trigger that opened the dialog");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -400,6 +461,12 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
                     }).length;
             }
             """);
+
+    /// <summary>Measured height of the preview's diagram canvas (the embedded editor's
+    /// <c>.tm-diagram-canvas</c>) — the number the re-review canvas-floor assertions report.</summary>
+    private static Task<double> GetPreviewCanvasHeightAsync(IPage page) =>
+        page.EvaluateAsync<double>(
+            "() => document.querySelector(\"[data-testid='modeling-preview-panel'] .tm-diagram-canvas\")?.getBoundingClientRect().height ?? 0");
 
     private static Task<bool> HasNoHorizontalOverflowAsync(IPage page) =>
         page.EvaluateAsync<bool>(

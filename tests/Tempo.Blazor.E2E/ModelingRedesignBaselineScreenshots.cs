@@ -152,6 +152,28 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Fáze 7 re-review: the cs 320 baseline — the compact band under the Czech demo
+    /// culture, where the localized labels are the longest (the tile labels are sr-only now, but
+    /// the header/tab strip/ellipsis behaviour is what this shot pins). Light only; the themed
+    /// pairs above cover the palettes.</summary>
+    [TestMethod]
+    [Description("Captures modeling-editor-mobile-cs-320x640: the compact band with the Czech demo culture")]
+    public async Task Capture_MobileEditor_Cs()
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, "light", 320, 640, culture: "cs");
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "modeling-editor-mobile-cs-320x640");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     [TestMethod]
     [DataRow(390, 844)]
     [DataRow(320, 640)]
@@ -540,8 +562,9 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
 
     /// <summary>The themed setup for the TABLET band (Fáze 6): the same theme flow as
     /// <see cref="OpenThemedModelingPageAsync"/> but with touch emulation on, so the coarse
-    /// pointer styles and the sheet toggles render exactly as a tablet user sees them.</summary>
-    private async Task<IPage> OpenThemedTouchModelingPageAsync(string query, string theme, int width, int height)
+    /// pointer styles and the sheet toggles render exactly as a tablet user sees them. The
+    /// optional <paramref name="culture"/> swaps the demo culture (the cs baseline).</summary>
+    private async Task<IPage> OpenThemedTouchModelingPageAsync(string query, string theme, int width, int height, string culture = "en")
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -552,7 +575,7 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             IgnoreHTTPSErrors = true,
         });
         RegisterContext(context);
-        var init = "localStorage.setItem('tm-demo-culture', 'en');";
+        var init = $"localStorage.setItem('tm-demo-culture', '{culture}');";
         if (theme.Contains("indigo", StringComparison.Ordinal))
         {
             init += "localStorage.setItem('tm-demo-color-theme', 'indigo');";

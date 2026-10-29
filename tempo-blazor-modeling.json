@@ -286,6 +286,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether the embedded diagram editor renders its own chrome. Default true. The mobile band passes false: there the DE header bar would hold only the overflow trigger and the floating zoom pill duplicates the canvas pinch, so the preview shows the page tabs and the canvas. Reduction happens through the DE's public ShowToolbar parameter only."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
         }
       ]
     },

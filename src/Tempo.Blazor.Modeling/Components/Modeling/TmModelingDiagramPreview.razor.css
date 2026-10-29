@@ -77,12 +77,22 @@
     line-height: var(--tm-line-height-normal);
 }
 
+/* Fáze 7 re-review (320 canvas): the shell keeps a FLOOR so the embedded editor can never
+   collapse to a sliver on a short panel — when the tab body cannot afford the floor the panel
+   scrolls instead (the mobile panel is the scroll surface). Without it a 320px-tall editor left
+   the preview canvas a few pixels tall and the diagram was invisible. */
 .tm-modeling-diagram-preview__canvas-shell {
     position: relative;
-    min-height: 0;
+    min-height: calc(var(--tm-space-16) * 3);
     padding: var(--tm-space-3);
     border: 1px dashed transparent;
     overflow: hidden;
+}
+
+/* The heading block is removable (ShowHeader=false, the mobile band): the grid drops its auto
+   row so the canvas shell takes the 1fr track and the drop hint keeps its auto row. */
+.tm-modeling-diagram-preview--no-header {
+    grid-template-rows: minmax(0, 1fr) auto;
 }
 
 /* Review fix (phase 5): the drop-zone stripes are a WHILE-DRAGGING affordance, not permanent

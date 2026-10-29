@@ -64,10 +64,25 @@ public partial class TmModelingDiagramPreview
     /// </summary>
     [Parameter] public bool ShowEmbeddedEditorChrome { get; set; } = true;
 
+    /// <summary>
+    /// Whether the preview renders its own heading block (the title + the nodes/edges summary).
+    /// Default <c>true</c>. The mobile band (Fáze 7 re-review) passes <c>false</c>: the summary
+    /// line duplicates the counts the editor's compact status card already shows in the same tab,
+    /// and at 320px the heading row cost the canvas its remaining height. The edit actions ride
+    /// <see cref="ShowEditActions"/> independently (they render inside this header when both are
+    /// enabled). Mobile preview zoom is pinch-only — the zoom buttons live in "Open in editor".
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 
-    private string RootClass => string.Join(" ", new[] { "tm-modeling-diagram-preview", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string RootClass => string.Join(" ", new[]
+    {
+        "tm-modeling-diagram-preview",
+        ShowHeader ? null : "tm-modeling-diagram-preview--no-header",
+        Class
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private int NodeCount => Document?.Nodes.Count ?? 0;
 

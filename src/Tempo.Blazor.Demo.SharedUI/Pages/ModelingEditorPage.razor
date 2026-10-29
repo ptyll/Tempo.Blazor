@@ -34,7 +34,11 @@
        pushed the in-flow F5 action bar below the fold at 390/320, so first paint needed a page
        scroll. On narrow viewports the page gives the editor the exact remaining viewport height
        instead — the action bar (and the tab strip) are inside the first paint at 390x844 and
-       320x640. Desktop/tablet keep the library contract. */
+       320x640. Desktop/tablet keep the library contract.
+       DEMO-ONLY sizing: this 100dvh override is a demo-page accommodation for the demo chrome.
+       A host owns the editor's height through the TmModelingEditor Height parameter (or its own
+       layout container) — the library default remains min(768px, 100vh - 32px) and this rule is
+       scoped to .modeling-demo-page only. */
     @@media (max-width: 1023.98px) {
         .modeling-demo-page .tm-modeling-editor {
             height: calc(100dvh - 11.5rem) !important;

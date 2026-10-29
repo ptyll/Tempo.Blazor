@@ -283,8 +283,10 @@
 /* Fáze 7: the mobile chrome is one column — the compact header, the TmTabs panel strip (ONE
    panel at a time), the status card and the in-flow action bar. The shell is the focusWithin
    surface (positioning context of the reload indicator) and the flex remainder of the editor.
-   Fáze 7 review: overflow: CLIP — the shell itself never scrolls (the tab bodies scroll inside
-   their panels), so the action bar cannot be pushed below the fold by long tab content. */
+   Fáze 7 review: overflow CLIPS — the shell itself never scrolls (the tab bodies scroll inside
+   their panels), so the action bar cannot be pushed below the fold by long tab content. The
+   `overflow: hidden` line is the legacy fallback: browsers without `clip` support keep clipping
+   instead of scrolling the shell open. */
 [data-layout='mobile'] .tm-modeling-editor__mobile-shell {
     position: relative;
     display: flex;
@@ -292,8 +294,18 @@
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
+    overflow: hidden;
     overflow: clip;
     background: var(--tm-bg-workspace);
+}
+
+/* Fáze 7 re-review (empty/error screens): the single-state screen is the flex REMAINDER of the
+   shell — the header stays on top, the reduced action bar pins to the BOTTOM, and tall error
+   detail text scrolls inside the screen instead of pushing the bar below the fold. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-shell > .tm-modeling-editor__single-state {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
 }
 
 /* The panel area: the TmTabs fills the remainder; the tab BODY scrolls inside so the tab
@@ -385,9 +397,12 @@
     height: 100%;
 }
 
+/* Fáze 7 re-review (mobile preview canvas floor): the shell keeps the preview's own floor even
+   on the compact band — a short tab body can no longer collapse the canvas to a sliver; the
+   panel scrolls instead. */
 [data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__canvas-shell {
     flex: 1 1 0;
-    min-height: 0;
+    min-height: calc(var(--tm-space-16) * 3);
 }
 
 [data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__editor {
@@ -764,42 +779,37 @@
     padding: 0;
 }
 
-/* The status card: the four count tiles plus the loaded time — the mobile replacement of the
-   status strip (whose trailing item dropped off-screen at 390). Fáze 7 review: the card lives
-   in the PREVIEW tab body, above the scrolling panel — a hairline under it (not on top) and
-   flex-shrink: 0 keep it a fixed header row of that one tab. */
+/* The status card: ONE compact row of the four counts (Fáze 7 re-review) — the numbers are the
+   visible content, the labels ride sr-only spans (the card keeps its role="status" label), and
+   the loaded line is sr-only too. The single text line returns ~110px to the preview canvas at
+   320px (the two-row label tile grid was the reason the diagram vanished below the fold). The
+   card lives in the PREVIEW tab body, above the scrolling panel — a hairline under it (not on
+   top) and flex-shrink: 0 keep it a fixed header row of that one tab. */
 [data-layout='mobile'] .tm-modeling-editor__status-card {
     display: grid;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-1);
     flex-shrink: 0;
     padding: var(--tm-space-2) var(--tm-space-3);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
 }
 
-/* Fáze 7 review: two tiles per row — four columns squeezed the cs/sk labels into ellipses at
-   320, and the labels wrap instead of truncating. */
+/* Four columns of numbers — the cs/sk labels are sr-only now, so the columns cannot collide
+   and each tile centers its count in one equal track. */
 [data-layout='mobile'] .tm-modeling-editor__status-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--tm-space-2);
 }
 
 [data-layout='mobile'] .tm-modeling-editor__status-tile {
     display: grid;
-    gap: var(--tm-space-1);
+    place-items: center;
     min-width: 0;
-    padding: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
-}
-
-[data-layout='mobile'] .tm-modeling-editor__status-tile span {
-    overflow: hidden;
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
-    white-space: normal;
 }
 
 [data-layout='mobile'] .tm-modeling-editor__status-tile strong {
@@ -807,16 +817,20 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
+/* The loaded time: part of the aria-live status region only — the visible card is the one
+   number row. The sr-only pattern is written out (not the utility class) because this scoped
+   rule would out-cascade a shared class on the same property set. */
 [data-layout='mobile'] .tm-modeling-editor__status-loaded {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    min-width: 0;
+    position: absolute;
     overflow: hidden;
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 /* The "Change view" sheet body: the labeled selects stack in one column (the shared

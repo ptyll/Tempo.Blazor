@@ -110,8 +110,15 @@
                             <TmTabPanel Id="inspector"
                                        TabAttributes="@InspectorTabAttributes"
                                        Title="@Loc["TmModelingEditor_Inspector"]">
+                                @* Fáze 7 re-review: the aside is the programmatic focus target of
+                                   the selection switch — an issue/edge tap changes the tab AND
+                                   moves focus onto this panel through the stable
+                                   data-modeling-focus hook (tabindex="-1", not tab-reachable).
+                                   A tree tap is G2 browsing and never lands here. *@
                                 <aside class="tm-modeling-editor__panel tm-modeling-editor__inspector tm-modeling-editor__panel--active"
                                        data-testid="@TestId("modeling-inspector-panel")"
+                                       data-modeling-focus="inspector-panel"
+                                       tabindex="-1"
                                        aria-label="@Loc["TmModelingEditor_Inspector"]">
                                     @CompactInspectorContent
                                 </aside>
@@ -401,10 +408,13 @@
     }
 
     /// <summary>The generated diagram preview — shared by both layouts. On the mobile band the
-    /// edit actions are gone (G2: they live in the action bar and the header "⋯") and the
-    /// preview is not a drop target. Fáze 7 review: the mobile band also drops the embedded
-    /// editor's own chrome — its header bar would hold ONLY the "⋯" trigger there and the
-    /// floating zoom pill duplicates the canvas pinch — through the DE's public parameters.</summary>
+    /// edit actions are gone (G2: they live in the action bar and the header "⋯"), the preview
+    /// is not a drop target and its own heading block is hidden — the status card in the same
+    /// tab already carries the nodes/edges counts the heading summary would duplicate (Fáze 7
+    /// re-review). Fáze 7 review: the mobile band also drops the embedded editor's own chrome —
+    /// its header bar would hold ONLY the "⋯" trigger there and the floating zoom pill
+    /// duplicates the canvas pinch — through the DE's public parameters. Mobile preview zoom is
+    /// pinch-only; the zoom buttons live in "Open in editor".</summary>
     private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
                                                                         Document="@_document"
                                                                         DocumentChanged="UpdatePreviewDocumentAsync"
@@ -412,6 +422,7 @@
                                                                         AllowNodeDrop="@EffectiveAllowNodeDrop"
                                                                         ShowEditActions="@(!IsMobileLayout)"
                                                                         ShowEmbeddedEditorChrome="@(!IsMobileLayout)"
+                                                                        ShowHeader="@(!IsMobileLayout)"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
                                                                         OnNodeDropped="HandleNodeDroppedAsync"
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
@@ -460,16 +471,18 @@
                                                                          Collapsed="@_mobileIssuesCollapsed"
                                                                          CollapsedChanged="SetIssuesCollapsedAsync" />;
 
-    /// <summary>The mobile status card: the four count tiles plus the loaded time — the mobile
-    /// replacement of the desktop status strip (whose trailing state item dropped off-screen at
-    /// 390px; the card keeps every count reachable without horizontal scrolling).</summary>
+    /// <summary>The mobile status card: ONE compact row of the four counts (Fáze 7 re-review) —
+    /// the numbers are the visible content and each label is an sr-only span (the card keeps its
+    /// role="status" aria-label), so the row costs a single text line and the preview canvas
+    /// keeps its height at 320px. The loaded time stays in the aria-live region as sr-only
+    /// text; the state badge in the header owns the visible state (MO3 dedupe).</summary>
     private RenderFragment MobileStatusCardContent => @<text>
         <div class="tm-modeling-editor__status-grid">
             @foreach (var (label, count) in StatusTiles)
             {
                 <div class="tm-modeling-editor__status-tile">
-                    <span>@label</span>
                     <strong>@count</strong>
+                    <span class="tm-sr-only">@label</span>
                 </div>
             }
         </div>

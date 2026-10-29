@@ -9,41 +9,47 @@
          data-node-count="@NodeCount"
          data-edge-count="@EdgeCount"
          data-drop-enabled="@AllowNodeDrop.ToString().ToLowerInvariant()">
-    <header class="tm-modeling-diagram-preview__header">
-        <div class="tm-modeling-diagram-preview__title-group">
-            <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
-            <span>@SummaryText</span>
-        </div>
-        @* Fáze 7 (G2): on a mobile layout the preview shows viewer controls only — the edit
-           entries (generate / open in editor) live in the editor's action bar and header
-           overflow, so no header actions render here. *@
-        @if (ShowEditActions)
-        {
-            <div class="tm-modeling-diagram-preview__actions">
-                @if (OnGenerateRequested.HasDelegate)
-                {
-                    <TmButton Variant="ButtonVariant.Secondary"
-                              Size="ButtonSize.Sm"
-                              Icon="@IconNames.Refresh"
-                              OnClick="HandleGenerateRequestedAsync"
-                              data-testid="@TestId("modeling-generate-diagram-button")">
-                        @Loc["TmModelingDiagramPreview_Generate"]
-                    </TmButton>
-                }
-                <TmButton Variant="ButtonVariant.Primary"
-                          Size="ButtonSize.Sm"
-                          Icon="@IconNames.ExternalLink"
-                          Disabled="@(Document is null)"
-                          OnClick="HandleOpenInEditorAsync"
-                          AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
-                          data-modeling-focus="open-in-editor"
-                          id="@OpenInEditorTriggerId"
-                          data-testid="@TestId("modeling-open-in-editor-button")">
-                    @Loc["TmModelingDiagramPreview_OpenInEditor"]
-                </TmButton>
+    @* Fáze 7 re-review: the heading block is opt-out (ShowHeader=false on the mobile band) — its
+       summary line duplicates the status card's node/edge counts in the same tab and the row
+       starved the canvas at 320px. *@
+    @if (ShowHeader)
+    {
+        <header class="tm-modeling-diagram-preview__header">
+            <div class="tm-modeling-diagram-preview__title-group">
+                <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
+                <span>@SummaryText</span>
             </div>
-        }
-    </header>
+            @* Fáze 7 (G2): on a mobile layout the preview shows viewer controls only — the edit
+               entries (generate / open in editor) live in the editor's action bar and header
+               overflow, so no header actions render here. *@
+            @if (ShowEditActions)
+            {
+                <div class="tm-modeling-diagram-preview__actions">
+                    @if (OnGenerateRequested.HasDelegate)
+                    {
+                        <TmButton Variant="ButtonVariant.Secondary"
+                                  Size="ButtonSize.Sm"
+                                  Icon="@IconNames.Refresh"
+                                  OnClick="HandleGenerateRequestedAsync"
+                                  data-testid="@TestId("modeling-generate-diagram-button")">
+                            @Loc["TmModelingDiagramPreview_Generate"]
+                        </TmButton>
+                    }
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Size="ButtonSize.Sm"
+                              Icon="@IconNames.ExternalLink"
+                              Disabled="@(Document is null)"
+                              OnClick="HandleOpenInEditorAsync"
+                              AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
+                              data-modeling-focus="open-in-editor"
+                              id="@OpenInEditorTriggerId"
+                              data-testid="@TestId("modeling-open-in-editor-button")">
+                        @Loc["TmModelingDiagramPreview_OpenInEditor"]
+                    </TmButton>
+                </div>
+            }
+        </header>
+    }
 
     @if (Document is null)
     {

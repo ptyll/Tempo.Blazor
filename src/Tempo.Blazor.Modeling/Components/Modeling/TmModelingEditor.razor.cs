@@ -46,6 +46,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     private ModelingEditorPanel _activePanel = ModelingEditorPanel.Preview;
     private bool _shouldFocusOpenEditorCloseButton;
     private bool _shouldRestoreOpenButtonFocus;
+    private bool _focusInspectorAfterRender;
     private ModelingInteropModule? _interopModule;
     private ElementReference _canvasSurface;
 
@@ -80,6 +81,10 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>Stable, test-id-independent focus hook of the open-editor overlay close button.</summary>
     internal const string OpenEditorCloseFocusSelector = "[data-modeling-focus='open-editor-close']";
 
+    /// <summary>Stable, test-id-independent focus hook of the mobile Inspector panel (the aside
+    /// an issue/edge tap moves focus onto after switching the tab, Fáze 7 re-review).</summary>
+    internal const string InspectorPanelFocusSelector = "[data-modeling-focus='inspector-panel']";
+
     /// <summary>Focus-return trigger of the compact header "⋯" (the mobile open-editor entry).</summary>
     internal const string MobileHeaderTriggerSelector = ".tm-modeling-editor__more .tm-dropdown-trigger";
 
@@ -102,6 +107,15 @@ public partial class TmModelingEditor : IAsyncDisposable
     private string OpenEditorFocusReturnSelector => _openEditorFocusReturnSelector == OpenInEditorFocusSelector
         ? OpenInEditorFocusSelector
         : $"{_openEditorFocusReturnSelector}, {OpenInEditorFocusSelector}";
+
+    /// <summary>
+    /// Snapshot of the focus-return list for the PENDING restore. CloseGeneratedDiagramAsync
+    /// arms the restore AND resets <see cref="_openEditorFocusReturnSelector"/> to the default in
+    /// the same call (Fáze 7 re-review minor), so the actual trigger list must be captured first —
+    /// otherwise the reset would make every close restore the default instead of the trigger that
+    /// opened the dialog.
+    /// </summary>
+    private string? _pendingFocusReturnSelector;
 
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
 
@@ -554,10 +568,21 @@ public partial class TmModelingEditor : IAsyncDisposable
             await FocusWithinAsync(OpenEditorCloseFocusSelector);
         }
 
+        if (_focusInspectorAfterRender)
+        {
+            // Fáze 7 re-review: the tab switch of an issue/edge selection also MOVES FOCUS onto
+            // the inspector panel — the stable data-modeling-focus hook keeps it working when a
+            // host renames the test ids. Progressive enhancement: failures are swallowed.
+            _focusInspectorAfterRender = false;
+            await FocusWithinAsync(InspectorPanelFocusSelector);
+        }
+
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
-            await FocusWithinAsync(OpenEditorFocusReturnSelector);
+            var selector = _pendingFocusReturnSelector ?? OpenEditorFocusReturnSelector;
+            _pendingFocusReturnSelector = null;
+            await FocusWithinAsync(selector);
         }
     }
 
@@ -768,16 +793,24 @@ public partial class TmModelingEditor : IAsyncDisposable
     }
 
     /// <summary>
-    /// Every selection is an inspector intent: on a TABLET the inspector side sheet opens (and
-    /// the tree drawer yields, keeping the one-sheet rule); on MOBILE the Inspector panel tab
-    /// becomes active (Fáze 7 review — the selection must surface the element immediately, not
-    /// leave the user on the tab they tapped from). Other layouts keep their docked panels.
+    /// Every selection is an inspector intent — except a MOBILE tree tap, which is G2 browsing
+    /// and stays on the Tree tab (Fáze 7 re-review): only an issue or an edge selection passes
+    /// <paramref name="focusInspectorAfterSwitch"/>, which switches the mobile Inspector panel
+    /// AND arms the post-render focus move onto it. On a TABLET the inspector side sheet opens
+    /// (and the tree drawer yields, keeping the one-sheet rule); other layouts keep their docked
+    /// panels.
     /// </summary>
-    private Task OpenInspectorForSelectionAsync()
+    private Task OpenInspectorForSelectionAsync(bool focusInspectorAfterSwitch = false)
     {
         if (IsMobileLayout)
         {
+            if (!focusInspectorAfterSwitch)
+            {
+                return Task.CompletedTask;
+            }
+
             _activePanel = ModelingEditorPanel.Inspector;
+            _focusInspectorAfterRender = true;
             return Task.CompletedTask;
         }
 
@@ -838,7 +871,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = null;
             _selectedRelationship = relationship;
-            return OpenInspectorForSelectionAsync();
+            return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
         }
 
         return Task.CompletedTask;
@@ -870,7 +903,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = element;
             _selectedRelationship = null;
-            return OpenInspectorForSelectionAsync();
+            return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
         }
 
         return Task.CompletedTask;
@@ -990,6 +1023,13 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         _openedEditorDocument = null;
         _shouldRestoreOpenButtonFocus = true;
+        // Capture the ACTUAL trigger list before the reset below — the restore runs after the
+        // next render and must return to the trigger that OPENED this dialog (Fáze 7 re-review).
+        _pendingFocusReturnSelector = OpenEditorFocusReturnSelector;
+        // Fáze 7 re-review (minor): the mobile trigger selectors describe a CLOSED context (the
+        // header "⋯" and the bar's More). Reset to the default so a NEXT dialog opened by the
+        // desktop preview trigger cannot inherit a stale mobile return target.
+        _openEditorFocusReturnSelector = OpenInEditorFocusSelector;
         return Task.CompletedTask;
     }
 
