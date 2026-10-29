@@ -10,7 +10,10 @@ namespace Tempo.Blazor.E2E;
 /// THEIR surface first (open search panel, open context menu) and keep the dialog open, while an
 /// Escape nothing consumes (a focused canvas without a selection) closes it, a scrim click does
 /// not close it (live changes propagate without a footer), and the dialog shows ONE header — the
-/// diagram editor renders without its own document title.
+/// diagram editor renders without its own document title. Fáze 10: one press closes exactly ONE
+/// layer (menu → search → dialog), an Escape in an inline edge-label edit cancels the edit and
+/// keeps the dialog open, and the header close on the docked bands is a TEXT button through
+/// <c>TmModal.HeaderActions</c> (the frozen test id moves to the active close).
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]
@@ -96,6 +99,122 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
 
         await Assertions.Expect(page.Locator("[data-testid='modeling-open-diagram-editor']"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+    }
+
+    [TestMethod]
+    [Description("Fáze 10: Escape with the ⋯ view menu open closes the MENU and keeps the dialog; the second Escape closes the dialog and restores the trigger")]
+    public async Task Escape_with_open_view_menu_closes_the_menu_and_keeps_the_dialog()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        var viewMenu = dialog.Locator(".tm-diagram-editor__view-menu");
+        await dialog.Locator("[data-testid='diagram-editor-more']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(viewMenu).ToHaveAttributeAsync("data-open", "true",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+
+        // Press 1: the view menu is the topmost layer — it closes, the dialog stays.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(viewMenu).Not.ToHaveAttributeAsync("data-open", "true");
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+        // Press 2: nothing consumes any more — the dialog layer closes and focus returns.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Assertions.Expect(page.Locator("[data-testid='modeling-open-in-editor-button']")).ToBeFocusedAsync(
+            new LocatorAssertionsToBeFocusedOptions { Timeout = 10000 });
+    }
+
+    [TestMethod]
+    [Description("Fáze 10: with the context menu AND the search panel open, Escape closes menu → search → dialog, one layer per press")]
+    public async Task Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        var searchPanel = dialog.Locator(".tm-diagram-search-panel");
+        var contextMenu = dialog.Locator(".tm-diagram-editor__context-menu");
+
+        // Open the search panel first, then the context menu on a node: the menu is the topmost layer.
+        await dialog.Locator("[data-tm-group='search'] button")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await searchPanel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await dialog.Locator(".tm-diagram-node").First
+            .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000 });
+        await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Press 1: the MENU closes (the confirmed topmost layer) — the search panel STAYS.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(contextMenu).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        await Assertions.Expect(searchPanel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+        // Press 2: the SEARCH closes.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(searchPanel).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+        // Press 3: the dialog layer closes.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+    }
+
+    [TestMethod]
+    [Description("Fáze 10: Escape while editing an edge label cancels the edit (value reverted) and keeps the dialog open")]
+    public async Task Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        var contextMenu = dialog.Locator(".tm-diagram-editor__context-menu");
+
+        // Right-click an edge hit path and pick "Edit label" — the inline label input appears.
+        await dialog.Locator(".tm-diagram-edge-hit-path").First
+            .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000, Force = true });
+        await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await contextMenu.Locator(".tm-diagram-editor__context-item").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+
+        var labelInput = dialog.Locator(".tm-diagram-edge-label-input");
+        await labelInput.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await labelInput.FillAsync("temporary draft");
+
+        // Escape: the edit CANCELS (input gone, value reverted) and the dialog stays open.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(labelInput).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+        // The label reverts — reopening the editor shows the original text.
+        await dialog.Locator(".tm-diagram-edge-hit-path").First
+            .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000, Force = true });
+        await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await contextMenu.Locator(".tm-diagram-editor__context-item").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        var reopenedValue = await dialog.Locator(".tm-diagram-edge-label-input")
+            .InputValueAsync(new LocatorInputValueOptions { Timeout = 5000 });
+        Assert.AreNotEqual("temporary draft", reopenedValue, "the cancelled draft never landed on the edge");
+    }
+
+    [TestMethod]
+    [Description("Fáze 10: the dialog header close is a TEXT button (HeaderActions) — clicking it closes the dialog and restores the trigger focus")]
+    public async Task Text_close_button_closes_dialog_and_restores_focus()
+    {
+        var page = await OpenPageWithDialogAsync();
+
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        var textClose = dialog.Locator("[data-testid='modeling-open-diagram-close']");
+        await Assertions.Expect(textClose).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+        Assert.IsTrue((await textClose.InnerTextAsync()).Trim().Length > 0,
+            "the docked-band close is a labelled TEXT button, not the icon-only close");
+        await Assertions.Expect(dialog.Locator(".tm-modal-close"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
+        await textClose.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+
+        await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Assertions.Expect(page.Locator("[data-testid='modeling-open-in-editor-button']")).ToBeFocusedAsync(
+            new LocatorAssertionsToBeFocusedOptions { Timeout = 10000 });
     }
 
     [TestMethod]

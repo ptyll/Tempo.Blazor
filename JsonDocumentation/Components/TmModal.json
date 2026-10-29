@@ -63,6 +63,12 @@
       "default": "true"
     },
     {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Extra content rendered in the header row, between the header content and the built-in close button, wrapped in .tm-modal-header-actions. The typical use is a host-styled close affordance - e.g. a text TmButton Close paired with ShowCloseButton=false - or additional header actions. Null (the default) keeps today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle covers it."
+    },
+    {
       "name": "CloseButtonAdditionalAttributes",
       "type": "Dictionary<string, object>?",
       "isRequired": false,
@@ -232,6 +238,7 @@
     "tm-modal-header",
     "tm-modal-header-icon",
     "tm-modal-header-content",
+    "tm-modal-header-actions",
     "tm-modal-title",
     "tm-modal-subtitle",
     "tm-modal-close",

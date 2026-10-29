@@ -1319,6 +1319,24 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task JsOnViewMenuEscape()
         => await OnCloseViewMenu.InvokeAsync();
 
+    /// <summary>
+    /// Fáze 10: raised by the capture-phase Escape consumer when the focus sits in an INLINE EDIT
+    /// of the canvas (the <c>.tm-diagram-edge-label-input</c> foreignObject input, or a node
+    /// inline editor routed through its <c>TmDiagramStencilShape</c>). The consumer has already
+    /// marked the Escape (<c>preventDefault</c> + <c>tmEscapeHandled</c>), so a host overlay (the
+    /// open-editor dialog) stays open and the NEXT Escape continues with the confirmed layer
+    /// order. This handler CANCELS the edge-label edit — the value reverts and nothing is pushed
+    /// to the undo stack. The Blazor <c>OnLabelInputKeyDown</c> Escape branch stays as the
+    /// idempotent fallback path.
+    /// </summary>
+    [JSInvokable("OnInlineEditEscape")]
+    public void JsOnInlineEditEscape()
+    {
+        if (_editingEdgeLabelId is null) return;
+        CancelEdgeLabelEdit();
+        StateHasChanged();
+    }
+
     [JSInvokable("OnShowReplace")]
     public async Task JsOnShowReplace()
         => await OnShowReplace.InvokeAsync();

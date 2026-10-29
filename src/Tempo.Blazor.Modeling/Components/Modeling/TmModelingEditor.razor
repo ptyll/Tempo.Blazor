@@ -648,6 +648,25 @@
     </TmModal>;
 
     /// <summary>
+    /// Fáze 10: the dialog's header close affordance. On the docked bands (desktop/tablet) it is
+    /// a TEXT <c>TmButton</c> "Close" (icon <c>x</c>, Ghost variant) rendered through the core
+    /// <c>TmModal.HeaderActions</c> slot with <c>ShowCloseButton="false"</c>; on the mobile
+    /// fullscreen presentation the icon-only <c>.tm-modal-close</c> stays. The frozen
+    /// <c>modeling-open-diagram-close</c> test id and the <c>open-editor-close</c>
+    /// data-modeling-focus hook live on whichever close is ACTIVE, so
+    /// the open focus and the E2E keep working on both bands. Null on mobile — the slot renders
+    /// nothing and the built-in close button takes over.
+    /// </summary>
+    private RenderFragment? OpenEditorHeaderActions => IsMobileLayout ? null : @<text>
+        <TmButton Variant="ButtonVariant.Ghost"
+                  Icon="x"
+                  OnClick="CloseGeneratedDiagramAsync"
+                  AdditionalAttributes="@OpenEditorCloseButtonAttributes">
+            @Loc["TmModal_Close"]
+        </TmButton>
+    </text>;
+
+    /// <summary>
     /// Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned
     /// dialog with a scrim, a public focus scope and Escape, sized ~90vw × 90vh on the
     /// desktop through TmModelingEditor.razor.css. The TmModal header owns the title
@@ -661,6 +680,8 @@
     /// measurement, no flash. Final review fix (single focus-restore owner): the modal's own
     /// TmFocusScope restore is DISABLED — the editor's focusWithin close path is the one owner,
     /// so a mobile close cannot race a restore target that does not exist there.
+    /// Fáze 10: on the docked bands the close is the HeaderActions TEXT button (the icon-only
+    /// close is disabled); on the mobile fullscreen presentation the icon close stays.
     /// </summary>
     private RenderFragment OpenEditorModalContent => @<text>
         @if (_openedEditorDocument is not null)
@@ -677,6 +698,8 @@
                      RestoreFocus="false"
                      OnClose="CloseGeneratedDiagramAsync"
                      Class="tm-modeling-editor__open-editor-modal"
+                     ShowCloseButton="@(IsMobileLayout)"
+                     HeaderActions="@OpenEditorHeaderActions"
                      CloseButtonAdditionalAttributes="@OpenEditorCloseButtonAttributes"
                      AdditionalAttributes="@OpenEditorModalAttributes">
                 <ChildContent>

@@ -67,6 +67,16 @@
                             <p id="@_subtitleId" class="tm-modal-subtitle">@Subtitle</p>
                         }
                     </div>
+                    @if (HeaderActions is not null)
+                    {
+                        @* Fáze 10: a slot for host actions in the header row — e.g. a text "Close"
+                           button replacing the icon-only close on a dialog presentation. Rendered
+                           BETWEEN the header content and the built-in close button, inside the
+                           focus scope, so the trap covers it. Null (default) keeps today's DOM. *@
+                        <div class="tm-modal-header-actions">
+                            @HeaderActions
+                        </div>
+                    }
                     @if (ShowCloseButton)
                     {
                         @* The splat goes FIRST so the built-in type/class/@onclick/aria-label win
@@ -165,6 +175,16 @@
     [Parameter] public bool Animated { get; set; } = true;
     
     [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>
+    /// Extra content rendered in the header row, between the header content and the built-in close
+    /// button, wrapped in <c>.tm-modal-header-actions</c>. The typical use is a host-styled close
+    /// affordance — e.g. a text <c>TmButton</c> "Close" paired with <see cref="ShowCloseButton"/>
+    /// set to <c>false</c> — or additional header actions. <c>null</c> (the default) keeps
+    /// today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle
+    /// covers it.
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     /// <summary>
     /// Extra attributes splatted onto the built-in close button — a host-owned

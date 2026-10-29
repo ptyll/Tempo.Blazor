@@ -566,4 +566,91 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         tabletEditor.Instance.GetHashCode().Should().Be(dialogEditorId,
             "the instance survives both directions of the flip");
     }
+
+    [Fact]
+    public async Task Desktop_dialog_header_has_text_close_button_via_header_actions()
+    {
+        // Fáze 10 (confirmed): on the docked bands the dialog's close is a TEXT TmButton rendered
+        // through the core TmModal.HeaderActions slot — the icon-only .tm-modal-close is DISABLED.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-header-actions").Should().NotBeNull());
+
+        var textClose = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-header-actions button");
+        textClose.TextContent.Trim().Should().Be("Close", "the desktop close is a labelled text button (TmModal_Close)");
+        textClose.ClassList.Should().Contain("tm-btn-ghost", "the header close renders as a Ghost TmButton");
+
+        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-modal-close").Should().BeEmpty(
+            "the icon-only close is replaced by the text button on the desktop/tablet band");
+    }
+
+    [Fact]
+    public async Task Mobile_dialog_keeps_icon_close()
+    {
+        // Fáze 10 (confirmed): on the mobile FULLSCREEN presentation the icon-only close stays —
+        // no header actions slot renders there. Opened on the tablet band (the mobile band parks
+        // the trigger behind the action bar's More), then flipped while the dialog is open.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-open-diagram-editor']").ClassList
+                .Should().Contain("tm-modal--fullscreen-presentation", "the mobile band presents fullscreen");
+            cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-modal-close").Should().NotBeNull(
+                "the mobile band keeps the icon-only close");
+        });
+
+        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-modal-header-actions").Should().BeEmpty(
+            "the mobile band keeps today's icon close (no header actions slot)");
+    }
+
+    [Fact]
+    public async Task Close_focus_hook_and_test_id_live_on_active_close_button()
+    {
+        // Fáze 10 (confirmed): the frozen test id and the data-modeling-focus hook move to
+        // whichever close affordance is ACTIVE — the text button on the docked bands, the icon
+        // close on the mobile fullscreen presentation.
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        // Desktop: both attributes live on the TEXT button inside the actions slot.
+        var desktopClose = cut.Find("[data-testid='modeling-open-diagram-editor'] [data-testid='modeling-open-diagram-close']");
+        desktopClose.TagName.Should().Be("BUTTON");
+        desktopClose.GetAttribute("data-modeling-focus").Should().Be("open-editor-close");
+
+        // Flip to mobile: the SAME test id now sits on the icon close button.
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+        cut.WaitForAssertion(() =>
+        {
+            var mobileClose = cut.Find("[data-testid='modeling-open-diagram-editor'] [data-testid='modeling-open-diagram-close']");
+            mobileClose.ClassList.Should().Contain("tm-modal-close",
+                "on the mobile band the frozen attributes ride the built-in icon close");
+            mobileClose.GetAttribute("data-modeling-focus").Should().Be("open-editor-close");
+        });
+    }
 }

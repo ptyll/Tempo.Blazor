@@ -1822,6 +1822,7 @@ Modální okno.
 | `tm-modal--animated` / `--visible` | Stavy |
 | `tm-modal-overlay` / `tm-modal-container` | Obal |
 | `tm-modal-header` / `tm-modal-header-content` / `tm-modal-header-icon` | Hlavička |
+| `tm-modal-header-actions` | Slot pro host akce v hlavičce (mezi obsahem a close tlačítkem) |
 | `tm-modal-title` / `tm-modal-subtitle` / `tm-modal-close` | Části hlavičky |
 | `tm-modal-body` | Tělo |
 | `tm-modal-footer` / `tm-modal-btn-ok` / `tm-modal-btn-cancel` | Patička |
@@ -1840,6 +1841,7 @@ Modální okno.
 | `Position` | `ModalPosition` | `Center` | Pozice: `Center`, `Top`, `Bottom` |
 | `Animated` | `bool` | `true` | Animace otevření |
 | `ShowCloseButton` | `bool` | `true` | Zobrazit X tlačítko |
+| `HeaderActions` | `RenderFragment?` | `null` | Akce v hlavičce mezi obsahem a close (např. textové „Zavřít" s `ShowCloseButton="false"`); uvnitř focus scope |
 | `ShowFooter` | `bool` | `true` | Zobrazit patičku |
 | `ShowDefaultFooterButtons` | `bool` | `false` | Zobrazit výchozí tlačítka OK/Cancel |
 | `ShowOkButton` | `bool` | `true` | Zobrazit OK |

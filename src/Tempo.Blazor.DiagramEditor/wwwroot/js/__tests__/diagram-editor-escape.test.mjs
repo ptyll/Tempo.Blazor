@@ -19,7 +19,12 @@ function loadEngine({ document: doc = {}, window: win = {}, extra = {} } = {}) {
     if (typeof document.removeEventListener !== 'function') document.removeEventListener = () => {};
     const ctx = vm.createContext({ window, document, URL, console, setTimeout, clearTimeout, performance, ...extra });
     vm.runInContext(SRC, ctx, { filename: SRC_PATH });
-    return window.tmDiagramEditor;
+    const engine = window.tmDiagramEditor;
+    // Test hook: the classic script installs its own window.tmDiagramStencilShape registry during
+    // evaluation (overwriting anything injected through `win`), so tests reach the LIVE registry
+    // through the evaluated window instead of pre-seeding it.
+    if (engine) engine.__vmWindow = window;
+    return engine;
 }
 
 /** A document that records keydown listener registrations (capture flag included). */
@@ -218,11 +223,15 @@ test('Escape during an edge draw: consumed (the gesture wins over the dialog)', 
 
 // ── Final review (Modeling redesign): inline label edits, inert hosts and selection clears ──
 
-test('inline label edit (input inside the canvas container) consumes Escape without a panel or menu', () => {
+test('escape_in_edge_label_input_is_consumed_and_cancels_edit', () => {
     const engine = loadEngine();
-    // The edge-label foreignObject input: document.activeElement is an INPUT inside the canvas
-    // container; no search panel and no view menu are open.
-    const labelInput = { tagName: 'INPUT' };
+    // The edge-label foreignObject input: document.activeElement is the .tm-diagram-edge-label-input
+    // inside the canvas container; no search panel and no view menu are open.
+    const labelInput = {
+        tagName: 'INPUT',
+        className: 'tm-diagram-edge-label-input',
+        closest: (selector) => (typeof selector === 'string' && selector.includes('tm-diagram-edge-label-input')) ? labelInput : null,
+    };
     const doc = { activeElement: labelInput };
     const engineDoc = loadEngine({ document: doc });
     const { inst, log } = fakeInst({}, { contains: () => true });
@@ -233,15 +242,47 @@ test('inline label edit (input inside the canvas container) consumes Escape with
 
     assert.equal(e.defaultPrevented, true, 'the edit owns the Escape');
     assert.equal(e.tmEscapeHandled, true, 'the host overlay (the dialog) must not close under the caret');
-    assert.deepEqual(log, [], 'nothing else is invoked — the input cancels on its own keydown');
+    assert.deepEqual(log, [['OnInlineEditEscape']],
+        'the canvas cancels the label edit — value reverted, nothing pushed to the undo stack');
 });
 
-test('a TEXTAREA inline edit inside the canvas container consumes Escape the same way', () => {
-    const engine = loadEngine();
-    const labelArea = { tagName: 'TEXTAREA' };
+test('escape_in_node_inline_input_is_consumed (the owning shape cancels its edit)', () => {
+    const shapeLog = [];
+    const shapeRef = { invokeMethodAsync: (name) => { shapeLog.push(name); return Promise.resolve(); } };
+    const nodeGroup = { getAttribute: (a) => (a === 'data-node-id' ? 'n1' : null) };
+    const inlineInput = {
+        tagName: 'INPUT',
+        className: 'tm-diagram-node__inline-input',
+        closest: (selector) => {
+            if (typeof selector === 'string' && selector.includes('tm-diagram-node__inline-input')) return inlineInput;
+            if (selector === 'g.tm-diagram-node[data-node-id]') return nodeGroup;
+            return null;
+        },
+    };
+    const doc = { activeElement: inlineInput };
+    const engineDoc = loadEngine({ document: doc });
+    engineDoc.__vmWindow.tmDiagramStencilShape.getRef = (id) => (id === 'n1' ? shapeRef : null);
+    const { inst, log } = fakeInst({}, { contains: () => true });
+    inst.container = Object.assign(inst.container, { contains: (el) => el === inlineInput });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, true, 'the node inline edit owns the Escape');
+    assert.equal(e.tmEscapeHandled, true, 'the dialog stays open');
+    assert.deepEqual(shapeLog, ['CancelActiveEditFromJs'], 'the registered shape cancels its inline edit');
+    assert.deepEqual(log, [['OnInlineEditEscape']], 'the canvas callback is the fallback owner');
+});
+
+test('a TEXTAREA node inline edit (tm-diagram-node__inline-textarea) consumes Escape the same way', () => {
+    const labelArea = {
+        tagName: 'TEXTAREA',
+        className: 'tm-diagram-node__inline-textarea',
+        closest: (selector) => (typeof selector === 'string' && selector.includes('tm-diagram-node__inline-textarea')) ? labelArea : null,
+    };
     const doc = { activeElement: labelArea };
     const engineDoc = loadEngine({ document: doc });
-    const { inst } = fakeInst({}, { contains: () => true });
+    const { inst, log } = fakeInst({}, { contains: () => true });
     inst.container = Object.assign(inst.container, { contains: (el) => el === labelArea });
     const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
 
@@ -249,9 +290,10 @@ test('a TEXTAREA inline edit inside the canvas container consumes Escape the sam
 
     assert.equal(e.defaultPrevented, true);
     assert.equal(e.tmEscapeHandled, true);
+    assert.deepEqual(log, [['OnInlineEditEscape']]);
 });
 
-test('focus outside the container (a plain INPUT elsewhere) does NOT consume', () => {
+test('a plain INPUT inside the canvas container that is NOT an inline editor does not consume', () => {
     const engine = loadEngine();
     const elsewhere = { tagName: 'INPUT' };
     const doc = { activeElement: elsewhere };
@@ -306,4 +348,90 @@ test('the selection-clear Escape marks tmEscapeHandled (the host dialog stays op
 
     assert.equal(e.defaultPrevented, true);
     assert.equal(e.tmEscapeHandled, true, 'a consumed Escape never bubbles to the host overlay');
+});
+
+// ── Fáze 10 (confirmed ordering): one press closes ONE layer, topmost first ──────────────
+// context menu > "⋯" view menu > search panel > inline edit > gesture/selection > dialog.
+
+test('escape_with_open_context_menu_and_search_closes_menu_first: the capture consumer skips while _menuOpen', () => {
+    const engine = loadEngine();
+    const { inst, log } = fakeInst({ _menuOpen: true }, {
+        querySelector: (selector) => selector === '.tm-diagram-search-panel' ? {} : null,
+        contains: () => true,
+    });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, false,
+        'the open context menu is the topmost layer — its own capture handler owns this Escape');
+    assert.equal(e.tmEscapeHandled, undefined, 'nothing is marked: the menu handler consumes it next');
+    assert.deepEqual(log, [], 'the search panel must NOT close under an open context menu');
+});
+
+test('escape_with_open_context_menu_skips_the_inline_edit_consumer_too', () => {
+    const engine = loadEngine();
+    const labelInput = {
+        tagName: 'INPUT',
+        className: 'tm-diagram-edge-label-input',
+        closest: (selector) => (typeof selector === 'string' && selector.includes('tm-diagram-edge-label-input')) ? labelInput : null,
+    };
+    const doc = { activeElement: labelInput };
+    const engineDoc = loadEngine({ document: doc });
+    const { inst, log } = fakeInst({ _menuOpen: true }, { contains: () => true });
+    inst.container = Object.assign(inst.container, { contains: (el) => el === labelInput });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, false, 'the menu outranks the inline edit');
+    assert.deepEqual(log, []);
+});
+
+test('second_escape_closes_search: with the menu gone, the panel is the topmost layer again', () => {
+    const engine = loadEngine();
+    const rootOverrides = {
+        querySelector: (selector) => selector === '.tm-diagram-search-panel' ? {} : null,
+        contains: () => true,
+    };
+    const first = fakeInst({ _menuOpen: true }, rootOverrides);
+    const second = fakeInst({ _menuOpen: false }, rootOverrides);
+
+    // Press 1: the menu owns the Escape — nothing is consumed here.
+    const e1 = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    engine._onSearchEscape(e1, first.inst);
+    assert.equal(e1.defaultPrevented, false, 'press 1 belongs to the context menu');
+    assert.deepEqual(first.log, []);
+
+    // Press 2: the menu is closed — the search panel is now the topmost layer.
+    const e2 = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    engine._onSearchEscape(e2, second.inst);
+    assert.equal(e2.defaultPrevented, true, 'press 2 closes the search panel');
+    assert.equal(e2.tmEscapeHandled, true);
+    assert.deepEqual(second.log, [['OnSearchEscape']], 'one press = one layer: the panel, not the dialog');
+});
+
+test('view menu outranks the search panel: both open → the menu closes first', () => {
+    const engine = loadEngine();
+    const { inst, log } = fakeInst({}, {
+        querySelector: (selector) => (selector === '.tm-diagram-search-panel' || selector === '.tm-diagram-editor__view-menu[data-open]') ? {} : null,
+        contains: () => true,
+    });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onSearchEscape(e, inst);
+
+    assert.deepEqual(log, [['OnViewMenuEscape']], 'the "⋯" view menu sits above the search panel');
+    assert.equal(e.defaultPrevented, true);
+});
+
+test('unconsumed_escape_stays_unmarked: no menu, no view menu, no panel, no inline edit', () => {
+    const engine = loadEngine();
+    const { inst } = fakeInst({}, { querySelector: () => null, contains: () => true });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, false, 'an unconsumed Escape must keep bubbling');
+    assert.equal(e.tmEscapeHandled, undefined, 'the host dialog closes on it');
 });

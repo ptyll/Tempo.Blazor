@@ -477,4 +477,58 @@ public class TmModalTests : LocalizationTestBase
     }
 
     #endregion
+
+    #region HeaderActions Tests (Fáze 10)
+
+    [Fact]
+    public void HeaderActions_render_inside_header_before_close_button()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.ShowCloseButton, true)
+            .Add(m => m.HeaderActions, "<button type=\"button\" class=\"tm-modal-header-text-close\">Close</button>"));
+
+        // Assert: the actions wrapper sits in the header row, AFTER the header content and
+        // BEFORE the built-in close button.
+        var header = cut.Find(".tm-modal-header");
+        header.QuerySelector(".tm-modal-header-actions").Should().NotBeNull();
+        var contentIndex = header.InnerHtml.IndexOf("tm-modal-header-content", StringComparison.Ordinal);
+        var actionsIndex = header.InnerHtml.IndexOf("tm-modal-header-actions", StringComparison.Ordinal);
+        var closeIndex = header.InnerHtml.IndexOf("tm-modal-close", StringComparison.Ordinal);
+        (actionsIndex > contentIndex && actionsIndex < closeIndex).Should().BeTrue(
+            "the actions slot renders between the header content and the close button");
+        cut.Find(".tm-modal-header-actions .tm-modal-header-text-close").TextContent.Should().Be("Close");
+    }
+
+    [Fact]
+    public void HeaderActions_null_keeps_header_dom_unchanged()
+    {
+        // Act — default (null) HeaderActions
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test"));
+
+        // Assert: no actions wrapper, the plain close button stays.
+        cut.FindAll(".tm-modal-header-actions").Should().BeEmpty();
+        cut.Find(".tm-modal-header .tm-modal-close").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void HeaderActions_are_inside_focus_scope()
+    {
+        // Act
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.HeaderActions, "<button type=\"button\" id=\"header-action-btn\">Close</button>"));
+
+        // Assert: the slot renders inside the TmFocusScope subtree, so the Tab cycle covers it.
+        var scope = cut.Find(".tm-focus-scope");
+        scope.QuerySelector(".tm-modal-header-actions #header-action-btn").Should().NotBeNull(
+            "host header actions are focusables inside the trap");
+    }
+
+    #endregion
 }

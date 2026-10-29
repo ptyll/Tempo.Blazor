@@ -3559,6 +3559,7 @@ to{opacity:1;}
 .tm-modal-header{display:flex;align-items:flex-start;gap:var(--tm-space-4);justify-content:space-between;padding:var(--tm-space-6) var(--tm-space-6) var(--tm-space-4);border-bottom:1px solid var(--tm-border-color);}
 .tm-modal-header-icon{flex-shrink:0;color:var(--tm-color-primary);}
 .tm-modal-header-content{flex:1;min-width:0;}
+.tm-modal-header-actions{display:flex;align-items:center;gap:var(--tm-space-2);flex-shrink:0;}
 .tm-modal-title{font-size:var(--tm-font-size-lg);font-weight:var(--tm-font-weight-semibold);color:var(--tm-text-primary);margin:0;line-height:1.3;}
 .tm-modal-subtitle{font-size:var(--tm-font-size-sm);color:var(--tm-text-secondary);margin:var(--tm-space-1) 0 0 0;}
 .tm-modal-close{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;background:transparent;border:none;border-radius:var(--tm-radius-md);color:var(--tm-text-secondary);cursor:pointer;transition:all var(--tm-transition-fast);font-size:var(--tm-font-size-xl);}

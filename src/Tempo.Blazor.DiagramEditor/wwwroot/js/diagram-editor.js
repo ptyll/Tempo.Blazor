@@ -366,24 +366,23 @@ window.tmDiagramEditor = {
     // unmarked so it keeps bubbling and closes the host overlay (draw.io ordering: an empty canvas
     // Escape belongs to the dialog).
 
-    // Escape while the search panel (or the "⋯" view menu) is open closes THAT surface without
-    // closing the host overlay. The panel exists only while open (Blazor renders it conditionally);
-    // the view menu is stamped data-open while open. Both only consume when the focus is inside the
+    // Escape closes the TOPMOST layer only — one press closes ONE layer (Fáze 10, confirmed
+    // ordering: context menu > "⋯" view menu > search panel > inline edit > gesture/selection >
+    // the host dialog). While the custom context menu is open it owns the Escape through its own
+    // capture handler (this consumer must not close a surface under it); with the menu gone the
+    // view menu outranks the search panel, and an Escape typed into an inline edit cancels the
+    // edit without closing a host overlay. All consumers only fire while the focus is inside the
     // editor root, so an Escape typed elsewhere (another surface of the host page) is not stolen.
     _onSearchEscape: function (e, inst) {
         if (!inst.container || !inst.container.closest || !inst.dotNetRef) return;
         if (!e || e.key !== 'Escape' || e.defaultPrevented || e.tmEscapeHandled) return;
+        // The open context menu is the topmost layer: its _menuKeyHandler (capture, registered on
+        // open) consumes the Escape — skipping here is what makes the MENU close before the
+        // search panel even though this listener was registered first.
+        if (inst._menuOpen) return;
         const root = inst.container.closest('.tm-diagram-editor');
         if (!root) return;
         if (!root.contains(document.activeElement)) return;
-
-        const panel = root.querySelector('.tm-diagram-search-panel');
-        if (panel) {
-            e.preventDefault();
-            e.tmEscapeHandled = true;
-            inst.dotNetRef.invokeMethodAsync('OnSearchEscape');
-            return;
-        }
 
         const viewMenu = root.querySelector('.tm-diagram-editor__view-menu[data-open]');
         if (viewMenu) {
@@ -393,15 +392,35 @@ window.tmDiagramEditor = {
             return;
         }
 
-        // Final review: an Escape typed into an INLINE EDIT of the canvas (the edge-label
-        // foreignObject input) belongs to the editor too — the input cancels/blurs on its own
-        // keydown. Consume it so a host overlay (the open-editor dialog) does not close under
-        // the caret. Reaching this branch means no panel and no view menu consumed the key.
-        const active = document.activeElement;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
-            && inst.container.contains(active)) {
+        const panel = root.querySelector('.tm-diagram-search-panel');
+        if (panel) {
             e.preventDefault();
             e.tmEscapeHandled = true;
+            inst.dotNetRef.invokeMethodAsync('OnSearchEscape');
+            return;
+        }
+
+        // Fáze 10: an Escape typed into an INLINE EDIT of the canvas (the edge-label foreignObject
+        // input or a node inline editor input/textarea) belongs to the editor: the edit CANCELS
+        // (value reverted, nothing pushed to the undo stack) and the Escape is consumed so a host
+        // overlay (the open-editor dialog) does not close under the caret. The owning component is
+        // notified — a node inline editor through its registered TmDiagramStencilShape, the canvas
+        // through OnInlineEditEscape (which also covers the edge-label input). Reaching this
+        // branch means no menu, no view menu and no panel consumed the key.
+        const active = document.activeElement;
+        if (active && typeof active.closest === 'function'
+            && inst.container.contains(active)
+            && active.closest('.tm-diagram-node__inline-input, .tm-diagram-node__inline-textarea, .tm-diagram-edge-label-input')) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            const nodeGroup = active.closest('g.tm-diagram-node[data-node-id]');
+            const shapeRef = nodeGroup && window.tmDiagramStencilShape
+                ? window.tmDiagramStencilShape.getRef(nodeGroup.getAttribute('data-node-id'))
+                : null;
+            if (shapeRef && typeof shapeRef.invokeMethodAsync === 'function') {
+                shapeRef.invokeMethodAsync('CancelActiveEditFromJs');
+            }
+            inst.dotNetRef.invokeMethodAsync('OnInlineEditEscape');
         }
     },
 

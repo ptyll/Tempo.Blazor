@@ -198,9 +198,17 @@ Decisions:
   (the DOCUMENT title, falling back to the localized "Open in editor" label) plus the
   `TmModelingDiagramPreview_OpenEditorSummary` subtitle; the embedded `TmDiagramEditor` renders
   with `ShowTitle="false"` (public API, never CSS).
+- **Header close (Fáze 10)**: on the docked bands (desktop/tablet) the close is a TEXT
+  `TmButton` — "Close" (`TmModal_Close`), icon `x`, `ButtonVariant.Ghost` — rendered through the
+  core `TmModal.HeaderActions` slot with `ShowCloseButton="false"` (the icon-only
+  `.tm-modal-close` is disabled). On the mobile **fullscreen** presentation the icon-only close
+  stays and no actions slot renders. The frozen `data-testid="modeling-open-diagram-close"` and
+  the `data-modeling-focus="open-editor-close"` hook live on whichever close is ACTIVE, so the
+  open focus and host/E2E selectors keep working on both bands (see Breaking / Migration — E2E
+  consumers key off the test id, never off `.tm-modal-close`).
 - **No footer** (G8): `DocumentChanged` edits propagate live, so the scrim click does NOT close
-  (`CloseOnOverlayClick="false"`) — only the × close, `TmModal.OnClose` and an Escape the
-  embedded editor did not consume close it.
+  (`CloseOnOverlayClick="false"`) — only the header close (text button or ×), `TmModal.OnClose`
+  and an Escape the embedded editor did not consume close it.
 - **Footprint**: ~90vw × 90vh on desktop/tablet (through `.tm-modeling-editor__open-editor-modal
   .tm-modal`); the mobile band presents **fullscreen** and hands the embedded editor a
   full-height body (`tm-modal-body` padding `0` there, `--tm-space-4` elsewhere). The footprint
@@ -216,12 +224,14 @@ Decisions:
   `MinimapInitiallyCollapsed` with the editor's resolved tablet mode — the overlay covered the
   touch canvas there — and it reopens from the overlay's reopen button; a desktop dialog body
   keeps the expanded card (the seed is a `bool` — a desktop body is simply `false`).
-- **Escape ordering**: the dialog's trap honors Escape on a document *bubble* keydown listener,
-  so every DiagramEditor Escape consumer runs in the **capture** phase and marks a handled
-  Escape (`preventDefault()` + `tmEscapeHandled`) — the open search panel, the "⋯" view menu,
-  the context menu, a running gesture or a non-empty selection close/cancel inside the editor
-  while the dialog stays open; an Escape NOTHING consumes keeps bubbling and closes the dialog.
-  The search-close path refocuses the canvas via `TmDiagramCanvas.FocusCanvasAsync()`. Contract:
+- **Escape ordering** (confirmed Fáze 10): the dialog's trap honors Escape on a document *bubble*
+  keydown listener, so every DiagramEditor Escape consumer runs in the **capture** phase and marks
+  a handled Escape (`preventDefault()` + `tmEscapeHandled`). One press closes exactly ONE layer —
+  the topmost one: the context menu, then the "⋯" view menu, then the search panel, then an
+  inline edit of an edge/node label (the edit CANCELS — value reverted, nothing pushed to the
+  undo stack — and the dialog stays open), then a running gesture or a non-empty selection; an
+  Escape NOTHING consumes keeps bubbling and closes the dialog. The search-close path refocuses
+  the canvas via `TmDiagramCanvas.FocusCanvasAsync()`. Contract:
   [docs/diagram-editor.md](docs/diagram-editor.md).
 - **Focus return**: the editor's `focusWithin` close path is the SINGLE restore owner (final
   review) — the dialog's `TmModal` renders with `RestoreFocus="false"` (the additive parameter:

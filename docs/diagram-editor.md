@@ -237,21 +237,34 @@ The editor is frequently layered inside a host overlay (a `TmModal` dialog). The
 consumer registers in the **capture** phase on `document` and runs before any bubble listener —
 the ordering against the trap is deterministic, not registration-order dependent. A consumer that
 actually handles the Escape marks it (`preventDefault()` + `e.tmEscapeHandled = true`, both
-honored by the trap and by later consumers):
+honored by the trap and by later consumers).
 
-- **Open search panel** (and **open "⋯" view menu**, stamped `data-open`): Escape closes that
-  surface — through the additive `TmDiagramCanvas` parameters `OnCloseSearch` / `OnCloseViewMenu`
-  (the editor closes the panel and refocuses the canvas container so the focus does not drop to
-  `body`) — and a host overlay behind the editor stays open. Both consumers only fire while the
-  focus is inside the editor root, so an Escape typed elsewhere is never stolen.
-- **A running gesture or a non-empty selection** (rotate, pending/drawing edge, waypoint or
-  whole-edge drag): the canvas key handler consumes the Escape and cancels the session.
-- **Nothing to consume** (empty canvas, no session): the canvas handler does NOT call
-  `preventDefault()` — the Escape keeps bubbling, which is what lets the host dialog close.
-  (Before the fix the canvas consumed every Escape unconditionally, and whether the editor or a
-  host dialog won depended on listener registration order.)
-- **The custom context menu** closes on Escape through its own capture-phase key handler, which
-  marks the event the same way.
+**One press closes exactly ONE layer — the topmost one** (confirmed ordering, Fáze 10):
+
+1. **The custom context menu** — while open (`_menuOpen`) it owns the Escape through its own
+   capture-phase key handler, and the other consumers SKIP (`_onSearchEscape` returns early), so
+   a search panel or view menu never closes under it. The menu's handler marks the event the
+   same way.
+2. **The open "⋯" view menu** (stamped `data-open`): Escape closes the menu — through the
+   additive `TmDiagramCanvas` parameter `OnCloseViewMenu` — and outranks the search panel.
+3. **The open search panel**: Escape closes it through `OnCloseSearch` (the editor closes the
+   panel and refocuses the canvas container so the focus does not drop to `body`). A host overlay
+   behind the editor stays open. Both consumers only fire while the focus is inside the editor
+   root, so an Escape typed elsewhere is never stolen.
+4. **An inline edit** (the `.tm-diagram-edge-label-input` foreignObject input, a
+   `.tm-diagram-node__inline-input`/`-textarea` section editor, a swimlane header or a table
+   cell): the Escape is CONSUMED — the edit CANCELS (the value reverts, nothing is pushed to the
+   undo stack) and a host dialog stays open; the NEXT Escape continues with the order above. The
+   canvas' capture consumer resolves the owner — a node editor through its registered
+   `TmDiagramStencilShape` (`CancelActiveEditFromJs`), everything else through the canvas'
+   `[JSInvokable] OnInlineEditEscape` (`CancelEdgeLabelEdit`). The Blazor `@onkeydown` Escape
+   branches on the inputs themselves stay as idempotent fallbacks.
+5. **A running gesture or a non-empty selection** (rotate, pending/drawing edge, waypoint or
+   whole-edge drag): the canvas key handler consumes the Escape and cancels the session.
+6. **Nothing to consume** (empty canvas, no session): the canvas handler does NOT call
+   `preventDefault()` — the Escape keeps bubbling, which is what lets the host dialog close.
+   (Before the fix the canvas consumed every Escape unconditionally, and whether the editor or a
+   host dialog won depended on listener registration order.)
 
 ## Motion
 
