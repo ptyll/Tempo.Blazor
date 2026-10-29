@@ -405,7 +405,9 @@ public sealed class MarkupClassCoverageTests
             // the toolbar/sidebar parts add the "tm-gantt-" stem — 50 → 51.
             // TmGantt redesign phase 6: the import dialog became a TmModal, which owns its title id, so its
             // "tm-gantt-import-title-{Guid…}" stem is gone — 51 → 50.
-            ExpectedUnmeasurableStems: 50),
+            // TmGantt redesign phase 8: the mobile task sheet's field ids ($"tm-gantt-task-status-{Guid…}",
+            // $"tm-gantt-task-percent-{Guid…}") add their two stems — 50 → 52.
+            ExpectedUnmeasurableStems: 52),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

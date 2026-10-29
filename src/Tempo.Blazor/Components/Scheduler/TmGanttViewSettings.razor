@@ -1,0 +1,156 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Models
+@* The Gantt view-settings list: today marker, days off, progress label, closed tasks, task name location,
+   row density, theme and (with NotificationSettings) the notification preferences. The toolbar renders it
+   as the popover of the "View settings" button; the mobile "More" sheet renders the same list as its
+   second view (Sheet=true drops the click-away overlay and the popover positioning). *@
+@if (Open)
+{
+    @if (!Sheet)
+    {
+        <div class="tm-gantt__view-settings-overlay" @onclick="Owner.ToggleViewSettings"></div>
+    }
+    <div class="@MenuClass" @onclick:stopPropagation>
+        <label class="tm-gantt__view-settings-item">
+            <input type="checkbox" data-testid="@TestId("vset-show-today")"
+                   checked="@Owner.ViewSettings.ShowTodayMarker"
+                   @onchange="e => Owner.SetShowTodayMarker((bool)e.Value!)" />
+            <span>@Loc["TmGantt_ShowTodayMarker"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="checkbox" data-testid="@TestId("vset-show-daysoff")"
+                   checked="@Owner.ViewSettings.ShowDaysOff"
+                   @onchange="e => Owner.SetShowDaysOff((bool)e.Value!)" />
+            <span>@Loc["TmGantt_ShowDaysOff"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="checkbox" data-testid="@TestId("vset-show-progress")"
+                   checked="@Owner.ViewSettings.ShowProgressLabel"
+                   @onchange="e => Owner.SetShowProgressLabel((bool)e.Value!)" />
+            <span>@Loc["TmGantt_ShowProgressLabel"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="checkbox" data-testid="@TestId("vset-show-closed")"
+                   checked="@Owner.ViewSettings.ShowClosedTasks"
+                   @onchange="e => Owner.SetShowClosedTasks((bool)e.Value!)" />
+            <span>@Loc["TmGantt_ShowClosedTasks"]</span>
+        </label>
+        <div class="tm-gantt__view-settings-divider"></div>
+        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_TaskNameLocation"]</div>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="InsideBar"
+                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.InsideBar)"
+                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.InsideBar)" />
+            <span>@Loc["TmGantt_TaskNameInside"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="NextToBar"
+                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.NextToBar)"
+                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.NextToBar)" />
+            <span>@Loc["TmGantt_TaskNameBeside"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="taskloc-@Owner.GetHashCode()" value="Hidden"
+                   checked="@(Owner.ViewSettings.TaskNameLocation == GanttTaskNameLocation.Hidden)"
+                   @onchange="() => Owner.SetTaskNameLocation(GanttTaskNameLocation.Hidden)" />
+            <span>@Loc["TmGantt_TaskNameHidden"]</span>
+        </label>
+        @* The row density is a desktop / tablet decision: on the mobile container the density is pinned
+           (the read-mostly two-line rows) and choosing Compact / Touch there would do nothing. *@
+        @if (!Sheet && !Owner.IsMobileLayout)
+        {
+            <div class="tm-gantt__view-settings-divider"></div>
+            <div class="tm-gantt__view-settings-label">@Loc["TmGantt_ViewDensity"]</div>
+            <label class="tm-gantt__view-settings-item">
+                <input type="radio" name="density-@Owner.GetHashCode()" value="Comfortable"
+                       checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Comfortable)"
+                       @onchange="() => Owner.SetViewDensity(GanttViewDensity.Comfortable)" />
+                <span>@Loc["TmGantt_ViewComfortable"]</span>
+            </label>
+            <label class="tm-gantt__view-settings-item">
+                <input type="radio" name="density-@Owner.GetHashCode()" value="Compact"
+                       checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Compact)"
+                       @onchange="() => Owner.SetViewDensity(GanttViewDensity.Compact)" />
+                <span>@Loc["TmGantt_ViewCompact"]</span>
+            </label>
+            <label class="tm-gantt__view-settings-item">
+                <input type="radio" name="density-@Owner.GetHashCode()" value="Touch"
+                       checked="@(Owner.ViewSettings.ViewDensity == GanttViewDensity.Touch)"
+                       @onchange="() => Owner.SetViewDensity(GanttViewDensity.Touch)" />
+                <span>@Loc["TmGantt_ViewTouch"]</span>
+            </label>
+        }
+        <div class="tm-gantt__view-settings-divider"></div>
+        <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Theme"]</div>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="theme-@Owner.GetHashCode()" value="Auto"
+                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Auto)"
+                   @onchange="() => Owner.SetTheme(GanttTheme.Auto)" />
+            <span>@Loc["TmGantt_ThemeAuto"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="theme-@Owner.GetHashCode()" value="Light"
+                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Light)"
+                   @onchange="() => Owner.SetTheme(GanttTheme.Light)" />
+            <span>@Loc["TmGantt_ThemeLight"]</span>
+        </label>
+        <label class="tm-gantt__view-settings-item">
+            <input type="radio" name="theme-@Owner.GetHashCode()" value="Dark"
+                   checked="@(Owner.ViewSettings.Theme == GanttTheme.Dark)"
+                   @onchange="() => Owner.SetTheme(GanttTheme.Dark)" />
+            <span>@Loc["TmGantt_ThemeDark"]</span>
+        </label>
+
+        @if (Owner.NotificationSettings is not null)
+        {
+            <div class="tm-gantt__view-settings-divider"></div>
+            <div class="tm-gantt__view-settings-label">@Loc["TmGantt_Notifications"]</div>
+            <div class="tm-gantt__notification-settings" data-testid="@TestId("notification-settings-section")">
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox"
+                           checked="@Owner.NotificationSettings.EmailOnAssign"
+                           @onchange="e => Owner.UpdateNotification(s => s.EmailOnAssign = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnAssignEmail"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox"
+                           checked="@Owner.NotificationSettings.EmailOnMention"
+                           @onchange="e => Owner.UpdateNotification(s => s.EmailOnMention = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnMentionEmail"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox"
+                           checked="@Owner.NotificationSettings.PushOnAssign"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnAssign = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnAssignPush"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox"
+                           checked="@Owner.NotificationSettings.PushOnMention"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnMention = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnMentionPush"]</span>
+                </label>
+                <label class="tm-gantt__view-settings-item">
+                    <input type="checkbox"
+                           checked="@Owner.NotificationSettings.PushOnDeadline"
+                           @onchange="e => Owner.UpdateNotification(s => s.PushOnDeadline = (bool)(e.Value ?? false))" />
+                    <span>@Loc["TmGantt_NotifyOnDeadlinePush"]</span>
+                </label>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Whether the list renders (the toolbar's popover state, or always inside the mobile More sheet).</summary>
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Sheet presentation (the mobile More sheet): no click-away overlay, the menu is a static block.</summary>
+    [Parameter] public bool Sheet { get; set; }
+
+    private string MenuClass => Sheet
+        ? "tm-gantt__view-settings-menu tm-gantt__view-settings-menu--sheet"
+        : "tm-gantt__view-settings-menu";
+}

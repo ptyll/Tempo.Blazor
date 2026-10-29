@@ -5845,6 +5845,12 @@
   "TmGantt_ZoomIn": "Zoom avant",
   "TmGantt_ZoomOut": "Zoom arrière",
   "TmGantt_ZoomLevel": "Niveau de zoom",
+  "TmGantt_MobileSortByDate": "Trier par date",
+  "TmGantt_MobileFullEditingHint": "L'édition complète est disponible sur un écran plus grand.",
+  "TmGantt_MobileMenuStatus": "Changer le statut",
+  "TmGantt_MobileMenuPercent": "Modifier l'avancement",
+  "TmGantt_MobileAddNameRequired": "Saisissez un nom de tâche.",
+  "TmGantt_WorkloadAllocatedOfCapacity": "{0} sur {1} h",
   "TmGantt_ExpandTask": "Développer {0}",
   "TmGantt_CollapseTask": "Réduire {0}",
 

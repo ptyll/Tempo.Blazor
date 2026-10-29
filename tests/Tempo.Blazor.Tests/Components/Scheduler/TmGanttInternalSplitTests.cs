@@ -369,7 +369,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
         "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports", "ResolvedLayoutChanged",
         "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowTaskPanel", "ShowTaskPanelChanged", "ShowToolbar",
-        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "TaskPanelMode", "TestIdPrefix", "Title", "ToolbarLabels", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
+        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "TaskBreadcrumb", "TaskPanelMode", "TestIdPrefix", "Title", "ToolbarLabels", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
         "WorkloadDisplayMode", "WorkloadDisplayModeChanged", "WorkloadPlacement", "ZoomPreset",
     ];
 }

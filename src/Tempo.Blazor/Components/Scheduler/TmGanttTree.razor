@@ -72,7 +72,7 @@
                  tabindex="@(node.Task.Id == focusRowId ? 0 : -1)"
                  data-testid="@TestId($"tree-row-{node.Task.Id}")"
                  data-task-id="@node.Task.Id"
-                 draggable="true"
+                 draggable="@(Owner.IsMobileLayout ? "false" : "true")"
                  @onfocus="() => Owner.NoteRowFocus(node.Task.Id)"
                  @onkeydown="e => Owner.HandleRowKeyDownAsync(e, node)"
                  @onkeyup="e => Owner.HandleRowKeyUpAsync(e, node)"
@@ -105,9 +105,12 @@
                     else if (col.Key == GanttColumnKey.Title)
                     {
                         <span class="tm-gantt__tree-cell tm-gantt__tree-cell--title" role="gridcell" style="padding-left: @(node.Depth * 20)px">
-                            <span class="tm-gantt__drag-handle">
-                                <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
-                            </span>
+                            @if (!Owner.IsMobileLayout)
+                            {
+                                <span class="tm-gantt__drag-handle">
+                                    <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
+                                </span>
+                            }
                             @if (node.Children.Count > 0)
                             {
                                 <button type="button" class="tm-gantt__expand-btn" tabindex="-1" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onkeyup:stopPropagation="true" @onclick="() => Owner.ToggleExpandAsync(node.Task)"
@@ -128,7 +131,15 @@
                                   data-testid="@TestId("priority-icon")"
                                   title="@Loc[$"GanttPriority_{node.Task.Priority}"]"></span>
 
-                            @if (Owner._inlineEditTaskId == node.Task.Id && Owner._inlineEditColumn == GanttColumnKey.Title)
+                            @if (Owner.IsMobileLayout)
+                            {
+                                @* Read-mostly cell: two lines — the title and the date range. No inline edit, no badges. *@
+                                <span class="tm-gantt__mobile-cell" data-testid="@TestId($"tree-mobile-cell-{node.Task.Id}")">
+                                    <span class="tm-gantt__mobile-cell-title">@node.Task.Title</span>
+                                    <span class="tm-gantt__mobile-cell-range">@MobileRange(node.Task)</span>
+                                </span>
+                            }
+                            else if (Owner._inlineEditTaskId == node.Task.Id && Owner._inlineEditColumn == GanttColumnKey.Title)
                             {
                                 <input class="tm-gantt__inline-edit"
                                        data-testid="@TestId("inline-edit-input")"

@@ -116,6 +116,41 @@ public partial class TmGanttTaskPanel
     /// </summary>
     [Parameter] public bool Tabbed { get; set; }
 
+    /// <summary>
+    /// The mobile read-mostly presentation (decision G2): the panel is a fact sheet — Name, Start and End read-only,
+    /// Status and Percent editable — and draws no footer (the sheet's sticky Cancel | Save drives
+    /// <see cref="SaveAsync"/> / <see cref="CancelAsync"/>). The full editor stays tablet+.
+    /// </summary>
+    [Parameter] public bool MobileReadOnly { get; set; }
+
+    private string RootClass => MobileReadOnly
+        ? "tm-gantt-task-panel tm-gantt-task-panel--mobile"
+        : Tabbed ? "tm-gantt-task-panel tm-gantt-task-panel--tabbed" : "tm-gantt-task-panel";
+
+    private readonly string _statusFieldId = $"tm-gantt-task-status-{Guid.NewGuid():N}";
+    private readonly string _percentFieldId = $"tm-gantt-task-percent-{Guid.NewGuid():N}";
+
+    /// <summary>The <c>@key</c> of the mobile percent field: bumped when a clamp must re-sync the input (a new key rebuilds the element with the clamped value).</summary>
+    private int _percentFieldSync;
+
+    private void OnMobileStatusChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<TmWorkItemStatus>(e.Value?.ToString(), out var status))
+        {
+            OnStatusSelected(status);
+        }
+    }
+
+    /// <summary>Clamps 0–100 and, when the clamp (or a clear) changed what the field must hold, bumps
+    /// <see cref="_percentFieldSync"/> so the input is rebuilt with the clamped value — the DOM keeps
+    /// the raw text the user typed ("150" stays on screen while the model holds 100 without this).</summary>
+    private void SetMobilePercent(string? value)
+    {
+        var parsed = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent);
+        _editPercent = parsed ? Math.Clamp(percent, 0, 100) : null;
+        if (!parsed || percent != _editPercent) _percentFieldSync++;
+    }
+
     /// <summary>Audit entries; the History tab shows those whose <c>EntityRef.EntityId</c> is the edited task.</summary>
     [Parameter] public IReadOnlyList<TmActivityEntry> History { get; set; } = [];
 
@@ -429,7 +464,9 @@ public partial class TmGanttTaskPanel
         _newDepType = 0;
     }
 
-    private async Task SaveAsync()
+    /// <summary>Commits the draft (the mobile sheet's sticky Save drives this too). Validates first; raises
+    /// <see cref="OnTaskUpdated"/> and — when the Status changed — <see cref="OnStatusChanged"/>.</summary>
+    internal async Task SaveAsync()
     {
         if (Task is null) return;
         if (!Validate()) return;
@@ -474,7 +511,8 @@ public partial class TmGanttTaskPanel
         }
     }
 
-    private async Task CancelAsync()
+    /// <summary>Reverts the draft to the task (the mobile sheet's sticky Cancel drives this too).</summary>
+    internal async Task CancelAsync()
     {
         if (Task is null) return;
         // Reset local fields back to task values

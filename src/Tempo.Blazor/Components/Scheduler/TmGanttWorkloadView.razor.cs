@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Scheduler;
@@ -46,6 +47,44 @@ public partial class TmGanttWorkloadView : IAsyncDisposable
 
     /// <summary>Last day of the docked date axis (the Gantt's range end).</summary>
     [Parameter] public DateTime? RangeEnd { get; set; }
+
+    /// <summary>
+    /// The layout the view follows. <see cref="TmLayoutMode.Auto"/> (default) keeps the grid; a forced
+    /// <see cref="TmLayoutMode.Mobile"/> — or the chart passing its resolved layout — presents the mobile person
+    /// list: one week (the week of <see cref="Today"/>), a utilization bar per person and the person column pinned
+    /// while the day columns scroll horizontally.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>True on the mobile container: the week person list with the utilization bar.</summary>
+    internal bool IsMobile => LayoutMode == TmLayoutMode.Mobile;
+
+    /// <summary>The week the mobile list shows: Monday .. Sunday of <see cref="Today"/>'s week.</summary>
+    internal List<DateTime> MobileWeekDates()
+    {
+        var start = Today.Date.AddDays(-(((int)Today.DayOfWeek + 6) % 7));
+        return Enumerable.Range(0, 7).Select(i => start.AddDays(i)).ToList();
+    }
+
+    /// <summary>One utilization figure per person: the allocated hours of the week against the capacity of the week.</summary>
+    internal sealed record PersonWeek(string AssigneeId, string Name, double Allocated, double Capacity, bool Over);
+
+    internal List<PersonWeek> MobileWeek(IEnumerable<WorkloadEntry> entries, IReadOnlyList<DateTime> weekDates)
+    {
+        var set = weekDates.ToHashSet();
+        return entries
+            .GroupBy(e => e.AssigneeId)
+            .Select(g =>
+            {
+                var inWeek = g.Where(e => set.Contains(e.Date)).ToList();
+                var allocated = inWeek.Sum(e => e.AllocatedHours);
+                var capacity = inWeek.Sum(e => e.CapacityHours);
+                var name = Tasks.SelectMany(t => t.Assignees).FirstOrDefault(a => a.Id == g.Key)?.Name ?? g.Key;
+                return new PersonWeek(g.Key, name, allocated, capacity, capacity > 0 && allocated > capacity);
+            })
+            .OrderBy(p => p.Name, StringComparer.CurrentCulture)
+            .ToList();
+    }
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 

@@ -10,7 +10,9 @@ using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.DataTable;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Abstractions.WorkItems;
+using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Toolbar;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
@@ -91,6 +93,10 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     private double _contextMenuX;
     private double _contextMenuY;
     private TmWorkItem? _contextMenuTask;
+
+    /// <summary>Incremented on every open: the mobile menu part focuses its first item once per open.</summary>
+    internal int _contextMenuOpenSeq;
+
     private long _touchMenuOpenedAt;
     private string? _announcement;
 
@@ -103,23 +109,28 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     private const int ComfortableRowHeight = 40;
     private const int CompactRowHeight = 28;
     private const int TouchRowHeight = 44;
+    private const int MobileRowHeight = 56;
     private const int DayWidth = 40;
 
-    /// <summary>The density hook of the stylesheets (the tree rows read it); the default comfortable density renders no attribute.</summary>
-    private string? DensityAttribute => ViewSettings.ViewDensity switch
+    /// <summary>The density hook of the stylesheets (the tree rows read it); the default comfortable density renders no attribute.
+    /// The mobile read-mostly mode has its own density: the two-line rows are taller than any desktop density.</summary>
+    private string? DensityAttribute => IsMobileLayout ? "mobile" : ViewSettings.ViewDensity switch
     {
         GanttViewDensity.Compact => "compact",
         GanttViewDensity.Touch => "touch",
         _ => null,
     };
 
-    /// <summary>The row height in pixels, one value for the tree rows and the timeline rows (the bar tops are computed from it).</summary>
-    internal int RowHeight => ViewSettings.ViewDensity switch
-    {
-        GanttViewDensity.Compact => CompactRowHeight,
-        GanttViewDensity.Touch => TouchRowHeight,
-        _ => ComfortableRowHeight,
-    };
+    /// <summary>The row height in pixels, one value for the tree rows and the timeline rows (the bar tops are computed from it).
+    /// The mobile read-mostly mode pins 56 px: one title column with a two-line cell, consistent in the tree and the timeline.</summary>
+    internal int RowHeight => IsMobileLayout
+        ? MobileRowHeight
+        : ViewSettings.ViewDensity switch
+        {
+            GanttViewDensity.Compact => CompactRowHeight,
+            GanttViewDensity.Touch => TouchRowHeight,
+            _ => ComfortableRowHeight,
+        };
 
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
@@ -144,10 +155,34 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// The layout the markup is about to draw. Runs from <c>LayoutContent</c> on every render: a flip is
+    /// reconciled HERE even when the observer's <see cref="OnResolvedLayoutChanged"/> did not deliver it (the
+    /// first measurement of a page that mounts inside a narrow container). Crossing the mobile boundary
+    /// relays the timeline (the read-mostly Days zoom) and rebuilds the header data; the parts re-render
+    /// from <c>_layout</c> through their own render gates.
+    /// </summary>
+    private void ApplyLayout(TmLayoutMode resolved)
+    {
+        if (_layout == resolved) return;
+        var wasMobile = _layout == TmLayoutMode.Mobile;
+        _layout = resolved;
+        ReconcilePanels();
+        if (IsMobileLayout != wasMobile)
+        {
+            // Crossing the mobile boundary is a chrome change: no overlay survives it with a sane place
+            // to return to, and the tree's inline editor belongs to the desktop row.
+            HideContextMenu();
+            CloseMobileSurfaces();
+            _viewSettingsOpen = false;
+            CancelInlineEdit();
+            RefreshVisibleData();
+        }
+    }
+
     private Task OnResolvedLayoutChanged(TmLayoutMode mode)
     {
-        _layout = mode;
-        ReconcilePanels();
+        ApplyLayout(mode);
         return ResolvedLayoutChanged.InvokeAsync(mode);
     }
 
@@ -177,8 +212,21 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     /// <summary>True when the layout is tablet (the two-row toolbar).</summary>
     internal bool IsTabletLayout => _layout == TmLayoutMode.Tablet;
 
-    /// <summary>True when the task panel and the Reports inspector render as <c>TmSidePanel</c> side sheets.</summary>
+    /// <summary>
+    /// True when the layout is mobile (a container below 768 px): the read-mostly mode (decision G2). The chart is a
+    /// reading surface — viewing, status/percent changes and adding a task; import, export, mapping, rollback /
+    /// time-travel and reorder / dependency-drag are not offered, and every right-hand surface is a full-height
+    /// <c>TmSidePanel</c> bottom sheet.
+    /// </summary>
+    internal bool IsMobileLayout => _layout == TmLayoutMode.Mobile;
+
+    /// <summary>The layout the parts pass on (the workload view and the portfolio cards follow the chart).</summary>
+    internal TmLayoutMode CurrentLayout => _layout;
+
+    /// <summary>True when the task panel and the Reports inspector render as <c>TmSidePanel</c> side sheets.
+    /// The mobile container is always a sheet: the read-mostly task detail is a full-height bottom sheet.</summary>
     private bool PanelsAsSheets => TaskPanelMode == GanttTaskPanelMode.Overlay
+        || IsMobileLayout
         || (TaskPanelMode == GanttTaskPanelMode.Auto && _layout != TmLayoutMode.Desktop);
 
     private const string SheetWidth = "clamp(22rem, 50vw, 40rem)";
@@ -224,6 +272,230 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     {
         if (!open) _activeSidebarPanel = null;
     }
+
+    // ── Mobile read-mostly (G2, phase 8) ─────────────────────────
+
+    /// <summary>Whether the "More" bottom sheet of the mobile action bar is open.</summary>
+    internal bool _mobileMoreOpen;
+
+    /// <summary>The More sheet's second view: the view-settings list (the entry swapped the content).</summary>
+    private bool _mobileMoreSettings;
+
+    /// <summary>Read by the mobile overlays part.</summary>
+    internal bool MobileMoreSettings => _mobileMoreSettings;
+
+    /// <summary>Whether the minimal add-task sheet (name, start, end) is open (read by the mobile overlays part).</summary>
+    internal bool MobileAddSheetOpen => _mobileAddSheetOpen;
+    private bool _mobileAddSheetOpen;
+    private string _mobileAddTitle = string.Empty;
+    private string _mobileAddStart = string.Empty;
+    private string _mobileAddEnd = string.Empty;
+    private string? _mobileAddError;
+
+    /// <summary>The minimal add-task sheet's draft (read and written by the mobile overlays part).</summary>
+    internal string MobileAddTitle => _mobileAddTitle;
+
+    internal string MobileAddStart => _mobileAddStart;
+
+    internal string MobileAddEnd => _mobileAddEnd;
+
+    internal string? MobileAddError => _mobileAddError;
+
+    /// <summary>Opens / closes the "More" sheet of the mobile action bar (the entry tiles drive it). Opening it is one surface: the others close.</summary>
+    internal void ToggleMobileMore()
+    {
+        if (!_mobileMoreOpen) CloseMobileSurfaces();
+        _mobileMoreOpen = !_mobileMoreOpen;
+        _mobileMoreSettings = false;
+    }
+
+    /// <summary>Closes the "More" sheet for real (any close path of the sheet).</summary>
+    internal void MobileMoreClose()
+    {
+        _mobileMoreOpen = false;
+        _mobileMoreSettings = false;
+    }
+
+    /// <summary>
+    /// One mobile sheet at a time: closes EVERY mobile surface — the "More" sheet (with its settings
+    /// view), the minimal add-task sheet, the read-only history sheet, the filter dialog, the Reports
+    /// sheet, the task sheet and the long-press menu. Every mobile opener calls it first, so opening a
+    /// surface always replaces the one on screen (the desktop surfaces are not touched — desktop keeps
+    /// its own exclusivity rules).
+    /// </summary>
+    internal void CloseMobileSurfaces()
+    {
+        _mobileMoreOpen = false;
+        _mobileMoreSettings = false;
+        _mobileAddSheetOpen = false;
+        _historyDrawerOpen = false;
+        _filterPanelOpen = false;
+        if (_activeSidebarPanel == GanttSidebarPanel.Reports) _activeSidebarPanel = null;
+        HideContextMenu();
+        SetTaskPanelOpen(false);
+    }
+
+    /// <summary>"View settings" in the More sheet: the sheet body swaps to the settings list (a Back entry returns).</summary>
+    internal void OpenMobileSettings() => _mobileMoreSettings = true;
+
+    /// <summary>The Back entry of the settings view inside the More sheet.</summary>
+    internal void CloseMobileSettings() => _mobileMoreSettings = false;
+
+    /// <summary>The context menu state the mobile overlays part reads.</summary>
+    internal bool ContextMenuVisible => _contextMenuVisible;
+
+    internal TmWorkItem? ContextMenuTask => _contextMenuTask;
+
+    internal double ContextMenuX => _contextMenuX;
+
+    internal double ContextMenuY => _contextMenuY;
+
+    internal void MobileMoreTaskPanel()
+    {
+        CloseMobileSurfaces();
+        ToggleTaskPanel();
+    }
+
+    internal void MobileMoreHistory()
+    {
+        CloseMobileSurfaces();
+        if (!_historyDrawerOpen) ToggleHistoryDrawer();
+    }
+
+    internal void MobileMoreReports()
+    {
+        CloseMobileSurfaces();
+        _activeSidebarPanel = GanttSidebarPanel.Reports;
+    }
+
+    /// <summary>The tiles of the mobile <c>TmMobileActionBar</c>: Add task (primary) | Expand all | Collapse all | More.</summary>
+    internal IReadOnlyList<TmActionItem> MobileActionItems =>
+    [
+        new() { Id = "gantt-mobile-add", Label = Loc["TmGantt_AddTask"], Icon = IconNames.Plus,
+                OnClick = EventCallback.Factory.Create(this, OpenMobileAddSheet) },
+        new() { Id = "gantt-mobile-expand", Label = Loc["TmGantt_ExpandAll"], Icon = "chevrons-down",
+                OnClick = EventCallback.Factory.Create(this, () => _ = ExpandAllAsync()) },
+        new() { Id = "gantt-mobile-collapse", Label = Loc["TmGantt_CollapseAll"], Icon = "chevrons-up",
+                OnClick = EventCallback.Factory.Create(this, () => _ = CollapseAllAsync()) },
+        new() { Id = "gantt-mobile-more", Label = Loc["Tm_More"], Icon = IconNames.MoreHorizontal,
+                OnClick = EventCallback.Factory.Create(this, ToggleMobileMore) },
+    ];
+
+    /// <summary>Opens the minimal add-task sheet with the dates seeded from today (the display zone). It is the one surface: the others close.</summary>
+    internal void OpenMobileAddSheet()
+    {
+        CloseMobileSurfaces();
+        var today = TodayInZone();
+        _mobileAddTitle = string.Empty;
+        _mobileAddStart = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        _mobileAddEnd = today.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        _mobileAddError = null;
+        _mobileAddSheetOpen = true;
+    }
+
+    internal void CloseMobileAddSheet() => _mobileAddSheetOpen = false;
+
+    internal void SetMobileAddTitle(string? value) => _mobileAddTitle = value ?? string.Empty;
+
+    internal void SetMobileAddStart(string? value) => _mobileAddStart = value ?? string.Empty;
+
+    internal void SetMobileAddEnd(string? value) => _mobileAddEnd = value ?? string.Empty;
+
+    /// <summary>
+    /// Creates the task from the minimal sheet through the SAME path the toolbar "Add task" uses
+    /// (<see cref="OnTaskInserted"/> + <see cref="OnTaskAdded"/>), then closes the sheet. A programmatic
+    /// selection never raises the modal task sheet, so the new task is only selected.
+    /// </summary>
+    internal async Task AddTaskFromMobileSheetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_mobileAddTitle))
+        {
+            _mobileAddError = Loc["TmGantt_MobileAddNameRequired"];
+            return;
+        }
+
+        if (!DateTime.TryParseExact(_mobileAddStart, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
+        {
+            _mobileAddError = Loc["TmGanttTaskPanel_ErrorInvalidStart"];
+            return;
+        }
+
+        if (!DateTime.TryParseExact(_mobileAddEnd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+        {
+            _mobileAddError = Loc["TmGanttTaskPanel_ErrorInvalidEnd"];
+            return;
+        }
+
+        if (start > end)
+        {
+            _mobileAddError = Loc["TmGanttTaskPanel_ErrorStartAfterEnd"];
+            return;
+        }
+
+        var newTask = new TmWorkItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            Title = _mobileAddTitle.Trim(),
+            Start = start,
+            End = end,
+            PercentComplete = 0,
+            ParentId = SelectedTask?.ParentId,
+        };
+
+        await OnTaskInserted.InvokeAsync(new GanttTaskInsertedArgs { Task = newTask, Position = GanttInsertPosition.End });
+        await RaiseTaskAddedAsync(newTask);
+        await SelectTaskAsync(newTask);
+        _mobileAddSheetOpen = false;
+    }
+
+    /// <summary>The mobile long-press menu "Change status": opens the read-only task sheet of the task. The sheet is the one surface.</summary>
+    internal async Task OpenMobileStatusAsync()
+    {
+        var task = _contextMenuTask;
+        CloseMobileSurfaces();
+        if (task is not null) await ActivateTaskAsync(task);
+    }
+
+    /// <summary>The mobile long-press menu "Change progress": the same read-only sheet (Status and Percent are its editable fields).</summary>
+    internal Task OpenMobilePercentAsync() => OpenMobileStatusAsync();
+
+    /// <summary>The mobile long-press menu "Add task": opens the minimal add-task sheet (which closes the menu with the other surfaces).</summary>
+    internal void OpenMobileAddFromMenu() => OpenMobileAddSheet();
+
+    /// <summary>The mobile filter chip: OPENING the filter dialog is one surface (the others close); closing is a plain close.</summary>
+    internal void ToggleMobileFilterPanel()
+    {
+        if (!_filterPanelOpen) CloseMobileSurfaces();
+        ToggleFilterPanel();
+    }
+
+    /// <summary>
+    /// Closes the mobile long-press menu and returns the focus to the row of the task (the menu moved
+    /// focus into content it destroys — WCAG 2.4.3, the focus-restore rule of
+    /// docs/keyboard-activation-convention.md). The dismissal paths use it; an entry that opens another
+    /// surface closes the menu through <see cref="CloseMobileSurfaces"/> without the request (the sheet
+    /// takes the focus instead).
+    /// </summary>
+    internal void CloseMobileMenu()
+    {
+        var task = _contextMenuTask;
+        HideContextMenu();
+        if (task is not null) RequestFocus(GanttFocusTarget.Row, task.Id);
+    }
+
+    /// <summary>
+    /// The click-away scrim of the mobile menu. A touch long-press opens the menu while the finger is
+    /// still down, so the compatibility <c>click</c> of the lifting finger lands on the scrim: it is
+    /// ignored for a moment after a touch open (the same guard as the desktop menu).
+    /// </summary>
+    internal void CloseMobileMenuFromOverlay()
+    {
+        if (_touchMenuOpenedAt != 0 && Environment.TickCount64 - _touchMenuOpenedAt < 600) return;
+        CloseMobileMenu();
+    }
+
+    /// <summary>The progress label next to a bar: the host setting, and always on mobile (the read-mostly bar reads at a glance).</summary>
+    internal bool ShowBarProgressLabels => ViewSettings.ShowProgressLabel || IsMobileLayout;
 
     // ── Parameters ───────────────────────────────────────────────
 
@@ -484,6 +756,12 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     /// <summary>Set false to hide the header row even when its slots are filled. Default true (no header unless a slot is set).</summary>
     [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>
+    /// Optional breadcrumb (a host-drawn project / parent path) for the task detail: the task panel header and the
+    /// mobile task sheet render it above / next to the task title. Null renders nothing.
+    /// </summary>
+    [Parameter] public RenderFragment? TaskBreadcrumb { get; set; }
 
     /// <summary>Report definitions shown in the Reports sidebar panel.</summary>
     [Parameter] public IReadOnlyList<GanttReport> Reports { get; set; } = [];
@@ -910,8 +1188,15 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     private GanttZoomPreset _zoomPresetOverride = GanttZoomPreset.Weeks;
     private bool _zoomPresetOverrideSet;
 
+    /// <summary>
+    /// The zoom the timeline lays out with. The mobile read-mostly container (the mockup's day timeline) starts at the
+    /// Days preset — the horizontal scroll covers the days — while the zoom level keeps scaling the pixels per day. An
+    /// explicit choice (the Day | Week | Month segment through <see cref="SetViewAsync"/>) sets the override and wins on
+    /// the mobile container too, so the segment stays functional there.
+    /// </summary>
     internal GanttZoomPreset GetEffectiveZoomPreset() =>
-        _zoomPresetOverrideSet ? _zoomPresetOverride : ZoomPreset;
+        IsMobileLayout && !_zoomPresetOverrideSet ? GanttZoomPreset.Days
+        : _zoomPresetOverrideSet ? _zoomPresetOverride : ZoomPreset;
 
     internal bool IsViewActive(GanttView view) => View == view;
 
@@ -1380,6 +1665,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         _contextMenuY = e.ClientY;
         _contextMenuTask = task;
         _contextMenuVisible = true;
+        _contextMenuOpenSeq++;
     }
 
     private void HideContextMenu()
@@ -1392,7 +1678,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     /// The click-away scrim. A touch long-press opens the menu while the finger is still down, so the compatibility
     /// <c>click</c> of the lifting finger lands on the scrim: it is ignored for a moment after a touch open.
     /// </summary>
-    private void HideContextMenuFromOverlay()
+    internal void HideContextMenuFromOverlay()
     {
         if (_touchMenuOpenedAt != 0 && Environment.TickCount64 - _touchMenuOpenedAt < 600) return;
         HideContextMenu();
@@ -1412,6 +1698,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             _contextMenuY = y;
             _contextMenuTask = task;
             _contextMenuVisible = true;
+            _contextMenuOpenSeq++;
             _touchMenuOpenedAt = Environment.TickCount64;
             StateHasChanged();
         });
@@ -1426,8 +1713,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     private bool CanMoveContextTask(int step) => _contextMenuTask is not null && CanMove(_contextMenuTask, step);
 
-    /// <summary>The move items need a host that applies the reorder; without an <see cref="OnTaskReordered"/> handler they are disabled (a no-op must not announce success).</summary>
-    internal bool CanReorder => OnTaskReordered.HasDelegate;
+    /// <summary>The move items need a host that applies the reorder; without an <see cref="OnTaskReordered"/> handler they are disabled (a no-op must not announce success).
+    /// The mobile read-mostly container offers no reorder at all (the drag and its keyboard alternative are tablet+).</summary>
+    internal bool CanReorder => OnTaskReordered.HasDelegate && !IsMobileLayout;
 
     /// <summary>The task panel's move flags for the currently selected task (false without a selection and when reordering is unavailable — both false hide the pair).</summary>
     private bool CanMoveSelected(int step) => SelectedTask is not null && CanMove(SelectedTask, step);
@@ -1489,12 +1777,13 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     // ── Dependency drag (finger, mouse and pen: one pointer session in gantt.js) ─────────────────────────────────
 
-    /// <summary>A dependency handle was dragged onto another bar. Commits through the same path as <see cref="OnDepDrop"/>.</summary>
+    /// <summary>A dependency handle was dragged onto another bar. Commits through the same path as <see cref="OnDepDrop"/>.
+    /// The mobile read-mostly container refuses the commit (its bars render no handles; this is defence in depth).</summary>
     [JSInvokable]
     public Task OnDependencyDragCompleted(string fromId, bool fromEnd, string toId)
         => InvokeAsync(async () =>
         {
-            if (!AllowDependencyCreation || string.IsNullOrEmpty(fromId) || string.IsNullOrEmpty(toId) || fromId == toId) return;
+            if (!AllowDependencyCreation || IsMobileLayout || string.IsNullOrEmpty(fromId) || string.IsNullOrEmpty(toId) || fromId == toId) return;
             StartDepDrag(fromId, fromEnd);
             await CommitDependencyAsync(toId);
         });
@@ -2026,9 +2315,11 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// True when the filter editor renders as a dialog. <see cref="GanttFilterPanelMode.Auto"/> is a dialog on a tablet or
-    /// narrower container and an inline strip on a desktop one.
+    /// narrower container and an inline strip on a desktop one; the mobile container is always the dialog (the read-mostly
+    /// bottom sheet with the sticky Apply).
     /// </summary>
     internal bool FilterPanelAsDialog => FilterPanelMode == GanttFilterPanelMode.Dialog
+        || IsMobileLayout
         || (FilterPanelMode == GanttFilterPanelMode.Auto && _layout != TmLayoutMode.Desktop);
 
     /// <summary>The active filters as chips: each carries the filter it was built from, so removing a chip removes exactly that rule.</summary>

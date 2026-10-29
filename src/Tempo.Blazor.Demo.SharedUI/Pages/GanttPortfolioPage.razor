@@ -1,6 +1,8 @@
 @page "/gantt-portfolio"
 @using Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Layout
 @inject IHttpClientFactory HttpFactory
 @inject ToastService Toast
 
@@ -30,16 +32,22 @@ else
             </button>
         </div>
         <div data-testid="gantt-demo-portfolio">
-            <TmGanttPortfolio Projects="@PortfolioProjects"
-                              OnProjectSelected="@(project => Toast.ShowInfo($"Project selected: {project.Name}"))">
-                <ProjectActions Context="project">
-                    <TmDropdown Text="" ShowChevron="false" Icon="more-horizontal" AriaLabel="@($"Actions for {project.Name}")"
-                                OnSelect="@(action => Toast.ShowInfo($"{action}: {project.Name}"))">
-                        <TmDropdownItem Value="Open">Open project</TmDropdownItem>
-                        <TmDropdownItem Value="Archive">Archive</TmDropdownItem>
-                    </TmDropdown>
-                </ProjectActions>
-            </TmGanttPortfolio>
+            @* The cards follow the page's own width: on a phone the read-mostly mobile cards render. *@
+            <TmLayoutObserver IsContainer="false">
+                <LayoutContent Context="lay">
+                    <TmGanttPortfolio Projects="@PortfolioProjects"
+                                      LayoutMode="lay.Resolved"
+                                      OnProjectSelected="@(project => Toast.ShowInfo($"Project selected: {project.Name}"))">
+                        <ProjectActions Context="project">
+                            <TmDropdown Text="" ShowChevron="false" Icon="more-horizontal" AriaLabel="@($"Actions for {project.Name}")"
+                                        OnSelect="@(action => Toast.ShowInfo($"{action}: {project.Name}"))">
+                                <TmDropdownItem Value="Open">Open project</TmDropdownItem>
+                                <TmDropdownItem Value="Archive">Archive</TmDropdownItem>
+                            </TmDropdown>
+                        </ProjectActions>
+                    </TmGanttPortfolio>
+                </LayoutContent>
+            </TmLayoutObserver>
         </div>
         <TmGanttImportMappingDialog IsOpen="_mappingOpen"
                                     SourceColumns="@_mappingColumns"

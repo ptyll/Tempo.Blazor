@@ -44,12 +44,22 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
     /// land inside the dialog (the first focusable of a TmModal is its header close button).
     /// </summary>
     [TestMethod]
-    [Description("Gantt import dialog: initial focus lands inside the dialog on every open at 1440 and 390")]
+    [Description("Gantt import dialog: initial focus lands inside the dialog on every open at 1440; at 390 the read-mostly container offers no import at all (phase 8, G2)")]
     public async Task Gantt_ImportDialog_InitialFocus_LandsInsideOnEveryOpen()
     {
         foreach (var (width, height) in new[] { (1440, 900), (390, 844) })
         {
             var page = await OpenGanttAsync(width, height);
+
+            // Mobile read-mostly (phase 8, G2): the import command is not offered anywhere on the mobile
+            // chrome — the legacy "opens at 390" leg became the absence assertion.
+            if (width == 390)
+            {
+                Assert.AreEqual(0, await page.Locator("button[data-testid='gantt-import-btn']").CountAsync(),
+                    "import is tablet+; the mobile chrome offers no import command");
+                continue;
+            }
+
             for (var open = 1; open <= 6; open++)
             {
                 await page.Locator("button[data-testid='gantt-import-btn']").ClickAsync();

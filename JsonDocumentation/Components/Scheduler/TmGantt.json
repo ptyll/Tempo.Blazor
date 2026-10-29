@@ -449,12 +449,19 @@
       "description": "Raised when the resolved layout changes (never for the initial value). Do not pair it with LayoutMode."
     },
     {
+      "name": "TaskBreadcrumb",
+      "type": "Microsoft.AspNetCore.Components.RenderFragment",
+      "isRequired": false,
+      "description": "Optional breadcrumb (a host-drawn project / parent path) for the task detail: the task panel header and the mobile task sheet render it above the task title. Null renders nothing."
+    },
+    {
       "name": "TaskPanelMode",
       "type": "GanttTaskPanelMode",
       "isRequired": false,
       "default": "GanttTaskPanelMode.Inline",
       "description": "How the task panel and the Reports inspector are presented: Inline (default) is the in-flow column at every width, Overlay a TmSidePanel side sheet with the tabs Detail | Attachments | Comments | History, Auto the in-flow panel on a desktop container and the side sheet on a tablet or narrower one. On a narrow container at most one right-hand surface (task panel, reports, history) is open."
-    },    {
+    },
+    {
       "name": "OnNewReportRequested",
       "type": "EventCallback",
       "isRequired": false,

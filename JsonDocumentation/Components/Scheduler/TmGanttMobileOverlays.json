@@ -1,0 +1,21 @@
+{
+  "itemName": "TmGanttMobileOverlays",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the read-mostly overlays of the mobile container (decision G2) — the \"More\" sheet of the mobile action bar (zoom, task panel, history, reports, view settings; never export / import / mapping), the minimal add-task sheet (name, start, end), the read-only history sheet and the limited long-press menu (Status / Percent / Add task only). They render as siblings of the chart root, like every Gantt overlay. Place TmGantt, not this component.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttMobileOverlays.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Owner",
+      "type": "TmGantt",
+      "isRequired": false,
+      "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+    }
+  ]
+}

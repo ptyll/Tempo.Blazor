@@ -89,3 +89,92 @@
 .tm-gantt-portfolio__project-count {
     white-space: nowrap;
 }
+
+/* ─── Mobile card (phase 8, G2) ────────────────────────────────── */
+
+/* Component knob: a task with its own colour tints its mini-gantt bar (set inline by the markup). */
+.tm-gantt-portfolio__project {
+    --tm-gantt-portfolio-mini-color: var(--tm-color-primary-solid);
+}
+
+/* The mobile header lets the name and the percent wrap onto their own lines; the meta line moves
+   into the summary row below. */
+.tm-gantt-portfolio--mobile .tm-gantt-portfolio__project-meta {
+    display: none;
+}
+
+.tm-gantt-portfolio__project-summary-mobile {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__project-percent {
+    margin-inline-start: auto;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+/* The mini-gantt: month header spans over bar rows, percentages of the project range. Read-only. */
+.tm-gantt-portfolio__mini {
+    display: flex;
+    flex-direction: column;
+    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__mini-months {
+    position: relative;
+    height: 1.25rem;
+    margin-bottom: var(--tm-space-1);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__mini-month {
+    position: absolute;
+    top: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__mini-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+}
+
+.tm-gantt-portfolio__mini-name {
+    flex: 0 0 7.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt-portfolio__mini-track {
+    position: relative;
+    flex: 1;
+    height: 0.875rem;
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-gantt-portfolio__mini-bar {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-primary-solid);
+}
+
+.tm-gantt-portfolio__mini-bar--colored {
+    background: var(--tm-gantt-portfolio-mini-color, var(--tm-color-primary-solid));
+}

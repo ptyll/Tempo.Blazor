@@ -27,6 +27,73 @@
     var entries = allEntries.Where(e => dates.Contains(e.Date)).ToList();
 }
 <div class="tm-gantt__workload @(HasRange ? "tm-gantt__workload--docked" : "")" data-testid="@TestId("gantt-workload-view")">
+@if (IsMobile)
+{
+    @* Mobile person list (G2): the week of Today, a utilization bar per person and the pinned person column
+       while the day columns scroll horizontally. Read-only, like the grid. *@
+    var weekDates = MobileWeekDates();
+    var week = MobileWeek(allEntries, weekDates);
+    <div class="tm-gantt__workload-mobile">
+        @if (week.Count == 0)
+        {
+            <div class="tm-gantt__workload-empty">
+                <span>@Loc["TmGantt_WorkloadView"]</span>
+            </div>
+        }
+        else
+        {
+            <div class="tm-gantt__workload-mobile-scroller">
+                <div class="tm-gantt__workload-mobile-grid">
+                    <div class="tm-gantt__workload-mobile-corner"></div>
+                    @foreach (var date in weekDates)
+                    {
+                        <div class="tm-gantt__workload-mobile-header-cell @(date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "tm-gantt__workload-weekend" : "")">
+                            @GanttLabels.ShortDayMonth(date, Loc.Culture)
+                        </div>
+                    }
+                    @foreach (var person in week)
+                    {
+                        <div class="tm-gantt__workload-mobile-row" data-testid="@TestId($"workload-mobile-row-{person.AssigneeId}")">
+                            <div class="tm-gantt__workload-mobile-name">
+                                <span class="tm-gantt__workload-mobile-name-text">@person.Name</span>
+                                <span class="@UtilClass(person.Over)"
+                                      role="img"
+                                      aria-label="@Loc["TmGantt_WorkloadAllocatedOfCapacity", person.Allocated.ToString("0.#", Loc.Culture), person.Capacity.ToString("0.#", Loc.Culture)]">
+                                    <span class="tm-gantt__workload-util-bar" aria-hidden="true">
+                                        <span class="tm-gantt__workload-util-fill"
+                                              style="width: @(F(person.Capacity > 0 ? Math.Clamp(person.Allocated / person.Capacity * 100, 0, 100) : 0))%"></span>
+                                    </span>
+                                    <span class="tm-gantt__workload-util-text">@Loc["TmGantt_WorkloadAllocatedOfCapacity", person.Allocated.ToString("0.#", Loc.Culture), person.Capacity.ToString("0.#", Loc.Culture)]</span>
+                                </span>
+                            </div>
+                            @foreach (var date in weekDates)
+                            {
+                                var entry = allEntries.FirstOrDefault(e => e.AssigneeId == person.AssigneeId && e.Date == date);
+                                var isOver = entry is not null && entry.AllocatedHours > entry.CapacityHours;
+                                var cellClass = entry is null ? "tm-gantt__workload-cell--empty" : (isOver ? "tm-gantt__workload-cell--over" : "tm-gantt__workload-cell--ok");
+                                var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                                <div class="tm-gantt__workload-mobile-cell @cellClass @(isWeekend ? "tm-gantt__workload-weekend" : "")"
+                                     data-testid="@TestId($"workload-cell-{person.AssigneeId}-{date:yyyy-MM-dd}")">
+                                    @if (entry is null)
+                                    {
+                                        <span aria-hidden="true">–</span>
+                                        <span class="tm-sr-only">@Loc["TmGantt_WorkloadNoAllocation"]</span>
+                                    }
+                                    else
+                                    {
+                                        @($"{entry.AllocatedHours:0.#}h")
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
     @if (HasRange)
     {
         <div class="tm-gantt__workload-header">
@@ -111,4 +178,15 @@
             }
         </div>
     }
+}
 </div>
+
+@code {
+    /// <summary>Invariant-culture number, the way every bar width reaches an inline style.</summary>
+    private static string F(double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The whole class list of a utilization figure (whole names, no interpolated stems).</summary>
+    private static string UtilClass(bool over) => over
+        ? "tm-gantt__workload-util tm-gantt__workload-util--over"
+        : "tm-gantt__workload-util";
+}

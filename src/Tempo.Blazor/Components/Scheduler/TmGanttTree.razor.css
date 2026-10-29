@@ -415,11 +415,47 @@
     height: 44px;
 }
 
-/* A tablet container narrows the tree so the timeline keeps room: the grid scrolls inside it past the width. */
-[data-layout="tablet"] .tm-gantt__tree,
-[data-layout="mobile"] .tm-gantt__tree {
+/* Mobile read-mostly (phase 8): the two-line rows are 56px — the same number the timeline bars sit on. */
+[data-density="mobile"] .tm-gantt__tree-row {
+    height: 56px;
+}
+
+/* A tablet container narrows the tree so the timeline keeps room: the grid scrolls inside it past the width.
+   The mobile container is different: the tree IS the pinned name column, so it takes only what it needs. */
+[data-layout="tablet"] .tm-gantt__tree {
     width: min(28rem, 50%);
     min-width: 0;
+}
+
+[data-layout="mobile"] .tm-gantt__tree {
+    width: min(14rem, 55%);
+    min-width: 0;
+    border-inline-end: 1px solid var(--tm-border-color);
+}
+
+/* The mobile two-line cell: the title over the date range. */
+.tm-gantt__mobile-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.tm-gantt__mobile-cell-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__mobile-cell-range {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
 }
 
 @media (pointer: coarse) {

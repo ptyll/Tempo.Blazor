@@ -3,6 +3,7 @@
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Layout
@@ -14,7 +15,7 @@
 <TmLayoutObserver LayoutMode="EffectiveLayoutMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false"
                   Style="display: flex; flex-direction: column; height: 100%; min-height: 0">
 <LayoutContent Context="lay">
-@{ _layout = lay.Resolved; }
+@{ ApplyLayout(lay.Resolved); }
 <div class="tm-gantt @LayoutClass(lay) @GetThemeClass() @Class" data-layout="@lay.CssModifier" data-density="@DensityAttribute" data-theme="@GetDataTheme()" @attributes="AdditionalAttributes">
 
     @if (HasHeader)
@@ -44,7 +45,11 @@
         </div>
     }
 
-    <TmGanttPanelTabs Owner="this" />
+    @* The panel tabs (SidebarMode=Tabs) hide with the rail on mobile (the panels live in the More sheet). *@
+    @if (!IsMobileLayout)
+    {
+        <TmGanttPanelTabs Owner="this" />
+    }
 
     @if (ShowToolbar)
     {
@@ -62,7 +67,11 @@
     <!-- Content area: sidebar + views -->
     <div class="tm-gantt__content">
 
-    <TmGanttSidebar Owner="this" />
+    @* The rail / tabs sidebar is a desktop and tablet affordance: on mobile the panels live in the More sheet. *@
+    @if (!IsMobileLayout)
+    {
+        <TmGanttSidebar Owner="this" />
+    }
 
     @{
         // The view area (alternate views, or the tree + timeline). A template, because the docked workload wraps it
@@ -73,6 +82,7 @@
     {
         <TmGanttWorkloadView Tasks="Data" WorkingSchedule="WorkingSchedule"
                              DisplayMode="WorkloadDisplayMode"
+                             LayoutMode="CurrentLayout"
                              Today="TodayInZone()" />
     }
     else if (View == GanttView.Calendar)
@@ -256,8 +266,7 @@
             <TmGanttTimeline Owner="this" />
         } @* end @if (View != GanttView.List) *@
     </div>
-    } @* end else (main area) *@
-        </text>;
+    } @* end else (main area) *@        </text>;
     }
 
     @if (DockedWorkload)
@@ -269,6 +278,7 @@
                 <TmGanttWorkloadView Tasks="Data" WorkingSchedule="WorkingSchedule"
                                      DisplayMode="WorkloadDisplayMode"
                                      DisplayModeChanged="OnWorkloadModeChangedAsync"
+                                     LayoutMode="CurrentLayout"
                                      Today="TodayInZone()"
                                      Docked="true" RangeStart="dockRange.Start" RangeEnd="dockRange.End" />
             </div>
@@ -279,23 +289,22 @@
         @viewArea
     }
 
-    @* One right-hand surface at a time: the Reports inspector takes the place of the task panel while it is open. On a
-       tablet / narrower container (TaskPanelMode Auto) or with TaskPanelMode Overlay the surface is a core TmSidePanel
-       side sheet (modal, Escape / backdrop / close) — the SHEETS render as siblings of the chart root, after it (see
-       the bottom of this file): .tm-gantt is a CSS size container (inline-size), and a container is the containing
-       block of fixed-position descendants, which would confine and clip them. The in-flow panel stays in the content
-       column. *@
+    @* One right-hand surface at a time: the Reports inspector takes the place of the task panel while it is open.
+       On a narrower container (TaskPanelMode Auto) or with Overlay the surface is a core TmSidePanel side sheet —
+       the SHEETS render as siblings of the chart root (a size container confines fixed descendants). *@
     @{
-        RenderFragment reportsPanel = @<TmGanttReportsPanel Reports="Reports" @attributes="ReportsPanelAttributes"
-                                                            OnReportRun="OnReportRun" OnReportEdit="OnReportEdit" OnReportDelete="OnReportDelete"
+        RenderFragment reportsPanel = @<TmGanttReportsPanel Reports="Reports" @attributes="ReportsPanelAttributes" OnReportRun="OnReportRun"
+                                                            OnReportEdit="OnReportEdit" OnReportDelete="OnReportDelete"
                                                             OnReportDuplicate="OnReportDuplicate" OnNewReportRequested="OnNewReportRequested" />;
+        // The mobile reports sheet is run-only: editing, duplicating, deleting and creating a report are tablet+.
+        RenderFragment mobileReportsPanel = @<TmGanttReportsPanel Reports="Reports" @attributes="ReportsPanelAttributes" OnReportRun="OnReportRun" />;
         RenderFragment taskPanel = @<TmGanttTaskPanel @ref="_taskPanel" Task="SelectedTask" Tabbed="PanelsAsSheets" History="History" TimeZone="@DisplayZone"
-                                                      AllTasks="Data" Dependencies="Dependencies"
+                                                      AllTasks="Data" Dependencies="Dependencies" Breadcrumb="TaskBreadcrumb" MobileReadOnly="IsMobileLayout"
                                                       CanMoveUp="CanMoveSelected(-1)" CanMoveDown="CanMoveSelected(1)"
                                                       OnTaskUpdated="OnTaskUpdated" OnDependencyAdded="OnDependencyAdded" OnDependencyRemoved="OnDependencyRemoved"
                                                       OnCommentAdded="HandleTaskCommentAddedAsync" ActiveTimerTaskId="@ActiveTimerTaskId"
-                                                      OnTimerStarted="OnTimerStarted" OnTimerStopped="OnTimerStopped"
-                                                      OnDescriptionChanged="OnDescriptionChanged" OnAttachmentUpload="OnAttachmentUpload" OnAttachmentRemoved="OnAttachmentRemoved"
+                                                      OnTimerStarted="OnTimerStarted" OnTimerStopped="OnTimerStopped" OnDescriptionChanged="OnDescriptionChanged"
+                                                      OnAttachmentUpload="OnAttachmentUpload" OnAttachmentRemoved="OnAttachmentRemoved"
                                                       OnStatusChanged="OnTaskPanelStatusChangedAsync" OnAction="OnTaskPanelActionAsync"
                                                       IsOverloaded="SelectedTaskOverloaded" BaselineTask="SelectedTaskBaseline"
                                                       OnClose="@(PanelsAsSheets ? default : EventCallback.Factory.Create(this, () => SetTaskPanelOpen(false)))" />;
@@ -310,40 +319,48 @@
     }
 </div> @* tm-gantt__content *@
 
-    <!-- History Drawer -->
-    @if (_historyDrawerOpen)
+    <!-- History Drawer (on the mobile container the read-only sheet of TmGanttMobileOverlays replaces it) -->
+    @if (_historyDrawerOpen && !IsMobileLayout)
     {
-        <TmGanttHistoryDrawer History="History"
-                              Tasks="Data"
-                              IsOpen="_historyDrawerOpen"
-                              Placement="HistoryDrawerPlacement"
-                              OnTaskSelected="OpenTaskByIdAsync"
-                              TimeZone="@(_userZone?.Zone ?? Clock.LocalTimeZone)"
-                              OnTimeTravelRequested="OnTimeTravelRequested"
-                              OnRollbackRequested="OnRollbackRequested"
-                              OnClose="ToggleHistoryDrawer" />
+        <TmGanttHistoryDrawer History="History" Tasks="Data" IsOpen="_historyDrawerOpen" Placement="HistoryDrawerPlacement"
+                              OnTaskSelected="OpenTaskByIdAsync" TimeZone="@(_userZone?.Zone ?? Clock.LocalTimeZone)" OnClose="ToggleHistoryDrawer"
+                              OnTimeTravelRequested="OnTimeTravelRequested" OnRollbackRequested="OnRollbackRequested" />
     }
 
 </div>
 @* Polite live region: a keyboard / menu reorder is announced here (WCAG 4.1.3). Always rendered (a region inserted together with its text is often not announced) and a sibling of the chart root, so the chart's own children stay as they were. *@
 <div class="tm-sr-only" role="status" aria-live="polite" data-testid="@TestId("gantt-announcer")">@_announcement</div>
 
-@* ── Overlays — SIBLINGS of .tm-gantt, never descendants ─────────────────────────────────
-   The chart root is a CSS size container (`container-type: inline-size`), and a container is the
-   containing block of every fixed-position descendant: the context menu (anchored at clientX/Y),
-   the TmSidePanel sheets, the TmModal dialogs and the confirm dialogs would be confined to (and
-   clipped by) the chart. They render here, inside the TmLayoutObserver LayoutContent, whose root
-   is `tm-layout--no-container` (a plain block that only reports a width). *@
+@* The mobile action bar (F5): a SIBLING of the chart root (the chart is overflow:hidden, and an
+   overflow:hidden ancestor is the scrollport a sticky element sticks in — it could never pin inside). *@
+@if (IsMobileLayout && ShowToolbar)
+{
+    <TmMobileActionBar Class="tm-gantt__mobile-bar" Placement="ActionBarPlacement.StickyContainer"
+                       LayoutMode="TmLayoutMode.Mobile" MaxVisible="4" Items="MobileActionItems" TestIdPrefix="@TestIdPrefix" AriaLabel="@Loc["TmGantt_Toolbar"]" />
+}
+
+@* ── Overlays — SIBLINGS of .tm-gantt, never descendants: the chart root is a CSS size container
+   (`container-type: inline-size`) and therefore the containing block of every fixed-position descendant,
+   which would confine and clip them. They render here, inside the observer's LayoutContent. *@
 @if (ReportsPanelOpen && PanelsAsSheets)
 {
+    @* The mobile reports sheet restores the focus to the More tile it came from (tablet keeps the default). *@
     <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="HandleReportsSheetOpenChanged"
-                 Title="@Loc["TmGantt_Reports"]" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-reports-sheet")">@reportsPanel</TmSidePanel>
+                 Title="@Loc["TmGantt_Reports"]" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-reports-sheet")"
+                 RestoreFocusTargetId="@(IsMobileLayout ? TestId("gantt-mobile-more") : null)" LayoutMode="@(IsMobileLayout ? TmLayoutMode.Mobile : TmLayoutMode.Auto)">
+        @(IsMobileLayout ? mobileReportsPanel : reportsPanel)
+    </TmSidePanel>
 }
 else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
 {
     <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="HandleTaskSheetOpenChanged"
-                 Title="@SelectedTask.Title" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-task-sheet")">@taskPanel</TmSidePanel>
+                 Title="@SelectedTask.Title" Width="@SheetWidth" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-task-sheet")"
+                 LayoutMode="@(IsMobileLayout ? TmLayoutMode.Mobile : TmLayoutMode.Auto)"
+                 FooterContent="@(IsMobileLayout ? MobileTaskSheetFooter : default(RenderFragment))">@taskPanel</TmSidePanel>
 }
+
+@* ── Mobile sheets + the limited long-press menu (read-mostly): a sibling part in the same overlay area. *@
+<TmGanttMobileOverlays Owner="this" />
 
 <!-- Export Dialog -->
 @if (_exportDialogOpen)
@@ -384,8 +401,7 @@ else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
               OnResult="ConfirmDeleteAsync" />
 }
 
-@* Closing the task sheet over a dirty draft (Escape / backdrop / close) keeps the sheet open and asks first:
-   Discard throws the draft away and closes the sheet, Keep editing returns to the fields. *@
+@* Closing over a dirty draft keeps the sheet open and asks first: Discard closes it, Keep editing returns. *@
 @if (_discardPromptOpen)
 {
     <TmDialog Show="true" Type="DialogType.Confirm" Variant="DialogVariant.Warning"
@@ -396,9 +412,10 @@ else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
               OnResult="ConfirmDiscardAsync" />
 }
 
-<!-- Context Menu -->
-@if (_contextMenuVisible && _contextMenuTask is not null)
+<!-- Context Menu (desktop / tablet; the read-mostly long-press menu of the mobile container is the TmGanttMobileOverlays part) -->
+@if (_contextMenuVisible && _contextMenuTask is not null && !IsMobileLayout)
 {
+    @* The read-mostly long-press menu (Status / Percent / Add task only) is the TmGanttMobileOverlays part. *@
     <div class="tm-gantt__context-menu-overlay" @onclick="HideContextMenuFromOverlay">
         <div class="tm-gantt__context-menu"
              style="left: min(@(F(_contextMenuX))px, calc(100% - 13rem)); top: min(@(F(_contextMenuY))px, calc(100% - 20rem));"
@@ -449,3 +466,14 @@ else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
 }
 </LayoutContent>
 </TmLayoutObserver>
+
+@code {
+    /// <summary>The sticky footer of the mobile task sheet: Cancel | Save. Cancel routes through the sheet's close
+    /// guard, so a dirty draft asks first; Save commits the two editable fields through the panel.</summary>
+    private RenderFragment? MobileTaskSheetFooter => IsMobileLayout ? @<div class="tm-gantt__sheet-footer">
+        <TmButton Variant="ButtonVariant.Ghost" data-testid="@TestId("task-mobile-cancel")"
+                  OnClick="@(() => HandleTaskSheetOpenChanged(false))">@Loc["TmGanttTaskPanel_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" data-testid="@TestId("task-mobile-save")"
+                  OnClick="@(() => _taskPanel?.SaveAsync())">@Loc["TmGanttTaskPanel_Save"]</TmButton>
+    </div> : null;
+}

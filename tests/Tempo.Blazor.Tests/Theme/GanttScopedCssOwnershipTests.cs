@@ -116,12 +116,14 @@ public sealed class GanttScopedCssOwnershipTests
             if (text.Contains("dialog-overlay", StringComparison.Ordinal)) offences.Add(Path.GetFileName(path) + ": dialog-overlay");
             if (text.Contains("__backdrop", StringComparison.Ordinal)) offences.Add(Path.GetFileName(path) + ": __backdrop");
             // Recorded fixed placements: the history drawer's opt-in Viewport placement, and the transparent
-            // click-away scrims of the two menus (TmGantt.razor.css context menu, TmGanttToolbar.razor.css view
-            // settings) - menus, not dialogs; they paint no backdrop.
+            // click-away scrims of the menus (TmGantt.razor.css context menu, TmGanttViewSettings.razor.css view
+            // settings - the settings list moved there in phase 8, its scrim with it, and TmGanttMobileOverlays.razor.css
+            // mobile long-press menu) - menus, not dialogs; they paint no backdrop.
             if (Regex.IsMatch(text, @"position:\s*fixed", RegexOptions.None, TimeSpan.FromSeconds(5))
                 && !path.EndsWith("TmGanttHistoryDrawer.razor.css", StringComparison.Ordinal)
                 && !path.EndsWith("TmGantt.razor.css", StringComparison.Ordinal)
-                && !path.EndsWith("TmGanttToolbar.razor.css", StringComparison.Ordinal))
+                && !path.EndsWith("TmGanttViewSettings.razor.css", StringComparison.Ordinal)
+                && !path.EndsWith("TmGanttMobileOverlays.razor.css", StringComparison.Ordinal))
             {
                 offences.Add(Path.GetFileName(path) + ": position: fixed");
             }

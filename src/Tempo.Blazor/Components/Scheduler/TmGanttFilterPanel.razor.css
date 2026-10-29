@@ -110,3 +110,51 @@
 .tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-op {
     flex-basis: 8.5rem;
 }
+
+/* ─── Mobile bottom sheet (phase 8, G2) ────────────────────────── */
+
+/* The dialog overlay is rendered by TmModal (the Class lands on the overlay root), so only ::deep
+   reaches it. The overlay is its own size container: the condition rows resolve THEIR mobile layout
+   against the sheet they sit in, not against the viewport. */
+::deep .tm-gantt__filter-dialog {
+    container-type: inline-size;
+}
+
+@container (max-width: 767.99px) {
+    /* One condition = two lines: the field select alone, then the operator + value pair. 44px targets. */
+    .tm-gantt__filter-row {
+        align-items: stretch;
+        row-gap: var(--tm-space-2);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-field {
+        flex: 1 1 100%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-op {
+        flex: 1 1 40%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-value {
+        flex: 1 1 55%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-remove {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    /* A rule on the button element, not on .tm-btn (another component's class). */
+    .tm-gantt__filter-add button {
+        min-height: var(--tm-touch-target);
+    }
+}

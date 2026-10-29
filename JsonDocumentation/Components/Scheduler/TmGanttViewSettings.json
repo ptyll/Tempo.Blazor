@@ -1,0 +1,35 @@
+{
+  "itemName": "TmGanttViewSettings",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the view-settings list — the today marker, days off, progress label and closed-tasks toggles, the task name location, the row density, the theme and (with NotificationSettings) the notification preferences. The toolbar renders it as the popover of the \"View settings\" button; the mobile \"More\" sheet renders the same list as its second view. Place TmGantt, not this component.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttViewSettings.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Owner",
+      "type": "TmGantt",
+      "isRequired": false,
+      "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+    },
+    {
+      "name": "Open",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the list renders (the toolbar's popover state, or always inside the mobile More sheet)."
+    },
+    {
+      "name": "Sheet",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Sheet presentation (the mobile More sheet): no click-away overlay, the menu is a static block."
+    }
+  ]
+}

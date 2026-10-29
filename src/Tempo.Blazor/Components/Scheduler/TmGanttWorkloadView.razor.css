@@ -213,3 +213,117 @@
     flex-basis: 100%;
     color: var(--tm-text-secondary);
 }
+/* ─── Mobile person list (phase 8, G2) ─────────────────────────── */
+
+/* One week, one row per person: the name (with its utilization bar) pinned while the seven day
+   columns scroll horizontally. The scroller is the component itself, like the desktop grid. */
+.tm-gantt__workload-mobile {
+    overflow: hidden;
+}
+
+.tm-gantt__workload-mobile-scroller {
+    overflow-x: auto;
+}
+
+.tm-gantt__workload-mobile-grid {
+    display: grid;
+    grid-template-columns: minmax(10rem, 45%) repeat(7, minmax(3.5rem, 1fr));
+    width: max-content;
+    min-width: 100%;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    overflow: clip;
+    font-size: 0.75rem;
+}
+
+.tm-gantt__workload-mobile-corner {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
+    border-right: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-gantt__workload-mobile-header-cell {
+    padding: var(--tm-space-2) var(--tm-space-1);
+    text-align: center;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
+    border-right: 1px solid var(--tm-color-border-subtle);
+    white-space: nowrap;
+}
+
+.tm-gantt__workload-mobile-row {
+    display: contents;
+}
+
+/* The pinned person column carries the utilization bar: allocated vs capacity of the week. */
+.tm-gantt__workload-mobile-name {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-surface);
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+    border-right: 1px solid var(--tm-color-border-subtle);
+    min-width: 0;
+}
+
+.tm-gantt__workload-mobile-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__workload-util {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-gantt__workload-util-bar {
+    flex: 0 0 3rem;
+    height: 0.375rem;
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-muted);
+    overflow: hidden;
+}
+
+.tm-gantt__workload-util-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-primary);
+}
+
+.tm-gantt__workload-util--over .tm-gantt__workload-util-fill {
+    background: var(--tm-color-danger);
+}
+
+.tm-gantt__workload-util-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__workload-mobile-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--tm-space-2) var(--tm-space-1);
+    border-bottom: 1px solid var(--tm-color-border-subtle);
+    border-right: 1px solid var(--tm-color-border-subtle);
+    white-space: nowrap;
+}

@@ -15,7 +15,60 @@
 
 @if (Task is not null)
 {
-    <div class="@(Tabbed ? "tm-gantt-task-panel tm-gantt-task-panel--tabbed" : "tm-gantt-task-panel")" data-dirty="@(Tabbed && IsDirty ? "true" : null)">
+    <div class="@RootClass" data-dirty="@((Tabbed || MobileReadOnly) && IsDirty ? "true" : null)">
+        @if (MobileReadOnly)
+        {
+            @* Mobile read-mostly (G2): the detail is a fact sheet — Name, Start and End are read-only,
+               Status and Percent stay editable. Save / Cancel live in the sheet's sticky footer (TmGantt). *@
+            <div class="tm-gantt-task-panel__mobile">
+                @if (Breadcrumb is not null)
+                {
+                    <div class="tm-gantt-task-panel__breadcrumb">@Breadcrumb</div>
+                }
+                <div class="tm-gantt-task-panel__mobile-facts">
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_Title"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-name")">@Task.Title</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_Start"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-start")">@Task.Start.ToString("d", Loc.Culture)</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_End"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-end")">@Task.End.ToString("d", Loc.Culture)</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <label class="tm-gantt-task-panel__mobile-label" for="@_statusFieldId">@Loc["TmGantt_Status"]</label>
+                        <select id="@_statusFieldId" class="tm-input tm-gantt-task-panel__mobile-input" data-testid="@TestId("task-mobile-status")"
+                                value="@_editStatus.ToString()" @onchange="OnMobileStatusChanged">
+                            @foreach (var option in _statusOptions)
+                            {
+                                <option value="@option.Value.ToString()" selected="@(option.Value == _editStatus)">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <label class="tm-gantt-task-panel__mobile-label" for="@_percentFieldId">@Loc["TmGanttTaskPanel_PercentComplete"]</label>
+                        <input @key="@_percentFieldSync" id="@_percentFieldId" type="number" class="tm-input tm-gantt-task-panel__mobile-input" min="0" max="100" inputmode="numeric"
+                               data-testid="@TestId("task-mobile-percent")" value="@_editPercent" @onchange="e => SetMobilePercent(e.Value?.ToString())" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(_validationError))
+                {
+                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("task-validation-error")" role="alert">
+                        <TmIcon Name="alert-circle" />
+                        <span>@_validationError</span>
+                    </div>
+                }
+                <p class="tm-gantt-task-panel__mobile-hint" data-testid="@TestId("task-mobile-hint")">
+                    <TmIcon Name="monitor" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_MobileFullEditingHint"]</span>
+                </p>
+            </div>
+        }
+        else
+        {
         @* Tabbed (the side sheet): the TmSidePanel owns the title and the close button, so the panel draws no header of its own. *@
         @if (!Tabbed)
         {
@@ -82,6 +135,7 @@
                 @Loc["TmGanttTaskPanel_Save"]
             </TmButton>
         </div>
+        }
         }
     </div>
 }

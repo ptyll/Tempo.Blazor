@@ -59,6 +59,13 @@
       "type": "DateTime?",
       "isRequired": false,
       "description": "Last day of the docked date axis (the Gantt's range end)."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the view follows. Auto (default) keeps the grid; a forced Mobile — or the chart passing its resolved layout — presents the mobile person list: one week (the week of Today), a utilization bar per person and the person column pinned while the day columns scroll horizontally."
     }
   ]
 }

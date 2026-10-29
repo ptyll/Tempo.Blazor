@@ -108,62 +108,10 @@
 
 /* ─── View Settings dropdown ───────────────────────────────────── */
 
+/* The trigger button's positioning wrapper. The overlay, the menu and the list styles are
+   TmGanttViewSettings's (the markup moved there in phase 8, so the mobile More sheet can reuse it). */
 .tm-gantt__view-settings-wrapper {
     position: relative;
-}
-
-.tm-gantt__view-settings-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-}
-
-.tm-gantt__view-settings-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    z-index: 51;
-    min-width: 220px;
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    box-shadow: var(--tm-shadow-popover);
-    padding: var(--tm-space-2, 0.5rem) 0;
-}
-
-.tm-gantt__view-settings-label {
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--tm-text-tertiary);
-}
-
-.tm-gantt__view-settings-item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
-    font-size: 0.875rem;
-    color: var(--tm-text-primary);
-    cursor: pointer;
-    transition: background 0.1s ease;
-}
-
-.tm-gantt__view-settings-item:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-gantt__view-settings-item input {
-    margin: 0;
-    cursor: pointer;
-}
-
-.tm-gantt__view-settings-divider {
-    height: 1px;
-    background: var(--tm-border-color);
-    margin: var(--tm-space-1, 0.25rem) 0;
 }
 
 /* ─── Phase 2: Zoom slider ──────────────────────────────────────── */
@@ -216,8 +164,77 @@
     .tm-gantt__zoom-slider {
         min-height: var(--tm-touch-target);
     }
+}
 
-    .tm-gantt__view-settings-item {
-        min-height: var(--tm-touch-target);
-    }
+/* ─── Mobile read-mostly chrome (phase 8) ──────────────────────── */
+
+/* The compact chrome replaces the command row on a container below 768 px: the full-width view
+   segment and the chips. The data commands (export / import / mapping) are not part of it. */
+.tm-gantt__mobile-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
+/* The segment spans the container width; the three views share it equally (44px targets). */
+.tm-gantt__segment--full {
+    display: flex;
+    width: 100%;
+}
+
+.tm-gantt__segment--full .tm-gantt__segment-btn {
+    flex: 1 1 0;
+    min-height: var(--tm-touch-target);
+}
+
+.tm-gantt__mobile-chips {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* The filter chip is the last one and reads at the far end, like the mockup. */
+.tm-gantt__mobile-chip:last-child {
+    margin-inline-start: auto;
+}
+
+.tm-gantt__mobile-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__mobile-chip:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-gantt__mobile-chip:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The active-filter dot sits on the chip's corner. */
+.tm-gantt__mobile-chip-dot {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--tm-color-primary);
 }

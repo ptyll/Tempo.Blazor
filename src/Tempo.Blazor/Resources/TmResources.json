@@ -5813,6 +5813,12 @@
   "TmGantt_ZoomIn": "Zoom in",
   "TmGantt_ZoomOut": "Zoom out",
   "TmGantt_ZoomLevel": "Zoom level",
+  "TmGantt_MobileSortByDate": "Sort by date",
+  "TmGantt_MobileFullEditingHint": "Full editing is available on a larger screen.",
+  "TmGantt_MobileMenuStatus": "Change status",
+  "TmGantt_MobileMenuPercent": "Change progress",
+  "TmGantt_MobileAddNameRequired": "Enter a task name.",
+  "TmGantt_WorkloadAllocatedOfCapacity": "{0} of {1} h",
   "TmGantt_ExpandTask": "Expand {0}",
   "TmGantt_CollapseTask": "Collapse {0}",
 

@@ -186,9 +186,10 @@
                             }
 
                             <!-- Dep creation handles -->
-                            @if (Owner.AllowDependencyCreation)
+                            @if (Owner.AllowDependencyCreation && !Owner.IsMobileLayout)
                             {
-                                @* Pointer sessions of gantt.js (core pointer-drag.js): the handle names its task and which end it starts from. *@
+                                @* Pointer sessions of gantt.js (core pointer-drag.js): the handle names its task and which end it starts from.
+                                   Read-mostly (mobile): the linking drag is tablet+, so the handles do not render at all. *@
                                 <span class="tm-gantt__dep-handle tm-gantt__dep-handle--start"
                                       data-task-id="@bar.Task.Id" data-dep-end="false"></span>
                                 <span class="tm-gantt__dep-handle tm-gantt__dep-handle--end"
@@ -222,7 +223,7 @@
                         @* A sibling of the bar, not a child: the completed bar is faded (opacity .6) and a
                            descendant label would be composited with it, so its contrast was measured against
                            a half-transparent ancestor. Placed from the geometry the bar already has. *@
-                        @if (Owner.ViewSettings.ShowProgressLabel)
+                        @if (Owner.ShowBarProgressLabels)
                         {
                             <span class="tm-gantt__bar-progress-label @GetProgressLabelClass(bar)"
                                   data-testid="@TestId("bar-progress-label")"

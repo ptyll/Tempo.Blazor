@@ -5877,6 +5877,12 @@
   "TmGantt_ZoomIn": "Priblížiť",
   "TmGantt_ZoomOut": "Oddialiť",
   "TmGantt_ZoomLevel": "Úroveň priblíženia",
+  "TmGantt_MobileSortByDate": "Triediť podľa dátumu",
+  "TmGantt_MobileFullEditingHint": "Úplná úprava je dostupná na väčšej obrazovke.",
+  "TmGantt_MobileMenuStatus": "Zmeniť stav",
+  "TmGantt_MobileMenuPercent": "Zmeniť percentá",
+  "TmGantt_MobileAddNameRequired": "Zadajte názov úlohy.",
+  "TmGantt_WorkloadAllocatedOfCapacity": "{0} z {1} h",
   "TmGantt_ExpandTask": "Rozbaliť {0}",
   "TmGantt_CollapseTask": "Zbaliť {0}",
 

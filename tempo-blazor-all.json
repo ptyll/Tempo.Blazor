@@ -23570,6 +23570,12 @@
               "description": "Secondary header line under the Title."
             },
             {
+              "name": "TaskBreadcrumb",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional breadcrumb (a host-drawn project / parent path) for the task detail: the task panel header and the mobile task sheet render it above the task title. Null renders nothing."
+            },
+            {
               "name": "TaskPanelMode",
               "type": "GanttTaskPanelMode",
               "isRequired": false,
@@ -23976,6 +23982,27 @@
           ]
         },
         {
+          "itemName": "TmGanttMobileOverlays",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the read-mostly overlays of the mobile container (decision G2) — the \"More\" sheet of the mobile action bar (zoom, task panel, history, reports, view settings; never export / import / mapping), the minimal add-task sheet (name, start, end), the read-only history sheet and the limited long-press menu (Status / Percent / Add task only). They render as siblings of the chart root, like every Gantt overlay. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttMobileOverlays.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
           "itemName": "TmGanttPanelTabs",
           "kind": "Component",
           "category": "Scheduler",
@@ -24014,6 +24041,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS classes appended to the root element."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the cards follow. Auto (default) keeps the card with the embedded chart; a forced Mobile — or the host passing the chart's resolved layout — presents the read-only mobile card: the summary line, the percent with its progress bar and a mini-gantt of bars only (a tap raises OnProjectSelected; nothing is editable)."
             },
             {
               "name": "OnProjectSelected",
@@ -24216,6 +24250,13 @@
               "default": "false"
             },
             {
+              "name": "MobileReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "The mobile read-mostly presentation (decision G2): the panel is a fact sheet — Name, Start and End read-only, Status and Percent editable — and draws no footer (the sheet's sticky Cancel | Save commits through SaveAsync). The full editor stays tablet+.",
+              "default": "false"
+            },
+            {
               "name": "OnAction",
               "type": "EventCallback<GanttTaskAction>",
               "isRequired": false,
@@ -24372,6 +24413,41 @@
           ]
         },
         {
+          "itemName": "TmGanttViewSettings",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (hidden from the editor): the view-settings list — the today marker, days off, progress label and closed-tasks toggles, the task name location, the row density, the theme and (with NotificationSettings) the notification preferences. The toolbar renders it as the popover of the \"View settings\" button; the mobile \"More\" sheet renders the same list as its second view. Place TmGantt, not this component.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttViewSettings.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Open",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the list renders (the toolbar's popover state, or always inside the mobile More sheet).",
+              "default": "false"
+            },
+            {
+              "name": "Sheet",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Sheet presentation (the mobile More sheet): no click-away overlay, the menu is a static block.",
+              "default": "false"
+            },
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": false,
+              "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+            }
+          ]
+        },
+        {
           "itemName": "TmGanttWorkloadView",
           "kind": "Component",
           "category": "Scheduler",
@@ -24403,6 +24479,13 @@
               "isRequired": false,
               "description": "Docked presentation: a card with a header (title, Hours | Percent segment), a continuous date axis over RangeStart..RangeEnd, a legend and a range note. Default false keeps the sparse alternate-view grid.",
               "default": "false"
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the view follows. Auto (default) keeps the grid; a forced Mobile — or the chart passing its resolved layout — presents the mobile person list: one week (the week of Today), a utilization bar per person and the person column pinned while the day columns scroll horizontally."
             },
             {
               "name": "RangeEnd",
@@ -29974,11 +30057,11 @@
         }
       ],
       "summary": {
-        "itemCount": 399,
-        "manualItemCount": 399,
-        "generatedItemCount": 391,
+        "itemCount": 401,
+        "manualItemCount": 401,
+        "generatedItemCount": 393,
         "generatedOnlyItemCount": 0,
-        "componentCount": 214,
+        "componentCount": 216,
         "publicApiTypeCount": 177
       }
     },
@@ -122867,10 +122950,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3325,
-    "manualItemCount": 3325,
+    "itemCount": 3327,
+    "manualItemCount": 3327,
     "generatedOnlyItemCount": 0,
-    "componentCount": 497,
+    "componentCount": 499,
     "publicApiTypeCount": 2775
   }
 }

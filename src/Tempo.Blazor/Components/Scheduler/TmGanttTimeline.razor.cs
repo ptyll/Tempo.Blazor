@@ -52,8 +52,8 @@ public partial class TmGanttTimeline : TmGanttPart
         Owner.DrawVersion, Owner.TaskFingerprint(), Owner._taskBars, Owner._lowerHeaders, Owner._visibleDependencies, Owner._nonWorkingRects,
         Owner._totalTimelineWidth, Owner._visibleNodes.Count, Owner.SelectedTask?.Id,
         Owner._selectedDependencyId, Owner.ActiveTimerTaskId, Owner.ShowOverdueHighlight, Owner.ShowCriticalPath,
-        Owner.ActiveBaselineId, Owner.AllowDependencyCreation, Owner.GetEffectiveZoomPreset(),
-        Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ViewSettings.ShowProgressLabel,
+        Owner.ActiveBaselineId, Owner.AllowDependencyCreation && !Owner.IsMobileLayout, Owner.GetEffectiveZoomPreset(),
+        Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ShowBarProgressLabels,
         Owner.ViewSettings.TaskNameLocation, Owner.RowHeight, Owner._today, Owner.TestIdPrefix, Loc.Culture.Name,
         Owner.FocusRequest?.Seq ?? 0);
 

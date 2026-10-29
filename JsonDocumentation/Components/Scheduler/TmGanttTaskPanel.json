@@ -160,6 +160,13 @@
       "type": "RenderFragment?",
       "isRequired": false,
       "description": "Optional breadcrumb shown above the task title in the panel header."
+    },
+    {
+      "name": "MobileReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The mobile read-mostly presentation (decision G2): the panel is a fact sheet — Name, Start and End read-only, Status and Percent editable — and draws no footer (the sheet's sticky Cancel | Save commits through SaveAsync). The full editor stays tablet+."
     }
   ]
 }

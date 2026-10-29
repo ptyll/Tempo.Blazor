@@ -3,6 +3,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Feedback;
@@ -383,6 +384,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
 
         var cut = Render<TmGantt>(p => p
             .Add(x => x.Items, Tasks())
+            .Add(x => x.LayoutMode, TmLayoutMode.Desktop)
             .Add(x => x.ContainerWidth, 1));
         cut.Find("[data-testid='gantt-fit-to-screen']").Click();
 
@@ -522,6 +524,7 @@ public class TmGanttPhase1FixesTests : LocalizationTestBase
 
         var cut = Render<TmGantt>(p => p
             .Add(x => x.Items, Tasks())
+            .Add(x => x.LayoutMode, TmLayoutMode.Desktop)
             .Add(x => x.ContainerWidth, widthAt200 * 0.6));
         for (var i = 0; i < 4; i++)
         {

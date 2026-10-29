@@ -1,0 +1,222 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Microsoft.AspNetCore.Components.Web
+@* The read-mostly overlays of the mobile container (phase 8, G2): the "More" sheet of the action bar,
+   the minimal add-task sheet, the read-only history sheet and the limited long-press menu. They render
+   as SIBLINGS of the chart root (a CSS size container is the containing block of fixed descendants),
+   from the same LayoutContent area the desktop / tablet overlays use. Every sheet restores the focus
+   to the action-bar tile that can reopen it (the stable tile ids of TmGantt.MobileActionItems). *@
+@if (Owner.IsMobileLayout)
+{
+    @* The "More" sheet: zoom, the task panel, history, reports and the view settings.
+       The data commands (export / import / mapping) are deliberately absent: tablet+.
+       A plain list of buttons — no menu roles: the entries navigate to whole surfaces,
+       not to commands of an open menu (and a sheet keeps no focus loop of its own). *@
+    @if (Owner._mobileMoreOpen)
+    {
+        <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="@(open => { if (!open) Owner.MobileMoreClose(); })"
+                     Title="@Loc["Tm_More"]" Class="tm-gantt__sheet tm-gantt__more-sheet" DataTestId="@TestId("gantt-more-sheet")"
+                     RestoreFocusTargetId="@TestId("gantt-mobile-more")"
+                     LayoutMode="TmLayoutMode.Mobile">
+            @if (Owner.MobileMoreSettings)
+            {
+                <div class="tm-gantt__more-back">
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-back")" @onclick="Owner.CloseMobileSettings">
+                        <TmIcon Name="arrow-left" Size="IconSize.Sm" />
+                        <span>@Loc["Tm_Back"]</span>
+                    </button>
+                </div>
+                <TmGanttViewSettings Owner="Owner" Open="true" Sheet="true" />
+            }
+            else
+            {
+                <div class="tm-gantt__more-menu" aria-label="@Loc["Tm_More"]">
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-zoom-in")" @onclick="() => Owner.ZoomInAsync()">
+                        <TmIcon Name="zoom-in" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_ZoomIn"]</span>
+                    </button>
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-zoom-out")" @onclick="() => Owner.ZoomOutAsync()">
+                        <TmIcon Name="zoom-out" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_ZoomOut"]</span>
+                    </button>
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-task-panel")"
+                            disabled="@(Owner.SelectedTask is null)"
+                            aria-pressed="@(Owner.TaskPanelOpen ? "true" : "false")" @onclick="Owner.MobileMoreTaskPanel">
+                        <TmIcon Name="edit" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_ToggleTaskPanel"]</span>
+                    </button>
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-history")" @onclick="Owner.MobileMoreHistory">
+                        <TmIcon Name="clock" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_History"]</span>
+                    </button>
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-reports")" @onclick="Owner.MobileMoreReports">
+                        <TmIcon Name="bar-chart-2" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_Reports"]</span>
+                    </button>
+                    <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-settings")" @onclick="Owner.OpenMobileSettings">
+                        <TmIcon Name="settings" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_ViewSettings"]</span>
+                    </button>
+                </div>
+            }
+        </TmSidePanel>
+    }
+
+    @* The minimal add-task sheet: name, start, end — the read-mostly way to create a task. *@
+    @if (Owner.MobileAddSheetOpen)
+    {
+        <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="@(open => { if (!open) Owner.CloseMobileAddSheet(); })"
+                     Title="@Loc["TmGantt_AddTask"]" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-add-sheet")"
+                     RestoreFocusTargetId="@TestId("gantt-mobile-add")"
+                     LayoutMode="TmLayoutMode.Mobile" FooterContent="AddSheetFooter">
+            <div class="tm-gantt__add-form">
+                <label class="tm-gantt__add-field">
+                    <span class="tm-gantt__add-label">@Loc["TmGantt_TaskTitle"]</span>
+                    <input type="text" class="tm-input" data-testid="@TestId("gantt-add-name")" value="@Owner.MobileAddTitle"
+                           @oninput="e => Owner.SetMobileAddTitle(e.Value?.ToString())" />
+                </label>
+                <div class="tm-gantt__add-dates">
+                    <label class="tm-gantt__add-field">
+                        <span class="tm-gantt__add-label">@Loc["TmGanttTaskPanel_Start"]</span>
+                        <input type="date" class="tm-input" data-testid="@TestId("gantt-add-start")" value="@Owner.MobileAddStart"
+                               aria-label="@Loc["TmGanttTaskPanel_Start"]"
+                               @onchange="e => Owner.SetMobileAddStart(e.Value?.ToString())" />
+                    </label>
+                    <label class="tm-gantt__add-field">
+                        <span class="tm-gantt__add-label">@Loc["TmGanttTaskPanel_End"]</span>
+                        <input type="date" class="tm-input" data-testid="@TestId("gantt-add-end")" value="@Owner.MobileAddEnd"
+                               aria-label="@Loc["TmGanttTaskPanel_End"]"
+                               @onchange="e => Owner.SetMobileAddEnd(e.Value?.ToString())" />
+                    </label>
+                </div>
+                @if (Owner.MobileAddError is not null)
+                {
+                    <p class="tm-gantt__add-error" data-testid="@TestId("gantt-add-error")" role="alert">@Owner.MobileAddError</p>
+                }
+            </div>
+        </TmSidePanel>
+    }
+
+    @* The history sheet: read-only (no time-travel, no rollback — tablet+ commands). Opened from the
+       "More" sheet, so the focus returns to the More tile. *@
+    @if (Owner._historyDrawerOpen)
+    {
+        <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="@(open => { if (!open) Owner.ToggleHistoryDrawer(); })"
+                     Title="@Loc["TmGantt_History"]" Class="tm-gantt__sheet" DataTestId="@TestId("gantt-history-sheet")"
+                     RestoreFocusTargetId="@TestId("gantt-mobile-more")"
+                     LayoutMode="TmLayoutMode.Mobile">
+            <TmGanttHistoryList History="Owner.History" Tasks="Owner.Data" TimeZone="@Owner.DisplayZone" ShowActions="false"
+                                TestIdPrefix="@Owner.TestIdPrefix"
+                                OnTaskSelected="Owner.OpenTaskByIdAsync" />
+        </TmSidePanel>
+    }
+
+    @* The long-press menu offers only Status, Percent and Add task — reorder, duplicate and delete are tablet+.
+       A real menu: role="menu" with menuitem entries, a roving tab stop (↑/↓), Escape closes it and the
+       focus returns to the row of the task (the menu moved focus into content it destroys). *@
+    @if (Owner.ContextMenuVisible && Owner.ContextMenuTask is not null)
+    {
+        var task = Owner.ContextMenuTask;
+        <div class="tm-gantt__mobile-menu-overlay" @onclick="Owner.CloseMobileMenuFromOverlay">
+            <div class="tm-gantt__mobile-menu" role="menu" aria-label="@task.Title"
+                 style="left: min(@(F(Owner.ContextMenuX))px, calc(100% - 13rem)); top: min(@(F(Owner.ContextMenuY))px, calc(100% - 12rem));"
+                 @onclick:stopPropagation @onkeydown="HandleMenuKeyDown">
+                <button type="button" role="menuitem" tabindex="@(MobileMenuIndex == 0 ? "0" : "-1")"
+                        class="tm-gantt__mobile-menu-item" data-testid="@TestId("gantt-context-status")"
+                        @ref="_statusItem" @onclick="Owner.OpenMobileStatusAsync">
+                    <TmIcon Name="check-circle" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_MobileMenuStatus"]</span>
+                </button>
+                <button type="button" role="menuitem" tabindex="@(MobileMenuIndex == 1 ? "0" : "-1")"
+                        class="tm-gantt__mobile-menu-item" data-testid="@TestId("gantt-context-percent")"
+                        @ref="_percentItem" @onclick="Owner.OpenMobilePercentAsync">
+                    <TmIcon Name="percent" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_MobileMenuPercent"]</span>
+                </button>
+                <div class="tm-gantt__mobile-menu-divider"></div>
+                <button type="button" role="menuitem" tabindex="@(MobileMenuIndex == 2 ? "0" : "-1")"
+                        class="tm-gantt__mobile-menu-item" data-testid="@TestId("gantt-context-add")"
+                        @ref="_addItem" @onclick="Owner.OpenMobileAddFromMenu">
+                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_AddTask"]</span>
+                </button>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private ElementReference _statusItem;
+    private ElementReference _percentItem;
+    private ElementReference _addItem;
+
+    /// <summary>The roving tab stop of the open long-press menu (0 = Status, 1 = Percent, 2 = Add task).</summary>
+    internal int MobileMenuIndex => _mobileMenuIndex;
+    private int _mobileMenuIndex;
+
+    /// <summary>The menu-open sequence the first-item focus was performed for (once per open).</summary>
+    private int _handledMenuSeq = -1;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The menu took the focus (it will focus its first item): do it once, after the render that
+        // opened it — the items exist now and the first one carries the roving tab stop.
+        if (!Owner.ContextMenuVisible || Owner.ContextMenuTask is null) return;
+        if (_handledMenuSeq == Owner._contextMenuOpenSeq) return;
+        _handledMenuSeq = Owner._contextMenuOpenSeq;
+        _mobileMenuIndex = 0;
+        await FocusItemAsync(0);
+    }
+
+    /// <summary>Menu keys: Escape dismisses (and returns the focus to the row), ↑/↓ move the roving tab stop. The Enter / Space activation of the entries is the native button's.</summary>
+    private async Task HandleMenuKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                Owner.CloseMobileMenu();
+                break;
+            case "ArrowDown":
+                await MoveAsync(1);
+                break;
+            case "ArrowUp":
+                await MoveAsync(-1);
+                break;
+        }
+    }
+
+    private async Task MoveAsync(int step)
+    {
+        _mobileMenuIndex = (_mobileMenuIndex + step + 3) % 3;
+        await FocusItemAsync(_mobileMenuIndex);
+    }
+
+    private async Task FocusItemAsync(int index)
+    {
+        var target = index switch { 1 => _percentItem, 2 => _addItem, _ => _statusItem };
+        try
+        {
+            await target.FocusAsync(preventScroll: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // The element left the DOM with the render that closed the menu; nothing to focus.
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    /// <summary>The sticky footer of the add-task sheet: Cancel | Add (the part owns the sheet, the footer rides it).</summary>
+    private RenderFragment AddSheetFooter => @<div class="tm-gantt__add-footer">
+        <TmButton Variant="ButtonVariant.Ghost" data-testid="@TestId("gantt-add-cancel")"
+                  OnClick="Owner.CloseMobileAddSheet">@Loc["Tm_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" data-testid="@TestId("gantt-add-submit")"
+                  OnClick="Owner.AddTaskFromMobileSheetAsync">@Loc["TmGanttTaskPanel_Confirm"]</TmButton>
+    </div>;
+}

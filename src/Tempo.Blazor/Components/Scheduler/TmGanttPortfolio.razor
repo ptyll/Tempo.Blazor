@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Feedback
 
-<div class="tm-gantt-portfolio @Class" data-testid="@RootTestId()" @attributes="AdditionalAttributes">
+<div class="tm-gantt-portfolio @(IsMobile ? "tm-gantt-portfolio--mobile" : "") @Class" data-testid="@RootTestId()" @attributes="AdditionalAttributes">
     @foreach (var project in Projects)
     {
         var current = project;
@@ -22,11 +22,12 @@
                 @if (OnProjectSelected.HasDelegate)
                 {
                     <button type="button" class="tm-gantt-portfolio__project-name tm-gantt-portfolio__project-name--link"
+                            data-testid="@TestId($"portfolio-name-{project.Id}")"
                             @onclick="() => OnProjectSelected.InvokeAsync(current)">@project.Name</button>
                 }
                 else
                 {
-                    <span class="tm-gantt-portfolio__project-name">@project.Name</span>
+                    <span class="tm-gantt-portfolio__project-name" data-testid="@TestId($"portfolio-name-{project.Id}")">@project.Name</span>
                 }
                 <span class="tm-gantt-portfolio__project-meta">
                     @if (range is { } r)
@@ -41,7 +42,40 @@
                     <span class="tm-gantt-portfolio__project-actions">@ProjectActions(project)</span>
                 }
             </div>
-            @if (expanded)
+            @if (IsMobile)
+            {
+                @* Mobile card (G2): the summary line, the weighted percent and a mini-gantt of bars only.
+                   Nothing is editable; a tap on the project name (or the header) selects the project. *@
+                <div class="tm-gantt-portfolio__project-summary-mobile" data-testid="@TestId($"portfolio-summary-{project.Id}")">
+                    <span class="tm-gantt-portfolio__project-count">@Loc["TmGanttPortfolio_TaskCount", project.Tasks.Count]</span>
+                    @if (range is { } mr)
+                    {
+                        <span class="tm-gantt-portfolio__project-range">@mr.Start.ToString("d", Loc.Culture) – @mr.End.ToString("d", Loc.Culture)</span>
+                    }
+                    <span class="tm-gantt-portfolio__project-percent">@(((int)Math.Round(progress)).ToString(Loc.Culture))&#8202;%</span>
+                </div>
+                var mini = MiniLayout(project);
+                <div class="tm-gantt-portfolio__mini" role="img" aria-label="@Loc["TmGanttPortfolio_TaskCount", project.Tasks.Count]">
+                    <div class="tm-gantt-portfolio__mini-months" aria-hidden="true">
+                        @foreach (var (month, left, width) in mini.Months)
+                        {
+                            <span class="tm-gantt-portfolio__mini-month" style="left: @(F(left))%; width: @(F(width))%">@month.ToString("MMM yyyy", Loc.Culture)</span>
+                        }
+                    </div>
+                    @foreach (var bar in mini.Bars)
+                    {
+                        <div class="tm-gantt-portfolio__mini-row">
+                            <span class="tm-gantt-portfolio__mini-name">@bar.Task.Title</span>
+                            <span class="tm-gantt-portfolio__mini-track">
+                                <span class="@MiniBarClass(bar.Task.Color)"
+                                      style="@MiniBarStyle(bar)"
+                                      title="@bar.Task.Title"></span>
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+            else if (expanded)
             {
                 <div class="tm-gantt-portfolio__project-summary" id="@BodyId(project)" style="@SummaryStyle">
                     <TmGantt TestIdPrefix="@TestId($"gantt-{project.Id}")"

@@ -45,7 +45,8 @@ public partial class TmGanttTree : TmGanttPart
         string? FocusRow,
         int FocusSeq,
         bool WbsInTitle,
-        bool Narrow);
+        bool Narrow,
+        bool Mobile);
 
     /// <inheritdoc />
     protected override object? RenderState => new TreeState(
@@ -54,7 +55,8 @@ public partial class TmGanttTree : TmGanttPart
         Owner._inlineEditTaskId, Owner._inlineEditColumn, Owner._inlineEditCustomFieldId, Owner._inlineEditValue,
         Owner.ShowOverdueHighlight, Owner._today, Owner.ActiveBaselineId, Owner._overloadedAssigneeIds.Count,
         Owner.TestIdPrefix, Loc.Culture.Name,
-        Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle, Owner.IsNarrowLayout);
+        Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle, Owner.IsNarrowLayout,
+        Owner.IsMobileLayout);
 
     /// <summary>
     /// Duration and Priority do not fit the 420px default, so the grid sizes to the columns it shows (the header and
@@ -62,12 +64,15 @@ public partial class TmGanttTree : TmGanttPart
     /// column - today's grid - nothing is written and the stylesheet width stands.
     /// </summary>
     /// <summary>
-    /// The columns the grid shows. A tablet or narrower container keeps the four that identify and schedule a task - Task, Status, Start,
-    /// End - so the timeline keeps its room (the other columns and the custom fields are one desktop width away).
+    /// The columns the grid shows. A tablet container keeps the four that identify and schedule a task - Task, Status,
+    /// Start, End - so the timeline keeps its room. The MOBILE read-mostly container keeps only the title: the dates
+    /// ride in the two-line cell and the timeline (with its percent labels) carries the rest.
     /// </summary>
-    private IEnumerable<GanttColumnDefinition> ShownColumns => Owner.IsNarrowLayout
-        ? Owner.EffectiveColumns.Where(c => c.Visible && c.Key is GanttColumnKey.Title or GanttColumnKey.Status or GanttColumnKey.Start or GanttColumnKey.End)
-        : Owner.EffectiveColumns.Where(c => c.Visible);
+    private IEnumerable<GanttColumnDefinition> ShownColumns => Owner.IsMobileLayout
+        ? Owner.EffectiveColumns.Where(c => c.Visible && c.Key == GanttColumnKey.Title)
+        : Owner.IsNarrowLayout
+            ? Owner.EffectiveColumns.Where(c => c.Visible && c.Key is GanttColumnKey.Title or GanttColumnKey.Status or GanttColumnKey.Start or GanttColumnKey.End)
+            : Owner.EffectiveColumns.Where(c => c.Visible);
 
     /// <summary>The custom-field columns; none on a narrow container.</summary>
     private IReadOnlyList<TmCustomFieldDefinition> ShownCustomFields => Owner.IsNarrowLayout ? [] : Owner.CustomFields;
@@ -139,6 +144,18 @@ public partial class TmGanttTree : TmGanttPart
     {
         var days = (int)Math.Max(0, Math.Round((task.End.Date - task.Start.Date).TotalDays));
         return Loc.Plural("TmGantt_DurationDays", days);
+    }
+
+    /// <summary>
+    /// The second line of the mobile two-line cell: "start – end". The format follows the culture —
+    /// its <see cref="System.Globalization.DateTimeFormatInfo.MonthDayPattern"/> when one is defined
+    /// (cs: "1. 6."), else the short-date pattern ("d") — never a hard-coded pattern.
+    /// </summary>
+    private string MobileRange(TmWorkItem task)
+    {
+        var pattern = Loc.Culture.DateTimeFormat.MonthDayPattern;
+        if (string.IsNullOrWhiteSpace(pattern)) pattern = "d";
+        return $"{task.Start.ToString(pattern, Loc.Culture)} – {task.End.ToString(pattern, Loc.Culture)}";
     }
 
     private static string GetPriorityGlyphClass(TmWorkItemPriority priority) => priority switch

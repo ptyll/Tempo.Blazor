@@ -198,3 +198,18 @@ and the "today" of the now indicator both use it; neither reads `DateTime.Now`.
 The embedded calendar mode of `TmGantt` renders this scheduler; the Gantt's own tablet layout, the `TaskPanelMode` side sheet and the
 pointer gestures of `gantt.js` (pan, dependency drag, long-press menu, Alt+Up/Down reorder) are described in
 [touch-interaction.md](touch-interaction.md) and in the `CHANGELOG` entry "TmGantt phase 7".
+
+## Gantt mobile (read-mostly)
+
+A Gantt container below 768 px is a **reading surface** (decision G2): one pinned Title column with a two-line cell
+(title over the date range, 56 px rows in the tree and the timeline), the full-width Day | Week | Month segment and
+chips (Sort by date | Fit to screen | Filter, with a dot for an active filter), a bottom `TmMobileActionBar`
+(Add task | Expand all | Collapse all | More) and a "More" bottom sheet (Zoom in / out, Task panel, History, Reports,
+View settings). Every right-hand surface is a full-height `TmSidePanel` bottom sheet: the task detail is read-only
+except **Status** and **Percent** (sticky Cancel | Save; the `TaskBreadcrumb` slot renders above the title), adding a
+task is a minimal sheet (name, start, end), the filter editor is the dialog (two-line rows, 44 px targets, sticky
+Apply), history is read-only and Reports are run-only cards. Export, import, column mapping, reorder (drag, Move
+up / down, Alt+Arrow) and the dependency drag are **not offered** on a mobile container — a host that wants the full
+editing chrome pins `LayoutMode="TmLayoutMode.Tablet"`. `TmGanttPortfolio` (mobile cards with a mini-gantt) and
+`TmGanttWorkloadView` (the week person list with a utilization bar and the pinned person column) follow the same
+`LayoutMode` their host passes. See the `CHANGELOG` entry "TmGantt phase 8".

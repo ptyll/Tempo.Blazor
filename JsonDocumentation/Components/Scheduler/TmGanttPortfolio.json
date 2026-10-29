@@ -41,6 +41,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Maximum height of the Gantt area of a card as a CSS length (e.g. 400px). Default: the stylesheet value (15rem)."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the cards follow. Auto (default) keeps the card with the embedded chart; a forced Mobile — or the host passing the chart's resolved layout — presents the read-only mobile card: the summary line, the percent with its progress bar and a mini-gantt of bars only (a tap raises OnProjectSelected; nothing is editable)."
     }
   ]
 }

@@ -17,6 +17,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_OpensOnTaskSelect()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -51,6 +54,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_EditsTaskTitle()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -92,6 +98,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_Validation_StartAfterEnd()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -134,6 +143,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_AddsDependency()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -182,6 +194,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_RemovesDependency_WithConfirm()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -226,6 +241,9 @@ public class GanttTaskPanelE2ETests : WasmTestBase
     public async Task Gantt_TaskPanel_PreventsCyclicDependency()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet (TaskPanelMode Auto -> the panel is a
+        // sheet): the legacy desktop specs pin the wide viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 

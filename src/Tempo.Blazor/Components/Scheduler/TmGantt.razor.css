@@ -473,3 +473,30 @@
 .tm-gantt ::deep .tm-gantt__sheet {
     --tm-drawer-width: clamp(22rem, 50vw, 40rem);
 }
+
+/* ─── Mobile read-mostly (phase 8) ─────────────────────────────── */
+
+/* The compact mobile header: only the host slots (Title / Subtitle / HeaderStart / HeaderActions) stay,
+   stacked and tighter than the desktop header row. The app shell around them is the host's business. */
+.tm-gantt--mobile .tm-gantt__header {
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+/* The mobile action bar (TmMobileActionBar) is the chart's bottom chrome: a hairline separates it
+   from the chart and the tiles share the row. */
+.tm-gantt ::deep .tm-gantt__mobile-bar {
+    border-top: 1px solid var(--tm-border-color);
+}
+
+/* Sticky footer of the mobile task sheet (the TmSidePanel FooterContent slot); the add-task
+   sheet's footer is TmGanttMobileOverlays's (tm-gantt__add-footer). */
+.tm-gantt__sheet-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3) calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
