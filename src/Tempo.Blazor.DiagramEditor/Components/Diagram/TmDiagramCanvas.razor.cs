@@ -363,15 +363,27 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
 
         // Fáze 9: the deferred FitOnDocumentLoad fit — AFTER the init await above, so the JS
         // instance always exists here (the editor's render hook fires before this canvas').
-        if (_jsInitialized && _pendingFitWhenReady is { } fitWhenReady)
+        if (_jsInitialized && !_disposed && _pendingFitWhenReady is { } fitWhenReady)
         {
             _pendingFitWhenReady = null;
+            var fitCompleted = _fitCompleted;
+            _fitCompleted = null;
             await FitToView(fitWhenReady);
+            // The editor tracks its fit through this callback: the fit has now REALLY happened,
+            // so a still-owed flag on the editor's side can retire (Fáze 9 review — the editor
+            // re-arms the fit on a remounted canvas until this fires).
+            fitCompleted?.Invoke();
         }
     }
 
+    // Set in DisposeAsync: a canvas the shell replaced (mobile↔docked flip) may still have a
+    // deferred fit waiting behind the init await — that fit must never run (it would fit a dead
+    // JS instance and falsely retire the editor's owed flag).
+    private bool _disposed;
+
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         if (_jsInitialized)
         {
             try { await JS.InvokeVoidAsync("tmDiagramEditor.destroy", _containerRef); }
@@ -2421,13 +2433,25 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// Fits the content to the canvas. Fáze 9: the optional <paramref name="mode"/> is additive —
     /// <see cref="DiagramFitMode.Page"/> (default) keeps today's fit both axes,
     /// <see cref="DiagramFitMode.Width"/> asks the JS engine to scale by the container width only.
+    /// Returns the fitted scale; with <see cref="ShowPageView"/> the page-view margin is applied
+    /// AFTER the fit and the returned (final, smaller) scale is the one AFTER the margin — the
+    /// single fit path the editor's own fit button and <c>FitToViewAsync</c> go through (Fáze 9
+    /// review), so the zoom label can never show a pre-margin scale.
     /// </summary>
-    public async Task FitToView(DiagramFitMode mode = DiagramFitMode.Page)
+    public async Task<double> FitToView(DiagramFitMode mode = DiagramFitMode.Page)
     {
-        if (!_jsInitialized) return;
-        await JS.InvokeVoidAsync("tmDiagramEditor.fitToView", _containerRef, 40, mode == DiagramFitMode.Width ? "width" : null);
+        if (!_jsInitialized) return _currentScale;
+        var scale = await JS.InvokeAsync<double>("tmDiagramEditor.fitToView", _containerRef, 40, mode == DiagramFitMode.Width ? "width" : null);
         if (ShowPageView)
-            await JS.InvokeVoidAsync("tmDiagramEditor.addPageViewMargin", _containerRef, PageViewMargin);
+        {
+            // The margin grows the viewBox, so the scale shrinks — the JS returns the final
+            // scale (and reports it back through OnZoomChanged for the zoom label). A mock/host
+            // JS that does not return a number keeps the fit scale (a real engine always
+            // reports a positive MIN_SCALE-clamped value).
+            var finalScale = await JS.InvokeAsync<double>("tmDiagramEditor.addPageViewMargin", _containerRef, PageViewMargin);
+            if (finalScale > 0) scale = finalScale;
+        }
+        return scale;
     }
 
     // Fáze 9: a fit handed over by the hosting editor (FitOnDocumentLoad) and consumed at the END
@@ -2435,12 +2459,29 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     // fit can never race the boot (the editor's own render hook fires BEFORE this canvas').
     private DiagramFitMode? _pendingFitWhenReady;
 
+    /// <summary>Invoked once the deferred fit above has actually run (Fáze 9 review): the editor
+    /// retires its still-owed fit flag through it.</summary>
+    private Action? _fitCompleted;
+
     /// <summary>
     /// Defers a fit until the canvas' JS engine is initialized (Fáze 9). The editor arms it from
     /// its render hook (which runs before this canvas' own), and the fit executes right after
     /// the boot — the JS engine reports the fitted scale back through <see cref="ZoomChanged"/>.
+    /// <paramref name="onFitted"/> (Fáze 9 review) fires once the fit has really run, so the
+    /// editor can retire its owed-fit bookkeeping. When the engine is ALREADY initialized
+    /// (a late arm — the editor hands the fit over after this canvas' render pass), a render is
+    /// requested so the deferred fit runs promptly instead of waiting for the next render.
     /// </summary>
-    public void RequestFitWhenReady(DiagramFitMode mode) => _pendingFitWhenReady = mode;
+    public void RequestFitWhenReady(DiagramFitMode mode, Action? onFitted = null)
+    {
+        _pendingFitWhenReady = mode;
+        _fitCompleted = onFitted;
+        if (_jsInitialized)
+        {
+            MarkContentDirty();
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
 
     public async Task SetSelection(params string[] ids)
     {

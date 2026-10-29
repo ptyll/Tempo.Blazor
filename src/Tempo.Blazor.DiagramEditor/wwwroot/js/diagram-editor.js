@@ -4015,21 +4015,16 @@ window.tmDiagramEditor = {
         if (mode === 'width') {
             // Width mode: the CONTAINER WIDTH over the CONTENT WIDTH decides the scale — the
             // height is ignored, so a tall diagram overflows (scrolls) instead of shrinking.
-            // Content shorter than the box is vertically centered in the visible band.
+            // Short content is TOP-ALIGNED in the visible band (the band's top edge pins the
+            // content; a centered placement would let it drift when the band resizes).
             fitScale = this._clampScale(Math.min(svgRect.width / contentW, this.FIT_MAX_SCALE));
-            newW = svgRect.width / fitScale;
-            newH = svgRect.height / fitScale;
-            nx = minX - padding;
-            ny = contentH < newH
-                ? minY - padding - (newH - contentH) / 2
-                : minY - padding;
         } else {
             fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
-            newW = svgRect.width / fitScale;
-            newH = svgRect.height / fitScale;
-            nx = minX - padding;
-            ny = minY - padding;
         }
+        newW = svgRect.width / fitScale;
+        newH = svgRect.height / fitScale;
+        nx = minX - padding;
+        ny = minY - padding;
         this._setViewBox(inst, nx, ny, newW, newH);
         if (inst.dotNetRef) {
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', nx, ny, newW, newH);
@@ -4234,11 +4229,16 @@ window.tmDiagramEditor = {
 
     addPageViewMargin: function (container, margin) {
         const inst = this.instances.get(container ? container.id : null);
-        if (!inst || !inst.svg) return;
+        if (!inst || !inst.svg) return 1.0;
         const vb = this._getViewBox(inst);
         this._setViewBox(inst, vb.x - margin, vb.y - margin, vb.w + margin * 2, vb.h + margin * 2);
-        if (inst.dotNetRef)
+        if (inst.dotNetRef) {
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x - margin, vb.y - margin, vb.w + margin * 2, vb.h + margin * 2);
+            // The margin GROWS the viewBox, so the scale shrank — report the FINAL zoom (Fáze 9
+            // review: a fit followed by the margin must not leave a pre-margin zoom label).
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+        }
+        return inst.scale;
     },
 
     // ── Toolbox drag init ─────────────────────────────────────────────────────

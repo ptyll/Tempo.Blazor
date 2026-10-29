@@ -4864,7 +4864,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available through the editor's API and keyboard paths) — the embedded single-page viewer's knob, never CSS."
+          "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available by setting the document's ActivePageIndex) — the embedded single-page viewer's knob, never CSS."
         },
         {
           "name": "ShowPageView",

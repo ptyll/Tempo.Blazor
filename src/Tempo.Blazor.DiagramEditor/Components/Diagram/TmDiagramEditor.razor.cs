@@ -65,8 +65,9 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>
     /// Show the page-tab row above the canvas (Fáze 9, embedded viewers). Default <c>true</c> —
     /// today's behavior in every layout. <c>false</c> drops the row entirely (a single-page
-    /// preview has nothing to switch); page switching stays available through the editor's own
-    /// API and keyboard paths — the knob never hides pages through CSS.
+    /// preview has nothing to switch); page switching stays available by setting the document's
+    /// own <see cref="DiagramDocument.ActivePageIndex"/> (the host owns the
+    /// <see cref="Document"/> reference) — the knob never hides pages through CSS.
     /// </summary>
     [Parameter] public bool ShowPageTabs { get; set; } = true;
 
@@ -266,9 +267,17 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private DiagramMinimapViewport? _minimapViewport;
 
     // Fáze 9: FitOnDocumentLoad bookkeeping — the last document identity that was scheduled a
-    // fit (so the same instance never re-fits) and the fit waiting for the first render.
+    // fit (so the same instance never re-fits) and the fit waiting for its first render.
     private DiagramDocument? _lastFitDocument;
     private DiagramFitMode? _pendingFitOnLoad;
+
+    // Fáze 9 review: the fit stays OWED until a canvas has actually performed it. The shell
+    // remounts <see cref="TmDiagramCanvas"/> on a mobile↔docked flip (it renders the canvas in
+    // different places), and the remounted canvas instance has lost any handed-over state — so
+    // the editor re-arms a still-owed fit on every canvas it is not already armed on, and the
+    // canvas' onFitted callback retires the owed flag after the real fit.
+    private bool _fitOwed;
+    private TmDiagramCanvas? _fitArmedCanvas;
 
     private string? _activeLayerId;
 
@@ -434,6 +443,10 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         {
             _lastFitDocument = Document;
             _pendingFitOnLoad = fitMode;
+            // A new document identity makes the fit owed again — even on a canvas instance a
+            // previous fit was already armed on (the ReferenceEquals check below).
+            _fitOwed = true;
+            _fitArmedCanvas = null;
         }
 
         // A FORCED layout is the resolution: the shell reports changes only, and the initial
@@ -1775,14 +1788,10 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     {
         if (_canvas is not null)
         {
-            // The width flag is additive (Fáze 9): the JS keeps its today two-argument contract
-            // when the mode is the default Page.
-            var scale = await JS.InvokeAsync<double>(
-                "tmDiagramEditor.fitToView",
-                _canvas.GetContainerRef(),
-                40,
-                mode == DiagramFitMode.Width ? "width" : null);
-            _zoomLevel = scale;
+            // Fáze 9 review: ONE canvas fit path — the canvas applies the page-view margin and
+            // returns the FINAL scale (after the margin), so the zoom label never shows a
+            // pre-margin scale and both fit call sites cannot drift.
+            _zoomLevel = await _canvas.FitToView(mode);
         }
     }
 

@@ -201,17 +201,19 @@ behavior, so a host that sets nothing sees no change:
 
 | Knob | Type / default | Effect |
 |---|---|---|
-| `ShowPageTabs` | `bool`, `true` | `false` drops the `.tm-diagram-editor__page-tabs` row in EVERY layout (a single-page preview has nothing to switch). Page switching stays available through the editor's own API and keyboard paths — the row is removed, not hidden with CSS. |
-| `FitToViewAsync(mode)` | `DiagramFitMode mode = Page` | Public zoom-to-fit (final UX review M5): asks the JS engine for a zoom-to-fit and re-renders the zoom label. `DiagramFitMode.Page` (default) is today's both-axes fit; `DiagramFitMode.Width` scales by the CONTAINER WIDTH only — a taller-than-box diagram overflows (scrolls) instead of shrinking. `TmDiagramCanvas.FitToView(mode)` mirrors it. |
-| `FitOnDocumentLoad` | `DiagramFitMode?`, `null` | Fits ONCE after the first render of a NEW document identity. The same document never re-fits; a replaced document does; user zoom afterwards wins. `Width` is the embedded mobile preview's first-load fit. |
+| `ShowPageTabs` | `bool`, `true` | `false` drops the `.tm-diagram-editor__page-tabs` row in EVERY layout (a single-page preview has nothing to switch). Page switching stays available by setting the document's own `ActivePageIndex` (the host owns the `Document` reference) — the row is removed, not hidden with CSS. |
+| `FitToViewAsync(mode)` | `DiagramFitMode mode = Page` | Public zoom-to-fit (final UX review M5): asks the JS engine for a zoom-to-fit and re-renders the zoom label. `DiagramFitMode.Page` (default) is today's both-axes fit; `DiagramFitMode.Width` scales by the CONTAINER WIDTH only — a taller-than-box diagram overflows (scrolls) instead of shrinking. `TmDiagramCanvas.FitToView(mode)` mirrors it: ONE canvas fit path applies the page-view margin and reports the FINAL scale (after the margin) to the zoom label. |
+| `FitOnDocumentLoad` | `DiagramFitMode?`, `null` | Fits ONCE after the first render of a NEW document identity. The same document never re-fits; a replaced document does; user zoom afterwards wins. `Width` is the embedded mobile preview's first-load fit. The fit stays OWED across a canvas remount (a mobile↔docked flip remounts `TmDiagramCanvas`): the editor re-arms it on the finally mounted canvas, which fits exactly once. |
 | `ShowMobileZoomOverlay` | `bool?`, `null` | The floating − \| % \| + \| fit pill rule: `null` keeps today's rule (`IsMobileLayout && ShowToolbar &&` the Zoom group); `true` shows the pill on a mobile layout even chrome-less (`ShowToolbar=false`); `false` never shows it. The docked bands keep the status-bar zoom. |
 | `MinimapInitiallyCollapsed` | `bool`, `false` | Seeds the minimap card (desktop) / floating overlay (tablet) collapsed ONCE at initialization. The user's own toggle wins afterwards; the mobile X1 rule (minimap hidden, "⋯" toggle) is unchanged. The Modeling tablet dialog seeds it from the editor's resolved mode. |
 
 `diagram-editor.js` `fitToView(container, padding, mode)` keeps its two-argument contract: the
 third `mode` argument is additive (`'width'`), so a host calling the old signature gets today's
 page fit. The width mode scales by `containerWidth / contentWidth` (padding included) capped by
-`FIT_MAX_SCALE`, centers shorter-than-box content vertically and keeps `minX - padding` as the
-visible left edge.
+`FIT_MAX_SCALE`, TOP-aligns shorter-than-box content (`minY - padding` is the visible top edge —
+the content pins to the band's top instead of floating centered) and keeps `minX - padding` as
+the visible left edge. `addPageViewMargin` reports the zoom AFTER the margin (the final, smaller
+scale) through `OnZoomChanged`.
 
 ```razor
 @* A chrome-less mobile viewer with zoom buttons and a fit-to-width first load *@

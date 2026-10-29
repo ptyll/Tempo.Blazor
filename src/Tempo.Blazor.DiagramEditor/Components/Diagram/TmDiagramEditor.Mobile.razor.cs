@@ -302,10 +302,21 @@ public partial class TmDiagramEditor
         // canvas' JS boot (an empty container ref, a no-op scale) — so the fit is handed to the
         // canvas and consumed right after its init (the engine reports the fitted scale back
         // through the ZoomChanged event, which re-renders the zoom label).
-        if (_pendingFitOnLoad is { } pendingFit && _canvas is not null)
+        // Fáze 9 review: the handover is OWED until a canvas actually fitted — a mobile↔docked
+        // flip remounts the canvas (the shell renders @Canvas in different places) and the
+        // remounted instance has lost the handed-over state, so the fit is re-armed on every
+        // canvas that is not the one it was already armed on. The canvas' onFitted callback
+        // retires the owed flag after the real fit (an instance that dies before fitting leaves
+        // the flag armed for its replacement).
+        if (_fitOwed && _pendingFitOnLoad is { } pendingFit
+            && _canvas is not null && !ReferenceEquals(_canvas, _fitArmedCanvas))
         {
-            _pendingFitOnLoad = null;
-            _canvas.RequestFitWhenReady(pendingFit);
+            _fitArmedCanvas = _canvas;
+            _canvas.RequestFitWhenReady(pendingFit, () =>
+            {
+                _fitOwed = false;
+                _fitArmedCanvas = null;
+            });
         }
 
         // The render served the layout generation it was rendered with: from here on a collapse raise is a

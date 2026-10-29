@@ -673,6 +673,27 @@ test('fitToView without a mode keeps the page fit (today contract)', () => {
     assert.ok(Math.abs(readVb(inst).width - 800 / 0.15) < 1e-6, 'the viewBox matches the page fit');
 });
 
+test('fitToView width mode TOP-aligns content shorter than the visible band', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    // SHORT content (500 wide + 80 padding; 60 tall + 80 padding = 140) in an 800x500 box: the
+    // width mode scales by the width (800/580 ≈ 1.379 → newH ≈ 362) — the band is TALLER than
+    // the content, and the content must pin to the band's TOP edge, not float centered.
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 300, w: 500, h: 60 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40, 'width');
+    assert.ok(Math.abs(fit - 800 / 580) < 1e-9, 'width mode scales by the container width over the content width');
+    const vb = readVb(inst);
+    // Top-aligned: the padded content top (300 - 40 = 260) IS the visible top edge — the
+    // centered placement would have pushed the top up by (362 - 140) / 2 = 111 more.
+    assert.ok(Math.abs(vb.y - 260) < 1e-9, `the short content pins to the band top (got y=${vb.y})`);
+    assert.ok(Math.abs(vb.width - 580) < 1e-9, 'the viewBox width equals the padded content width');
+});
+
 
 // ── J10: one measured containing block for the fixed popovers ───────────────────────────────
 

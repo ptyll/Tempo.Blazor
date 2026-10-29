@@ -143,6 +143,103 @@ public class TmDiagramEditorEmbeddedViewerTests : DiagramTestBase
         await Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task FitOnDocumentLoad_survives_canvas_remount_exactly_one_fit()
+    {
+        // Hold BOTH awaits on the canvas' path to its deferred fit (init on the first pass,
+        // typesetMath on every pass): the flip must happen BEFORE the fit runs — the production
+        // race (a layout flip can land while the canvas is still working through its boot).
+        var init = JSInterop.SetupVoid("tmDiagramEditor.init", _ => true);
+        var typeset = JSInterop.SetupVoid("tmDiagramEditor.typesetMath", _ => true);
+        JSInterop.Setup<double>("tmDiagramEditor.fitToView", _ => true).SetResult(0.5);
+
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, CreateDocument())
+            .Add(e => e.FitOnDocumentLoad, DiagramFitMode.Width)
+            .Add(e => e.LayoutMode, TmLayoutMode.Desktop));
+
+        var firstCanvas = cut.FindComponent<TmDiagramCanvas>().Instance;
+        JSInterop.Invocations.Where(i => i.Identifier == "tmDiagramEditor.fitToView")
+            .Should().BeEmpty("the canvas never reached its deferred fit — the fit is owed, not run");
+
+        // Desktop → Mobile: the shell renders @Canvas in a different place, so the canvas
+        // REMOUNTS and the handed-over fit would be lost. The owed fit must land on the finally
+        // mounted canvas — exactly once.
+        cut.Render(p => p.Add(e => e.LayoutMode, TmLayoutMode.Mobile));
+
+        var lastCanvas = cut.FindComponents<TmDiagramCanvas>().Last().Instance;
+        lastCanvas.Should().NotBeSameAs(firstCanvas,
+            "the layout flip remounts TmDiagramCanvas");
+
+        // Let the render passes finish: the DISPOSED canvas must not fit, the finally mounted
+        // one fits exactly once.
+        typeset.SetVoidResult();
+        init.SetVoidResult();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == "tmDiagramEditor.fitToView")
+            .Should().Be(1, "the owed fit runs exactly ONCE on the finally mounted canvas"));
+    }
+
+    [Fact]
+    public async Task RequestFitWhenReady_on_an_initialized_canvas_fits_promptly()
+    {
+        JSInterop.Setup<double>("tmDiagramEditor.fitToView", _ => true).SetResult(0.5);
+        using var cut = RenderEditor(TmLayoutMode.Desktop);
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+
+        // The engine booted long ago; a late arm must not wait for a render that may never come.
+        await cut.InvokeAsync(() => canvas.Instance.RequestFitWhenReady(DiagramFitMode.Width));
+
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == "tmDiagramEditor.fitToView")
+            .Should().Be(1, "the deferred fit runs promptly on an already-initialized canvas"));
+        JSInterop.Invocations["tmDiagramEditor.fitToView"].Single().Arguments
+            .Should().Contain("width");
+    }
+
+    [Fact]
+    public async Task FitToViewAsync_reports_the_post_margin_zoom_through_one_canvas_path()
+    {
+        JSInterop.Setup<double>("tmDiagramEditor.fitToView", _ => true).SetResult(0.5);
+        JSInterop.Setup<double>("tmDiagramEditor.addPageViewMargin", _ => true).SetResult(0.4);
+        using var cut = RenderEditor(TmLayoutMode.Desktop);
+
+        await cut.InvokeAsync(() => cut.Instance.FitToViewAsync());
+
+        JSInterop.Invocations["tmDiagramEditor.addPageViewMargin"].Should().NotBeEmpty(
+            "the page-view margin is applied on the SAME canvas fit path (one unified fit)");
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-diagram-editor__zoom-label").TextContent.Should().Be("40%",
+                "the reported zoom is the FINAL scale — after the page-view margin"));
+    }
+
+    // ── Header=null (Fáze 9 review) ──────────────────────────────────────────
+
+    [Fact]
+    public void No_page_tabs_and_no_header_bar_render_no_shell_header_div()
+    {
+        using var cut = RenderEditor(TmLayoutMode.Desktop, p => p
+            .Add(e => e.ShowPageTabs, false)
+            .Add(e => e.ShowToolbar, false)); // chrome-less: no header bar and no host slots
+
+        cut.FindAll(".tm-editor-shell__header").Should().BeEmpty(
+            "neither page tabs nor a header bar → Header=null, no empty shell header div");
+    }
+
+    [Fact]
+    public void Page_tabs_or_header_bar_still_render_the_shell_header()
+    {
+        // Page tabs alone keep the header region.
+        using var withTabs = RenderEditor(TmLayoutMode.Desktop);
+        withTabs.Find(".tm-editor-shell__header").Should().NotBeNull();
+        withTabs.Find(".tm-diagram-editor__page-tabs").Should().NotBeNull();
+
+        // A chrome-full editor without page tabs keeps the header region (the header bar).
+        using var withBar = RenderEditor(TmLayoutMode.Desktop, p => p.Add(e => e.ShowPageTabs, false));
+        withBar.Find(".tm-editor-shell__header").Should().NotBeNull();
+        withBar.Find(".tm-diagram-editor__header-bar").Should().NotBeNull();
+    }
+
     // ── ShowMobileZoomOverlay ────────────────────────────────────────────────
 
     [Fact]
