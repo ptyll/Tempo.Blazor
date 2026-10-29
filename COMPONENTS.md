@@ -40,8 +40,9 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 30. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
 31. [Knihovna dokumentů](#knihovna-dokumentů-document-library) — ITempoDocumentLibraryProvider, TmDocumentOpenDialog, ITempoDocumentChangeNotifier, NotionEditor insert-existing, MCP
 32. [Reporting](#reporting) — TmReportViewer, TmReportParameterPanel, TmReportExplorer, TmReportDesigner
-33. [Přehled enumů](#přehled-enumů)
-34. [Design Token System](#design-token-system)
+33. [Modeling](#modeling) — TmModelingEditor a panely balíčku Tempo.Blazor.Modeling
+34. [Přehled enumů](#přehled-enumů)
+35. [Design Token System](#design-token-system)
 35. [Diagram Editor](#diagram-editor)
 36. [Email Templates](#email-templates) — TmEmailTemplateEditor, TmEmailTemplatePreview, TmEmailTemplateToolbox, TmEmailTemplateCanvas, TmEmailPropertyPanel, TmEmailImportDialog, TmEmailExportDialog, TmEmailValidationPanel, TmEmailItemDialog, TmEmailTableCellDialog, TmEmailObjectFields a podobory
 
@@ -8302,6 +8303,62 @@ události pro save draft/publish.
 
 ---
 
+## Modeling
+
+Balíček `Tempo.Blazor.Modeling` převádí sémantický model (profily BPMN, UML, ArchiMate, ERD) na diagram a
+přehrává ho. Kompletní kontrakt — rozvržení dle MO1/G2, parametry, stabilní DOM a CSP-safe modul — je v
+[docs/modeling-editor.md](docs/modeling-editor.md); demo stránka je `/modeling-editor` (scénáře
+`?scenario=drag-readonly|error|performance-large|bpmn2-*|uml25-*` a deep linky `?provider=|notation=|viewpoint=`).
+
+### TmModelingEditor
+
+Pracovní plocha editoru: hlavička (titulek + stavový badge, volitelný select Poskytovatel, Notace/Pohled),
+strom modelu, náhled diagramu se sbalitelným panelem Nálezů, inspektor se záložkami **Properties | Source**,
+stavový řádek. Rozvržení řeší z **vlastního kontejneru** (768/1200): desktop ≥1200 renderuje přes jádrový
+`TmEditorShell`, tablet 768–1199 je Overlay (drawer/sheet, nejvýše jeden otevřený, oba zavřené po načtení),
+mobil <768 je G2 prohlížení + lehké úpravy (tab strip Preview | Tree | Inspector | Issues, status card,
+akční lišta, bez dragu). Dialog „Otevřít v editoru" je jádrový `TmModal` + `TmFocusScope`.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `ProviderKey` | `string?` | `null` | Klíč poskytovatele sémantického modelu. |
+| `ShowProviderSelector` | `bool` | `false` | Zobrazit labelovaný select Poskytovatel v hlavičce (MO3); jinak zůstává chip hostiteli. |
+| `ProviderKeyChanged` / `OnProviderChanged` | `EventCallback<string?>` | — | Partner `@bind-ProviderKey`; výběr přenačte model. |
+| `ProviderDisplayName` | `Func<string, string>?` | `null` | Resolver zobrazovaného jména pro select i chip. |
+| `NotationKey` / `ViewpointKey` | `string?` | `null` | Předávají se poskytovateli/generátoru; změny hlásí `OnNotationChanged` / `OnViewpointChanged`. |
+| `OnDiagramGenerated` / `OnOpenInEditor` | `EventCallback<DiagramDocument>` | — | Po generování / otevření v plném editoru. |
+| `AllowNodeDrop` | `bool` | `true` | Znovupoužití prvku ze stromu do náhledu (drag i ne-drag alternativa); `false` odebere obojí. |
+| `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Po dropu i po ne-drag insertu (stejný kontrakt). |
+| `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | — | `Auto` / `Desktop` / `(768, 1200)` | Řízení rozvržení z vlastního kontejneru. |
+| `Height` | `string?` | `null` | Bloková výška editoru (CSS délka); `null` drží kontrakt `min(768px, 100vh - 32px)`. |
+| `PersistKey` | `string?` | `null` | Klíč localStorage pro šířky panelů shellu (výchozí `{TestIdPrefix}-modeling-editor`). |
+| `ModelLoaderOverride` | delegát | `null` | Loader pro hostitele/testy bez registrace provideru. |
+| `Class` | `string?` | `null` | Doplňková CSS třída. |
+
+```razor
+<TmModelingEditor ProviderKey="_providerKey"
+                  ShowProviderSelector="true"
+                  ProviderKeyChanged="HandleProviderChanged"
+                  ProviderDisplayName="ResolveDisplayName"
+                  OnDiagramGenerated="HandleGenerated" />
+```
+
+### Podpůrné panely
+
+| Komponenta | Účel | Klíčové parametry |
+|------------|------|-------------------|
+| `TmModelingDiagramPreview` | Náhled vygenerovaného diagramu (read-only `TmDiagramEditor`, preset Viewer) s Primárním „Otevřít v editoru". | `Document`/`DocumentChanged`, `ShowHeader`, `ShowEditActions`, `ShowEmbeddedEditorChrome`, `OpenInEditorTriggerId`, `AllowNodeDrop`, `OnNodeDropped`; metoda `InsertAtViewportCenterAsync(element)` (střed viewportu). |
+| `TmModelingModelTree` | APG strom prvků skupinovaných podle `SemanticType`. | `SelectedElement`, dvousměrné `FilterText`/`CollapsedGroups`, `AllowNodeDrop`, `OnInsertIntoPreview`, `ShowTitle`. |
+| `TmModelingInspector` | Read-only inspektor vybraného prvku/vazby (MO2). | `Element`, `Relationship`, `Elements`. |
+| `TmModelingSourcePanel` | Záložka „Source": metadata, svěžest, „Load model". | `Metadata`, `IsLoading`, `OnLoadRequested`. |
+| `TmModelingIssuePanel` | Nálezy se závažností a doporučenou opravou; sbalitelný dock. | `Issues`, `OnIssueSelected`, dvousměrné `Collapsed`, `ShowToggle`. |
+| `TmModelingViewSelector` | Labelovaný výběr Notace/Pohledu v hlavičce. | `NotationKey`, `ViewpointKey`, `OnNotationChanged`, `OnViewpointChanged`. |
+
+Ne-drag alternativa (WCAG 2.5.7): každý řádek stromu má sourozenecké tlačítko „+"
+(`modeling-tree-insert-{elementId}`) a treeitem inzeruje `Insert` / `Ctrl+Enter` přes
+`aria-keyshortcuts`; geometrii vlastní hostitel přes `InsertAtViewportCenterAsync` (střed viewportu,
+fallback střed stránky) se stejnou smlouvou `OnNodeDropped` jako drop.
+
 ## Email Templates
 
 Editor e-mailových šablon žije ve **třech balíčcích** (rozhodnutí D11/D17 plánu 2.10.0), ne v jádru:
@@ -8493,4 +8550,4 @@ hostitelské testy (popisky jsou lokalizované, ne odvozené z názvu vlastnosti
 
 ---
 
-*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP) a Email Templates 2.10.0.*
+*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP), Email Templates 2.10.0 a Modeling.*

@@ -79,6 +79,13 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                         document.documentElement.setAttribute('data-theme', '{{(dark ? "dark" : "light")}}');
                         document.documentElement.setAttribute('data-tm-theme', '{{(indigo ? "indigo" : "default")}}');
                         localStorage.setItem('tm-demo-color-theme', '{{(indigo ? "indigo" : "default")}}');
+                        // The demo layout owns .demo-shell[data-theme] (ThemeService). Since the
+                        // light-island block landed in tokens-dark.css (TmGantt phase 2), that
+                        // div is a REAL theme scope: an html-level dark no longer reaches the
+                        // page content inside it. Mirror the attribute onto the shell — the same
+                        // mechanism the Modeling a11y pass uses (click the demo ThemeToggle).
+                        const shell = document.querySelector('.demo-shell');
+                        if (shell) shell.setAttribute('data-theme', '{{(dark ? "dark" : "light")}}');
                     }
                     """);
                 await page.WaitForTimeoutAsync(150);
