@@ -86,10 +86,24 @@ public partial class TmModelingEditor
         }
     }
 
-    private Task OnShellResolvedLayoutChanged(TmLayoutMode mode)
+    private async Task OnShellResolvedLayoutChanged(TmLayoutMode mode)
     {
+        // Fáze 10 review minor: a band flip re-presents the open "Open in editor" dialog —
+        // tablet→mobile swaps the docked HeaderActions close for the mobile icon close (and
+        // mobile→tablet the reverse), so the close that owned the focus UNMOUNTS and the focus
+        // would drop to body. Probe the focus BEFORE the flip render: if the close owned it,
+        // re-arm the close focus (the stable open-editor-close hook lives on whichever close is
+        // ACTIVE), and OnAfterRenderAsync moves it onto the new close after the flip.
+        var flipsModalPresentation = (_resolvedLayout == TmLayoutMode.Tablet && mode == TmLayoutMode.Mobile)
+            || (_resolvedLayout == TmLayoutMode.Mobile && mode == TmLayoutMode.Tablet);
+        if (_openedEditorDocument is not null
+            && flipsModalPresentation
+            && await IsFocusWithinAsync(OpenEditorCloseFocusSelector))
+        {
+            _shouldFocusOpenEditorCloseButton = true;
+        }
+
         ApplyResolvedLayout(mode);
-        return Task.CompletedTask;
     }
 
     // ── One sheet at a time (the shell's Open callbacks) ─────────────────────

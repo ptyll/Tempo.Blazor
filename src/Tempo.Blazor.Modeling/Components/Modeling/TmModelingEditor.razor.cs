@@ -445,17 +445,28 @@ public partial class TmModelingEditor : IAsyncDisposable
     }
 
     /// <inheritdoc />
-    protected override Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync()
     {
         // Forced layouts adopt their flips here; an Auto editor is driven by the shell's
         // ResolvedLayoutChanged instead (docs/responsive-conventions.md inherited-raise contract).
+        // A forced band flip re-presents the open dialog too — probe the close focus BEFORE the
+        // flip render (same contract as the shell's resolved-layout-changed handler).
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
         {
+            var flipsModalPresentation = (_resolvedLayout == TmLayoutMode.Tablet && LayoutMode == TmLayoutMode.Mobile)
+                || (_resolvedLayout == TmLayoutMode.Mobile && LayoutMode == TmLayoutMode.Tablet);
+            if (_openedEditorDocument is not null
+                && flipsModalPresentation
+                && await IsFocusWithinAsync(OpenEditorCloseFocusSelector))
+            {
+                _shouldFocusOpenEditorCloseButton = true;
+            }
+
             ApplyResolvedLayout(LayoutMode);
         }
 
         SyncEffectiveSelectionFromParameters();
-        return LoadModelAsync(force: false);
+        await LoadModelAsync(force: false);
     }
 
     /// <inheritdoc />

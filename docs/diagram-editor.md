@@ -258,13 +258,23 @@ honored by the trap and by later consumers).
    canvas' capture consumer resolves the owner — a node editor through its registered
    `TmDiagramStencilShape` (`CancelActiveEditFromJs`), everything else through the canvas'
    `[JSInvokable] OnInlineEditEscape` (`CancelEdgeLabelEdit`). The Blazor `@onkeydown` Escape
-   branches on the inputs themselves stay as idempotent fallbacks.
+   branches on the inputs themselves stay as idempotent fallbacks. After the cancel the focus
+   returns to the canvas container (the JS node branch focuses `container` with
+   `preventScroll`; the edge-label path goes through `FocusCanvasAsync`) — the edit input
+   unmounts and the focus must not drop to `body`. Because both capture listeners see the SAME
+   event, `_onKeyDown` skips a handled Escape entirely (a `defaultPrevented || tmEscapeHandled`
+   guard is the first line of its Escape branch) — the inline-edit cancel never ALSO clears a
+   non-empty selection on the same keypress.
 5. **A running gesture or a non-empty selection** (rotate, pending/drawing edge, waypoint or
    whole-edge drag): the canvas key handler consumes the Escape and cancels the session.
 6. **Nothing to consume** (empty canvas, no session): the canvas handler does NOT call
    `preventDefault()` — the Escape keeps bubbling, which is what lets the host dialog close.
    (Before the fix the canvas consumed every Escape unconditionally, and whether the editor or a
    host dialog won depended on listener registration order.)
+
+The custom context menu is flagged open SYNCHRONOUSLY (`inst._menuOpen = true` before the
+deferred placement `setTimeout`), so an Escape typed between the open call and the placement
+already sees `_menuOpen` and cannot close a surface under the still-opening menu.
 
 ## Motion
 

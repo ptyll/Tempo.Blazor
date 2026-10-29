@@ -530,5 +530,26 @@ public class TmModalTests : LocalizationTestBase
             "host header actions are focusables inside the trap");
     }
 
+    [Fact]
+    public void HeaderActions_button_precedes_body_focusables_in_document_order()
+    {
+        // Act — a header action AND a body focusable rendered together.
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.ShowCloseButton, true)
+            .Add(m => m.HeaderActions, "<button type=\"button\" id=\"header-action-btn\">Close</button>")
+            .AddChildContent("<button type=\"button\" id=\"body-action-btn\">Body</button>"));
+
+        // Assert: in DOCUMENT order the header action precedes every body focusable — the
+        // focus trap's cycle reaches the header row before the body content (querySelectorAll
+        // returns its matches in document order).
+        var ordered = cut.Find(".tm-modal-container")
+            .QuerySelectorAll("#header-action-btn, #body-action-btn");
+        ordered.Should().HaveCount(2);
+        ordered[0].Id.Should().Be("header-action-btn",
+            "the header action is the first focusable in document order");
+    }
+
     #endregion
 }

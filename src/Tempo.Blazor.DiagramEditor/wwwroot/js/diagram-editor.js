@@ -419,6 +419,10 @@ window.tmDiagramEditor = {
                 : null;
             if (shapeRef && typeof shapeRef.invokeMethodAsync === 'function') {
                 shapeRef.invokeMethodAsync('CancelActiveEditFromJs');
+                // The node inline editor unmounts with the cancel, so the focus would drop to
+                // body: return it to the canvas container (the canvas side mirrors this for the
+                // edge-label path through FocusCanvasAsync).
+                inst.container.focus({ preventScroll: true });
             }
             inst.dotNetRef.invokeMethodAsync('OnInlineEditEscape');
         }
@@ -3123,6 +3127,11 @@ window.tmDiagramEditor = {
         // TmModal dialog) through its own document-level listener — the capture registration plus
         // _onSearchEscape above make the ordering against that listener deterministic.
         if (e.key === 'Escape') {
+            // A capture-phase consumer that ran BEFORE this handler (e.g. _onSearchEscape —
+            // inline edit / search panel / view menu / context menu) already owns this Escape:
+            // skip entirely so e.g. a non-empty selection is not ALSO cleared on the same
+            // keypress while an inline editor cancels.
+            if (e.defaultPrevented || e.tmEscapeHandled) return;
             if (inst.isRotating) {
                 e.preventDefault();
                 this._cancelRotateSession(inst);
@@ -4090,8 +4099,13 @@ window.tmDiagramEditor = {
         const self = this;
         // Clean up any existing dismiss handlers first
         self._teardownMenu(inst);
+        // Flag the menu as open SYNCHRONOUSLY: an Escape typed between this call and the deferred
+        // placement (setTimeout 0) must already see `_menuOpen` in _onSearchEscape, otherwise the
+        // capture consumer would close a surface UNDER the still-opening menu.
+        inst._menuOpen = true;
         setTimeout(function () {
             if (!menuEl) return;
+            if (!inst._menuOpen) return; // closed again before the deferred placement ran
             const margin = 8;
             // VIEWPORT coordinates from C# (data-screen-x/y); the style is OUR output and may
             // already be translated by an earlier call — never read it back.
@@ -4124,7 +4138,7 @@ window.tmDiagramEditor = {
             menuEl.style.left = pos.left + 'px';
             menuEl.style.top = pos.top + 'px';
 
-            inst._menuOpen = true;
+            // (_menuOpen was already set synchronously before this deferred placement.)
 
             // A11y: roving focus over the native menuitem buttons — focus the first ENABLED item
             // after placement, ArrowUp/Down/Home/End move (no Enter/Space emulation: the items are

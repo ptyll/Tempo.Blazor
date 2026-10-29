@@ -293,6 +293,39 @@ test('a TEXTAREA node inline edit (tm-diagram-node__inline-textarea) consumes Es
     assert.deepEqual(log, [['OnInlineEditEscape']]);
 });
 
+test('handled_escape_skips_the_selection_clear: the canvas handler runs after the inline-edit consumer', () => {
+    // Fáze 10 review: the SAME event object flows through both capture listeners. The node
+    // inline edit consumes it first (marked), so _onKeyDown must not ALSO clear a non-empty
+    // selection on the same keypress.
+    const shapeRef = { invokeMethodAsync: () => Promise.resolve() };
+    const nodeGroup = { getAttribute: (a) => (a === 'data-node-id' ? 'n1' : null) };
+    const inlineInput = {
+        tagName: 'INPUT',
+        className: 'tm-diagram-node__inline-input',
+        closest: (selector) => {
+            if (typeof selector === 'string' && selector.includes('tm-diagram-node__inline-input')) return inlineInput;
+            if (selector === 'g.tm-diagram-node[data-node-id]') return nodeGroup;
+            return null;
+        },
+    };
+    const doc = { activeElement: inlineInput };
+    const engineDoc = loadEngine({ document: doc });
+    engineDoc.__vmWindow.tmDiagramStencilShape.getRef = (id) => (id === 'n1' ? shapeRef : null);
+    const { inst, log } = fakeInst({ selectedIds: new Set(['n1']) }, { contains: () => true });
+    inst.container = Object.assign(inst.container, { contains: (el) => el === inlineInput });
+    engineDoc._updateSelection = () => {};
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+    assert.equal(e.tmEscapeHandled, true, 'the inline edit consumed the Escape first');
+
+    engineDoc._onKeyDown(e, inst);
+
+    assert.deepEqual(log, [['OnInlineEditEscape']],
+        'only the inline-edit cancel ran — OnClearSelection must NOT be invoked on the same keypress');
+    assert.equal(inst.selectedIds.size, 1, 'the selection survives the inline-edit cancel');
+});
+
 test('a plain INPUT inside the canvas container that is NOT an inline editor does not consume', () => {
     const engine = loadEngine();
     const elsewhere = { tagName: 'INPUT' };

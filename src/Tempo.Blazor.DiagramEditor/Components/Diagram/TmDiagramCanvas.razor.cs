@@ -1327,14 +1327,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// open-editor dialog) stays open and the NEXT Escape continues with the confirmed layer
     /// order. This handler CANCELS the edge-label edit — the value reverts and nothing is pushed
     /// to the undo stack. The Blazor <c>OnLabelInputKeyDown</c> Escape branch stays as the
-    /// idempotent fallback path.
+    /// idempotent fallback path. After the cancel the focus returns to the canvas container —
+    /// the edit input unmounts and the focus must not drop to <c>body</c> (the node inline-editor
+    /// path mirrors this from JS via <c>container.focus({preventScroll:true})</c>).
     /// </summary>
     [JSInvokable("OnInlineEditEscape")]
-    public void JsOnInlineEditEscape()
+    public async Task JsOnInlineEditEscape()
     {
         if (_editingEdgeLabelId is null) return;
         CancelEdgeLabelEdit();
         StateHasChanged();
+        await FocusCanvasAsync();
     }
 
     [JSInvokable("OnShowReplace")]

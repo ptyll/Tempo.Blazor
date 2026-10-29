@@ -104,4 +104,12 @@ public partial class TmModelingEditor
         await Interop.InvokeVoidSafeAsync("focusWithin", _editorRoot, selector);
     }
 
+    /// <summary>
+    /// Whether the DOCUMENT's active element sits inside the editor root and matches
+    /// <paramref name="selector"/> — the flip-time probe (see the resolved-layout-changed
+    /// handler). Progressive enhancement: false without the module.
+    /// </summary>
+    private Task<bool> IsFocusWithinAsync(string selector)
+        => Interop.InvokeSafeAsync<bool>("isFocusWithin", _editorRoot, selector);
+
 }

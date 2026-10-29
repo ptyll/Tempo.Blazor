@@ -686,7 +686,9 @@
                 break;
 
             case ContextMenuType.Edge:
-                <button class="tm-diagram-editor__context-item" role="menuitem" @onclick="ContextMenuEditEdgeLabel">@Loc["TmDiagramEditor_EditLabel"]</button>
+                @* data-action: stable E2E/test hook on the context items (additive) — tests key
+                   off it instead of the localized text or the item's position. *@
+                <button class="tm-diagram-editor__context-item" role="menuitem" data-action="edit-edge-label" @onclick="ContextMenuEditEdgeLabel">@Loc["TmDiagramEditor_EditLabel"]</button>
                 <div class="tm-diagram-editor__context-sep" role="separator"></div>
                 <span class="tm-diagram-editor__context-heading">@Loc["TmDiagramEditor_Connector"]</span>
                 <div class="tm-diagram-edge-routing-picker">

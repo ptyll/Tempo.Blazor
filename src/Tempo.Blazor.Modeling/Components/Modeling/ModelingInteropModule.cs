@@ -94,6 +94,76 @@ internal sealed class ModelingInteropModule : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Invokes a VALUE-returning export with the same progressive-enhancement guarantees as
+    /// <see cref="InvokeVoidSafeAsync"/>: every failure path (no module, prerender, torn-down
+    /// circuit, disposed runtime) yields <c>default</c> instead of throwing, so a boolean probe
+    /// simply reports "no" and the component keeps working without the module.
+    /// </summary>
+    public async Task<T> InvokeSafeAsync<T>(string identifier, params object?[] args)
+    {
+        if (_disposed)
+        {
+            return default!;
+        }
+
+        IJSObjectReference? module;
+        try
+        {
+            module = await ImportSafeAsync();
+        }
+        catch (JSException)
+        {
+            // A failed import is progressive-enhancement noise — the component keeps working.
+            return default!;
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing left to enhance.
+            return default!;
+        }
+        catch (OperationCanceledException)
+        {
+            // The runtime cancelled the in-flight import.
+            return default!;
+        }
+        catch (ObjectDisposedException)
+        {
+            // The component or the runtime is being torn down.
+            return default!;
+        }
+
+        if (module is null)
+        {
+            return default!;
+        }
+
+        try
+        {
+            return await module.InvokeAsync<T>(identifier, args);
+        }
+        catch (JSException)
+        {
+            // Progressive enhancement only — the component itself must keep working.
+            return default!;
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing left to enhance.
+            return default!;
+        }
+        catch (OperationCanceledException)
+        {
+            // The runtime cancelled the in-flight call.
+            return default!;
+        }
+        catch (ObjectDisposedException)
+        {
+            // The component or the runtime is being torn down.
+            return default!;
+        }
+    }
+
     private async Task<IJSObjectReference?> ImportSafeAsync()
     {
         if (_disposed)

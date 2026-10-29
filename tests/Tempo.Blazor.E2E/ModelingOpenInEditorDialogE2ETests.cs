@@ -127,7 +127,7 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Fáze 10: with the context menu AND the search panel open, Escape closes menu → search → dialog, one layer per press")]
+    [Description("Fáze 10: with the context menu AND the search panel open, Escape closes menu → search → selection → dialog, one layer per press")]
     public async Task Escape_with_context_menu_and_search_open_closes_menu_then_search_then_dialog()
     {
         var page = await OpenPageWithDialogAsync();
@@ -144,7 +144,9 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
             .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000 });
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
-        // Press 1: the MENU closes (the confirmed topmost layer) — the search panel STAYS.
+        // Press 1: the MENU closes (the confirmed topmost layer) — the search panel STAYS and the
+        // right-click selection is NOT also cleared on the same press (a handled Escape skips the
+        // selection clear — one press closes ONE layer).
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(contextMenu).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         await Assertions.Expect(searchPanel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
@@ -155,13 +157,18 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
         await Assertions.Expect(searchPanel).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
 
-        // Press 3: the dialog layer closes.
+        // Press 3: the SELECTION layer (the node right-click selected it) — the canvas clears the
+        // selection and the dialog stays.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+        // Press 4: nothing consumes any more — the dialog layer closes.
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
     }
 
     [TestMethod]
-    [Description("Fáze 10: Escape while editing an edge label cancels the edit (value reverted) and keeps the dialog open")]
+    [Description("Fáze 10: Escape while editing an edge label cancels the edit (value reverted), keeps the dialog open, returns the focus to the canvas and keeps the edge selected")]
     public async Task Escape_while_editing_edge_label_cancels_edit_and_keeps_dialog()
     {
         var page = await OpenPageWithDialogAsync();
@@ -169,11 +176,12 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
         var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
         var contextMenu = dialog.Locator(".tm-diagram-editor__context-menu");
 
-        // Right-click an edge hit path and pick "Edit label" — the inline label input appears.
+        // Right-click an edge hit path and pick "Edit label" (the stable data-action hook —
+        // never the localized text or the item position) — the inline label input appears.
         await dialog.Locator(".tm-diagram-edge-hit-path").First
             .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000, Force = true });
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await contextMenu.Locator(".tm-diagram-editor__context-item").First
+        await contextMenu.Locator("[data-action='edit-edge-label']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
 
         var labelInput = dialog.Locator(".tm-diagram-edge-label-input");
@@ -185,11 +193,19 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
         await Assertions.Expect(labelInput).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         await Assertions.Expect(dialog).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
 
+        // The focus returns to the canvas container (the edit input unmounted with the cancel)
+        // and the edge selection SURVIVES — the properties panel still shows the single-edge
+        // section, so the next Escape still belongs to the editor's own layer order.
+        await Assertions.Expect(dialog.Locator(".tm-diagram-canvas"))
+            .ToBeFocusedAsync(new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
+        await Assertions.Expect(dialog.Locator(".tm-diagram-editor__props [data-edge-template-selector]"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+
         // The label reverts — reopening the editor shows the original text.
         await dialog.Locator(".tm-diagram-edge-hit-path").First
             .ClickAsync(new LocatorClickOptions { Button = MouseButton.Right, Timeout = 10000, Force = true });
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await contextMenu.Locator(".tm-diagram-editor__context-item").First
+        await contextMenu.Locator("[data-action='edit-edge-label']")
             .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
         var reopenedValue = await dialog.Locator(".tm-diagram-edge-label-input")
             .InputValueAsync(new LocatorInputValueOptions { Timeout = 5000 });

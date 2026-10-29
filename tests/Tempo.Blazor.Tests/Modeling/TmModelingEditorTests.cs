@@ -16,9 +16,15 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
 {
     private const string ModelingModulePath = "./_content/Tempo.Blazor.Modeling/js/modeling-editor.js";
 
+    private readonly ModelingEditorTestClock _clock = new();
+
     public TmModelingEditorTests()
     {
         Services.AddTempoBlazorModeling();
+        // Flaky-test fix: the editor's minimum-loading delay must not arm REAL timers (they
+        // raced the assertions under parallel test execution). The test clock completes short
+        // delays immediately and keeps the 5 s long-loading threshold pending.
+        Services.AddSingleton<TimeProvider>(_clock);
     }
 
     [Fact]
@@ -414,9 +420,11 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
             cut.Find("[data-testid='modeling-editor']").GetAttribute("data-element-count").Should().Be("2");
         });
 
-        // Release beta now: its stale result must never reach the editor state.
+        // Release beta now: its stale result must never reach the editor state. Await the
+        // provider's gate hand-off (signalled by Release resolving the gated task) instead of a
+        // real-timer sleep, then flush one render — the stale call unwinds before the asserts.
         beta.Release();
-        await Task.Delay(200);
+        await beta.GateResolved;
         cut.Render();
 
         cut.Find("[data-testid='modeling-editor']").GetAttribute("data-provider")
@@ -689,7 +697,9 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     /// <summary>Provider whose model is distinguishable by element id/count; optionally blocks
-    /// every call behind a gate until <see cref="Release"/> (fast A→B→A switch tests).</summary>
+    /// every call behind a gate until <see cref="Release"/> (fast A→B→A switch tests). The
+    /// release signals <see cref="GateResolved"/> — the deterministic hand-off the test awaits
+    /// instead of a real-timer <c>Task.Delay(200)</c> sleep.</summary>
     private sealed class GatedSwitchModelingModelProvider : IModelingModelProvider
     {
         private readonly string _key;
@@ -697,6 +707,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         private readonly int _elementCount;
         private readonly bool _gated;
         private TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _gateResolved = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public GatedSwitchModelingModelProvider(string key, string elementId, int elementCount, bool gated)
         {
@@ -708,7 +719,15 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
 
         public string ProviderKey => _key;
 
-        public void Release() => _gate.TrySetResult();
+        /// <summary>Completes once the gate released (a <see cref="Release"/> call resolved the
+        /// gated task) — awaiting it in the test lets the stale load unwind deterministically.</summary>
+        public Task GateResolved => _gateResolved.Task;
+
+        public void Release()
+        {
+            _gate.TrySetResult();
+            _gateResolved.TrySetResult();
+        }
 
         public async Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
         {
@@ -718,6 +737,8 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
                 await using var _ = cancellationToken.Register(() => release.TrySetCanceled(cancellationToken));
                 await Task.WhenAny(_gate.Task, release.Task);
                 cancellationToken.ThrowIfCancellationRequested();
+                // A non-cancelled gate pass also resolves the seam (kept for symmetric callers).
+                _gateResolved.TrySetResult();
             }
 
             var model = new ModelingModelDto

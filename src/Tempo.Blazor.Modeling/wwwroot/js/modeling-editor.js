@@ -22,6 +22,8 @@
  *    without scrolling. `selector` may be a comma-separated priority list — parts are tried in
  *    order and the first part with a match wins (used by the mobile focus return: the actual
  *    trigger first, the host-div proxy as the fallback).
+ *  - isFocusWithin(root, selector): whether the document's active element is inside `root` and
+ *    matches `selector` (the layout-flip focus probe of TmModelingEditor).
  */
 
 let dragBridgeRegistered = false;
@@ -97,6 +99,26 @@ export function focusWithin(root, selector) {
       return;
     }
   }
+}
+
+/**
+ * Whether the DOCUMENT's active element sits inside `root` and matches `selector` — the
+ * flip-time focus probe. A tablet→mobile flip re-presents the open "Open in editor" dialog
+ * (the docked HeaderActions close unmounts, the mobile icon close takes over), so the editor
+ * asks BEFORE the flip re-render whether the close owned the focus and re-arms its close-focus
+ * flag for the next render. `selector` may be a comma-separated list; any part matching counts.
+ */
+export function isFocusWithin(root, selector) {
+  const scope = queryRoot(root);
+  const active = typeof document === 'undefined' ? null : document.activeElement;
+  if (!scope || !active || typeof active.matches !== 'function' || !scope.contains(active)) {
+    return false;
+  }
+
+  return String(selector || '').split(',').some(part => {
+    const trimmed = part.trim();
+    return trimmed && active.matches(trimmed);
+  });
 }
 
 /**

@@ -81,3 +81,53 @@ internal sealed class CountingModelingModelProvider : IModelingModelProvider
         return Task.FromResult(ModelingEditorTestModels.CreateModel());
     }
 }
+
+/// <summary>
+/// A TimeProvider that keeps the editor's SHORT loading delays off the real-timer path:
+/// every delay at or below <see cref="ImmediateThreshold"/> fires its callback on the spot
+/// (so <c>Task.Delay(minimum-loading, this)</c> completes synchronously and the load pipeline
+/// settles inside the test's own dispatcher turns), while LONGER delays — the 5 s
+/// long-loading threshold — stay pending like an unadvanced fake clock, so a fast load never
+/// falsely raises the "taking longer than expected" message. Flaky-test fix: the 150 ms
+/// minimum-loading delay no longer races a real-timer sleep under parallel test execution.
+/// </summary>
+internal sealed class ModelingEditorTestClock : TimeProvider
+{
+    /// <summary>Delays at or below this span complete immediately (the editor's minimum-loading
+    /// delay is 150 ms; anything longer is a long-loading threshold and must stay pending).</summary>
+    private static readonly TimeSpan ImmediateThreshold = TimeSpan.FromMilliseconds(999);
+
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+    {
+        if (dueTime <= ImmediateThreshold)
+        {
+            return new ImmediateTimer(callback, state);
+        }
+
+        return new PendingTimer();
+    }
+
+    /// <summary>A timer that fires its callback during construction — the delay completes
+    /// before <c>Task.Delay</c> even returns (verified: the delay promise tolerates the
+    /// callback running inside <c>CreateTimer</c>).</summary>
+    private sealed class ImmediateTimer : ITimer
+    {
+        public ImmediateTimer(TimerCallback callback, object? state) => callback(state);
+
+        public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+        public void Dispose() { }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>A timer that never fires — the delay stays pending until disposed.</summary>
+    private sealed class PendingTimer : ITimer
+    {
+        public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+        public void Dispose() { }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+}
