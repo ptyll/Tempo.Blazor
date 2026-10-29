@@ -15,23 +15,55 @@
     // Resolved NOW: document.currentScript is only set while the classic script runs synchronously.
     var dragUrl = null;
     var gestureUrl = null;
+    var virtualUrl = null;
     try {
         if (typeof document !== 'undefined') {
             var script = document.currentScript;
             if (script && script.src) {
                 dragUrl = new URL('pointer-drag.js', script.src).href;
                 gestureUrl = new URL('pointer-gesture.js', script.src).href;
+                virtualUrl = new URL('gantt-virtual.mjs', script.src).href;
             } else if (document.baseURI) {
                 dragUrl = new URL('_content/Tempo.Blazor/js/pointer-drag.js', document.baseURI).href;
                 gestureUrl = new URL('_content/Tempo.Blazor/js/pointer-gesture.js', document.baseURI).href;
+                virtualUrl = new URL('_content/Tempo.Blazor/js/gantt-virtual.mjs', document.baseURI).href;
             }
         }
     } catch (e) {
         dragUrl = null;
         gestureUrl = null;
+        virtualUrl = null;
     }
 
     var helpersPromise = null;
+    var virtualModulePromise = null;
+
+    /** Loads the pure window-maths module; resolves null (after a console warning) when it cannot load. */
+    function loadVirtualModule() {
+        if (!virtualModulePromise) {
+            virtualModulePromise = Promise.resolve()
+                .then(function () {
+                    if (!virtualUrl) throw new Error('the gantt-virtual.mjs URL could not be resolved');
+                    return import(virtualUrl);
+                })
+                .then(function (module) {
+                    if (typeof module.computeWindow !== 'function' || typeof module.shouldNotify !== 'function'
+                        || typeof module.alignScrollTop !== 'function') {
+                        throw new Error('gantt-virtual.mjs does not export the expected functions');
+                    }
+                    return module;
+                })
+                .catch(function (error) {
+                    virtualModulePromise = null; // a later call may retry
+                    console.warn('tmGantt: gantt-virtual.mjs could not be loaded; the virtualization window is not computed.', error);
+                    return null;
+                });
+        }
+        return virtualModulePromise;
+    }
+
+    /** The registered virtual-scroll sessions of tmGantt.attachVirtualScroll, keyed by the caller-supplied id. */
+    var virtualStates = new Map();
 
     /** The registered scroll groups of tmGantt.linkScrollGroup, keyed by the caller-supplied id. */
     var groupLinks = new Map();
@@ -204,10 +236,23 @@
             }
         });
 
+        // Vertical edge scroll of the TIMELINE BODY: near its top / bottom edge the body scrolls, the
+        // virtual-scroll session follows on the tree and the window shifts, so a target bar outside the
+        // window is re-rendered under the stationary pointer (Fáze 12) and stays hittable.
+        var vScroller = state.body ? h.createAutoScroller(state.body, {
+            axis: 'y',
+            onScroll: function () {
+                if (!drag) return;
+                redraw(drag);
+                markTarget(drag, targetAt(drag.x, drag.y, drag.fromId));
+            }
+        }) : null;
+
         function cleanup() {
             var current = drag;
             drag = null;
             try { scroller.stop(); } catch (e) { /* ignore */ }
+            if (vScroller) { try { vScroller.stop(); } catch (e) { /* ignore */ } }
             if (!current) return;
             if (current.target && current.target.classList) current.target.classList.remove(TARGET_CLASS);
             if (current.ghost && typeof current.ghost.remove === 'function') current.ghost.remove();
@@ -256,6 +301,7 @@
                 redraw(drag);
                 markTarget(drag, targetAt(info.x, info.y, drag.fromId));
                 scroller.update(info.x, info.y);
+                if (vScroller) vScroller.update(info.x, info.y);
             },
             onEnd: function (info) {
                 if (!drag) return;
@@ -297,6 +343,156 @@
         state.disposed = true;
         detachAll(state.sessions);
         if (states.get(id) === state) states.delete(id);
+    }
+
+    // ── Virtual scroll (Fáze 12) ────────────────────────────────────────────────────────────────
+    // One session owns the vertical tree↔timeline sync IN THE BROWSER (the old interop round-trip per scroll
+    // event is gone) and computes the virtualization window in requestAnimationFrame: which rows are visible
+    // (plus overscan) and whether the window moved past the overscan/2 hysteresis that is worth a .NET render.
+    // The maths is gantt-virtual.mjs (pure, node-tested); this file only wires the DOM — and the SYNC is a
+    // plain listener (attachScrollSync) that needs no module at all: it works before the module resolves and
+    // entirely without it.
+
+    /**
+     * The plain vertical tree↔timeline sync: a passive scroll listener on BOTH bodies, the peer follows
+     * the source in the same tick. No module, no interop — this is the fallback sync for a browser where
+     * the maths module never loads, and the sync of the virtual session everywhere else. `onScrolled` is
+     * the virtual session's measure hook (a no-module browser never gets one).
+     */
+    function attachScrollSync(state, onScrolled) {
+        function onScroll(event) {
+            if (state.disposed) return;
+            var source = event.currentTarget || state.treeBody;
+            var top = source.scrollTop;
+            var peer = source === state.treeBody ? state.timelineBody : state.treeBody;
+            if (peer && peer !== source && peer.scrollTop !== top) peer.scrollTop = top;
+            if (onScrolled) onScrolled();
+        }
+        state.treeBody.addEventListener('scroll', onScroll, { passive: true });
+        if (state.timelineBody !== state.treeBody) {
+            state.timelineBody.addEventListener('scroll', onScroll, { passive: true });
+        }
+        return {
+            detach: function () {
+                state.treeBody.removeEventListener('scroll', onScroll);
+                if (state.timelineBody !== state.treeBody) {
+                    state.timelineBody.removeEventListener('scroll', onScroll);
+                }
+            }
+        };
+    }
+
+    function virtualContentOf(state) {
+        var body = state.timelineBody;
+        if (body && typeof body.querySelector === 'function') {
+            var content = body.querySelector('.tm-gantt__timeline-content');
+            if (content) return content;
+        }
+        return null;
+    }
+
+    /**
+     * Total visible rows: the timeline content's exact (virtual) height over the row height where there
+     * is one; otherwise the tree body's OWN scroll height — the List view attaches the tree body as both
+     * scrollers (there is no timeline), and the tree spacers keep its scroll height at rows × row height
+     * in every window state.
+     */
+    function virtualRowCount(state) {
+        if (!(state.rowHeight > 0)) return 0;
+        var content = virtualContentOf(state);
+        if (content) {
+            var height = typeof content.getBoundingClientRect === 'function'
+                ? content.getBoundingClientRect().height : content.clientHeight;
+            if (height > 0) return Math.max(0, Math.round(height / state.rowHeight));
+        }
+        var total = state.treeBody && typeof state.treeBody.scrollHeight === 'number' ? state.treeBody.scrollHeight : 0;
+        return total > 0 ? Math.max(0, Math.round(total / state.rowHeight)) : 0;
+    }
+
+    function virtualMeasure(state, module) {
+        return module.computeWindow(
+            state.treeBody.scrollTop,
+            state.treeBody.clientHeight,
+            virtualRowCount(state),
+            state.rowHeight,
+            state.overscan);
+    }
+
+    /**
+     * Reports the window once (the hysteresis decides); keeps the last reported window on the state.
+     * While the reports are disabled (updateVirtualScroll …, enabled=false) nothing is reported — the
+     * sync above keeps running. The third interop argument is the floor viewport row count the .NET
+     * keyboard paging (PageRows) uses.
+     */
+    function virtualNotify(state, module, win, force) {
+        if (state.enabled === false) return;
+        if (!force && !module.shouldNotify(state.last, win, state.overscan)) return;
+        state.last = { first: win.first, last: win.last };
+        var viewport = state.treeBody && state.treeBody.clientHeight > 0 ? state.treeBody.clientHeight : 0;
+        notify(state, 'OnViewportRowsChanged', win.first, win.last, Math.floor(viewport / state.rowHeight));
+    }
+
+    function attachVirtualSession(state) {
+        var module = null;
+        var frame = 0;
+
+        function measureAndNotify(force) {
+            if (state.disposed || !module) return;
+            virtualNotify(state, module, virtualMeasure(state, module), force === true);
+        }
+
+        var sync = attachScrollSync(state, scheduleMeasure);
+        var observer = typeof ResizeObserver === 'function'
+            ? new ResizeObserver(function () { scheduleMeasure(); })
+            : null;
+
+        function scheduleMeasure() {
+            if (frame || typeof requestAnimationFrame !== 'function') {
+                if (typeof requestAnimationFrame !== 'function') measureAndNotify();
+                return;
+            }
+            frame = requestAnimationFrame(function () {
+                frame = 0;
+                measureAndNotify();
+            });
+        }
+
+        // The bodies' boxes stay when the data shrinks or grows — only their scroll heights move, which a
+        // ResizeObserver cannot see (that case is .NET's remeasureVirtual on a DrawVersion bump). The
+        // observer covers what .NET cannot know: a container resize (a docked split, a window resize)
+        // that changes clientHeight — and with it the visible window — without any scroll event.
+        if (observer) observer.observe(state.treeBody);
+
+        // The first measurement corrects the prerender window (the first few rows) once the layout is real.
+        loadVirtualModule().then(function (loaded) {
+            if (state.disposed) return;
+            if (!loaded) {
+                if (typeof window !== 'undefined' && window.tmGantt) window.tmGantt.detachVirtualScroll(state.id);
+                return;
+            }
+            module = loaded;
+            state.__measure = measureAndNotify;
+            scheduleMeasure();
+        });
+
+        return {
+            detach: function () {
+                if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
+                frame = 0;
+                sync.detach();
+                if (observer) {
+                    try { observer.disconnect(); } catch (e) { /* already gone */ }
+                }
+            }
+        };
+    }
+
+    function teardownVirtual(id, state) {
+        state.disposed = true;
+        if (state.session) {
+            try { state.session.detach(); } catch (e) { /* already gone */ }
+        }
+        if (virtualStates.get(id) === state) virtualStates.delete(id);
     }
 
     // ── Tree ────────────────────────────────────────────────────────────────────────────────────
@@ -619,6 +815,107 @@
         detachTree: function (id) {
             const state = id === null || id === undefined ? null : treeStates.get(id);
             if (state) teardown(treeStates, id, state);
+            return Promise.resolve();
+        },
+
+        // Virtual scroll (Fáze 12): one session per chart that (a) keeps the tree body and the timeline body
+        // in step VERTICALLY in the browser — no interop per scroll tick, even with the virtualization off —
+        // and (b) computes the visible window (row indexes, overscan included) in requestAnimationFrame and
+        // reports it through OnViewportRowsChanged(first, last, visibleRows) once it moved past the
+        // overscan/2 hysteresis. `treeBody` = .tm-gantt__tree-body, `timelineBody` =
+        // .tm-gantt__timeline-body (the List view has no timeline and passes the tree body as BOTH — the
+        // row count then comes from the tree body's own scroll height), `dotNet` = a
+        // DotNetObjectReference, `rowHeight` = the one row height of the tree and the timeline, `overscan` =
+        // extra rows on each side of the window. Keyed and idempotent like attachTimeline: an existing id is
+        // torn down first. Resolves false when there was nothing to attach or the maths module is unavailable.
+        attachVirtualScroll: function (id, treeBody, timelineBody, dotNet, rowHeight, overscan) {
+            if (id === null || id === undefined) return Promise.resolve(false);
+            const existing = virtualStates.get(id);
+            if (existing) teardownVirtual(id, existing);
+            if (!treeBody || !timelineBody) return Promise.resolve(false);
+            const state = {
+                id: id,
+                treeBody: treeBody,
+                timelineBody: timelineBody,
+                dotNet: dotNet,
+                rowHeight: rowHeight > 0 ? rowHeight : 40,
+                overscan: overscan >= 0 ? overscan : 10,
+                last: null,
+                enabled: true,
+                session: null,
+                disposed: false
+            };
+            virtualStates.set(id, state);
+            state.session = attachVirtualSession(state);
+            return loadVirtualModule().then(function (module) {
+                if (state.disposed) return false;
+                if (!module) {
+                    teardownVirtual(id, state);
+                    return false;
+                }
+                return true;
+            });
+        },
+
+        // Row height / overscan changed (density, layout flip, a host parameter) or the .NET side turned
+        // the window reports on/off (its mode-active gate): updates the session in place. Reports are
+        // skipped while disabled — the scroll sync keeps running; a flip to enabled clears the hysteresis
+        // state and measures immediately, so the window .NET just activated reports in the same tick.
+        // Returns true while the session exists.
+        updateVirtualScroll: function (id, rowHeight, overscan, enabled) {
+            const state = id === null || id === undefined ? null : virtualStates.get(id);
+            if (!state || state.disposed) return false;
+            if (rowHeight > 0 && rowHeight !== state.rowHeight) {
+                state.rowHeight = rowHeight;
+                state.last = null; // the window arithmetic changed: report the next measurement
+                if (state.__measure) state.__measure();
+            }
+            if (overscan >= 0 && overscan !== state.overscan) state.overscan = overscan;
+            const want = enabled !== false;
+            if (want !== state.enabled) {
+                state.enabled = want;
+                if (want) {
+                    state.last = null;
+                    if (state.__measure) state.__measure();
+                }
+            }
+            return true;
+        },
+
+        // The data changed under the session (a .NET DrawVersion bump: a refresh, a filter, an in-place
+        // edit) and the row count the window is computed over moved. Forces the next measure — the
+        // hysteresis is cleared, so the fresh window always reports. Answers false without a session.
+        remeasureVirtual: function (id) {
+            const state = id === null || id === undefined ? null : virtualStates.get(id);
+            if (!state || state.disposed) return false;
+            state.last = null;
+            if (state.__measure) state.__measure();
+            return true;
+        },
+
+        // Brings a row into the viewport (the treegrid keyboard: arrows past the window, Home / End / PageUp /
+        // PageDown). Syncs both scrollers in the same tick and reports the window immediately — a deliberate
+        // jump must not wait for, or be swallowed by, the scroll hysteresis. Returns false without a session.
+        scrollToRow: function (id, index, align) {
+            const state = id === null || id === undefined ? null : virtualStates.get(id);
+            if (!state || state.disposed || !virtualModulePromise) return Promise.resolve(false);
+            return loadVirtualModule().then(function (module) {
+                if (!state || state.disposed || !module) return false;
+                if (!(index >= 0)) return false;
+                const top = module.alignScrollTop(index, state.rowHeight, state.treeBody.clientHeight, align || 'nearest', state.treeBody.scrollTop);
+                if (state.treeBody.scrollTop !== top) state.treeBody.scrollTop = top;
+                if (state.timelineBody.scrollTop !== state.treeBody.scrollTop) {
+                    state.timelineBody.scrollTop = state.treeBody.scrollTop;
+                }
+                const win = virtualMeasure(state, module);
+                virtualNotify(state, module, win, true);
+                return true;
+            });
+        },
+
+        detachVirtualScroll: function (id) {
+            const state = id === null || id === undefined ? null : virtualStates.get(id);
+            if (state) teardownVirtual(id, state);
             return Promise.resolve();
         }
     };

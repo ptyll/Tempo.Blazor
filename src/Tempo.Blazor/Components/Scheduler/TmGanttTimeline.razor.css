@@ -13,6 +13,9 @@
     background: var(--tm-bg-surface);
     /* A finger scrolls the timeline natively; the mouse / pen pan is a pointer session of pointer-drag.js (gantt.js). */
     touch-action: pan-x pan-y;
+    /* Window virtualization: the re-renders replace bars under the scroller — the browser's scroll
+       anchoring would fight the JS-owned scroll sync on every window shift. */
+    overflow-anchor: none;
 }
 
 .tm-gantt__timeline--panning {
@@ -33,8 +36,11 @@
     flex-shrink: 0;
 }
 
-/* ShowTimelineHeader=false (the shared portfolio axis): the zero-height scroll carrier — see the markup. */
-.tm-gantt__timeline-header--carrier {
+/* ShowTimelineHeader=false (the shared portfolio axis): the zero-height scroll carrier — see the markup.
+   Two classes on purpose: the phase-2 header rule below re-declares height: 60px at the SAME scoped
+   specificity, and source order would let it win — the carrier must stay 0 px tall or the timeline body
+   (and with it every bar) sits 60 px below the tree rows. */
+.tm-gantt__timeline-header.tm-gantt__timeline-header--carrier {
     height: 0;
     border: none;
     visibility: hidden;
@@ -56,6 +62,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     position: relative;
+    /* See .tm-gantt__timeline: the window re-renders must not be fought by scroll anchoring. */
+    overflow-anchor: none;
 }
 
 .tm-gantt__timeline-content {
@@ -212,6 +220,19 @@
     text-overflow: ellipsis;
     line-height: 20px;
     display: block;
+}
+
+/* The completed bar is faded (opacity .6), which drops the fixed light label below AA on its washed
+   background: switch to the surface text colour there (the wash is a light primary tone). */
+.tm-gantt__bar--completed .tm-gantt__bar-label {
+    color: var(--tm-text-primary);
+}
+
+/* Keyboard focus of the timeline BODY — it is the scrollable region of the axis (tabindex="0",
+   role="region", a localized label), virtualized or not. */
+.tm-gantt__timeline-body:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
 }
 
 /* The percentage next to the bar (GanttViewSettings.ShowProgressLabel). A child of .tm-gantt__task-row

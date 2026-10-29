@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "Whether the Gantt window-virtualizes its tree and timeline for large data sets: Off (default, every row renders), Auto (from the VirtualizationThreshold of visible rows) or On (always). The window is computed arithmetically from the fixed row height in the browser; Off keeps the pre-virtualization DOM byte for byte.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttVirtualizationMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttVirtualizationMode"
+}

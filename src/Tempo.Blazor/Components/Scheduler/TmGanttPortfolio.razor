@@ -139,6 +139,9 @@
                              TimelineEnd="@(SharedAxis ? _unionRange!.Value.Item2 : null)"
                              ZoomPreset="@(SharedAxis ? ZoomPreset : GanttZoomPreset.Weeks)"
                              ShowTimelineHeader="@(!SharedAxis)"
+                             Virtualization="Virtualization"
+                             VirtualizationThreshold="VirtualizationThreshold"
+                             OverscanRows="OverscanRows"
                              TreeWidth="@(SharedAxis ? SharedTreeWidth : null)" />
                 </div>
             }

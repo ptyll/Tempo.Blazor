@@ -210,28 +210,4 @@ public class TmGanttTests : LocalizationTestBase
         // Ctrl + wheel up (positive delta) = zoom out
         await timeline.WheelAsync(new WheelEventArgs { CtrlKey = true, DeltaY = 50 });
     }
-
-    [Fact]
-    public async Task TmGantt_ScrollSync_TreeScroll_DoesNotThrow()
-    {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
-
-        var treeBody = cut.Find(".tm-gantt__tree-body");
-
-        // Should not throw in bUnit loose JS mode
-        await treeBody.TriggerEventAsync("onscroll", new EventArgs());
-    }
-
-    [Fact]
-    public async Task TmGantt_ScrollSync_TimelineBodyScroll_DoesNotThrow()
-    {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
-
-        var timelineBody = cut.Find(".tm-gantt__timeline-body");
-
-        // Should not throw in bUnit loose JS mode
-        await timelineBody.TriggerEventAsync("onscroll", new EventArgs());
-    }
 }

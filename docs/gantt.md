@@ -40,7 +40,11 @@ warning.
 (`linkScrollGroup(groupId, elements)` / `unlinkScrollGroup(groupId)`, idempotent per group id;
 pixel-mapped where the members' content widths match, a ratio of the scrollable distance where they
 differ), the
-history drawer focus return (`noteOpener` / `restoreOpener`) and the pointer sessions
+history drawer focus return (`noteOpener` / `restoreOpener`), the virtual-scroll session
+(`attachVirtualScroll(id, treeBody, timelineBody, dotNet, rowHeight, overscan)` — the plain-listener
+vertical sync plus the window computation; `updateVirtualScroll(id, rowHeight, overscan, enabled)` follows
+a row-height change or the mode gate, `remeasureVirtual(id)` re-measures after a data change and
+`scrollToRow(id, index, align)` serves the treegrid keyboard) and the pointer sessions
 `attachTimeline(id, timeline, body, treeBody, dotNet)` / `attachTree(id, treeBody, dotNet)` (plus the
 matching `detach*`). Sessions are
 keyed by a caller-supplied id — Blazor removes the element before `DisposeAsync` runs — idempotent,
@@ -404,6 +408,98 @@ itself.
 - Sparse rows are read by `CellReference` column index, so a skipped cell cannot slide the columns
   that follow it. Every warning carries `Row` (the data ordinal predecessor references use) and
   `SheetRow` (the 1-based sheet row, from the row's `RowIndex`, for display).
+
+## Large data sets (window virtualization)
+
+`Virtualization` (`GanttVirtualizationMode` in Abstractions, default `Off`) renders only the visible window
+of tree rows and timeline bars for large data sets. `Off` keeps the pre-virtualization DOM byte for byte;
+`On` always virtualizes; `Auto` virtualizes once the visible set reaches `VirtualizationThreshold` visible
+rows (default 300). `OverscanRows` (default 10) renders extra rows above and below the window so a scroll
+step never shows an unpainted edge.
+
+The window is computed **arithmetically from the fixed row height** (`RowHeight` — one value the tree and
+the timeline share: 40 / 28 / 44 px per density and 56 px on the read-mostly mobile container), not with
+`<Virtualize>`: two synchronized scroll containers with absolutely positioned bars and an SVG dependency
+layer cannot host a framework virtualizer. The chart owns the window (`_windowStart` / `_windowEnd`); the
+tree and the timeline only read it. The browser does the arithmetic — `gantt.js attachVirtualScroll`
+computes the window in a `requestAnimationFrame` through the pure `gantt-virtual.mjs` maths (node-tested)
+and reports `[JSInvokable] OnViewportRowsChanged(first, last, visibleRows)` only once the window moved past the
+overscan/2-row **hysteresis**, so at most one .NET render happens per overscan/2 rows of scroll. The window
+is anchored on the real pixel range the viewport shows — `firstVisible = floor(top / rowHeight)`,
+`lastVisible = ceil((top + clientHeight) / rowHeight)`, the overscan added on both sides — so the partially
+visible edge rows stay painted at a mid-row scroll, and the third report argument is the floor viewport row
+count the keyboard paging (`PageRows`) uses. The same session owns the vertical tree↔timeline sync in the
+browser — a plain scroll listener (`attachScrollSync`) that needs neither the maths module nor any interop;
+the old interop round trip per scroll event (`OnTreeScroll` / `OnTimelineBodyScroll` →
+`tmGantt.getScrollTop`/`setScrollTop`) and its C# handlers are gone. The session also follows its
+environment on its own: a `ResizeObserver` on the tree body re-measures when the container resizes,
+`tmGantt.remeasureVirtual(id)` re-measures (hysteresis cleared) after a data change — `TmGantt` calls it
+whenever its `DrawVersion` moved — and `updateVirtualScroll(id, rowHeight, overscan, enabled)` silences the
+window reports while the mode is inactive (the sync keeps running); a flip to enabled clears the hysteresis
+and measures immediately, so a `Virtualization` / threshold crossing reports in the same tick.
+
+**The window applies only while the session is attached** (`VirtualizationActive` = mode-active &&
+attached): until gantt.js confirms itself the FULL set renders — prerender, bUnit and a host without the
+script never hide a single row behind a window nobody computes. (The browser's own first paint is therefore
+the full set too; the attach + first measurement correct it to the window immediately after.) While the
+session is attached but not yet measured, the prerender window (the first `OverscanRows × 3` rows) stands.
+The **List view** has no timeline: the session attaches the tree body as BOTH scrollers and reads the row
+count from the tree body's own scroll height (the spacers keep it at `rows × RowHeight` in every window
+state). The session re-registers whenever its key changes — the key carries the gesture key (the same
+element-replacement signal the pointer sessions use), the row height and the overscan — so a DockedWorkload
+toggle or a chart ↔ List flip never leaves it bound to detached elements. Without JS
+(prerender, a missing script) the keyboard still pins what it focuses; a density or layout flip re-registers
+the session with the new row height.
+
+What renders per window: tree rows (window + two `aria-hidden` spacers of the exact remaining height, so
+the scroll area and the timeline keep the full `rows × RowHeight`), bars, baseline ghosts, progress labels
+and the dependency handles. A dependency line renders when its **y-range intersects the window**, even with
+both ends outside it. The grid and the non-working overlays are horizontal (x-axis) — the demo's 10 000-task
+data set spans ~330 days ≈ 47 week cells + ~94 weekend rects, far below the 2 000-cell threshold where a
+repeating-gradient or a scrollLeft window would pay off, so they stay as-is. The rows a keyboard user or a
+gesture still needs render **pinned** outside the window with their absolute `aria-rowindex`: the roving
+tab stop, the selection, the inline edit, the dragged row and the drop target, plus a bar the focus request
+is about to reach. The treegrid keeps its a11y contract while virtualized: `aria-rowcount` = visible nodes
++ header and an absolute `aria-rowindex` on every row. Home / End / PageUp / PageDown move through the
+window (the page is what the viewport really shows — the browser-reported floor of the body height over
+the row height; 15 rows without virtualization), the target row renders pinned and the JS session
+scrolls it into view (`scrollToRow`), announced as "Row {0} of {1}". The scrollable region of the axis is
+`.tm-gantt__timeline-body` (`tabindex="0"`, `role="region"`, the localized `TmGantt_TimelineAxis` label,
+a `:focus-visible` ring) — the pan container above it is not a tab stop.
+
+Scope: the virtualization covers the chart views (Day / Week / Month / List) at every layout — desktop,
+tablet and the read-mostly mobile container (56 px rows, native finger scroll, long-press on a
+re-rendered row). Calendar, Board, Dashboard, People, the workload and the summary band are unaffected —
+the band, the docked workload and the export preview always compute over the whole (filtered) data, never
+over the window. A nested `TmGantt` inside `TmGanttPortfolio` virtualizes only when the host passes
+`Virtualization` to the portfolio. **Browser Ctrl+F finds only rendered rows** — a host that needs
+in-chart search points users at `ShowQuickSearch` (which filters the data instead).
+
+| 10 000 tasks, all expanded (WASM `/gantt-large`, Chromium) | `Off` | `Auto` |
+|---|---|---|
+| First render (navigation → rows painted) — the FULL set in both modes since the attach gate | ~31.3 s | ~30.4 s |
+| Window bound applied after that paint (`Auto_windowAppliedMs` − `Auto_firstRenderMs`) | — | ~0.3 s |
+| `.tm-gantt__tree-row` elements once the window applied | 10 000 | 28 |
+| Elements inside `.tm-gantt` | ~428 000 | ~1 600 |
+| .NET renders while scrolling in 200 px steps (5 rows) | — | 1 per step (the overscan/2 hysteresis — the phase target) |
+| Long tasks > 50 ms / worst / heap over 50 full-viewport scrolls | 47 / 223 ms / +5.0 MB | 50 / 313 ms / −23.0 MB |
+
+The dev-box targets of the phase (the window bounding the DOM ≤ 1.5 s WASM / ≤ 800 ms Server after the
+first paint — `Auto_windowAppliedMs − Auto_firstRenderMs` in the report, since the attach gate makes the
+first paint the full set in both modes; scroll without long tasks > 50 ms) are written against quiet
+hardware; the table records the measured numbers of this build (the WASM lane also pays the deterministic
+10 000-task generation before the first paint, which the busy CI runner stretches into the tens of
+seconds in BOTH modes).
+The live report is written by
+`GanttVirtualizationE2ETests.Performance_TenThousandTasks_Meets_The_Targets` to
+`tests/Tempo.Blazor.E2E/TestResults/gantt-phase12/perf.json`.
+
+```razor
+<!-- a 10 000-task project -->
+<TmGantt Items="tasks" Virtualization="GanttVirtualizationMode.Auto" />
+<!-- small charts stay byte-identical: Off is the default, no spacers, no aria-rowcount -->
+<TmGantt Items="tasks" />
+```
 
 ## Touch and pointer
 

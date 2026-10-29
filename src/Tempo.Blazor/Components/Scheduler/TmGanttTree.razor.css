@@ -74,6 +74,29 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    /* The out-of-window pinned rows (virtualization) anchor at their absolute row offset inside it. */
+    position: relative;
+    /* See the timeline body: the window re-renders must not be fought by scroll anchoring. */
+    overflow-anchor: none;
+}
+
+/* Window virtualization (Fáze 12): the rows above / below the window are two plain spacers of the exact
+   remaining height, so the scroll area and the timeline's content keep the full size. aria-hidden in the
+   markup; no content of its own. */
+.tm-gantt__tree-spacer {
+    flex-shrink: 0;
+    pointer-events: none;
+    contain: strict;
+}
+
+/* A pinned row OUTSIDE the window (the roving tab stop, a selection, an inline edit, a dragged row or a
+   drop target): absolutely positioned at its true row offset, so it stays findable and focusable without
+   pushing the window rows off their bars. */
+.tm-gantt__tree-row--pinned-out {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
 }
 
 .tm-gantt__tree-row {

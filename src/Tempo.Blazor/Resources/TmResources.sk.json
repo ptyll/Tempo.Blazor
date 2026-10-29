@@ -2849,6 +2849,8 @@
   "TmGantt_MoveUp": "Posunúť hore",
   "TmGantt_MoveDown": "Posunúť dole",
   "TmGantt_MovedUp": "Úloha „{0}“ presunutá pred „{1}“",
+  "TmGantt_RowPosition": "Riadok {0} z {1}",
+  "TmGantt_TimelineAxis": "Časová osa",
   "TmGantt_MovedDown": "Úloha „{0}“ presunutá za „{1}“",
   "TmGanttTaskPanel_Tabs": "Sekcie úlohy",
   "TmGanttTaskPanel_TabDetail": "Detail",

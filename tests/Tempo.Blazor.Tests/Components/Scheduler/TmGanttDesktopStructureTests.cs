@@ -654,10 +654,30 @@ public class TmGanttDesktopStructureTests : LocalizationTestBase
         var tree = File.ReadAllText(Path.Combine(dir, "TmGanttTree.razor"));
         var timeline = File.ReadAllText(Path.Combine(dir, "TmGanttTimeline.razor"));
 
-        tree.Should().Contain("class=\"tm-gantt__tree-row @GetRowClass(node) @GetDragClass(node)\"\n                 @key=\"node.Task.Id\"");
+        tree.Should().Contain("class=\"tm-gantt__tree-row @GetRowClass(node) @GetDragClass(node, entry.OutOfWindow)\"\n                 @key=\"node.Task.Id\"");
         timeline.Should().Contain("class=\"tm-gantt__task-row\"\n                     @key=\"bar.Task.Id\"");
         timeline.Should().Contain("class=\"tm-gantt__milestone\"\n                             @key=\"bar.Task.Id\"");
         timeline.Should().Contain("class=\"tm-gantt__bar @GetBarClass(bar)\"\n                             @key=\"bar.Task.Id\"");
+    }
+
+    /// <summary>
+    /// The vertical tree↔timeline sync and the virtualization window are owned by the gantt.js session
+    /// (attachScrollSync + attachVirtualScroll): the bodies carry NO Blazor scroll bindings (the old
+    /// interop round trip per scroll tick), and the timeline BODY is the scrollable region of the axis
+    /// a11y-wise (tabindex/role/aria-label on the body, not the panning container).
+    /// </summary>
+    [Fact]
+    public void TmGantt_Scroll_Sync_And_Timeline_A11y_Live_In_The_Markup_Contract()
+    {
+        var dir = Path.Combine(ThemeCss.RepositoryRoot().FullName, "src", "Tempo.Blazor", "Components", "Scheduler");
+        var tree = File.ReadAllText(Path.Combine(dir, "TmGanttTree.razor"));
+        var timeline = File.ReadAllText(Path.Combine(dir, "TmGanttTimeline.razor"));
+
+        tree.Should().NotContain("@onscroll", "the sync is a JS session; no interop per scroll tick");
+        timeline.Should().NotContain("@onscroll");
+        timeline.Should().Contain("tabindex=\"0\" role=\"region\" aria-label=\"@Loc[\"TmGantt_TimelineAxis\"]\"",
+            "the timeline body is the keyboard-reachable scroll region");
+        timeline.Should().NotContain("VirtualizationActive ? 0 : null", "the panning container is not a tab stop — the body is");
     }
     [Fact]
     public void TmGantt_Tree_And_Timeline_Prune_Refs_Of_Hidden_Tasks()

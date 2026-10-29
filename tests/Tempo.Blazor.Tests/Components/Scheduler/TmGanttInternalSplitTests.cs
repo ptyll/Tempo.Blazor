@@ -367,9 +367,9 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
         "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnImportResultCompleted", "OnNewReportRequested",
         "OnNotificationTriggered", "OnReportDelete", "OnReportDuplicate", "OnReportEdit", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
-        "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports", "ResolvedLayoutChanged",
+        "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "OverscanRows", "RealtimeConnection", "Reports", "ResolvedLayoutChanged",
         "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowSummaryBand", "ShowTaskPanel", "ShowTaskPanelChanged", "ShowTimelineHeader", "ShowToolbar",
-        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "SummaryBandContent", "TaskBreadcrumb", "TaskPanelMode", "TestIdPrefix", "TimelineEnd", "TimelineStart", "Title", "ToolbarLabels", "TreeWidth", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
+        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "SummaryBandContent", "TaskBreadcrumb", "TaskPanelMode", "TestIdPrefix", "TimelineEnd", "TimelineStart", "Title", "ToolbarLabels", "TreeWidth", "View", "ViewChanged", "ViewSettings", "Virtualization", "VirtualizationThreshold", "WorkItemSource", "WorkingSchedule",
         "WorkloadDisplayMode", "WorkloadDisplayModeChanged", "WorkloadPlacement", "ZoomPreset",
     ];
 }

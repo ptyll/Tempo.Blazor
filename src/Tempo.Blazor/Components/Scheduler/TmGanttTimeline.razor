@@ -4,6 +4,8 @@
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Abstractions.WorkItems
 
+@* The pan container is NOT a tab stop: the scrollable region of the axis is the body below (tabindex +
+   role + label there), while the container keeps its pan cursor and the wheel handler. *@
 <div class="tm-gantt__timeline"
      data-testid="@TestId("gantt-timeline")"
      @ref="Owner._timelineContainerRef"
@@ -45,10 +47,11 @@
              style="width: @(F(Owner._totalTimelineWidth))px" aria-hidden="true"></div>
     }
 
-    <!-- Timeline Body -->
+    <!-- Timeline Body (the keyboard-reachable scroll region of the axis; the vertical scroll itself is the
+         gantt.js session — no Blazor scroll binding) -->
     <div class="tm-gantt__timeline-body"
          @ref="Owner._timelineBodyRef"
-         @onscroll="Owner.OnTimelineBodyScroll">
+         tabindex="0" role="region" aria-label="@Loc["TmGantt_TimelineAxis"]">
         <div class="tm-gantt__timeline-content"
              style="height: @(F(Owner._visibleNodes.Count * Owner.RowHeight))px; width: @(F(Owner._totalTimelineWidth))px">
 
@@ -92,6 +95,12 @@
             <svg class="tm-gantt__dependencies" style="width: @(F(Owner._totalTimelineWidth))px; height: 100%">
                 @foreach (var dep in Owner._visibleDependencies)
                 {
+                    @* Window virtualization: a line whose y-span crosses the window renders even with both of its
+                       ends outside it, so a long dependency never vanishes while its middle row is on screen. *@
+                    if (!Owner.IsDependencyInView(dep))
+                    {
+                        continue;
+                    }
                     <line x1="@F(dep.X1)" y1="@F(dep.Y1)" x2="@F(dep.X2)" y2="@F(dep.Y2)"
                           class="@GetDepLineClass(dep)"
                           data-testid="@TestId($"dep-line-{dep.DependencyId}")"
@@ -109,8 +118,12 @@
             <!-- Baseline ghost bars -->
             @if (Owner.ActiveBaselineId is not null)
             {
-                @foreach (var bar in Owner._taskBars.Where(b => b.BaselineLeft.HasValue))
+                @foreach (var bar in Owner._taskBars)
                 {
+                    if (!bar.BaselineLeft.HasValue || !Owner.IsBarInView(bar))
+                    {
+                        continue;
+                    }
                     <div class="tm-gantt__bar tm-gantt__bar--baseline"
                          data-testid="@TestId($"ghost-bar-{bar.Task.Id}")"
                          style="left: @(F(bar.BaselineLeft!.Value))px; width: @(F(bar.BaselineWidth!.Value))px; top: @(F(bar.Top))px;"></div>
@@ -121,6 +134,11 @@
             @foreach (var bar in Owner._taskBars)
             {
                 if (bar.Width <= 0)
+                {
+                    continue;
+                }
+                @* Window virtualization: only the bars of the rendered rows (plus a bar the keyboard asked to focus). *@
+                if (!Owner.IsBarInView(bar))
                 {
                     continue;
                 }

@@ -2811,6 +2811,8 @@
   "TmGantt_MoveUp": "Move up",
   "TmGantt_MoveDown": "Move down",
   "TmGantt_MovedUp": "Task \"{0}\" moved before \"{1}\"",
+  "TmGantt_RowPosition": "Row {0} of {1}",
+  "TmGantt_TimelineAxis": "Timeline axis",
   "TmGantt_MovedDown": "Task \"{0}\" moved after \"{1}\"",
   "TmGanttTaskPanel_Tabs": "Task sections",
   "TmGanttTaskPanel_TabDetail": "Detail",

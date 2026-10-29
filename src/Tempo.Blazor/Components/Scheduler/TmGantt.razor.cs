@@ -29,6 +29,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     internal List<GanttTaskNode> _visibleNodes = [];
     internal List<TaskBarInfo> _taskBars = [];
     internal List<DependencyLineInfo> _visibleDependencies = [];
+
+    /// <summary>Task id → row index in <see cref="_visibleNodes"/>, built once per refresh (the dependency lines and the window filter read it).</summary>
+    private Dictionary<string, int> _nodeIndexById = new(StringComparer.Ordinal);
     internal List<TimelineHeader> _timelineHeaders = [];
     internal List<TimelineHeader> _upperHeaders = [];
     internal List<TimelineHeader> _lowerHeaders = [];
@@ -85,7 +88,6 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         new() { Key = GanttColumnKey.Priority, Visible = false, Order = 7, Width = 90 },
     };
 
-    private bool _isSyncingScroll;
     internal bool _viewSettingsOpen;
 
     // Context menu state
@@ -131,6 +133,217 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             GanttViewDensity.Touch => TouchRowHeight,
             _ => ComfortableRowHeight,
         };
+
+    // ── Virtualization window (Fáze 12) ──────────────────────────
+    // The chart owns the window; the tree and the timeline only read it. It is computed from the fixed
+    // RowHeight in the browser (gantt-virtual.mjs → attachVirtualScroll), which reports it through
+    // OnViewportRowsChanged with an overscan/2-row hysteresis. Off (the default) keeps the full set.
+
+    /// <summary>First visible row of the window (inclusive).</summary>
+    internal int _windowStart;
+
+    /// <summary>First row BELOW the window (exclusive); the full set when virtualization is off.</summary>
+    internal int _windowEnd = int.MaxValue;
+
+    /// <summary>The window the browser last reported — ALWAYS stored, also while the reports are gated off, so an activation resumes where the user actually is.</summary>
+    private int _reportedFirst;
+
+    /// <summary>Exclusive end of the last reported window.</summary>
+    private int _reportedLast;
+
+    /// <summary>Viewport rows the browser last reported (floor of the body height over the row height) — the keyboard page size.</summary>
+    private int _reportedVisibleRows = 15;
+
+    /// <summary>True once the browser reported a real viewport; before that (attached, first rAF in flight) the prerender window stands.</summary>
+    private bool _windowMeasured;
+
+    /// <summary>Ids of the rows the tree currently paints (the window plus the pinned rows); the tree cleans its element references against it.</summary>
+    private HashSet<string> _renderedRowIds = [];
+
+    /// <summary>Whether the host asked for the window at the current data size — the MODE half of <see cref="VirtualizationActive"/>.</summary>
+    private bool IsVirtualizationModeActive => Virtualization switch
+    {
+        GanttVirtualizationMode.On => true,
+        GanttVirtualizationMode.Auto => _visibleNodes.Count >= Math.Max(1, VirtualizationThreshold),
+        _ => false,
+    };
+
+    /// <summary>
+    /// True when the window applies to the current render. The mode half alone is not enough: until the
+    /// gantt.js session confirmed itself, the chart cannot know a browser will ever correct the window —
+    /// so the full set renders (prerender, bUnit, a host without the script) and no row ever hides behind
+    /// a window nobody computes.
+    /// </summary>
+    internal bool VirtualizationActive => IsVirtualizationModeActive && _virtualScrollAttached;
+
+    /// <summary>First visible row of the window (inclusive).</summary>
+    internal int WindowStart => _windowStart;
+
+    /// <summary>First row below the window (exclusive).</summary>
+    internal int WindowEnd => VirtualizationActive ? _windowEnd : _visibleNodes.Count;
+
+    /// <summary>
+    /// Visible rows the keyboard pages over: what the browser measured of the real viewport (floor of the
+    /// body height over the row height) — the window's own span distorts at the data edges; 15 rows
+    /// without virtualization or before the first report.
+    /// </summary>
+    internal int PageRows
+    {
+        get
+        {
+            if (!VirtualizationActive) return 15;
+            return Math.Max(1, _reportedVisibleRows);
+        }
+    }
+
+    /// <summary>
+    /// Recalculates the window after a data refresh: the full set while the session is unconfirmed, its
+    /// prerender window until the first measurement, then the last REPORTED window (a collapse keeps the
+    /// viewport where the user is — no jump to the top), clamped into the new set.
+    /// </summary>
+    private void RefreshWindow()
+    {
+        if (!VirtualizationActive || _visibleNodes.Count == 0)
+        {
+            _windowStart = 0;
+            _windowEnd = _visibleNodes.Count;
+            return;
+        }
+
+        var count = _visibleNodes.Count;
+        if (!_windowMeasured)
+        {
+            // Attached, not yet measured (the first rAF is in flight): the prerender window stands.
+            _windowStart = 0;
+            _windowEnd = Math.Min(count, Math.Max(1, OverscanRows) * 3);
+            return;
+        }
+
+        // A collapse / filter shrank or grew the set: keep the last REPORTED window (no jump to the top),
+        // clamped so [start, end) stays inside the data.
+        _windowStart = Math.Clamp(_reportedFirst, 0, count - 1);
+        _windowEnd = Math.Min(count, Math.Max(_windowStart + 1, _reportedLast));
+    }
+
+    /// <summary>
+    /// The browser's window report (gantt.js <c>attachVirtualScroll</c>): the rAF-computed first/last visible row
+    /// (overscan included) and the floor viewport row count the keyboard pages over. The report is ALWAYS
+    /// remembered (<c>_reportedFirst</c> / <c>_reportedLast</c> / <c>_reportedVisibleRows</c>) — also while the
+    /// reports are gated off — so an activation resumes from the scroll position the user is at. Applied only
+    /// when it moved: a scroll inside the hysteresis never re-renders the chart.
+    /// </summary>
+    [JSInvokable]
+    public Task OnViewportRowsChanged(int first, int last, int visibleRows)
+        => InvokeAsync(() =>
+        {
+            if (first < 0) first = 0;
+            if (last < first) last = first;
+            _reportedFirst = first;
+            _reportedLast = last;
+            _reportedVisibleRows = Math.Max(0, visibleRows);
+            _windowMeasured = true;
+
+            var count = _visibleNodes.Count;
+            if (count == 0)
+            {
+                // Every row filtered away under a live report: an empty window, never a Clamp over an
+                // empty range.
+                _windowStart = 0;
+                _windowEnd = 0;
+                return;
+            }
+
+            if (!VirtualizationActive)
+            {
+                _windowStart = 0;
+                _windowEnd = count;
+                return;
+            }
+
+            var start = Math.Clamp(first, 0, Math.Max(0, count - 1));
+            var end = Math.Clamp(last, start + 1, count);
+            if (_windowStart == start && _windowEnd == end) return;
+            _windowStart = start;
+            _windowEnd = end;
+            StateHasChanged();
+        });
+
+    /// <summary>True when the row must render even outside the window: the roving tab stop, the selection, an inline edit, a dragged row or a drop target.</summary>
+    internal bool IsRowPinned(string taskId) =>
+        taskId == EffectiveFocusRowId()
+        || SelectedTask?.Id == taskId
+        || _inlineEditTaskId == taskId
+        || _draggedTaskId == taskId
+        || _dropTargetId == taskId;
+
+    /// <summary>One entry of the tree slice: the node, its ABSOLUTE index in the visible set (the aria-rowindex source) and whether it renders OUTSIDE the window (absolutely positioned at its true offset, so it never shifts the window rows out of alignment with their bars).</summary>
+    internal readonly record struct GanttSliceEntry(GanttTaskNode Node, int Index, bool OutOfWindow);
+
+    /// <summary>
+    /// What the tree paints: the window plus every pinned row outside it, in document order (top-pinned rows,
+    /// the window, bottom-pinned rows). The out-of-window pinned rows are absolutely positioned at their true
+    /// <c>index × RowHeight</c> offset — in flow they would push the window rows off their bars — so the
+    /// spacers are simply the rows above and below the window and the total height stays
+    /// <c>visibleCount × RowHeight</c>. Without virtualization this is the whole visible set and no spacers.
+    /// </summary>
+    internal (IReadOnlyList<GanttSliceEntry> Rows, int TopSpacerRows, int BottomSpacerRows) TreeSlice
+    {
+        get
+        {
+            var count = _visibleNodes.Count;
+            if (!VirtualizationActive || count == 0)
+            {
+                var all = new List<GanttSliceEntry>(count);
+                for (var i = 0; i < count; i++) all.Add(new(_visibleNodes[i], i, false));
+                _renderedRowIds = all.Select(e => e.Node.Task.Id).ToHashSet();
+                return (all, 0, 0);
+            }
+
+            var windowStart = Math.Clamp(_windowStart, 0, count);
+            var windowEnd = Math.Clamp(WindowEnd, windowStart, count);
+            List<GanttSliceEntry> top = [];
+            List<GanttSliceEntry> window = [];
+            List<GanttSliceEntry> bottom = [];
+            for (var i = 0; i < count; i++)
+            {
+                var entry = new GanttSliceEntry(_visibleNodes[i], i, true);
+                if (i >= windowStart && i < windowEnd) window.Add(entry with { OutOfWindow = false });
+                else if (IsRowPinned(_visibleNodes[i].Task.Id))
+                {
+                    if (i < windowStart) top.Add(entry);
+                    else bottom.Add(entry);
+                }
+            }
+
+            var rows = new List<GanttSliceEntry>(top.Count + window.Count + bottom.Count);
+            rows.AddRange(top);
+            rows.AddRange(window);
+            rows.AddRange(bottom);
+            _renderedRowIds = rows.Select(e => e.Node.Task.Id).ToHashSet();
+            return (rows, windowStart, count - windowEnd);
+        }
+    }
+
+    /// <summary>Ids the tree currently paints (window + pinned); the parts clean their row references against it.</summary>
+    internal HashSet<string> RenderedRowIds => _renderedRowIds;
+
+    /// <summary>True when the bar belongs to the rendered window (or the bar a keyboard request is about to focus).</summary>
+    internal bool IsBarInView(TaskBarInfo bar) =>
+        !VirtualizationActive
+        || (bar.RowIndex >= _windowStart && bar.RowIndex < WindowEnd)
+        || (FocusRequest is { Target: GanttFocusTarget.Bar } request && request.TaskId == bar.Task.Id);
+
+    /// <summary>
+    /// True when the dependency line's y-range intersects the window: a line that spans the window renders even
+    /// with both of its ends outside it, so a long dependency never vanishes while its middle row is on screen.
+    /// </summary>
+    internal bool IsDependencyInView(DependencyLineInfo dep)
+    {
+        if (!VirtualizationActive) return true;
+        var top = _windowStart * (double)RowHeight;
+        var bottom = WindowEnd * (double)RowHeight;
+        return Math.Max(dep.Y1, dep.Y2) >= top && Math.Min(dep.Y1, dep.Y2) <= bottom;
+    }
 
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
@@ -919,6 +1132,26 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     /// </summary>
     [Parameter] public string? TreeWidth { get; set; }
 
+    /// <summary>
+    /// Window virtualization for large data sets. <see cref="GanttVirtualizationMode.Off"/> (default) renders every
+    /// visible row exactly as before; <see cref="GanttVirtualizationMode.On"/> renders only the visible window of
+    /// rows plus <see cref="OverscanRows"/> on each side (the tree and the timeline, one mechanism at every layout);
+    /// <see cref="GanttVirtualizationMode.Auto"/> virtualizes only once the visible set reaches
+    /// <see cref="VirtualizationThreshold"/> rows. The window is computed arithmetically from the fixed
+    /// <see cref="RowHeight"/> in the browser (gantt.js); without JS (prerender, a missing script) the first
+    /// <c>OverscanRows × 3</c> rows render and the keyboard still pins what it focuses.
+    /// </summary>
+    [Parameter] public GanttVirtualizationMode Virtualization { get; set; } = GanttVirtualizationMode.Off;
+
+    /// <summary>
+    /// Visible-row count from which <see cref="GanttVirtualizationMode.Auto"/> starts to virtualize. Default 300 —
+    /// below it the full render is cheaper than the window bookkeeping.
+    /// </summary>
+    [Parameter] public int VirtualizationThreshold { get; set; } = 300;
+
+    /// <summary>Extra rows rendered above and below the window so a scroll step never shows an unpainted edge. Default 10.</summary>
+    [Parameter] public int OverscanRows { get; set; } = 10;
+
     /// <summary>The timeline range the chart lays out against: the pinned <see cref="TimelineStart"/> / <see cref="TimelineEnd"/> when set, else the data's own range.</summary>
     internal (DateTime Start, DateTime End) EffectiveTimelineRange
     {
@@ -1010,6 +1243,22 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         }
 
         await AttachGesturesAsync();
+
+        // The data changed under a live session (a refresh, a filter, an in-place edit — DrawVersion
+        // moved): ask the browser to re-measure with the hysteresis cleared, so the fresh window always
+        // reports. A ResizeObserver cannot see this — the bodies' boxes stay, only their scroll heights
+        // move — and a scroll event will not fire either.
+        if (_virtualScrollAttached && _remeasuredDrawVersion != DrawVersion)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("tmGantt.remeasureVirtual", _gestureId);
+                _remeasuredDrawVersion = DrawVersion;
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+            {
+            }
+        }
     }
 
     // ── Pointer gestures (core pointer-drag.js, wired by gantt.js) ───────────────────────────
@@ -1017,55 +1266,135 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     private readonly string _gestureId = "tm-gantt-" + Guid.NewGuid().ToString("N");
     private DotNetObjectReference<TmGantt>? _dotNetRef;
     private string? _attachedGestureKey;
+    private string? _attachedVirtualKey;
+    private bool _virtualScrollAttached;
+    private bool? _pushedVirtualEnabled;
+    private int _remeasuredDrawVersion = -1;
     private bool _disposed;
 
     /// <summary>
     /// Registers the timeline (pan with a mouse — a finger or a pen scrolls natively, dependency drag, long-press)
-    /// and the tree (long-press, Alt+Up/Down) sessions with <c>gantt.js</c>. The elements exist only while the chart
-    /// area is shown (a Board / Calendar view replaces them) and are replaced when the docked workload wraps them, so
-    /// the registration is repeated whenever that key changes. The key is recorded only after every attach/detach
-    /// call succeeded AND the JS side reported the sessions registered (<c>false</c> = the helpers were unavailable),
-    /// so a failed attempt is retried on a later render instead of being remembered as done.
+    /// and the tree (long-press, Alt+Up/Down) sessions, then the virtual-scroll session (the vertical tree↔timeline
+    /// sync plus the window computation) with <c>gantt.js</c>. The elements exist only while the chart area is shown
+    /// (a Board / Calendar view replaces them) and are replaced when the docked workload wraps them, so each
+    /// registration is repeated whenever its key changes; the virtual key carries the GESTURE key plus the row
+    /// height and the overscan, so an element replacement (a DockedWorkload toggle, chart ↔ List) re-registers the
+    /// window arithmetic as well — a session never binds to detached elements. A key is recorded only after its
+    /// attach/detach call succeeded AND the JS side reported the sessions registered (<c>false</c> = the helpers
+    /// were unavailable), so a failed attempt is retried on a later render instead of being remembered as done —
+    /// and one session failing never invalidates the other two.
     /// </summary>
     private async Task AttachGesturesAsync()
     {
         if (_disposed) return;
         var hasChart = View is not (GanttView.Workload or GanttView.Calendar or GanttView.Board or GanttView.Dashboard or GanttView.People);
         var key = hasChart ? (DockedWorkload ? "docked" : "chart") + (View == GanttView.List ? "-list" : string.Empty) : null;
-        if (key == _attachedGestureKey) return;
+        if (key != _attachedGestureKey)
+        {
+            try
+            {
+                if (key is null)
+                {
+                    await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
+                    await JSRuntime.InvokeVoidAsync("tmGantt.detachTree", _gestureId);
+                    _attachedGestureKey = key;
+                }
+                else
+                {
+                    _dotNetRef ??= DotNetObjectReference.Create(this);
+                    var attached = true;
+                    if (View != GanttView.List)
+                    {
+                        attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTimeline", _gestureId, _timelineContainerRef, _timelineBodyRef, _treeBodyRef, _dotNetRef);
+                    }
+                    else
+                    {
+                        // The List view has no timeline: release the registration of the one that was there.
+                        await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
+                    }
+
+                    attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTree", _gestureId, _treeBodyRef, _dotNetRef) && attached;
+
+                    // Only a fully registered set is remembered: a false (helpers unavailable) or a thrown
+                    // exception leaves the key unset, so the next render tries again.
+                    if (attached) _attachedGestureKey = key;
+                }
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+            {
+                // The gestures are an enhancement over the buttons and the keyboard: a missing script never breaks the chart.
+                // The key stays unset, so a later render retries the registration.
+            }
+        }
+
+        await AttachVirtualScrollAsync(key);
+    }
+
+    /// <summary>
+    /// The virtual-scroll session: registered on its own key (the gesture key plus row height + overscan), so it
+    /// re-registers whenever the elements behind the gesture key were replaced (a DockedWorkload toggle, chart ↔
+    /// List) as well as on a density or layout flip, and its availability never blocks the pointer sessions. The
+    /// List view has no timeline: the tree body is attached as BOTH scrollers and the window maths reads the row
+    /// count from the tree body's own scroll height.
+    /// </summary>
+    private async Task AttachVirtualScrollAsync(string? gestureKey)
+    {
+        var virtualKey = gestureKey is null
+            ? null
+            : gestureKey + "|r" + RowHeight + "|o" + Math.Max(0, OverscanRows);
+        if (virtualKey == _attachedVirtualKey)
+        {
+            await SyncVirtualEnabledAsync();
+            return;
+        }
 
         try
         {
-            if (key is null)
+            if (virtualKey is null)
             {
-                await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
-                await JSRuntime.InvokeVoidAsync("tmGantt.detachTree", _gestureId);
-                _attachedGestureKey = key;
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachVirtualScroll", _gestureId);
+                _virtualScrollAttached = false;
+                _attachedVirtualKey = virtualKey;
+                _pushedVirtualEnabled = null;
                 return;
             }
 
             _dotNetRef ??= DotNetObjectReference.Create(this);
-            var attached = true;
-            if (View != GanttView.List)
+            var timelineBody = View == GanttView.List ? _treeBodyRef : _timelineBodyRef;
+            var attached = await JSRuntime.InvokeAsync<bool>(
+                "tmGantt.attachVirtualScroll", _gestureId, _treeBodyRef, timelineBody, _dotNetRef, RowHeight, Math.Max(0, OverscanRows));
+            _virtualScrollAttached = attached;
+            if (attached)
             {
-                attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTimeline", _gestureId, _timelineContainerRef, _timelineBodyRef, _treeBodyRef, _dotNetRef);
+                _attachedVirtualKey = virtualKey;
+                _remeasuredDrawVersion = DrawVersion; // the fresh session measures itself
+                _pushedVirtualEnabled = null;
+                await SyncVirtualEnabledAsync();
             }
-            else
-            {
-                // The List view has no timeline: release the registration of the one that was there.
-                await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
-            }
-
-            attached = await JSRuntime.InvokeAsync<bool>("tmGantt.attachTree", _gestureId, _treeBodyRef, _dotNetRef) && attached;
-
-            // Only a fully registered set is remembered: a false (helpers unavailable) or a thrown
-            // exception leaves the key unset, so the next render tries again.
-            if (attached) _attachedGestureKey = key;
         }
         catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
         {
-            // The gestures are an enhancement over the buttons and the keyboard: a missing script never breaks the chart.
-            // The key stays unset, so a later render retries the registration.
+        }
+    }
+
+    /// <summary>
+    /// Pushes the mode half of the virtualization gate into the session: with the mode inactive (Off, or Auto
+    /// under the threshold) the JS side skips every window report — the scroll sync keeps running; a flip to
+    /// active clears the hysteresis state and measures immediately, so the window .NET just activated reports
+    /// in the same tick.
+    /// </summary>
+    private async Task SyncVirtualEnabledAsync()
+    {
+        if (!_virtualScrollAttached) return;
+        var enabled = IsVirtualizationModeActive;
+        if (_pushedVirtualEnabled == enabled) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("tmGantt.updateVirtualScroll", _gestureId, RowHeight, Math.Max(0, OverscanRows), enabled);
+            _pushedVirtualEnabled = enabled;
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+        {
         }
     }
 
@@ -1277,6 +1606,10 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             {
                 await JSRuntime.InvokeVoidAsync("tmGantt.detachTimeline", _gestureId);
                 await JSRuntime.InvokeVoidAsync("tmGantt.detachTree", _gestureId);
+            }
+            if (_attachedVirtualKey is not null)
+            {
+                await JSRuntime.InvokeVoidAsync("tmGantt.detachVirtualScroll", _gestureId);
             }
         }
         catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
@@ -1495,15 +1828,30 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     /// </summary>
     internal int DrawVersion { get; private set; }
 
+    /// <summary>Render pass of the owner: the parts' gates evaluate within one pass, so the fingerprint is computed once for both.</summary>
+    private int _renderPass;
+
+    private int _fingerprintCache;
+    private int _fingerprintPass = -1;
+
+    /// <summary>How often the fingerprint actually walked the data (one per render pass — the test suite pins this).</summary>
+    internal int FingerprintComputations { get; private set; }
+
+    /// <summary>Bumps the render pass; called at the top of the owner's markup, before any part evaluates its gate.</summary>
+    internal void NoteRenderPass() => _renderPass++;
+
     /// <summary>
     /// A hash of every task field the tree and the timeline paint. Tasks are mutated in place (the inline edit,
     /// the task panel, a host, a realtime update) and the monolith read them at render time, so a render pass
     /// always showed the current values. The parts skip a pass whose state is unchanged; this fingerprint is part
-    /// of that state, which keeps the skip from ever hiding an in-place edit. It walks the list once (a few field
-    /// reads per task) - far cheaper than rendering one element per row, bar and header cell.
+    /// of that state, which keeps the skip from ever hiding an in-place edit. It walks the list once per RENDER
+    /// PASS — the tree gate and the timeline gate share the pass's value (the O(n) walk used to run twice) — and
+    /// a host that mutates a task between passes is still detected, because a new pass recomputes.
     /// </summary>
     internal int TaskFingerprint()
     {
+        if (_fingerprintPass == _renderPass) return _fingerprintCache;
+
         var hash = new HashCode();
         foreach (var task in Data)
         {
@@ -1537,7 +1885,10 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             }
         }
 
-        return hash.ToHashCode();
+        _fingerprintCache = hash.ToHashCode();
+        _fingerprintPass = _renderPass;
+        FingerprintComputations++;
+        return _fingerprintCache;
     }
     /// <summary>Resolves an internal test id; the parts call it so a <c>TestIdPrefix</c> reaches their markup.</summary>
     internal string TestIdFor(string name) => TestId(name);
@@ -1680,12 +2031,40 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         return _visibleNodes[0].Task.Id;
     }
 
-    private void FocusRowAt(int index)
+    private void FocusRowAt(int index, string align = "nearest")
     {
         if (index < 0 || index >= _visibleNodes.Count) return;
         var id = _visibleNodes[index].Task.Id;
+        var outsideWindow = VirtualizationActive && (index < _windowStart || index >= WindowEnd);
         _focusedRowId = id;
         RequestFocus(GanttFocusTarget.Row, id);
+        if (outsideWindow)
+        {
+            // The row renders pinned on the next pass; the JS session scrolls it into the viewport and the
+            // next window report re-renders it in place. Announced, so a screen reader hears the jump.
+            Announce(Loc["TmGantt_RowPosition", index + 1, _visibleNodes.Count]);
+        }
+        ScrollToRow(index, align);
+    }
+
+    /// <summary>
+    /// Asks the gantt.js virtual-scroll session to align the row in the viewport (a keyboard move past the
+    /// window). A no-op until the session registered (bUnit, prerender, a host without the script): the pinned
+    /// row renders anyway and the user's own scroll brings the window over.
+    /// </summary>
+    private void ScrollToRow(int index, string align)
+    {
+        if (!_virtualScrollAttached) return;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("tmGantt.scrollToRow", _gestureId, index, align);
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException or JSException or TaskCanceledException)
+            {
+            }
+        });
     }
 
     /// <summary>
@@ -1703,8 +2082,10 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         {
             case "ArrowDown": FocusRowAt(index + 1); break;
             case "ArrowUp": FocusRowAt(index - 1); break;
-            case "Home": FocusRowAt(0); break;
-            case "End": FocusRowAt(_visibleNodes.Count - 1); break;
+            case "Home": FocusRowAt(0, "start"); break;
+            case "End": FocusRowAt(_visibleNodes.Count - 1, "end"); break;
+            case "PageDown": FocusRowAt(Math.Min(index + PageRows, _visibleNodes.Count - 1)); break;
+            case "PageUp": FocusRowAt(Math.Max(index - PageRows, 0)); break;
             case "ArrowRight":
                 if (node.Children.Count > 0)
                 {
@@ -2666,24 +3047,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     }
 
     // ── Scroll sync ──────────────────────────────────────────────
-
-    internal async Task OnTreeScroll()
-    {
-        if (_isSyncingScroll) return;
-        _isSyncingScroll = true;
-        var top = await JSRuntime.InvokeAsync<double>("tmGantt.getScrollTop", _treeBodyRef);
-        await JSRuntime.InvokeVoidAsync("tmGantt.setScrollTop", _timelineBodyRef, top);
-        _isSyncingScroll = false;
-    }
-
-    internal async Task OnTimelineBodyScroll()
-    {
-        if (_isSyncingScroll) return;
-        _isSyncingScroll = true;
-        var top = await JSRuntime.InvokeAsync<double>("tmGantt.getScrollTop", _timelineBodyRef);
-        await JSRuntime.InvokeVoidAsync("tmGantt.setScrollTop", _treeBodyRef, top);
-        _isSyncingScroll = false;
-    }
+    // The vertical tree↔timeline sync lives ENTIRELY in gantt.js (attachScrollSync, a plain listener bound
+    // by the attachVirtualScroll session — it needs no module and no interop per scroll tick). There is no
+    // C# handler: a @onscroll binding would only add a round trip the browser already handles.
 
     // ── Rendering helpers ────────────────────────────────────────
 
@@ -2701,6 +3067,13 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         _visibleNodes = ViewSettings.ShowClosedTasks
             ? allVisible
             : allVisible.Where(n => n.Task.Status != TmWorkItemStatus.Done && n.Task.Status != TmWorkItemStatus.Closed).ToList();
+
+        // One id → index lookup per refresh: the dependency lines and the virtualization window filter read it.
+        _nodeIndexById = new Dictionary<string, int>(_visibleNodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < _visibleNodes.Count; i++)
+        {
+            _nodeIndexById[_visibleNodes[i].Task.Id] = i;
+        }
 
         var (timelineStart, timelineEnd) = EffectiveTimelineRange;
         var pixelPerDay = GetPixelPerDay();
@@ -2733,6 +3106,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         BuildTaskBars(timelineStart, timelineEnd, pixelPerDay);
         BuildDependencyLines();
         BuildNonWorkingRects(timelineStart, timelineEnd, pixelPerDay);
+
+        // The window follows the data (collapse, filter, zoom): clamped in place, never reset to the top.
+        RefreshWindow();
 
         // Compute overloaded assignees when workload panel is active
         if (ShowWorkloadPanel || WorkloadPlacement == GanttWorkloadPlacement.Docked)
@@ -2767,9 +3143,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     private void BuildTaskBars(DateTime timelineStart, DateTime timelineEnd, double pixelPerDay)
     {
-        _taskBars = [];
-        // Build a lookup of taskId → node for group detection
-        var nodesByTaskId = GanttHelper.FlattenAll(_treeRoots).ToDictionary(n => n.Task.Id);
+        var bars = new List<TaskBarInfo>(_visibleNodes.Count);
 
         for (int i = 0; i < _visibleNodes.Count; i++)
         {
@@ -2783,8 +3157,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             var effectiveEnd   = task.End;
             if (isGroup && !task.UseManualDates)
             {
-                var childTasks = node.Children.Select(c => c.Task).ToList();
-                var bounds = GanttHelper.CalculateGroupBounds(childTasks);
+                var bounds = GanttHelper.CalculateGroupBounds(node.Children.Select(c => c.Task).ToList());
                 if (bounds.HasValue)
                 {
                     effectiveStart = bounds.Value.MinStart;
@@ -2815,21 +3188,23 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             // A fully clipped bar stays invisible (width 0); a visible one keeps the 4 px minimum.
             var barWidth = width <= 0 ? 0 : Math.Max(4, width);
 
-            _taskBars.Add(new TaskBarInfo(
+            bars.Add(new TaskBarInfo(
                 task, left, barWidth, barTop,
                 task.Color, isGroup, isDeadlineExceeded,
-                baselineLeft, baselineWidth));
+                baselineLeft, baselineWidth, i));
         }
+
+        _taskBars = bars;
     }
 
     private void BuildDependencyLines()
     {
-        _visibleDependencies = [];
-        var taskIndex = _visibleNodes.Select((n, i) => (n.Task.Id, Index: i)).ToDictionary(x => x.Id, x => x.Index);
-
+        var lines = new List<DependencyLineInfo>();
         foreach (var dep in Dependencies)
         {
-            if (!taskIndex.TryGetValue(dep.FromId, out var fromIdx) || !taskIndex.TryGetValue(dep.ToId, out var toIdx))
+            // One id → row-index lookup per refresh (built in RefreshVisibleData): the window filter of the
+            // timeline reads the same indexes back (IsBarInView / IsDependencyInView).
+            if (!_nodeIndexById.TryGetValue(dep.FromId, out var fromIdx) || !_nodeIndexById.TryGetValue(dep.ToId, out var toIdx))
                 continue;
 
             var fromBar = _taskBars[fromIdx];
@@ -2866,9 +3241,11 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             var midX = (x1 + x2) / 2;
             var midY = (y1 + y2) / 2;
 
-            _visibleDependencies.Add(new DependencyLineInfo(
+            lines.Add(new DependencyLineInfo(
                 dep.Id, x1, y1, x2, y2, midX, midY, dep.DepType, dep.LagDays));
         }
+
+        _visibleDependencies = lines;
     }
 
     private void BuildNonWorkingRects(DateTime start, DateTime end, double pixelPerDay)
@@ -2962,7 +3339,8 @@ internal record TaskBarInfo(
     bool IsGroup = false,
     bool IsDeadlineExceeded = false,
     double? BaselineLeft = null,
-    double? BaselineWidth = null);
+    double? BaselineWidth = null,
+    int RowIndex = -1);
 
 internal record DependencyLineInfo(
     string DependencyId,

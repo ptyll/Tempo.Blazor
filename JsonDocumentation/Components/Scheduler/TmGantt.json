@@ -90,6 +90,27 @@
       "description": "Pins the task tree's width as a CSS length (e.g. \"200px\"); the shared portfolio axis pins one width on every card so the timelines start at the same x. Null keeps the chart's own width logic."
     },
     {
+      "name": "Virtualization",
+      "type": "GanttVirtualizationMode",
+      "isRequired": false,
+      "default": "GanttVirtualizationMode.Off",
+      "description": "Window virtualization for large data sets. Off (default) renders every visible row exactly as before; On renders only the visible window of rows plus OverscanRows on each side (the tree and the timeline, one mechanism at every layout); Auto virtualizes only once the visible set reaches VirtualizationThreshold rows. The window is computed arithmetically from the fixed RowHeight in the browser (gantt.js); without JS (prerender, a missing script) the first OverscanRows × 3 rows render and the keyboard still pins what it focuses."
+    },
+    {
+      "name": "VirtualizationThreshold",
+      "type": "int",
+      "isRequired": false,
+      "default": "300",
+      "description": "Visible-row count from which Auto starts to virtualize. Below it the full render is cheaper than the window bookkeeping."
+    },
+    {
+      "name": "OverscanRows",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "Extra rows rendered above and below the window so a scroll step never shows an unpainted edge."
+    },
+    {
       "name": "HeaderStart",
       "type": "RenderFragment?",
       "isRequired": false,

@@ -1,0 +1,94 @@
+@page "/gantt-large"
+@using Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Abstractions.Models
+@using System.Globalization
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Gantt Large Data – Tempo.Blazor</PageTitle>
+
+<div class="mb-2">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Gantt — large data set</h1>
+    <p class="text-sm text-slate-600 dark:text-slate-300">
+        Deterministic generator (depth 4, ~1.2 dependencies/task) for the window virtualization measurements.
+        The default <code>Auto</code> mode virtualizes from 300 visible rows; <code>Off</code> is the pre-virtualization pipeline.
+    </p>
+</div>
+
+<div class="mb-2 flex flex-wrap items-center gap-2" data-testid="gantt-large-controls">
+    <div class="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+        @foreach (var size in new[] { 1000, 5000, 10000 })
+        {
+            <button class="@SizeChipClass(size)" data-testid="gantt-large-size-@size" @onclick="() => Rebuild(size)">@size.ToString("N0", CultureInfo.InvariantCulture)</button>
+        }
+    </div>
+    <div class="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+        @foreach (GanttVirtualizationMode mode in Enum.GetValues<GanttVirtualizationMode>())
+        {
+            <button class="@ModeChipClass(mode)" data-testid="gantt-large-mode-@mode" @onclick="() => _mode = mode">@mode</button>
+        }
+    </div>
+    <span class="text-xs text-slate-600 dark:text-slate-300" data-testid="gantt-large-dataset">
+        @string.Format(CultureInfo.InvariantCulture, "{0:N0} tasks · {1:N0} dependencies", _tasks.Count, _dependencies.Count)
+    </span>
+</div>
+
+<section class="showcase-card p-0 overflow-hidden" style="height: 720px;" data-testid="gantt-large-host">
+    <TmGantt Items="@_tasks"
+             DependencyItems="@_dependencies"
+             Virtualization="@_mode"
+             VirtualizationThreshold="300"
+             OverscanRows="10"
+             ShowTimelineHeader="false"
+             TreeWidth="300px"
+             ShowSidebar="false"
+             ShowToolbar="false"
+             TaskPanelMode="GanttTaskPanelMode.Auto"
+             AllowDependencyCreation="true"
+             OnDependencyAdded="HandleDependencyAdded"
+             OnDependencyRemoved="HandleDependencyRemoved"
+             ZoomPreset="GanttZoomPreset.Days" />
+</section>
+
+@code {
+    private List<TmWorkItem> _tasks = [];
+    private List<GanttDependency> _dependencies = [];
+    private GanttVirtualizationMode _mode = GanttVirtualizationMode.Auto;
+    private int _size = 10000;
+
+    protected override void OnInitialized()
+    {
+        // ?size=10000&mode=Off pins a data set for the performance lanes (a fresh navigation per measurement).
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        if (int.TryParse(query["size"], out var size) && size is 1000 or 5000 or 10000) _size = size;
+        if (Enum.TryParse<GanttVirtualizationMode>(query["mode"], out var mode)) _mode = mode;
+        Rebuild(_size);
+    }
+
+    private string SizeChipClass(int size) =>
+        "px-2 py-1 text-xs font-medium rounded-md transition-colors " +
+        (_size == size ? "bg-indigo-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700");
+
+    private string ModeChipClass(GanttVirtualizationMode mode) =>
+        "px-2 py-1 text-xs font-medium rounded-md transition-colors " +
+        (_mode == mode ? "bg-indigo-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700");
+
+    private void Rebuild(int size)
+    {
+        _size = size;
+        (_tasks, _dependencies) = GanttLargeData.Generate(size);
+    }
+
+    private Task HandleDependencyAdded(GanttDependency dependency)
+    {
+        _dependencies.Add(dependency);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDependencyRemoved(string id)
+    {
+        _dependencies.RemoveAll(d => d.Id == id);
+        return Task.CompletedTask;
+    }
+}

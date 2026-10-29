@@ -50,6 +50,18 @@ public partial class TmGanttPortfolio : IAsyncDisposable
     [Parameter] public GanttZoomPreset ZoomPreset { get; set; } = GanttZoomPreset.Weeks;
 
     /// <summary>
+    /// Forwarded to every expanded card's <see cref="TmGantt"/>. A portfolio card virtualizes only when the host
+    /// asks for it — <see cref="GanttVirtualizationMode.Off"/> (the default) keeps today's card.
+    /// </summary>
+    [Parameter] public GanttVirtualizationMode Virtualization { get; set; } = GanttVirtualizationMode.Off;
+
+    /// <summary>Forwarded to every card: the visible-row count from which <see cref="GanttVirtualizationMode.Auto"/> virtualizes. Default 300.</summary>
+    [Parameter] public int VirtualizationThreshold { get; set; } = 300;
+
+    /// <summary>Forwarded to every card: the rows rendered above and below the window. Default 10.</summary>
+    [Parameter] public int OverscanRows { get; set; } = 10;
+
+    /// <summary>
     /// The task tree width every card is pinned to in <see cref="GanttPortfolioAxisMode.Shared"/> (a CSS length, e.g.
     /// "200px") — one width so the timelines start at the same x. Null uses the shared default (12rem).
     /// </summary>

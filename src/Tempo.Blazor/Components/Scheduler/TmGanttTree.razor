@@ -6,9 +6,14 @@
 
 @{
     var focusRowId = Owner.EffectiveFocusRowId();
+    // The window slice (the visible rows plus the pinned ones) — computed once per render; without
+    // virtualization it is the whole visible set and the spacers are zero.
+    var slice = Owner.TreeSlice;
+    var virtualizing = Owner.VirtualizationActive;
 }
 <div class="tm-gantt__tree" data-testid="@TestId("gantt-tree")" style="@TreeStyle">
-  <div class="tm-gantt__tree-grid" role="treegrid" aria-label="@Loc["TmGantt_TaskList"]" style="@GridMinWidth">
+  <div class="tm-gantt__tree-grid" role="treegrid" aria-label="@Loc["TmGantt_TaskList"]"
+       aria-rowcount="@(virtualizing ? Owner._visibleNodes.Count + 1 : null)" style="@GridMinWidth">
     @* ShowTimelineHeader=false (the shared portfolio axis renders ONE header above the cards): the header row is
        visually hidden (TreeHeaderClass) so the first tree row starts level with the first bar, but it keeps its
        treegrid roles for assistive tech. *@
@@ -62,16 +67,27 @@
                   data-testid="@TestId($"custom-col-header-{cf.Id}")">@cf.Name</span>
         }
     </div>
-    <div class="tm-gantt__tree-body" role="rowgroup" @ref="Owner._treeBodyRef" @onscroll="Owner.OnTreeScroll">
-        @foreach (var node in Owner._visibleNodes)
+    <div class="tm-gantt__tree-body" role="rowgroup" @ref="Owner._treeBodyRef">
+        @* Window virtualization: the rows above / below the window are two aria-hidden spacers of the exact
+           remaining height, so the scrollbar and the timeline's scroll area keep the full size. *@
+        @if (slice.TopSpacerRows > 0)
         {
-            <div class="tm-gantt__tree-row @GetRowClass(node) @GetDragClass(node)"
+            <div class="tm-gantt__tree-spacer" style="height: @(slice.TopSpacerRows * Owner.RowHeight)px" aria-hidden="true"></div>
+        }
+        @foreach (var entry in slice.Rows)
+        {
+            var node = entry.Node;
+            @* The pinned-out modifier rides inside GetDragClass (a single space before it, never a trailing
+               one): the default, virtualization-off markup stays byte-identical. *@
+            <div class="tm-gantt__tree-row @GetRowClass(node) @GetDragClass(node, entry.OutOfWindow)"
                  @key="node.Task.Id"
                  @ref="_rowRefs[node.Task.Id]"
+                 style="@(entry.OutOfWindow ? $"top: {entry.Index * Owner.RowHeight}px" : null)"
                  role="row"
                  aria-level="@(node.Depth + 1)"
                  aria-expanded="@(node.Children.Count > 0 ? (node.Task.IsExpanded ? "true" : "false") : null)"
                  aria-selected="@(Owner.SelectedTask?.Id == node.Task.Id ? "true" : "false")"
+                 aria-rowindex="@(virtualizing ? entry.Index + 2 : null)"
                  tabindex="@(node.Task.Id == focusRowId ? 0 : -1)"
                  data-testid="@TestId($"tree-row-{node.Task.Id}")"
                  data-task-id="@node.Task.Id"
@@ -282,6 +298,10 @@
                     }
                 }
             </div>
+        }
+        @if (slice.BottomSpacerRows > 0)
+        {
+            <div class="tm-gantt__tree-spacer" style="height: @(slice.BottomSpacerRows * Owner.RowHeight)px" aria-hidden="true"></div>
         }
     </div>
   </div>

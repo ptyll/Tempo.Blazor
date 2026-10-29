@@ -15902,6 +15902,16 @@
       ]
     },
     {
+      "itemName": "GanttVirtualizationMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Whether the Gantt window-virtualizes its tree and timeline for large data sets: Off (default, every row renders), Auto (from the VirtualizationThreshold of visible rows) or On (always). The window is computed arithmetically from the fixed row height in the browser; Off keeps the pre-virtualization DOM byte for byte.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttVirtualizationMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttWorkloadPlacement",
       "kind": "Enum",
       "category": "Models",
@@ -37670,11 +37680,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1507,
-    "manualItemCount": 1507,
-    "generatedItemCount": 1490,
+    "itemCount": 1508,
+    "manualItemCount": 1508,
+    "generatedItemCount": 1491,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1490
+    "publicApiTypeCount": 1491
   }
 }

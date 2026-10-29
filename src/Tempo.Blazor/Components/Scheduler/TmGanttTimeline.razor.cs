@@ -46,7 +46,10 @@ public partial class TmGanttTimeline : TmGanttPart
         string? Prefix,
         string Culture,
         int FocusSeq,
-        bool Header);
+        bool Header,
+        bool Virtualizing,
+        int WindowStart,
+        int WindowEnd);
 
     /// <inheritdoc />
     protected override object? RenderState => new TimelineState(
@@ -56,7 +59,8 @@ public partial class TmGanttTimeline : TmGanttPart
         Owner.ActiveBaselineId, Owner.AllowDependencyCreation && !Owner.IsMobileLayout, Owner.GetEffectiveZoomPreset(),
         Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ShowBarProgressLabels,
         Owner.ViewSettings.TaskNameLocation, Owner.RowHeight, Owner._today, Owner.TestIdPrefix, Loc.Culture.Name,
-        Owner.FocusRequest?.Seq ?? 0, Owner.ShowTimelineHeader);
+        Owner.FocusRequest?.Seq ?? 0, Owner.ShowTimelineHeader,
+        Owner.VirtualizationActive, Owner.WindowStart, Owner.WindowEnd);
 
     private readonly Dictionary<string, ElementReference> _barRefs = [];
     private int _handledFocusSeq;
@@ -64,8 +68,9 @@ public partial class TmGanttTimeline : TmGanttPart
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Element references of bars that are no longer drawn (collapse, filter) would otherwise pile up.
-        var barIds = Owner._taskBars.Select(b => b.Task.Id).ToHashSet();
+        // Element references of bars that are no longer drawn (collapse, filter, a window that moved past them)
+        // would otherwise pile up: only what the current window paints is kept.
+        var barIds = Owner._taskBars.Where(Owner.IsBarInView).Select(b => b.Task.Id).ToHashSet();
         foreach (var id in _barRefs.Keys.Where(id => !barIds.Contains(id)).ToList()) _barRefs.Remove(id);
 
         // ArrowRight on a leaf row asks for the focus of its bar; the bar is a roving child (tabindex -1), so it

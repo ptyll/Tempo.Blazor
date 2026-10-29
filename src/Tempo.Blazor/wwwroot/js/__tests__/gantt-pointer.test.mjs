@@ -421,14 +421,23 @@ test('the edge auto-scroll moves the timeline and the ghost origin follows the s
     assert.equal(line.getAttribute('x1'), '146');
     assert.ok(frames.length > 0, 'the auto-scroller scheduled a frame');
 
-    // The scroll shifts the content (and the handle) left by the applied delta.
+    // The scroll shifts the content (and the handle) left by the applied delta. The drag runs TWO
+    // scrollers (the timeline's x band plus the timeline body's y band), so the pump walks the queued
+    // rAF callbacks (oldest first) until the x band's frame actually scrolls the timeline — the body's
+    // y frame is a no-op in this DOM (its rect has no measurable edges). Bounded: a scroller at a
+    // scroll limit reschedules forever without applying anything.
     const advance = () => {
         const before = g.timeline.scrollLeft;
-        frames.pop()();
-        const applied = g.timeline.scrollLeft - before;
-        g.content.rect = { ...g.content.rect, left: g.content.rect.left - applied };
-        g.handle.rect = { ...g.handle.rect, left: g.handle.rect.left - applied };
-        return applied;
+        for (let pumped = 0; pumped < 10 && frames.length > 0; pumped++) {
+            frames.shift()();
+            const applied = g.timeline.scrollLeft - before;
+            if (applied !== 0) {
+                g.content.rect = { ...g.content.rect, left: g.content.rect.left - applied };
+                g.handle.rect = { ...g.handle.rect, left: g.handle.rect.left - applied };
+                return applied;
+            }
+        }
+        return 0;
     };
     const applied = advance();
     assert.ok(applied > 0, 'the timeline scrolled');

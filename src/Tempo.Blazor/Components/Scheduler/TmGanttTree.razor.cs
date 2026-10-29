@@ -19,7 +19,8 @@ public partial class TmGanttTree : TmGanttPart
 {
     /// <summary>
     /// What the tree paints. <see cref="TmGantt.DrawVersion"/> moves on every data refresh; <c>Tasks</c> is the
-    /// content fingerprint of the tasks, so a task edited in place is never skipped.
+    /// content fingerprint of the tasks, so a task edited in place is never skipped. The window fields make a
+    /// window shift a render of this part (and a no-move inside the hysteresis a skip).
     /// </summary>
     private readonly record struct TreeState(
         int Version,
@@ -48,7 +49,10 @@ public partial class TmGanttTree : TmGanttPart
         bool Narrow,
         bool Mobile,
         string? HostTreeWidth,
-        bool TimelineHeader);
+        bool TimelineHeader,
+        bool Virtualizing,
+        int WindowStart,
+        int WindowEnd);
 
     /// <inheritdoc />
     protected override object? RenderState => new TreeState(
@@ -58,7 +62,8 @@ public partial class TmGanttTree : TmGanttPart
         Owner.ShowOverdueHighlight, Owner._today, Owner.ActiveBaselineId, Owner._overloadedAssigneeIds.Count,
         Owner.TestIdPrefix, Loc.Culture.Name,
         Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle, Owner.IsNarrowLayout,
-        Owner.IsMobileLayout, Owner.TreeWidth, Owner.ShowTimelineHeader);
+        Owner.IsMobileLayout, Owner.TreeWidth, Owner.ShowTimelineHeader,
+        Owner.VirtualizationActive, Owner.WindowStart, Owner.WindowEnd);
 
     /// <summary>
     /// The header row's classes. With <see cref="TmGantt.ShowTimelineHeader"/> false (the shared portfolio axis renders
@@ -136,9 +141,10 @@ public partial class TmGanttTree : TmGanttPart
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Element references of rows that left the visible set (collapse, filter) would otherwise pile up.
-        var visibleIds = Owner._visibleNodes.Select(n => n.Task.Id).ToHashSet();
-        foreach (var id in _rowRefs.Keys.Where(id => !visibleIds.Contains(id)).ToList()) _rowRefs.Remove(id);
+        // Element references of rows that are no longer painted (collapse, filter, a window that moved past
+        // them) would otherwise pile up: the tree keeps only what the current slice draws.
+        var rendered = Owner.RenderedRowIds;
+        foreach (var id in _rowRefs.Keys.Where(id => !rendered.Contains(id)).ToList()) _rowRefs.Remove(id);
 
         // A key on a row asked the owner to move DOM focus (an arrow key, Escape from a bar): the new tab stop is
         // rendered now, so the element exists and carries tabindex 0. One request is acted on once.
@@ -211,17 +217,25 @@ public partial class TmGanttTree : TmGanttPart
         return string.Join(" ", classes);
     }
 
-    private string GetDragClass(GanttTaskNode node)
+    /// <summary>
+    /// The drag-over classes of a row, plus the window virtualization's pinned-out modifier folded in:
+    /// <paramref name="outOfWindow"/> appends <c>tm-gantt__tree-row--pinned-out</c> (a single space before
+    /// it, never a trailing one), so the default, virtualization-off markup stays byte-identical.
+    /// </summary>
+    private string GetDragClass(GanttTaskNode node, bool outOfWindow)
     {
-        if (Owner._dropTargetId != node.Task.Id || Owner._dropPosition == GanttDropPosition.None)
-            return "";
-        return Owner._dropPosition switch
-        {
-            GanttDropPosition.Before => "tm-gantt__tree-row--drop-before",
-            GanttDropPosition.After => "tm-gantt__tree-row--drop-after",
-            GanttDropPosition.Child => "tm-gantt__tree-row--drop-child",
-            _ => ""
-        };
+        const string pinnedOut = "tm-gantt__tree-row--pinned-out";
+        var drag = Owner._dropTargetId != node.Task.Id || Owner._dropPosition == GanttDropPosition.None
+            ? ""
+            : Owner._dropPosition switch
+            {
+                GanttDropPosition.Before => "tm-gantt__tree-row--drop-before",
+                GanttDropPosition.After => "tm-gantt__tree-row--drop-after",
+                GanttDropPosition.Child => "tm-gantt__tree-row--drop-child",
+                _ => ""
+            };
+        if (!outOfWindow) return drag;
+        return drag.Length == 0 ? pinnedOut : drag + " " + pinnedOut;
     }
 
     private static string GetPriorityIconClass(TmWorkItemPriority priority) => priority switch

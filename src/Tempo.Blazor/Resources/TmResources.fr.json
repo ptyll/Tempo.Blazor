@@ -2830,6 +2830,8 @@
   "TmGantt_MoveUp": "Monter",
   "TmGantt_MoveDown": "Descendre",
   "TmGantt_MovedUp": "Tâche « {0} » déplacée avant « {1} »",
+  "TmGantt_RowPosition": "Ligne {0} sur {1}",
+  "TmGantt_TimelineAxis": "Axe temporel",
   "TmGantt_MovedDown": "Tâche « {0} » déplacée après « {1} »",
   "TmGanttTaskPanel_Tabs": "Sections de la tâche",
   "TmGanttTaskPanel_TabDetail": "Détail",
