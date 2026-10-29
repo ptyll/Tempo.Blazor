@@ -6,9 +6,14 @@ using Tempo.Blazor.Components.Spreadsheet.Models;
 namespace Tempo.Blazor.Components.Spreadsheet;
 
 /// <summary>Tab bar for switching between workbook sheets with add, delete, and rename support.</summary>
-public partial class TmSpreadsheetSheetTabs
+public partial class TmSpreadsheetSheetTabs : IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private readonly string _overflowObserverId = $"tm-spreadsheet-tabs-{Guid.NewGuid():N}";
+    private DotNetObjectReference<TmSpreadsheetSheetTabs>? _overflowDotNetRef;
+    private bool _overflowObserved;
+    private bool _disposed;
 
     private ElementReference _renameInput;
     private ElementReference _scrollRef;
@@ -86,11 +91,62 @@ public partial class TmSpreadsheetSheetTabs
     {
         _contextMenuX = e.ClientX;
         _contextMenuY = e.ClientY;
-        _contextMenuVisible = true;
         _contextMenuSheetIndex = index;
+
+        if (!RenderContextMenu)
+        {
+            // The host owns the menu: it must render it OUTSIDE the layout container (see
+            // SpreadsheetContextMenuRequest — containment would reposition a fixed menu).
+            OnContextMenuRequested.InvokeAsync(new SpreadsheetContextMenuRequest
+            {
+                SheetIndex = index,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY,
+            });
+            return;
+        }
+
+        _contextMenuVisible = true;
     }
 
-    private void CloseContextMenu()
+    /// <summary>
+    /// Whether this component renders its own tab context menu. <see cref="TmSpreadsheet"/> passes
+    /// <c>false</c> and renders it as a sibling of the layout container.
+    /// </summary>
+    [Parameter] public bool RenderContextMenu { get; set; } = true;
+
+    /// <summary>Raised with the gesture when <see cref="RenderContextMenu"/> is <c>false</c>.</summary>
+    [Parameter] public EventCallback<SpreadsheetContextMenuRequest> OnContextMenuRequested { get; set; }
+
+    /// <summary>Starts the inline rename of the sheet at <paramref name="index"/> (the host's context menu action).</summary>
+    public void RequestRename(int index)
+    {
+        if (index < 0 || index >= Sheets.Count)
+        {
+            return;
+        }
+
+        _editingIndex = index;
+        _editName = Sheets[index].Name;
+        _shouldFocusRenameInput = true;
+        CloseContextMenu();
+        StateHasChanged();
+    }
+
+    /// <summary>Raises the delete request for the sheet at <paramref name="index"/> (the host's context menu action).</summary>
+    public void RequestDelete(int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        CloseContextMenu();
+        OnDeleteSheetRequested.InvokeAsync(index);
+    }
+
+    /// <summary>Closes the built-in tab context menu.</summary>
+    public void CloseContextMenu()
     {
         _contextMenuVisible = false;
         _contextMenuSheetIndex = -1;
@@ -175,5 +231,74 @@ public partial class TmSpreadsheetSheetTabs
             _hasOverflow = hasOverflow;
             StateHasChanged();
         }
+
+        // Phase 6: the strip lives in a CONTAINER-sized layout, so its own width can change without any
+        // re-render of this component (the card grows, the container query flips, the host resizes a
+        // column). A ResizeObserver on the scroller is the one signal that covers all of them.
+        if (!_overflowObserved && !_disposed)
+        {
+            _overflowObserved = true;
+            _overflowDotNetRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("tmSpreadsheetSheetTabs.observeOverflow", _scrollRef, _overflowDotNetRef, _overflowObserverId);
+            }
+            catch
+            {
+                // No script (prerender, bUnit): the strip keeps the per-render measurement.
+            }
+        }
+    }
+
+    /// <summary>Called by the shared ResizeObserver when the strip's own width changed.</summary>
+    [JSInvokable]
+    public async Task OnSheetTabsResized()
+    {
+        var hasOverflow = false;
+        try
+        {
+            hasOverflow = await JS.InvokeAsync<bool>("tmSpreadsheetSheetTabs.hasOverflow", _scrollRef);
+        }
+        catch
+        {
+            // A detached scroller: nothing to measure, and nothing to re-render for.
+            return;
+        }
+
+        await InvokeAsync(() =>
+        {
+            if (hasOverflow == _hasOverflow)
+            {
+                return;
+            }
+
+            _hasOverflow = hasOverflow;
+            StateHasChanged();
+        });
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (_overflowObserved)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("tmSpreadsheetSheetTabs.disconnectOverflow", _overflowObserverId);
+            }
+            catch
+            {
+                // The circuit may already be gone with the module.
+            }
+        }
+
+        _overflowDotNetRef?.Dispose();
+        _overflowDotNetRef = null;
     }
 }

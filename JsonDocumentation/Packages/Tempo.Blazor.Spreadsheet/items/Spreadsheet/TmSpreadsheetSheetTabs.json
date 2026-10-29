@@ -70,6 +70,20 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether every tab paints its own × close affordance (default true). With false the clean reference tab look is kept and deleting stays available from the tab's context menu."
+    },
+    {
+      "name": "RenderContextMenu",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether this component renders its own tab context menu. TmSpreadsheet passes false and renders it as a sibling of the layout container."
+    },
+    {
+      "name": "OnContextMenuRequested",
+      "type": "EventCallback<SpreadsheetContextMenuRequest>",
+      "isRequired": false,
+      "default": "null",
+      "description": "Raised with the gesture when RenderContextMenu is false (SheetIndex + client point)."
     }
   ]
 }

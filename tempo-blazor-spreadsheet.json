@@ -1046,6 +1046,84 @@
       ]
     },
     {
+      "itemName": "SpreadsheetContextMenuItem",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Spreadsheet",
+      "description": "One entry of a spreadsheet context menu: a stable kebab-case Id the host dispatches on, the already-localized Label, and the DividerBefore / Danger modifiers. TmSpreadsheetContextMenu renders the same list as the anchored desktop menu and as the phone's bottom sheet.",
+      "packageId": "Tempo.Blazor.Spreadsheet",
+      "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Danger",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Tints the entry as destructive and announces it as such."
+        },
+        {
+          "name": "DividerBefore",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Renders a divider ABOVE this entry."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Stable action id (kebab case, never tm--prefixed). Raised back through the menu's selection callback."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "required string",
+          "description": "The already-localized visible label."
+        }
+      ]
+    },
+    {
+      "itemName": "SpreadsheetContextMenuRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Spreadsheet",
+      "description": "Where a context menu was requested and what it applies to: the gesture's client point plus the cell (Row/Column) or the sheet (SheetIndex). Raised by TmSpreadsheetCanvasGrid / TmSpreadsheetSheetTabs when their RenderContextMenu is false, so the host can render the menu as a SIBLING of the layout container — the container's containment would otherwise reposition the menu's position:fixed surface.",
+      "packageId": "Tempo.Blazor.Spreadsheet",
+      "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuRequest.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ClientX",
+          "kind": "Property",
+          "type": "double",
+          "description": "Client (viewport) X of the gesture that opened the menu."
+        },
+        {
+          "name": "ClientY",
+          "kind": "Property",
+          "type": "double",
+          "description": "Client (viewport) Y of the gesture that opened the menu."
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based column of the cell the menu applies to; -1 for a sheet-tab request."
+        },
+        {
+          "name": "Row",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based row of the cell the menu applies to; -1 for a sheet-tab request."
+        },
+        {
+          "name": "SheetIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based index of the sheet the menu applies to; -1 for a grid request."
+        }
+      ]
+    },
+    {
       "itemName": "SpreadsheetFormulaEditSession",
       "kind": "Class",
       "category": "Components",
@@ -1610,6 +1688,13 @@
           "description": "Pre-populates the spreadsheet with an existing workbook on first render. Subsequent parameter changes are ignored — read the Workbook property to get the current state after editing."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout, which is what a host that already knows its surface (and a test without a DOM) does."
+        },
+        {
           "name": "Mode",
           "type": "SpreadsheetMode",
           "isRequired": false,
@@ -1823,6 +1908,13 @@
           "description": "When true the grid is displayed in read-only mode: cell editing, context menu, and editing-related callbacks are disabled."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The responsive layout of the hosting spreadsheet. Auto resolves from the app-level viewport scope (a bare grid); TmSpreadsheet passes its own resolved container layout, so the grid's context menu is a bottom sheet exactly when the spreadsheet is a phone."
+        },
+        {
           "name": "OnBoldToggleRequested",
           "type": "EventCallback",
           "isRequired": false,
@@ -1863,6 +1955,13 @@
           "type": "EventCallback<(int ColIndex, double Width)>",
           "isRequired": false,
           "description": "Called when a column is resized."
+        },
+        {
+          "name": "OnContextMenuRequested",
+          "type": "EventCallback<SpreadsheetContextMenuRequest>",
+          "isRequired": false,
+          "description": "Raised with the gesture when RenderContextMenu is false: the host owns the menu. The cell under the gesture has already become active.",
+          "default": "null"
         },
         {
           "name": "OnCopyRequested",
@@ -2039,6 +2138,13 @@
           "description": "Called when the zoom should change by one step (+1 to zoom in, -1 to zoom out)."
         },
         {
+          "name": "RenderContextMenu",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether this component renders the cell context menu itself. TmSpreadsheet passes false and renders the menu as a sibling of its layout container (a position:fixed menu inside the container would be positioned against the card). A standalone grid at a phone width must pass false too and render its own sheet."
+        },
+        {
           "name": "RootDomId",
           "type": "string?",
           "isRequired": false,
@@ -2071,6 +2177,65 @@
           "description": "The zoom factor applied to the grid geometry and fonts (1.0 = 100%)."
         }
       ]
+    },
+    {
+      "itemName": "TmSpreadsheetContextMenu",
+      "kind": "Component",
+      "category": "Spreadsheet",
+      "namespace": "Tempo.Blazor.Components.Spreadsheet",
+      "description": "The spreadsheet's context menu surface. It must be rendered as a SIBLING of the layout container: the container is container-type: inline-size (implied contain: layout), which makes it the containing block of a position:fixed menu, and a menu inside the scrolling grid would be clipped. On the mobile layout it is the core TmDrawer bottom sheet (modal: backdrop + focus trap, Escape closes it, 44px menuitem rows in the sans face); on desktop/tablet the anchored menu at the gesture's client point.",
+      "packageId": "Tempo.Blazor.Spreadsheet",
+      "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetContextMenu.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Spreadsheet"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra CSS class for the anchored desktop menu."
+        },
+        {
+          "name": "IsMobile",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the phone presentation (the core drawer sheet) is used."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<SpreadsheetContextMenuItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The entries, in render order."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the menu should close (outside click, Escape, backdrop, the sheet's close)."
+        },
+        {
+          "name": "OnSelect",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the selected entry's Id."
+        },
+        {
+          "name": "Request",
+          "type": "SpreadsheetContextMenuRequest",
+          "isRequired": true,
+          "description": "The gesture that opened the menu (client point plus the cell or sheet it applies to)."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the menu and the sheet's title."
+        }
+      ],
+      "examples": []
     },
     {
       "itemName": "TmSpreadsheetCustomFilterDialog",
@@ -2202,6 +2367,13 @@
           "isRequired": true,
           "description": "The active auto-filter.",
           "editorRequired": true
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout."
         },
         {
           "name": "OnApply",
@@ -2781,6 +2953,13 @@
           "description": "Called when a new sheet should be added."
         },
         {
+          "name": "OnContextMenuRequested",
+          "type": "EventCallback<SpreadsheetContextMenuRequest>",
+          "isRequired": false,
+          "description": "Raised with the gesture when RenderContextMenu is false (SheetIndex + client point).",
+          "default": "null"
+        },
+        {
           "name": "OnDeleteSheetRequested",
           "type": "EventCallback<int>",
           "isRequired": false,
@@ -2797,6 +2976,13 @@
           "type": "EventCallback<int>",
           "isRequired": false,
           "description": "Called when a tab is clicked in formula-point mode to switch the displayed sheet for ref selection."
+        },
+        {
+          "name": "RenderContextMenu",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether this component renders its own tab context menu. TmSpreadsheet passes false and renders it as a sibling of the layout container."
         },
         {
           "name": "Sheets",
@@ -3090,6 +3276,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the current selection is underlined."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the ribbon renders in. Auto resolves from the app-level viewport scope (a standalone toolbar); TmSpreadsheet always passes its own resolved CONTAINER layout. Desktop keeps the tab strip, tablet renders two compact rows and mobile a single one (rounded through the core TmToolbar Overflow=Menu)."
         },
         {
           "name": "OnAlignChanged",
@@ -3563,11 +3756,11 @@
     }
   ],
   "summary": {
-    "itemCount": 77,
-    "manualItemCount": 77,
-    "generatedItemCount": 76,
+    "itemCount": 80,
+    "manualItemCount": 80,
+    "generatedItemCount": 79,
     "generatedOnlyItemCount": 0,
-    "componentCount": 20,
-    "publicApiTypeCount": 56
+    "componentCount": 21,
+    "publicApiTypeCount": 58
   }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Format;
 using Tempo.Blazor.Components.Spreadsheet.Formula;
@@ -131,6 +132,34 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
     /// <summary>When true the grid is displayed in read-only mode: cell editing, context menu, and editing-related callbacks are disabled.</summary>
     [Parameter] public bool IsReadonly { get; set; }
+
+    /// <summary>
+    /// The responsive layout of the hosting spreadsheet. <see cref="TmSpreadsheet"/> always passes its own
+    /// resolved CONTAINER layout. STANDALONE use: <see cref="TmLayoutMode.Auto"/> falls back to the app-level
+    /// VIEWPORT scope (desktop when the host provides none), because a bare grid has no parent container to
+    /// measure — pass the layout explicitly when the grid lives in a narrow column, and pass
+    /// <see cref="RenderContextMenu"/>="false" so the menu can be rendered outside the layout container.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout — only read when <see cref="LayoutMode"/> is <see cref="TmLayoutMode.Auto"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether this component renders the cell context menu itself. The default keeps a STANDALONE grid working
+    /// (the anchored menu on a fine pointer). <see cref="TmSpreadsheet"/> passes <c>false</c> and renders the menu
+    /// (and the mobile sheet) as a SIBLING of its layout container: the container is a
+    /// <c>container-type: inline-size</c> box, which makes it the containing block of the menu's
+    /// <c>position: fixed</c> surface, and a menu rendered inside the scrolling grid is clipped as well.
+    /// A standalone grid at a phone width must pass <c>false</c> too and render its own sheet.
+    /// </summary>
+    [Parameter] public bool RenderContextMenu { get; set; } = true;
+
+    /// <summary>
+    /// Raised with the gesture when <see cref="RenderContextMenu"/> is <c>false</c>: the host owns the menu. The
+    /// cell (or column header) under the gesture has already become active, so the host's commands act on it.
+    /// </summary>
+    [Parameter] public EventCallback<SpreadsheetContextMenuRequest> OnContextMenuRequested { get; set; }
 
     /// <summary>Called when the active cell changes.</summary>
     [Parameter] public EventCallback<string?> ActiveCellChanged { get; set; }
@@ -1224,6 +1253,19 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _contextMenuColIndex = Math.Max(0, col);
         _contextMenuX = clientX;
         _contextMenuY = clientY;
+
+        if (!RenderContextMenu)
+        {
+            // The host renders the menu outside the container; the gesture has already set the active cell.
+            return InvokeAsync(() => OnContextMenuRequested.InvokeAsync(new SpreadsheetContextMenuRequest
+            {
+                Row = _contextMenuRowIndex,
+                Column = _contextMenuColIndex,
+                ClientX = clientX,
+                ClientY = clientY,
+            }));
+        }
+
         _contextMenuVisible = true;
         _needsRender = true;
         return InvokeAsync(StateHasChanged);
@@ -1934,7 +1976,8 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _showRowHeightDialog = true;
     }
 
-    private void CloseContextMenu() => _contextMenuVisible = false;
+    /// <summary>Closes the built-in context menu (a host that owns the menu does not need it).</summary>
+    public void CloseContextMenu() => _contextMenuVisible = false;
 
     private void ApplyColWidth()
     {

@@ -5898,5 +5898,21 @@
   "TmSpreadsheet_DeleteCells": "Odstrániť",
   "TmSpreadsheet_DeleteOptions": "Možnosti odstránenia",
   "TmSpreadsheet_TextColorPicker": "Výber farby textu",
-  "TmSpreadsheet_BackgroundColorPicker": "Výber farby výplne"
+  "TmSpreadsheet_BackgroundColorPicker": "Výber farby výplne",
+  "TmSpreadsheet_Group_Advanced": "Pokročilé",
+  "TmSpreadsheet_Group_Sheet": "List",
+  "TmSpreadsheet_Group_Zoom": "Zväčšenie",
+  "TmSpreadsheet_Status_Summary": "Súhrn",
+  "TmSpreadsheet_CompactRow_Primary": "Základné príkazy",
+  "TmSpreadsheet_CompactRow_Formatting": "Príkazy formátovania",
+  "TmSpreadsheet_CompactMore": "Ďalšie",
+  "TmSpreadsheet_Color_None": "Bez farby",
+  "TmSpreadsheet_Mobile_Insert": "Vložiť",
+  "TmSpreadsheet_Mobile_Format": "Formát",
+  "TmSpreadsheet_Mobile_AriaLabel": "Akcie tabuľky",
+  "TmSpreadsheet_Align": "Zarovnanie",
+  "TmSpreadsheet_Mobile_Image": "Obrázok",
+  "TmSpreadsheet_Group_Custom": "Vlastné",
+  "TmSpreadsheet_CellMenu": "Ponuka bunky",
+  "TmSpreadsheet_SheetMenu": "Ponuka listu"
 }

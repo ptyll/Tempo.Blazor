@@ -3,23 +3,41 @@
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Dialogs
 
-<div class="tm-spreadsheet @(Mode == SpreadsheetMode.Full ? "tm-spreadsheet--workspace" : "tm-spreadsheet--chrome-flat") @Class"
-     style="width: @(Width ?? "100%"); height: @(Height ?? "600px");"
+<div class="tm-spreadsheet @(Mode == SpreadsheetMode.Full ? "tm-spreadsheet--workspace" : "tm-spreadsheet--chrome-flat") tm-spreadsheet--layout-@(LayoutName) @Class"
+     style="width: @EffectiveWidth; height: @EffectiveHeight;"
+     data-layout="@LayoutName"
      data-formula-point-mode="@(HostFormulaPointMode ? "true" : null)"
      data-formula-guard-active="@(_formulaReferencePickingGuardActive ? "true" : "false")"
      data-formula-argument-separator="@FormulaArgumentSeparator"
      data-formula-decimal-separator="@FormulaDecimalSeparator"
      data-formula-culture="@FormulaCultureName"
      @attributes="AdditionalAttributes">
+    @* The layout is measured from the spreadsheet's OWN container (never the viewport). The OBSERVER's root
+       (`div.tm-spreadsheet__layout`, a NEW wrapper element inside the component root) is the named
+       container-query surface `tm-spreadsheet` — NOT the component root: container-type implies
+       `contain: layout`, and that would trap every position:fixed overlay (dialogs, sheets, the context
+       menus) inside the card. LayoutContent reconciles the mode at RENDER time, so a page that mounts inside a
+       narrow container flips on its first frame instead of waiting for the observer's first callback. *@
+    <TmLayoutObserver LayoutMode="LayoutMode"
+                      InitialMode="TmLayoutMode.Desktop"
+                      ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                      IsContainer="false"
+                      Class="tm-spreadsheet__layout">
+        <LayoutContent Context="lay">
+            @{
+                ApplyLayout(lay.Resolved);
+            }
     @if (Mode == SpreadsheetMode.Full)
     {
-    @if (ShowHeader)
+    @if (ShowHeader && !IsMobileLayout)
     {
-        @* Document header (opt-in, G9/SP3). The title and both host slots are additive; the built-in
-           Open / Download actions render only for a host that listens to OnOpen / OnDownload, and the
-           "Show grid lines" switch is the core TmToggle driving the active sheet. The app-shell
-           elements of the reference ("Saved", hamburger, overflow menu, document switcher) are the
-           host's HeaderStart / HeaderActions content, never built in. *@
+        @* Document header (opt-in, G9/SP3). On the mobile layout the COMPACT header below replaces it (a
+           phone cannot hold the file actions and the grid switch), so the two are mutually exclusive: a
+           host that sets ShowHeader="true" gets exactly ONE header at every width. The title and both host
+           slots are additive; the built-in Open / Download actions render only for a host that listens to
+           OnOpen / OnDownload, and the "Show grid lines" switch is the core TmToggle driving the active
+           sheet. The app-shell elements of the reference ("Saved", hamburger, overflow menu, document
+           switcher) are the host's HeaderStart / HeaderActions content, never built in. *@
         <header class="tm-spreadsheet__header" data-testid="tm-spreadsheet-header">
             <div class="tm-spreadsheet__header-start">
                 @HeaderStart
@@ -79,7 +97,28 @@
         </header>
     }
 
-    <TmSpreadsheetToolbar CanUndo="CanUndo"
+    @if (IsMobileLayout && HasMobileHeaderContent)
+    {
+        @* G2 mobile chrome: a compact header instead of the document header — the title and the host slots.
+           It renders ONLY when the host actually gives it content: an empty 50px row above a phone grid is
+           worse than no row at all, and the undo/redo pair therefore leads the mobile FORMATTING row
+           (SpreadsheetToolbarLayout) so their availability never depends on the header. *@
+        <header class="tm-spreadsheet__mobile-header" data-testid="tm-spreadsheet-mobile-header">
+            <div class="tm-spreadsheet__mobile-header-start">
+                @HeaderStart
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <span class="tm-spreadsheet__mobile-title">@Title</span>
+                }
+            </div>
+            <div class="tm-spreadsheet__mobile-header-actions">
+                @HeaderActions
+            </div>
+        </header>
+    }
+
+    <TmSpreadsheetToolbar LayoutMode="@DialogLayout"
+                          CanUndo="CanUndo"
                           CanRedo="CanRedo"
                           SelectedFontFamily="@ToolbarFontFamily"
                           SelectedFontSize="@ToolbarFontSize"
@@ -170,11 +209,14 @@
     }
 
         <TmSpreadsheetCanvasGrid @ref="_grid"
+                                 RenderContextMenu="false"
+                                 OnContextMenuRequested="OpenGridContextMenu"
                                  RootDomId="@GridRootDomId"
                                  Sheet="_workbook.ActiveSheet"
                                  RowHeight="RowHeight"
                                  ColumnWidth="ColumnWidth"
-                                 Density="Density"
+                                 Density="EffectiveDensity"
+                                 LayoutMode="@DialogLayout"
                                  Zoom="Zoom"
                                  IsReadonly="@(Mode == SpreadsheetMode.Embedded)"
                                  ExternalFormulaSessionActive="@(IsFormulaBarPointSessionActive || _formulaReferencePickingGuardActive || (_formulaOriginSheetIndex >= 0 && _formulaOriginCellRef is not null))"
@@ -222,7 +264,10 @@
                                  FilterButtonClicked="OnFilterButtonClicked"
                                  ValidationDropButtonClicked="OnValidationDropButtonClicked" />
 
-    <TmSpreadsheetSheetTabs Sheets="_workbook.Sheets"
+    <TmSpreadsheetSheetTabs @ref="_sheetTabs"
+                            RenderContextMenu="false"
+                            OnContextMenuRequested="OpenSheetTabContextMenu"
+                            Sheets="_workbook.Sheets"
                             ActiveIndex="_workbook.ActiveSheetIndex"
                             IsReadonly="@(Mode == SpreadsheetMode.Embedded)"
                             IsFormulaPointMode="@(_grid?.IsInFormulaPointMode == true)"
@@ -232,13 +277,100 @@
                             OnDeleteSheetRequested="DeleteSheet"
                             OnRenameSheetRequested="RenameSheet" />
 
-    <TmSpreadsheetStatusBar Aggregation="StatusAggregation"
-                            Zoom="Zoom"
-                            OnZoomChanged="OnZoomChanged" />
+    @if (IsMobileLayout)
+    {
+        @* The phone chrome has no status bar: the zoom controls AND the aggregations move into the
+           action bar's "More" menu (see BuildMobileActions). *@
+        @if (Mode == SpreadsheetMode.Full)
+        {
+            @* An EMBEDDED (read-only) spreadsheet at phone width is viewing only: no action bar. *@
+            <TmMobileActionBar Items="BuildMobileActions()"
+                               LayoutMode="TmLayoutMode.Mobile"
+                               MaxVisible="3"
+                               AriaLabel="@Loc["TmSpreadsheet_Mobile_AriaLabel"]"
+                               Class="@MobileBarClass" />
+        }
+    }
+    else
+    {
+        <TmSpreadsheetStatusBar Aggregation="StatusAggregation"
+                                Zoom="Zoom"
+                                OnZoomChanged="OnZoomChanged" />
+    }
 
+        </LayoutContent>
+    </TmLayoutObserver>
+
+    @* The two context menus are SIBLINGS of the layout container for the same reason the dialogs are: their
+       surface is position:fixed, and the container's `container-type: inline-size` implies `contain: layout`,
+       which would make it the containing block of that surface (the menu would be positioned against the
+       card instead of the viewport). The phone chrome renders them as the core TmDrawer sheet with real
+       role=menuitem buttons; the desktop/tablet chrome as the anchored menu at the gesture's client point. *@
+    @if (_gridContextMenu is { } gridRequest)
+    {
+        <TmSpreadsheetContextMenu Request="gridRequest"
+                                  Items="GridContextMenuItems"
+                                  Title="@Loc["TmSpreadsheet_CellMenu"]"
+                                  IsMobile="IsMobileLayout"
+                                  OnSelect="OnGridContextMenuSelect"
+                                  OnClose="CloseGridContextMenu" />
+    }
+
+    @if (_showResizeDialog)
+    {
+        @* Host-owned resize dialog: a TmModal surface (position: fixed) must be a SIBLING of the layout
+           container, exactly like the other dialogs. It edits the MODEL size and applies through the same
+           resize path the canvas drag uses. *@
+        <TmModal Show="true"
+                 Title="@ResizeDialogTitle"
+                 Size="ModalSize.Small"
+                 MobilePresentation="MobilePresentation.Auto"
+                 FooterLayout="FooterLayout.Inline"
+                 CloseOnEscape="true"
+                 CloseOnOverlayClick="true"
+                 InitialFocusTargetId="@ResizeInputDomId"
+                 RestoreFocusTargetId="@GridRootDomId"
+                 Class="tm-spreadsheet-resize-dialog"
+                 OnClose="CloseResizeDialog">
+            <ChildContent>
+                <input class="tm-spreadsheet-resize-dialog__input"
+                       id="@ResizeInputDomId"
+                       type="number"
+                       min="@(_resizeTarget == SpreadsheetResizeTarget.Column ? 16 : 8)"
+                       max="@(_resizeTarget == SpreadsheetResizeTarget.Column ? 1000 : 500)"
+                       aria-label="@ResizeDialogTitle"
+                       value="@_resizeInputValue"
+                       @oninput="e => _resizeInputValue = e.Value?.ToString() ?? _resizeInputValue"
+                       @onkeydown="OnResizeInputKeyDownAsync" />
+            </ChildContent>
+            <Footer>
+                <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                        @onclick="CloseResizeDialog">@Loc["Tm_Cancel"]</button>
+                <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                        @onclick="ApplyResizeDialogAsync">@Loc["Tm_Apply"]</button>
+            </Footer>
+        </TmModal>
+    }
+
+    @if (_sheetTabContextMenu is { } tabRequest)
+    {
+        <TmSpreadsheetContextMenu Request="tabRequest"
+                                  Items="SheetTabContextMenuItems"
+                                  Title="@Loc["TmSpreadsheet_SheetMenu"]"
+                                  IsMobile="IsMobileLayout"
+                                  Class="tm-spreadsheet-sheet-tabs__context-menu"
+                                  OnSelect="OnSheetTabContextMenuSelect"
+                                  OnClose="CloseSheetTabContextMenu" />
+    }
+
+    @* Every overlay/dialog is a SIBLING of the layout container: `container-type: inline-size` on the
+       container is `contain: layout`, which would make it the containing block of the dialogs'
+       position:fixed surfaces and trap them inside the card. They read the resolved layout from
+       DialogLayout (a field), never from the cascade. *@
     @if (_showFindReplace)
     {
-        <TmSpreadsheetFindReplaceDialog InitialOptions="_searchOptions"
+        <TmSpreadsheetFindReplaceDialog LayoutMode="@DialogLayout"
+                                        InitialOptions="_searchOptions"
                                         MatchIndex="SearchMatchIndex"
                                         MatchCount="SearchMatchCount"
                                         OnSearchRequested="OnSearchRequested"
@@ -300,6 +432,7 @@
             Sheet="_workbook.ActiveSheet"
             Filter="filterDef"
             ColumnIndex="filterCol"
+            LayoutMode="@DialogLayout"
             X="_filterDropdownX"
             Y="_filterDropdownY"
             OnSortAscending="SortColumnAscending"
@@ -407,5 +540,6 @@
                 <TmIcon Name="close" />
             </button>
         </div>
-    }
+    
+}
 </div>

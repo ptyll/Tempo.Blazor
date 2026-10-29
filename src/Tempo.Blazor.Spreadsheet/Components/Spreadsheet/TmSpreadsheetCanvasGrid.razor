@@ -52,38 +52,17 @@ else
 
         @if (_contextMenuVisible && !IsReadonly)
         {
-            <div class="tm-spreadsheet-context-menu"
-                 style="left:@(_contextMenuX)px;top:@(_contextMenuY)px;"
-                 @onclick:stopPropagation
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation
-                 @oncontextmenu:preventDefault
-                 @oncontextmenu:stopPropagation>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFormatCells">@Loc["TmSpreadsheet_FormatCells"]</div>
-                <div class="tm-spreadsheet-context-menu__divider"></div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCopy">@Loc["TmSpreadsheet_Copy"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCut">@Loc["TmSpreadsheet_Cut"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuPaste">@Loc["TmSpreadsheet_Paste"]</div>
-                <div class="tm-spreadsheet-context-menu__divider"></div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertRow">@Loc["TmSpreadsheet_InsertRow"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteRow">@Loc["TmSpreadsheet_DeleteRow"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertColumn">@Loc["TmSpreadsheet_InsertColumn"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteColumn">@Loc["TmSpreadsheet_DeleteColumn"]</div>
-                <div class="tm-spreadsheet-context-menu__divider"></div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuSetColumnWidth">@Loc["TmSpreadsheet_SetColumnWidth"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuSetRowHeight">@Loc["TmSpreadsheet_SetRowHeight"]</div>
-                <div class="tm-spreadsheet-context-menu__divider"></div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearFormatting">@Loc["TmSpreadsheet_ClearFormatting"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearContent">@Loc["TmSpreadsheet_ClearContent"]</div>
-                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearAll">@Loc["TmSpreadsheet_ClearAll"]</div>
-            </div>
+            @* Standalone use on a fine pointer. TmSpreadsheet passes RenderContextMenu="false" and renders the
+               menu (and the phone's sheet) as a sibling of its layout container — see
+               SpreadsheetContextMenuRequest for why a position:fixed menu may not live in here. *@
+            @ContextMenuItems(isSheet: false)
         }
 
-        @* The two resize dialogs are dialogs of the package too, so they ride the same core frame as
-           the other twelve surfaces (phase 3, G6): TmModal owns the overlay, the card, the dialog role,
-           the initial focus, Escape and the focus restore to the grid. The package keeps the input's
-           and the buttons' class hooks (the published tests key off them) and the numeric bounds. *@
-        @if (_showColWidthDialog)
+        @* STANDALONE-ONLY resize dialogs. TmSpreadsheet passes RenderContextMenu="false" and renders them as
+           siblings of its layout container: they are TmModal surfaces (position: fixed) and the container's
+           containment would place them against the card. The package keeps the input's and the buttons' class
+           hooks (the published tests key off them) and the numeric bounds. *@
+        @if (RenderContextMenu && _showColWidthDialog)
         {
             <TmModal Show="true"
                      Title="@Loc["TmSpreadsheet_SetColumnWidth"]"
@@ -114,7 +93,7 @@ else
             </TmModal>
         }
 
-        @if (_showRowHeightDialog)
+        @if (RenderContextMenu && _showRowHeightDialog)
         {
             <TmModal Show="true"
                      Title="@Loc["TmSpreadsheet_SetRowHeight"]"
@@ -145,4 +124,47 @@ else
             </TmModal>
         }
     </div>
+}
+
+@code {
+    /// <summary>Whether the grid presents its overlays as sheets (a phone-width container).</summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Tablet or TmLayoutMode.Desktop => false,
+        _ => Viewport?.IsMobile == true,
+    };
+
+    /// <summary>
+    /// The context menu's one item list for both presentations (the anchored menu and the mobile sheet), so a
+    /// new command cannot land in only one of them.
+    /// </summary>
+    private RenderFragment ContextMenuItems(bool isSheet) => @<text>
+        <div class="tm-spreadsheet-context-menu @(isSheet ? "tm-spreadsheet-context-menu--sheet" : null)"
+             role="menu"
+             style="@(isSheet ? null : $"left:{_contextMenuX}px;top:{_contextMenuY}px;")"
+             @onclick:stopPropagation
+             @onmousedown:stopPropagation
+             @onpointerdown:stopPropagation
+             @oncontextmenu:preventDefault
+             @oncontextmenu:stopPropagation>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFormatCells">@Loc["TmSpreadsheet_FormatCells"]</div>
+                <div class="tm-spreadsheet-context-menu__divider"></div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCopy">@Loc["TmSpreadsheet_Copy"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCut">@Loc["TmSpreadsheet_Cut"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuPaste">@Loc["TmSpreadsheet_Paste"]</div>
+                <div class="tm-spreadsheet-context-menu__divider"></div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertRow">@Loc["TmSpreadsheet_InsertRow"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteRow">@Loc["TmSpreadsheet_DeleteRow"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertColumn">@Loc["TmSpreadsheet_InsertColumn"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteColumn">@Loc["TmSpreadsheet_DeleteColumn"]</div>
+                <div class="tm-spreadsheet-context-menu__divider"></div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuSetColumnWidth">@Loc["TmSpreadsheet_SetColumnWidth"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuSetRowHeight">@Loc["TmSpreadsheet_SetRowHeight"]</div>
+                <div class="tm-spreadsheet-context-menu__divider"></div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearFormatting">@Loc["TmSpreadsheet_ClearFormatting"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearContent">@Loc["TmSpreadsheet_ClearContent"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearAll">@Loc["TmSpreadsheet_ClearAll"]</div>
+        </div>
+    </text>;
 }

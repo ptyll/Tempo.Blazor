@@ -1,5 +1,6 @@
 @page "/spreadsheet"
 @inject IJSRuntime JS
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Spreadsheet
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Models
@@ -238,6 +239,37 @@
                            RowsCount="20"
                            ColumnsCount="12"
                            Height="430px" />
+        </div>
+    </div>
+</section>
+
+<!-- Responsive chrome (redesign phase 6): the mode follows the CONTAINER, never the viewport -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Responsive Chrome</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Container queries</span>
+    </div>
+
+    <div class="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl mb-4">
+        <p class="text-sm text-emerald-800 dark:text-emerald-200">
+            The layout comes from the width of the spreadsheet's OWN container (<code>container-type: inline-size</code>
+            plus the core <code>TmLayoutObserver</code>), never from the viewport — a phone-width block inside this
+            wide page is a phone. The two boxes below are 420px and 760px wide inside a 1440px page:
+            <code>LayoutMode="Auto"</code> renders the mobile chrome in the first one and the tablet chrome in the
+            second. <code>LayoutMode</code> pins a mode for a host that already knows its surface, and the desktop
+            chrome is unchanged (the tab strip of phase 5).
+        </p>
+    </div>
+
+    <div class="flex flex-wrap items-start gap-4">
+        <div style="width: 420px" data-testid="spreadsheet-responsive-mobile">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="8" />
+        </div>
+        <div style="width: 760px" data-testid="spreadsheet-responsive-tablet">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="10" />
+        </div>
+        <div style="width: 420px" data-testid="spreadsheet-responsive-pinned">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="8" LayoutMode="TmLayoutMode.Desktop" />
         </div>
     </div>
 </section>

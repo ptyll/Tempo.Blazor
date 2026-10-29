@@ -5866,5 +5866,21 @@
   "TmSpreadsheet_DeleteCells": "Supprimer",
   "TmSpreadsheet_DeleteOptions": "Options de suppression",
   "TmSpreadsheet_TextColorPicker": "Sélecteur de couleur du texte",
-  "TmSpreadsheet_BackgroundColorPicker": "Sélecteur de couleur de remplissage"
+  "TmSpreadsheet_BackgroundColorPicker": "Sélecteur de couleur de remplissage",
+  "TmSpreadsheet_Group_Advanced": "Avancé",
+  "TmSpreadsheet_Group_Sheet": "Feuille",
+  "TmSpreadsheet_Group_Zoom": "Zoom",
+  "TmSpreadsheet_Status_Summary": "Résumé",
+  "TmSpreadsheet_CompactRow_Primary": "Commandes principales",
+  "TmSpreadsheet_CompactRow_Formatting": "Commandes de mise en forme",
+  "TmSpreadsheet_CompactMore": "Plus",
+  "TmSpreadsheet_Color_None": "Sans couleur",
+  "TmSpreadsheet_Mobile_Insert": "Insérer",
+  "TmSpreadsheet_Mobile_Format": "Format",
+  "TmSpreadsheet_Mobile_AriaLabel": "Actions du tableur",
+  "TmSpreadsheet_Align": "Alignement",
+  "TmSpreadsheet_Mobile_Image": "Image",
+  "TmSpreadsheet_Group_Custom": "Personnalisé",
+  "TmSpreadsheet_CellMenu": "Menu de la cellule",
+  "TmSpreadsheet_SheetMenu": "Menu de la feuille"
 }

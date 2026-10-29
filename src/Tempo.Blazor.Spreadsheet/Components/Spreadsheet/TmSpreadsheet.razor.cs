@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using System.Globalization;
 using Tempo.Blazor.Components.Spreadsheet.Commands;
 using Tempo.Blazor.Components.Spreadsheet.Data;
@@ -160,6 +161,14 @@ public partial class TmSpreadsheet
     /// their values, so a touch-friendly grid round-trips its workbook byte-identically.
     /// </remarks>
     [Parameter] public SpreadsheetDensity Density { get; set; } = SpreadsheetDensity.Auto;
+
+    /// <summary>
+    /// The responsive layout. <see cref="TmLayoutMode.Auto"/> (default) classifies the spreadsheet's OWN
+    /// container width — never the viewport, because the spreadsheet is embedded in a Notion block or a
+    /// modal that can be a phone-width column inside a wide page. Any other value pins the layout, which
+    /// is what a host that already knows its surface (and a test without a DOM) does.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Additional CSS classes to apply to the root element.</summary>
     [Parameter] public string? Class { get; set; }

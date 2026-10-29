@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 
@@ -25,6 +26,16 @@ public partial class TmSpreadsheetFilterDropdown
 
     /// <summary>The zero-based column index this dropdown filters.</summary>
     [Parameter] public int ColumnIndex { get; set; }
+
+    /// <summary>
+    /// The responsive layout of the hosting spreadsheet. <see cref="TmLayoutMode.Auto"/> resolves from the
+    /// app-level VIEWPORT scope; <see cref="TmSpreadsheet"/> passes its own resolved container layout, so a
+    /// phone-width embed gets the sheet even on a wide page.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout — only read when <see cref="LayoutMode"/> is <see cref="TmLayoutMode.Auto"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     /// <summary>The culture used to format and compare values.</summary>
     [Parameter] public CultureInfo? Culture { get; set; }

@@ -12,6 +12,83 @@
 
 ### Breaking / Migration
 
+- **Spreadsheet redesign (phase 6): the chrome is responsive to the CONTAINER, not the viewport, and the phone layout is viewing plus basic editing (G2).** `TmSpreadsheet` now renders through the core `TmLayoutObserver` and classifies the width of its OWN box — the root is a named inline-size query container (`container-type: inline-size; container-name: tm-spreadsheet`) — so a 390px Notion block or modal inside a 1440px page is a phone. The four `@media (max-width: 768px)` blocks of the package (`_spreadsheet.css`, `TmSpreadsheetFormulaBar.razor.css`, `TmSpreadsheetSheetTabs.razor.css`) are gone; every responsive rule is now a `@container tm-spreadsheet (width < 640px)` range query whose literal is a `TmBreakpoints` value (`TmBreakpointsTests`). New parameter `LayoutMode` (`TmLayoutMode`, default `Auto`) pins the mode for a host that already knows its surface and for tests; `Auto` is the desktop chrome until the first measurement, so static SSR is unchanged.
+
+  | Surface | Desktop | Tablet (640–1023px of container — `TmLayoutBreakpoints.Default`) | Mobile (<640px of container) |
+  |---|---|---|---|
+  | Ribbon | phase-5 tab strip (`Home`/`Insert`/`Data`/`View`/`File`) | TWO compact rows over the core `TmToolbar Overflow=Menu`; **no tab strip**; row 1 = open/undo/redo/clipboard/Format Cells/image/link + "More" (advanced data tools + the workbook download live there), row 2 = font, size, B/I/U, colours, alignment, number format, %, 000, decimals, borders, Filter, Sort | ONE basic-formatting row (undo/redo, B/I/U, ONE Align dropdown, number format, %, colours + "More") |
+  | Header | `ShowHeader` document header (opt-in) | same | compact header: `Title` + undo/redo + `HeaderStart`/`HeaderActions`; the document header (file actions, grid switch) does not render |
+  | Status bar | present | present | **absent** — the zoom controls and the aggregations move into the action bar's "More" menu (grouped `zoom` / `summary`, the summary rows are inert information) |
+  | Bottom bar | — | — | core `TmMobileActionBar`: Insert / Format / Insert image + "More" (sheet, data, zoom, summary groups) |
+  | Height | `Height` (600px default) | `Height` | **`100%`** (SP3) with a `--tm-spreadsheet-mobile-min-height` (32rem) floor and a `100dvh` ceiling |
+  | Grid density | `Density` | `Density` | `Density=Auto` resolves to `Comfortable` |
+
+  The mobile height cap is not cosmetic: `height: 100%` inside an auto-height parent resolves to `auto`, and the canvas grid's size spacer is the whole scrollable sheet, so an uncapped mobile spreadsheet grew to thousands of pixels in a normal document flow (found in the phase's own screenshot review). `max-height: 100dvh` keeps the grid scrolling inside the component, like the reference's phone app.
+
+  **New DOM wrapper (breaking for positional CSS).** The component root `.tm-spreadsheet` now contains a
+  `div.tm-spreadsheet__layout` (the core layout observer's root) and everything the chrome renders sits inside
+  it; every overlay — the 14 dialogs, the sheets, the filter dropdown, both context menus — is a SIBLING of
+  that wrapper inside the root. A host selector that assumed direct children (`.tm-spreadsheet > .tm-spreadsheet-toolbar`)
+  must become a descendant selector:
+
+  ```css
+  /* before */
+  .tm-spreadsheet > .tm-spreadsheet-toolbar { /* host override */ }
+  /* after */
+  .tm-spreadsheet .tm-spreadsheet-toolbar { /* host override */ }
+  ```
+
+  **The compact chrome's hooks.** The tablet/mobile rows keep the frozen `data-tm-group` contract (each run of
+  commands is a core `TmToolbarGroup` with `data-tm-group` = one of `clipboard | font | alignment | number |
+  cells | insert | data | view | file | custom`) and add `data-toolbar-layout="tablet|mobile"` on the toolbar,
+  `data-toolbar-row="primary|formatting"` on each row and `data-command-id="…"` on every command (the selects,
+  the colour splits and the border split included). `data-tm-tab` does NOT exist in the compact chrome — there
+  is no tab strip below the desktop breakpoint, so a spec/host that keyed off `data-tm-tab` must key off
+  `data-tm-group`/`data-command-id` (or pin `LayoutMode="TmLayoutMode.Desktop"`). `CustomTools` render one
+  `data-tm-group="custom"` entry per tool on the compact rows: reachable from the row's "More" on a tablet
+  (their `Tab` is irrelevant there — there are no tabs) and only from More on a phone (G2).
+
+  Removed/renamed behaviour: `.tm-spreadsheet-find` keeps its flows, but the Find & Replace panel, the header filter dropdown and the grid context menu now present as a **sheet whenever the CONTAINER is a phone** (they follow the layout the host resolved, not the viewport — new `LayoutMode` parameters on `TmSpreadsheetFindReplaceDialog`, `TmSpreadsheetFilterDropdown`, `TmSpreadsheetCanvasGrid`). The filter dropdown's mobile sheet has 44px rows and a sticky Cancel / OK bar; the grid context menu is a `TmDrawer` sheet (`tm-spreadsheet-context-sheet`).
+
+  ```razor
+  <!-- before: the layout followed the viewport; a narrow embed inside a wide page kept the desktop chrome -->
+  <div style="width:390px"><TmSpreadsheet @bind-Data="@bytes" /></div>
+
+  <!-- after: the container decides; a host (or a test) can still pin it -->
+  <div style="width:390px"><TmSpreadsheet Data="@bytes" /></div>
+  <TmSpreadsheet Data="@bytes" LayoutMode="TmLayoutMode.Desktop" />
+  ```
+
+  ```html
+  <!-- before: viewport query, mode invisible in the DOM -->
+  @media (max-width: 768px) { .tm-spreadsheet-toolbar__button { width: 24px; } }
+
+  <!-- after: container query on the named container + the resolved mode as attributes -->
+  <div class="tm-spreadsheet tm-spreadsheet--layout-mobile" data-layout="mobile">
+  @container tm-spreadsheet (width < 640px) { … }
+  ```
+
+  **Review round (same phase).** The two context menus are now RENDERED BY THE HOST
+  (`TmSpreadsheetContextMenu`, a sibling of the layout container): `TmSpreadsheetCanvasGrid` and
+  `TmSpreadsheetSheetTabs` gained `RenderContextMenu`/`OnContextMenuRequested` and the grid two public entry
+  points (`OpenColumnWidthDialog`, `OpenRowHeightDialog`), because a `position: fixed` menu inside the
+  container is positioned against the card and one inside the scrolling grid is clipped. The phone's cell
+  menu is a MODAL core drawer sheet (backdrop, focus trap, Escape, 44px `role="menuitem"` rows in the sans
+  face, focus back to the grid) and while any sheet owns the phone layout the sticky action bar is removed
+  (`tm-spreadsheet__mobile-bar--suppressed`) so it cannot cover the sheet's footer — the same fix made the
+  filter sheet modal and bounded (`height: 100%` of the drawer, value list scrolls, sticky Cancel / OK) after
+  its footer was measured below the fold. `ShowHeader="true"` no longer renders TWO headers on a phone: the
+  document header is desktop/tablet only and the compact header renders ONLY when the host gives it content
+  (undo/redo lead the mobile formatting row instead of an empty 50px row). The compact rows keep the frozen
+  `data-tm-group` contract (a core `TmToolbarGroup` per run) and render `CustomTools` as
+  `data-tm-group="custom"` entries. The mobile Format Cells hides the Border tab. `SpreadsheetToolbarLayout`
+  and its three types are now `internal` (no public API commitment). The new public surface is
+  `RenderContextMenu` + `OnContextMenuRequested` on the grid and the sheet tabs, and
+  `SpreadsheetContextMenuRequest`; `TmSpreadsheetContextMenu`/`SpreadsheetContextMenuItem` are public only
+  because a Razor component cannot be `internal` — both are `[EditorBrowsable(Never)]` (implementation detail).
+
+  What is NOT offered below the tablet breakpoint (G2 — full editing starts at the tablet): Text to Columns, Remove Duplicates, Data Validation (and the invalid-data circles), the Name Manager, Paste Special, the Format Painter, the cell-border picker (including the **Borders tab of Format Cells**, which the dialog hides on the phone layout), Merge cells, the thousands separator and the workbook Open / Download. Those commands are absent from the mobile model, so the core toolbar cannot re-offer them in "More". A host that needs one on a phone passes `LayoutMode="TmLayoutMode.Tablet"` (or keeps its own button outside the spreadsheet).
+
 - **Spreadsheet redesign (phase 5): the ribbon is a grouped tabbed ribbon, the document header is opt-in and every toolbar glyph is an icon.** `TmSpreadsheetToolbar` now renders one tab strip (`Home`, `Insert`, `Data`, `View` and the compatibility `File` tab) above a row of named groups — `tm-spreadsheet-toolbar__group` with a visible `tm-spreadsheet-toolbar__group-label` (Clipboard, Font with the cell-border picker, Alignment, Number, Cells, Insert, Data, View, File) — whose commands are either **large** (`__button--large`, icon above the label: Undo, Redo, Paste, Insert row/column, Delete, Insert link/image) or **small** (`__button--small/--text`, e.g. Cut, Copy, the Data-tab text buttons). Every Unicode glyph is gone (`←|`, `|→`, `.0→`, `.00→`, `☐ ⊞ ▣ ◼ ▬ ▰ ═ ⊟ ▭ ▏ ▕ ⚙ ▾`): the standard marks are lucide `TmIcon`s and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG set (`SpreadsheetIcons`, `tm-ss-border-*`, `tm-ss-align-*`, `tm-ss-decimal-*`). Existing selectors survive: `.tm-spreadsheet-toolbar__tab`, `__button`, `__button--text`, `__select` and every command `title` (Filter, Sort ascending, Custom sort…, Remove duplicates, Text to columns, Paste special, Data validation..., Name Manager, …).
 
   ```razor

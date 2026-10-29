@@ -195,14 +195,19 @@ public abstract class PlaywrightTestBase
     /// Creates a new browser context for a test. The context is automatically
     /// closed in <see cref="BaseTestCleanup"/> after the test finishes.
     /// </summary>
-    protected async Task<IBrowserContext> CreateContextAsync()
+    /// <param name="hasTouch">
+    /// Emulates a coarse pointer (<c>(any-pointer: coarse)</c>). The responsive-chrome specs need it: the
+    /// 44px touch targets are a coarse-pointer rule, and a desktop-pointer context can never see them.
+    /// </param>
+    protected async Task<IBrowserContext> CreateContextAsync(bool hasTouch = false)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
             Locale = "en-US",
             IgnoreHTTPSErrors = true,
-            AcceptDownloads = true
+            AcceptDownloads = true,
+            HasTouch = hasTouch
         });
         if (ShouldCollectTraceOnFailure())
         {
@@ -225,9 +230,10 @@ public abstract class PlaywrightTestBase
     /// <summary>
     /// Creates a new page and navigates to the base URL.
     /// </summary>
-    protected async Task<IPage> CreatePageAsync()
+    /// <param name="hasTouch">Emulates a coarse pointer; see <see cref="CreateContextAsync"/>.</param>
+    protected async Task<IPage> CreatePageAsync(bool hasTouch = false)
     {
-        var context = await CreateContextAsync();
+        var context = await CreateContextAsync(hasTouch);
         var page = await context.NewPageAsync();
         await GotoAppReadyAsync(page, BaseUrl);
         return page;

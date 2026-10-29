@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.Models;
@@ -73,6 +74,18 @@ public partial class TmSpreadsheetToolbar
     /// Open / Download actions) pass <c>false</c>.
     /// </summary>
     [Parameter] public bool ShowFileTab { get; set; } = true;
+
+    /// <summary>
+    /// The layout the ribbon renders in. <see cref="TmLayoutMode.Auto"/> resolves from the app-level
+    /// VIEWPORT scope (the standalone toolbar case); the hosting <see cref="TmSpreadsheet"/> always passes
+    /// its own resolved container layout, so an embedded spreadsheet follows its container, never the page.
+    /// Desktop keeps the phase-5 tab strip; tablet renders two compact rows and mobile a single one
+    /// (see <see cref="SpreadsheetToolbarLayout"/>).
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout — only read when <see cref="LayoutMode"/> is <see cref="TmLayoutMode.Auto"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     /// <summary>Whether undo is available.</summary>
     [Parameter] public bool CanUndo { get; set; }

@@ -32,7 +32,8 @@ public partial class TmNotionSpreadsheetEditModal : ComponentBase
         ["Mode"] = SpreadsheetMode.Full,
         ["Height"] = "calc(100vh - 120px)",
         ["Width"] = "100%",
-        ["Class"] = "tm-notion-spreadsheet-edit-modal__editor"
+        // NO LayoutMode: the editor resolves its own container (the modal is a fullscreen surface, so it is
+        // a phone at 390 and a tablet/desktop at 1024+). Pinning it here would break the container contract.
     };
 
     // ── Lifecycle ────────────────────────────────────────────────────────────

@@ -1,4 +1,6 @@
 using Bunit;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Spreadsheet.Models;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -26,6 +28,26 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
                 EventCallback.Factory.Create<SpreadsheetCellStyle>(this, s => onApply?.Invoke(s)))
             .Add(c => c.OnClose,
                 EventCallback.Factory.Create(this, () => onClose?.Invoke())));
+
+    [Fact]
+    public void FormatCells_Mobile_HidesTheBorderTab()
+    {
+        // Review round, G2: Border editing (like the ribbon's border picker and the merge toggle) is NOT part
+        // of the phone's basic set — full editing starts at the tablet.
+        var mobile = Render<TmSpreadsheetFormatCellsDialog>(p => p
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
+            .Add(c => c.Style, new SpreadsheetCellStyle()));
+
+        var mobileTabs = mobile.FindAll(".tm-fcd__tab").Select(t => t.TextContent.Trim()).ToArray();
+        mobileTabs.Should().NotContain("Borders");
+        mobileTabs.Should().Contain("Number");
+
+        var desktop = Render<TmSpreadsheetFormatCellsDialog>(p => p
+            .Add(c => c.LayoutMode, TmLayoutMode.Desktop)
+            .Add(c => c.Style, new SpreadsheetCellStyle()));
+        desktop.FindAll(".tm-fcd__tab").Select(t => t.TextContent.Trim())
+            .Should().Contain("Borders", "the desktop keeps the full tab set");
+    }
 
     [Fact]
     public void CtrlEnter_OnApplyButton_AppliesExactlyOnce()

@@ -154,6 +154,13 @@
       "type": "EventCallback<SpreadsheetCustomTool>",
       "isRequired": false,
       "description": "Called when a custom ribbon tool is clicked."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout."
     }
   ],
   "cssClasses": [

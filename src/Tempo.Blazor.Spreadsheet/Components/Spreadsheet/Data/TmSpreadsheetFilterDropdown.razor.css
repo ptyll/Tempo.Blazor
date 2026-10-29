@@ -113,3 +113,48 @@
     padding-top: var(--tm-space-2);
     border-top: 1px solid var(--tm-color-border-subtle);
 }
+
+/* ── Responsive chrome (phase 6) ────────────────────────────────────────────────────────────────
+   Desktop/tablet: the anchored popover is clamped into the viewport on BOTH axes, so a header cell near
+   the right or the bottom edge can never push it off the page. Mobile: the panel is the content of the
+   core TmDrawer bottom sheet — static, full width, 44px rows and a sticky Cancel / OK bar. */
+
+.tm-spreadsheet-filter-dropdown {
+    max-width: calc(100vw - var(--tm-space-4));
+}
+
+.tm-spreadsheet-filter-host .tm-spreadsheet-filter-dropdown--sheet {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* The DRAWER owns the height (its snap point); the panel fills it and the value list is the only
+       scrolling box. A viewport-relative max-height here let the panel grow taller than the sheet, which put
+       the sticky Cancel / OK bar below the fold — the review finding. */
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    max-width: none;
+    overflow: hidden;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.tm-spreadsheet-filter-dropdown--sheet .tm-spreadsheet-filter-dropdown__item {
+    min-height: var(--tm-touch-target);
+}
+
+.tm-spreadsheet-filter-dropdown--sheet .tm-spreadsheet-filter-dropdown__list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.tm-spreadsheet-filter-dropdown__actions--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--tm-color-surface);
+    border-top: 1px solid var(--tm-color-border);
+}

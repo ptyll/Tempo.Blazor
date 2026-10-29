@@ -78,10 +78,12 @@ public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
         var cut = Render<TmSpreadsheet>(p => p.Add(c => c.InitialWorkbook, workbook));
         var grid = cut.FindComponent<TmSpreadsheetCanvasGrid>();
 
-        // The only path a user has: the grid's context menu entry.
+        // The only path a user has: the grid's context menu entry. The menu is rendered by the HOST
+        // (TmSpreadsheet) as a sibling of its layout container — the grid only reports the gesture, because a
+        // position:fixed menu inside the container would be positioned against the card.
         await cut.InvokeAsync(() => grid.Instance.OnCanvasContextMenu(4, 4, 10, 10));
-        grid.Render();
-        grid.FindAll(".tm-spreadsheet-context-menu__item")
+        cut.Render();
+        cut.FindAll(".tm-spreadsheet-context-menu__item")
             .First(item => item.TextContent.Contains(label, StringComparison.Ordinal))
             .Click();
 

@@ -29,3 +29,70 @@
     border-radius: var(--tm-radius-md);
     box-shadow: var(--tm-shadow-lg);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   Compact ribbon — tablet (two rows) and mobile (one row), redesign phase 6
+
+   The rows ARE the core TmToolbar (Overflow=Menu): the chrome here only spaces them and keeps the
+   package's 44px coarse-pointer targets. A command that does not fit leaves its row for the toolbar's
+   own "More" menu, so nothing here may set a fixed row height or hide overflow.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-spreadsheet-toolbar--compact {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-color-surface);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-spreadsheet-compact-toolbar__row {
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+/* The selects and the colour/border splits are core TmToolbarItems: the wrapper is the measured item,
+   so it must not grow and must align with the button rows. */
+.tm-spreadsheet-compact-toolbar__item {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet-compact-toolbar__color {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.tm-spreadsheet-compact-toolbar__command {
+    flex: 0 0 auto;
+}
+
+/* A TmSelect renders the host Class on its own wrapper; the width is the item's business. */
+.tm-spreadsheet-compact-toolbar__select {
+    width: 100%;
+    min-width: 4.75rem;
+}
+
+.tm-spreadsheet-compact-toolbar__item .tm-select {
+    height: 28px;
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-compact-toolbar__item .tm-select-arrow {
+    height: 28px;
+}
+
+/* The compact colour control reuses the ribbon's icon buttons; it must not inherit the ribbon's
+   fixed 26px box, which is below the coarse-pointer target. */
+.tm-spreadsheet-compact-toolbar__color .tm-spreadsheet-toolbar__button {
+    height: 28px;
+}
+
+/* An all-OverflowOnly group keeps only hidden measurement markers on the row: it must not paint a box (the
+   phone's formatting row showed an empty cell at its end for exactly this reason). */
+.tm-spreadsheet-compact-toolbar__group--overflow {
+    display: contents;
+}

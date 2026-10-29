@@ -17,6 +17,10 @@
                title="@Loc["TmSpreadsheet_CellReference"]"
                aria-label="@Loc["TmSpreadsheet_CellReference"]"
                value="@_nameBoxValue"
+               aria-haspopup="@(HasNamedRanges ? "listbox" : null)"
+               aria-expanded="@(HasNamedRanges ? (_isRefListOpen ? "true" : "false") : null)"
+               aria-controls="@(HasNamedRanges && _isRefListOpen ? RefListId : null)"
+               aria-activedescendant="@(HasNamedRanges && _isRefListOpen && _activeRefIndex >= 0 ? RefItemId(_activeRefIndex) : null)"
                @oninput="OnNameBoxInput"
                @onkeydown="HandleNameBoxKeyDown"
                @onblur="OnNameBoxBlur" />
@@ -40,14 +44,19 @@
                  aria-hidden="true"
                  @onclick="CloseNamedRangeList"></div>
             <div class="tm-spreadsheet-formula-bar__ref-list"
+                 id="@RefListId"
                  role="listbox"
                  aria-label="@Loc["TmSpreadsheet_NamedRanges"]">
-                @foreach (var range in NamedRanges!)
+                @for (var index = 0; index < NamedRanges!.Count; index++)
                 {
+                    var i = index;
+                    var range = NamedRanges[i];
                     <button type="button"
-                            class="tm-spreadsheet-formula-bar__ref-item"
+                            id="@RefItemId(i)"
+                            class="tm-spreadsheet-formula-bar__ref-item @(_activeRefIndex == i ? "tm-spreadsheet-formula-bar__ref-item--active" : null)"
                             role="option"
-                            aria-selected="false"
+                            aria-selected="@(_activeRefIndex == i ? "true" : "false")"
+                            tabindex="-1"
                             @onmousedown:preventDefault
                             @onclick="() => SelectNamedRangeAsync(range)">
                         @range.Name

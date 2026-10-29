@@ -307,29 +307,49 @@ public partial class SpreadsheetE2ETests
     [TestCategory("WASM")]
     public async Task Phase5_NarrowDesktop1280_RibbonScrollsWithoutOverflowingThePage()
     {
+        // Redesign phase 6 moved the layout decision from the VIEWPORT to the CONTAINER
+        // (TmLayoutBreakpoints.Default: mobile <640, tablet 640-1023, desktop >=1024), so a 1280-wide page
+        // whose content column is ~910px is the TABLET chrome. The intent of this spec is unchanged — the
+        // chrome must never push the page wide — so it is asserted on BOTH sides of the breakpoint.
         var page = await OpenPhase5RibbonDemoAsync(1280, 860);
         var component = DemoComponent(page);
 
         var pageWidth = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
         var viewportWidth = await page.EvaluateAsync<int>("() => window.innerWidth");
         Assert.IsTrue(pageWidth <= viewportWidth + 1,
-            $"the ribbon must not overflow the page at 1280 (scrollWidth {pageWidth} vs viewport {viewportWidth})");
+            $"the chrome must not overflow the page at 1280 (scrollWidth {pageWidth} vs viewport {viewportWidth})");
+        Assert.AreEqual("tablet", await component.Locator(".tm-spreadsheet").First.GetAttributeAsync("data-layout"),
+            "a ~910px container inside a 1280 viewport is the tablet chrome");
+        Assert.AreEqual(0, await component.Locator(".tm-spreadsheet-toolbar__tabs").CountAsync(),
+            "the tablet chrome has no ribbon tab strip");
+        Assert.AreEqual(2, await component.Locator("[data-toolbar-row]").CountAsync(),
+            "the tablet chrome is the two compact rows");
+        await ShotPhase5Async(page, "ribbon-home--narrow-1280");
+        await page.CloseAsync();
 
-        var tabContent = component.Locator(".tm-spreadsheet-toolbar__tab-content");
+        // The desktop ribbon (a >=1024px container) still may not push the page wide; it scrolls inside
+        // its own row when the group set is wider than the container.
+        var wide = await OpenPhase5RibbonDemoAsync(1440, 900);
+        var wideComponent = DemoComponent(wide);
+        var widePageWidth = await wide.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
+        var wideViewportWidth = await wide.EvaluateAsync<int>("() => window.innerWidth");
+        Assert.IsTrue(widePageWidth <= wideViewportWidth + 1,
+            $"the desktop ribbon must not overflow the page (scrollWidth {widePageWidth} vs viewport {wideViewportWidth})");
+
+        var tabContent = wideComponent.Locator(".tm-spreadsheet-toolbar__tab-content").First;
         var box = await tabContent.BoundingBoxAsync();
         Assert.IsNotNull(box);
-        Assert.IsTrue(box.X + box.Width <= viewportWidth + 1,
+        Assert.IsTrue(box.X + box.Width <= wideViewportWidth + 1,
             $"the ribbon row ends inside the viewport (right edge {box.X + box.Width})");
 
-        // The row itself may scroll horizontally rather than push the page wide.
         var rowOverflow = await tabContent.EvaluateAsync<bool>("el => el.scrollWidth > el.clientWidth + 1");
         if (rowOverflow)
         {
-            Assert.AreEqual("auto", await tabContent.EvaluateAsync<string>("el => getComputedStyle(el).overflowX"));
+            Assert.AreEqual("auto", await tabContent.EvaluateAsync<string>("el => getComputedStyle(el).overflowX"),
+                "a ribbon row wider than its container scrolls inside itself");
         }
 
-        await ShotPhase5Async(page, "ribbon-home--narrow-1280");
-        await page.CloseAsync();
+        await wide.CloseAsync();
     }
 
     [TestMethod]
@@ -469,9 +489,13 @@ public partial class SpreadsheetE2ETests
         var tabsBefore = await component.Locator(".tm-spreadsheet-sheet-tab").CountAsync();
         Assert.AreEqual(2, tabsBefore, "the added sheet renders");
         await component.Locator(".tm-spreadsheet-sheet-tab").Last.ClickAsync(new LocatorClickOptions { Button = MouseButton.Right });
+        // Review round: the tab menu is rendered by the HOST (TmSpreadsheetContextMenu, a sibling of the
+        // layout container) so its fixed surface is viewport-anchored; the entries are the shared
+        // role=menuitem buttons. The class hook is kept for host/CSS compatibility.
         var contextMenu = component.Locator(".tm-spreadsheet-sheet-tabs__context-menu");
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5_000 });
-        await contextMenu.Locator(".tm-spreadsheet-sheet-tabs__context-item", new() { HasTextString = "Delete" })
+        await contextMenu.Locator(".tm-spreadsheet-context-menu__item, .tm-spreadsheet-sheet-tabs__context-item",
+                new() { HasTextString = "Delete" })
             .First.DispatchEventAsync("click");
         await page.WaitForTimeoutAsync(400);
 

@@ -41,6 +41,9 @@
     --tm-spreadsheet-menu-max-height: 20rem;
     --tm-spreadsheet-menu-padding-block: var(--tm-space-1);
     --tm-spreadsheet-menu-padding-inline: 0;
+    /* The floor of the mobile layout's `height: 100%` (SP3): a host whose own height is auto would
+       otherwise collapse the grid to zero. */
+    --tm-spreadsheet-mobile-min-height: 32rem;
 
     display: flex;
     flex-direction: column;
@@ -897,7 +900,9 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+/* The query container is `.tm-spreadsheet` (a NAMED container), so these rules follow the CONTAINER
+   width, not the viewport: the same 640px threshold as TmBreakpoints.Sm, in range syntax. */
+@container tm-spreadsheet (width < 640px) {
     .tm-spreadsheet-grid {
         font-size: var(--tm-font-size-xs);
     }
@@ -905,7 +910,6 @@
     .tm-spreadsheet-header-cell {
         font-size: var(--tm-font-size-xs);
     }
-
 }
 
 /* ── Formula-point mode ── */
@@ -1470,6 +1474,7 @@
   .tm-spreadsheet-context-menu__item,
   .tm-spreadsheet-corner,
   .tm-spreadsheet-find__btn,
+  .tm-spreadsheet__mobile-header-action,
   .tm-spreadsheet-formula-bar__display,
   .tm-spreadsheet-formula-bar__input,
   .tm-spreadsheet-formula-bar__ref,
@@ -1488,4 +1493,225 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   Responsive chrome (redesign phase 6)
+
+   The layout is the CONTAINER's, never the viewport's: the root is a named inline-size query container
+   (`.tm-spreadsheet`, `container-name: tm-spreadsheet`) and the core TmLayoutObserver renders the same
+   resolved mode as `data-layout` / `tm-spreadsheet--layout-*`. The desktop keeps the phase-5 tab strip,
+   the tablet renders two compact rows, the mobile is the G2 chrome (compact header, one basic row, sheet
+   tabs above the action bar, no status bar).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* The observer's own root is the flex column the chrome lives in; the package root keeps the padding and
+   the workspace card. `min-height: 0` is what lets the grid scroll inside it.
+   It is ALSO the query container: the spreadsheet measures its own box, never the viewport (a phone-width
+   Notion block or modal inside a wide page is a phone). The containment deliberately sits HERE and not on
+   `.tm-spreadsheet` — `container-type: inline-size` implies `contain: layout`, which would make the root the
+   containing block of the dialogs' position:fixed surfaces and trap every dialog and sheet inside the card,
+   so the overlays are siblings of this container. All package @container rules query `tm-spreadsheet`, and
+   the widths come from TmBreakpoints (TmBreakpointsTests). */
+.tm-spreadsheet__layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    container-type: inline-size;
+    container-name: tm-spreadsheet;
+}
+
+.tm-spreadsheet--workspace .tm-spreadsheet__layout {
+    gap: var(--tm-space-2);
+}
+
+/* SP3: the phone layout fills its container. `min-height` is the floor that keeps a host with no height on
+   the chain (an auto-height demo card) from collapsing the grid to zero, and `max-height` is the CEILING
+   that keeps `height: 100%` from resolving to `auto` inside an auto-height parent: the canvas grid's size
+   spacer is the whole scrollable sheet (200 rows), so an unbounded mobile grid grew to thousands of pixels
+   inside a normal document flow. With the cap the grid scrolls inside the component, exactly like the
+   reference's phone app. */
+.tm-spreadsheet--layout-mobile {
+    min-height: var(--tm-spreadsheet-mobile-min-height);
+    max-height: 100dvh;
+}
+
+.tm-spreadsheet--layout-mobile.tm-spreadsheet--workspace {
+    padding: 0;
+    gap: 0;
+}
+
+/* ── Mobile compact header (title + undo/redo + host actions) ── */
+.tm-spreadsheet__mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-spreadsheet__mobile-header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-spreadsheet__mobile-title {
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-spreadsheet__mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet__mobile-header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+    transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-spreadsheet__mobile-header-action:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet__mobile-header-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tm-spreadsheet__mobile-header-action:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Mobile action bar ──
+   The bar rides the core TmMobileActionBar (F5); the package only removes the workspace card so it reads
+   as a bottom bar, and keeps it out of the grid's scroll box. */
+.tm-spreadsheet--layout-mobile .tm-spreadsheet__mobile-bar {
+    flex: 0 0 auto;
+    background: var(--tm-color-surface);
+    border-top: 1px solid var(--tm-color-border);
+}
+
+/* ── Grid context menu: mobile sheet ── */
+.tm-spreadsheet-context-sheet .tm-spreadsheet-context-menu--sheet {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 60dvh;
+    overflow-y: auto;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.tm-spreadsheet-context-menu--sheet .tm-spreadsheet-context-menu__item {
+    min-height: var(--tm-touch-target);
+    display: flex;
+    align-items: center;
+    padding-inline: var(--tm-space-3);
+}
+
+/* ── Coarse pointer: 44px targets on the compact chrome ── */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-compact-toolbar__row .tm-toolbar-btn,
+    .tm-spreadsheet-compact-toolbar__item {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-spreadsheet-compact-toolbar__color .tm-spreadsheet-toolbar__button {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
+}
+
+/* ── Coarse pointer: the 44px floor on the chrome's own controls (phase 6) ─────────────────────
+   The compact ribbon's buttons are handled above; these are the controls OUTSIDE a toolbar: the
+   formula bar's ✓ / ✗ pair, the sheet-tab scroll arrows and the zoom buttons. They stay compact for a
+   fine pointer (a 26px control is correct there) and grow only where a finger is the input. */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-formula-bar__btn,
+    .tm-spreadsheet-formula-bar__ref-toggle,
+    .tm-spreadsheet-sheet-tabs__scroll-button,
+    .tm-spreadsheet-sheet-tabs__add,
+    .tm-spreadsheet-statusbar__zoom-btn,
+    .tm-spreadsheet-statusbar__zoom-percent {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Context menu surfaces (rendered by TmSpreadsheetContextMenu, a sibling of the layout container) ──
+   The menu is position:fixed and lives outside the query container, so its coordinates are the gesture's
+   client point. The entries are real buttons (role=menuitem) — the phone sheet needs the 44px rows and the
+   desktop menu needs a full-width hit area. */
+.tm-spreadsheet-context-menu__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--tm-z-dropdown) - 1);
+    background: transparent;
+}
+
+.tm-spreadsheet-context-menu__item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2rem;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: none;
+    background: none;
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
+    text-align: start;
+    cursor: pointer;
+    transition: background var(--tm-transition-fast);
+}
+
+.tm-spreadsheet-context-menu__item:hover,
+.tm-spreadsheet-context-menu__item:focus-visible {
+    background: var(--tm-color-primary-subtle);
+    outline: none;
+}
+
+.tm-spreadsheet-context-menu__item--danger {
+    color: var(--tm-color-danger);
+}
+
+/* The phone sheet's rows are touch-sized and use the sans face, never the grid's mono font. */
+.tm-spreadsheet-context-menu--sheet .tm-spreadsheet-context-menu__item {
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+}
+
+/* While a sheet owns the phone layout the sticky action bar is removed: it has a higher stacking order than
+   the drawer and would cover the sheet's footer (its Cancel / OK bar). */
+.tm-spreadsheet__mobile-bar--suppressed {
+    display: none;
 }

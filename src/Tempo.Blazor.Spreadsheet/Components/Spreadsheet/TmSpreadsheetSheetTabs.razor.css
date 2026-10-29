@@ -177,7 +177,7 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@container tm-spreadsheet (width < 640px) {
     .tm-spreadsheet-sheet-tab {
         padding: 2px 6px;
         font-size: var(--tm-font-size-xs);

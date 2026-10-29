@@ -305,6 +305,74 @@ public class TmSpreadsheetFormulaBarTests : LocalizationTestBase
     }
 
     [Fact]
+    public void FormulaBar_NameBox_ArrowKeys_MoveTheActiveRange_AndEnterNavigates()
+    {
+        // Redesign phase 6: the named-range list is a keyboard listbox. ArrowDown on the name box OPENS it
+        // (the Excel gesture) and the arrows then move the active option while the input keeps the focus —
+        // the input owns the selection, so aria-activedescendant points at the highlighted option and Enter
+        // navigates to it instead of re-parsing the typed text.
+        var ranges = new List<SpreadsheetNamedRange>
+        {
+            new() { Name = "TaxRate", RefersTo = "=Sheet1!$B$2", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Total", RefersTo = "=Sheet1!$B$10", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Vat", RefersTo = "=Sheet1!$B$11", Scope = NamedRangeScope.Workbook },
+        };
+        string? navigated = null;
+
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test")
+            .Add(p => p.NamedRanges, ranges)
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, v => navigated = v)));
+
+        var input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Count.Should().Be(3, "ArrowDown opens the list");
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        input.GetAttribute("aria-expanded").Should().Be("true");
+        var activeId = input.GetAttribute("aria-activedescendant");
+        activeId.Should().NotBeNullOrEmpty();
+        cut.Find($"[id='{activeId}']").TextContent.Trim().Should().Be("TaxRate", "the first option is active");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("Total");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").GetAttribute("aria-selected")
+            .Should().Be("true", "only the active option is selected");
+
+        // Wrapping: one more step from the last option returns to the first.
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("Vat");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Render();
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("TaxRate");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        navigated.Should().Be("TaxRate", "Enter accepts the highlighted range, not the typed text");
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_ArrowKeys_WithoutNamedRanges_DoNothing()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
     public void FormulaBar_NameBox_NoNamedRanges_KeepsTheLegacyInput()
     {
         var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters

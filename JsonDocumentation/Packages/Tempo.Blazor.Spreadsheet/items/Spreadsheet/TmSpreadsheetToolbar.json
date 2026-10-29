@@ -447,6 +447,13 @@
       "type": "EventCallback<string?>",
       "isRequired": false,
       "description": "Called with \"top\", \"middle\" or \"bottom\" when a vertical alignment button in the Alignment group is clicked."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the ribbon renders in. Auto resolves from the app-level viewport scope (a standalone toolbar); TmSpreadsheet always passes its own resolved CONTAINER layout. Desktop keeps the tab strip, tablet renders two compact rows and mobile a single one (rounded through the core TmToolbar Overflow=Menu)."
     }
   ]
 }

@@ -14,7 +14,16 @@
    Dropdowns (text/fill colour, cell borders, the Delete split) render through the core
    TmOverlayPanel: it puts them in the browser top layer, so the ribbon row's own overflow can never
    clip them, and it owns placement, outside-pointer dismissal and Escape. *@
-<div class="tm-spreadsheet-toolbar">
+<div class="tm-spreadsheet-toolbar @(IsCompact ? "tm-spreadsheet-toolbar--compact" : null)"
+     data-toolbar-layout="@LayoutName">
+@if (IsCompact)
+{
+    @* Tablet (two rows) and mobile (one row): the reference's command sets over the core overflow
+       toolbar. No tab strip — the whole point of the compact chrome is that the tabs are gone. *@
+    @RenderCompactRows
+}
+else
+{
     <div class="tm-spreadsheet-toolbar__tabs"
          role="tablist"
          aria-label="@Loc["TmSpreadsheet_ToolbarLabel"]"
@@ -595,6 +604,7 @@
             @RenderCustomTools("File")
         </div>
     }
+}
 
     @* Menus live outside the ribbon row's scroll box: the core TmOverlayPanel moves them to the browser
        top layer, so no ancestor overflow can clip them. *@
@@ -724,4 +734,242 @@
             }
         </text>;
     }
+
+    /// <summary>
+    /// The compact rows: one core <c>TmToolbar Overflow=Menu</c> per row, so a command that does not fit
+    /// leaves the row for "More" (the measurement lives in the core toolbar, never here).
+    /// </summary>
+    private RenderFragment RenderCompactRows => @<text>
+        @foreach (var row in CompactRows)
+        {
+            <TmToolbar Overflow="ToolbarOverflow.Menu"
+                       Labels="@(ResolvedLayout == TmLayoutMode.Mobile || row.Id != "primary" ? ToolbarLabels.Icons : ToolbarLabels.IconsWithText)"
+                       AriaLabel="@Loc[row.LabelKey]"
+                       OverflowLabel="@Loc["TmSpreadsheet_CompactMore"]"
+                       OverflowPresentation="PanelPresentation.Auto"
+                       Class="tm-spreadsheet-compact-toolbar__row"
+                       data-toolbar-row="@row.Id">
+                @foreach (var group in CompactGroups(row))
+                {
+                    <TmToolbarGroup Label="@Loc[group.LabelKey]"
+                                    data-tm-group="@group.Id"
+                                    Class="@(group.IsOverflowOnly ? "tm-spreadsheet-compact-toolbar__group--overflow" : null)">
+                        @foreach (var command in group.Commands)
+                        {
+                            @RenderCompactCommand(command)
+                        }
+                    </TmToolbarGroup>
+                }
+                @if (row.Id == "primary")
+                {
+                    @RenderCompactCustomTools
+                }
+            </TmToolbar>
+        }
+    </text>;
+
+    /// <summary>
+    /// The row's commands grouped by their frozen <c>data-tm-group</c> id, in the order the groups first appear
+    /// (a core <c>TmToolbarGroup</c> per id, Label = the group's localized name) so the tablet/mobile chrome
+    /// keeps the SAME contract the ribbon's groups carry — a host or a spec never has to care which layout is
+    /// rendering.
+    /// </summary>
+    private IReadOnlyList<CompactToolbarGroupModel> CompactGroups(SpreadsheetToolbarRow row)
+    {
+        var groups = new List<CompactToolbarGroupModel>();
+        foreach (var command in row.Commands)
+        {
+            var id = command.GroupId ?? "custom";
+            var existing = groups.FirstOrDefault(g => g.Id == id);
+            if (existing is null)
+            {
+                groups.Add(new CompactToolbarGroupModel(id, command.GroupLabelKey ?? command.LabelKey, new List<SpreadsheetToolbarCommand> { command }));
+            }
+            else
+            {
+                existing.Commands.Add(command);
+            }
+        }
+
+        return groups;
+    }
+
+    /// <summary>
+    /// One row's <c>data-tm-group</c> run: the frozen group id, its label key and its commands.
+    /// <see cref="IsOverflowOnly"/> marks a run whose every command lives in "More" — its wrapper must not paint
+    /// an empty box on the row (that was the stray empty cell at the end of the phone's formatting row).
+    /// </summary>
+    private sealed record CompactToolbarGroupModel(string Id, string LabelKey, List<SpreadsheetToolbarCommand> Commands)
+    {
+        public bool IsOverflowOnly => Commands.All(command => command.Priority == ToolbarButtonPriority.OverflowOnly);
+    }
+
+    /// <summary>
+    /// The host's custom ribbon tools on the compact rows: each becomes its own <c>data-tm-group="custom"</c>
+    /// item so it is reachable on a tablet through the row's "More" (its Tab is irrelevant there — the compact
+    /// chrome has no tabs), and on a phone only through More (G2 keeps the bar for the basic set).
+    /// </summary>
+    private RenderFragment RenderCompactCustomTools => @<text>
+        @foreach (var tool in CompactCustomTools)
+        {
+            <TmToolbarGroup Label="@Loc["TmSpreadsheet_Group_Custom"]" data-tm-group="custom">
+                <TmToolbarButton Icon="@(string.IsNullOrEmpty(tool.IconName) ? "link" : tool.IconName)"
+                                 Text="@tool.Title"
+                                 Tooltip="@tool.Title"
+                                 Priority="@(ResolvedLayout == TmLayoutMode.Mobile ? ToolbarButtonPriority.OverflowOnly : ToolbarButtonPriority.Secondary)"
+                                 LabelPosition="ToolbarLabelPosition.Hidden"
+                                 Class="tm-spreadsheet-compact-toolbar__command"
+                                 data-tool-id="@tool.Id"
+                                 OnClick="() => OnCustomToolClick.InvokeAsync(tool)" />
+            </TmToolbarGroup>
+        }
+    </text>;
+
+    /// <summary>The host's custom tools offered by the compact chrome (every tab — there are no tabs there).</summary>
+    private IReadOnlyList<SpreadsheetCustomTool> CompactCustomTools => CustomTools is null
+        ? Array.Empty<SpreadsheetCustomTool>()
+        : CustomTools.OrderBy(tool => tool.Order).ToArray();
+
+    /// <summary>
+    /// One compact command. A button/toggle is the core <c>TmToolbarButton</c>; a select, a colour split and
+    /// the border split are core <c>TmToolbarItem</c>s, so each keeps a "More" representation instead of
+    /// disappearing on a narrow row. Every command carries <c>data-command-id</c>, the host/E2E contract.
+    /// </summary>
+    private RenderFragment RenderCompactCommand(SpreadsheetToolbarCommand command)
+    {
+        if (command.Kind == SpreadsheetToolbarCommandKind.Select)
+        {
+            return @<text>
+                <TmToolbarItem Priority="@command.Priority"
+                               MenuLabel="@Loc[command.LabelKey]"
+                               MenuItems="@SelectMenuItems(command)"
+                               Class="tm-spreadsheet-compact-toolbar__item"
+                               data-command-id="@command.Id">
+                    <TmSelect Value="@SelectValueFor(command.Id)"
+                              ValueChanged="@SelectChangedFor(command.Id)"
+                              Options="@SelectOptionsFor(command.Id)"
+                              AriaLabel="@Loc[command.LabelKey]"
+                              Class="tm-spreadsheet-compact-toolbar__select" />
+                </TmToolbarItem>
+            </text>;
+        }
+
+        if (command.Kind == SpreadsheetToolbarCommandKind.Color)
+        {
+            return command.Id == "text-color" ? RenderCompactTextColor() : RenderCompactFillColor();
+        }
+
+        if (command.Kind == SpreadsheetToolbarCommandKind.Border)
+        {
+            return RenderCompactBorder();
+        }
+
+        return @<text>
+            <TmToolbarButton Icon="@command.Icon"
+                             Text="@CompactTextFor(command)"
+                             Tooltip="@Loc[command.LabelKey]"
+                             Priority="@command.Priority"
+                             Pressed="@PressedFor(command.Id)"
+                             Disabled="@DisabledFor(command.Id)"
+                             Class="@($"tm-spreadsheet-compact-toolbar__command {GetActiveClass(PressedFor(command.Id) == true)}")"
+                             data-command-id="@command.Id"
+                             OnClick="() => DispatchAsync(command.Id)" />
+        </text>;
+    }
+
+    private RenderFragment RenderCompactTextColor() => @<text>
+        <TmToolbarItem Priority="@ToolbarButtonPriority.Secondary"
+                       MenuLabel="@Loc["TmSpreadsheet_TextColor"]"
+                       MenuItems="@ColorMenuItems("text-color")"
+                       Class="tm-spreadsheet-compact-toolbar__item"
+                       data-command-id="text-color">
+            <div class="tm-spreadsheet-compact-toolbar__color">
+                <button type="button"
+                        class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon @GetActiveClass(HasTextColor)"
+                        title="@Loc["TmSpreadsheet_TextColor"]"
+                        aria-label="@Loc["TmSpreadsheet_TextColor"]"
+                        data-command-id="text-color-apply"
+                        @onclick="() => ApplyColorAsync(isText: true)">
+                    <span class="tm-spreadsheet-toolbar__color-preview"
+                          style="border-bottom-color: @(TextColor ?? "currentColor")">A</span>
+                </button>
+                <button type="button"
+                        @ref="_textColorTriggerRef"
+                        class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon tm-color-picker-inline__chevron"
+                        title="@Loc["TmSpreadsheet_TextColorPicker"]"
+                        aria-label="@Loc["TmSpreadsheet_TextColorPicker"]"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_isTextColorOpen ? "true" : "false")"
+                        data-command-id="text-color-menu"
+                        @onclick="() => _isTextColorOpen = !_isTextColorOpen">
+                    <TmIcon Name="chevron-down" />
+                </button>
+            </div>
+        </TmToolbarItem>
+    </text>;
+
+    private RenderFragment RenderCompactFillColor() => @<text>
+        <TmToolbarItem Priority="@ToolbarButtonPriority.Secondary"
+                       MenuLabel="@Loc["TmSpreadsheet_BackgroundColor"]"
+                       MenuItems="@ColorMenuItems("fill-color")"
+                       Class="tm-spreadsheet-compact-toolbar__item"
+                       data-command-id="fill-color">
+            <div class="tm-spreadsheet-compact-toolbar__color">
+                <button type="button"
+                        class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon @GetActiveClass(HasBackgroundColor)"
+                        title="@Loc["TmSpreadsheet_BackgroundColor"]"
+                        aria-label="@Loc["TmSpreadsheet_BackgroundColor"]"
+                        data-command-id="fill-color-apply"
+                        @onclick="() => ApplyColorAsync(isText: false)">
+                    <span class="tm-spreadsheet-toolbar__color-preview tm-spreadsheet-toolbar__color-preview--bg"
+                          style="background: @(BackgroundColor ?? "transparent")">
+                        <TmIcon Name="fill" />
+                    </span>
+                </button>
+                <button type="button"
+                        @ref="_backgroundColorTriggerRef"
+                        class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon tm-color-picker-inline__chevron"
+                        title="@Loc["TmSpreadsheet_BackgroundColorPicker"]"
+                        aria-label="@Loc["TmSpreadsheet_BackgroundColorPicker"]"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_isBackgroundColorOpen ? "true" : "false")"
+                        data-command-id="fill-color-menu"
+                        @onclick="() => _isBackgroundColorOpen = !_isBackgroundColorOpen">
+                    <TmIcon Name="chevron-down" />
+                </button>
+            </div>
+        </TmToolbarItem>
+    </text>;
+
+    private RenderFragment RenderCompactBorder() => @<text>
+        <TmToolbarItem Priority="@ToolbarButtonPriority.Secondary"
+                       MenuLabel="@Loc["TmSpreadsheet_BorderPicker"]"
+                       MenuItems="@BorderMenuItems"
+                       Class="tm-spreadsheet-compact-toolbar__item"
+                       data-command-id="borders">
+            <div class="tm-border-picker">
+                <div class="tm-spreadsheet-toolbar__split">
+                    <button type="button"
+                            class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon"
+                            title="@Loc[$"TmSpreadsheet_Border_{_lastBorderPreset}"]"
+                            aria-label="@Loc[$"TmSpreadsheet_Border_{_lastBorderPreset}"]"
+                            data-command-id="borders-apply"
+                            @onclick="ApplyLastBorderPreset">
+                        <TmIcon Name="@GetBorderPresetIconName(_lastBorderPreset)" />
+                    </button>
+                    <button type="button"
+                            @ref="_borderTriggerRef"
+                            class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon tm-border-picker__chevron"
+                            title="@Loc["TmSpreadsheet_BorderPicker"]"
+                            aria-label="@Loc["TmSpreadsheet_BorderPicker"]"
+                            aria-haspopup="menu"
+                            aria-expanded="@(_isBorderDropdownOpen ? "true" : "false")"
+                            data-command-id="borders-menu"
+                            @onclick="() => _isBorderDropdownOpen = !_isBorderDropdownOpen">
+                        <TmIcon Name="chevron-down" />
+                    </button>
+                </div>
+            </div>
+        </TmToolbarItem>
+    </text>;
 }

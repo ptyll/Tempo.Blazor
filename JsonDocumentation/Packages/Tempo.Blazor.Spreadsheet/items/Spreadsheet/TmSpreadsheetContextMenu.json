@@ -1,0 +1,56 @@
+{
+  "kind": "Component",
+  "category": "Spreadsheet",
+  "itemName": "TmSpreadsheetContextMenu",
+  "packageId": "Tempo.Blazor.Spreadsheet",
+  "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetContextMenu.razor",
+  "documentationStatus": "generated",
+  "namespace": "Tempo.Blazor.Components.Spreadsheet",
+  "requiredImports": [],
+  "description": "The spreadsheet's context menu surface. It must be rendered as a SIBLING of the layout container: the container is container-type: inline-size (implied contain: layout), which makes it the containing block of a position:fixed menu, and a menu inside the scrolling grid would be clipped. On the mobile layout it is the core TmDrawer bottom sheet (modal: backdrop + focus trap, Escape closes it, 44px menuitem rows in the sans face); on desktop/tablet the anchored menu at the gesture's client point.",
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<SpreadsheetContextMenuItem>",
+      "isRequired": false,
+      "description": "The entries, in render order."
+    },
+    {
+      "name": "Request",
+      "type": "SpreadsheetContextMenuRequest",
+      "isRequired": false,
+      "description": "The gesture that opened the menu (client point plus the cell or sheet it applies to)."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the menu and the sheet's title."
+    },
+    {
+      "name": "IsMobile",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the phone presentation (the core drawer sheet) is used."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS class for the anchored desktop menu."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the selected entry's Id."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the menu should close (outside click, Escape, backdrop, the sheet's close)."
+    }
+  ],
+  "examples": []
+}

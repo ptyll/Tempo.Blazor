@@ -10,6 +10,9 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
     public async Task NamedRange_CreateAndUseInFormula()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -56,6 +59,9 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
     public async Task Hyperlink_InsertWebLink()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -83,6 +89,9 @@ public class SpreadsheetPhase6E2ETests : WasmTestBase
     public async Task NameBox_NavigateToNamedRange()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 

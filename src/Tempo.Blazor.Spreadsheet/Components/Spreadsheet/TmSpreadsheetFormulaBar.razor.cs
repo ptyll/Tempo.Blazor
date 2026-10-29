@@ -24,6 +24,8 @@ public partial class TmSpreadsheetFormulaBar
     private bool _localIsEditing;
     private bool _suppressExternalEditing;
     private bool _isRefListOpen;
+    private int _activeRefIndex = -1;
+    private readonly string _refItemIdSuffix = Guid.NewGuid().ToString("N")[..8];
     private (int RowDelta, int ColDelta)? _pendingCommitNavigation;
 
     private sealed class SelectionSnapshot
@@ -273,16 +275,65 @@ public partial class TmSpreadsheetFormulaBar
 
     private async Task HandleNameBoxKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_nameBoxValue))
+        // The ARROWS are handled once, by the wrapper (the keydown bubbles out of the input): opening,
+        // moving and closing must never be done by two handlers — a per-handler copy moved the active
+        // option twice per press.
+        if (e.Key == "Enter")
         {
-            await OnNavigateToRef.InvokeAsync(_nameBoxValue.Trim());
+            if (_isRefListOpen && _activeRefIndex >= 0 && _activeRefIndex < NamedRanges!.Count)
+            {
+                await SelectNamedRangeAsync(NamedRanges[_activeRefIndex]);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_nameBoxValue))
+            {
+                await OnNavigateToRef.InvokeAsync(_nameBoxValue.Trim());
+            }
         }
         else if (e.Key == "Escape")
         {
+            if (_isRefListOpen)
+            {
+                _isRefListOpen = false;
+                _activeRefIndex = -1;
+                return;
+            }
+
             _nameBoxValue = ActiveCellRef;
             StateHasChanged();
         }
     }
+
+    /// <summary>Opens the named-range list with a sensible active option (the first one upward, the last one downward).</summary>
+    private void OpenNamedRangeList(bool startAtEnd)
+    {
+        if (!HasNamedRanges)
+        {
+            return;
+        }
+
+        _isRefListOpen = true;
+        _activeRefIndex = startAtEnd ? NamedRanges!.Count - 1 : 0;
+    }
+
+    /// <summary>Roving selection inside the open list. The index wraps, so the arrows never dead-end.</summary>
+    private void MoveActiveRef(int delta)
+    {
+        var count = NamedRanges?.Count ?? 0;
+        if (count == 0)
+        {
+            return;
+        }
+
+        _activeRefIndex = ((_activeRefIndex + delta) % count + count) % count;
+    }
+
+    /// <summary>The DOM id of a list option — the input's <c>aria-activedescendant</c> target.</summary>
+    private string RefItemId(int index) => $"tm-spreadsheet-ref-item-{index}-{_refItemIdSuffix}";
+
+    /// <summary>The DOM id of the open listbox (the input's <c>aria-controls</c> target).</summary>
+    private string RefListId => $"tm-spreadsheet-ref-list-{_refItemIdSuffix}";
 
     private void OnNameBoxBlur()
     {
@@ -293,12 +344,20 @@ public partial class TmSpreadsheetFormulaBar
 
     private void ToggleNamedRangeList()
     {
-        _isRefListOpen = !_isRefListOpen;
+        if (_isRefListOpen)
+        {
+            _isRefListOpen = false;
+            _activeRefIndex = -1;
+            return;
+        }
+
+        OpenNamedRangeList(startAtEnd: false);
     }
 
     private async Task SelectNamedRangeAsync(SpreadsheetNamedRange range)
     {
         _isRefListOpen = false;
+        _activeRefIndex = -1;
         _nameBoxValue = range.Name;
         await OnNavigateToRef.InvokeAsync(range.Name);
     }
@@ -306,9 +365,30 @@ public partial class TmSpreadsheetFormulaBar
     /// <summary>Escape closes the list from the input, the toggle OR a list entry (the whole wrapper).</summary>
     private void HandleNameBoxWrapperKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape" && _isRefListOpen)
+        if (!HasNamedRanges)
         {
-            _isRefListOpen = false;
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown" when !_isRefListOpen:
+                // The Excel gesture: ArrowDown in the name box opens the list on its first entry.
+                OpenNamedRangeList(startAtEnd: false);
+                break;
+            case "ArrowDown":
+                MoveActiveRef(1);
+                break;
+            case "ArrowUp" when !_isRefListOpen:
+                OpenNamedRangeList(startAtEnd: true);
+                break;
+            case "ArrowUp":
+                MoveActiveRef(-1);
+                break;
+            case "Escape" when _isRefListOpen:
+                _isRefListOpen = false;
+                _activeRefIndex = -1;
+                break;
         }
     }
 

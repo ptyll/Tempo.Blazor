@@ -1334,6 +1334,39 @@ window.tmSpreadsheetSheetTabs.scrollTabs = function (scroller, direction) {
     }
 };
 
+// The overflow arrows must also follow a CONTAINER resize (phase 6): the layout is container-owned, so a
+// width change proves nothing about a window resize event, and a demoted card can go from overflowing to
+// fitting without a single re-render of the strip. One shared ResizeObserver, registrations keyed by the
+// caller's id (Blazor detaches the element before a dispose callback runs).
+window.tmSpreadsheetSheetTabs._resizeTracked = window.tmSpreadsheetSheetTabs._resizeTracked || new Map();
+window.tmSpreadsheetSheetTabs._resizeObserver = window.tmSpreadsheetSheetTabs._resizeObserver || null;
+
+window.tmSpreadsheetSheetTabs.observeOverflow = function (scroller, dotNet, id) {
+    if (!scroller || typeof ResizeObserver !== "function") return;
+    window.tmSpreadsheetSheetTabs.disconnectOverflow(id);
+    const tracked = window.tmSpreadsheetSheetTabs._resizeTracked;
+    if (!window.tmSpreadsheetSheetTabs._resizeObserver) {
+        window.tmSpreadsheetSheetTabs._resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const registration = tracked.get(entry.target);
+                if (!registration) continue;
+                registration.dotNet.invokeMethodAsync("OnSheetTabsResized").catch(() => {});
+            }
+        });
+    }
+    tracked.set(scroller, { dotNet, id });
+    window.tmSpreadsheetSheetTabs._resizeObserver.observe(scroller);
+};
+
+window.tmSpreadsheetSheetTabs.disconnectOverflow = function (id) {
+    const tracked = window.tmSpreadsheetSheetTabs._resizeTracked;
+    for (const [scroller, registration] of tracked) {
+        if (registration.id !== id) continue;
+        tracked.delete(scroller);
+        window.tmSpreadsheetSheetTabs._resizeObserver?.unobserve(scroller);
+    }
+};
+
 // ── Ribbon tabs (redesign phase 5 review) ─────────────────────────────────────
 // Roving tabindex needs focus to follow the selected tab; Blazor cannot focus a sibling element
 // without a per-tab ElementReference, so the toolbar asks for the id it just activated.

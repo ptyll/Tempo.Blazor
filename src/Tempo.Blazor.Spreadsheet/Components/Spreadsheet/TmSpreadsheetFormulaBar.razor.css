@@ -317,7 +317,7 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@container tm-spreadsheet (width < 640px) {
     .tm-spreadsheet-formula-bar {
         padding: var(--tm-space-1) var(--tm-space-2);
         gap: var(--tm-space-1);

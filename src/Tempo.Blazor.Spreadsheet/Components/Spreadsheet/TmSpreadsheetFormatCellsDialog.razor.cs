@@ -127,6 +127,11 @@ public partial class TmSpreadsheetFormatCellsDialog
 
     protected override void OnParametersSet()
     {
+        if (!VisibleTabs.Contains(_activeTab, StringComparer.Ordinal))
+        {
+            _activeTab = "Number";
+        }
+
         _workingStyle = Style.Clone();
         InitNumberTabFromFormat(_workingStyle.NumberFormat);
     }

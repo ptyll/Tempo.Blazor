@@ -5834,5 +5834,21 @@
   "TmSpreadsheet_DeleteCells": "Delete",
   "TmSpreadsheet_DeleteOptions": "Delete options",
   "TmSpreadsheet_TextColorPicker": "Text color picker",
-  "TmSpreadsheet_BackgroundColorPicker": "Fill color picker"
+  "TmSpreadsheet_BackgroundColorPicker": "Fill color picker",
+  "TmSpreadsheet_Group_Advanced": "Advanced",
+  "TmSpreadsheet_Group_Sheet": "Sheet",
+  "TmSpreadsheet_Group_Zoom": "Zoom",
+  "TmSpreadsheet_Status_Summary": "Summary",
+  "TmSpreadsheet_CompactRow_Primary": "Primary commands",
+  "TmSpreadsheet_CompactRow_Formatting": "Formatting commands",
+  "TmSpreadsheet_CompactMore": "More",
+  "TmSpreadsheet_Color_None": "No color",
+  "TmSpreadsheet_Mobile_Insert": "Insert",
+  "TmSpreadsheet_Mobile_Format": "Format",
+  "TmSpreadsheet_Mobile_AriaLabel": "Spreadsheet actions",
+  "TmSpreadsheet_Align": "Align",
+  "TmSpreadsheet_Mobile_Image": "Image",
+  "TmSpreadsheet_Group_Custom": "Custom",
+  "TmSpreadsheet_CellMenu": "Cell menu",
+  "TmSpreadsheet_SheetMenu": "Sheet menu"
 }

@@ -161,19 +161,21 @@ public class TmSpreadsheetDensityTests : LocalizationTestBase
             .Add(p => p.InitialWorkbook, workbook));
         var grid = cut.FindComponent<TmSpreadsheetCanvasGrid>();
 
-        // Open the context menu on row 0 and pick "Set row height".
+        // Open the context menu on row 0 and pick "Set row height". The menu belongs to the HOST now (a
+        // position:fixed menu may not live inside the layout container).
         await cut.InvokeAsync(() => grid.Instance.OnCanvasContextMenu(4, 4, 10, 10));
-        grid.Render();
-        var setRowHeight = grid.FindAll(".tm-spreadsheet-context-menu__item")
+        cut.Render();
+        var setRowHeight = cut.FindAll(".tm-spreadsheet-context-menu__item")
             .First(item => item.TextContent.Contains("Set row height", StringComparison.Ordinal));
         setRowHeight.Click();
 
-        var input = grid.Find(".tm-spreadsheet-resize-dialog__input");
+        // The resize dialog is host-owned (a position:fixed surface may not live inside the layout container).
+        var input = cut.Find(".tm-spreadsheet-resize-dialog__input");
         input.GetAttribute("value").Should().Be("18",
             "the dialog must show the MODEL height, not the 1.5x rendered one (27px)");
 
         // Applying without a change must not rewrite the model.
-        grid.Find(".tm-spreadsheet-resize-dialog__btn--ok").Click();
+        cut.Find(".tm-spreadsheet-resize-dialog__btn--ok").Click();
 
         cut.Instance.Workbook.ActiveSheet!.Rows[0].Height.Should().Be(18,
             "opening and confirming the dialog without editing must leave the model untouched");

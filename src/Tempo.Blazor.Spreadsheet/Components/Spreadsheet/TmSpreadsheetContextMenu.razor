@@ -1,0 +1,183 @@
+@namespace Tempo.Blazor.Components.Spreadsheet
+@attribute [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using Tempo.Blazor.Abstractions.Layout
+@inject IJSRuntime JS
+
+@* The spreadsheet context menu. It is a SIBLING of the spreadsheet's layout container, never a child of it:
+   the container is `container-type: inline-size`, which implies `contain: layout` and therefore makes it the
+   containing block of a `position: fixed` surface (the menu would be positioned against the card instead of
+   the viewport), and a menu rendered inside the scrolling grid would be clipped as well.
+   On the phone layout it is the core TmDrawer bottom sheet (modal: backdrop + focus trap, Escape closes it),
+   on desktop/tablet the anchored menu at the gesture's client point. *@
+@if (IsMobile)
+{
+    <TmDrawer IsOpen="true"
+              Modal="true"
+              Position="DrawerPosition.Bottom"
+              ShowOverlay="true"
+              ShowHandle="true"
+              ShowCloseButton="true"
+              Title="@Title"
+              CloseOnEscape="true"
+              LayoutMode="TmLayoutMode.Mobile"
+              Class="tm-spreadsheet-context-sheet"
+              IsOpenChanged="OnSheetOpenChanged">
+        <ChildContent>
+            <div class="tm-spreadsheet-context-menu tm-spreadsheet-context-menu--sheet"
+                 role="menu"
+                 aria-label="@Title">
+                @RenderItems
+            </div>
+        </ChildContent>
+    </TmDrawer>
+}
+else
+{
+    <div class="tm-spreadsheet-context-menu__overlay"
+         @onclick="CloseAsync"
+         @oncontextmenu:preventDefault
+         @oncontextmenu="CloseAsync"></div>
+    <div class="tm-spreadsheet-context-menu @(Class)"
+         role="menu"
+         aria-label="@Title"
+         style="@PositionStyle"
+         @onclick:stopPropagation
+         @oncontextmenu:preventDefault>
+        @RenderItems
+    </div>
+}
+
+@code {
+    /// <summary>The gesture that opened the menu: its client point and, for a grid request, the cell.</summary>
+    [Parameter] public SpreadsheetContextMenuRequest Request { get; set; } = new();
+
+    /// <summary>The entries, in render order.</summary>
+    [Parameter] public IReadOnlyList<SpreadsheetContextMenuItem> Items { get; set; } = [];
+
+    /// <summary>Accessible name of the menu (and the sheet's title).</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Whether the phone presentation (the core drawer sheet) is used.</summary>
+    [Parameter] public bool IsMobile { get; set; }
+
+    /// <summary>Extra CSS class for the anchored desktop menu.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Raised with the selected entry's <see cref="SpreadsheetContextMenuItem.Id"/>.</summary>
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+
+    /// <summary>Raised when the menu should close (outside click, Escape, backdrop, the sheet's close).</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
+    private int _keyboardIndex = -1;
+
+    /// <summary>
+    /// The anchored position, CLAMPED into the viewport in CSS: a right-click near the right or bottom edge
+    /// must not put the menu off-screen. `min()` keeps the gesture point when it is inside the limits.
+    /// </summary>
+    private string PositionStyle => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"left:min({Request.ClientX}px, calc(100vw - var(--tm-spreadsheet-menu-min-width) - var(--tm-space-4)));"
+        + $"top:min({Request.ClientY}px, calc(100dvh - 12rem));"
+        + $"max-height:calc(100dvh - {System.Math.Max(0, Request.ClientY)}px - var(--tm-space-4));");
+
+    private string ItemDomId(int index) => $"tm-spreadsheet-ctx-{_instanceId}-{index}";
+
+    /// <summary>
+    /// Keyboard contract of the anchored menu: focus the first entry on open, ArrowUp/Down + Home/End rove
+    /// between entries, Escape closes (and the host restores the grid's focus). The phone sheet is a core
+    /// drawer — it owns its own keyboard/focus handling.
+    /// </summary>
+    private async Task OnItemKeyDownAsync(KeyboardEventArgs e, int index)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                await OnClose.InvokeAsync();
+                return;
+            case "ArrowDown":
+                _keyboardIndex = Next(index, 1);
+                break;
+            case "ArrowUp":
+                _keyboardIndex = Next(index, -1);
+                break;
+            case "Home":
+                _keyboardIndex = 0;
+                break;
+            case "End":
+                _keyboardIndex = Items.Count - 1;
+                break;
+            default:
+                return;
+        }
+
+        await FocusItemAsync(_keyboardIndex);
+    }
+
+    /// <summary>Roving index with wrap-around, so the arrows never dead-end.</summary>
+    private int Next(int from, int delta)
+    {
+        if (Items.Count == 0)
+        {
+            return -1;
+        }
+
+        return ((from + delta) % Items.Count + Items.Count) % Items.Count;
+    }
+
+    private async Task FocusItemAsync(int index)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tmSpreadsheetToolbar.focusTab", ItemDomId(index));
+        }
+        catch
+        {
+            // No script (prerender/bUnit): the keyboard walk is a progressive enhancement.
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !IsMobile)
+        {
+            _keyboardIndex = 0;
+            await FocusItemAsync(0);
+        }
+    }
+
+    private RenderFragment RenderItems => @<text>
+        @for (var itemIndex = 0; itemIndex < Items.Count; itemIndex++)
+        {
+            var item = Items[itemIndex];
+            @if (item.DividerBefore)
+            {
+                <div class="tm-spreadsheet-context-menu__divider" role="separator"></div>
+            }
+            <button type="button"
+                    id="@ItemDomId(itemIndex)"
+                    class="tm-spreadsheet-context-menu__item @(item.Danger ? "tm-spreadsheet-context-menu__item--danger" : null)"
+                    role="menuitem"
+                    tabindex="-1"
+                    data-context-menu-id="@item.Id"
+                    @onkeydown="e => OnItemKeyDownAsync(e, itemIndex)"
+                    @onclick="() => SelectAsync(item.Id)">
+                @item.Label
+            </button>
+        }
+    </text>;
+
+    private async Task SelectAsync(string id)
+    {
+        // Close BEFORE the action runs: the menu must never sit above the dialog the action opens.
+        await OnClose.InvokeAsync();
+        await OnSelect.InvokeAsync(id);
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private Task OnSheetOpenChanged(bool open) => open ? Task.CompletedTask : CloseAsync();
+}
