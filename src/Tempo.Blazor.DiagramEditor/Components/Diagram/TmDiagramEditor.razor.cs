@@ -147,6 +147,19 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     public Task NotifyViewportChangedAsync()
         => _canvas?.NotifyViewportChangedAsync() ?? Task.CompletedTask;
 
+    /// <summary>
+    /// Re-fits the current content to the editor's box (final UX review, M5): a host that grows
+    /// or shrinks the editor's own box (a collapsed dock, a resized pane) asks the JS engine for
+    /// a zoom-to-fit so the diagram fills the new box and the zoom report follows — the same
+    /// path the toolbar's Fit-to-view (and the document load) use. The zoom label re-renders with
+    /// the fitted scale. A no-op before the canvas mounted.
+    /// </summary>
+    public async Task FitToViewAsync()
+    {
+        await FitToView();
+        StateHasChanged();
+    }
+
     // ── Command stack ────────────────────────────────────────────────────────
     // One isolated stack per page so undo/redo is scoped to the active page.
 

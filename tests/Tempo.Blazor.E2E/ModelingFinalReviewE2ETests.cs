@@ -98,6 +98,73 @@ public sealed class ModelingFinalReviewE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("The tablet issues sheet is an editor-anchored side sheet: absolutely positioned over the canvas end edge, ≤20rem wide, with a scrollable issue list")]
+    public async Task Tablet_1024_IssuesSheet_AnchoredToTheCanvasEndEdge()
+    {
+        // 500 issues guarantee the sheet's list overflows its 20rem column.
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-500", 1024, 768);
+        try
+        {
+            await page.Locator("[data-testid='modeling-panel-tab-issues']").ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-issues-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+            var sheet = await page.EvaluateAsync<SheetGeometry>(
+                """
+                () => {
+                    const host = document.querySelector('.tm-modeling-editor__issues-sheet-host');
+                    if (!host) return null;
+                    const body = document.querySelector('.tm-modeling-editor__canvas-body');
+                    const list = document.querySelector("[data-testid='modeling-issues-sheet'] .tm-modeling-issue-panel__list");
+                    const hr = host.getBoundingClientRect();
+                    const br = body.getBoundingClientRect();
+                    return {
+                        position: getComputedStyle(host).position,
+                        width: hr.width,
+                        hostRight: hr.right,
+                        hostTop: hr.top,
+                        hostBottom: hr.bottom,
+                        bodyRight: br.right,
+                        bodyTop: br.top,
+                        bodyBottom: br.bottom,
+                        zIndex: getComputedStyle(host).zIndex,
+                        listScrollHeight: list?.scrollHeight ?? 0,
+                        listClientHeight: list?.clientHeight ?? 0
+                    };
+                }
+                """);
+
+            Assert.IsNotNull(sheet, "the editor-owned issues sheet host renders with the sheet open");
+            Assert.AreEqual("absolute", sheet.Position,
+                "the host positions itself absolutely (it carries the editor's scope attribute, the child focus scope never would)");
+            Assert.IsTrue(sheet.Width <= 320.5,
+                $"the sheet is at most 20rem wide (measured {sheet.Width:0.#}px)");
+            Assert.IsTrue(Math.Abs(sheet.HostRight - sheet.BodyRight) <= 1,
+                $"the sheet's end edge touches the canvas column's end edge (host {sheet.HostRight:0.#} vs body {sheet.BodyRight:0.#})");
+            Assert.IsTrue(Math.Abs(sheet.HostTop - sheet.BodyTop) <= 1 && Math.Abs(sheet.HostBottom - sheet.BodyBottom) <= 1,
+                "the sheet spans the canvas column's full height");
+            Assert.IsTrue(sheet.ListScrollHeight > sheet.ListClientHeight,
+                $"the issue list overflows its column (scrollHeight {sheet.ListScrollHeight} > clientHeight {sheet.ListClientHeight})");
+
+            var scrolled = await page.EvaluateAsync<double>(
+                """
+                () => {
+                    const list = document.querySelector("[data-testid='modeling-issues-sheet'] .tm-modeling-issue-panel__list");
+                    list.scrollTop = 400;
+                    return list.scrollTop;
+                }
+                """);
+            Assert.IsTrue(scrolled > 0, $"the list actually scrolls (scrollTop after scroll {scrolled:0.#})");
+
+            await SaveStableScreenshotAsync(page, "modeling-tablet-issues-sheet-anchor.png");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
     [Description("At 1440x900 the error screen shows a visible Retry affordance that re-arms the load")]
     public async Task Error_1440_RetryVisibleAndReloads()
     {
@@ -144,7 +211,7 @@ public sealed class ModelingFinalReviewE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("After a dock collapse at 1440x900 the canvas top sits directly below the DE chrome (no >16px gap)")]
+    [Description("After a dock collapse at 1440x900 the canvas sits directly under the page tabs (no empty chrome row) and the preview re-fits the grown box")]
     public async Task DockCollapse_1440_RefitsTheCanvasWithoutAGap()
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-500", 1440, 900);
@@ -152,31 +219,26 @@ public sealed class ModelingFinalReviewE2ETests : WasmTestBase
         {
             await WaitForPreviewNodeCountAtLeastAsync(page, 1);
 
+            var before = await ReadCanvasTopAsync(page);
+
             await page.Locator("[data-testid='modeling-issues-toggle']").ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
             await page.Locator("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
 
-            // Give the post-collapse refit (RefreshViewportAsync → relayout) a frame.
+            // Give the post-collapse refit (RefreshViewportAsync → FitToViewAsync) a frame.
             await page.WaitForTimeoutAsync(300);
 
-            var gap = await page.EvaluateAsync<double>(
-                """
-                () => {
-                    // The gap between the bottom of the diagram editor's chrome rows and the
-                    // top of the canvas viewport, measured inside the preview editor.
-                    const editor = document.querySelector('.tm-modeling-diagram-preview__editor');
-                    if (!editor) return -1;
-                    const canvas = editor.querySelector('.tm-diagram-canvas');
-                    if (!canvas) return -1;
-                    let chromeBottom = editor.getBoundingClientRect().top;
-                    editor.querySelectorAll('.tm-diagram-editor__page-tabs, .tm-diagram-editor__toolbar, .tm-diagram-editor__header-bar')
-                        .forEach(row => { chromeBottom = Math.max(chromeBottom, row.getBoundingClientRect().bottom); });
-                    return canvas.getBoundingClientRect().top - chromeBottom;
-                }
-                """);
+            var after = await ReadCanvasTopAsync(page);
 
-            Assert.IsTrue(gap >= -1 && gap <= 16,
-                $"After the collapse the canvas top must sit directly below the DE chrome (gap {gap:0.#}px).");
+            Assert.IsTrue(after.Gap >= -1 && after.Gap <= 16,
+                $"After the collapse the canvas top must sit directly below the DE chrome (gap {after.Gap:0.#}px).");
+            Assert.IsTrue(Math.Abs(after.CanvasTop - after.PageTabsBottom) <= 1,
+                $"No empty chrome row between the page tabs and the canvas (canvas top {after.CanvasTop:0.#} vs page-tabs bottom {after.PageTabsBottom:0.#}).");
+
+            // The refit: the embedded viewer re-fits the grown canvas, so the zoom report (or the
+            // fitted viewBox) must follow the new box.
+            Assert.IsTrue(before.Zoom != after.Zoom || before.ViewBox != after.ViewBox,
+                $"The preview re-fits after the collapse (zoom '{before.Zoom}' → '{after.Zoom}', viewBox '{before.ViewBox}' → '{after.ViewBox}').");
         }
         finally
         {
@@ -225,6 +287,29 @@ public sealed class ModelingFinalReviewE2ETests : WasmTestBase
         "([selector, attributeName]) => Number(document.querySelector(selector)?.getAttribute(attributeName) ?? '0')",
         new[] { selector, attributeName });
 
+    private static Task<CanvasChrome> ReadCanvasTopAsync(IPage page) => page.EvaluateAsync<CanvasChrome>(
+        """
+        () => {
+            const editor = document.querySelector('.tm-modeling-diagram-preview__editor');
+            if (!editor) return { gap: -1, canvasTop: -1, pageTabsBottom: -1, zoom: '', viewBox: '' };
+            const canvas = editor.querySelector('.tm-diagram-canvas');
+            let chromeBottom = editor.getBoundingClientRect().top;
+            let pageTabsBottom = chromeBottom;
+            editor.querySelectorAll('.tm-diagram-editor__page-tabs, .tm-diagram-editor__toolbar, .tm-diagram-editor__header-bar')
+                .forEach(row => { chromeBottom = Math.max(chromeBottom, row.getBoundingClientRect().bottom); });
+            const tabs = editor.querySelector('.tm-diagram-editor__page-tabs');
+            if (tabs) pageTabsBottom = tabs.getBoundingClientRect().bottom;
+            const svg = canvas?.querySelector('svg');
+            return {
+                gap: canvas ? canvas.getBoundingClientRect().top - chromeBottom : -1,
+                canvasTop: canvas ? canvas.getBoundingClientRect().top : -1,
+                pageTabsBottom: pageTabsBottom,
+                zoom: editor.querySelector('.tm-diagram-editor__zoom-label, .tm-diagram-editor__status-zoom')?.textContent?.trim() ?? '',
+                viewBox: svg?.getAttribute('viewBox') ?? ''
+            };
+        }
+        """);
+
     private static Task<double> CanvasHeightAsync(IPage page) => page.EvaluateAsync<double>(
         "() => document.querySelector('.tm-modeling-diagram-preview .tm-diagram-canvas')?.getBoundingClientRect().height ?? 0");
 
@@ -252,6 +337,30 @@ public sealed class ModelingFinalReviewE2ETests : WasmTestBase
         public string BodyClass { get; set; } = string.Empty;
         public double CanvasHeight { get; set; }
         public double EmptyText { get; set; }
+    }
+
+    private sealed class CanvasChrome
+    {
+        public double Gap { get; set; }
+        public double CanvasTop { get; set; }
+        public double PageTabsBottom { get; set; }
+        public string Zoom { get; set; } = string.Empty;
+        public string ViewBox { get; set; } = string.Empty;
+    }
+
+    private sealed class SheetGeometry
+    {
+        public string Position { get; set; } = string.Empty;
+        public double Width { get; set; }
+        public double HostRight { get; set; }
+        public double HostTop { get; set; }
+        public double HostBottom { get; set; }
+        public double BodyRight { get; set; }
+        public double BodyTop { get; set; }
+        public double BodyBottom { get; set; }
+        public string ZIndex { get; set; } = string.Empty;
+        public double ListScrollHeight { get; set; }
+        public double ListClientHeight { get; set; }
     }
 
     private static async Task SaveStableScreenshotAsync(IPage page, string fileName)

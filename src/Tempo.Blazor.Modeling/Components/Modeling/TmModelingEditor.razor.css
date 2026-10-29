@@ -695,8 +695,13 @@
 }
 
 /* Fáze 7 review: the fullscreen mobile header keeps ONE line — the summary subtitle clamps
-   (a wrapped second line would push the editor body down at 320). */
-[data-layout='mobile'] ::deep .tm-modeling-editor__open-editor-modal .tm-modal-subtitle {
+   (a wrapped second line would push the editor body down at 320). Final review re-fix: the
+   old `[data-layout='mobile'] ::deep …` form put this stylesheet's scope attribute on the
+   TmLayoutObserver root (a child component — it never carries the editor's scope id), so the
+   selector could never match. The modal is editor-owned once it renders as a sibling of the
+   observer inside the editor root, so anchor on the editor scope and key the mobile band off
+   the fullscreen presentation modifier instead. */
+::deep .tm-modeling-editor__open-editor-modal.tm-modal--fullscreen-presentation .tm-modal-subtitle {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -846,7 +851,8 @@
 
 /* Final UX review (M3): each tile stacks the aria-hidden type icon, the count and a SHORT
    visible label — the sr-only-only numbers were unreadable without the card's context. The
-   label ellipsizes so a long cs/sk form never pushes the four columns wide. */
+   label wraps to TWO lines max (final review: a long cs/sk form ellipsized mid-word at 320px
+   — two full lines keep the word legible without pushing the four columns wide). */
 [data-layout='mobile'] .tm-modeling-editor__status-tile {
     display: grid;
     place-items: center;
@@ -870,13 +876,17 @@
 }
 
 [data-layout='mobile'] .tm-modeling-editor__status-label {
+    display: -webkit-box;
     overflow: hidden;
     width: 100%;
     color: var(--tm-color-text-secondary);
     font-size: var(--tm-font-size-xs);
     text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    word-break: break-word;
+    line-clamp: 2;
+    white-space: normal;
 }
 
 /* The loaded time: part of the aria-live status region only — the visible card is the one
@@ -942,12 +952,15 @@
 
 /* The tablet issues side sheet (final UX review M2): the same overlay shape the shell's tablet
    presentation renders for the inspector — anchored to the editor root's END edge, over the
-   canvas, non-modal (the preview stays reachable). The editor root is the positioning context. */
-[data-layout='tablet'] .tm-modeling-editor__issues-sheet {
+   canvas, non-modal (the preview stays reachable). Re-review (M2): the HOST is editor-owned —
+   the TmFocusScope root never receives this stylesheet's scope attribute, so the positioning
+   lives on this plain div; the canvas body is the positioning context. The sheet body scrolls
+   inside whatever height the canvas column gives the host. */
+[data-layout='tablet'] .tm-modeling-editor__issues-sheet-host {
     position: absolute;
     inset-block: 0;
     inset-inline-end: 0;
-    z-index: 3;
+    z-index: var(--tm-z-inline-sheet);
     display: flex;
     flex-direction: column;
     width: min(20rem, 100%);
@@ -955,6 +968,14 @@
     border-inline-start: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
     box-shadow: var(--tm-shadow-lg);
+}
+
+/* The focus scope fills the host (the child root needs ::deep to receive any rule at all). */
+[data-layout='tablet'] .tm-modeling-editor__issues-sheet-host ::deep .tm-modeling-editor__issues-sheet {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 [data-layout='tablet'] .tm-modeling-editor__sheet-header {

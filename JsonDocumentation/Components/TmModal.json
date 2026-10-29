@@ -1,256 +1,257 @@
 {
- "itemName": "TmModal",
- "kind": "Component",
- "category": "Feedback",
- "description": "Versatile modal dialog with header (title, subtitle, icon), scrollable body, and configurable footer with OK/Cancel buttons. Supports multiple sizes, positions, overlay click dismiss, and escape key handling.",
- "requiredImports": [
-  "@using Tempo.Blazor.Components.Feedback"
- ],
- "parameters": [
-  {
-   "name": "Animated",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "CancelButtonText",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
-  },
-  {
-   "name": "ChildContent",
-   "type": "RenderFragment?",
-   "isRequired": false
-  },
-  {
-   "name": "Class",
-   "type": "string?",
-   "isRequired": false
-  },
-  {
-   "name": "CloseButtonAdditionalAttributes",
-   "type": "Dictionary<string, object>?",
-   "isRequired": false,
-   "description": "Extra attributes splatted onto the built-in close button - a host-owned data-testid or a stable focus hook the host's restore path targets. Rendered only with ShowCloseButton; never overrides the button's type, class, click handler or accessible name."
-  },
-  {
-   "name": "CloseOnEscape",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "CloseOnOverlayClick",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "Footer",
-   "type": "RenderFragment?",
-   "isRequired": false
-  },
-  {
-   "name": "FooterLayout",
-   "type": "FooterLayout",
-   "isRequired": false,
-   "default": "Inline",
-   "description": "How the footer buttons are arranged. Inline keeps them side by side at every width; Stacked stacks them full width."
-  },
-  {
-   "name": "Icon",
-   "type": "string?",
-   "isRequired": false
-  },
-  {
-   "name": "InitialFocusTargetId",
-   "type": "string?",
-   "isRequired": false,
-   "description": "The id of the element that receives focus when the modal opens."
-  },
-  {
-   "name": "InitialMode",
-   "type": "TmLayoutMode",
-   "isRequired": false,
-   "default": "Desktop",
-   "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
-  },
-  {
-   "name": "LayoutMode",
-   "type": "TmLayoutMode",
-   "isRequired": false,
-   "default": "Auto",
-   "description": "The layout the modal renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
-  },
-  {
-   "name": "MobilePresentation",
-   "type": "MobilePresentation",
-   "isRequired": false,
-   "default": "Auto",
-   "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
-  },
-  {
-   "name": "OkButtonDisabled",
-   "type": "bool",
-   "isRequired": false,
-   "default": "false"
-  },
-  {
-   "name": "OkButtonText",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Confirm button text. Defaults to the localized Tm_Ok when not set."
-  },
-  {
-   "name": "OkButtonVariant",
-   "type": "ButtonVariant",
-   "isRequired": false,
-   "default": "Primary"
-  },
-  {
-   "name": "OnClose",
-   "type": "EventCallback",
-   "isRequired": false
-  },
-  {
-   "name": "OnOk",
-   "type": "EventCallback",
-   "isRequired": false
-  },
-  {
-   "name": "OnOpen",
-   "type": "EventCallback",
-   "isRequired": false
-  },
-  {
-   "name": "Position",
-   "type": "ModalPosition",
-   "isRequired": false,
-   "default": "Center"
-  },
-  {
-   "name": "ResolvedLayoutChanged",
-   "type": "EventCallback<TmLayoutMode>",
-   "isRequired": false,
-   "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
-  },
-  {
-   "name": "RestoreFocus",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Whether the modal's focus scope restores focus on close. Default true (the opener is remembered at activation and focus returns there, or to an explicit restore target). Set false when the HOST owns the restore — e.g. an editor that closes the dialog through its own path and moves focus afterwards: the scope then renders data-restore-focus=\"false\" and the module skips the restore."
-  },
-  {
-   "name": "RestoreFocusTarget",
-   "type": "ElementReference?",
-   "isRequired": false,
-   "description": "The element focus returns to when the modal closes. A disconnected or inside-the-modal target is skipped (it would die with the overlay) and the restore falls back to the opener; a focus the app placed on a live element outside before the close render is never stolen."
-  },
-  {
-   "name": "RestoreFocusTargetId",
-   "type": "string?",
-   "isRequired": false,
-   "description": "The id of the restore target, for a target rendered outside the modal. Same skip rules as RestoreFocusTarget: a disconnected or inside-the-modal target falls back to the opener."
-  },
-  {
-   "name": "Show",
-   "type": "bool",
-   "isRequired": false
-  },
-  {
-   "name": "ShowCancelButton",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "ShowCloseButton",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "ShowDefaultFooterButtons",
-   "type": "bool",
-   "isRequired": false,
-   "default": "false"
-  },
-  {
-   "name": "ShowFooter",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "ShowOkButton",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true"
-  },
-  {
-   "name": "Size",
-   "type": "ModalSize",
-   "isRequired": false,
-   "default": "Medium"
-  },
-  {
-   "name": "Subtitle",
-   "type": "string?",
-   "isRequired": false
-  },
-  {
-   "name": "Title",
-   "type": "string",
-   "isRequired": false,
-   "default": "Empty"
-  }
- ],
- "cssClasses": [
-  "tm-modal-overlay",
-  "tm-modal--sheet",
-  "tm-modal--dialog",
-  "tm-modal--fullscreen-presentation",
-  "tm-modal--bottom-anchored",
-  "tm-modal__handle",
-  "tm-modal-footer--inline",
-  "tm-modal-footer--stacked",
-  "tm-modal--visible",
-  "tm-modal--animated",
-  "tm-modal-container",
-  "tm-modal--center",
-  "tm-modal--top",
-  "tm-modal--bottom",
-  "tm-modal",
-  "tm-modal--sm",
-  "tm-modal--md",
-  "tm-modal--lg",
-  "tm-modal--xl",
-  "tm-modal--fullscreen",
-  "tm-modal-header",
-  "tm-modal-header-icon",
-  "tm-modal-header-content",
-  "tm-modal-title",
-  "tm-modal-subtitle",
-  "tm-modal-close",
-  "tm-modal-body",
-  "tm-modal-footer",
-  "tm-modal-btn-cancel",
-  "tm-modal-btn-ok"
- ],
- "examples": [
-  {
-   "title": "Basic modal with title and body",
-   "code": "<TmModal Show=\"@isOpen\" Title=\"Confirm Action\" OnClose=\"() => isOpen = false\">\n    <p>Are you sure you want to proceed?</p>\n</TmModal>"
-  },
-  {
-   "title": "Modal with default footer buttons",
-   "code": "<TmModal Show=\"@isOpen\" Title=\"Edit Record\" Subtitle=\"Modify the fields below\"\n    Size=\"ModalSize.Large\" ShowDefaultFooterButtons=\"true\"\n    OkButtonText=\"Save\" CancelButtonText=\"Discard\"\n    OnOk=\"HandleSave\" OnClose=\"() => isOpen = false\">\n    <p>Form content here</p>\n</TmModal>"
-  },
-  {
-   "title": "Modal with custom footer",
-   "code": "<TmModal Show=\"@isOpen\" Title=\"Custom Footer\" OnClose=\"() => isOpen = false\">\n    <p>Body content</p>\n    <Footer>\n        <TmButton Variant=\"ButtonVariant.Danger\" OnClick=\"HandleDelete\">Delete</TmButton>\n        <TmButton Variant=\"ButtonVariant.Ghost\" OnClick=\"() => isOpen = false\">Cancel</TmButton>\n    </Footer>\n</TmModal>"
-  }
- ]
+  "itemName": "TmModal",
+  "kind": "Component",
+  "category": "Feedback",
+  "description": "Versatile modal dialog with header (title, subtitle, icon), scrollable body, and configurable footer with OK/Cancel buttons. Supports multiple sizes, positions, overlay click dismiss, and escape key handling.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
+      "name": "Footer",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
+      "name": "Size",
+      "type": "ModalSize",
+      "isRequired": false,
+      "default": "Medium"
+    },
+    {
+      "name": "Position",
+      "type": "ModalPosition",
+      "isRequired": false,
+      "default": "Center"
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowCloseButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "CloseButtonAdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Extra attributes splatted onto the built-in close button - a host-owned data-testid or a stable focus hook the host's restore path targets. Rendered only with ShowCloseButton; never overrides the button's type, class, click handler or accessible name."
+    },
+    {
+      "name": "ShowFooter",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowDefaultFooterButtons",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "ShowOkButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowCancelButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OkButtonText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Confirm button text. Defaults to the localized Tm_Ok when not set."
+    },
+    {
+      "name": "CancelButtonText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
+    },
+    {
+      "name": "OkButtonVariant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Primary"
+    },
+    {
+      "name": "OkButtonDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "CloseOnOverlayClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnOk",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnOpen",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "MobilePresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
+    },
+    {
+      "name": "FooterLayout",
+      "type": "FooterLayout",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "How the footer buttons are arranged. Inline keeps them side by side at every width; Stacked stacks them full width."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the modal renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
+    },
+    {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element focus returns to when the modal closes. A disconnected or inside-the-modal target is skipped (it would die with the overlay) and the restore falls back to the opener; a focus the app placed on a live element outside before the close render is never stolen."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the restore target, for a target rendered outside the modal. Same skip rules as RestoreFocusTarget: a disconnected or inside-the-modal target falls back to the opener."
+    },
+    {
+      "name": "RestoreFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the modal's focus scope restores focus on close. Default true (the opener is remembered at activation and focus returns there, or to an explicit restore target). Set false when the HOST owns the restore — e.g. an editor that closes the dialog through its own path and moves focus afterwards: the scope then renders data-restore-focus=\"false\" and the module skips the restore."
+    },
+    {
+      "name": "InitialFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element that receives focus when the modal opens."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
+  ],
+  "cssClasses": [
+    "tm-modal-overlay",
+    "tm-modal--sheet",
+    "tm-modal--dialog",
+    "tm-modal--fullscreen-presentation",
+    "tm-modal--bottom-anchored",
+    "tm-modal__handle",
+    "tm-modal-footer--inline",
+    "tm-modal-footer--stacked",
+    "tm-modal--visible",
+    "tm-modal--animated",
+    "tm-modal-container",
+    "tm-modal--center",
+    "tm-modal--top",
+    "tm-modal--bottom",
+    "tm-modal",
+    "tm-modal--sm",
+    "tm-modal--md",
+    "tm-modal--lg",
+    "tm-modal--xl",
+    "tm-modal--fullscreen",
+    "tm-modal-header",
+    "tm-modal-header-icon",
+    "tm-modal-header-content",
+    "tm-modal-title",
+    "tm-modal-subtitle",
+    "tm-modal-close",
+    "tm-modal-body",
+    "tm-modal-footer",
+    "tm-modal-btn-cancel",
+    "tm-modal-btn-ok"
+  ],
+  "examples": [
+    {
+      "title": "Basic modal with title and body",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Confirm Action\" OnClose=\"() => isOpen = false\">\n    <p>Are you sure you want to proceed?</p>\n</TmModal>"
+    },
+    {
+      "title": "Modal with default footer buttons",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Edit Record\" Subtitle=\"Modify the fields below\"\n    Size=\"ModalSize.Large\" ShowDefaultFooterButtons=\"true\"\n    OkButtonText=\"Save\" CancelButtonText=\"Discard\"\n    OnOk=\"HandleSave\" OnClose=\"() => isOpen = false\">\n    <p>Form content here</p>\n</TmModal>"
+    },
+    {
+      "title": "Modal with custom footer",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Custom Footer\" OnClose=\"() => isOpen = false\">\n    <p>Body content</p>\n    <Footer>\n        <TmButton Variant=\"ButtonVariant.Danger\" OnClick=\"HandleDelete\">Delete</TmButton>\n        <TmButton Variant=\"ButtonVariant.Ghost\" OnClick=\"() => isOpen = false\">Cancel</TmButton>\n    </Footer>\n</TmModal>"
+    }
+  ]
 }

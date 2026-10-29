@@ -46,14 +46,18 @@ public partial class TmModelingModelTree : IAsyncDisposable
              bool CanInsert,
              bool ShowTitle,
              string? Class,
+             string? TestIdPrefix,
+             string? DataTestId,
              string Culture) _renderSnapshot;
 
     /// <summary>Compares the render-affecting parameter surface against the last snapshot; the
-    /// culture rides along because every visible label resolves through it.</summary>
+    /// culture rides along because every visible label resolves through it. The test-id pair
+    /// rides along too — both rewrite every <c>data-testid</c> the tree paints.</summary>
     private bool RenderSurfaceChanged()
     {
         var snapshot = (Elements, SelectedElement, CollapsedGroups, _filterText,
-            AllowNodeDrop, CanInsertIntoPreview, ShowTitle, Class, CultureInfo.CurrentUICulture.Name);
+            AllowNodeDrop, CanInsertIntoPreview, ShowTitle, Class, TestIdPrefix, DataTestId,
+            CultureInfo.CurrentUICulture.Name);
         var changed = !snapshot.Equals(_renderSnapshot);
         _renderSnapshot = snapshot;
         return changed;

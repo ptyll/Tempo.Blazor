@@ -55,7 +55,7 @@ from its **own container** (`TmLayoutObserver`, `data-layout` on the root — ne
 | Layout | Container width | What the user gets |
 |---|---|---|
 | **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it (an **issues-empty** body drops the dock row to `auto` when the model has zero issues), Right = inspector with **Properties \| Source** tabs (only the active tab body renders), StatusBar = the status strip. The preview's embedded editor keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar), and the status bar keeps the zoom controls. |
-| **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector/Issues are `aria-expanded` disclosure toggles; Preview closes all) — **Issues is the fourth panel**, a non-modal side sheet (`modeling-issues-sheet`) under the same one-open rule, never a dock row under the canvas; its tab carries the count badge. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
+| **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector/Issues are `aria-expanded` disclosure toggles; Preview closes all) — **Issues is the fourth panel**, a non-modal side sheet (`modeling-issues-sheet`) under the same one-open rule, never a dock row under the canvas; its tab carries the count badge. The sheet is positioned by the editor-owned `tm-modeling-editor__issues-sheet-host` wrapper (absolute, the canvas column's end edge, `min(20rem, 100%)`, `--tm-z-inline-sheet`; the `TmFocusScope` root is a child component and carries no scope attribute of its own) and its issue list scrolls inside. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
 | **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles with short visible labels + aria-hidden type icons + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag and no tree→preview insert**: reuse is a desktop/tablet editing intent — on mobile the tree renders neither the "+" button nor the drag grip, and edits go through "Open in editor" (G2 viewing). Preview zoom is pinch-only — zoom buttons live in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
 
 `LayoutMode` (`Auto` default) pins a presentation for tests and kiosk hosts; `InitialMode`
@@ -105,7 +105,14 @@ creates the node at the center of the diagram viewport (`TmDiagramEditor.GetView
 center when unknown) through the same clamp/collision path as a drop and raises the SAME
 `OnNodeDropped` contract. `RefreshViewportAsync()` — final UX review M5: after the hosting
 editor re-grids the canvas column (an issues-dock collapse/expand), the embedded viewer
-re-measures (the DE's JS `relayout` path) so the diagram refits the new box.
+re-fits its content to the new box through the DE's additive `FitToViewAsync()` (a real
+zoom-to-fit, the same path the document load uses), so the diagram fills the box and the zoom
+report follows. The embedded editor also runs `LayoutBreakpoints = new(600, 1200)`: the docked
+canvas column sits near the DE's own 768px mobile threshold, so the preview drops the mobile
+threshold to 600px — a docked column always presents the stable tablet chrome (page tabs +
+canvas + status-bar zoom, never a flip during a dock toggle) while a real G2 column (≤ 600px)
+keeps the DE's compact mobile presentation, whose chrome the mobile band drops through
+`ShowEmbeddedEditorChrome`.
 
 ### `TmModelingModelTree`
 

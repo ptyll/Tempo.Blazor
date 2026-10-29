@@ -94,12 +94,28 @@ public partial class TmModelingDiagramPreview
 
     /// <summary>
     /// Final UX review (M5): after the hosting editor re-grids the canvas column (an issues-dock
-    /// collapse/expand), the embedded viewer re-measures its canvas (the DE's JS
-    /// <c>relayout</c> path) so the diagram refits the new box and the viewport/zoom report
-    /// stays truthful. A no-op before the editor mounted.
+    /// collapse/expand), the embedded viewer re-fits its content to the new box (the DE's public
+    /// <c>FitToViewAsync</c> — the same zoom-to-fit the document load and the Fit-to-view command
+    /// use) so the diagram fills the grown/shrunk canvas and the zoom report stays truthful. A
+    /// no-op before the editor mounted.
     /// </summary>
     public Task RefreshViewportAsync()
-        => _editor?.NotifyViewportChangedAsync() ?? Task.CompletedTask;
+        => _editor?.FitToViewAsync() ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Final UX review (M5 re-review): the docked preview's canvas column sits NEAR the diagram
+    /// editor's own 768px mobile threshold (760px at the 1440x900 baseline), so a width nudge —
+    /// a scrollbar appearing or a pane nudge during a dock collapse/expand — would flip the
+    /// embedded editor between its mobile and tablet presentations and repaint its chrome row.
+    /// The preview therefore drops the mobile threshold to 600px: a docked column (≥ ~620px at
+    /// the editor's 1200px desktop floor) always presents the stable tablet layout (page tabs +
+    /// canvas + status-bar zoom) and can only flip once, to desktop from 1200px, while a real
+    /// G2 mobile column (≤ 600px, e.g. the 320/390 baselines) keeps the DE's compact mobile
+    /// presentation. The G2 band drops the chrome through <see cref="ShowEmbeddedEditorChrome"/>
+    /// instead — it never relied on the tablet chrome.
+    /// </summary>
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints PreviewEditorBreakpoints
+        = new(600, 1200);
 
     private int NodeCount => Document?.Nodes.Count ?? 0;
 

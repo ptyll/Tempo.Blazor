@@ -226,6 +226,26 @@ public class TmModalTests : LocalizationTestBase
         closeCalled.Should().BeTrue();
     }
 
+    [Fact]
+    public void Modal_RestoreFocusFalse_OptsTheScopeOutOfTheRestore()
+    {
+        // The default keeps the restore (no data-restore-focus attribute on the scope root);
+        // RestoreFocus=false renders the opt-out flag the tm-focus-trap module reads and skips.
+        var defaultCut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test"));
+        defaultCut.Find("div.tm-focus-scope").HasAttribute("data-restore-focus").Should().BeFalse(
+            "the default restores focus, so the opt-out flag is absent");
+
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test")
+            .Add(m => m.RestoreFocus, false));
+
+        cut.Find("div.tm-focus-scope").GetAttribute("data-restore-focus").Should().Be("false",
+            "RestoreFocus=false renders data-restore-focus=\"false\" so the module skips the restore");
+    }
+
     #endregion
 
     #region Size Tests

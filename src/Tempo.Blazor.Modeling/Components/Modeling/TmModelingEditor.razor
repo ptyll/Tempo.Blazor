@@ -492,38 +492,43 @@
     /// the shell's overlay presentation renders for the inspector, scoped to the editor root and
     /// positioned by the editor's own stylesheet. The panel renders WITHOUT its collapse toggle
     /// (the sheet header owns the close button) — the sheet replaces the dock on this band.
+    /// Final review re-fix (M2): the focus scope is a CHILD component root, so it never carries
+    /// this stylesheet's scope attribute — the positioning rule targets an editor-owned HOST
+    /// wrapper rendered here (a plain div in this file) instead, and the scope fills the host.
     /// </summary>
     private RenderFragment? TabletIssuesSheetContent
         => IssuesSheetOpen
-            ? @<TmFocusScope Active="true"
-                             Modal="false"
-                             CloseOnEscape="true"
-                             OnEscape="CloseIssuesSheetAsync"
-                             Class="tm-modeling-editor__issues-sheet"
-                             AriaLabelledBy="@_issuesSheetTitleId"
-                             DataTestId="@TestId("modeling-issues-sheet")">
-                <div class="tm-modeling-editor__sheet-header">
-                    <div role="heading" aria-level="2" id="@_issuesSheetTitleId" class="tm-modeling-editor__sheet-title">
-                        @Loc["TmModelingEditor_Issues"]
+            ? @<div class="tm-modeling-editor__issues-sheet-host">
+                <TmFocusScope Active="true"
+                              Modal="false"
+                              CloseOnEscape="true"
+                              OnEscape="CloseIssuesSheetAsync"
+                              Class="tm-modeling-editor__issues-sheet"
+                              AriaLabelledBy="@_issuesSheetTitleId"
+                              DataTestId="@TestId("modeling-issues-sheet")">
+                    <div class="tm-modeling-editor__sheet-header">
+                        <div role="heading" aria-level="2" id="@_issuesSheetTitleId" class="tm-modeling-editor__sheet-title">
+                            @Loc["TmModelingEditor_Issues"]
+                        </div>
+                        <span class="tm-modeling-editor__sheet-count" aria-hidden="true">@IssueCount</span>
+                        <button type="button"
+                                class="tm-modeling-editor__sheet-close"
+                                data-testid="@TestId("modeling-issues-sheet-close")"
+                                aria-label="@Loc["TmModelingEditor_CloseIssues"]"
+                                title="@Loc["TmModelingEditor_CloseIssues"]"
+                                @onclick="CloseIssuesSheetAsync">
+                            <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                        </button>
                     </div>
-                    <span class="tm-modeling-editor__sheet-count" aria-hidden="true">@IssueCount</span>
-                    <button type="button"
-                            class="tm-modeling-editor__sheet-close"
-                            data-testid="@TestId("modeling-issues-sheet-close")"
-                            aria-label="@Loc["TmModelingEditor_CloseIssues"]"
-                            title="@Loc["TmModelingEditor_CloseIssues"]"
-                            @onclick="CloseIssuesSheetAsync">
-                        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
-                    </button>
-                </div>
-                <div class="tm-modeling-editor__sheet-body" id="@_issuesSheetId">
-                    <TmModelingIssuePanel Issues="@DisplayIssues"
-                                          OnIssueSelected="SelectIssueAsync"
-                                          ShowToggle="false"
-                                          Collapsed="false"
-                                          CollapsedChanged="SetIssuesCollapsedAsync" />
-                </div>
-            </TmFocusScope>
+                    <div class="tm-modeling-editor__sheet-body" id="@_issuesSheetId">
+                        <TmModelingIssuePanel Issues="@DisplayIssues"
+                                              OnIssueSelected="SelectIssueAsync"
+                                              ShowToggle="false"
+                                              Collapsed="false"
+                                              CollapsedChanged="SetIssuesCollapsedAsync" />
+                    </div>
+                </TmFocusScope>
+            </div>
             : null;
 
     /// <summary>The source panel (the inspector's "Source" tab on the docked layouts).</summary>
