@@ -42,6 +42,7 @@ else
     <div class="tm-spreadsheet-context-menu @(Class)"
          role="menu"
          aria-label="@Title"
+         data-anchor="@(Request.Anchor ?? "pointer")"
          style="@PositionStyle"
          @onclick:stopPropagation
          @oncontextmenu:preventDefault>
@@ -74,15 +75,40 @@ else
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
     private int _keyboardIndex = -1;
 
+    /// <summary>The gap the menu keeps from a finger (the finger would cover the first entry).</summary>
+    private const double TouchAnchorOffset = 14;
+
     /// <summary>
-    /// The anchored position, CLAMPED into the viewport in CSS: a right-click near the right or bottom edge
-    /// must not put the menu off-screen. `min()` keeps the gesture point when it is inside the limits.
+    /// The anchored position, CLAMPED into the viewport in CSS. A gesture near the bottom edge FLIPS the
+    /// menu above the press point (`bottom:` instead of `top:`) when the space below is less than the
+    /// comfortable menu height, so a long press near the phone's thumb zone never opens a menu whose
+    /// first entries are off-screen. A touch gesture is offset from the finger.
     /// </summary>
-    private string PositionStyle => string.Create(
-        System.Globalization.CultureInfo.InvariantCulture,
-        $"left:min({Request.ClientX}px, calc(100vw - var(--tm-spreadsheet-menu-min-width) - var(--tm-space-4)));"
-        + $"top:min({Request.ClientY}px, calc(100dvh - 12rem));"
-        + $"max-height:calc(100dvh - {System.Math.Max(0, Request.ClientY)}px - var(--tm-space-4));");
+    private string PositionStyle
+    {
+        get
+        {
+            var height = Request.ViewportHeight;
+            var offset = string.Equals(Request.Anchor, "touch", StringComparison.OrdinalIgnoreCase)
+                ? TouchAnchorOffset
+                : 0;
+            var top = Request.ClientY + offset;
+            var bottom = Math.Max(0, height - Request.ClientY + offset);
+            var flip = height > 0 && height - Request.ClientY < MenuComfortableHeight;
+            var vertical = flip
+                ? $"bottom:min({bottom.ToString(System.Globalization.CultureInfo.InvariantCulture)}px, calc(100dvh - var(--tm-space-4)));"
+                  + $"max-height:calc(100dvh - {Math.Max(0, bottom).ToString(System.Globalization.CultureInfo.InvariantCulture)}px - var(--tm-space-4));"
+                : $"top:min({top.ToString(System.Globalization.CultureInfo.InvariantCulture)}px, calc(100dvh - {MenuComfortableHeight}px));"
+                  + $"max-height:calc(100dvh - {Math.Max(0, top).ToString(System.Globalization.CultureInfo.InvariantCulture)}px - var(--tm-space-4));";
+
+            var left = Request.ClientX.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return $"left:min({left}px, calc(100vw - var(--tm-spreadsheet-menu-min-width) - var(--tm-space-4)));"
+                + vertical;
+        }
+    }
+
+    /// <summary>The menu height that still leaves the whole list comfortably readable (~14rem).</summary>
+    private const double MenuComfortableHeight = 224;
 
     private string ItemDomId(int index) => $"tm-spreadsheet-ctx-{_instanceId}-{index}";
 

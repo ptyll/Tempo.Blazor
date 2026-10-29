@@ -310,23 +310,52 @@ public partial class TmSpreadsheet
         StateHasChanged();
     }
 
-    /// <summary>The cell menu's entries (labels are localized here, ids are the host's dispatch keys).</summary>
-    private IReadOnlyList<SpreadsheetContextMenuItem> GridContextMenuItems =>
-    [
-        new() { Id = "format-cells", Label = Loc["TmSpreadsheet_FormatCells"] },
-        new() { Id = "copy", Label = Loc["TmSpreadsheet_Copy"], DividerBefore = true },
-        new() { Id = "cut", Label = Loc["TmSpreadsheet_Cut"] },
-        new() { Id = "paste", Label = Loc["TmSpreadsheet_Paste"] },
-        new() { Id = "insert-row", Label = Loc["TmSpreadsheet_InsertRow"], DividerBefore = true },
-        new() { Id = "delete-row", Label = Loc["TmSpreadsheet_DeleteRow"], Danger = true },
-        new() { Id = "insert-column", Label = Loc["TmSpreadsheet_InsertColumn"] },
-        new() { Id = "delete-column", Label = Loc["TmSpreadsheet_DeleteColumn"], Danger = true },
-        new() { Id = "column-width", Label = Loc["TmSpreadsheet_SetColumnWidth"], DividerBefore = true },
-        new() { Id = "row-height", Label = Loc["TmSpreadsheet_SetRowHeight"] },
-        new() { Id = "clear-formatting", Label = Loc["TmSpreadsheet_ClearFormatting"], DividerBefore = true },
-        new() { Id = "clear-content", Label = Loc["TmSpreadsheet_ClearContent"] },
-        new() { Id = "clear-all", Label = Loc["TmSpreadsheet_ClearAll"], Danger = true },
-    ];
+    /// <summary>
+    /// The cell menu's entries (labels are localized here, ids are the host's dispatch keys).
+    /// A READ-ONLY grid (an Embedded Notion block, a read-only host) offers only the observation and
+    /// layout commands (Format Cells, Copy, column width / row height): Cut, Paste, Fill down/right,
+    /// row/column insert/delete and every Clear are gone — a menu entry that would mutate the workbook must
+    /// not exist when the grid cannot be edited. The grid itself never opens the menu in read-only mode;
+    /// this is the HOST-side guard for the path that renders the menu outside the grid.
+    /// </summary>
+    private IReadOnlyList<SpreadsheetContextMenuItem> GridContextMenuItems
+    {
+        get
+        {
+            var readOnly = Mode == SpreadsheetMode.Embedded;
+            List<SpreadsheetContextMenuItem> items =
+            [
+                new() { Id = "format-cells", Label = Loc["TmSpreadsheet_FormatCells"] },
+                new() { Id = "copy", Label = Loc["TmSpreadsheet_Copy"], DividerBefore = true },
+            ];
+
+            if (!readOnly)
+            {
+                items.Add(new() { Id = "cut", Label = Loc["TmSpreadsheet_Cut"] });
+                items.Add(new() { Id = "paste", Label = Loc["TmSpreadsheet_Paste"] });
+                // The fill-handle drag's WCAG 2.5.7 alternative (phase 7): the same AutoFillCommand, one tap.
+                items.Add(new() { Id = "fill-down", Label = Loc["TmSpreadsheet_FillDown"] });
+                items.Add(new() { Id = "fill-right", Label = Loc["TmSpreadsheet_FillRight"] });
+                items.Add(new() { Id = "insert-row", Label = Loc["TmSpreadsheet_InsertRow"], DividerBefore = true });
+                items.Add(new() { Id = "delete-row", Label = Loc["TmSpreadsheet_DeleteRow"], Danger = true });
+                items.Add(new() { Id = "insert-column", Label = Loc["TmSpreadsheet_InsertColumn"] });
+                items.Add(new() { Id = "delete-column", Label = Loc["TmSpreadsheet_DeleteColumn"], Danger = true });
+            }
+
+            // Column width / row height are RENDER hints a read-only viewer may still want, and they are
+            // pure layout on an Embedded block, so they stay. Clear/format writes do not.
+            items.Add(new() { Id = "column-width", Label = Loc["TmSpreadsheet_SetColumnWidth"], DividerBefore = true });
+            items.Add(new() { Id = "row-height", Label = Loc["TmSpreadsheet_SetRowHeight"] });
+            if (!readOnly)
+            {
+                items.Add(new() { Id = "clear-formatting", Label = Loc["TmSpreadsheet_ClearFormatting"], DividerBefore = true });
+                items.Add(new() { Id = "clear-content", Label = Loc["TmSpreadsheet_ClearContent"] });
+                items.Add(new() { Id = "clear-all", Label = Loc["TmSpreadsheet_ClearAll"], Danger = true });
+            }
+
+            return items;
+        }
+    }
 
     /// <summary>The sheet-tab menu's entries.</summary>
     private IReadOnlyList<SpreadsheetContextMenuItem> SheetTabContextMenuItems =>
@@ -342,6 +371,8 @@ public partial class TmSpreadsheet
         "copy" => CloseAndRunAsync(() => Copy()),
         "cut" => CloseAndRunAsync(() => Cut()),
         "paste" => CloseAndRunAsync(() => Paste()),
+        "fill-down" => CloseAndRunAsync(() => OnGridFillRequested(SpreadsheetFillDirection.Down)),
+        "fill-right" => CloseAndRunAsync(() => OnGridFillRequested(SpreadsheetFillDirection.Right)),
         "insert-row" => CloseAndRunAsync(InsertRow),
         "delete-row" => CloseAndRunAsync(DeleteRow),
         "insert-column" => CloseAndRunAsync(InsertColumn),

@@ -130,3 +130,83 @@ rendered inside it would be trapped in the card. Keep every new overlay outside
 `ShowTabCloseButtons` (default `true`) gates the per-tab ×; deleting always stays available from the
 tab's context menu. The active tab is marked by its accent underline. When the strip overflows, a pair
 of scroll arrows appears (`tm-spreadsheet-sheet-tabs__scroll-button[data-direction=left|right]`).
+
+## Touch and pen
+
+The canvas runs on the shared core pointer helpers — `pointer-drag.js` for the single pointer and
+`pointer-gesture.js` `attachPinch` for two fingers (`npm run test:overlay`). The package never
+implements a drag or a pinch of its own; the two modules load through a dynamic `import()` resolved
+from `document.currentScript.src` (classic script, see [touch-interaction.md](touch-interaction.md)).
+The gesture DECISIONS are pure functions in `spreadsheet-canvas.js` (`_internals.resolveTouchTap`,
+`resolveTouchDragAction`, `resolveLongPressAction`, `resolvePinchZoom`, `resolveAutoFillHitSize`,
+`resolveTouchHandleRects`, `resolveFilterButtonHitRect`, `resolveCellInputMode`) and are covered by
+`npm run test:spreadsheet`; the fingers themselves by the Playwright touch lane
+(`SpreadsheetPhase7TouchE2ETests`).
+
+| Gesture | Result | Non-drag / keyboard alternative |
+|---|---|---|
+| tap | selects the cell | the arrow keys (roving focus) |
+| double tap (≤ 320 ms, ≤ 24 px) | opens the editor with `inputmode` from the cell type (`decimal` for a numeric or percent cell, `text` for text/date) | `Enter` / `F2` / typing a character |
+| long press (500 ms) | the cell menu at the finger (phone: the `TmDrawer` sheet; tablet/desktop: the anchored menu). A 400 ms release-click guard keeps the lifting finger from closing it | `Shift+F10`, the context-menu key, right click |
+| one-finger drag on a cell | the browser's **native pan**; the canvas starts no drag-select from a finger | scrollbars, PageUp/PageDown |
+| tap the cell next to the selection | selects that cell (the drops never cover it) | the arrow keys |
+| drag a ROUND corner drop (`start` = top-left, `end` = bottom-right) | extends the selection, keeping the anchor — drag-only, a tap on a drop does nothing | **Shift+arrow** |
+| drag the fill handle (bottom-right) | fills | **Fill down / Fill right** in the cell menu and **Ctrl+D / Ctrl+R** (the C# `AutoFillCommand`, one undo step) |
+| two-finger pinch | one clamped 10 % zoom step (50–200 %) through `OnZoomChanged` | the status-bar zoom buttons, the phone's More → zoom |
+
+`touch-action: pan-x pan-y` on `.tm-spreadsheet-canvas-grid` is what makes all of this unambiguous:
+one finger pans, the browser's page pinch-zoom is off over the grid, and the JS pinch owns the zoom.
+The exception is the **DOM touch-handle layer**
+(`.tm-spreadsheet-canvas-grid__touch-handles`, three `[data-touch-handle]` boxes: `start`, `fill`,
+`end`): these are real elements because `touch-action: none` can only be set on an element.
+`spreadsheet-canvas.js` positions them over the painted selection (`syncTouchHandles`), CLIPPED to the
+grid body — a box that would have to be shifted onto the selection to fit is hidden instead — and pairs
+each with a `clipTouchHandleRect` pure helper. The two corner drops are drag-only and sit on the
+selection's corners (the `end` one just outside the fill handle); they are `aria-hidden`, not
+focusable — the keyboard paths above are the accessible ones — and the whole layer is hidden on
+`(pointer: fine)`, so a desktop host sees no new interactive element and the mouse keeps its painted
+handles and coordinate hit test. The earlier four EDGE STRIPS were removed: along the selection's edge
+they covered the selected row/column on a phone (30 px rows vs a 44 px finger box) and swallowed the
+taps and long-presses meant for the cell itself.
+
+**Ctrl+D / Ctrl+R are claimed by the canvas** (`isCanvasShortcutCommand`, node-tested): the key is
+`preventDefault`ed and forwarded to .NET, so Ctrl+D does not open the browser's bookmark dialog and
+Ctrl+R does not reload the page with the grid on it. A read-only grid returns before the keyboard
+command path, so an Embedded block keeps the browser's chords. The fill itself follows Excel: Fill down
+copies the selection's top row into EVERY column (Fill right its left column into every row), the
+source row/column is never re-written, the source cell's FORMAT is copied into the filled cells
+(`SpreadsheetCellStyle.CopyFrom`), and the whole operation is one `BatchCommand` — one undo step. A
+single-cell selection copies the cell above/left and an empty source is a no-op.
+
+## Embedding (Notion block, modal, read-only host)
+
+`TmNotionSpreadsheetBlock` renders `Mode=Embedded`, i.e. a read-only grid: it opens **no** cell menu
+(the gesture is blocked by `IsReadonly`), so there is no long-press sheet and no fill. The host cell
+menu is built from `Mode` too — a read-only spreadsheet offers only Format Cells, Copy, column width
+and row height, never Paste/Cut/Fill/insert/delete/Clear. `TmNotionSpreadsheetEditModal` hosts the
+editable grid inside the Notion fullscreen modal: the gestures are the normal ones, the pinch zooms the
+SHEET (the modal does not zoom), and the phone sheet renders as a sibling of the layout container so
+the modal's stacking context cannot clip it. Scroll chaining: the menu contains its own overflow
+(`overscroll-behavior: contain`); the grid deliberately keeps the platform's default chaining, because
+a nested editor that swallows an edge scroll traps the page.
+
+## Scripts and CSP
+
+`spreadsheet-canvas.js` (and `spreadsheet.js`) now dynamic-`import()` the shared core helpers, so a host
+must serve **`_content/Tempo.Blazor/js/`** as well as the package's own `_content/Tempo.Blazor.Spreadsheet/js/`
+— the helpers sit in the core package folder (`_content/Tempo.Blazor/js/pointer-drag.js` and
+`pointer-gesture.js`) and are resolved from the script's own URL. A per-file CSP hash must therefore
+list `spreadsheet-canvas.js` **and** `pointer-drag.js` + `pointer-gesture.js`; a host-wide nonce for the
+served origin covers all three. When the helpers cannot be loaded the grid keeps its mouse interaction
+and logs one warning ("the pointer helpers ... could not be loaded"): touch gestures (tap, double tap,
+long press, pinch, the corner drops) are OFF, so a touch-only kiosk must serve them.
+
+The hit areas follow the density: `Density=Comfortable` (the `Auto` default on a coarse pointer) grows
+the painted fill handle **and** its hit box, gives a coarse pointer a 24 px fill-handle box, and scales
+the header gutters (row header 56 px, column header 28 px), which is also what makes the auto-filter
+button a finger target (its HIT rect reaches the touch floor inside its own column). The `Density=Auto`
+resolution is re-run whenever the `(pointer: coarse)` media query flips, so attaching a mouse to a
+tablet does not keep the touch density.
+
+`prefers-reduced-motion` is honoured through the shared helpers (`reducedMotion` in every callback);
+the grid's touch path has no animation of its own to disable.

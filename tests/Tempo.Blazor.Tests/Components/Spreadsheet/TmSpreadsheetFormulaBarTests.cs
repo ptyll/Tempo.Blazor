@@ -189,6 +189,39 @@ public class TmSpreadsheetFormulaBarTests : LocalizationTestBase
     }
 
     [Fact]
+    public void NameBox_SurvivesAParentRender_WithTheSameActiveCell()
+    {
+        // A canvas activation re-renders the host several times (the command-log flush, the viewport
+        // sync the grid's own focusout schedules). The name box is a CONTROLLED input, so re-seeding it
+        // from ActiveCellRef on every parent pass silently replaced a ref the user was typing and the
+        // Enter that should navigate went to the active cell instead (phase-7 regression, caught by
+        // SpreadsheetPhase2VisualE2ETests.Phase2_NameBoxNavigation_MovesTheHeaderHighlight).
+        string? navigated = null;
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").Input("F7");
+
+        // The parent passes the SAME active cell again — an unrelated render, not a navigation.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").GetAttribute("value").Should().Be("F7",
+            "an unrelated parent render must not overwrite the ref the user typed");
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").KeyDown("Enter");
+        navigated.Should().Be("F7", "Enter must navigate to the TYPED ref, not to the active cell");
+
+        // A real navigation still re-seeds the box.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "F7")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+        cut.Find(".tm-spreadsheet-formula-bar__ref").GetAttribute("value").Should().Be("F7");
+    }
+
+    [Fact]
     public void NameBox_Escape_RevertsToActiveCellRef()
     {
         var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters

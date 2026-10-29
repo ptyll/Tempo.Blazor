@@ -5013,6 +5013,8 @@
   "TmSpreadsheet_Filter_SortAsc": "Trier A → Z",
   "TmSpreadsheet_Filter_SortDesc": "Trier Z → A",
   "TmSpreadsheet_Filter_TextFilters": "Filtres textuels",
+  "TmSpreadsheet_FillDown": "Recopier vers le bas",
+  "TmSpreadsheet_FillRight": "Recopier vers la droite",
   "TmSpreadsheet_Filter_Title": "Filtrer et trier",
   "TmSpreadsheet_Find_FindNext": "Suivant",
   "TmSpreadsheet_Find_FindPrevious": "Précédent",

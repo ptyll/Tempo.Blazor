@@ -17,6 +17,12 @@ public partial class TmSpreadsheetFormulaBar
     private ElementReference _nameBoxWrapperRef;
     private string? _editValue;
     private string? _nameBoxValue;
+
+    /// <summary>
+    /// The active cell the name box was last seeded from. A parent render with the SAME ref must not
+    /// overwrite what the user typed into the box (see <see cref="OnParametersSet"/>).
+    /// </summary>
+    private string? _lastSyncedActiveCellRef;
     private bool _shouldFocusAfterRender;
     private readonly string _functionHintId = $"tm-spreadsheet-formula-hint-{Guid.NewGuid():N}";
     private int _renderedSelectionStart;
@@ -121,7 +127,18 @@ public partial class TmSpreadsheetFormulaBar
 
     protected override void OnParametersSet()
     {
-        _nameBoxValue = ActiveCellRef;
+        // The name box is a CONTROLLED input (_nameBoxValue is what renders), so re-seeding it from
+        // ActiveCellRef on EVERY parent pass used to replace a ref the user was typing: a canvas
+        // activation re-renders the host several times (the command-log flush, the viewport sync the
+        // grid's own focusout schedules), and the next pass then patched the input back to the active
+        // cell — the Enter meant to navigate to the typed ref went to the grid instead. Seed only when
+        // the active cell actually changed (a navigation, a new selection, a sheet switch).
+        if (!string.Equals(_lastSyncedActiveCellRef, ActiveCellRef, StringComparison.OrdinalIgnoreCase))
+        {
+            _lastSyncedActiveCellRef = ActiveCellRef;
+            _nameBoxValue = ActiveCellRef;
+        }
+
         if (IsEditing && !_suppressExternalEditing)
         {
             _localIsEditing = true;

@@ -5041,6 +5041,8 @@
   "TmSpreadsheet_Filter_SortAsc": "Seřadit A → Z",
   "TmSpreadsheet_Filter_SortDesc": "Seřadit Z → A",
   "TmSpreadsheet_Filter_TextFilters": "Filtry textu",
+  "TmSpreadsheet_FillDown": "Vyplnit dolů",
+  "TmSpreadsheet_FillRight": "Vyplnit doprava",
   "TmSpreadsheet_Filter_Title": "Filtr a řazení",
   "TmSpreadsheet_Find_FindNext": "Najít další",
   "TmSpreadsheet_Find_FindPrevious": "Najít předchozí",

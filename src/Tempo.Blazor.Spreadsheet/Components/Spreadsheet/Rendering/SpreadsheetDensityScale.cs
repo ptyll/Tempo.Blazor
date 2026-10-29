@@ -17,7 +17,8 @@ internal readonly record struct SpreadsheetDensityScale(
     SpreadsheetDensity Resolved,
     double RowScale,
     double FontScale,
-    double HandleScale)
+    double HandleScale,
+    double GutterScale)
 {
     /// <summary>Row-height multiplier of the comfortable density (20px rows draw at 30px).</summary>
     public const double ComfortableRowScale = 1.5;
@@ -27,6 +28,13 @@ internal readonly record struct SpreadsheetDensityScale(
 
     /// <summary>Fill-handle / filter-button multiplier of the comfortable density.</summary>
     public const double ComfortableHandleScale = 1.4;
+
+    /// <summary>
+    /// Header-gutter multiplier of the comfortable density (the row-header width and the
+    /// column-header height). The tablet reference draws visibly taller/wider gutters: 40×1.4 = 56px
+    /// and 20×1.4 = 28px, which is also what gives the auto-filter button its finger-sized height.
+    /// </summary>
+    public const double ComfortableGutterScale = 1.4;
 
     /// <summary>Resolves the requested density against the browser's pointer kind.</summary>
     public static SpreadsheetDensityScale Resolve(SpreadsheetDensity density, bool coarsePointer)
@@ -39,8 +47,9 @@ internal readonly record struct SpreadsheetDensityScale(
         };
 
         return resolved == SpreadsheetDensity.Comfortable
-            ? new SpreadsheetDensityScale(resolved, ComfortableRowScale, ComfortableFontScale, ComfortableHandleScale)
-            : new SpreadsheetDensityScale(resolved, 1, 1, 1);
+            ? new SpreadsheetDensityScale(
+                resolved, ComfortableRowScale, ComfortableFontScale, ComfortableHandleScale, ComfortableGutterScale)
+            : new SpreadsheetDensityScale(resolved, 1, 1, 1, 1);
     }
 
     /// <summary>The resolved density as the canvas reads it (lowercase, one of compact/comfortable).</summary>

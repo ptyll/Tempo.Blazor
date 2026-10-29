@@ -30,6 +30,12 @@ else
          data-external-formula-origin-ref="@ExternalFormulaOriginCellRef"
          data-readonly="@(IsReadonly ? "true" : null)"
          @ref="_rootElement">
+        @* Phase 7 touch handles: the DOM hit areas a finger grabs to EXTEND the selection (two round
+           corner drops) and to FILL from the selection corner. They live in the sticky scrollport layer so
+           they share the exact coordinate space the canvases paint in, and they are real elements
+           because `touch-action: none` can only be set on an element — a painted handle cannot stop the
+           browser panning the grid under the finger. The JS engine positions them from the painted
+           selection rectangle; a fine pointer hides the whole layer (CSS), so the mouse path is untouched. *@
         <div class="tm-spreadsheet-canvas-grid__layer" aria-hidden="true">
             <canvas class="tm-spreadsheet-canvas-grid__canvas tm-spreadsheet-canvas-grid__canvas--content"
                     @ref="_canvasElement"></canvas>
@@ -37,6 +43,17 @@ else
                     @ref="_headerCanvasElement"></canvas>
             <canvas class="tm-spreadsheet-canvas-grid__canvas tm-spreadsheet-canvas-grid__canvas--selection"
                     @ref="_selectionCanvasElement"></canvas>
+            <div class="tm-spreadsheet-canvas-grid__touch-handles" data-touch-handles>
+                @* Two ROUND corner drops (drag-only: they extend the selection) and the fill handle.
+                   Full edge strips were rejected — a strip along the selection's edge swallowed the taps
+                   meant for the selected row/column on a phone (30px rows, 44px finger). *@
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--start"
+                     data-touch-handle="start" hidden></div>
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--fill"
+                     data-touch-handle="fill" hidden></div>
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--end"
+                     data-touch-handle="end" hidden></div>
+            </div>
         </div>
         <div class="tm-spreadsheet-canvas-grid__size"
              style="width:@TotalScrollableWidthPx;height:@TotalScrollableHeightPx;"></div>
@@ -153,6 +170,9 @@ else
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCopy">@Loc["TmSpreadsheet_Copy"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCut">@Loc["TmSpreadsheet_Cut"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuPaste">@Loc["TmSpreadsheet_Paste"]</div>
+                @* Phase 7: the non-drag alternative to the fill-handle drag (WCAG 2.5.7). *@
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFillDown">@Loc["TmSpreadsheet_FillDown"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFillRight">@Loc["TmSpreadsheet_FillRight"]</div>
                 <div class="tm-spreadsheet-context-menu__divider"></div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertRow">@Loc["TmSpreadsheet_InsertRow"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteRow">@Loc["TmSpreadsheet_DeleteRow"]</div>

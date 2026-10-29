@@ -44076,6 +44076,19 @@
           ]
         },
         {
+          "itemName": "SpreadsheetFillDirection",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet",
+          "description": "The direction of a fill that does not need the fill-handle drag (WCAG 2.5.7 Dragging Movements). Down copies the leading row of the selection downwards (Ctrl+D, Fill down), Right copies the leading column rightwards (Ctrl+R, Fill right); both run the same AutoFillCommand as the pointer drag, so a keyboard or single-pointer fill is one undo step. The fill-handle drag stays the fast path on a coarse pointer.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetFillDirection.cs",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet"
+          ]
+        },
+        {
           "itemName": "SpreadsheetFormulaEditSession",
           "kind": "Class",
           "category": "Components",
@@ -44821,7 +44834,7 @@
               "type": "SpreadsheetDensity",
               "isRequired": false,
               "default": "SpreadsheetDensity.Auto",
-              "description": "Requested grid density. Auto is resolved once per instance from the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts only (the sheet model and every XLSX height keep their values). The root carries data-density so a host style or a test can key off the resolved value."
+              "description": "Requested grid density. Auto is resolved against the browser's coarse-pointer media query — once before the first canvas frame and again whenever the query flips (a mouse attached to a tablet) — and scales the RENDERED row heights, fonts, handles and header gutters only (the sheet model and every XLSX height keep their values). The root carries data-density, but only once the pointer is known or the density is forced, so a touch device never flashes the compact attribute."
             },
             {
               "name": "ExternalFormulaEditValue",
@@ -44944,6 +44957,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Called when the user requests delete row."
+            },
+            {
+              "name": "OnFillRequested",
+              "type": "EventCallback<SpreadsheetFillDirection>",
+              "isRequired": false,
+              "description": "Raised when the user asks for a fill WITHOUT dragging the fill handle: the cell menu's Fill down / Fill right entries or Ctrl+D / Ctrl+R. The WCAG 2.5.7 non-drag alternative to the fill-handle drag; the workbook command (AutoFillCommand, one undo step) lives in TmSpreadsheet."
             },
             {
               "name": "OnFindRequested",
@@ -45076,6 +45095,12 @@
               "type": "EventCallback<(int Start, int End)>",
               "isRequired": false,
               "description": "Called when hidden rows near the selection should be shown."
+            },
+            {
+              "name": "OnZoomChanged",
+              "type": "EventCallback<double>",
+              "isRequired": false,
+              "description": "Raised when a two-finger pinch commits a zoom factor (clamped to 0.5–2.0 in whole 10 % steps). The pinch is a WCAG 2.5.7 path: the status-bar zoom buttons and the phone's More menu are its single-pointer alternative and drive the same OnZoomChanged."
             },
             {
               "name": "OnZoomResetRequested",
@@ -46705,15 +46730,19 @@
         {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-touch.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 80,
-        "manualItemCount": 80,
-        "generatedItemCount": 79,
+        "itemCount": 81,
+        "manualItemCount": 81,
+        "generatedItemCount": 80,
         "generatedOnlyItemCount": 0,
         "componentCount": 21,
-        "publicApiTypeCount": 58
+        "publicApiTypeCount": 59
       }
     },
     {
@@ -122839,10 +122868,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3316,
-    "manualItemCount": 3316,
+    "itemCount": 3317,
+    "manualItemCount": 3317,
     "generatedOnlyItemCount": 0,
     "componentCount": 492,
-    "publicApiTypeCount": 2771
+    "publicApiTypeCount": 2772
   }
 }

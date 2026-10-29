@@ -123,6 +123,11 @@
     font-family: var(--tm-font-mono, ui-monospace, monospace);
     font-size: var(--tm-text-xs);
     outline: none;
+    /* Phase 7 touch: one finger pans/scrolls the grid NATIVELY (momentum included) and the browser's
+       own pinch-zoom is disabled, because the two-finger pinch is the core pointer-gesture.js gesture
+       (`touch-action: pan-x pan-y` is the same contract the PdfViewer wrap uses). A cross-paragraph
+       selection rectangle on a touch screen is never a text selection — see docs/touch-interaction.md. */
+    touch-action: pan-x pan-y;
 }
 
 .tm-spreadsheet-canvas-grid:focus {
@@ -190,6 +195,71 @@
     inset: 0 auto auto 0;
     pointer-events: none;
     z-index: 0;
+}
+
+/* ── Touch handles (phase 7, WCAG 2.5.7) ──
+   The four edge drops extend the selection, the corner box fills from it. They are DOM elements so
+   `touch-action: none` can stop the browser panning the grid under the finger; the JS engine keeps
+   them over the painted selection. Tapping an edge drop extends the selection by one row/column —
+   the single-pointer alternative to dragging it (Shift+arrow is the keyboard one), while the fill's
+   non-drag path is the cell menu's Fill down / Fill right (Ctrl+D / Ctrl+R).
+   A FINE pointer hides the layer completely: the mouse keeps the painted handles and the classic
+   coordinate hit test, so nothing about the desktop interaction changes. */
+.tm-spreadsheet-canvas-grid__touch-handles {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle {
+    position: absolute;
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: auto;
+    touch-action: none;
+    /* The visible affordance is the painted handle/fill square on the selection canvas; these boxes
+       only enlarge the reachable area. Never a text selection or a callout under the finger. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle[hidden] {
+    display: none;
+}
+
+/* The two corner drops are VISIBLE circles on a coarse pointer (the fill handle keeps its painted
+   square): a 12px dot in the selection border with a surface ring, inside the finger-sized hit box.
+   A fine pointer never renders the layer at all, so the mouse keeps the square it always had. */
+.tm-spreadsheet-canvas-grid__touch-handle--start::after,
+.tm-spreadsheet-canvas-grid__touch-handle--end::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--tm-space-3);
+    height: var(--tm-space-3);
+    margin: calc(var(--tm-space-3) / -2) 0 0 calc(var(--tm-space-3) / -2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-spreadsheet-selection-border);
+    box-shadow: 0 0 0 var(--tm-space-0-5) var(--tm-color-surface);
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle[hidden]::after {
+    display: none;
+}
+
+@media (pointer: fine) {
+    .tm-spreadsheet-canvas-grid__touch-handles {
+        display: none;
+    }
 }
 
 .tm-spreadsheet-canvas-grid__editor {
@@ -584,7 +654,24 @@
     box-shadow: var(--tm-shadow-lg);
     z-index: var(--tm-z-dropdown);
     min-width: 160px;
-    padding: 4px 0;
+    padding: var(--tm-space-1) 0;
+    /* The menu may be taller than the room the gesture left (the C# clamps its max-height): it scrolls
+       inside itself and the scroll never chains to the page behind it. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* A finger-sized menu on a coarse pointer: every entry clears the touch floor, so a long press opens a
+   menu that can actually be tapped (the desktop popover keeps its compact rows). */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-context-menu {
+        min-width: var(--tm-spreadsheet-menu-min-width);
+    }
+
+    .tm-spreadsheet-context-menu .tm-spreadsheet-context-menu__item {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-spreadsheet-context-menu__item {

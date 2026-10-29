@@ -29,4 +29,17 @@ public sealed record SpreadsheetContextMenuRequest
 
     /// <summary>Client (viewport) Y of the gesture that opened the menu.</summary>
     public double ClientY { get; init; }
+
+    /// <summary>
+    /// The gesture that opened the menu: <c>"touch"</c> for a long-press, <c>"pointer"</c> for a mouse.
+    /// A finger-sized menu is offset from the fingerprint (the finger would cover the first entry), and a
+    /// host may key its own presentation off it. Null when the caller did not report one.
+    /// </summary>
+    public string? Anchor { get; init; }
+
+    /// <summary>
+    /// The viewport height the gesture reported, so a menu with no room below can FLIP above the press
+    /// point instead of being clamped into the bottom edge. Null when the caller did not report one.
+    /// </summary>
+    public double ViewportHeight { get; init; }
 }

@@ -5041,6 +5041,8 @@
   "TmSpreadsheet_Filter_SortAsc": "Zoradiť A → Z",
   "TmSpreadsheet_Filter_SortDesc": "Zoradiť Z → A",
   "TmSpreadsheet_Filter_TextFilters": "Filtre textu",
+  "TmSpreadsheet_FillDown": "Vyplniť nadol",
+  "TmSpreadsheet_FillRight": "Vyplniť doprava",
   "TmSpreadsheet_Filter_Title": "Filter a zoradenie",
   "TmSpreadsheet_Find_FindNext": "Nájsť ďalšie",
   "TmSpreadsheet_Find_FindPrevious": "Nájsť predchádzajúce",

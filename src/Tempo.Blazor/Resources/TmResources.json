@@ -4985,6 +4985,8 @@
   "TmSpreadsheet_Filter_SortAsc": "Sort A → Z",
   "TmSpreadsheet_Filter_SortDesc": "Sort Z → A",
   "TmSpreadsheet_Filter_TextFilters": "Text filters",
+  "TmSpreadsheet_FillDown": "Fill down",
+  "TmSpreadsheet_FillRight": "Fill right",
   "TmSpreadsheet_Filter_Title": "Filter and sort",
   "TmSpreadsheet_Find_FindNext": "Find next",
   "TmSpreadsheet_Find_FindPrevious": "Find previous",

@@ -325,7 +325,7 @@
       "type": "SpreadsheetDensity",
       "isRequired": false,
       "default": "SpreadsheetDensity.Auto",
-      "description": "Requested grid density. Auto is resolved once per instance from the browser's coarse-pointer media query; the result scales the RENDERED row heights and fonts only (the sheet model and every XLSX height keep their values). The root carries data-density so a host style or a test can key off the resolved value."
+      "description": "Requested grid density. Auto is resolved against the browser's coarse-pointer media query — once before the first canvas frame and again whenever the query flips (a mouse attached to a tablet) — and scales the RENDERED row heights, fonts, handles and header gutters only (the sheet model and every XLSX height keep their values). The root carries data-density, but only once the pointer is known or the density is forced, so a touch device never flashes the compact attribute."
     },
     {
       "name": "LayoutMode",
@@ -347,6 +347,18 @@
       "isRequired": false,
       "default": "null",
       "description": "Raised with the gesture when RenderContextMenu is false: the host owns the menu. The cell under the gesture has already become active."
+    },
+    {
+      "name": "OnZoomChanged",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Raised when a two-finger pinch commits a zoom factor (clamped to 0.5–2.0 in whole 10 % steps). The pinch is a WCAG 2.5.7 path: the status-bar zoom buttons and the phone's More menu are its single-pointer alternative and drive the same OnZoomChanged."
+    },
+    {
+      "name": "OnFillRequested",
+      "type": "EventCallback<SpreadsheetFillDirection>",
+      "isRequired": false,
+      "description": "Raised when the user asks for a fill WITHOUT dragging the fill handle: the cell menu's Fill down / Fill right entries or Ctrl+D / Ctrl+R. The WCAG 2.5.7 non-drag alternative to the fill-handle drag; the workbook command (AutoFillCommand, one undo step) lives in TmSpreadsheet."
     }
   ]
 }

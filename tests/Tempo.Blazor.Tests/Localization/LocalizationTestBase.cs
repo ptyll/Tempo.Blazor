@@ -2163,6 +2163,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSpreadsheet_Filter_SelectAll"] = "(Select all)",
         ["TmSpreadsheet_Filter_Blanks"] = "(Blanks)",
         ["TmSpreadsheet_Filter_TextFilters"] = "Text filters",
+        ["TmSpreadsheet_FillDown"] = "Fill down",
+        ["TmSpreadsheet_FillRight"] = "Fill right",
         ["TmSpreadsheet_Filter_Title"] = "Filter and sort",
         ["TmSpreadsheet_Filter_NumberFilters"] = "Number filters",
         ["TmSpreadsheet_Filter_DateFilters"] = "Date filters",
@@ -4671,6 +4673,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmCodeEditor_Format"]      = "Formátovat",
 
         // Spreadsheet dialogs (redesign phase 4)
+        ["TmSpreadsheet_FillDown"] = "Vyplnit dolů",
+        ["TmSpreadsheet_FillRight"] = "Vyplnit doprava",
         ["TmSpreadsheet_Filter_Title"] = "Filtr a řazení",
         ["TmSpreadsheet_Dedup_SelectedColumns"] = "Vybráno {0} z {1}",
         ["TmSpreadsheet_TextToColumns_StepLabel1"] = "Typ dat",
