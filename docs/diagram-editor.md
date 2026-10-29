@@ -192,6 +192,42 @@ rails the non-expanded side while `LeftOpen`/`RightOpen` keep meaning *shown*. A
 always re-raises the inspector with the **Properties** tab active — even when the user had railed
 it after switching to Layers (the selection pins the tab; the palette returns to its rail).
 
+## Embedded viewers (Fáze 9)
+
+A host that embeds the editor as a **viewer** (the Modeling preview and its "Open in editor"
+dialog) drives it through these additive knobs — never through CSS on the editor's internal DOM
+(the `Preview_css_has_no_selectors_on_diagram_editor_internals` guard). Every default is today's
+behavior, so a host that sets nothing sees no change:
+
+| Knob | Type / default | Effect |
+|---|---|---|
+| `ShowPageTabs` | `bool`, `true` | `false` drops the `.tm-diagram-editor__page-tabs` row in EVERY layout (a single-page preview has nothing to switch). Page switching stays available through the editor's own API and keyboard paths — the row is removed, not hidden with CSS. |
+| `FitToViewAsync(mode)` | `DiagramFitMode mode = Page` | Public zoom-to-fit (final UX review M5): asks the JS engine for a zoom-to-fit and re-renders the zoom label. `DiagramFitMode.Page` (default) is today's both-axes fit; `DiagramFitMode.Width` scales by the CONTAINER WIDTH only — a taller-than-box diagram overflows (scrolls) instead of shrinking. `TmDiagramCanvas.FitToView(mode)` mirrors it. |
+| `FitOnDocumentLoad` | `DiagramFitMode?`, `null` | Fits ONCE after the first render of a NEW document identity. The same document never re-fits; a replaced document does; user zoom afterwards wins. `Width` is the embedded mobile preview's first-load fit. |
+| `ShowMobileZoomOverlay` | `bool?`, `null` | The floating − \| % \| + \| fit pill rule: `null` keeps today's rule (`IsMobileLayout && ShowToolbar &&` the Zoom group); `true` shows the pill on a mobile layout even chrome-less (`ShowToolbar=false`); `false` never shows it. The docked bands keep the status-bar zoom. |
+| `MinimapInitiallyCollapsed` | `bool`, `false` | Seeds the minimap card (desktop) / floating overlay (tablet) collapsed ONCE at initialization. The user's own toggle wins afterwards; the mobile X1 rule (minimap hidden, "⋯" toggle) is unchanged. The Modeling tablet dialog seeds it from the editor's resolved mode. |
+
+`diagram-editor.js` `fitToView(container, padding, mode)` keeps its two-argument contract: the
+third `mode` argument is additive (`'width'`), so a host calling the old signature gets today's
+page fit. The width mode scales by `containerWidth / contentWidth` (padding included) capped by
+`FIT_MAX_SCALE`, centers shorter-than-box content vertically and keeps `minX - padding` as the
+visible left edge.
+
+```razor
+@* A chrome-less mobile viewer with zoom buttons and a fit-to-width first load *@
+<TmDiagramEditor Document="@doc"
+                 ReadOnly="true"
+                 ToolbarPreset="DiagramToolbarPreset.Viewer"
+                 ToolbarGroups="DiagramToolbarGroups.Zoom"
+                 ShowPageTabs="@(doc.Pages.Count > 1)"
+                 ShowToolbar="false"
+                 ShowMobileZoomOverlay="true"
+                 FitOnDocumentLoad="DiagramFitMode.Width" />
+
+@* A tablet-dialog editor whose floating minimap starts collapsed *@
+<TmDiagramEditor Document="@doc" MinimapInitiallyCollapsed="@isTablet" />
+```
+
 ## Escape ordering (capture consumers)
 
 The editor is frequently layered inside a host overlay (a `TmModal` dialog). The core

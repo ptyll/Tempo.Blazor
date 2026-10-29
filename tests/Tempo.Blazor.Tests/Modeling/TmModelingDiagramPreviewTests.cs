@@ -1,12 +1,16 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using FluentAssertions;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Buttons;
+using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Tests.Localization;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Modeling;
 
@@ -26,6 +30,69 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-diagram-preview']").GetAttribute("data-state").Should().Be("populated");
         cut.Find("[data-testid='diagram-editor']").Should().NotBeNull();
         cut.FindAll(".tm-diagram-node").Should().HaveCount(2);
+    }
+
+    // ── Fáze 9: the embedded-viewer knobs (public DE API, never CSS on its internals) ──
+
+    [Fact]
+    public void Single_page_preview_hides_page_tabs_via_public_api()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindAll(".tm-diagram-editor__page-tabs").Should().BeEmpty(
+            "the 1-page preview hides the page-tabs row through ShowPageTabs (public API)");
+        cut.FindComponent<TmDiagramEditor>().Instance.ShowPageTabs.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Multi_page_preview_keeps_page_tabs()
+    {
+        var document = CreateDocument(nodeCount: 2);
+        document.Pages.Add(new DiagramPage { Name = "Page 2" });
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document));
+
+        cut.Find(".tm-diagram-editor__page-tabs").Should().NotBeNull(
+            "a multi-page document keeps the tab row (pages stay switchable)");
+    }
+
+    [Fact]
+    public void Mobile_preview_shows_zoom_overlay_without_toolbar()
+    {
+        // The mobile band drops the embedded chrome (ShowToolbar=false) and opts into the DE's
+        // floating zoom pill — the mobile preview is no longer pinch-only.
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowEmbeddedEditorChrome, false)
+            .Add(p => p.ShowZoomOverlay, true));
+
+        var editor = cut.FindComponent<TmDiagramEditor>().Instance;
+        editor.ShowMobileZoomOverlay.Should().BeTrue("the preview requests the mobile zoom pill");
+        editor.ShowToolbar.Should().BeFalse("the mobile band hides the embedded chrome");
+    }
+
+    [Fact]
+    public void Preview_without_zoom_overlay_keeps_default_de_rule()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindComponent<TmDiagramEditor>().Instance.ShowMobileZoomOverlay.Should().BeNull(
+            "the default leaves the DE's own rule in place (docked bands keep the status-bar zoom)");
+    }
+
+    [Fact]
+    public void Preview_requests_fit_width_on_first_load_on_mobile()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowEmbeddedEditorChrome, false)
+            .Add(p => p.ShowZoomOverlay, true));
+
+        cut.FindComponent<TmDiagramEditor>().Instance.FitOnDocumentLoad.Should().Be(DiagramFitMode.Width,
+            "the mobile preview fits the diagram to the width on its first load");
     }
 
     [Fact]

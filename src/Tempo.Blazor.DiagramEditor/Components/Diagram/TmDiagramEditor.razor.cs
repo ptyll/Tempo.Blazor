@@ -62,6 +62,41 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Show the component toolbox panel on the left.</summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
+    /// <summary>
+    /// Show the page-tab row above the canvas (Fáze 9, embedded viewers). Default <c>true</c> —
+    /// today's behavior in every layout. <c>false</c> drops the row entirely (a single-page
+    /// preview has nothing to switch); page switching stays available through the editor's own
+    /// API and keyboard paths — the knob never hides pages through CSS.
+    /// </summary>
+    [Parameter] public bool ShowPageTabs { get; set; } = true;
+
+    /// <summary>
+    /// Fit the diagram when a NEW document identity renders for the first time (Fáze 9, embedded
+    /// viewers). Default <c>null</c> — today's no-auto-fit behavior. A value fits ONCE per document
+    /// instance after its first render (<see cref="DiagramFitMode.Width"/> is the embedded mobile
+    /// preview's fit-to-width); re-renders of the SAME document never re-fit, a replaced document
+    /// does. User zoom afterwards always wins.
+    /// </summary>
+    [Parameter] public DiagramFitMode? FitOnDocumentLoad { get; set; }
+
+    /// <summary>
+    /// The mobile floating zoom pill rule (Fáze 9, embedded viewers). Default <c>null</c> keeps
+    /// today's rule (<c>IsMobileLayout &amp;&amp; ShowToolbar &amp;&amp;</c> the Zoom group);
+    /// <c>true</c> shows the pill on a mobile layout even when <see cref="ShowToolbar"/> is
+    /// <c>false</c> (a chrome-less viewer keeps zoom buttons); <c>false</c> never shows it. The
+    /// pill is a mobile-band surface — on the docked bands the status bar owns the zoom.
+    /// </summary>
+    [Parameter] public bool? ShowMobileZoomOverlay { get; set; }
+
+    /// <summary>
+    /// The initial collapsed state of the minimap card (desktop) / floating overlay (tablet),
+    /// Fáze 9. Default <c>false</c> — today's expanded start. Seeded ONCE in
+    /// <see cref="OnInitialized"/> (a host like the Modeling tablet dialog starts with the map
+    /// collapsed); the user's own collapse/expand wins after start and the mobile X1 rule
+    /// (minimap hidden, toggled from the "⋯" menu) is unchanged.
+    /// </summary>
+    [Parameter] public bool MinimapInitiallyCollapsed { get; set; }
+
     /// <summary>Show the properties panel on the right.</summary>
     [Parameter] public bool ShowPropertiesPanel { get; set; } = true;
 
@@ -152,11 +187,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// or shrinks the editor's own box (a collapsed dock, a resized pane) asks the JS engine for
     /// a zoom-to-fit so the diagram fills the new box and the zoom report follows — the same
     /// path the toolbar's Fit-to-view (and the document load) use. The zoom label re-renders with
-    /// the fitted scale. A no-op before the canvas mounted.
+    /// the fitted scale. A no-op before the canvas mounted. Fáze 9: the optional
+    /// <paramref name="mode"/> picks the fit — <see cref="DiagramFitMode.Page"/> (default,
+    /// today's behavior) fits both axes, <see cref="DiagramFitMode.Width"/> scales by the
+    /// container width only (a tall diagram stays scrollable).
     /// </summary>
-    public async Task FitToViewAsync()
+    public async Task FitToViewAsync(DiagramFitMode mode = DiagramFitMode.Page)
     {
-        await FitToView();
+        await FitToView(mode);
         StateHasChanged();
     }
 
@@ -226,6 +264,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private string? _importError;
     private string? _exportError;
     private DiagramMinimapViewport? _minimapViewport;
+
+    // Fáze 9: FitOnDocumentLoad bookkeeping — the last document identity that was scheduled a
+    // fit (so the same instance never re-fits) and the fit waiting for the first render.
+    private DiagramDocument? _lastFitDocument;
+    private DiagramFitMode? _pendingFitOnLoad;
 
     private string? _activeLayerId;
 
@@ -360,6 +403,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         EnsureDocumentLayers(_document);
         _document.SnapToGrid(GridSize);
         EnsureCommandStackForActivePage();
+
+        // Fáze 9: the minimap start state is seeded ONCE, here — a host (the Modeling tablet
+        // dialog) starts the map collapsed without CSS. The user's own toggle wins after start;
+        // the mobile X1 snapshot (minimap hidden) applies unchanged on a mobile layout entry.
+        _minimapCollapsed = MinimapInitiallyCollapsed;
     }
 
     protected override void OnParametersSet()
@@ -375,6 +423,17 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _document.SnapToGrid(GridSize);
             _selectedIds = [];
             EnsureCommandStackForActivePage();
+        }
+
+        // Fáze 9: a NEW document identity (initial render included — the seeded _document is the
+        // same reference, hence the separate last-fit tracker) with FitOnDocumentLoad armed
+        // schedules ONE fit after that document's first render. The same instance re-rendering
+        // never re-fits; a replaced document does.
+        if (FitOnDocumentLoad is { } fitMode && Document is not null
+            && !ReferenceEquals(Document, _lastFitDocument))
+        {
+            _lastFitDocument = Document;
+            _pendingFitOnLoad = fitMode;
         }
 
         // A FORCED layout is the resolution: the shell reports changes only, and the initial
@@ -1712,11 +1771,17 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await _canvas.SetZoom(_zoomLevel);
     }
 
-    private async Task FitToView()
+    private async Task FitToView(DiagramFitMode mode = DiagramFitMode.Page)
     {
         if (_canvas is not null)
         {
-            var scale = await JS.InvokeAsync<double>("tmDiagramEditor.fitToView", _canvas.GetContainerRef(), 40);
+            // The width flag is additive (Fáze 9): the JS keeps its today two-argument contract
+            // when the mode is the default Page.
+            var scale = await JS.InvokeAsync<double>(
+                "tmDiagramEditor.fitToView",
+                _canvas.GetContainerRef(),
+                40,
+                mode == DiagramFitMode.Width ? "width" : null);
             _zoomLevel = scale;
         }
     }

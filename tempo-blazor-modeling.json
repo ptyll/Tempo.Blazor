@@ -300,6 +300,12 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether the header renders the nodes/edges summary subtitle. Default true. The hosting editor passes false (final UX review M1): on the docked bands the status bar already carries the counts, and the subtitle row cost the diagram canvas height. The title and the edit actions are unaffected."
+        },
+        {
+          "name": "ShowZoomOverlay",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt in to the embedded editor's floating mobile zoom pill (ShowMobileZoomOverlay) plus a fit-to-width first load (FitOnDocumentLoad=Width). Default false; the hosting editor turns it on for its mobile band. The pinch keeps working either way."
         }
       ]
     },

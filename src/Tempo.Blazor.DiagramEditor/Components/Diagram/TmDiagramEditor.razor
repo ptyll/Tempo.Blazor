@@ -52,7 +52,11 @@
                    LeftWidth="220px" MinLeftWidth="180" MaxLeftWidth="360"
                    RightWidth="300px" MinRightWidth="240" MaxRightWidth="440">
         <Header>
-            @* ── Page tabs (DI3: pages stay on top) ──────────────────────────── *@
+            @* ── Page tabs (DI3: pages stay on top). Fáze 9: an embedded viewer (a 1-page
+               Modeling preview) drops the row through the public ShowPageTabs knob — in EVERY
+               layout, never through CSS; page switching stays available via the API/keyboard. *@
+            @if (ShowPageTabs)
+            {
             <div class="tm-diagram-editor__page-tabs"
                  role="@(IsReadOnly ? null : "tablist")"
                  aria-label="@(IsReadOnly ? null : Loc["TmDiagramEditor_PageName"])"
@@ -126,6 +130,7 @@
                     }
                 }
             </div>
+            }
 
             @* ── Header bar: host slot, title, named panel toggles, "⋯" view settings ── *@
             @if (ShowsHeaderBar)
@@ -473,7 +478,7 @@
                    both live in the MobileChrome partial so this razor stays under the length
                    ceiling. The pill reads − | % | + | fit; the minimap floats over the canvas
                    corner with a header-strip collapse button. *@
-                @if (IsMobileLayout && ShowToolbar && Shows(DiagramToolbarGroups.Zoom))
+                @if (ShowsMobileZoomOverlay)
                 {
                     @MobileZoomOverlaySlot
                 }
@@ -1089,7 +1094,7 @@
                         <TmToolbarButton Icon="@IconNames.Minus" Tooltip="@Loc["TmDiagramEditor_ZoomOut"]" OnClick="ZoomOut" Disabled="@(!CanZoomOut)" />
                         <span class="tm-diagram-editor__zoom-label" role="status" aria-live="polite" aria-label="@(string.Format(Loc["TmDiagramEditor_ZoomAria"], _zoomLabel))">@_zoomLabel</span>
                         <TmToolbarButton Icon="@IconNames.Plus" Tooltip="@Loc["TmDiagramEditor_ZoomIn"]" OnClick="ZoomIn" Disabled="@(!CanZoomIn)" />
-                        <TmToolbarButton Icon="@IconNames.Maximize2" Tooltip="@Loc["TmDiagramEditor_FitToView"]" OnClick="FitToView" />
+                        <TmToolbarButton Icon="@IconNames.Maximize2" Tooltip="@Loc["TmDiagramEditor_FitToView"]" OnClick="@(async () => await FitToView())" />
                     </div>
                 }
                 <div class="tm-diagram-editor__statusbar-spacer"></div>

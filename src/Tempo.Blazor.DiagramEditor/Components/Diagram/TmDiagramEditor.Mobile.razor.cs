@@ -297,6 +297,17 @@ public partial class TmDiagramEditor
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        // Fáze 9: FitOnDocumentLoad fires after the render that mounted the new document. The
+        // editor's render hook runs BEFORE the canvas' own — a direct fit here would race the
+        // canvas' JS boot (an empty container ref, a no-op scale) — so the fit is handed to the
+        // canvas and consumed right after its init (the engine reports the fitted scale back
+        // through the ZoomChanged event, which re-renders the zoom label).
+        if (_pendingFitOnLoad is { } pendingFit && _canvas is not null)
+        {
+            _pendingFitOnLoad = null;
+            _canvas.RequestFitWhenReady(pendingFit);
+        }
+
         // The render served the layout generation it was rendered with: from here on a collapse raise is a
         // USER action again (U2/D27).
         SettleLayoutGeneration();

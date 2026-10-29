@@ -188,6 +188,30 @@
       "isRequired": false,
       "default": "true",
       "description": "Show the component toolbox panel on the left."
+    },
+    {
+      "name": "ShowPageTabs",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available through the editor's API and keyboard paths) — the embedded single-page viewer's knob, never CSS."
+    },
+    {
+      "name": "FitOnDocumentLoad",
+      "type": "DiagramFitMode?",
+      "isRequired": false,
+      "description": "Fit the diagram once after the first render of a NEW document identity. Default null (no auto-fit). Width is the embedded mobile preview's fit-to-width; the same document never re-fits, a replaced document does, and user zoom afterwards wins."
+    },
+    {
+      "name": "ShowMobileZoomOverlay",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "The mobile floating zoom pill rule. Default null keeps today's rule (mobile layout + ShowToolbar + the Zoom group); true shows the pill on a mobile layout even chrome-less; false never shows it. The docked bands keep the status-bar zoom."
+    },
+    {
+      "name": "MinimapInitiallyCollapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Start the minimap card (desktop) / floating overlay (tablet) collapsed. Default false (today's expanded start); seeded once at initialization, the user's own toggle wins afterwards and the mobile X1 rule is unchanged. The Modeling tablet dialog seeds it from its resolved mode."
     }
   ],
   "cssClasses": [

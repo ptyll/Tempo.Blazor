@@ -34440,6 +34440,34 @@
           ]
         },
         {
+          "itemName": "DiagramFitMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Diagram",
+          "description": "How TmDiagramEditor.FitToViewAsync (and the canvas fit) computes the fitted scale (Fáze 9, embedded viewers).",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramFitMode.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Page",
+              "value": "0",
+              "description": "Fit the whole content (both axes) into the editor's box — the default, today's behavior."
+            },
+            {
+              "name": "Width",
+              "value": "1",
+              "description": "Scale so the content width matches the container width; the height may overflow and scroll (the embedded mobile preview's fit-on-load)."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Fit a tall diagram to the editor width",
+              "code": "await editor.FitToViewAsync(DiagramFitMode.Width);"
+            }
+          ]
+        },
+        {
           "itemName": "DiagramGeometryHelper",
           "kind": "Class",
           "category": "Components",
@@ -38050,6 +38078,12 @@
               "description": "Optional named HttpClient to use for SVG/PNG/PDF export calls."
             },
             {
+              "name": "FitOnDocumentLoad",
+              "type": "DiagramFitMode?",
+              "isRequired": false,
+              "description": "Fit the diagram once after the first render of a NEW document identity. Default null (no auto-fit). Width is the embedded mobile preview's fit-to-width; the same document never re-fits, a replaced document does, and user zoom afterwards wins."
+            },
+            {
               "name": "GridSize",
               "type": "int",
               "isRequired": false,
@@ -38087,6 +38121,12 @@
               "isRequired": false,
               "default": "TmLayoutMode.Auto",
               "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
+            },
+            {
+              "name": "MinimapInitiallyCollapsed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Start the minimap card (desktop) / floating overlay (tablet) collapsed. Default false (today's expanded start); seeded once at initialization, the user's own toggle wins afterwards and the mobile X1 rule is unchanged. The Modeling tablet dialog seeds it from its resolved mode."
             },
             {
               "name": "MinimapPlacement",
@@ -38146,6 +38186,19 @@
               "isRequired": false,
               "default": "true",
               "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
+            },
+            {
+              "name": "ShowMobileZoomOverlay",
+              "type": "bool?",
+              "isRequired": false,
+              "description": "The mobile floating zoom pill rule. Default null keeps today's rule (mobile layout + ShowToolbar + the Zoom group); true shows the pill on a mobile layout even chrome-less; false never shows it. The docked bands keep the status-bar zoom."
+            },
+            {
+              "name": "ShowPageTabs",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available through the editor's API and keyboard paths) — the embedded single-page viewer's knob, never CSS."
             },
             {
               "name": "ShowPageView",
@@ -39065,12 +39118,12 @@
         }
       ],
       "summary": {
-        "itemCount": 143,
-        "manualItemCount": 143,
-        "generatedItemCount": 134,
+        "itemCount": 144,
+        "manualItemCount": 144,
+        "generatedItemCount": 135,
         "generatedOnlyItemCount": 0,
         "componentCount": 17,
-        "publicApiTypeCount": 117
+        "publicApiTypeCount": 118
       }
     },
     {
@@ -43939,6 +43992,12 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether the header renders the nodes/edges summary subtitle. Default true. The hosting editor passes false (final UX review M1): on the docked bands the status bar already carries the counts, and the subtitle row cost the diagram canvas height. The title and the edit actions are unaffected."
+            },
+            {
+              "name": "ShowZoomOverlay",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt in to the embedded editor's floating mobile zoom pill (ShowMobileZoomOverlay) plus a fit-to-width first load (FitOnDocumentLoad=Width). Default false; the hosting editor turns it on for its mobile band. The pinch keeps working either way."
             }
           ]
         },
@@ -124035,10 +124094,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3325,
-    "manualItemCount": 3325,
+    "itemCount": 3326,
+    "manualItemCount": 3326,
     "generatedOnlyItemCount": 0,
     "componentCount": 497,
-    "publicApiTypeCount": 2775
+    "publicApiTypeCount": 2776
   }
 }

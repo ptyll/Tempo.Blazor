@@ -3967,7 +3967,10 @@ window.tmDiagramEditor = {
         }
     },
 
-    fitToView: function (container, padding) {
+    // Fáze 9: `mode` is additive — 'width' scales by the container width ONLY (a taller-than-box
+    // diagram stays scrollable instead of shrinking to the height); the default (undefined/null)
+    // keeps today's page fit (both axes). The two-argument signature stays valid.
+    fitToView: function (container, padding, mode) {
         const inst = this.instances.get(container.id);
         if (!inst) return 1.0;
         padding = (padding != null) ? padding : 40;
@@ -4007,11 +4010,26 @@ window.tmDiagramEditor = {
         const contentW = maxX - minX + padding * 2;
         const contentH = maxY - minY + padding * 2;
         const svgRect = inst.svg.getBoundingClientRect();
-        const fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
-        const newW = svgRect.width / fitScale;
-        const newH = svgRect.height / fitScale;
-        const nx = minX - padding;
-        const ny = minY - padding;
+        let fitScale;
+        let newW, newH, nx, ny;
+        if (mode === 'width') {
+            // Width mode: the CONTAINER WIDTH over the CONTENT WIDTH decides the scale — the
+            // height is ignored, so a tall diagram overflows (scrolls) instead of shrinking.
+            // Content shorter than the box is vertically centered in the visible band.
+            fitScale = this._clampScale(Math.min(svgRect.width / contentW, this.FIT_MAX_SCALE));
+            newW = svgRect.width / fitScale;
+            newH = svgRect.height / fitScale;
+            nx = minX - padding;
+            ny = contentH < newH
+                ? minY - padding - (newH - contentH) / 2
+                : minY - padding;
+        } else {
+            fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
+            newW = svgRect.width / fitScale;
+            newH = svgRect.height / fitScale;
+            nx = minX - padding;
+            ny = minY - padding;
+        }
         this._setViewBox(inst, nx, ny, newW, newH);
         if (inst.dotNetRef) {
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', nx, ny, newW, newH);

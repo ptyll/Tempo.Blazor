@@ -89,6 +89,20 @@ public partial class TmDiagramEditor
         || (IsMobileLayout && (Shows(DiagramToolbarGroups.Search) || ShowsReadOnlyToggle
             || MobileMinimapToggleAvailable)));
 
+    /// <summary>
+    /// The floating mobile zoom pill rule (Fáze 9). The explicit <see cref="ShowMobileZoomOverlay"/>
+    /// knob wins: <c>true</c> shows the pill on a mobile layout even chrome-less (a viewer keeps
+    /// zoom buttons), <c>false</c> never shows it, and the default <c>null</c> keeps today's rule —
+    /// mobile + <see cref="ShowToolbar"/> + the Zoom group. The pill is a mobile-band surface: the
+    /// docked bands keep the status-bar zoom.
+    /// </summary>
+    private bool ShowsMobileZoomOverlay => ShowMobileZoomOverlay switch
+    {
+        true => IsMobileLayout,
+        false => false,
+        _ => IsMobileLayout && ShowToolbar && Shows(DiagramToolbarGroups.Zoom),
+    };
+
     /// <summary>Whether the status bar region renders.</summary>
     private bool ShowsStatusBar => ShowToolbar && ShowStatusBar
         && (Shows(DiagramToolbarGroups.Zoom) || ShowsReadOnlyToggle);

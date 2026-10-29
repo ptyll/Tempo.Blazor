@@ -65,6 +65,16 @@ public partial class TmModelingDiagramPreview
     [Parameter] public bool ShowEmbeddedEditorChrome { get; set; } = true;
 
     /// <summary>
+    /// Opt in to the embedded editor's floating mobile zoom pill (Fáze 9): with <c>true</c> the
+    /// preview passes the DE's additive <c>ShowMobileZoomOverlay="true"</c> (the pill shows on the
+    /// DE's own mobile band even with the toolbar hidden) and arms
+    /// <c>FitOnDocumentLoad="DiagramFitMode.Width"</c> so a first load fits the diagram to the
+    /// width. Default <c>false</c> — the docked bands keep the DE's own status-bar zoom rule. The
+    /// hosting editor turns this on for its mobile band; the pinch keeps working either way.
+    /// </summary>
+    [Parameter] public bool ShowZoomOverlay { get; set; }
+
+    /// <summary>
     /// Whether the preview renders its own heading block (the title + the nodes/edges summary).
     /// Default <c>true</c>. The mobile band (Fáze 7 re-review) passes <c>false</c>: the summary
     /// line duplicates the counts the editor's compact status card already shows in the same tab,

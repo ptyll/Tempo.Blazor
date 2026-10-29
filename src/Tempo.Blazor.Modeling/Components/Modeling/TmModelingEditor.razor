@@ -459,9 +459,9 @@
     /// is not a drop target and its own heading block is hidden — the status card in the same
     /// tab already carries the nodes/edges counts the heading summary would duplicate (Fáze 7
     /// re-review). Fáze 7 review: the mobile band also drops the embedded editor's own chrome —
-    /// its header bar would hold ONLY the "⋯" trigger there and the floating zoom pill
-    /// duplicates the canvas pinch — through the DE's public parameters. Mobile preview zoom is
-    /// pinch-only; the zoom buttons live in "Open in editor".</summary>
+    /// its header bar would hold ONLY the "⋯" trigger there — through the DE's public parameters.
+    /// Fáze 9: the mobile band opts into the DE's floating zoom pill + a fit-to-width first load
+    /// (ShowZoomOverlay) — the mobile preview is no longer pinch-only.</summary>
     private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
                                                                         Document="@_document"
                                                                         DocumentChanged="UpdatePreviewDocumentAsync"
@@ -469,6 +469,7 @@
                                                                         AllowNodeDrop="@EffectiveAllowNodeDrop"
                                                                         ShowEditActions="@(!IsMobileLayout)"
                                                                         ShowEmbeddedEditorChrome="@(!IsMobileLayout)"
+                                                                        ShowZoomOverlay="@IsMobileLayout"
                                                                         ShowHeader="@(!IsMobileLayout)"
                                                                         ShowSummary="false"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
@@ -687,13 +688,15 @@
                            The dialog breakpoints are 768/1100 so BOTH tablet viewports (the 90vw
                            body of a 1024 or 1180 window is 922/1062px — below the 1100 desktop
                            threshold) present the DE tablet layout, while a desktop dialog body
-                           (≥1100px) still resolves desktop. The floating minimap starts expanded
-                           — the DE exposes no "start collapsed" knob for the tablet overlay
-                           (noted for the DE plan). *@
+                           (≥1100px) still resolves desktop. Fáze 9: the editor's resolved tablet
+                           mode seeds the DE's MinimapInitiallyCollapsed — the floating overlay
+                           starts collapsed on a tablet (it covered the touch canvas) and reopens
+                           from its button; a desktop body keeps the expanded card. *@
                         <TmDiagramEditor Document="@_openedEditorDocument"
                                          DocumentChanged="UpdateOpenedEditorDocumentAsync"
                                          LayoutMode="TmLayoutMode.Auto"
                                          LayoutBreakpoints="@OpenEditorBreakpoints"
+                                         MinimapInitiallyCollapsed="@IsTablet"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
                                          ShowTitle="false"
                                          ShowToolbox="true"

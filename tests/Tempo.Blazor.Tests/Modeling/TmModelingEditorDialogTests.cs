@@ -455,6 +455,32 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Tablet_dialog_starts_with_minimap_collapsed()
+    {
+        // Fáze 9: the dialog seeds the DE's additive MinimapInitiallyCollapsed with the editor's
+        // resolved mode — on a tablet the floating minimap starts COLLAPSED (the overlay covered
+        // the touch canvas) and reopens from its button; on desktop it keeps today's expanded card.
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        cut.FindAll("[data-testid='modeling-open-diagram-editor'] .tm-diagram-minimap").Should().BeEmpty(
+            "the tablet dialog's minimap starts collapsed (a tablet band editor, not the DE default)");
+
+        // The knob is the public DE API: the embedded editor instance carries the seed.
+        cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramEditor>()
+            .Single(component => component.Markup.Contains("tm-modeling-editor__open-editor-diagram"))
+            .Instance.MinimapInitiallyCollapsed.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Tablet_dialog_escape_consumers_close_their_surface_not_the_dialog()
     {
         // Fáze 6: the embedded diagram editor is tablet-docked inside the dialog — its Escape

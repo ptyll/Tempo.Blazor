@@ -341,6 +341,69 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
         Assert.IsTrue(focusOnHeaderTrigger, "focus returns to the header ⋯ trigger that opened the dialog");
     }
 
+    // ── Fáze 9: the embedded viewer knobs on the mobile band ─────────────────
+
+    [TestMethod]
+    [Description("390 touch: the preview shows the DE zoom pill (no toolbar), +/- change data-diagram-zoom, no page-tabs row and the first load fits the diagram to the width")]
+    public async Task Mobile_390_ZoomPill_NoPageTabs_FitWidthOnLoad()
+    {
+        var page = await OpenTouchAsync(390, 844);
+        try
+        {
+            var preview = page.Locator(".tm-modeling-diagram-preview__editor").First;
+            await preview.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
+
+            // Fáze 9: the mobile band opts into the DE's floating zoom pill — the preview is no
+            // longer pinch-only — and hides the page-tabs row for the 1-page generated document.
+            var pill = preview.Locator(".tm-diagram-editor__zoom-overlay");
+            await pill.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            Assert.AreEqual(0, await preview.Locator(".tm-diagram-editor__page-tabs").CountAsync(),
+                "the 1-page preview renders no page-tabs row (the DE's public ShowPageTabs knob)");
+
+            // The first load fits the WIDE bpmn flow to the mobile width: the fitted zoom reports
+            // below 100% (a page fit would shrink further; no auto-fit would stay at 100%).
+            await page.WaitForFunctionAsync(
+                """() => { const z = document.querySelector(".tm-modeling-diagram-preview__editor .tm-diagram-editor__zoom-overlay")?.getAttribute('data-diagram-zoom'); return z !== null && z !== '100%'; }""",
+                null, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
+            // +/− drive the reported zoom (the pill's data-diagram-zoom and the label move together).
+            var before = await pill.GetAttributeAsync("data-diagram-zoom");
+            await pill.Locator(".tm-diagram-editor__zoom-overlay-btn").Nth(1).TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.WaitForFunctionAsync(
+                """(prev) => document.querySelector(".tm-modeling-diagram-preview__editor .tm-diagram-editor__zoom-overlay")?.getAttribute('data-diagram-zoom') !== prev""",
+                before, new PageWaitForFunctionOptions { Timeout = 10_000 });
+            var zoomedIn = await pill.GetAttributeAsync("data-diagram-zoom");
+            await pill.Locator(".tm-diagram-editor__zoom-overlay-btn").Nth(0).TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.WaitForFunctionAsync(
+                """(prev) => document.querySelector(".tm-modeling-diagram-preview__editor .tm-diagram-editor__zoom-overlay")?.getAttribute('data-diagram-zoom') !== prev""",
+                zoomedIn, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [Description("320x640 touch: the narrowest band keeps the zoom pill and the page-tabs-free preview")]
+    public async Task Mobile_320_ZoomPillVisible_NoPageTabs()
+    {
+        var page = await OpenTouchAsync(320, 640);
+        try
+        {
+            var preview = page.Locator(".tm-modeling-diagram-preview__editor").First;
+            await preview.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
+            await preview.Locator(".tm-diagram-editor__zoom-overlay")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            Assert.AreEqual(0, await preview.Locator(".tm-diagram-editor__page-tabs").CountAsync(),
+                "the 1-page preview renders no page-tabs row at 320px either");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task<IPage> OpenTouchAsync(int width, int height, string query = "?notation=bpmn&viewpoint=overview",

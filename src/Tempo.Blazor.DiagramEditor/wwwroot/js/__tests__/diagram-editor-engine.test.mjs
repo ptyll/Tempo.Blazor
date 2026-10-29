@@ -637,6 +637,43 @@ test('fitToView clamps its fit scale', () => {
     assert.ok(fit <= 5.0, 'fitToView never exceeds MAX_SCALE');
 });
 
+test('fitToView width mode scales by container width only', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    // Wide content (500 + 2*40 padding = 580 doc units) that is ALSO tall (5000 + 80 = 5080) in
+    // an 800x500 box: a PAGE fit would shrink to the MIN_SCALE floor (500/5080 clamps to 0.15);
+    // the width mode scales by the container width over the CONTENT WIDTH only and ignores the height.
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 0, w: 500, h: 5000 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40, 'width');
+    assert.ok(Math.abs(fit - 800 / 580) < 1e-9, 'width mode scales by the container width over the content width');
+    const vb = readVb(inst);
+    assert.ok(Math.abs(vb.width - 580) < 1e-9, 'the viewBox width equals the padded content width');
+    assert.ok(fit > 0.15, 'the tall content does NOT shrink the scale the way a page fit would');
+    // The content's left edge (minus the padding) stays the visible left edge.
+    assert.ok(Math.abs(vb.x - -40) < 1e-9, 'the content keeps its padding offset');
+});
+
+test('fitToView without a mode keeps the page fit (today contract)', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 0, w: 500, h: 5000 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40);
+    // A page fit considers BOTH axes: the tall content hits the MIN_SCALE floor (clamped).
+    assert.ok(Math.abs(fit - 0.15) < 1e-9, 'the default mode fits the whole page (width AND height)');
+    assert.ok(Math.abs(readVb(inst).width - 800 / 0.15) < 1e-6, 'the viewBox matches the page fit');
+});
+
+
 // ── J10: one measured containing block for the fixed popovers ───────────────────────────────
 
 /** A fake editor root: querySelector returns the anchor, getBoundingClientRect the editor box,

@@ -56,7 +56,7 @@ from its **own container** (`TmLayoutObserver`, `data-layout` on the root — ne
 |---|---|---|
 | **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it (an **issues-empty** body drops the dock row to `auto` when the model has zero issues), Right = inspector with **Properties \| Source** tabs (only the active tab body renders), StatusBar = the status strip. The preview's embedded editor keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar), and the status bar keeps the zoom controls. |
 | **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector/Issues are `aria-expanded` disclosure toggles; Preview closes all) — **Issues is the fourth panel**, a non-modal side sheet (`modeling-issues-sheet`) under the same one-open rule, never a dock row under the canvas; its tab carries the count badge. The sheet is positioned by the editor-owned `tm-modeling-editor__issues-sheet-host` wrapper (absolute, the canvas column's end edge, `min(20rem, 100%)`, `--tm-z-inline-sheet`; the `TmFocusScope` root is a child component and carries no scope attribute of its own) and its issue list scrolls inside. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
-| **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles with short visible labels + aria-hidden type icons + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag and no tree→preview insert**: reuse is a desktop/tablet editing intent — on mobile the tree renders neither the "+" button nor the drag grip, and edits go through "Open in editor" (G2 viewing). Preview zoom is pinch-only — zoom buttons live in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
+| **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles with short visible labels + aria-hidden type icons + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag and no tree→preview insert**: reuse is a desktop/tablet editing intent — on mobile the tree renders neither the "+" button nor the drag grip, and edits go through "Open in editor" (G2 viewing). Preview zoom is the DE's floating pill + pinch (Fáze 9 — `ShowZoomOverlay`, fit-to-width first load); the full editor lives in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
 
 `LayoutMode` (`Auto` default) pins a presentation for tests and kiosk hosts; `InitialMode`
 (`Desktop`) is what an Auto editor renders before the first measurement (SSR/prerender);
@@ -96,6 +96,7 @@ window still resolves the DE tablet layout).
 | `ShowSummary` | `bool` | `true` | The nodes/edges subtitle line in the header. The hosting editor passes `false` (final UX review M1 — the status bar already carries the counts and the row cost the canvas height). |
 | `ShowEditActions` | `bool` | `true` | Render the Primary "Open in editor" / Secondary "Generate diagram" buttons and the drop hint (only while drops are accepted). `false` when a hosting action bar owns those entries (mobile). |
 | `ShowEmbeddedEditorChrome` | `bool` | `true` | Pass `false` to hide the embedded editor's toolbar (`ShowToolbar=false` through the public API — never CSS). The mobile band does this: the header bar there would hold only the "⋯" trigger while the floating zoom pill duplicates the pinch. On the docked bands the preview keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar). |
+| `ShowZoomOverlay` | `bool` | `false` | Opt in to the embedded editor's floating mobile zoom pill (Fáze 9): passes the DE's additive `ShowMobileZoomOverlay="true"` — the pill shows on the DE's own mobile band even with the toolbar hidden — and arms `FitOnDocumentLoad="DiagramFitMode.Width"` so a first load fits the diagram to the width. The hosting editor turns this on for its mobile band; the pinch keeps working either way. The docked bands keep the DE's own status-bar zoom. |
 | `OpenInEditorTriggerId` | `string?` | `null` | Stable DOM id stamped on the open-editor trigger so the dialog's `TmFocusScope` can name the restore target. |
 | `AllowNodeDrop` / `OnDrop` / `ActiveDraggedElement` / `OnNodeDropped` | — | — | The drop target contract. |
 | `OnGenerateRequested` / `OnOpenInEditor` / `OnRelationshipSelected` | — | — | Host callbacks. |
@@ -113,6 +114,11 @@ threshold to 600px — a docked column always presents the stable tablet chrome 
 canvas + status-bar zoom, never a flip during a dock toggle) while a real G2 column (≤ 600px)
 keeps the DE's compact mobile presentation, whose chrome the mobile band drops through
 `ShowEmbeddedEditorChrome`.
+
+Embedded-viewer knobs (Fáze 9, all through the DE's public API — never CSS on its internals):
+the preview passes `ShowPageTabs="@(Document?.Pages.Count > 1)"`, so a single-page generated
+document renders NO page-tabs row (a multi-page one keeps the tabs switchable), and the mobile
+band's `ShowZoomOverlay` adds the DE's floating zoom pill plus the fit-to-width first load.
 
 ### `TmModelingModelTree`
 
@@ -206,8 +212,10 @@ Decisions:
   (the pin went stale the moment the editor's container and the ~90vw dialog body disagreed).
   A 1024 or 1180 tablet window renders a 922/1062px body, which resolves the DE tablet layout,
   while a desktop dialog body (≥1100px) still resolves desktop. The floating minimap starts
-  expanded — the DE exposes no "start collapsed" knob for the tablet overlay (noted for the DE
-  plan).
+  **collapsed on a tablet** (Fáze 9): the dialog seeds the DE's additive
+  `MinimapInitiallyCollapsed` with the editor's resolved tablet mode — the overlay covered the
+  touch canvas there — and it reopens from the overlay's reopen button; a desktop dialog body
+  keeps the expanded card (the seed is a `bool` — a desktop body is simply `false`).
 - **Escape ordering**: the dialog's trap honors Escape on a document *bubble* keydown listener,
   so every DiagramEditor Escape consumer runs in the **capture** phase and marks a handled
   Escape (`preventDefault()` + `tmEscapeHandled`) — the open search panel, the "⋯" view menu,

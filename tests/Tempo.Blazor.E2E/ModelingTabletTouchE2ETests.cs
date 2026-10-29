@@ -186,6 +186,38 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("1024x768 touch (Fáze 9): the open-editor dialog's floating minimap starts COLLAPSED and its reopen button expands it")]
+    public async Task Tablet_1024_OpenInEditorDialog_MinimapStartsCollapsedAndReopens()
+    {
+        var page = await OpenLoadedTabletPageAsync(1024, 768);
+        try
+        {
+            await page.Locator("[data-testid='modeling-open-in-editor-button']").TapAsync();
+            var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+            await dialog.Locator(".tm-modal")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector(\"[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout]\")?.getAttribute('data-editor-layout') === 'tablet'",
+                null, new PageWaitForFunctionOptions { Timeout = 20_000 });
+
+            // Fáze 9: the dialog seeds the DE's MinimapInitiallyCollapsed with the editor's
+            // tablet mode — the overlay (which covered the touch canvas) starts collapsed and
+            // the floating reopen button expands it in place.
+            Assert.AreEqual(0, await dialog.Locator(".tm-diagram-editor__minimap-overlay").CountAsync(),
+                "the tablet dialog's minimap overlay starts collapsed");
+            var reopen = dialog.Locator("[data-testid='diagram-editor-minimap-reopen']").First;
+            await reopen.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await reopen.TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await dialog.Locator(".tm-diagram-editor__minimap-overlay")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
     [Description("1024x768 touch: the coarse-pointer targets measure at least 44px tall (tabs, tree rows, selects, insert action)")]
     public async Task Tablet_1024_TouchTargets_Measure44px()
     {

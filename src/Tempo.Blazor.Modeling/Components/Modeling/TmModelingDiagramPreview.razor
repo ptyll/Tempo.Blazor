@@ -84,11 +84,14 @@
                gone with its groups (the DE renders no empty header bar), and the status bar keeps
                the zoom controls. Never CSS on the editor's internals.
                Fáze 7 review: on the mobile band the host drops the chrome entirely through
-               ShowToolbar=false — the DE header bar would hold ONLY the "⋯" trigger there (the
-               floating zoom pill duplicates the canvas pinch) and the page tabs stay (no public
-               hide switch — noted for the DE plan). The @ref backs GetViewport: the non-drag
+               ShowToolbar=false — the DE header bar would hold ONLY the "⋯" trigger there. The
+               1-page document hides the page-tabs row through the DE's public ShowPageTabs knob
+               (Fáze 9); a multi-page document keeps the tabs switchable. Fáze 9: ShowZoomOverlay
+               opts the mobile band into the DE's floating zoom pill (ShowMobileZoomOverlay) plus
+               a fit-to-width on the first load (FitOnDocumentLoad) — the mobile preview is no
+               longer pinch-only. The @ref backs GetViewport: the non-drag
                "Insert into preview" path targets the center of what the user SEES, not the page
-               center, and RefreshViewportAsync re-measures the canvas after a dock collapse. *@
+               center, and RefreshViewportAsync re-fits the canvas after a dock collapse. *@
             <TmDiagramEditor @ref="_editor"
                              Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
@@ -96,6 +99,9 @@
                              ToolbarPreset="DiagramToolbarPreset.Viewer"
                              ToolbarGroups="DiagramToolbarGroups.Zoom"
                              LayoutBreakpoints="@PreviewEditorBreakpoints"
+                             ShowPageTabs="@(Document?.Pages.Count > 1)"
+                             ShowMobileZoomOverlay="@(ShowZoomOverlay ? (bool?)true : null)"
+                             FitOnDocumentLoad="@(ShowZoomOverlay ? DiagramFitMode.Width : null)"
                              ShowTitle="false"
                              ShowToolbox="false"
                              ShowPropertiesPanel="false"

@@ -395,16 +395,19 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
 
         // Viewer preview contract: no edit action bar INSIDE the embedded diagram editor and no
         // panels sheet. Fáze 7 review: the modeling host also drops the editor chrome on this
-        // band through ShowToolbar=false — the header bar would hold ONLY the "⋯" trigger there
-        // (the floating zoom pill duplicates the canvas pinch, which the CDP tests below prove).
+        // band through ShowToolbar=false — the header bar would hold ONLY the "⋯" trigger there.
+        // Fáze 9: the mobile band opts into the floating zoom pill (ShowZoomOverlay) — the pill
+        // IS present now, and the 1-page preview renders no page-tabs row.
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor .tm-mobile-action-bar__bar").CountAsync(),
             "the Viewer preview has no edit action bar inside the embedded diagram editor on mobile");
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-editor-shell__sheet").CountAsync(),
             "the Viewer preview opens no panels sheet (no collision with the overlay header)");
-        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor__zoom-overlay").CountAsync(),
-            "the Viewer preview carries no floating zoom (chrome-free: the canvas pinch zooms)");
+        Assert.AreEqual(1, await page.Locator(".tm-modeling-editor .tm-diagram-editor__zoom-overlay").CountAsync(),
+            "the Viewer preview carries the floating zoom pill (Fáze 9: the mobile band opts in)");
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor__header-bar").CountAsync(),
             "the Viewer preview renders no header bar (it would hold only the overflow trigger)");
+        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor__page-tabs").CountAsync(),
+            "the 1-page Viewer preview renders no page-tabs row (Fáze 9)");
 
         await page.WaitForFunctionAsync(
             "() => document.querySelectorAll('.tm-modeling-editor .tm-diagram-node').length > 0",
