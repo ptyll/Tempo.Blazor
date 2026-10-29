@@ -62,8 +62,9 @@
 
 /* The docked canvas: the preview row fills the region, the issues dock row is a clamped block
    while expanded and auto (header only) while collapsed — the PARENT owns the dock height, the
-   panel itself no longer carries min/max-height. The region is the focusWithin surface, so it
-   stays the positioning context of the reload indicator and the open-editor modal. */
+   panel itself no longer carries min/max-height. The region is the positioning context of the
+   reload indicator (final review: the open-editor dialog renders ONCE after the layout
+   observer — it is viewport-positioned and needs no container). */
 .tm-modeling-editor__canvas-body {
     position: relative;
     display: grid;
@@ -80,18 +81,25 @@
    area stays ≥320px at the 1440x900/1280x800 baselines). The 14rem floor (review fix, phase 5)
    keeps ≥2 FULL rows visible in the mixed scenario too — its recommendation box makes the rows
    taller than the uniform stress list. The list scrolls inside whatever row the dock gets; the
-   header toggle collapses it entirely. */
+   header toggle collapses it entirely. Final UX review (M1): with ZERO issues the dock is a
+   one-line empty state — the row is auto and the preview takes the rest. */
 .tm-modeling-editor__canvas-body--issues-open {
     grid-template-rows: minmax(calc(var(--tm-space-16) * 4), 1fr) clamp(calc(var(--tm-space-16) * 3.5), 32%, calc(var(--tm-space-16) * 5));
+}
+
+.tm-modeling-editor__canvas-body--issues-empty {
+    grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .tm-modeling-editor__panel-tabs {
     display: none;
 }
 
+/* Final review (m2): the toolbar rows center their items — the baseline-align flex-end rule
+   let the wrapped title row sink below the header's hairline at the docked widths. */
 .tm-modeling-editor__toolbar {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-4);
     padding: var(--tm-space-3) var(--tm-space-4);
@@ -147,13 +155,13 @@
 /* MO3: the header provider select mirrors the TmModelingViewSelector fields (label above the
    field, --tm-input-height-md) so the three labeled selects read as one row. The field grows
    with the leftover context width (review fix, phase 3) so longer provider names are not
-   truncated; the token max-width still caps it next to the view selector. */
+   truncated; the final-review cap (m2) keeps the field from starving the view selector. */
 .tm-modeling-editor__field {
     display: grid;
     gap: var(--tm-space-1);
     flex: 1 1 calc(var(--tm-space-16) * 4);
     min-width: calc(var(--tm-space-16) * 3);
-    max-width: calc(var(--tm-space-16) * 8);
+    max-inline-size: calc(var(--tm-space-16) * 5);
 }
 
 .tm-modeling-editor__field > span {
@@ -273,6 +281,19 @@
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-danger-subtle);
     color: var(--tm-color-danger-text) !important;
+}
+
+/* Final UX review (M4): the recoverable single-state screens carry the shared Retry affordance
+   under their text — a Secondary button driving the editor's reload path. */
+.tm-modeling-editor__state-actions {
+    display: flex;
+    margin-block-start: var(--tm-space-3);
+}
+
+/* Final review (m3): the freshness warning is the warning tint (colour-plus-shape: the alert
+   triangle rides the same rule through the stale StatusStripIcon). */
+.tm-modeling-editor__status-icon--stale {
+    color: var(--tm-color-warning-text);
 }
 
 /* ── Compact layout (the editor container below its own mobile threshold) ─────────────
@@ -693,14 +714,33 @@
 
 /* Fáze 7: the compact header is a single row — see the mobile chrome section below. */
 
+/* Final UX review (M2): the tablet band has FOUR panel tabs (Tree | Preview | Inspector | Issues
+   — the issues open the side sheet). */
 [data-layout='tablet'] .tm-modeling-editor__panel-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--tm-space-1);
     padding: var(--tm-space-2);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
     flex-shrink: 0;
+}
+
+/* The tablet issues count badge inside its tab button — a plain count pill that shares the
+   tab's active tint. */
+[data-layout='tablet'] .tm-modeling-editor__panel-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-6);
+    margin-inline-start: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
 }
 
 [data-layout='tablet'] .tm-modeling-editor__panel-tab {
@@ -749,6 +789,8 @@
     padding: var(--tm-space-2) var(--tm-space-3);
 }
 
+/* Final review (m6): the title shrinks to the compact size and the title GROUP wraps — the
+   state badge drops below the title instead of being pushed out of a nowrap row at 320. */
 [data-layout='mobile'] .tm-modeling-editor__title {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -758,7 +800,7 @@
 
 [data-layout='mobile'] .tm-modeling-editor__title-group {
     flex: 1 1 auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     min-width: 0;
 }
 
@@ -802,9 +844,13 @@
     gap: var(--tm-space-2);
 }
 
+/* Final UX review (M3): each tile stacks the aria-hidden type icon, the count and a SHORT
+   visible label — the sr-only-only numbers were unreadable without the card's context. The
+   label ellipsizes so a long cs/sk form never pushes the four columns wide. */
 [data-layout='mobile'] .tm-modeling-editor__status-tile {
     display: grid;
     place-items: center;
+    gap: var(--tm-space-1);
     min-width: 0;
     padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid var(--tm-color-border-subtle);
@@ -812,9 +858,25 @@
     background: var(--tm-color-surface);
 }
 
+[data-layout='mobile'] .tm-modeling-editor__status-tile-icon {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tm-text-secondary);
+}
+
 [data-layout='mobile'] .tm-modeling-editor__status-tile strong {
     font-size: var(--tm-font-size-md);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-label {
+    overflow: hidden;
+    width: 100%;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The loaded time: part of the aria-live status region only — the visible card is the one
@@ -868,16 +930,98 @@
 }
 
 /* Fáze 6 review: the tablet canvas floor. The shell canvas row is a minmax(0,1fr) track that
-   collapses under the stacked tablet chrome (header, panel tabs, status strip, the issues dock
-   row) — the preview's inner floor alone cannot grow a minmax(0,…) track. On the tablet band
-   the preview row keeps a usable floor (the shell main region fills the rest); the compact
-   band and the desktop dock keep their own sizing. */
+   collapses under the stacked tablet chrome (header, panel tabs, status strip) — the preview's
+   inner floor alone cannot grow a minmax(0,…) track. On the tablet band the preview row keeps a
+   usable floor (the shell main region fills the rest); the compact band and the desktop dock
+   keep their own sizing. Final UX review (M2): the tablet band has NO dock row — the issues
+   live in the side sheet, so the second grid row is empty (auto = 0) and the canvas keeps the
+   full floor with the sheet open too. */
 [data-layout='tablet'] .tm-modeling-editor__canvas-body {
     grid-template-rows: minmax(calc(var(--tm-space-16) * 5), 1fr) auto;
 }
 
-[data-layout='tablet'] .tm-modeling-editor__canvas-body--issues-open {
-    grid-template-rows: minmax(calc(var(--tm-space-16) * 5), 1fr) clamp(calc(var(--tm-space-16) * 3.5), 32%, calc(var(--tm-space-16) * 5));
+/* The tablet issues side sheet (final UX review M2): the same overlay shape the shell's tablet
+   presentation renders for the inspector — anchored to the editor root's END edge, over the
+   canvas, non-modal (the preview stays reachable). The editor root is the positioning context. */
+[data-layout='tablet'] .tm-modeling-editor__issues-sheet {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    width: min(20rem, 100%);
+    overflow: hidden;
+    border-inline-start: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-count {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-color-text);
+    cursor: pointer;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close:hover {
+    background: var(--tm-bg-muted);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The sheet body scrolls; the panel inside is the whole body (its own header is suppressed —
+   the sheet header already names the panel and shows the count). */
+[data-layout='tablet'] .tm-modeling-editor__sheet-body {
+    display: grid;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-body ::deep .tm-modeling-issue-panel {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+    border: 0;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-body ::deep .tm-modeling-issue-panel__header {
+    display: none;
 }
 
 /* Fáze 6 (touch): every control the phase names reaches --tm-touch-target on a coarse

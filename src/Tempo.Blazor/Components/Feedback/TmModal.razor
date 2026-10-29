@@ -37,6 +37,7 @@
                           AriaDescribedBy="@(string.IsNullOrEmpty(Subtitle) ? null : _subtitleId)"
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
+                          RestoreFocus="@RestoreFocus"
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId"
                           InitialFocusTargetId="@InitialFocusTargetId">
@@ -208,6 +209,15 @@
     /// the opener.
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// Whether the modal's focus scope restores focus on close. Default <c>true</c> (the opener
+    /// is remembered at activation and focus returns there, or to an explicit restore target).
+    /// Set <c>false</c> when the HOST owns the restore — e.g. an editor that closes the dialog
+    /// through its own path and moves focus afterwards (single restore owner — final review):
+    /// the scope then renders <c>data-restore-focus="false"</c> and the module skips the restore.
+    /// </summary>
+    [Parameter] public bool RestoreFocus { get; set; } = true;
 
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }

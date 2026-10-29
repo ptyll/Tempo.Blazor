@@ -18,6 +18,7 @@
    not carry this stylesheet's scope attribute); the observer fills it and hosts the branch. *@
 <section class="@RootClass"
          data-testid="@TestId("modeling-editor")"
+         @ref="_editorRoot"
          data-state="@StateName"
          data-load-count="@_completedLoadCount"
          data-generation-count="@_completedGenerationCount"
@@ -51,15 +52,16 @@
                ONE panel at a time behind a real tablist ordered Preview / Tree / Inspector /
                Issues (badge count), a status card with the four count tiles and the loaded
                time, and the in-flow F5 action bar (Reload / Change view / Issues + More with
-               Generate diagram and Open in editor — never a "Settings" entry). The whole
-               chrome is the focusWithin surface so the open-editor dialog's close button and
-               the mobile focus return stay inside the scope. *@
+               Generate diagram and Open in editor — never a "Settings" entry). The editor ROOT
+               section is the focusWithin surface, so the open-editor dialog's close button and
+               the mobile focus return stay inside the scope (the overlays themselves render
+               ONCE after the layout observer — final review fix). *@
             @* Fáze 7 review fix (blocker): the mobile shell is the ALWAYS-PRESENT chrome — even on
                the empty / error / loading-without-model screens it renders the compact header, the
                "Change view" sheet and a reduced action bar (Reload + Change view), with the
                single-state screen where the tabs would be. Without it those states had no reload
                and no way back (no provider surface at all). *@
-            <div class="tm-modeling-editor__mobile-shell" @ref="_canvasSurface">
+            <div class="tm-modeling-editor__mobile-shell">
                 <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@MobileHeaderContent</header>
 
                 @if (WorkspaceMounted)
@@ -109,7 +111,8 @@
                             </TmTabPanel>
                             <TmTabPanel Id="inspector"
                                        TabAttributes="@InspectorTabAttributes"
-                                       Title="@Loc["TmModelingEditor_Inspector"]">
+                                       Title="@Loc["TmModelingEditor_Inspector"]"
+                                       Badge="@InspectorTabBadge">
                                 @* Fáze 7 re-review: the aside is the programmatic focus target of
                                    the selection switch — an issue/edge tap changes the tab AND
                                    moves focus onto this panel through the stable
@@ -146,11 +149,6 @@
                                    MaxVisible="3"
                                    LayoutMode="TmLayoutMode.Mobile"
                                    Class="tm-modeling-editor__action-bar" />
-
-                @* The mobile overlays live INSIDE the shell wrapper so the focusWithin scope
-                   (this element) contains both the close button and the focus-return host. *@
-                @ChangeViewSheetContent
-                @OpenEditorModalContent
             </div>
         }
         else
@@ -180,9 +178,11 @@
                            LeftOpen="@TreeSheetOpen" LeftOpenChanged="OnShellLeftOpenChanged"
                            RightOpen="@InspectorSheetOpen" RightOpenChanged="OnShellRightOpenChanged"
                            CollapsedPanels="_shellCollapsed" CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
-                           LeftWidth="220px" MinLeftWidth="200" MaxLeftWidth="360"
+                           LeftWidth="260px" MinLeftWidth="200" MaxLeftWidth="360"
                            RightWidth="280px" MinRightWidth="240" MaxRightWidth="440"
-                           PersistWidthsKey="@EffectivePersistWidthsKey">
+                           PersistWidthsKey="@EffectivePersistWidthsKey"
+                           Left="@TreeSlot"
+                           Right="@RightSlot">
                 <Header>
                     <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@EditorHeaderContent</header>
                     @if (layout.IsTablet)
@@ -206,7 +206,7 @@
                             <button type="button"
                                     class="@GetTabletPanelTabClass(ModelingEditorPanel.Preview)"
                                     data-testid="@TestId("modeling-panel-tab-preview")"
-                                    aria-pressed="@((!TreeSheetOpen && !InspectorSheetOpen).ToString().ToLowerInvariant())"
+                                    aria-pressed="@((!TreeSheetOpen && !InspectorSheetOpen && !IssuesSheetOpen).ToString().ToLowerInvariant())"
                                     title="@Loc["TmModelingEditor_PreviewOnly"]"
                                     @onclick="ShowPreviewOnlyAsync">
                                 @Loc["TmModelingEditor_Preview"]
@@ -220,17 +220,45 @@
                                     @onclick="ToggleInspectorSheetAsync">
                                 @Loc["TmModelingEditor_Inspector"]
                             </button>
+                            @* Final UX review (M2): the issues are the fourth panel on the tablet
+                               band — a side sheet under the same one-open rule. The visible count
+                               rides inside the button (its accessible name includes it). *@
+                            <button type="button"
+                                    class="@GetTabletPanelTabClass(ModelingEditorPanel.Issues)"
+                                    data-testid="@TestId("modeling-panel-tab-issues")"
+                                    aria-expanded="@IssuesSheetOpen.ToString().ToLowerInvariant()"
+                                    aria-controls="@(IssuesSheetOpen ? _issuesSheetId : null)"
+                                    title="@Loc["TmModelingEditor_ToggleIssues"]"
+                                    @onclick="ToggleIssuesSheetAsync">
+                                @Loc["TmModelingEditor_Issues"]
+                                @if (IssueCount > 0)
+                                {
+                                    <span class="tm-modeling-editor__panel-tab-badge">@IssueCount</span>
+                                }
+                            </button>
                         </nav>
                     }
                 </Header>
-                <Left>@TreeSlot</Left>
+                @* Left/Right ride as VALUE attributes (final review M4): the section syntax wraps
+                   the fragment, so a null TreeSlot/RightSlot could never reach the shell and the
+                   docked asides painted EMPTY columns on the empty/error screens. The value form
+                   passes the null through and the shell skips the side entirely. *@
                 <Canvas>@CanvasSlot</Canvas>
-                <Right>@RightSlot</Right>
                 <StatusBar>@StatusBarSlot</StatusBar>
             </TmEditorShell>
+
         }
         </LayoutContent>
     </TmLayoutObserver>
+
+    @* Final review fix (MAJOR): the overlays render ONCE, outside both layout branches — a flip
+       across the 768 boundary used to tear the dialog down and rebuild it (a new TmDiagramEditor
+       instance, a fresh engine boot). The single instance here survives the flip; the mobile
+       fullscreen vs desktop dialog choice rides the TmModal MobilePresentation parameter from the
+       resolved layout. The editor ROOT section is the focusWithin scope (it contains the close
+       button and every focus-return host in every layout). *@
+    @ChangeViewSheetContent
+    @OpenEditorModalContent
 </section>
 
 @code {
@@ -350,6 +378,12 @@
                 <div>
                     <h3>@Loc["TmModelingEditor_EmptyTitle"]</h3>
                     <p>@Loc["TmModelingEditor_EmptyText"]</p>
+                    @if (HasReloadableSource)
+                    {
+                        @* Final UX review (M4): an empty state with a configured source is
+                           recoverable — offer the same Reload affordance as the error screen. *@
+                        @RetryButtonContent
+                    }
                 </div>
             </div>
         }
@@ -366,10 +400,23 @@
                     {
                         <p class="tm-modeling-editor__detail">@_errorMessage</p>
                     }
+                    @RetryButtonContent
                 </div>
             </div>
         }
     </text>;
+
+    /// <summary>The shared retry affordance of the recoverable single-state screens (final UX
+    /// review M4): a Secondary button driving the editor's own reload path. The action bar's
+    /// Reload entry and this button share the label and the handler — one contract.</summary>
+    private RenderFragment RetryButtonContent => @<div class="tm-modeling-editor__state-actions">
+        <TmButton Variant="ButtonVariant.Secondary"
+                  Icon="@IconNames.Refresh"
+                  OnClick="ReloadModelAsync"
+                  data-testid="@TestId("modeling-editor-retry")">
+            @Loc["TmModelingEditor_Reload"]
+        </TmButton>
+    </div>;
 
     /// <summary>The reload affordance (mounted workspace, loading state) — shared by both layouts.</summary>
     private RenderFragment ReloadIndicatorContent => @<div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
@@ -423,6 +470,7 @@
                                                                         ShowEditActions="@(!IsMobileLayout)"
                                                                         ShowEmbeddedEditorChrome="@(!IsMobileLayout)"
                                                                         ShowHeader="@(!IsMobileLayout)"
+                                                                        ShowSummary="false"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
                                                                         OnNodeDropped="HandleNodeDroppedAsync"
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
@@ -438,6 +486,45 @@
                                                                        OnIssueSelected="SelectIssueAsync"
                                                                        Collapsed="@IssuesCollapsed"
                                                                        CollapsedChanged="SetIssuesCollapsedAsync" />;
+
+    /// <summary>
+    /// The tablet issues side sheet (final UX review M2): the same non-modal TmFocusScope sheet
+    /// the shell's overlay presentation renders for the inspector, scoped to the editor root and
+    /// positioned by the editor's own stylesheet. The panel renders WITHOUT its collapse toggle
+    /// (the sheet header owns the close button) — the sheet replaces the dock on this band.
+    /// </summary>
+    private RenderFragment? TabletIssuesSheetContent
+        => IssuesSheetOpen
+            ? @<TmFocusScope Active="true"
+                             Modal="false"
+                             CloseOnEscape="true"
+                             OnEscape="CloseIssuesSheetAsync"
+                             Class="tm-modeling-editor__issues-sheet"
+                             AriaLabelledBy="@_issuesSheetTitleId"
+                             DataTestId="@TestId("modeling-issues-sheet")">
+                <div class="tm-modeling-editor__sheet-header">
+                    <div role="heading" aria-level="2" id="@_issuesSheetTitleId" class="tm-modeling-editor__sheet-title">
+                        @Loc["TmModelingEditor_Issues"]
+                    </div>
+                    <span class="tm-modeling-editor__sheet-count" aria-hidden="true">@IssueCount</span>
+                    <button type="button"
+                            class="tm-modeling-editor__sheet-close"
+                            data-testid="@TestId("modeling-issues-sheet-close")"
+                            aria-label="@Loc["TmModelingEditor_CloseIssues"]"
+                            title="@Loc["TmModelingEditor_CloseIssues"]"
+                            @onclick="CloseIssuesSheetAsync">
+                        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                    </button>
+                </div>
+                <div class="tm-modeling-editor__sheet-body" id="@_issuesSheetId">
+                    <TmModelingIssuePanel Issues="@DisplayIssues"
+                                          OnIssueSelected="SelectIssueAsync"
+                                          ShowToggle="false"
+                                          Collapsed="false"
+                                          CollapsedChanged="SetIssuesCollapsedAsync" />
+                </div>
+            </TmFocusScope>
+            : null;
 
     /// <summary>The source panel (the inspector's "Source" tab on the docked layouts).</summary>
     private RenderFragment SourcePanelContent => @<TmModelingSourcePanel Metadata="@_model?.Metadata"
@@ -471,23 +558,25 @@
                                                                          Collapsed="@_mobileIssuesCollapsed"
                                                                          CollapsedChanged="SetIssuesCollapsedAsync" />;
 
-    /// <summary>The mobile status card: ONE compact row of the four counts (Fáze 7 re-review) —
-    /// the numbers are the visible content and each label is an sr-only span (the card keeps its
-    /// role="status" aria-label), so the row costs a single text line and the preview canvas
-    /// keeps its height at 320px. The loaded time stays in the aria-live region as sr-only
-    /// text; the state badge in the header owns the visible state (MO3 dedupe).</summary>
+    /// <summary>The mobile status card: four tiles with a SHORT visible label above the count
+    /// (final UX review M3 — the sr-only-only numbers were unreadable without the card's
+    /// context), an aria-hidden type icon per tile, and the loaded line in the aria-live region.
+    /// The state badge in the header owns the visible state (MO3 dedupe).</summary>
     private RenderFragment MobileStatusCardContent => @<text>
         <div class="tm-modeling-editor__status-grid">
-            @foreach (var (label, count) in StatusTiles)
+            @foreach (var (label, count, icon) in StatusTiles)
             {
                 <div class="tm-modeling-editor__status-tile">
+                    <span class="tm-modeling-editor__status-tile-icon" aria-hidden="true">
+                        <TmIcon Name="@icon" Size="IconSize.Xs" />
+                    </span>
                     <strong>@count</strong>
-                    <span class="tm-sr-only">@label</span>
+                    <span class="tm-modeling-editor__status-label">@label</span>
                 </div>
             }
         </div>
         <div class="tm-modeling-editor__status-loaded">
-            <span class="tm-modeling-editor__status-icon" aria-hidden="true">
+            <span class="@StatusStripIconClass" aria-hidden="true">
                 <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
             </span>
             @if (_model?.Metadata.LoadedAt is { } mobileLoadedAt && mobileLoadedAt != default)
@@ -510,7 +599,7 @@
         <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramNodes"]: <strong>@(_document?.Nodes.Count ?? 0)</strong></span>
         <span class="tm-modeling-editor__status-item">@Loc["TmModelingEditor_DiagramEdges"]: <strong>@(_document?.Edges.Count ?? 0)</strong></span>
         <span class="tm-modeling-editor__status-item tm-modeling-editor__status-item--state">
-            <span class="tm-modeling-editor__status-icon" aria-hidden="true">
+            <span class="@StatusStripIconClass" aria-hidden="true">
                 <TmIcon Name="@StatusStripIcon" Size="IconSize.Xs" />
             </span>
             @if (_model?.Metadata.LoadedAt is { } lastLoadedAt && lastLoadedAt != default)
@@ -563,7 +652,9 @@
     /// Fáze 7: on the editor's own MOBILE band the dialog presents FULLSCREEN (the TmModal
     /// fullscreen presentation) and hands the diagram editor a full-height body; on the docked
     /// bands it stays the ~90% dialog. The value is derived from the resolved layout — no
-    /// measurement, no flash.
+    /// measurement, no flash. Final review fix (single focus-restore owner): the modal's own
+    /// TmFocusScope restore is DISABLED — the editor's focusWithin close path is the one owner,
+    /// so a mobile close cannot race a restore target that does not exist there.
     /// </summary>
     private RenderFragment OpenEditorModalContent => @<text>
         @if (_openedEditorDocument is not null)
@@ -577,8 +668,8 @@
                      ShowDefaultFooterButtons="false"
                      CloseOnOverlayClick="false"
                      CloseOnEscape="true"
+                     RestoreFocus="false"
                      OnClose="CloseGeneratedDiagramAsync"
-                     RestoreFocusTargetId="@_openEditorTriggerId"
                      Class="tm-modeling-editor__open-editor-modal"
                      CloseButtonAdditionalAttributes="@OpenEditorCloseButtonAttributes"
                      AdditionalAttributes="@OpenEditorModalAttributes">
@@ -621,8 +712,10 @@
     </div> : null;
 
     /// <summary>The canvas slot: a state screen while no workspace is mounted, otherwise the
-    /// preview with the collapsible issues dock under it (and the open-editor dialog inside the
-    /// same surface element, so the focusWithin scope contains the trigger and the dialog).</summary>
+    /// preview with the collapsible issues dock under it on the DESKTOP band (final UX review
+    /// M2: the tablet band presents the issues as a side sheet instead — the dock row under the
+    /// canvas would starve the touch canvas there). The open-editor dialog renders ONCE after
+    /// the layout observer, so this surface no longer contains it.</summary>
     private RenderFragment? CanvasSlot
     {
         get
@@ -637,14 +730,23 @@
                 {
                     @ReloadIndicatorContent
                 }
-                <div class="@CanvasBodyClass" @ref="_canvasSurface">
+                <div class="@CanvasBodyClass">
                     @* N190: the preview keeps its labelled <section> region; the issues dock is the
                        sibling row under it (the shell canvas region never emits a <main>). *@
                     <section class="tm-modeling-editor__preview" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
                         @PreviewContent
                     </section>
-                    @IssuesDockContent
-                    @OpenEditorModalContent
+                    @if (!IsTablet)
+                    {
+                        @IssuesDockContent
+                    }
+                    @* Final UX review (M2): the tablet issues sheet lives INSIDE the canvas body —
+                       anchored below the header/panel-tabs row, so the switches stay reachable
+                       while the sheet is open (the shell's overlay contract). *@
+                    @if (IsTablet)
+                    {
+                        @TabletIssuesSheetContent
+                    }
                 </div>
             </text>;
         }

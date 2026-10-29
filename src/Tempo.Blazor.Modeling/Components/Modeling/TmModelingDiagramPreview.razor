@@ -17,7 +17,12 @@
         <header class="tm-modeling-diagram-preview__header">
             <div class="tm-modeling-diagram-preview__title-group">
                 <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
-                <span>@SummaryText</span>
+                @* Final UX review (M1): the nodes/edges summary is opt-out (ShowSummary) — the
+                   docked status bar already carries the counts and the row starved the canvas. *@
+                @if (ShowSummary)
+                {
+                    <span>@SummaryText</span>
+                }
             </div>
             @* Fáze 7 (G2): on a mobile layout the preview shows viewer controls only — the edit
                entries (generate / open in editor) live in the editor's action bar and header
@@ -74,21 +79,22 @@
                     @Loc["TmModelingDiagramPreview_EmptyDiagramHint"]
                 </div>
             }
-            @* The viewer keeps ONE toolbar row through the editor's own API: the Viewer group set
-               minus export (a preview never exports) — the explicit flags override the preset,
-               so no export group folds into a second row. Never CSS on the editor's internals.
+            @* The viewer keeps ONE toolbar row through the editor's own API: the ZOOM group only
+               (final UX review M1) — the search + "⋯" header-bar row of the wider viewer set is
+               gone with its groups (the DE renders no empty header bar), and the status bar keeps
+               the zoom controls. Never CSS on the editor's internals.
                Fáze 7 review: on the mobile band the host drops the chrome entirely through
                ShowToolbar=false — the DE header bar would hold ONLY the "⋯" trigger there (the
                floating zoom pill duplicates the canvas pinch) and the page tabs stay (no public
                hide switch — noted for the DE plan). The @ref backs GetViewport: the non-drag
                "Insert into preview" path targets the center of what the user SEES, not the page
-               center. *@
+               center, and RefreshViewportAsync re-measures the canvas after a dock collapse. *@
             <TmDiagramEditor @ref="_editor"
                              Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
                              ReadOnly="true"
                              ToolbarPreset="DiagramToolbarPreset.Viewer"
-                             ToolbarGroups="DiagramToolbarGroups.Zoom | DiagramToolbarGroups.View | DiagramToolbarGroups.Search"
+                             ToolbarGroups="DiagramToolbarGroups.Zoom"
                              ShowTitle="false"
                              ShowToolbox="false"
                              ShowPropertiesPanel="false"

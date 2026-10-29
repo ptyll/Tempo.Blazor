@@ -677,12 +677,12 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
                     }
                     else if (await IsTabletLayoutAsync(page))
                     {
-                        // Fáze 6 review fix: the tablet band starts with the dock COLLAPSED —
-                        // expand it first, or the rows are hidden behind the dock header.
-                        await page.Locator("[data-testid='modeling-issues-toggle']")
+                        // Final UX review (M2): the tablet band has NO dock — the issues are the
+                        // fourth panel side sheet; open it so the rows are in the DOM.
+                        await page.Locator("[data-testid='modeling-panel-tab-issues']")
                             .TapAsync(new LocatorTapOptions { Timeout = 10000 });
                         await page.WaitForFunctionAsync(
-                            "() => !document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden')",
+                            "() => !!document.querySelector(\"[data-testid='modeling-issues-sheet']\")",
                             null,
                             new PageWaitForFunctionOptions { Timeout = 10_000 });
                     }

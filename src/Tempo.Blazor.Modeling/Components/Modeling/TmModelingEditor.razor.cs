@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
@@ -47,8 +48,17 @@ public partial class TmModelingEditor : IAsyncDisposable
     private bool _shouldFocusOpenEditorCloseButton;
     private bool _shouldRestoreOpenButtonFocus;
     private bool _focusInspectorAfterRender;
+
+    /// <summary>Armed by a desktop issues-dock collapse/expand (final UX review M5): the next
+    /// render re-fits the embedded preview through <see cref="TmModelingDiagramPreview.RefreshViewportAsync"/>.</summary>
+    private bool _refitPreviewAfterRender;
     private ModelingInteropModule? _interopModule;
-    private ElementReference _canvasSurface;
+
+    /// <summary>The editor ROOT section — the focusWithin scope (final review fix): it contains
+    /// the open-editor close button, the preview trigger and every mobile focus-return host in
+    /// EVERY layout, so the overlay focus move and the restore work across the 768 boundary
+    /// where the single dialog instance now lives outside both layout branches.</summary>
+    private ElementReference _editorRoot;
 
     // ── Fáze 5 (MO1): docked-layout state ────────────────────────────────────
     // The shell's two-way state lives on the editor so a layout flip cannot disagree with it.
@@ -74,48 +84,6 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>The selected inspector tab of the docked layout: "properties" (default) or "source".</summary>
     private string _inspectorTab = "properties";
-
-    /// <summary>Stable, test-id-independent focus hook of the open-editor overlay trigger.</summary>
-    internal const string OpenInEditorFocusSelector = "[data-modeling-focus='open-in-editor']";
-
-    /// <summary>Stable, test-id-independent focus hook of the open-editor overlay close button.</summary>
-    internal const string OpenEditorCloseFocusSelector = "[data-modeling-focus='open-editor-close']";
-
-    /// <summary>Stable, test-id-independent focus hook of the mobile Inspector panel (the aside
-    /// an issue/edge tap moves focus onto after switching the tab, Fáze 7 re-review).</summary>
-    internal const string InspectorPanelFocusSelector = "[data-modeling-focus='inspector-panel']";
-
-    /// <summary>Focus-return trigger of the compact header "⋯" (the mobile open-editor entry).</summary>
-    internal const string MobileHeaderTriggerSelector = ".tm-modeling-editor__more .tm-dropdown-trigger";
-
-    /// <summary>Focus-return trigger of the mobile action bar's "More" overflow.</summary>
-    internal const string MobileActionBarTriggerSelector = ".tm-mobile-action-bar__more";
-
-    /// <summary>
-    /// The surface that opened the current open-editor dialog: the desktop preview trigger by
-    /// default, the mobile action-bar "More" or the compact header "⋯" when opened from there
-    /// (Fáze 7 review — focus returns to the ACTUAL trigger, with the
-    /// <see cref="OpenInEditorFocusSelector"/> host div kept as the fallback part of the list).
-    /// </summary>
-    private string _openEditorFocusReturnSelector = OpenInEditorFocusSelector;
-
-    /// <summary>
-    /// The focus-return selector list: the actual trigger FIRST, then the host-div proxy. A
-    /// single-part list (the desktop path) is passed through unchanged so the established
-    /// contract stays byte-equal.
-    /// </summary>
-    private string OpenEditorFocusReturnSelector => _openEditorFocusReturnSelector == OpenInEditorFocusSelector
-        ? OpenInEditorFocusSelector
-        : $"{_openEditorFocusReturnSelector}, {OpenInEditorFocusSelector}";
-
-    /// <summary>
-    /// Snapshot of the focus-return list for the PENDING restore. CloseGeneratedDiagramAsync
-    /// arms the restore AND resets <see cref="_openEditorFocusReturnSelector"/> to the default in
-    /// the same call (Fáze 7 re-review minor), so the actual trigger list must be captured first —
-    /// otherwise the reset would make every close restore the default instead of the trigger that
-    /// opened the dialog.
-    /// </summary>
-    private string? _pendingFocusReturnSelector;
 
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
 
@@ -209,17 +177,6 @@ public partial class TmModelingEditor : IAsyncDisposable
 
         return cached;
     }
-
-    /// <summary>
-    /// Title of the open-editor dialog: the document's title, falling back to the localized
-    /// "Open in editor" label when the document carries none (the pre-redesign default fell
-    /// back to "Preview" — Fáze 4 renames the fallback to the dialog's own label).
-    /// Test seam (InternalsVisibleTo): the modal header renders exactly this value.
-    /// </summary>
-    internal string OpenEditorDialogTitle
-        => string.IsNullOrWhiteSpace(_openedEditorDocument?.Title)
-            ? Loc["TmModelingDiagramPreview_OpenInEditor"]
-            : _openedEditorDocument.Title!;
 
     /// <summary>Scoped accessor for the shared, disposed-guarded module wrapper (the [Inject]
     /// runtime is only available after construction, so the wrapper is created lazily).</summary>
@@ -335,9 +292,43 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>
     /// The inline style of the height contract: default <c>null</c> (the stylesheet owns
     /// <c>min(768px, 100vh - 32px)</c>), an explicit <see cref="Height"/> becomes the block size
-    /// and drops the token floor so the host value wins exactly.
+    /// and drops the token floor so the host value wins exactly. A value that is not a simple CSS
+    /// length or <c>calc()</c> expression (final code review: anything carrying <c>;</c>, <c>{</c>,
+    /// <c>}</c> or an unknown shape) is REJECTED and falls back to the stylesheet default — the
+    /// inline style must never become an injection vector.
     /// </summary>
-    private string? HeightStyle => Height is null ? null : $"height: {Height}; min-height: 0;";
+    private string? HeightStyle => IsValidCssLength(Height) ? $"height: {Height}; min-height: 0;" : null;
+
+    /// <summary>
+    /// Whether <paramref name="value"/> is a safe block-size value: a CSS length, a percentage or
+    /// a single <c>calc()</c> expression — never a string containing <c>;</c>, <c>{</c> or <c>}</c>.
+    /// Test seam (InternalsVisibleTo).
+    /// </summary>
+    internal static bool IsValidCssLength(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Contains(';') || value.Contains('{') || value.Contains('}'))
+        {
+            return false;
+        }
+
+        var candidate = value.Trim();
+        if (candidate.StartsWith("calc(", StringComparison.OrdinalIgnoreCase) && candidate.EndsWith(')'))
+        {
+            return CssCalcExpression().IsMatch(candidate);
+        }
+
+        return CssLengthExpression().IsMatch(candidate);
+    }
+
+    /// <summary>A single calc() expression: the safe charset only (numbers, units, operators,
+    /// parentheses and whitespace) — no semicolons, braces, quotes or URL-ish payloads.</summary>
+    [GeneratedRegex(@"^calc\([\s\-+*/0-9a-zA-Z%.()]+\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex CssCalcExpression();
+
+    /// <summary>A CSS length or percentage: an optional sign, a number (with optional decimals)
+    /// and a unit — the shapes the Height documentation names.</summary>
+    [GeneratedRegex(@"^-?(\d+\.?\d*|\.\d+)(px|rem|em|%|vh|vw|dvh|svh|lvh|vmin|vmax|ch|ex|pt|pc|cm|mm|in|q)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex CssLengthExpression();
 
     /// <summary>
     /// Whether the four-region workspace is mounted (as opposed to a full-surface state screen).
@@ -353,12 +344,39 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>
     /// The canvas body class: the issues dock row is a clamped block while the panel is expanded
-    /// and <c>auto</c> (header only) while collapsed. The class — not an inline style — keeps the
-    /// sizes in the stylesheet.
+    /// and <c>auto</c> (header only) while collapsed. With ZERO issues the dock is a single-line
+    /// empty state, so the row is <c>auto</c> as well and the preview row takes the rest (final
+    /// UX review M1). The tablet band has NO dock row (the issues live in the side sheet there).
+    /// The class — not an inline style — keeps the sizes in the stylesheet.
     /// </summary>
-    private string CanvasBodyClass => IssuesCollapsed
-        ? "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-collapsed"
-        : "tm-modeling-editor__canvas-body tm-modeling-editor__canvas-body--issues-open";
+    private string CanvasBodyClass
+    {
+        get
+        {
+            const string baseClass = "tm-modeling-editor__canvas-body";
+            if (IsTablet)
+            {
+                return baseClass;
+            }
+
+            if (IssueCount == 0)
+            {
+                return $"{baseClass} {baseClass}--issues-empty";
+            }
+
+            return IssuesCollapsed
+                ? $"{baseClass} {baseClass}--issues-collapsed"
+                : $"{baseClass} {baseClass}--issues-open";
+        }
+    }
+
+    /// <summary>
+    /// Whether the current configuration has a source the retry/empty screens can reload: a
+    /// provider key is set or a loader override exists. The empty state offers the Reload button
+    /// only then (final UX review M4) — an "empty" without a configured source has nothing to
+    /// reload.
+    /// </summary>
+    private bool HasReloadableSource => !string.IsNullOrWhiteSpace(EffectiveProviderKey) || ModelLoaderOverride is not null;
 
     /// <summary>
     /// The Source tab's badge text: the localized "Stale" label while the loaded metadata is stale
@@ -374,29 +392,44 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <c>aria-describedby</c> points at (rendered outside the tablist).</summary>
     private readonly string _sourceStaleHintId = $"tm-modeling-source-stale-{Guid.NewGuid():N}";
 
+    /// <summary>The TestIdPrefix and staleness the cached Source tab attributes were built with (final review: the dictionary is rebuilt only when one of them changes).</summary>
+    private string? _cachedSourceTabAttributesPrefix;
+    private bool _cachedSourceTabAttributesStale;
+    private IReadOnlyDictionary<string, object>? _sourceTabAttributes;
+
     /// <summary>
     /// The Source tab button attributes: the frozen tab test id plus, while the indicator shows,
     /// the <c>data-stale</c> hook for the warning-tinted badge CSS, a <c>title</c> tooltip and an
     /// <c>aria-describedby</c> reference to the hint span rendered outside the tablist (the
     /// tab's accessible NAME stays the visible "Source" label — no aria-label override).
+    /// Cached on (TestIdPrefix, SourceIsStale) — the only inputs of the dictionary.
     /// </summary>
     private IReadOnlyDictionary<string, object>? SourceTabAttributes
     {
         get
         {
-            var attributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            if (_sourceTabAttributes is null
+                || _cachedSourceTabAttributesPrefix != TestIdPrefix
+                || _cachedSourceTabAttributesStale != SourceIsStale)
             {
-                ["data-testid"] = TestId("modeling-tab-source")
-            };
+                _cachedSourceTabAttributesPrefix = TestIdPrefix;
+                _cachedSourceTabAttributesStale = SourceIsStale;
+                var attributes = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["data-testid"] = TestId("modeling-tab-source")
+                };
 
-            if (SourceIsStale)
-            {
-                attributes["data-stale"] = "true";
-                attributes["title"] = Loc["TmModelingEditor_SourceStaleHint"];
-                attributes["aria-describedby"] = _sourceStaleHintId;
+                if (SourceIsStale)
+                {
+                    attributes["data-stale"] = "true";
+                    attributes["title"] = Loc["TmModelingEditor_SourceStaleHint"];
+                    attributes["aria-describedby"] = _sourceStaleHintId;
+                }
+
+                _sourceTabAttributes = attributes;
             }
 
-            return attributes;
+            return _sourceTabAttributes;
         }
     }
 
@@ -449,6 +482,18 @@ public partial class TmModelingEditor : IAsyncDisposable
             var selector = _pendingFocusReturnSelector ?? OpenEditorFocusReturnSelector;
             _pendingFocusReturnSelector = null;
             await FocusWithinAsync(selector);
+        }
+
+        // Final UX review (M5): a dock collapse/expand re-grids the canvas column — the embedded
+        // editor re-measures (JS relayout) so the diagram refits the new box and no dead gap is
+        // left under the chrome.
+        if (_refitPreviewAfterRender)
+        {
+            _refitPreviewAfterRender = false;
+            if (_preview is not null)
+            {
+                await _preview.RefreshViewportAsync();
+            }
         }
     }
 
@@ -871,45 +916,6 @@ public partial class TmModelingEditor : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private async Task OpenGeneratedDiagramAsync(DiagramDocument document)
-    {
-        _openedEditorDocument = document;
-        _shouldFocusOpenEditorCloseButton = true;
-        await OnOpenInEditor.InvokeAsync(document);
-    }
-
-    private Task UpdateOpenedEditorDocumentAsync(DiagramDocument document)
-    {
-        _openedEditorDocument = document;
-        _document = document;
-        return Task.CompletedTask;
-    }
-
-    private Task CloseGeneratedDiagramAsync()
-    {
-        _openedEditorDocument = null;
-        _shouldRestoreOpenButtonFocus = true;
-        // Capture the ACTUAL trigger list before the reset below — the restore runs after the
-        // next render and must return to the trigger that OPENED this dialog (Fáze 7 re-review).
-        _pendingFocusReturnSelector = OpenEditorFocusReturnSelector;
-        // Fáze 7 re-review (minor): the mobile trigger selectors describe a CLOSED context (the
-        // header "⋯" and the bar's More). Reset to the default so a NEXT dialog opened by the
-        // desktop preview trigger cannot inherit a stale mobile return target.
-        _openEditorFocusReturnSelector = OpenInEditorFocusSelector;
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Moves DOM focus to the element matching <paramref name="selector"/> INSIDE the editor's
-    /// canvas surface (the open-editor overlay close button, or the overlay trigger on focus
-    /// return — the surface element contains both in every layout). Progressive enhancement:
-    /// every failure is swallowed and the editor keeps working without it.
-    /// </summary>
-    private async Task FocusWithinAsync(string selector)
-    {
-        await Interop.InvokeVoidSafeAsync("focusWithin", _canvasSurface, selector);
-    }
-
     private Task ActivatePanelAsync(ModelingEditorPanel panel)
     {
         _activePanel = panel;
@@ -962,6 +968,8 @@ public partial class TmModelingEditor : IAsyncDisposable
         }
 
         _issuesCollapsed = collapsed;
+        // The dock row re-grids the canvas column — the embedded editor re-measures after render.
+        _refitPreviewAfterRender = true;
         return Task.CompletedTask;
     }
 
@@ -977,7 +985,8 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             ModelingEditorPanel.Tree => TreeSheetOpen,
             ModelingEditorPanel.Inspector => InspectorSheetOpen,
-            _ => !TreeSheetOpen && !InspectorSheetOpen
+            ModelingEditorPanel.Issues => IssuesSheetOpen,
+            _ => !TreeSheetOpen && !InspectorSheetOpen && !IssuesSheetOpen
         };
         return active
             ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"

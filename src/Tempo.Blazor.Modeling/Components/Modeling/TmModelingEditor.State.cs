@@ -61,14 +61,24 @@ public partial class TmModelingEditor
         }
     }
 
-    /// <summary>Leading status strip icon: check when loaded, alert on error, clock while loading.</summary>
-    private string StatusStripIcon => _state switch
-    {
-        ModelingEditorState.Loaded => IconNames.CheckCircle,
-        ModelingEditorState.Error => IconNames.AlertCircle,
-        ModelingEditorState.Loading => IconNames.Clock,
-        _ => IconNames.Box
-    };
+    /// <summary>Leading status strip icon: check when loaded, alert on error, clock while loading —
+    /// and the alert TRIANGLE when the loaded metadata is stale (final review m3: the freshness
+    /// warning is colour-plus-shape, not the success check).</summary>
+    private string StatusStripIcon => SourceIsStale
+        ? IconNames.AlertTriangle
+        : _state switch
+        {
+            ModelingEditorState.Loaded => IconNames.CheckCircle,
+            ModelingEditorState.Error => IconNames.AlertCircle,
+            ModelingEditorState.Loading => IconNames.Clock,
+            _ => IconNames.Box
+        };
+
+    /// <summary>Class of the leading status icon span: the warning tint while the source is
+    /// stale (final review m3), the state-driven color otherwise.</summary>
+    private string StatusStripIconClass => SourceIsStale
+        ? "tm-modeling-editor__status-icon tm-modeling-editor__status-icon--stale"
+        : "tm-modeling-editor__status-icon";
 
     private string DisplayProviderKey => string.IsNullOrWhiteSpace(EffectiveProviderKey) ? Loc["TmModelingEditor_NotSelected"] : ResolveProviderDisplayName(EffectiveProviderKey!);
 
@@ -140,10 +150,30 @@ public partial class TmModelingEditor
         }
     }
 
+    /// <summary>Cached concatenated issues (final review: the array was rebuilt on EVERY access —
+    /// the markup reads it through several fragments per render) keyed on the (_model, _issues)
+    /// references; the null-model case returns the generated issues list as-is.</summary>
+    private IReadOnlyList<ModelingIssueDto>? _displayIssuesCache;
+    private (ModelingModelDto? Model, IReadOnlyList<ModelingIssueDto> Issues) _displayIssuesKey;
+
     private IReadOnlyList<ModelingIssueDto> DisplayIssues
-        => _model is null
-            ? _issues
-            : _model.Issues.Concat(_issues).ToArray();
+    {
+        get
+        {
+            if (_model is null)
+            {
+                return _issues;
+            }
+
+            if (_displayIssuesCache is null || !_displayIssuesKey.Equals((_model, _issues)))
+            {
+                _displayIssuesKey = (_model, _issues);
+                _displayIssuesCache = _model.Issues.Concat(_issues).ToArray();
+            }
+
+            return _displayIssuesCache;
+        }
+    }
 
     private int IssueCount => DisplayIssues.Count;
 }

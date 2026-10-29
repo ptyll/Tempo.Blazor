@@ -938,7 +938,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Inspector_has_tabs_properties_and_source()
+    public async Task Inspector_has_tabs_properties_and_source()
     {
         using var cut = RenderDesktopEditor();
         cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull());
@@ -957,7 +957,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         cut.FindAll("[data-testid='modeling-source-panel']").Should().BeEmpty();
 
         // The tab selection lands through the editor's callback — an async render.
-        tabs[1].Click();
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")[1].Click());
         cut.WaitForAssertion(() =>
         {
             cut.FindAll("[data-testid='modeling-source-panel']").Should().NotBeEmpty();

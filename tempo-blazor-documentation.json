@@ -12825,6 +12825,13 @@
           "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
         },
         {
+          "name": "RestoreFocus",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the modal's focus scope restores focus on close. Default true (the opener is remembered at activation and focus returns there, or to an explicit restore target). Set false when the HOST owns the restore — e.g. an editor that closes the dialog through its own path and moves focus afterwards: the scope then renders data-restore-focus=\"false\" and the module skips the restore."
+        },
+        {
           "name": "RestoreFocusTarget",
           "type": "ElementReference?",
           "isRequired": false,

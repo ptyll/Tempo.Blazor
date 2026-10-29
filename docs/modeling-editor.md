@@ -54,9 +54,9 @@ from its **own container** (`TmLayoutObserver`, `data-layout` on the root — ne
 
 | Layout | Container width | What the user gets |
 |---|---|---|
-| **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it, Right = inspector with **Properties \| Source** tabs (only the active tab body renders), StatusBar = the status strip. |
-| **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector are `aria-expanded` disclosure toggles; Preview closes both). A tree selection is an editing intent — it opens the inspector sheet and yields the drawer. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
-| **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag**: reuse is the non-drag insert (below). Preview zoom is pinch-only — zoom buttons live in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
+| **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it (an **issues-empty** body drops the dock row to `auto` when the model has zero issues), Right = inspector with **Properties \| Source** tabs (only the active tab body renders), StatusBar = the status strip. The preview's embedded editor keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar), and the status bar keeps the zoom controls. |
+| **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector/Issues are `aria-expanded` disclosure toggles; Preview closes all) — **Issues is the fourth panel**, a non-modal side sheet (`modeling-issues-sheet`) under the same one-open rule, never a dock row under the canvas; its tab carries the count badge. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
+| **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles with short visible labels + aria-hidden type icons + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag and no tree→preview insert**: reuse is a desktop/tablet editing intent — on mobile the tree renders neither the "+" button nor the drag grip, and edits go through "Open in editor" (G2 viewing). Preview zoom is pinch-only — zoom buttons live in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
 
 `LayoutMode` (`Auto` default) pins a presentation for tests and kiosk hosts; `InitialMode`
 (`Desktop`) is what an Auto editor renders before the first measurement (SSR/prerender);
@@ -82,7 +82,7 @@ window still resolves the DE tablet layout).
 | `AllowNodeDrop` | `bool` | `true` | Tree→preview reuse (drop AND the non-drag insert); `false` removes the drop zone and the "+" affordance. |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Raised by a real drop AND by the insert alternative (same contract). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | see above | `Auto` / `Desktop` / `new(768, 1200)` | Presentation resolution from the editor's own container. |
-| `Height` | `string?` | `null` | The editor's block size (CSS length only). `null` keeps the stylesheet contract `min(768px, 100vh - 32px)`; a set value renders exactly that height (the token floor is dropped) and the shell fills the box. |
+| `Height` | `string?` | `null` | The editor's block size (CSS length only). `null` keeps the stylesheet contract `min(768px, 100vh - 32px)`; a set value renders exactly that height (the token floor is dropped) and the shell fills the box. A value that is not a simple CSS length or a single `calc()` expression — anything carrying `;`/`{`/`}` — is REJECTED and falls back to the stylesheet default (final review: the inline style is never an injection vector). |
 | `PersistKey` | `string?` | `null` | Overrides the localStorage key the docked shell persists panel widths under. Default derives `{TestIdPrefix}-modeling-editor` (or `modeling-editor`) so two editors on one page share widths only when they share the prefix. |
 | `ModelLoaderOverride` | `Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>?` | `null` | Host/test loader without registering a provider. |
 | `Class` | `string?` | `null` | Extra root class. |
@@ -93,16 +93,19 @@ window still resolves the DE tablet layout).
 |-----------|------|---------|-------------|
 | `Document` / `DocumentChanged` | `DiagramDocument?` / `EventCallback<DiagramDocument>` | `null` | The generated document; live two-way so dialog edits propagate to the preview (G8 — no Apply/Cancel footer). |
 | `ShowHeader` | `bool` | `true` | The section header row (title summary + actions). The editor's mobile band passes `false` (the status card already shows the counts). |
+| `ShowSummary` | `bool` | `true` | The nodes/edges subtitle line in the header. The hosting editor passes `false` (final UX review M1 — the status bar already carries the counts and the row cost the canvas height). |
 | `ShowEditActions` | `bool` | `true` | Render the Primary "Open in editor" / Secondary "Generate diagram" buttons and the drop hint (only while drops are accepted). `false` when a hosting action bar owns those entries (mobile). |
-| `ShowEmbeddedEditorChrome` | `bool` | `true` | Pass `false` to hide the embedded editor's toolbar (`ShowToolbar=false` through the public API — never CSS). The mobile band does this: the header bar there would hold only the "⋯" trigger while the floating zoom pill duplicates the pinch. |
+| `ShowEmbeddedEditorChrome` | `bool` | `true` | Pass `false` to hide the embedded editor's toolbar (`ShowToolbar=false` through the public API — never CSS). The mobile band does this: the header bar there would hold only the "⋯" trigger while the floating zoom pill duplicates the pinch. On the docked bands the preview keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar). |
 | `OpenInEditorTriggerId` | `string?` | `null` | Stable DOM id stamped on the open-editor trigger so the dialog's `TmFocusScope` can name the restore target. |
 | `AllowNodeDrop` / `OnDrop` / `ActiveDraggedElement` / `OnNodeDropped` | — | — | The drop target contract. |
 | `OnGenerateRequested` / `OnOpenInEditor` / `OnRelationshipSelected` | — | — | Host callbacks. |
 
-Public method: `InsertAtViewportCenterAsync(ModelingElementDto element)` — the non-drag insert;
+Public methods: `InsertAtViewportCenterAsync(ModelingElementDto element)` — the non-drag insert;
 creates the node at the center of the diagram viewport (`TmDiagramEditor.GetViewport()`, page
 center when unknown) through the same clamp/collision path as a drop and raises the SAME
-`OnNodeDropped` contract.
+`OnNodeDropped` contract. `RefreshViewportAsync()` — final UX review M5: after the hosting
+editor re-grids the canvas column (an issues-dock collapse/expand), the embedded viewer
+re-measures (the DE's JS `relayout` path) so the diagram refits the new box.
 
 ### `TmModelingModelTree`
 
@@ -165,13 +168,18 @@ Every drag affordance has a tap/keyboard path:
   fallback), which raises the same `OnNodeDropped`/`ModelingNodeDroppedEventArgs` contract as a
   real drop — hosts listening for tree reuse need no new wiring.
 - With `AllowNodeDrop="false"` neither the drop zone nor the alternative exists
-  (`?scenario=drag-readonly` demo).
+  (`?scenario=drag-readonly` demo). The alternative is a DESKTOP/TABLET affordance: the mobile
+  band (G2) renders neither the drag grip nor the "+" button — G2 viewing, edits go through
+  "Open in editor".
 
 ## The "Open in editor" dialog
 
 The dialog is a viewport-level core `TmModal` (G6) — a real scrim, a `TmFocusScope` trap with an
 inert background, document-level Escape, a `popover="manual"` top-layer root — never clipped to
-the editor box. Decisions:
+the editor box. The modal renders ONCE, outside both layout branches (final review): a flip
+across the 768 boundary re-presents the SAME `TmDialogEditor` instance (no teardown, no engine
+reboot); the fullscreen-vs-dialog choice rides the TmModal `MobilePresentation` parameter.
+Decisions:
 
 - **One header** (`MODELING-OPEN-EDITOR-SINGLE-HEADER`): the `TmModal` header owns the title
   (the DOCUMENT title, falling back to the localized "Open in editor" label) plus the
@@ -185,8 +193,14 @@ the editor box. Decisions:
   full-height body (`tm-modal-body` padding `0` there, `--tm-space-4` elsewhere). The footprint
   is a `@container tm-modeling-editor (width < 768px)` query — a 500px editor inside a wide
   viewport gets the compact dialog, a tablet editor keeps the big one.
-- **Embedded editor API**: `ToolbarPreset="Full"`, every panel visible; on the editor's tablet
-  band it is pinned to the resolved tablet mode.
+- **Embedded editor API**: `ToolbarPreset="Full"`, every panel visible. The dialog body is its
+  own layout scope: the embedded editor resolves **AUTO** from the dialog body with the dialog
+  breakpoints **768/1100** (`OpenEditorBreakpoints`) — NOT pinned to the editor's resolved mode
+  (the pin went stale the moment the editor's container and the ~90vw dialog body disagreed).
+  A 1024 or 1180 tablet window renders a 922/1062px body, which resolves the DE tablet layout,
+  while a desktop dialog body (≥1100px) still resolves desktop. The floating minimap starts
+  expanded — the DE exposes no "start collapsed" knob for the tablet overlay (noted for the DE
+  plan).
 - **Escape ordering**: the dialog's trap honors Escape on a document *bubble* keydown listener,
   so every DiagramEditor Escape consumer runs in the **capture** phase and marks a handled
   Escape (`preventDefault()` + `tmEscapeHandled`) — the open search panel, the "⋯" view menu,
@@ -194,9 +208,12 @@ the editor box. Decisions:
   while the dialog stays open; an Escape NOTHING consumes keeps bubbling and closes the dialog.
   The search-close path refocuses the canvas via `TmDiagramCanvas.FocusCanvasAsync()`. Contract:
   [docs/diagram-editor.md](docs/diagram-editor.md).
-- **Focus return**: the dialog names the ACTUAL trigger through `TmFocusScope.RestoreFocusTarget`
-  — the desktop preview trigger (`OpenInEditorTriggerId`, hook `data-modeling-focus="open-in-editor"`)
-  or, on mobile, the action-bar "More" / header "⋯" host (`tm-modeling-editor__more-host`,
+- **Focus return**: the editor's `focusWithin` close path is the SINGLE restore owner (final
+  review) — the dialog's `TmModal` renders with `RestoreFocus="false"` (the additive parameter:
+  the scope renders `data-restore-focus="false"` and the trap module skips its own restore), so
+  a mobile close cannot race a restore target that does not exist there. The restore moves to
+  the ACTUAL trigger (`OpenInEditorTriggerId`, hook `data-modeling-focus="open-in-editor"`) or,
+  on mobile, the action-bar "More" / header "⋯" host (`tm-modeling-editor__more-host`,
   `tabindex="-1"` proxy). A next dialog opened from another trigger cannot inherit a stale
   restore selector.
 
@@ -244,7 +261,8 @@ All user-facing strings resolve through `ITmLocalizer` keys in the four core tab
 `TmModelingEditor_LastLoaded`, `TmModelingEditor_Properties`, `TmModelingEditor_SourceStaleHint`,
 `TmModelingIssuePanel_Collapse`/`_Expand` (fr/sk name the *issues panel*),
 `TmModelingEditor_ChangeView`/`_Reload`/`_MoreOptions`, the short mobile labels
-`TmModelingEditor_TreeShort`/`_Nodes`/`_Edges`, and the neutral count key
+`TmModelingEditor_TreeShort`/`_ElementsShort`/`_RelationshipsShort`/`_Nodes`/`_Edges` and
+`_CloseIssues`/`_ToggleIssues` (the tablet issues sheet), and the neutral count key
 `TmModelingIssuePanel_Count` ("Issues: {0}" — a plain key, no plural family).
 
 ## Demo
@@ -259,8 +277,11 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
 
 ## Tests
 
-- bUnit: `TmModelingEditorTests`, `TmModelingModelTreeTests`, `TmModelingDiagramPreviewTests`,
-  `TmModelingViewSelectorTests`, `TmModelingIssuePanelTests` (+ the package-wide
+- bUnit: `TmModelingEditorTests`, `TmModelingEditorDialogTests`, `TmModelingEditorTabletTests`,
+  `TmModelingEditorMobileTests`, `TmModelingEditorSingleStateTests` (the retry/empty screens and
+  the Height CSS-length guard), `TmModelingModelTreeTests`, `TmModelingDiagramPreviewTests`,
+  `TmModelingViewSelectorTests`, `TmModelingIssuePanelTests`, `TmModelingInspectorTests`,
+  `TmModelingSourcePanelTests`, `TmModelingLocalizationM15Tests` (+ the package-wide
   `ModelingNoEvalInteropTests` guard and `ModelingSemanticTypeIconsTests`).
 - E2E: the `Modeling*` specs (M8–M26) cover the desktop dock, the tablet drawer/sheet rules, the
   mobile G2 band, the provider selector, tree collapse/filter, the CSP lane (`?csp=1`), the

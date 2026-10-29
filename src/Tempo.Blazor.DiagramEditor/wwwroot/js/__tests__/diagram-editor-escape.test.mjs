@@ -215,3 +215,95 @@ test('Escape during an edge draw: consumed (the gesture wins over the dialog)', 
     assert.equal(e.defaultPrevented, true);
     assert.equal(log.length, 0, 'cancelEdgeDraw is the consumer; nothing else is invoked');
 });
+
+// ── Final review (Modeling redesign): inline label edits, inert hosts and selection clears ──
+
+test('inline label edit (input inside the canvas container) consumes Escape without a panel or menu', () => {
+    const engine = loadEngine();
+    // The edge-label foreignObject input: document.activeElement is an INPUT inside the canvas
+    // container; no search panel and no view menu are open.
+    const labelInput = { tagName: 'INPUT' };
+    const doc = { activeElement: labelInput };
+    const engineDoc = loadEngine({ document: doc });
+    const { inst, log } = fakeInst({}, { contains: () => true });
+    inst.container = Object.assign(inst.container, { contains: (el) => el === labelInput });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, true, 'the edit owns the Escape');
+    assert.equal(e.tmEscapeHandled, true, 'the host overlay (the dialog) must not close under the caret');
+    assert.deepEqual(log, [], 'nothing else is invoked — the input cancels on its own keydown');
+});
+
+test('a TEXTAREA inline edit inside the canvas container consumes Escape the same way', () => {
+    const engine = loadEngine();
+    const labelArea = { tagName: 'TEXTAREA' };
+    const doc = { activeElement: labelArea };
+    const engineDoc = loadEngine({ document: doc });
+    const { inst } = fakeInst({}, { contains: () => true });
+    inst.container = Object.assign(inst.container, { contains: (el) => el === labelArea });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, true);
+    assert.equal(e.tmEscapeHandled, true);
+});
+
+test('focus outside the container (a plain INPUT elsewhere) does NOT consume', () => {
+    const engine = loadEngine();
+    const elsewhere = { tagName: 'INPUT' };
+    const doc = { activeElement: elsewhere };
+    const engineDoc = loadEngine({ document: doc });
+    const { inst } = fakeInst();
+    inst.container = Object.assign(inst.container, { contains: () => false });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engineDoc._onSearchEscape(e, inst);
+
+    assert.equal(e.defaultPrevented, false, 'an Escape typed outside the editor is not stolen');
+    assert.equal(e.tmEscapeHandled, undefined);
+});
+
+test('_onKeyDown ignores the document.body fallback when the canvas sits inside an inert subtree', () => {
+    const engine = loadEngine();
+    const { inst, log } = fakeInst({ selectedIds: new Set(['n1']) });
+    // The Modeling preview behind the open-editor dialog: the canvas is inside [inert], focus
+    // fell to body — the DIALOG's editor owns the keys, this canvas is inert.
+    inst.container = Object.assign(inst.container, {
+        contains: () => false,
+        closest: (selector) => selector === '[inert]' ? { fake: 'overlay' } : null,
+    });
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onKeyDown(e, inst);
+
+    assert.equal(e.defaultPrevented, false, 'the inert canvas never consumes');
+    assert.deepEqual(log, [], 'the dialog editor owns the keys');
+});
+
+test('_onKeyDown keeps the document.body fallback when no inert ancestor exists', () => {
+    const engine = loadEngine();
+    const { inst, log } = fakeInst({ selectedIds: new Set(['n1']) });
+    inst.container = Object.assign(inst.container, { contains: () => false, closest: () => null });
+    engine._updateSelection = () => {};
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onKeyDown(e, inst);
+
+    assert.equal(e.defaultPrevented, true, 'the canvas fallback still clears a selection');
+    assert.deepEqual(log, [['OnClearSelection']]);
+});
+
+test('the selection-clear Escape marks tmEscapeHandled (the host dialog stays open)', () => {
+    const engine = loadEngine();
+    const { inst } = fakeInst({ selectedIds: new Set(['n1']) });
+    engine._updateSelection = () => {};
+    const e = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+
+    engine._onKeyDown(e, inst);
+
+    assert.equal(e.defaultPrevented, true);
+    assert.equal(e.tmEscapeHandled, true, 'a consumed Escape never bubbles to the host overlay');
+});

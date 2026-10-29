@@ -74,6 +74,14 @@ public partial class TmModelingDiagramPreview
     /// </summary>
     [Parameter] public bool ShowHeader { get; set; } = true;
 
+    /// <summary>
+    /// Whether the header renders the nodes/edges summary subtitle. Default <c>true</c>. The
+    /// hosting editor passes <c>false</c> (final UX review M1): on the docked bands the status
+    /// bar already carries the counts, and the subtitle row cost the diagram canvas height.
+    /// The title and the edit actions are unaffected.
+    /// </summary>
+    [Parameter] public bool ShowSummary { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -83,6 +91,15 @@ public partial class TmModelingDiagramPreview
         ShowHeader ? null : "tm-modeling-diagram-preview--no-header",
         Class
     }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    /// <summary>
+    /// Final UX review (M5): after the hosting editor re-grids the canvas column (an issues-dock
+    /// collapse/expand), the embedded viewer re-measures its canvas (the DE's JS
+    /// <c>relayout</c> path) so the diagram refits the new box and the viewport/zoom report
+    /// stays truthful. A no-op before the editor mounted.
+    /// </summary>
+    public Task RefreshViewportAsync()
+        => _editor?.NotifyViewportChangedAsync() ?? Task.CompletedTask;
 
     private int NodeCount => Document?.Nodes.Count ?? 0;
 

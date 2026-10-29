@@ -293,6 +293,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
+        },
+        {
+          "name": "ShowSummary",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the header renders the nodes/edges summary subtitle. Default true. The hosting editor passes false (final UX review M1): on the docked bands the status bar already carries the counts, and the subtitle row cost the diagram canvas height. The title and the edit actions are unaffected."
         }
       ]
     },

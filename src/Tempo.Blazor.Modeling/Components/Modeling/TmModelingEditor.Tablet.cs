@@ -18,10 +18,19 @@ public partial class TmModelingEditor
 
     /// <summary>The tablet band's own sheet flags: BOTH start closed (the preview is alone until
     /// the user opens a sheet — the same defaults the wireframe editor uses), and the issues dock
-    /// starts collapsed. The desktop dock flags are untouched by any of it.</summary>
+    /// starts collapsed. The desktop dock flags are untouched by any of it. Final UX review (M2):
+    /// the issues are the FOURTH panel on this band — the side sheet starts closed too.</summary>
     private bool _tabletTreeOpen;
     private bool _tabletInspectorOpen;
     private bool _tabletIssuesCollapsed = true;
+    private bool _tabletIssuesOpen;
+
+    /// <summary>Per-instance DOM ids of the tablet issues sheet (the focus-scope title and the body the tab's aria-controls names).</summary>
+    private readonly string _issuesSheetId = $"tm-modeling-issues-sheet-{Guid.NewGuid():N}";
+    private readonly string _issuesSheetTitleId = $"tm-modeling-issues-sheet-title-{Guid.NewGuid():N}";
+
+    /// <summary>Whether the tablet issues side sheet is open (the tablet band's own flag — the desktop dock and the mobile tab are separate states).</summary>
+    private bool IssuesSheetOpen => IsTablet && _tabletIssuesOpen;
 
     /// <summary>Whether the editor's own container currently resolves the tablet band.</summary>
     private bool IsTablet => _resolvedLayout == TmLayoutMode.Tablet;
@@ -58,11 +67,13 @@ public partial class TmModelingEditor
             _tabletTreeOpen = false;
             _tabletInspectorOpen = false;
             _tabletIssuesCollapsed = true;
+            _tabletIssuesOpen = false;
         }
         else if (wasTablet && mode != TmLayoutMode.Tablet)
         {
             _tabletTreeOpen = false;
             _tabletInspectorOpen = false;
+            _tabletIssuesOpen = false;
         }
 
         // Fáze 7: entering the mobile band resets ITS surfaces — the change-view sheet is closed
@@ -89,6 +100,8 @@ public partial class TmModelingEditor
         {
             _tabletTreeOpen = open;
             if (open) _tabletInspectorOpen = false;
+            // The one-open rule covers the issues sheet too (final UX review M2).
+            if (open) _tabletIssuesOpen = false;
             return Task.CompletedTask;
         }
 
@@ -102,10 +115,40 @@ public partial class TmModelingEditor
         {
             _tabletInspectorOpen = open;
             if (open) _tabletTreeOpen = false;
+            if (open) _tabletIssuesOpen = false;
             return Task.CompletedTask;
         }
 
         _shellRightOpen = open;
+        return Task.CompletedTask;
+    }
+
+    // ── The tablet issues side sheet (final UX review M2) ────────────────────
+
+    /// <summary>Toggles the issues side sheet — the fourth tablet panel. Opening it closes the
+    /// tree drawer and the inspector sheet (the same one-open rule); closing it is the ×/Escape path.</summary>
+    private Task ToggleIssuesSheetAsync()
+    {
+        if (!IsTablet)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_tabletIssuesOpen)
+        {
+            _tabletIssuesOpen = false;
+            return Task.CompletedTask;
+        }
+
+        _tabletTreeOpen = false;
+        _tabletInspectorOpen = false;
+        _tabletIssuesOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseIssuesSheetAsync()
+    {
+        _tabletIssuesOpen = false;
         return Task.CompletedTask;
     }
 
@@ -136,6 +179,7 @@ public partial class TmModelingEditor
     {
         if (TreeSheetOpen) await OnShellLeftOpenChanged(false);
         if (InspectorSheetOpen) await OnShellRightOpenChanged(false);
+        if (IssuesSheetOpen) await CloseIssuesSheetAsync();
     }
 
     // ── Tree filter + cached child callbacks (Fáze 6 review fix, M26) ────────

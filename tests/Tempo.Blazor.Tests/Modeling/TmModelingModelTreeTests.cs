@@ -22,6 +22,39 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
         cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(3);
     }
 
+    // ── Render gate (final code review, Wireframe render-gate pattern) ───────
+
+    [Fact]
+    public void Render_gate_skips_a_noop_parent_pass_but_renders_for_every_render_affecting_parameter()
+    {
+        var elements = CreateElements();
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, elements));
+
+        var afterFirst = cut.Instance.RenderCount;
+        afterFirst.Should().BeGreaterThan(0);
+
+        // A no-op parent pass (the SAME Elements reference, like the editor re-rendering for its
+        // own state) — the tree's gate diffs the snapshot to "no change" and skips the 200-row
+        // re-render.
+        cut.Render(parameters => parameters.Add(p => p.Elements, elements));
+        cut.Instance.RenderCount.Should().Be(afterFirst, "a parameter-equal pass renders nothing");
+
+        // A render-affecting parameter (the selected element) passes the gate.
+        var selection = elements[0];
+        cut.Render(parameters => parameters.Add(p => p.SelectedElement, selection));
+        cut.WaitForAssertion(() => cut.Instance.RenderCount.Should().BeGreaterThan(afterFirst,
+            "a new SelectedElement re-renders the selection state"));
+        cut.Find("[data-testid='modeling-tree-node-task-approve']")
+            .GetAttribute("aria-selected").Should().Be("true");
+
+        // Internal interactions still render: the filter input narrows the list.
+        var beforeFilter = cut.Instance.RenderCount;
+        cut.Find("[data-testid='modeling-tree-search']").Input("approve");
+        cut.WaitForAssertion(() => cut.Instance.RenderCount.Should().BeGreaterThan(beforeFilter));
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(1);
+    }
+
     [Fact]
     public void Filter_narrows_visible_nodes_to_matches()
     {
@@ -916,4 +949,48 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
             Tags = ["portal"]
         }
     ];
+
+    // ── M26 filter budget ────────────────────────────────────────────────────
+
+    [Fact]
+    public void Filter_narrows_a_200_row_tree_under_200ms()
+    {
+        // M26: the tree filter must stay under 200ms on a 200-element model — the render gate
+        // keeps parent passes from re-rendering the rows and the filter edit itself touches
+        // only the matching subset.
+        var elements = Enumerable.Range(0, 200)
+            .Select(index => new ModelingElementDto
+            {
+                Id = $"task-{index}",
+                SourceId = $"source/task-{index}",
+                SourceType = "task",
+                SourcePath = $"/Requests/Task{index}",
+                SemanticType = "userTask",
+                Name = $"Task {index}",
+                Description = $"Generated row {index}.",
+                Tags = ["bulk"]
+            })
+            .ToArray();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, elements));
+
+        // Warm the filter path up first: the FIRST edit pays the JIT/render-pipeline cost of the
+        // whole test host, which is not what the M26 budget measures. A warm-up edit + reset
+        // leaves the MEASURED edit to the tree's own work (the subset re-render).
+        cut.Find("[data-testid='modeling-tree-search']").Input("Task 1");
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().NotBeEmpty();
+        cut.Find("[data-testid='modeling-tree-search']").Input(string.Empty);
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(200);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        cut.Find("[data-testid='modeling-tree-search']").Input("Task 199");
+        stopwatch.Stop();
+
+        cut.FindAll("[data-testid^='modeling-tree-node-']").Should().HaveCount(1,
+            "the filter narrows the 200 rows to the single match");
+
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromMilliseconds(200),
+            "the M26 tree-filter budget is 200ms on a 200-row model");
+    }
 }

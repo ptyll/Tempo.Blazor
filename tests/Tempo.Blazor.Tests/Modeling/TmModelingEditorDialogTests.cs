@@ -192,21 +192,22 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
         cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
 
-        // The trigger records itself as the dialog's restore target (the focus-scope restore
-        // contract, resolved by the module at deactivation).
+        // Single focus-restore owner (final review): the editor's focusWithin close path owns
+        // the restore — the modal's own TmFocusScope restore is DISABLED (data-restore-focus=
+        // "false"), so a mobile close cannot race a restore target that does not exist there.
         var triggerId = cut.Find("[data-testid='modeling-open-in-editor-button']").GetAttribute("id");
-        triggerId.Should().NotBeNullOrEmpty("the trigger must carry the id the dialog restores focus to");
-        var restoreTarget = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope")
-            .GetAttribute("data-restore-target");
-        restoreTarget.Should().Be(triggerId, "Escape/restore returns focus to the 'Open in editor' trigger");
+        triggerId.Should().NotBeNullOrEmpty("the trigger keeps the stable DOM id contract");
+        var scopeElement = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-focus-scope");
+        scopeElement.GetAttribute("data-restore-focus").Should().Be("false",
+            "the modal restore is disabled — the editor's focusWithin path is the single owner");
 
         // Escape arrives through the focus-trap module callback (document-level listener):
         // the topmost modal scope raises OnEscape and TmModal closes through the editor's
         // close path, which restores the trigger focus.
         var modal = cut.FindComponents<Tempo.Blazor.Components.Feedback.TmModal>()
             .Single(component => component.Markup.Contains("modeling-open-diagram-editor"));
-        var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
-        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+        var scopeInstance = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
+        await cut.InvokeAsync(() => scopeInstance.Instance.HandleFocusTrapEscapeAsync());
 
         cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
         module.Invocations
@@ -416,12 +417,12 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task Open_editor_dialog_on_tablet_uses_modal_presentation_with_diagram_tablet_layout()
+    public async Task Open_editor_dialog_on_tablet_uses_modal_presentation_and_decides_its_own_layout()
     {
-        // Fáze 6: on a tablet the dialog stays a TmModal (~90% wide, NOT a fullscreen sheet)
-        // and the dialog body hands the embedded diagram editor the tablet layout — the
-        // forced-cascade contract: a forced TmLayoutContext ancestor pins the nested editor,
-        // whose data-editor-layout the E2E baselines assert.
+        // Fáze 6: on a tablet the dialog stays a TmModal (~90% wide, NOT a fullscreen sheet).
+        // Final review: the dialog DE is AUTO with the 768/1100 pair — the dialog body decides
+        // its own layout, the editor's resolved mode is never inherited (the pin went stale the
+        // moment the editor's container and the ~90vw body disagreed).
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
@@ -444,10 +445,13 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         dialog.GetAttribute("role").Should().Be("dialog");
         dialog.GetAttribute("aria-modal").Should().Be("true");
 
-        // The dialog body resolves the embedded editor's layout itself: the DE reports tablet.
+        // The dialog body resolves the embedded editor's layout ITSELF (final review: the dialog
+        // DE is Auto with the 768/1100 pair — never pinned to the editor's resolved mode).
+        // bUnit runs no container measurement, so the editor renders its desktop InitialMode —
+        // proof that the editor's own tablet resolution is not inherited.
         var embedded = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout]");
-        embedded.GetAttribute("data-editor-layout").Should().Be("tablet",
-            "the dialog body on a tablet renders the diagram editor's tablet layout");
+        embedded.GetAttribute("data-editor-layout").Should().Be("desktop",
+            "the dialog body decides the layout (Auto + 768/1100); the editor's tablet mode is NOT inherited");
     }
 
     [Fact]
@@ -482,5 +486,58 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         var scope = modal.FindComponents<Tempo.Blazor.Components.Feedback.TmFocusScope>().Single();
         await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
         cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+    }
+
+    [Fact]
+    public async Task Open_editor_dialog_survives_a_layout_flip_with_one_instance_and_one_modal()
+    {
+        // Final review (MAJOR): the dialog renders ONCE, outside both layout branches — a flip
+        // across the 768 boundary used to tear it down and rebuild it (a NEW TmDiagramEditor
+        // instance, a fresh engine boot). The same instance must survive Tablet → Mobile →
+        // Tablet, and the DOM must hold exactly ONE modal the whole time.
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet)
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        var dialogEditor = cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramEditor>()
+            .Single(component => component.Markup.Contains("tm-modeling-editor__open-editor-diagram"));
+        var dialogEditorId = dialogEditor.Instance.GetHashCode();
+
+        // Tablet -> Mobile: the dialog presents fullscreen but the instance survives.
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().ContainSingle("exactly one modal on the mobile band");
+            cut.Find("[data-testid='modeling-open-diagram-editor']").ClassList
+                .Should().Contain("tm-modal--fullscreen-presentation", "the mobile band presents fullscreen");
+        });
+
+        var mobileEditor = cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramEditor>()
+            .Single(component => component.Markup.Contains("tm-modeling-editor__open-editor-diagram"));
+        mobileEditor.Instance.GetHashCode().Should().Be(dialogEditorId,
+            "the flip re-presents the SAME dialog editor (no teardown, no engine reboot)");
+
+        // Mobile -> Tablet: still the same instance, back to the ~90% dialog.
+        cut.Render(parameters => parameters.Add(p => p.LayoutMode, TmLayoutMode.Tablet));
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().ContainSingle("exactly one modal after the round trip");
+            cut.Find("[data-testid='modeling-open-diagram-editor']").ClassList
+                .Should().NotContain("tm-modal--fullscreen-presentation", "the tablet band presents the dialog");
+        });
+
+        var tabletEditor = cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramEditor>()
+            .Single(component => component.Markup.Contains("tm-modeling-editor__open-editor-diagram"));
+        tabletEditor.Instance.GetHashCode().Should().Be(dialogEditorId,
+            "the instance survives both directions of the flip");
     }
 }

@@ -126,14 +126,16 @@
     line-height: var(--tm-line-height-tight);
 }
 
-/* Review fix (phase 5): no min-height floor and tighter padding — the empty state must stay
-   fully visible inside the clamped dock row (1280x800 baseline) instead of being clipped. */
+/* Final UX review (M1): the empty state is ONE compact line in the dock — the centered
+   two-line grid cost a full dock row at the desktop baselines for a message the header
+   already contextualizes ("Issues: 0"). The row still wraps on a narrow sheet (320px tab). */
 .tm-modeling-issue-panel__empty {
-    display: grid;
-    align-content: center;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     gap: var(--tm-space-2);
     min-height: 0;
-    padding: var(--tm-space-3) var(--tm-space-4);
+    padding: var(--tm-space-2) var(--tm-space-4);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
     line-height: var(--tm-line-height-normal);

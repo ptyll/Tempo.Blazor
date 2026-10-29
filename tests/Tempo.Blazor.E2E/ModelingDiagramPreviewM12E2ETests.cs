@@ -47,10 +47,11 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
                     .map(el => el.getAttribute('data-tm-group'))
                     .filter(name => !!name)
                 """);
-        // Review fix (phase 5): the preview drops the export group through TmDiagramEditor.ToolbarGroups
-        // (a preview never exports, and the export fold-in cost a second toolbar row).
-        CollectionAssert.AreEquivalent(new[] { "zoom", "view", "search" }, groups,
-            "the preview must render exactly the viewer toolbar groups minus export");
+        // Final UX review (M1): the preview keeps the ZOOM group only — the search + "⋯"
+        // header-bar row is gone with its groups (the DE renders no empty header bar) and the
+        // status bar keeps the zoom controls.
+        CollectionAssert.AreEquivalent(new[] { "zoom" }, groups,
+            "the preview must render exactly the zoom toolbar group");
 
         // A host-pinned read-only preview can no longer be unlocked from the UI (DI1).
         Assert.AreEqual(0, await preview.Locator("[data-tm-group='readonly']").CountAsync(),

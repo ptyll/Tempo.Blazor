@@ -109,28 +109,35 @@ public sealed class ModelingTabletTouchE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("1024x768 touch: the issues dock starts collapsed on a tablet and expands and collapses under the preview")]
-    public async Task Tablet_1024_IssuesDock_CollapsesAndExpands()
+    [Description("1024x768 touch: the issues are the fourth panel side sheet (no dock row) under the one-open rule")]
+    public async Task Tablet_1024_IssuesSheet_OpensUnderOneOpenRule()
     {
         var page = await OpenLoadedTabletPageAsync(1024, 768, scenario: "issues-mixed");
         try
         {
-            // The tablet band starts with the dock COLLAPSED (its own tablet flag — the desktop
-            // dock state is untouched), so a finger expands it first.
-            await page.Locator("[data-testid='modeling-issues-toggle']")
-                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-            await page.Locator("[data-testid='modeling-issues-toggle']").TapAsync();
-            await page.WaitForFunctionAsync(
-                "() => !document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden')",
-                null,
-                new PageWaitForFunctionOptions { Timeout = 10_000 });
+            // Final UX review (M2): the tablet band has NO dock under the canvas — the issues
+            // are the FOURTH panel, a side sheet opened from the panel tabs. Opening it closes
+            // the drawer/sheet (the one-open rule) and the canvas keeps its floor.
+            Assert.AreEqual(0, await page.Locator("[data-testid='modeling-issues-toggle']").CountAsync(),
+                "the tablet band has no issues dock toggle under the canvas");
 
-            await page.Locator("[data-testid='modeling-issues-toggle']").TapAsync();
+            await page.Locator("[data-testid='modeling-panel-tab-issues']").TapAsync();
             await page.WaitForFunctionAsync(
-                "() => document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden') === true",
+                "() => !!document.querySelector(\"[data-testid='modeling-issues-sheet']\")",
                 null,
                 new PageWaitForFunctionOptions { Timeout = 10_000 });
-            Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "the dock toggle must not introduce overflow");
+            Assert.AreEqual("true", await page.Locator("[data-testid='modeling-panel-tab-issues']")
+                .GetAttributeAsync("aria-expanded"), "the fourth tab is an aria-expanded disclosure");
+
+            await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync();
+            await page.WaitForFunctionAsync(
+                "() => !document.querySelector(\"[data-testid='modeling-issues-sheet']\")",
+                null,
+                new PageWaitForFunctionOptions { Timeout = 10_000 });
+            Assert.AreEqual(1, await page.Locator("[data-testid='modeling-inspector-sheet']").CountAsync(),
+                "opening the inspector closed the issues sheet (one open at a time)");
+
+            Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "the issues sheet must not introduce overflow");
         }
         finally
         {

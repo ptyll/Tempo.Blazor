@@ -390,6 +390,18 @@ window.tmDiagramEditor = {
             e.preventDefault();
             e.tmEscapeHandled = true;
             inst.dotNetRef.invokeMethodAsync('OnViewMenuEscape');
+            return;
+        }
+
+        // Final review: an Escape typed into an INLINE EDIT of the canvas (the edge-label
+        // foreignObject input) belongs to the editor too — the input cancels/blurs on its own
+        // keydown. Consume it so a host overlay (the open-editor dialog) does not close under
+        // the caret. Reaching this branch means no panel and no view menu consumed the key.
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+            && inst.container.contains(active)) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
         }
     },
 
@@ -3053,7 +3065,11 @@ window.tmDiagramEditor = {
     // ── Keyboard shortcuts ───────────────────────────────────────────────────
 
     _onKeyDown: function (e, inst) {
-        if (!inst.container.contains(document.activeElement) && document.activeElement !== document.body) return;
+        // The document.body fallback does not apply when this editor sits inside an INERT
+        // subtree (the host overlay's background — e.g. the Modeling preview behind the open
+        // open-editor dialog): the dialog's editor owns the keys, this canvas is inert.
+        if (!inst.container.contains(document.activeElement)
+            && (document.activeElement !== document.body || inst.container.closest('[inert]'))) return;
 
         const ids = [...inst.selectedIds];
 
@@ -3134,6 +3150,9 @@ window.tmDiagramEditor = {
             }
             if (ids.length > 0) {
                 e.preventDefault();
+                // A consumed Escape: the selection clear is this editor's action, so a host
+                // overlay must not also close on the same keypress (final review).
+                e.tmEscapeHandled = true;
                 inst.selectedIds.clear();
                 this._updateSelection(inst);
                 inst.dotNetRef.invokeMethodAsync('OnClearSelection');

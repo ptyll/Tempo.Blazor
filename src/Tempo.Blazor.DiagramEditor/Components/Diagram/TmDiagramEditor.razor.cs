@@ -138,6 +138,15 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     public (double X, double Y, double W, double H) GetViewport()
         => _canvas?.GetViewport() ?? (0, 0, 0, 0);
 
+    /// <summary>
+    /// Re-measures the canvas after the chrome AROUND the editor changed (final UX review, M5):
+    /// a host that grows or shrinks the editor's own box (a collapsed dock, a resized pane)
+    /// asks the JS engine to re-derive the scale and re-report the viewport and zoom — the same
+    /// relayout path the shell's panel toggles use. A no-op before the canvas mounted.
+    /// </summary>
+    public Task NotifyViewportChangedAsync()
+        => _canvas?.NotifyViewportChangedAsync() ?? Task.CompletedTask;
+
     // ── Command stack ────────────────────────────────────────────────────────
     // One isolated stack per page so undo/redo is scoped to the active page.
 

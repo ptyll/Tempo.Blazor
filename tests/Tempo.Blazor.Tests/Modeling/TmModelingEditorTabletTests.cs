@@ -195,8 +195,46 @@ public sealed class TmModelingEditorTabletTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-panel-tab-inspector']").GetAttribute("aria-expanded").Should().Be("false");
         cut.Find("[data-testid='modeling-panel-tab-preview']").GetAttribute("aria-pressed").Should().Be("true");
 
-        // The issues dock starts collapsed on the tablet band (its own tablet flag).
-        cut.Find("[data-testid='modeling-issues-toggle']").GetAttribute("aria-expanded").Should().Be("false");
+        // Final UX review (M2): the tablet band has NO dock under the canvas — the issues are
+        // the FOURTH panel, a side sheet that starts closed like the drawer/sheet pair.
+        cut.FindAll("[data-testid='modeling-issues-toggle']").Should().BeEmpty(
+            "the tablet band presents the issues as a side sheet, never a dock row under the canvas");
+        cut.FindAll("[data-testid='modeling-issues-sheet']").Should().BeEmpty("the issues sheet starts closed");
+        cut.Find("[data-testid='modeling-panel-tab-issues']").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    // ── The tablet issues side sheet (final UX review M2) ────────────────────
+
+    [Fact]
+    public async Task Tablet_issues_tab_opens_a_side_sheet_under_the_one_open_rule()
+    {
+        using var cut = RenderTabletEditor();
+        WaitForLoaded(cut);
+
+        // The fourth tab opens the issues sheet; the tree drawer and the inspector sheet yield.
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-panel-tab-issues']").Click());
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-issues-sheet']").Should().NotBeNull();
+            cut.FindAll("[data-testid='modeling-tree-drawer']").Should().BeEmpty("the drawer yields");
+            cut.FindAll("[data-testid='modeling-inspector-sheet']").Should().BeEmpty("the inspector sheet yields");
+            cut.Find("[data-testid='modeling-panel-tab-issues']").GetAttribute("aria-expanded").Should().Be("true");
+        });
+
+        // Opening the inspector closes the issues sheet — one sheet at a time.
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-panel-tab-inspector']").Click());
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-issues-sheet']").Should().BeEmpty();
+            cut.Find("[data-testid='modeling-inspector-sheet']").Should().NotBeNull();
+        });
+
+        // The sheet's own close returns to the preview alone.
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-panel-tab-inspector']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-panel-tab-issues']").Click());
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-issues-sheet']").Should().NotBeNull());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='modeling-issues-sheet-close']").Click());
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-issues-sheet']").Should().BeEmpty());
     }
 
     [Fact]

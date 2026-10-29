@@ -30,6 +30,48 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private ModelingInteropModule? _interopModule;
     private ElementReference _treeRoot;
 
+    // ── Render gate (final code review, Wireframe render-gate pattern) ───────
+    // The tree re-renders only when something RENDER-AFFECTING changed: a parameter of the
+    // snapshot below, an internal interaction (filter edit, group toggle, selection, keyboard
+    // focus move) or the very first render. Every other parent pass — the editor re-rendering
+    // for its own state — diffs to "no change" and is skipped (M26: a 200-row tree must not
+    // re-render on every parent pass).
+    private bool _firstRender = true;
+    private bool _renderPending;
+    private (IReadOnlyList<ModelingElementDto>? Elements,
+             ModelingElementDto? SelectedElement,
+             IReadOnlyCollection<string>? CollapsedGroups,
+             string FilterText,
+             bool AllowNodeDrop,
+             bool CanInsert,
+             bool ShowTitle,
+             string? Class,
+             string Culture) _renderSnapshot;
+
+    /// <summary>Compares the render-affecting parameter surface against the last snapshot; the
+    /// culture rides along because every visible label resolves through it.</summary>
+    private bool RenderSurfaceChanged()
+    {
+        var snapshot = (Elements, SelectedElement, CollapsedGroups, _filterText,
+            AllowNodeDrop, CanInsertIntoPreview, ShowTitle, Class, CultureInfo.CurrentUICulture.Name);
+        var changed = !snapshot.Equals(_renderSnapshot);
+        _renderSnapshot = snapshot;
+        return changed;
+    }
+
+    /// <summary>Test seam (InternalsVisibleTo): how many passes actually rendered — the render
+    /// gate's observable (the Wireframe toolbox pattern).</summary>
+    internal int RenderCount { get; private set; }
+
+    /// <inheritdoc />
+    protected override bool ShouldRender()
+    {
+        var render = _firstRender || _renderPending;
+        _firstRender = false;
+        _renderPending = false;
+        return render;
+    }
+
     /// <summary>Per-instance DOM id prefix — two trees on one page must never share content ids
     /// (the old static slug collapsed different group keys onto the same id).</summary>
     private readonly string _idPrefix = $"tm-mmt-{Guid.NewGuid():N}";
@@ -240,6 +282,8 @@ public partial class TmModelingModelTree : IAsyncDisposable
                     }
                 }
             }
+
+            _renderPending = true;
         }
 
         // Two-way filter text (Fáze 6 review fix): seed the working copy whenever the host hands
@@ -252,6 +296,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
         {
             _lastFilterTextParameter = FilterText;
             _filterText = FilterText ?? string.Empty;
+            _renderPending = true;
         }
 
         // External selection inside a collapsed group auto-reveals it, so the scroll target can
@@ -263,6 +308,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
             && SelectedElement is not null)
         {
             _lastSelectedElementParameter = SelectedElement;
+            _renderPending = true;
 
             if (!string.IsNullOrWhiteSpace(SelectedElement.Id))
             {
@@ -280,6 +326,28 @@ public partial class TmModelingModelTree : IAsyncDisposable
                 _filterCollapsedGroups.Remove(groupKey);
             }
         }
+
+        // The render-gate snapshot (final code review): every render-affecting parameter in one
+        // comparison — a parent pass that changed none of them renders nothing.
+        if (RenderSurfaceChanged())
+        {
+            _renderPending = true;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The render-gate flags reset here — the SYNC callback, which the render pipeline runs
+    /// before the next <see cref="SetParametersAsync"/> can arm them again. (ShouldRender is not
+    /// consulted for the very first render, so a flag armed by the first OnParametersSet would
+    /// otherwise leak into the second pass and force a spurious re-render.)
+    /// </remarks>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        _firstRender = false;
+        _renderPending = false;
+        RenderCount++;
     }
 
     /// <inheritdoc />
@@ -319,6 +387,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
         // transient session instead of inheriting the previous one (a USER edit only — a host
         // re-seed goes through OnParametersSet and keeps the session).
         _filterCollapsedGroups.Clear();
+        _renderPending = true;
         await FilterTextChanged.InvokeAsync(_filterText);
     }
 
@@ -326,6 +395,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     {
         SelectedElement = element;
         _activeTreeItemId = $"element:{element.Id}";
+        _renderPending = true;
         await SelectedElementChanged.InvokeAsync(element);
         await OnElementSelected.InvokeAsync(element);
     }
@@ -336,6 +406,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private async Task ToggleGroupAsync(string groupKey)
     {
         _activeTreeItemId = $"group:{groupKey}";
+        _renderPending = true;
         if (FilterActive)
         {
             if (!_filterCollapsedGroups.Remove(groupKey))
@@ -515,6 +586,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
         var entry = entries[index.GetOffset(entries.Count)];
         _activeTreeItemId = GetEntryId(entry);
+        _renderPending = true;
         if (entry.Kind == "group")
         {
             await FocusGroupHeaderAsync(entry.Key);
@@ -528,6 +600,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private async Task FocusGroupHeaderAsync(string groupKey)
     {
         _activeTreeItemId = $"group:{groupKey}";
+        _renderPending = true;
         await Interop.InvokeVoidSafeAsync("focusTreeGroupHeader", _treeRoot, groupKey);
     }
 

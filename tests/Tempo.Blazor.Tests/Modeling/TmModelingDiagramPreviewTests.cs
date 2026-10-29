@@ -199,9 +199,13 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             .Select(g => g.GetAttribute("data-tm-group")!)
             .ToList();
 
-        // The preview is a read-only viewer surface: the Viewer group set MINUS export (review
-        // fix, phase 5 — a preview never exports, and the export fold-in cost a second row).
-        groupNames.Should().BeEquivalentTo(["zoom", "view", "search"]);
+        // The preview is a read-only viewer surface keeping the ZOOM group only (final UX
+        // review M1): the search + "⋯" header-bar row of the wider viewer set is gone with its
+        // groups — the DE renders no empty header bar — and the status bar keeps the zoom
+        // controls. The export fold-in had already cost a second row (phase 5).
+        groupNames.Should().BeEquivalentTo(["zoom"]);
+        groupNames.Should().NotContain("search", "the search toggle's header-bar row is dropped with the group");
+        groupNames.Should().NotContain("view", "the view settings live in the header bar the preview drops");
         groupNames.Should().NotContain("export", "the preview drops the export group through ToolbarGroups");
         groupNames.Should().NotContain("import", "the preview must not offer imports");
         groupNames.Should().NotContain("templates", "the preview must not offer templates");
@@ -209,6 +213,25 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
 
         // The viewer zoom readout stays reachable by the Modeling E2E selector.
         cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Preview_header_summary_is_opt_out_through_ShowSummary()
+    {
+        // Final UX review (M1): the docked editor passes ShowSummary=false — the status bar
+        // already carries the counts, and the subtitle row cost the canvas height.
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowSummary, false));
+
+        cut.Find(".tm-modeling-diagram-preview__title-group h3").Should().NotBeNull("the title stays");
+        cut.FindAll(".tm-modeling-diagram-preview__title-group span").Should().BeEmpty(
+            "the nodes/edges summary is opt-out");
+
+        // Default true keeps the subtitle for other hosts.
+        using var defaultCut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+        defaultCut.Find(".tm-modeling-diagram-preview__title-group span").Should().NotBeNull();
     }
 
     [Fact]

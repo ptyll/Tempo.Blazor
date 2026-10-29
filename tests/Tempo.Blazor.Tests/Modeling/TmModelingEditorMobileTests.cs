@@ -312,8 +312,8 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
         tiles.Should().HaveCount(4, "Elements, Relationships, Nodes and Edges are the four tiles");
 
         var tileLabels = tiles.Select(tile => tile.TextContent).ToList();
-        tileLabels.Should().Contain(text => text.Contains("Elements"));
-        tileLabels.Should().Contain(text => text.Contains("Relationships"));
+        tileLabels.Should().Contain(text => text.Contains("Elements"), "the short Elements label is visible");
+        tileLabels.Should().Contain(text => text.Contains("Relations"), "the short Relationships label is visible (M3)");
         tileLabels.Should().Contain(text => text.Contains("Nodes"), "the mobile tiles use the short Nodes label");
         tileLabels.Should().Contain(text => text.Contains("Edges"), "the mobile tiles use the short Edges label");
         // Nodes and Edges must stay distinguishable — no shared prefix collapsing them.
@@ -322,14 +322,22 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
 
         card.TextContent.Should().Contain("Last loaded:", "the card shows the loaded time");
 
-        // Fáze 7 re-review: the compact card is ONE row — the count is the visible content and
-        // each label is an sr-only span (the number row returns the height to the canvas).
+        // Final UX review (M3): the label is now VISIBLE text above the count (short keys), the
+        // type icon is aria-hidden, and the label ellipsizes.
         foreach (var tile in tiles)
         {
-            tile.QuerySelector(".tm-sr-only").Should().NotBeNull("each tile label is an sr-only span");
+            tile.QuerySelector(".tm-modeling-editor__status-label").Should().NotBeNull(
+                "each tile carries a visible short label");
+            tile.QuerySelector(".tm-modeling-editor__status-label")!.TextContent.Trim().Should().NotBeEmpty();
+            tile.QuerySelector(".tm-modeling-editor__status-tile-icon").Should().NotBeNull(
+                "each tile carries an aria-hidden type icon");
+            tile.QuerySelector(".tm-modeling-editor__status-tile-icon")!.GetAttribute("aria-hidden")
+                .Should().Be("true", "the icon is presentational — the visible label names the tile");
             tile.TextContent.Should().Contain(tile.QuerySelector("strong")!.TextContent.Trim(),
                 "the count stays the visible content of the tile");
         }
+        tiles.Select(tile => tile.QuerySelector(".tm-modeling-editor__status-label")!.TextContent.Trim())
+            .Should().OnlyHaveUniqueItems("the four short labels are distinguishable");
 
         // The mobile layout replaces the desktop status strip — no duplicate count surfaces.
         cut.FindAll("[data-testid='modeling-status-strip']").Should().BeEmpty();

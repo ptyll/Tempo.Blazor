@@ -280,8 +280,9 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
+/* Final review (m1): the metadata line is secondary text — it never competes with the node name. */
 .tm-modeling-model-tree__node-meta {
-    color: var(--tm-color-text);
+    color: var(--tm-color-text-secondary);
     font-size: var(--tm-font-size-xs);
 }
 

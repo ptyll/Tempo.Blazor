@@ -1,7 +1,10 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Icons;
+using Tempo.Blazor.Modeling;
 
 namespace Tempo.Blazor.Components.Modeling;
 
@@ -26,11 +29,11 @@ public partial class TmModelingEditor
     /// <summary>Whether the editor's own container currently resolves the mobile band.</summary>
     private bool IsMobileLayout => _resolvedLayout == TmLayoutMode.Mobile;
 
-    /// <summary>
-    /// G2 scope: the tree→preview drag is a desktop/tablet affordance. On mobile the tree rows
+    /// <summary>G2 scope: the tree→preview drag is a desktop/tablet affordance. On mobile the tree rows
     /// are not draggable and the preview is not a drop target (<c>AllowNodeDrop</c> stays the
-    /// host's switch — the mobile band just cannot express it).
-    /// </summary>
+    /// host's switch — the mobile band just cannot express it). The non-drag insert is a
+    /// DESKTOP/TABLET alternative to that drag: the mobile tree renders neither the "+" button
+    /// nor the drag grip — G2 viewing, edits go through "Open in editor" (final review).</summary>
     private bool EffectiveAllowNodeDrop => AllowNodeDrop && !IsMobileLayout;
 
     /// <summary>The TestIdPrefix the cached mobile attribute dictionaries were built with.</summary>
@@ -132,6 +135,11 @@ public partial class TmModelingEditor
         ? IssueCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
         : null;
 
+    /// <summary>The mobile Inspector tab badge: the localized "Stale" label while the loaded
+    /// metadata is stale (final review m4 — the compact band has no Source tab to carry the
+    /// docked stale marker); null (no badge) otherwise.</summary>
+    private string? InspectorTabBadge => SourceIsStale ? Loc["TmModelingSourcePanel_Stale"] : null;
+
     // ── The compact header "⋯" overflow ──────────────────────────────────────
 
     /// <summary>
@@ -177,6 +185,13 @@ public partial class TmModelingEditor
 
     // ── The F5 action bar ────────────────────────────────────────────────────
 
+    /// <summary>The cached action-bar item list and the inputs it was built from (final review:
+    /// the five TmActionItem allocations plus their EventCallbacks are rebuilt only when one of
+    /// the inputs changes — every list element is reference-stable between editor renders, so
+    /// the TmMobileActionBar parameter diff stays quiet).</summary>
+    private IReadOnlyList<TmActionItem>? _cachedMobileActionItems;
+    private (bool WorkspaceMounted, ModelingModelDto? Model, ModelingEditorState State, DiagramDocument? Document, string? Prefix, string Culture) _mobileActionItemsKey;
+
     /// <summary>
     /// The mobile action bar items. With the workspace mounted: Reload / Change view / Issues on
     /// the bar and Generate diagram + Open in editor behind "More" (MaxVisible=3). Deliberately
@@ -190,71 +205,85 @@ public partial class TmModelingEditor
     {
         get
         {
-            var reload = new TmActionItem
+            var key = (WorkspaceMounted, _model, _state, _document, TestIdPrefix, CultureInfo.CurrentUICulture.Name);
+            if (_cachedMobileActionItems is not null && _mobileActionItemsKey.Equals(key))
             {
-                Id = "reload",
-                Label = Loc["TmModelingEditor_Reload"],
-                Icon = IconNames.Refresh,
-                OnClick = EventCallback.Factory.Create(this, ReloadModelAsync)
-            };
-            var changeView = new TmActionItem
-            {
-                Id = "change-view",
-                Label = Loc["TmModelingEditor_ChangeView"],
-                Icon = IconNames.Sliders,
-                OnClick = EventCallback.Factory.Create(this, OpenChangeViewAsync)
-            };
-
-            if (!WorkspaceMounted)
-            {
-                return [reload, changeView];
+                return _cachedMobileActionItems;
             }
 
-            return
-            [
-                reload,
-                changeView,
-                new()
-                {
-                    Id = "issues",
-                    Label = Loc["TmModelingEditor_Issues"],
-                    Icon = IconNames.AlertCircle,
-                    OnClick = EventCallback.Factory.Create(this, () => ActivatePanelAsync(ModelingEditorPanel.Issues))
-                },
-                new()
-                {
-                    Id = "generate",
-                    Label = Loc["TmModelingDiagramPreview_Generate"],
-                    Icon = IconNames.WandSparkles,
-                    TestId = TestId("modeling-action-generate"),
-                    Disabled = _model is null || _state != ModelingEditorState.Loaded,
-                    OnClick = EventCallback.Factory.Create(this, GenerateDiagramFromLoadedModelAsync)
-                },
-                new()
-                {
-                    Id = "open-editor",
-                    Label = Loc["TmModelingDiagramPreview_OpenInEditor"],
-                    Icon = IconNames.ExternalLink,
-                    TestId = TestId("modeling-action-open-editor"),
-                    Disabled = _document is null,
-                    OnClick = EventCallback.Factory.Create(this, () => OpenEditorFromMobileAsync(MobileActionBarTriggerSelector))
-                }
-            ];
+            _mobileActionItemsKey = key;
+            _cachedMobileActionItems = BuildMobileActionItems();
+            return _cachedMobileActionItems;
         }
+    }
+
+    private IReadOnlyList<TmActionItem> BuildMobileActionItems()
+    {
+        var reload = new TmActionItem
+        {
+            Id = "reload",
+            Label = Loc["TmModelingEditor_Reload"],
+            Icon = IconNames.Refresh,
+            OnClick = EventCallback.Factory.Create(this, ReloadModelAsync)
+        };
+        var changeView = new TmActionItem
+        {
+            Id = "change-view",
+            Label = Loc["TmModelingEditor_ChangeView"],
+            Icon = IconNames.Sliders,
+            OnClick = EventCallback.Factory.Create(this, OpenChangeViewAsync)
+        };
+
+        if (!WorkspaceMounted)
+        {
+            return [reload, changeView];
+        }
+
+        return
+        [
+            reload,
+            changeView,
+            new()
+            {
+                Id = "issues",
+                Label = Loc["TmModelingEditor_Issues"],
+                Icon = IconNames.AlertCircle,
+                OnClick = EventCallback.Factory.Create(this, () => ActivatePanelAsync(ModelingEditorPanel.Issues))
+            },
+            new()
+            {
+                Id = "generate",
+                Label = Loc["TmModelingDiagramPreview_Generate"],
+                Icon = IconNames.WandSparkles,
+                TestId = TestId("modeling-action-generate"),
+                Disabled = _model is null || _state != ModelingEditorState.Loaded,
+                OnClick = EventCallback.Factory.Create(this, GenerateDiagramFromLoadedModelAsync)
+            },
+            new()
+            {
+                Id = "open-editor",
+                Label = Loc["TmModelingDiagramPreview_OpenInEditor"],
+                Icon = IconNames.ExternalLink,
+                TestId = TestId("modeling-action-open-editor"),
+                Disabled = _document is null,
+                OnClick = EventCallback.Factory.Create(this, () => OpenEditorFromMobileAsync(MobileActionBarTriggerSelector))
+            }
+        ];
     }
 
     // ── Status card (the mobile replacement of the status strip) ─────────────
 
     /// <summary>
-    /// The four tiles of the mobile status card. Nodes/Edges use the SHORT count labels (the
-    /// long "Diagram nodes/edges" pair crowded the 320px card and its cs/sk forms collided at a
-    /// glance); Elements/Relationships keep the shared strip labels.
+    /// The four tiles of the mobile status card with their SHORT visible labels (final review
+    /// M3: the label is visible text above the count — the long strip labels would wrap the
+    /// 320px card) and the aria-hidden type icon each tile carries. Nodes/Edges reuse the short
+    /// count labels; Elements/Relationships get the dedicated short keys.
     /// </summary>
-    private (string Label, int Count)[] StatusTiles =>
+    private (string Label, int Count, string Icon)[] StatusTiles =>
     [
-        (Loc["TmModelingEditor_Elements"], _model?.Elements.Count ?? 0),
-        (Loc["TmModelingEditor_Relationships"], _model?.Relationships.Count ?? 0),
-        (Loc["TmModelingEditor_Nodes"], _document?.Nodes.Count ?? 0),
-        (Loc["TmModelingEditor_Edges"], _document?.Edges.Count ?? 0)
+        (Loc["TmModelingEditor_ElementsShort"], _model?.Elements.Count ?? 0, IconNames.Box),
+        (Loc["TmModelingEditor_RelationshipsShort"], _model?.Relationships.Count ?? 0, IconNames.Link2),
+        (Loc["TmModelingEditor_Nodes"], _document?.Nodes.Count ?? 0, IconNames.Circle),
+        (Loc["TmModelingEditor_Edges"], _document?.Edges.Count ?? 0, IconNames.ArrowRight)
     ];
 }
