@@ -1446,12 +1446,17 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         StateHasChanged();
     }
 
-    /// <summary>Zoom slider (<c>change</c>): sets the level and re-lays out the timeline.</summary>
-    internal void SetZoomLevel(ChangeEventArgs e)
+    /// <summary>Zoom level setter shared by the slider (<c>change</c>) and the toolbar zoom item's
+    /// "More" presets: clamps to the slider's range and re-lays out the timeline.</summary>
+    internal Task SetZoomLevelAsync(int level)
     {
-        _zoomLevel = int.Parse(e.Value!.ToString()!);
+        _zoomLevel = Math.Clamp(level, 50, 200);
         RefreshVisibleData();
+        return Task.CompletedTask;
     }
+
+    /// <summary>Zoom slider (<c>change</c>): sets the level and re-lays out the timeline.</summary>
+    internal void SetZoomLevel(ChangeEventArgs e) => _ = SetZoomLevelAsync(int.Parse(e.Value!.ToString()!));
 
     /// <summary>Toolbar: show / hide the task panel.</summary>
     internal void ToggleTaskPanel()

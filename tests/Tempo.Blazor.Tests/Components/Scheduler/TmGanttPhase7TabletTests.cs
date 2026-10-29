@@ -879,4 +879,42 @@ public class TmGanttPhase7TabletTests : LocalizationTestBase
         cut.Find(".tm-modal-overlay.tm-gantt__filter-dialog").Closest(".tm-gantt").Should().BeNull();
         chart.QuerySelector(".tm-gantt__filter-dialog").Should().BeNull();
     }
+
+    // ── Review fixes (phase 9: toolbar does not wrap at ~1024) ─────────────────
+
+    [Fact]
+    public void TmGantt_Toolbar_Never_Wraps_The_Add_Task_Label_Or_The_Zoom_Readout()
+    {
+        // Found in the browser at ~1024: the split button's "Add task" label broke onto two lines and
+        // the "100%" readout dropped below the Day | Week | Month segment (the groups still wrapped).
+        GanttCss.Property("TmGanttToolbar.razor.css", ".tm-gantt__toolbar ::deep .tm-split-button__text", "white-space")
+            .Should().Be("nowrap", "the label keeps the button's min-content width; the row overflows into More instead");
+        GanttCss.Property("TmGanttToolbar.razor.css", ".tm-gantt__zoom-level", "white-space")
+            .Should().Be("nowrap", "the readout never breaks onto a second line");
+
+        var control = ".tm-gantt__toolbar ::deep .tm-gantt__zoom-control";
+        GanttCss.Property("TmGanttToolbar.razor.css", control, "display").Should().Be("inline-flex");
+        GanttCss.Property("TmGanttToolbar.razor.css", control, "flex-wrap").Should().Be("nowrap", "the slider and its readout cannot split across a wrapped line");
+        GanttCss.Property("TmGanttToolbar.razor.css", control, "align-items").Should().Be("center");
+    }
+
+    [Fact]
+    public void TmGantt_Zoom_Slider_And_Readout_Are_One_Measured_Item_That_Leaves_Into_More()
+    {
+        var cut = RenderGantt(TmLayoutMode.Tablet);
+
+        // ONE measured item: the tablet bars run Overflow=Menu, so the wrapper carries the item marker
+        // and the slider + readout pair can only leave the bar (or return) as a whole.
+        var item = cut.Find(".tm-gantt__toolbar .tm-gantt__zoom-control");
+        item.ClassList.Should().Contain("tm-toolbar-item");
+        item.GetAttribute("data-tm-toolbar-item").Should().NotBeNullOrEmpty("an Overflow=Menu row moves the whole item into More when it does not fit");
+        item.QuerySelector("[data-testid='gantt-zoom-slider']").Should().NotBeNull();
+        item.QuerySelector(".tm-gantt__zoom-level").Should().NotBeNull();
+
+        // The More representation: the slider's range as checkable presets, the current level checked.
+        var zoomItem = cut.FindComponent<Tempo.Blazor.Components.Toolbar.TmToolbarItem>().Instance;
+        zoomItem.MenuLabel.Should().Be("Zoom level");
+        zoomItem.MenuItems!.Select(i => i.Label).Should().Equal("50%", "75%", "100%", "125%", "150%", "175%", "200%");
+        zoomItem.MenuItems.Should().ContainSingle(i => i.Checked == true).Which.Label.Should().Be("100%");
+    }
 }

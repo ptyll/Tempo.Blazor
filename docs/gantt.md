@@ -1,0 +1,290 @@
+# TmGantt
+
+`TmGantt` (`src/Tempo.Blazor/Components/Scheduler/`) is the project chart: a task tree beside a
+zoomable timeline, with dependencies, baselines, a workload view, filtering, import/export, history
+and reports. The redesign (plan phases 1–8) split the former monolith into parts, moved every style
+into its own `.razor.css`, repainted the chrome with the core tokens only, put the dialogs on the
+core `TmModal`, made the chart measure **its own container**, and turned a mobile container into a
+read-mostly surface. This file is the contract; the calendar it embeds for `GanttView.Calendar` is
+[docs/scheduler.md](scheduler.md), and the shared pointer helpers are
+[docs/touch-interaction.md](touch-interaction.md).
+
+## Components of the family
+
+| Component | Role |
+|-----------|------|
+| `TmGantt` | The chart. Hosts place only this. |
+| `TmGanttPortfolio` | Portfolio of project cards, each embedding a toolbar-less `TmGantt` (mobile: a summary line and a mini-gantt). |
+| `TmGanttWorkloadView` | The workload week (person rows, utilization bars); docked panel or `GanttView.Workload` view. |
+| `TmGanttToolbar` / `TmGanttTree` / `TmGanttTimeline` / `TmGanttSidebar` / `TmGanttStatusChip` / `TmGanttPanelTabs` / `TmGanttViewSettings` / `TmGanttFilterBar` / `TmGanttMobileOverlays` | Internal parts of `TmGantt` (`[EditorBrowsable(Never)]`, public only because Razor cannot emit internal components). Never place them; they have JSON overlays so the doc guards stay closed. |
+| `TmGanttTaskPanel` / `TmGanttReportsPanel` / `TmGanttHistoryList` / `TmGanttHistoryDrawer` / `TmGanttFilterPanel` | Right-hand / drawer surfaces the chart composes. |
+| `TmGanttExportDialog` / `TmGanttImportDialog` / `TmGanttImportMappingDialog` | The export, import and column-mapping dialogs (core `TmModal`s). |
+
+## Setup
+
+`gantt.js` is a classic script the host page must include. It resolves `pointer-drag.js` and
+`pointer-gesture.js` from its own URL with a dynamic `import()`, so `_content/Tempo.Blazor/js/` must
+be served **as a whole**; a per-file CSP hash must list both helper modules as well:
+
+```html
+<script src="_content/Tempo.Blazor/js/gantt.js"></script>
+```
+
+Without the helpers the chart still renders, scrolls and selects — only the pan, the dependency
+drag, the long-press menu and the Alt+Arrow reorder are missing, and `gantt.js` logs a console
+warning.
+`window.tmGantt` exposes the interop surface: the scroll helpers
+(`get/setScrollLeft|Top`, `getClientWidth`), the docked-workload scroll link (`linkScroll` /
+`unlinkScroll`, idempotent, keyed off the workload element), the history drawer focus return
+(`noteOpener` / `restoreOpener`) and the pointer sessions `attachTimeline(id, timeline, body,
+treeBody, dotNet)` / `attachTree(id, treeBody, dotNet)` (plus the matching `detach*`). Sessions are
+keyed by a caller-supplied id — Blazor removes the element before `DisposeAsync` runs — idempotent,
+and `attach*` resolve `true` only when every session registered, so a failed phase is retried on a
+later render.
+
+## Layout — the chart measures its own container
+
+`LayoutMode` (`TmLayoutMode`, default `Auto`) replaced `ContainerWidth` (Breaking, phase 7):
+`Auto` measures the Gantt's **own** container through `TmLayoutObserver` and classifies with the
+shared `TmBreakpoints` — mobile below 640 px, tablet 640–1023 px, desktop from 1024 px. The root is
+`div.tm-layout.tm-layout--no-container > div.tm-gantt`, carries `data-layout="desktop|tablet|mobile"`
+and the `tm-gantt--desktop|tablet|mobile` class; `ResolvedLayoutChanged` fires when the resolved
+mode changes (never for the initial value — do not pair it with `LayoutMode`).
+
+```razor
+<!-- a host that knew its width told the Gantt (before) -->
+<TmGantt Items="tasks" ContainerWidth="900" />
+<!-- the Gantt measures itself; pin a layout only for tests or forced presentations -->
+<TmGantt Items="tasks" />
+<TmGantt Items="tasks" LayoutMode="TmLayoutMode.Tablet" />
+```
+
+`ContainerWidth` still exists as an `[Obsolete]` alias: it keeps overriding the Fit-to-screen
+measurement and, while `LayoutMode` is `Auto`, is classified like a measurement (900 → tablet).
+
+| Layout | Presentation |
+|--------|--------------|
+| Desktop ≥ 1024 px | One wrapping `TmToolbar` row, the docked panels, the full zoom slider. |
+| Tablet 640–1023 px | The toolbar is two rows (`.tm-gantt__toolbar--two-rows`, `Overflow=Menu` — a command that does not fit leaves into "More"), a narrower task tree, finger-sized targets, `TaskPanelMode=Auto` shows the task panel as a side sheet, and a coarse pointer gets the touch hint. |
+| Mobile < 640 px | Read-mostly (below). |
+
+A forced `LayoutMode` (or a forced cascading `TmLayoutContext` ancestor) renders that layout without
+measuring. The chart root is a **CSS size container** (`container-type: inline-size`,
+`container-name: tm-gantt`) and `position: relative`; every overlay (context menu, sheets, dialogs)
+is a **sibling** of `.tm-gantt` inside the observer's `LayoutContent`, because a container is the
+containing block of every fixed-position descendant and would confine and clip them.
+
+### Mobile is read-mostly (decision G2)
+
+A container that classifies as `Mobile` is a **reading surface**: viewing, changing **Status** and
+**Percent**, and adding a task. The chrome is the compact toolbar — the full-width
+Day | Week | Month segment plus chips (Sort by date | Fit to screen | Filter, with a dot while a
+filter is active) — a bottom `TmMobileActionBar` (Add task | Expand all | Collapse all | More) and a
+"More" bottom sheet (Zoom in / out, Task panel, History, Reports, View settings). Every right-hand
+surface is a full-height `TmSidePanel` bottom sheet:
+
+- the task detail is read-only except Status and Percent, with a sticky Cancel | Save footer, a
+  localized "full editing" hint and the `TaskBreadcrumb` slot above the sheet title;
+- adding a task is a minimal sheet (name, start, end);
+- the filter editor is the dialog as a bottom sheet (44 px, two-line rows, sticky Apply);
+- history is a read-only sheet; Reports are run-only cards.
+
+**Not offered on mobile:** export, import, column mapping (absent from the chrome — a host that
+opens their dialogs programmatically still gets them as fullscreen `TmModal`s), reorder (drag, Move
+up / down, Alt+Arrow) and the dependency drag (no handles, rows `draggable="false"` without a
+grip). The progress % shows beside every bar; the zoom slider is replaced by the zoom entries. A
+host that wants the full editing chrome on a small screen pins
+`LayoutMode="TmLayoutMode.Tablet"` (or Desktop). Enforced by bUnit tests with
+`LayoutMode = TmLayoutMode.Mobile`; on a mobile container the Days zoom is pinned automatically
+(unless the host set a zoom override) and the layout flip re-renders the parts through their own
+render gates.
+
+## Header
+
+The header row (`div.tm-gantt__header`, `data-testid="gantt-header"`) renders only when at least
+one of its slots is filled and `ShowHeader` is not `false`:
+
+| Parameter | Purpose |
+|-----------|---------|
+| `Title` / `Subtitle` | Header title and the secondary line under it. |
+| `HeaderStart` | Host content after the title (a project switcher, a breadcrumb). |
+| `HeaderActions` | Host actions at the end of the row (Share, Save…) — the Gantt has no built-in header actions. |
+| `ShowHeader` | `false` hides the row even when its slots are filled. Default `true`. |
+
+```razor
+<TmGantt Items="tasks" Title="Project Aurora" Subtitle="12 tasks · Jan–Mar">
+    <HeaderStart><MyProjectSwitcher /></HeaderStart>
+    <HeaderActions><TmButton Variant="ButtonVariant.Primary">Share</TmButton></HeaderActions>
+</TmGantt>
+```
+
+## Toolbar
+
+The toolbar is the core `TmToolbar` (`div.tm-gantt__toolbar > div.tm-toolbar.tm-gantt__toolbar-bar[role=toolbar]`)
+with six labelled groups — `data-tm-group` = `create | structure | time | panels | data | settings`.
+Hosts and tests key off `data-tm-group` and the unchanged `data-testid`s, never a positional
+selector; a command that does not fit sits in the group's "More" menu (`.tm-toolbar-item--collapsed`
+stays in the DOM, the menu entry carries `data-menu-testid`).
+
+- `ToolbarLabels` (default `Icons`) maps onto `TmToolbar.Labels`: `Icons` keeps the icon-only row
+  (the text stays the accessible name and the tooltip), `IconsWithText` shows every label, `Auto`
+  shows them except on a toolbar narrower than 640 px.
+- **Add task is a split button** (`data-testid="gantt-add-task-split"`): the primary half adds a
+  task at the end, the chevron opens Add task above / below / add child task for the selected task
+  (the same insert the context menu performs; disabled without a selection).
+- `ShowQuickSearch` (default `false`) ends the toolbar with a "Search tasks…" box that writes a
+  Title / Contains entry into `Filters` (raising `OnFiltersChanged`); emptying the box removes it.
+  The search filters nothing on its own — it is sugar over the existing filter set.
+- The structure group carries expand / collapse all, sort and critical path; the time group the
+  Day | Week | Month segment and the zoom slider + its readout as ONE measured toolbar item — an
+  Overflow=Menu row moves it into "More" as a whole (the slider's 50–200 % presets are the item's
+  menu entries), so the readout can never wrap under the segment; the panels group opens the task
+  panel, the workload panel, history and reports; the data group export and import; the settings
+  group the column menu (`data-testid="gantt-column-menu"`, a `TmColumnPicker` over every rendered
+  column except Title) and the view-settings menu (`gantt-view-settings-btn` — density, avatars,
+  today marker, theme, WBS, notification settings).
+
+Active filters render as removable chips (`TmFilterChip`) in `div.tm-gantt__filter-chips` under the
+toolbar. `FilterPanelMode` picks the editor: `Inline` (default) is the strip under the toolbar,
+`Dialog` a modal (a bottom sheet on a mobile viewport; footer **Clear all filters | Cancel |
+Apply** — Apply raises the whole set, Cancel throws unapplied edits away, Clear all only clears the
+rows being edited until Apply), `Auto` picks the dialog on a tablet or narrower container and the
+strip on a desktop one. The value editor follows the field type (Status/Priority enum selects, date
+inputs, Title text), and so do the operators.
+
+## Views
+
+`View` / `ViewChanged` (`GanttView`): `Day`, `Week` (default), `Month` render the tree +
+timeline chart; `Workload` renders `TmGanttWorkloadView`; `List` the tree alone; `Calendar` the
+embedded `TmScheduler` month; `Board` the `TmKanbanBoard` by status; `Dashboard` four stat widgets;
+`People` the person rows with vacation overlays. The segment offers Day | Week | Month; the other
+views come from the sidebar rail / tabs (`Workload`, `List`) or the view-settings menu.
+
+`WorkloadPlacement` (`GanttWorkloadPlacement`, default `View`): `View` keeps the workload as the
+alternate view; `Docked` renders it as a panel **under the timeline** (`gantt-workload-dock`) that
+shares the Gantt's date range — `gantt.js linkScroll` keeps the two horizontal scrolls in step as a
+ratio of the scrollable distance, entirely in the browser (no round trip per scroll event), skipped
+with a localized note when the range exceeds the 366-day axis. `WorkloadDisplayMode` switches the
+cells between hours and percentage.
+
+## Task tree and keyboard
+
+The tree is an ARIA treegrid: `div.tm-gantt__tree-grid[role=treegrid]`, a header `row` of
+`columnheader`s, body `rowgroup`, each `.tm-gantt__tree-row[role=row]` with `aria-level`,
+`aria-selected` and — for a parent — `aria-expanded`, its cells `role=gridcell`. Exactly one row has
+`tabindex="0"` (the selected / last focused / first row), the rest `-1`.
+
+| Key | Action |
+|-----|--------|
+| ↑ ↓ | previous / next visible row |
+| Home / End | first / last row of the view |
+| → | expand, then step into the first child (a leaf's → focuses its bar) |
+| ← | collapse, then step to the parent |
+| Enter (Space on key-up) | open the task panel |
+| Alt+↑ / Alt+↓ | move the row up / down (`OnTaskReordered`, the WCAG 2.5.7 alternative to drag; not on a mobile container) |
+
+The expand button and the bulk checkbox are fenced from the row's key handler (`tabindex="-1"`).
+Bars and milestones are `role="button" tabindex="-1"` with an aria-label "title, start – end";
+Enter / Space opens the panel, Esc / ← returns to the row. Every drag control has a non-drag path:
+the context menu and the tabbed panel's **Move up / Move down** buttons (with `CanMoveUp` /
+`CanMoveDown` edge disabling) perform the same reorder, and the task panel's Dependencies section
+creates dependencies without a drag.
+
+## Task panel, panels and sheets
+
+`ShowTaskPanel` / `ShowTaskPanelChanged` (two-way; never assigned inside the component) shows the
+inspector of the selected task: sections `plan | progress | structure | appearance | description |
+attachments | comments | budget | timelog | dependencies` (`data-testid="task-section-*"`), a
+**Status** draft that raises `OnStatusChanged` on Save, `TmDecimalInput` estimates / logged time /
+budget, attachment cards, and Delete behind a confirm `TmDialog`. The footer is **Cancel | Save**,
+outside the scroller (`task-cancel` / `task-save`).
+
+`TaskPanelMode` (`GanttTaskPanelMode`, default `Inline`): `Inline` is the in-flow column at every
+width; `Overlay` presents the panel — and the Reports inspector — as a core `TmSidePanel` side
+sheet with the tabs **Detail | Attachments | Comments | History** (`TmGanttTaskPanel.Tabbed`;
+the History tab lists the audit entries of the task; a draft on the Detail tab survives a tab
+switch and is flagged "Unsaved changes"); `Auto` is `Inline` on a desktop container and the sheet
+on a tablet or narrower one. With a sheet presentation **at most one right-hand surface is open**
+(opening the task panel, Reports or the history drawer closes the other two), a finger or pen tap
+on a row or bar opens the sheet (a mouse click just selects; Enter opens it from the keyboard), and
+closing over a dirty draft asks first — "Discard changes?" / Discard / Keep editing.
+
+The other panels: History (the shared `TmGanttHistoryList`, and the drawer with Time travel /
+Rollback — `HistoryDrawerPlacement` `Component` (default, absolute inside the chart) or `Viewport`
+(the pre-redesign full-height panel); rollback asks for confirmation first), Notifications (with
+`NotificationSettings`, inside the view-settings menu since phase 2) and Reports (cards with Run /
+Edit / Delete / Duplicate; "New report" renders only with `OnNewReportRequested`; the inspector
+replaces the task panel while open). `SidebarMode` (`GanttSidebarMode`, default `Rail`) picks how
+the panels are offered: the vertical icon rail on the left, or the `Tabs` strip
+(`TmGanttPanelTabs`, ARIA tablist, `data-testid="panel-tab-tasks|workload|history|notifications|reports"`)
+above the chart; `ShowSidebar=false` hides either.
+
+## Zoom, timeline and dependencies
+
+`ZoomPreset` (`GanttZoomPreset`: Hours, Days, Weeks (default), Months, Quarters, Years) drives the
+axis; the zoom slider and the view-settings entries override it per session, Fit to screen measures
+the timeline element in the browser (`gantt.js getClientWidth` — no `eval`, no global
+`querySelector`). `GanttViewSettings` carries the visual switches: `ViewDensity`
+(`Comfortable` / `Compact` / `Touch` — 44 px rows with the tree and timeline sharing one height,
+`data-density` on the root), `ShowTodayMarker` (the 2px solid line plus the localized "Today" pill),
+`ShowProgressLabel`, `ShowAvatarsOnChart`, `ShowDaysOff`, `ShowClosedTasks`,
+`ShowAdvancedContextButtons`, `TaskNameLocation`, `WbsInTitle` and `Theme` (`Auto` follows the
+registered `ThemeService`; `Dark` / `Light` stamp `data-theme` on the chart root so the whole token
+set applies — light islands included).
+
+Dependencies render as SVG lines with the finger-sized `tm-gantt__dep-handle` hit areas when
+`AllowDependencyCreation` is set; the drag commits once through `OnDependencyDragCompleted`.
+`OnDependencyAdded` / `OnDependencyRemoved` are the host persistence path; the non-drag path is the
+task panel's Dependencies section. `ShowCriticalPath`, `ShowOverdueHighlight`, `Baselines` /
+`ActiveBaselineId` / `OnBaselineSaved` and the working-time model (`WorkingSchedule`,
+`ResourceCalendars`, `AutoSchedule`) are unchanged pre-redesign surfaces.
+
+## Export, import and mapping
+
+Export (`gantt-export-btn`), import and column mapping open as core `TmModal`s (browser top layer,
+`role="dialog"` + `aria-modal`, focus trap, Escape, focus back to the trigger, bottom sheet on a
+mobile viewport). The per-dialog class (`tm-gantt__export-dialog` etc.) sits on the **overlay
+root**; page-scoped locators, never `.tm-gantt`-scoped ones. Export offers the format radiogroup
+(PDF / PNG / Excel / MS Project XML) with the PDF/PNG options and an Excel column picker. Import is
+a tablist (Excel | MS Project | XML), an input group with **Choose file** / the chosen name /
+**Remove file**, a supported-formats hint and a `TmAlert` error box; switching the Excel and
+MS Project tabs drops the chosen file. The mapping dialog pre-maps columns by header name, warns on
+double targets, and **Import stays disabled until Task (title) and Start and End or Duration are
+mapped**. Wire the results through `OnExportRequested`, `OnImportCompleted` and `OnImportError`;
+wire `OnClose` to an explicit close method — never a `Toggle*()` that the action callback also
+calls, or the dialog reopens itself.
+
+## Touch and pointer
+
+All pointer work is `gantt.js` on the shared core helpers — never a second drag implementation:
+
+| Gesture | Session |
+|---------|---------|
+| Timeline pan | **mouse only** (a finger or a pen scrolls natively; `touch-action: pan-x pan-y` is CSS-owned and applies to the pen too). Threshold 4, Escape restores; scrollLeft/Top are written in JS with no interop per move. |
+| Dependency drag | every pointer type; a ghost `<svg>` line, the bar under the pointer highlighted (`tm-gantt__bar--dep-target`), edge auto-scroll via `createAutoScroller`, hit-tested release committed once. |
+| Long-press (500 ms, finger) | the context menu on bars and tree rows, anchored at the finger; the lifting finger's click does not dismiss it. On a mobile container the menu is the read-mostly limited menu (Status / Percent / Add task). |
+| Tree reorder (keyboard) | `attachKeyboardMove`: Alt+↑/↓ → `OnTreeKeyboardMove`, with an `accept` predicate that leaves Alt+arrow inside an inline editor to the text field. |
+| No HTML5 drag under a finger | a touch pointer sets `draggable="false"` on the pressed row (restored on release); mouse and pen keep HTML5 drag-and-drop. |
+
+Escape, `pointercancel` or a lost capture rolls a gesture back; `attachTimeline` / `attachTree`
+resolve `true` only after the sessions registered.
+
+## CSS and theming contract
+
+Every `TmGantt*` component owns its scoped `.razor.css` — subcomponent styles never live in the
+parent's stylesheet (`ScopedCssOwnershipTests`). The gantt CSS uses only `--tm-*` tokens: zero
+colour literals, zero undefined aliases (a strict token audit guards this); dark mode, the indigo
+theme and a host's overrides arrive through the tokens, and `GanttViewSettings.Theme` stamps
+`data-theme` for a light / dark island. The global dialog stylesheet of the pre-TmModal era
+(`_gantt-dialog.css`) was removed. Reduced-motion subjects are enumerated in
+`wwwroot/css/animations.css`; a new animated subject must join them.
+
+## Testing notes
+
+- Pin layouts with `LayoutMode="TmLayoutMode.Desktop|Tablet|Mobile"` in bUnit and E2E — the real
+  browser classifies the demo Gantt as tablet at the default 1280 viewport (~956 px of container).
+- Overlays (context menu, sheets, dialogs) are siblings of `.tm-gantt`: query them page-scoped.
+- Legacy desktop specs should pin a 1440×900 viewport and wait for `data-layout` before
+  interacting; a helper that taps a command "on the bar or in More" survives overflow changes.
+- Visual baselines: `GanttVisualBaselineE2ETests` pins the phase-2 look per (view × theme); re-record
+  consciously and note it in the CHANGELOG.

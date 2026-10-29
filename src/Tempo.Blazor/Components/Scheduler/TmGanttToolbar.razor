@@ -1,8 +1,10 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits TmGanttPart
+@using System.Globalization
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Abstractions.WorkItems
+@using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.Toolbar
 
 @* The command row: a core TmToolbar (roving tab stop, label mechanism) with the commands grouped by task -
@@ -146,11 +148,17 @@ else
                      OnClick="Owner.FitToScreenAsync" data-testid="@TestId("gantt-fit-to-screen")" />
     <TmToolbarButton Icon="zoom-out" Text="@Loc["TmGantt_ZoomOut"]" Tooltip="@Loc["TmGantt_ZoomOut"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
                      OnClick="Owner.ZoomOutAsync" data-testid="@TestId("gantt-zoom-out")" />
-    <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
-           aria-label="@Loc["TmGantt_ZoomLevel"]"
-           min="50" max="200" step="25" value="@Owner._zoomLevel"
-           @onchange="Owner.SetZoomLevel" />
-    <span class="tm-gantt__zoom-level">@(Owner._zoomLevel)%</span>
+    @* Phase 9 review: the slider and its readout are ONE measured toolbar item (an inline-flex that never
+       wraps), so the "100%" cannot drop below the segment; when an Overflow=Menu row runs out of room the
+       whole item leaves into "More" (the zoom presets below) instead of splitting in half. *@
+    <TmToolbarItem Class="tm-gantt__zoom-control" Priority="ToolbarButtonPriority.Secondary"
+                   MenuLabel="@Loc["TmGantt_ZoomLevel"]" MenuItems="@ZoomMenuItems">
+        <input type="range" class="tm-gantt__zoom-slider" data-testid="@TestId("gantt-zoom-slider")"
+               aria-label="@Loc["TmGantt_ZoomLevel"]"
+               min="50" max="200" step="25" value="@Owner._zoomLevel"
+               @onchange="Owner.SetZoomLevel" />
+        <span class="tm-gantt__zoom-level">@(Owner._zoomLevel)%</span>
+    </TmToolbarItem>
     <TmToolbarButton Icon="zoom-in" Text="@Loc["TmGantt_ZoomIn"]" Tooltip="@Loc["TmGantt_ZoomIn"]" Priority="ToolbarButtonPriority.Secondary" LabelPosition="ToolbarLabelPosition.Hidden"
                      OnClick="Owner.ZoomInAsync" data-testid="@TestId("gantt-zoom-in")" />
 </TmToolbarGroup>;
@@ -203,6 +211,29 @@ else
         ["aria-label"] = Loc["TmGantt_AddTask"],
         ["title"] = Loc["TmGantt_AddTask"],
     };
+
+    // The "More" representation of the zoom item (slider + readout): the slider's own range as
+    // checkable presets, so zooming stays reachable when the item leaves the bar (phase 9 review).
+    private IReadOnlyList<TmActionItem> ZoomMenuItems
+    {
+        get
+        {
+            var items = new List<TmActionItem>();
+            for (var level = 50; level <= 200; level += 25)
+            {
+                var current = level;
+                items.Add(new TmActionItem
+                {
+                    Id = $"gantt-zoom-{current}",
+                    Label = current.ToString(CultureInfo.InvariantCulture) + "%",
+                    Checked = Owner._zoomLevel == current,
+                    OnClick = EventCallback.Factory.Create(this, () => Owner.SetZoomLevelAsync(current)),
+                });
+            }
+
+            return items;
+        }
+    }
 
     private string? FilterBadge => Owner.ActiveFilterCount > 0 ? Owner.ActiveFilterCount.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
 

@@ -30,7 +30,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 20. [Timeline](#timeline) — TmTimeline
 21. [Toolbar](#toolbar) — TmToolbar, TmToolbarButton, TmToolbarDivider, TmFormActionBar
 22. [TreeView](#treeview) — TmTreeView
-23. [Scheduler](#scheduler) — TmScheduler
+23. [Scheduler](#scheduler) — TmScheduler, TmGantt, TmGanttPortfolio, TmGanttWorkloadView
 24. [Dashboard](#dashboard) — TmDashboard
 25. [Workflow](#workflow) — TmStepper, TmWorkflowDesignerCanvas, TmWorkflowPropertiesPanel, TmWorkflowToolbox, TmWorkflowMinimap
 26. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
@@ -5661,6 +5661,148 @@ Složení bočního panelu, filtr zdrojů, mobilní lišta a zúžený rozsah js
              OnSlotContextMenu="HandleSlotContextMenu"
              OnEventContextMenu="HandleEventContextMenu" />
 ```
+
+### TmGantt
+
+Ganttův diagram: strom úkolů vedle zoomovatelné časové osy, závislosti, baseline, workload,
+filtrování, import/export, historie a reporty. Redesign (fáze 1–8) rozdělil monolit na interní
+části (`TmGanttToolbar`, `TmGanttTree`, `TmGanttTimeline`, `TmGanttSidebar`, …), přestyloval
+chrome pomocí výhradně `--tm-*` tokenů (tmavý režim a témata přes tokeny), přesunul dialogy na
+jádrové `TmModal` a nechal graf měřit **vlastní kontejner**. Plná smlouva je v
+[docs/gantt.md](docs/gantt.md); dotyk popisuje [docs/touch-interaction.md](docs/touch-interaction.md).
+
+Hostitel používá jen `TmGantt`; interní části (`TmGanttToolbar`, `TmGanttTree`, `TmGanttTimeline`,
+`TmGanttSidebar`, `TmGanttStatusChip`, `TmGanttPanelTabs`, `TmGanttViewSettings`, `TmGanttFilterBar`,
+`TmGanttMobileOverlays`) jsou `public` jen proto, že Razor neumí interní komponenty — nikdy je
+neskládejte. `TmGanttPortfolio` (karty projektů s mini-Ganttem) a `TmGanttWorkloadView` (týdenní
+vytížení osob) jsou samostatné veřejné komponenty rodiny.
+
+#### Layout (vlastní kontejner)
+
+`LayoutMode` (`TmLayoutMode`, výchozí `Auto`) nahradilo `ContainerWidth` (breaking): graf měří sám
+svůj kontejner přes `TmLayoutObserver` a sdílené breakpointy — mobilní < 640 px, tablet
+640–1023 px, desktop od 1024 px. Kořen nese `data-layout` a třídu `tm-gantt--desktop|tablet|mobile`;
+`ResolvedLayoutChanged` oznámí změnu rozpoznaného režimu (nikdy ne pro počáteční hodnotu).
+
+| Layout | Prezentace |
+|--------|------------|
+| Desktop ≥ 1024 px | Jedna wrapující řada `TmToolbar`, dokované panely, celý zoom slider |
+| Tablet 640–1023 px | Toolbar ve dvou řadách (příkaz, který se nevejde, odchází do „More“), užší strom, 44px cíle, `TaskPanelMode=Auto` ukazuje panel úkolu jako postranní sheet |
+| Mobil < 640 px | Read-mostly (níže) |
+
+`ContainerWidth` zůstává jako `[Obsolete]` alias: nadále přepisuje měření Fit to screen a při
+`LayoutMode=Auto` se klasifikuje jako měření (900 → tablet).
+
+#### Mobil je read-mostly (rozhodnutí G2)
+
+Kontejner klasifikovaný jako mobil je **čtecí plocha**: prohlížení, změna **Stavu** a **Procent**
+a přidání úkolu. Chrom tvoří kompaktní lišta (segment Day | Week | Month na celou šířku + čipy
+„Sort by date | Fit to screen | Filter“ s tečkou aktivního filtru), spodní `TmMobileActionBar`
+(Add task | Expand all | Collapse all | More) a „More“ sheet (Zoom, Task panel, History, Reports,
+View settings). Každý pravý povrch je celovýškový spodní sheet: detail úkolu je jen pro čtení kromě
+stavu a procent (sticky Cancel | Save, slot `TaskBreadcrumb`), přidání úkolu je minimální sheet,
+filtr je dialog jako sheet, historie je read-only a reporty jsou karty pouze ke spuštění.
+**Nabízí se jen na tabletu a desktopu:** export, import, mapování sloupců, reorder (drag, Move
+up / down, Alt+šipka) a tažení závislostí. Hostitel, který chce plný chrom na malé obrazovce,
+pinuje `LayoutMode="TmLayoutMode.Tablet"`.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-layout` / `tm-layout--no-container` | Obal `TmLayoutObserver` (overlaye jsou sourozenci `.tm-gantt`, nikdy potomci — kořen grafu je CSS size kontejner a uzavírá by fixně pozicované potomky do sebe) |
+| `tm-gantt` | Kořen grafu (`data-layout`, `data-density`, karta na workspace) |
+| `tm-gantt__header` / `__title` / `__subtitle` / `__header-start` / `__header-actions` | Hlavička (renderuje se, jen když je alespoň jeden slot vyplněný a `ShowHeader`) |
+| `tm-gantt__toolbar` / `tm-gantt__toolbar-bar` / `--two-rows` | Toolbar (šest skupin `data-tm-group`: `create`, `structure`, `time`, `panels`, `data`, `settings`) |
+| `tm-gantt__segment` / `__segment-btn` / `--active` | Segment Day \| Week \| Month (`aria-pressed`) |
+| `tm-gantt__tree` / `tm-gantt__tree-grid` / `tm-gantt__tree-row` | ARIA treegrid (roving tabindex) |
+| `tm-gantt__timeline` / `__bar` / `__today-marker` / `__today-label` | Časová osa, bary, solidní linka „Today“ s popiskem |
+| `tm-gantt__status-badge` / `__status-icon` | Status čip (glyf + lokalizovaný text, `--tm-status-*` tokeny) |
+| `tm-gantt__filter-chips` | Čipy aktivních filtrů pod toolbarem |
+| `tm-gantt__mobile-toolbar` / `tm-gantt__mobile-chips` | Kompaktní chrom mobilního kontejneru |
+| `tm-gantt__context-menu` / `__context-menu-item` | Kontextové menu (sourozenec `.tm-gantt`; na mobilu omezené menu Status / Procenta / Přidat) |
+| `tm-gantt-task-panel__*`, `tm-gantt-portfolio__*`, `tm-gantt__workload*`, `tm-gantt__history-*` | Panel úkolu, portfolio, workload, historie (každá komponenta má vlastní scoped `.razor.css`) |
+
+Dialogy exportu, importu a mapování jsou jádrové `TmModal`: třída dialogu
+(`tm-gantt__export-dialog`, …) je na kořeni overlaye; selektory jsou page-scoped, ne pod `.tm-gantt`.
+
+#### Vybrané parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Items` / `DependencyItems` | `IReadOnlyList<TmWorkItem>` / `IReadOnlyList<GanttDependency>` | `[]` | Data grafu; `WorkItemSource` je sdílený provider |
+| `View` / `ViewChanged` | `GanttView` | `Week` | `Day`, `Week`, `Month` (graf), `Workload`, `List`, `Calendar`, `Board`, `Dashboard`, `People` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Vlastní kontejner; vynucená hodnota pro testy / prezentaci |
+| `ResolvedLayoutChanged` | `EventCallback<TmLayoutMode>` | — | Změna rozpoznaného layoutu (nikdy pro počáteční hodnotu) |
+| `TaskPanelMode` | `GanttTaskPanelMode` | `Inline` | `Inline` sloupec, `Overlay` `TmSidePanel` sheet s taby Detail \| Attachments \| Comments \| History, `Auto` podle kontejneru |
+| `ShowTaskPanel` / `ShowTaskPanelChanged` | `bool` | `false` | Panel úkolu; dvousměrný, komponenta ho nepřiřazuje |
+| `FilterPanelMode` | `GanttFilterPanelMode` | `Inline` | `Inline` pás pod toolbarem, `Dialog` modál (na mobilu bottom sheet), `Auto` podle kontejneru |
+| `Filters` / `OnFiltersChanged` | `IReadOnlyList<GanttFilter>` | `[]` | Aktivní filtry (čipy pod toolbarem) |
+| `ShowQuickSearch` | `bool` | `false` | „Search tasks…“ box, který zapíše Title/Contains do `Filters` |
+| `SidebarMode` | `GanttSidebarMode` | `Rail` | Sloupec ikon vlevo nebo `Tabs` pás (ARIA tablist) nad grafem |
+| `ShowSidebar` | `bool` | `true` | Skryje rail i taby |
+| `ToolbarLabels` | `ToolbarLabels` | `Icons` | `Icons` jen ikony, `IconsWithText` s popisky, `Auto` podle šířky |
+| `ShowHeader` | `bool` | `true` | `false` skryje hlavičku i s plnými sloty |
+| `Title` / `Subtitle` | `string?` | `null` | Text hlavičky |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Slot za titulkem / akce na konci hlavičky |
+| `TaskBreadcrumb` | `RenderFragment?` | `null` | Drobečky v hlavičce panelu úkolu i mobilního sheetu |
+| `WorkloadPlacement` | `GanttWorkloadPlacement` | `View` | `View` alternativní pohled, `Docked` panel pod časovou osou se sdíleným posuvem |
+| `WorkloadDisplayMode` | `WorkloadDisplayMode` | `Hours` | Hodiny nebo procenta |
+| `HistoryDrawerPlacement` | `GanttHistoryDrawerPlacement` | `Component` | `Component` uvnitř grafu, `Viewport` celá výška okna (původní chování) |
+| `ZoomPreset` | `GanttZoomPreset` | `Weeks` | `Hours` … `Years`; mobilní kontejner pinuje `Days` |
+| `Columns` / `OnColumnsChanged` | `IReadOnlyList<GanttColumnDefinition>` | DefaultColumns | Viditelné sloupce (menu sloupců v toolbaru) |
+| `AllowDependencyCreation` | `bool` | `false` | Úchyty závislostí (ne na mobilu) |
+| `AllowBulkSelect` | `bool` | `false` | Checkboxy hromadných operací (`OnBulkUpdate`) |
+| `ShowCriticalPath` / `ShowOverdueHighlight` | `bool` | `false` | Kritická cesta, zvýraznění po termínu |
+| `Baselines` / `ActiveBaselineId` / `OnBaselineSaved` | — | — | Baseline a jejich ukládání |
+| `History` / `OnTimeTravelRequested` / `OnRollbackRequested` | — | — | Auditní data; rollback se nejdřív ptá |
+| `Reports` + `OnReportRun` / `OnReportEdit` / `OnReportDelete` / `OnReportDuplicate` / `OnNewReportRequested` | — | — | Reporty; „New report“ jen s delegátem |
+| `OnExportRequested` / `OnImportCompleted` / `OnImportError` | — | — | Výstup exportních a importních dialogů |
+| `ViewSettings` / `OnViewSettingsChanged` | `GanttViewSettings` | nová | Hustota řádků (`GanttViewDensity.Touch` = 44 px), avatary, Today marker, téma (`Auto` sleduje `ThemeService`), WBS v titulku |
+| `WorkingSchedule` / `ResourceCalendars` / `AutoSchedule` | — | — | Pracovní doba, kalendáře zdrojů, kaskádování |
+| `RealtimeConnection` | `IGanttRealtimeConnection?` | `null` | SignalR aktualizace |
+| `ActiveTimerTaskId` + `OnTimerStarted` / `OnTimerStopped` | — | — | Časovač úkolu |
+| `Class` | `string?` | `null` | Další CSS třídy (na `.tm-gantt`) |
+
+Kompletní povrch parametrů včetně děděných je v JSON dokumentaci (`tempo-blazor-all.json`).
+
+#### Klávesnice a dotyk
+
+- Treegrid má jeden roving tab stop: ↑ ↓ Home End posun, → rozbalí a vstoupí, ← sbalí a vystoupí
+  na rodiče, Enter otevře panel úkolu; bar je `role="button"` (Enter / Space otevře, Esc / ← se
+  vrátí na řádek).
+- **Alt+↑ / Alt+↓** přesune řádek (`OnTaskReordered`) — nedragová alternativa (WCAG 2.5.7) vedle
+  položek „Move up / Move down“ v kontextovém menu a v panelu úkolu.
+- Dotyk: 500 ms dlouhý stisk otevře kontextové menu u prstu; tažení závislostí funguje myší, perem
+  i prstem; pan časové osy je **jen myš** (prst a pero skrolují nativně). Vše jsou relace jádrového
+  `pointer-drag.js`, které zavede `gantt.js` (`_content/Tempo.Blazor/js/` musí být servírováno
+  celé; CSP hash musí obsahovat i `pointer-drag.js` a `pointer-gesture.js`).
+
+#### Příklady
+
+```razor
+@* Graf měří vlastní kontejner: tablet dostane dvouřadý toolbar a sheet panelu úkolu,
+   mobilní kontejner je read-mostly. LayoutMode pinujte jen pro testy. *@
+<TmGantt Items="_tasks"
+         DependencyItems="_deps"
+         @bind-View="_view"
+         SelectedTask="_selected"
+         OnTaskSelected="t => _selected = t"
+         OnTaskUpdated="SaveTask"
+         OnDependencyAdded="AddDep"
+         TaskPanelMode="GanttTaskPanelMode.Auto"
+         FilterPanelMode="GanttFilterPanelMode.Auto"
+         ShowQuickSearch="true"
+         WorkloadPlacement="GanttWorkloadPlacement.Docked"
+         Title="Projekt Aurora"
+         OnExportRequested="ExportGantt"
+         OnImportCompleted="ImportDone">
+    <HeaderActions><TmButton Variant="ButtonVariant.Primary">Sdílet</TmButton></HeaderActions>
+</TmGantt>
+```
+
+Detailní smlouva (hlavička, toolbar, pohledy, panel úkolu, dialogy, dotyk, testovací poznámky):
+[docs/gantt.md](docs/gantt.md).
 
 ---
 

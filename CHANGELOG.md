@@ -12,6 +12,18 @@
 
 ### Breaking / Migration
 
+- **TmGantt redesign (phases 1–8): the breaking items at a glance.** The component contract is
+  [docs/gantt.md](docs/gantt.md); each item below has its detailed entry (with the full before/after)
+  in the phase bullets that follow. Everything else in the plan is opt-in or additive.
+  1. *Styled subcomponent surfaces (phase 1).* The dialogs, history drawer, filter panel, workload and portfolio render styled through their own owners; a selector pinned to the old scope attribute (`[b-xxxx]`) no longer matches — use a plain class selector or `::deep`.
+  2. *"New report" needs a handler (phase 1).* The button renders only with `OnNewReportRequested`.
+  3. *Token-only painting (phase 2).* Day | Week | Month is a segmented control (`tm-btn-secondary` classes gone), status chips are glyph + text, "Today" is a labelled pill over a solid line, the board columns carry no hex, notification settings moved into the view-settings menu, and `GanttViewSettings.Theme` stamps `data-theme` (the `.tm-gantt--theme-dark` palette aliases are gone — override canonical tokens).
+  4. *Toolbar and treegrid DOM (phase 4).* The toolbar is a core `TmToolbar` (`.tm-gantt__toolbar-group`/`__divider` gone; style `.tm-toolbar-btn` instead), "Add task" is a split button, the "%" header checkbox is the column menu, and the tree is an ARIA treegrid with a roving tab stop (`.tm-gantt__tree > .tm-gantt__tree-header` selectors go through `.tm-gantt__tree-grid`).
+  5. *Task panel and panels DOM (phase 5).* Footer is Cancel | Save outside the scroller, fields are grouped sections, the history drawer is positioned against the component (opt back into the viewport with `HistoryDrawerPlacement="GanttHistoryDrawerPlacement.Viewport"`), rollback and delete ask for confirmation first, and the history rows are the shared `TmGanttHistoryList` (`.tm-gantt__sidebar-history-*` classes gone).
+  6. *Dialogs are `TmModal`s (phase 6).* `.tm-gantt__dialog-overlay` and `_gantt-dialog.css` are gone — the per-dialog class moved to the overlay root, the footer order is Cancel then the primary action, and the mapping import stays disabled until Title and Start/End (or Duration) are mapped.
+  7. *`LayoutMode` replaces `ContainerWidth` (phase 7, `[Obsolete]`).* The chart measures its own container; the root gained the `tm-layout` wrapper; `GanttFilterPanelMode.Auto` picks the dialog on tablet and narrower.
+  8. *Mouse handlers became pointer sessions (phase 7).* No `@onmouse*` on the timeline — tests drive the `[JSInvokable]` paths (`OnDependencyDragCompleted`), and a finger disables HTML5 row drag while pressed.
+  9. *Mobile container is read-mostly (phase 8).* A container that classifies mobile offers viewing, Status/Percent and Add task only — no export/import/mapping chrome, no reorder, no dependency drag, no zoom slider (`gantt-export-btn` / `gantt-import-btn` / the slider must pin `LayoutMode="TmLayoutMode.Tablet"`).
 - **TmGantt phase 1: previously unstyled Gantt surfaces now render styled, and "New report" needs a callback.**
   - *Appearance.* The export, import and column-mapping dialogs, the history drawer, the filter panel, the workload grid and the portfolio used to render without any styling (a scoped-CSS isolation defect). They are styled now, with the values the stylesheet always declared. A host that overrode them with a selector written against the scoped attribute (`.tm-gantt__history-drawer[b-xxxx]`, or `::deep` from a parent) now matches the new owner's scope; write the override against the class and give it the same specificity as the component rule:
     ```css

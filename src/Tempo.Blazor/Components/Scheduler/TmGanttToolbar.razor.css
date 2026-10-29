@@ -98,12 +98,19 @@
     color: var(--tm-color-primary);
 }
 
+/* The split button's label never wraps inside the button (phase 9 review: "Add task" broke onto two
+   lines at ~1024) — the button keeps its min-content width or leaves into "More" as a whole. */
+.tm-gantt__toolbar ::deep .tm-split-button__text {
+    white-space: nowrap;
+}
+
 .tm-gantt__zoom-level {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--tm-text-secondary);
     min-width: 40px;
     text-align: center;
+    white-space: nowrap;
 }
 
 /* ─── View Settings dropdown ───────────────────────────────────── */
@@ -115,6 +122,15 @@
 }
 
 /* ─── Phase 2: Zoom slider ──────────────────────────────────────── */
+
+/* The slider and its readout are ONE measured toolbar item (TmToolbarItem, see the markup): an
+   inline-flex that never wraps, so the "100%" cannot drop below the segment (phase 9 review) — when
+   an Overflow=Menu row runs out of room the item leaves into "More" as a whole. */
+.tm-gantt__toolbar ::deep .tm-gantt__zoom-control {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+}
 
 .tm-gantt__zoom-slider {
     width: 80px;
