@@ -187,6 +187,12 @@ public sealed class SpreadsheetDesignTokenTests
         var offences = new List<string>();
         foreach (var (file, text) in PackageCss())
         {
+            // A package THEME layer (`theme-*.css` / `tokens*.css`) is where a dark override belongs —
+            // exactly the allowlist of the strict audit (scripts/audit-css-strict.mjs, isAllowlisted).
+            // The rule targets COMPONENT stylesheets, which must stay theme-agnostic.
+            if (IsThemeLayer(file))
+                continue;
+
             foreach (Match match in ManualDarkBlock.Matches(Strip(text)))
             {
                 offences.Add($"{file}: {match.Value}");
@@ -195,7 +201,58 @@ public sealed class SpreadsheetDesignTokenTests
 
         offences.Should().BeEmpty(
             "dark mode is tokens-dark.css's job — a [data-theme=dark]/.tm-dark block in a component "
-            + "stylesheet duplicates the theme and drifts. Offences:\n" + string.Join("\n", offences));
+            + "stylesheet duplicates the theme and drifts; move it to a package theme-*.css layer. Offences:\n"
+            + string.Join("\n", offences));
+    }
+
+    [Fact]
+    public void PackageThemeLayer_OverridesTheActiveHeaderOpaqueInDark()
+    {
+        var layer = PackageCss()
+            .Where(entry => Path.GetFileName(entry.File).StartsWith("theme-", StringComparison.Ordinal))
+            .ToList();
+        layer.Should().NotBeEmpty("the package ships a theme layer for its dark overrides");
+
+        var dark = layer.SingleOrDefault(entry => entry.Text.Contains("--tm-spreadsheet-header-active-bg", StringComparison.Ordinal));
+        dark.File.Should().NotBeNull("the dark active-header override must live in the package theme layer");
+        var stripped = Strip(dark.Text);
+
+        // The theme CONDITION is wrapped in :where(...) so the rule keeps `.tm-spreadsheet`'s own
+        // specificity (0,1,0) — a bare `[data-theme="dark"] .tm-spreadsheet` would be 0,2,0 and would
+        // out-rank a host's `.tm-spreadsheet { --tm-spreadsheet-header-active-bg: … }` override in dark.
+        stripped.Should().Contain(":where([data-theme=\"dark\"], .tm-dark) .tm-spreadsheet");
+        stripped.Should().NotContain("[data-theme=\"dark\"] .tm-spreadsheet",
+            "the theme condition must stay inside :where(), otherwise a host token override loses in dark");
+        DarkThemeRule.Matches(stripped).Should().ContainSingle(
+            "there is exactly one theme rule and its specificity is asserted above");
+        stripped.Should().Contain("--tm-spreadsheet-header-active-bg: color-mix(",
+            "the dark strip must be an OPAQUE mix over the header surface, not the translucent primary-subtle wash");
+        ColorLiteral.Matches(stripped).Should().BeEmpty("the override is token-only — no hex, no rgb() literal");
+        var usedTokens = TokenUsage.Matches(stripped).Select(match => match.Groups[1].Value).Distinct().ToList();
+        usedTokens.Should().BeSubsetOf(
+            new[] { "--tm-color-primary", "--tm-spreadsheet-header-bg" },
+            "the override may only compose existing tokens");
+
+        var bundle = PackageCss().Single(entry => Path.GetFileName(entry.File) == "tempo-blazor-spreadsheet.css");
+        bundle.Text.Should().Contain(Path.GetFileName(dark.File),
+            "the package bundle must import the theme layer, so a host that loads the bundle gets the opaque dark strip");
+    }
+
+    /// <summary>A theme rule whose selector mentions the dark attribute or class — the specificity contract.</summary>
+    private static readonly Regex DarkThemeRule =
+        new(@"(?<selector>[^{}]*\[data-theme\s*=\s*[""']dark[""']\][^{}]*)\{", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>The package theme layer carries the dark overrides the strict audit allowlists.</summary>
+    private static bool IsThemeLayer(string file)
+    {
+        var name = Path.GetFileName(file);
+        // Optional cheap hardening: a theme layer must be a TOP-LEVEL package stylesheet
+        // (wwwroot/css/<name>), never a hidden one inside components/.
+        var inThemeRoot = file.Replace('\\', '/').Contains("/wwwroot/css/", StringComparison.Ordinal)
+            && !file.Replace('\\', '/').Contains("/wwwroot/css/components/", StringComparison.Ordinal);
+        return inThemeRoot
+            && (name.StartsWith("theme-", StringComparison.Ordinal)
+                || name.StartsWith("tokens", StringComparison.Ordinal));
     }
 
     [Fact]

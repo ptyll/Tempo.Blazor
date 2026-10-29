@@ -387,3 +387,239 @@ test('isSpreadsheetOverlayTarget_RecognisesTheModalOverlaySelector', () => {
     assert.match(wheel[1], /isSpreadsheetOverlayTarget\(ev\.target\)/,
         'a wheel over an open dialog must not scroll the grid behind it');
 });
+
+// ── Phase 7b: the density gutter contract, the header font scale and the live pointer change ───
+
+test('resolveDensity_Comfortable_ReturnsGutterScale', () => {
+    const { internals } = loadCanvas();
+    const comfortable = internals.resolveDensity('Auto', true);
+    const compact = internals.resolveDensity('Auto', false);
+
+    assert.equal(comfortable.gutterScale, 1.4,
+        'the JS rule must mirror SpreadsheetDensityScale.ComfortableGutterScale (40->56, 20->28)');
+    assert.equal(compact.gutterScale, 1, 'a fine pointer keeps the historic 40/20 gutters');
+
+    const forced = internals.resolveDensity('Comfortable', false);
+    assert.equal(forced.gutterScale, 1.4, 'a forced Comfortable scales the gutters on a fine pointer too');
+});
+
+test('resolveDensityFromModel_PrefersTheFrameGutterScale', () => {
+    const { internals } = loadCanvas();
+    const resolved = internals.resolveDensityFromModel({
+        density: 'Comfortable',
+        densityRowScale: 1.5,
+        densityFontScale: 1.25,
+        densityHandleScale: 1.4,
+        densityGutterScale: 1.6,
+    });
+
+    assert.equal(resolved.gutterScale, 1.6, 'the component owns the scale; the canvas only reads it');
+    assert.equal(internals.resolveDensityFromModel({ density: 'Auto', pointerCoarse: false }).gutterScale, 1);
+});
+
+test('hitTest_UsesScaledGutters', () => {
+    const { internals } = loadCanvas();
+    // A primary press at client (10, 5) inside the grid body. The header gutters shift the content
+    // origin, so the same press lands on a DIFFERENT cell in Comfortable than in Compact — this is the
+    // bug class the phase-2 learning describes (cell centres moved silently).
+    const press = { clientX: 66, clientY: 33, rectLeft: 0, rectTop: 0, scrollLeft: 0, scrollTop: 0 };
+
+    const comfortable = internals.resolveContentPoint({
+        ...press, rowHeaderWidth: 56, columnHeaderHeight: 28,
+    });
+    assert.deepEqual({ ...comfortable }, { x: 10, y: 5 },
+        'the comfortable gutters (40x1.4 / 20x1.4) must be subtracted from the press point');
+
+    const compact = internals.resolveContentPoint({
+        ...press, rowHeaderWidth: 40, columnHeaderHeight: 20,
+    });
+    assert.deepEqual({ ...compact }, { x: 26, y: 13 },
+        'the compact gutters are the historic 40/20, so the same screen point is 16px/8px further right/down');
+
+    // The scroll offset is added back before the gutter subtraction, exactly like toContentPoint.
+    const scrolled = internals.resolveContentPoint({
+        clientX: 66, clientY: 33, rectLeft: 10, rectTop: 20, scrollLeft: 64, scrollTop: 30,
+        rowHeaderWidth: 56, columnHeaderHeight: 28,
+    });
+    assert.deepEqual({ ...scrolled }, { x: 64, y: 15 });
+});
+
+test('resolveAutoFillHitSize_Coarse_IsTouchFloor_FineIs10', () => {
+    const { internals } = loadCanvas();
+
+    assert.equal(internals.resolveAutoFillHitSize({ handleScale: 1, coarse: false }), 10,
+        'the compact fine pointer keeps exactly the pre-phase-7 10px hit box (no mouse regression)');
+    assert.equal(internals.resolveAutoFillHitSize({ handleScale: 1.4, coarse: false }), 14,
+        'Comfortable grows the hit box with the painted handle');
+    assert.equal(internals.resolveAutoFillHitSize({ handleScale: 1, coarse: true }), 24,
+        'a coarse pointer reaches the touch floor even at compact density');
+    assert.equal(internals.resolveAutoFillHitSize({ handleScale: 1.4, coarse: true }), 24);
+    assert.equal(internals.resolveAutoFillHitSize({}), 10, 'a missing input degrades to the historic box');
+});
+
+test('resolveFilterButtonHitRect_Coarse_IsTheTouchFloor_FineKeepsTheGlyph', () => {
+    const { internals } = loadCanvas();
+    const rect = { x: 96, y: 2, w: 12, h: 16 };
+
+    const fine = internals.resolveFilterButtonHitRect({ rect, columnWidth: 64, headerHeight: 20, coarse: false });
+    assert.deepEqual({ ...fine }, { x: 96, y: 2, width: 12, height: 16 },
+        'a fine pointer keeps the painted glyph rect exactly');
+
+    const coarse = internals.resolveFilterButtonHitRect({ rect, columnWidth: 64, headerHeight: 28, coarse: true });
+    assert.equal(coarse.height, 28, 'the hit box fills the comfortable header gutter height');
+    assert.ok(coarse.width >= 44, `the coarse hit box must reach the touch floor, got ${coarse.width}`);
+    assert.ok(coarse.x >= 96 + 12 - 64 && coarse.x + coarse.width <= 96 + 12,
+        'the hit box never leaves its own column');
+});
+
+test('headerFont_ScalesWithDensity', () => {
+    const { internals } = loadCanvas();
+    const token = '500 11px Inter, sans-serif';
+
+    assert.equal(internals.resolveHeaderFont(token, 1), token, 'Compact keeps the token exactly (no rounding drift)');
+    assert.equal(internals.resolveHeaderFont(token, 1.25), '500 13.75px Inter, sans-serif',
+        'Comfortable scales the header font by the same fontScale the cells use');
+    assert.equal(internals.resolveHeaderFont('600 10pt Inter', 1.5), '600 15pt Inter',
+        'a pt shorthand scales in place, keeping the unit');
+    assert.equal(internals.resolveHeaderFont('', 1.5), '', 'a missing token stays missing');
+    assert.equal(internals.resolveHeaderFont(token, 0), token, 'a zero/invalid scale is ignored');
+});
+
+test('buildPalette_DarkActiveHeader_IsOpaque', () => {
+    // What an UNREGISTERED custom property keeps: var() substituted, color-mix() NOT evaluated.
+    const mix = paletteFor({
+        '--tm-spreadsheet-header-bg': 'rgb(30, 41, 59)',
+        '--tm-spreadsheet-header-active-bg': 'color-mix(in srgb, rgb(129, 140, 248) 22%, rgb(30, 41, 59))',
+    });
+
+    assert.equal(mix.headerActiveBgAlpha, 1,
+        'the dark active header must be OPAQUE (the old rgba(..., 0.15) tint washed out over the dark header)');
+    assert.match(mix.headerActiveBg, /^rgb\(/, `an opaque tint serialises as rgb(), got ${mix.headerActiveBg}`);
+    assert.equal(mix.headerActiveBg, 'rgb(52, 63, 101)',
+        '22 % of the primary over the header surface, mixed in srgb');
+
+    // What Chromium serialises a computed color-mix() to (@property/color() hosts).
+    const srgb = paletteFor({
+        '--tm-spreadsheet-header-active-bg': 'color(srgb 0.2039 0.2471 0.3961)',
+    });
+    assert.equal(srgb.headerActiveBgAlpha, 1);
+    assert.equal(srgb.headerActiveBg, 'rgb(52, 63, 101)');
+
+    // A translucent token still reports its own alpha instead of claiming opacity.
+    const translucent = paletteFor({
+        '--tm-spreadsheet-header-active-bg': 'rgba(129, 140, 248, 0.15)',
+    });
+    assert.equal(translucent.headerActiveBgAlpha, 0.15);
+    assert.equal(translucent.headerActiveBg, 'rgba(129, 140, 248, 0.15)',
+        'a token the parser understands is normalised, never mangled');
+
+    // An unparseable notation is passed through untouched and reports an UNKNOWN alpha.
+    const relative = paletteFor({
+        '--tm-spreadsheet-header-active-bg': 'rgb(from #6366f1 r g b / 0.15)',
+    });
+    assert.equal(relative.headerActiveBgAlpha, null,
+        'an unparsed notation must not claim opacity it does not have');
+    assert.equal(relative.headerActiveBg, 'rgb(from #6366f1 r g b / 0.15)');
+});
+
+test('resolveColor_ParsesTheNotationsATokenCanCarry', () => {
+    const { internals } = loadCanvas();
+
+    assert.deepEqual({ ...internals.parseColor('#6366f1') }, { r: 99, g: 102, b: 241, a: 1 });
+    assert.deepEqual({ ...internals.parseColor('#63f') }, { r: 102, g: 51, b: 255, a: 1 });
+    assert.deepEqual({ ...internals.parseColor('rgba(1, 2, 3, 0.5)') }, { r: 1, g: 2, b: 3, a: 0.5 });
+    // Channels stay fractional from a color()/color-mix() notation (mixing precision), the FORMATTER
+    // is what rounds them; the palette therefore serialises rgb()/rgba() with whole channels.
+    const srgb = internals.parseColor('color(srgb 0.5 0.25 0.125 / 0.75)');
+    assert.deepEqual({ r: Math.round(srgb.r), g: Math.round(srgb.g), b: Math.round(srgb.b), a: srgb.a },
+        { r: 128, g: 64, b: 32, a: 0.75 });
+    assert.equal(Math.round(internals.parseColor('color-mix(in srgb, #ffffff 50%, #000000)').r), 128);
+    assert.equal(internals.parseColor('currentColor'), null, 'an unparseable value returns null, never NaN');
+    assert.equal(internals.parseColor(''), null);
+});
+
+test('coarsePointerChange_RecomputesAutoDensity_OnlyForAuto', () => {
+    const { internals } = loadCanvas();
+    const seen = [];
+    let handler = null;
+    const query = {
+        matches: false,
+        addEventListener: (name, callback) => {
+            if (name === 'change') handler = callback;
+        },
+    };
+
+    const listener = internals.attachPointerKindListener(query, () => 'Auto', (density, coarse) => {
+        seen.push({ density, coarse });
+    });
+    assert.ok(listener && handler, 'the observer must register exactly one change listener');
+    handler({ matches: true });
+    handler({ matches: false });
+    assert.deepEqual(seen, [
+        { density: 'comfortable', coarse: true },
+        { density: 'compact', coarse: false },
+    ], 'Auto follows the live media query (attaching a mouse to a tablet re-resolves the density)');
+
+    const forcedSeen = [];
+    let forcedHandler = null;
+    const forcedQuery = {
+        addEventListener: (name, callback) => {
+            if (name === 'change') forcedHandler = callback;
+        },
+    };
+    internals.attachPointerKindListener(forcedQuery, 'Compact', (density, coarse) => {
+        forcedSeen.push({ density, coarse });
+    });
+    forcedHandler({ matches: true });
+    assert.deepEqual(forcedSeen, [],
+        'an explicit Density=Compact/Comfortable ignores the pointer change (no pointless .NET round-trip)');
+
+    assert.equal(internals.attachPointerKindListener({}, 'Auto', () => { }), null,
+        'a host without matchMedia degrades gracefully');
+});
+
+test('parseColor_NonFiniteChannelsOrAlpha_ReturnsNull', () => {
+    const { internals } = loadCanvas();
+
+    // `none` (and any other non-numeric component) must never leak NaN into fillStyle — the caller has
+    // to keep the RAW token instead, so the browser resolves it and nothing paints garbage.
+    assert.equal(internals.parseColor('color(srgb 0.5 none 0.25)'), null,
+        'a `none` colour channel is not a number the canvas may paint');
+    assert.equal(internals.parseColor('color(srgb 0.5 0.5 0.5 / none)'), null,
+        'a `none` alpha must fall back to the raw token');
+    assert.equal(internals.parseColor('rgb(255 0 0 / none)'), null);
+    assert.equal(internals.parseColor('rgb(none 0 0)'), null);
+    assert.equal(internals.parseColor('color(srgb 0.5 0.5 0.5)').a, 1,
+        'a plain color(srgb) without an alpha stays opaque');
+});
+
+test('parseColor_ColorMix_RejectsTranslucentOperandsAndShortWeights', () => {
+    const { internals } = loadCanvas();
+
+    assert.equal(internals.parseColor('color-mix(in srgb, rgba(10, 20, 30, 0.5) 22%, #1e293b)'), null,
+        'a translucent operand cannot be mixed into an opaque strip — keep the raw token');
+    assert.equal(internals.parseColor('color-mix(in srgb, #ffffff 20%, #000000 20%)'), null,
+        'weights that add up to less than 100 % are ambiguous — keep the raw token');
+
+    const full = internals.parseColor('color-mix(in srgb, #ffffff 20%, #000000 80%)');
+    assert.ok(full, 'an opaque mix that adds up to 100 % is still resolved');
+    assert.equal(Math.round(full.r), 51);
+
+    const implicit = internals.parseColor('color-mix(in srgb, #ffffff 50%, #000000)');
+    assert.ok(implicit, 'an implicit complement weight (50 % + 50 %) is a full 100 % mix');
+});
+
+test('resolveGridGutters_WithoutAModel_ReturnsNull', () => {
+    const { internals } = loadCanvas();
+
+    assert.equal(internals.resolveGridGutters({}), null,
+        'a root without engine state must NOT report a 40/20 fallback the canvas never painted');
+    assert.equal(internals.resolveGridGutters(null), null);
+
+    const gutters = internals.resolveGridGutters({
+        __tmSpreadsheetCanvas: { model: { RowHeaderWidth: 56, ColumnHeaderHeight: 28, DensityResolved: 'Comfortable' } },
+    });
+    assert.equal(gutters.rowHeaderWidth, 56);
+    assert.equal(gutters.columnHeaderHeight, 28);
+    assert.equal(gutters.density, 'Comfortable');
+});

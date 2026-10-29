@@ -175,8 +175,13 @@ public partial class SpreadsheetE2ETests
             const s = el.__tmSpreadsheetCanvas;
             const model = s?.model || {};
             const read = (o, a, b, fallback) => (o?.[a] ?? o?.[b] ?? fallback);
-            const rowHeaderWidth = Number(read(model, 'rowHeaderWidth', 'RowHeaderWidth', 40));
-            const columnHeaderHeight = Number(read(model, 'columnHeaderHeight', 'ColumnHeaderHeight', 20));
+            // The gutter geometry is the engine's (density-scaled 40/20 or 56/28), never 40/20 literals.
+            const gutters = window.tmSpreadsheetCanvas.getGridGutters(el);
+            if (!gutters) {
+                throw new Error('the canvas engine has no model yet - refusing to measure a 40/20 grid it never painted');
+            }
+            const rowHeaderWidth = Number(gutters.rowHeaderWidth);
+            const columnHeaderHeight = Number(gutters.columnHeaderHeight);
             const scrollLeft = Number(read(model, 'scrollLeft', 'ScrollLeft', 0));
             const scrollTop = Number(read(model, 'scrollTop', 'ScrollTop', 0));
             const width = el.clientWidth || 1;

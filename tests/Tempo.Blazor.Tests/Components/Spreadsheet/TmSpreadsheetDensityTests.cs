@@ -5,6 +5,7 @@ using FluentAssertions;
 using Tempo.Blazor.Components.Spreadsheet;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Components.Spreadsheet.Rendering;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Spreadsheet;
@@ -194,6 +195,114 @@ public class TmSpreadsheetDensityTests : LocalizationTestBase
         FrameValue(frame, "DensityRowScale").Should().Be(1.5);
         RowHeights(frame).First().Should().Be(30);
         cut.Find(".tm-spreadsheet-canvas-grid").GetAttribute("data-density").Should().Be("comfortable");
+    }
+
+    // ── Phase 7b: the header-gutter half of the density contract ───────────────────────────────
+
+    [Fact]
+    public void SpreadsheetDensityScale_Resolve_GutterScale()
+    {
+        var comfortable = SpreadsheetDensityScale.Resolve(SpreadsheetDensity.Comfortable, coarsePointer: false);
+
+        comfortable.GutterScale.Should().Be(SpreadsheetDensityScale.ComfortableGutterScale);
+        comfortable.GutterScale.Should().Be(1.4,
+            "the tablet reference's gutter scale: 40 × 1.4 = 56 and 20 × 1.4 = 28");
+        Math.Round(SpreadsheetGridConstants.RowHeaderWidth * comfortable.GutterScale).Should().Be(56);
+        Math.Round(SpreadsheetGridConstants.ColumnHeaderHeight * comfortable.GutterScale).Should().Be(28);
+
+        var compact = SpreadsheetDensityScale.Resolve(SpreadsheetDensity.Compact, coarsePointer: true);
+        compact.GutterScale.Should().Be(1, "an explicit Compact keeps exactly 40/20 px even on a coarse pointer");
+        compact.RowScale.Should().Be(1);
+        compact.FontScale.Should().Be(1);
+        compact.HandleScale.Should().Be(1);
+
+        // Auto follows the pointer kind, which is the SP1 decision.
+        SpreadsheetDensityScale.Resolve(SpreadsheetDensity.Auto, coarsePointer: true).GutterScale.Should().Be(1.4);
+        SpreadsheetDensityScale.Resolve(SpreadsheetDensity.Auto, coarsePointer: false).GutterScale.Should().Be(1);
+    }
+
+    [Fact]
+    public void CanvasGrid_ComfortableDensity_ScalesHeaderGutters()
+    {
+        var comfortable = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.Density, SpreadsheetDensity.Comfortable));
+        var frame = CanvasFrame(comfortable);
+
+        FrameValue(frame, "RowHeaderWidth").Should().Be(56.0,
+            "the canvas frame carries the SCALED gutter — the canvas itself never multiplies a constant");
+        FrameValue(frame, "ColumnHeaderHeight").Should().Be(28.0);
+        FrameValue(frame, "DensityGutterScale").Should().Be(1.4);
+
+        var compact = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.Density, SpreadsheetDensity.Compact));
+        var compactFrame = CanvasFrame(compact);
+        FrameValue(compactFrame, "RowHeaderWidth").Should().Be(40.0, "a fine pointer keeps exactly 40/20 px");
+        FrameValue(compactFrame, "ColumnHeaderHeight").Should().Be(20.0);
+        FrameValue(compactFrame, "DensityGutterScale").Should().Be(1.0);
+    }
+
+    [Fact]
+    public void CanvasGrid_ScrollSize_IncludesScaledGutters()
+    {
+        var comfortable = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.Density, SpreadsheetDensity.Comfortable));
+        var compact = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.Density, SpreadsheetDensity.Compact));
+
+        var comfortableSize = comfortable.Find(".tm-spreadsheet-canvas-grid__size");
+        var compactSize = compact.Find(".tm-spreadsheet-canvas-grid__size");
+        var comfortableWidth = ScrollerSize(comfortableSize.GetAttribute("style"), "width");
+        var compactWidth = ScrollerSize(compactSize.GetAttribute("style"), "width");
+        var comfortableHeight = ScrollerSize(comfortableSize.GetAttribute("style"), "height");
+        var compactHeight = ScrollerSize(compactSize.GetAttribute("style"), "height");
+
+        comfortableWidth.Should()
+            .Be(compactWidth + 16,
+                "the scrollable width must include the 16px wider Comfortable row-header gutter, otherwise "
+                + "the last column is clipped by the wider gutter");
+        // The height delta is the scaled ROWS plus the 8px taller gutter: subtract the gutter from both
+        // sizes and the remaining content must scale by the row scale (1.5) and nothing else.
+        (comfortableHeight - 28).Should()
+            .Be((compactHeight - 20) * 1.5,
+                "the scrollable height must include the 8px taller Comfortable column-header gutter on top "
+                + "of the 1.5x scaled rows");
+    }
+
+    [Fact]
+    public void CanvasGrid_FirstFrame_WaitsForPointerKind()
+    {
+        JSInterop.Setup<bool>("tmSpreadsheetCanvas.isCoarsePointer").SetResult(true);
+
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.Density, SpreadsheetDensity.Auto));
+
+        // The very first frame the engine sees must already carry the coarse answer: the coarse-pointer
+        // interop is awaited BEFORE initEngine, so no Compact frame is ever painted on a touch device
+        // (the "one-frame compact flash" the SP1 carry-forward asked about).
+        var invocations = JSInterop.Invocations.ToList();
+        var coarseIndex = invocations.FindIndex(invocation => invocation.Identifier == "tmSpreadsheetCanvas.isCoarsePointer");
+        var initIndex = invocations.FindIndex(invocation => invocation.Identifier == InitEngine);
+        coarseIndex.Should().BeGreaterThanOrEqualTo(0);
+        initIndex.Should().BeGreaterThan(coarseIndex,
+            "isCoarsePointer must be answered before the engine is initialised");
+
+        var initFrame = invocations[initIndex].Arguments[^1]!;
+        FrameValue(initFrame, "DensityResolved").Should().Be("Comfortable");
+        FrameValue(initFrame, "RowHeaderWidth").Should().Be(56.0, "the first painted frame uses the scaled gutter");
+
+        // The data-density attribute is present in the markup, but the PAINTED frame already agrees with
+        // it — that is what makes a flash impossible.
+        cut.Find(".tm-spreadsheet-canvas-grid").GetAttribute("data-density").Should().Be("comfortable");
+    }
+
+    private static double ScrollerSize(string? style, string property)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            style ?? string.Empty,
+            $@"(?:^|;)\s*{property}\s*:\s*([\d.]+)px",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        match.Success.Should().BeTrue($"the scroller inline style carries {property} (style: {style})");
+        return double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>The last canvas frame handed to the engine (initEngine or a later render).</summary>

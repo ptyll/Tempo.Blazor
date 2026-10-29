@@ -1,0 +1,25 @@
+/* ═══════════════════════════════════════════════════════════════
+   Spreadsheet — dark theme overrides
+   ═══════════════════════════════════════════════════════════════
+   Theme, not component chrome: the strict CSS token audit (00-cross-cutting §7.3) forbids a
+   `[data-theme="dark"]` / `.tm-dark` block inside a COMPONENT stylesheet, because a dark override
+   belongs in one theme layer instead of being scattered across components. This file is that layer
+   for the Spreadsheet package (mirrors the core theme-*.css convention).
+
+   Only component tokens are redefined here; the core tokens-dark.css is untouched. */
+
+/* The active row/column header strip must stay OPAQUE in dark mode. The light chain resolves through
+   --tm-color-primary-subtle, which is a `rgb(from … r g b / 0.15)` relative colour: over the dark
+   header surface that tint is barely a wash, and a translucent strip lets the cell grid bleed through
+   while a row is scrolled. Mix the primary INTO the header surface instead — still token-only, no
+   hex — and let the canvas mix the colour it receives (spreadsheet-canvas.js
+   parseColor/resolveColorToken), so the strip is opaque on every backend, not only where fillStyle
+   understands color-mix().
+
+   The theme condition is wrapped in `:where(...)` ON PURPOSE: the selector keeps the specificity of
+   `.tm-spreadsheet` alone (0,1,0) instead of 0,2,0, so a host rule
+   `.tm-spreadsheet { --tm-spreadsheet-header-active-bg: … }` that loads AFTER the package bundle still
+   wins in dark mode (a bare `[data-theme="dark"] .tm-spreadsheet` would out-rank it and pin the token). */
+:where([data-theme="dark"], .tm-dark) .tm-spreadsheet {
+    --tm-spreadsheet-header-active-bg: color-mix(in srgb, var(--tm-color-primary) 22%, var(--tm-spreadsheet-header-bg));
+}

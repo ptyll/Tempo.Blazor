@@ -56,6 +56,9 @@
     overflow: hidden;
 }
 
+/* The DARK active-header override lives in the package theme layer (css/theme-spreadsheet-dark.css):
+   a component stylesheet may not carry a [data-theme="dark"] block (strict token audit). */
+
 /* ── Chrome (mode-scoped) ──────────────────────────────────────────────────────
    Mode=Full paints the workspace and lifts the ribbon, the formula bar, the grid, the sheet tabs and
    the status bar as cards. Mode=Embedded (Notion block, modal host) stays flat: the grid is the

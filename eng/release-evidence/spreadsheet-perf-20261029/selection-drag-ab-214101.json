@@ -1,0 +1,230 @@
+{
+  "Timestamp": "2026-10-29 21:41:01",
+  "BaselineTag": "v2.9.0",
+  "Alternations": 7,
+  "Steps": 8,
+  "Budget": 1.1,
+  "MaxIqrRatio": 0.3,
+  "BaselineMedianMs": 1508.3999999761581,
+  "CurrentMedianMs": 1146.6000000238419,
+  "BaselineQ1Ms": 989.1000000238419,
+  "BaselineQ3Ms": 1740,
+  "CurrentQ1Ms": 948,
+  "CurrentQ3Ms": 1377.0999999046326,
+  "BaselineIqrMs": 750.8999999761581,
+  "CurrentIqrMs": 429.09999990463257,
+  "NoiseRatio": 0.49781225138426605,
+  "Ratio": 0.760143198118513,
+  "Samples": [
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 1047.6000000238419,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.2999999523162842,
+        "LastSelectionLayerMs": 1.2999999523162842
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 1146.6000000238419,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.5,
+        "LastSelectionLayerMs": 1.600000023841858
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 889.2999999523163,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 9,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.3999999761581421,
+        "LastSelectionLayerMs": 1.6999999284744263
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 1242.3999999761581,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 3.8000000715255737,
+        "LastSelectionLayerMs": 1.5999999046325684
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 1508.3999999761581,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.2999999523162842,
+        "LastSelectionLayerMs": 2.1999999284744263
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 1669.3000000715256,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 9,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 1.0999999046325684,
+        "LastSelectionLayerMs": 2.399999976158142
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 1524.1999999284744,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.7000000476837158,
+        "LastSelectionLayerMs": 1.2999999523162842
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 1065,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.8999999761581421,
+        "LastSelectionLayerMs": 1.899999976158142
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 4052.899999976158,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.7000000476837158,
+        "LastSelectionLayerMs": 6.899999976158142
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 1377.0999999046326,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 9,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.7000000476837158,
+        "LastSelectionLayerMs": 2.6999999284744263
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 1740,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.6000000238418579,
+        "LastSelectionLayerMs": 1.2999999523162842
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 948,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.7999999523162842,
+        "LastSelectionLayerMs": 1.5
+      }
+    },
+    {
+      "Arm": "baseline",
+      "Probe": {
+        "DurationMs": 989.1000000238419,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 0,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 0.30000007152557373,
+        "LastSelectionLayerMs": 10.5
+      }
+    },
+    {
+      "Arm": "current",
+      "Probe": {
+        "DurationMs": 844.8999999761581,
+        "Steps": 8,
+        "Usable": true,
+        "ChangedCells": 8,
+        "SelectionPaintFrameCount": 8,
+        "HeaderLayerPaintCount": 8,
+        "ContentLayerPaintCount": 0,
+        "RedrawCount": 0,
+        "LastHeaderLayerMs": 1,
+        "LastSelectionLayerMs": 2.200000047683716
+      }
+    }
+  ]
+}

@@ -807,6 +807,109 @@ window.tmSpreadsheetBenchmark = (() => {
         runPhase12LatencyProbe: async selector => {
             const grid = document.querySelector(selector);
             return measurePhase12Latencies(grid);
+        },
+
+        /**
+         * The SELECTION-DRAG probe of the phase-7b A/B (redesign phase 7b, remaining task 12bc2afb):
+         * N synthetic mouse selections (press on a cell, two moves across the row, release) with the
+         * grid's own pointer handlers, timed in-page. Synthetic PointerEvents keep Playwright's
+         * per-action round trip — which is far bigger than the canvas work — out of the number, and the
+         * probe works against BOTH arms: the engine's `getCellCenter` when the build has it, the model
+         * offsets (with the frame's gutters) when the arm is an older canvas script.
+         * <para>
+         * `changedCells` proves the probe actually moved the selection; a zero means the arm did not
+         * react and the caller must not treat the duration as a measurement.
+         * </para>
+         */
+        runSelectionDragProbe: async (selector, options) => {
+            const settings = options || {};
+            const grid = document.querySelector(selector);
+            if (!grid) return { durationMs: 0, steps: 0, changedCells: 0, usable: false };
+
+            const readAny = (object, camel, pascal, fallback) =>
+                (object?.[camel] ?? object?.[pascal] ?? fallback);
+            const activeRef = () => String(readAny(grid.__tmSpreadsheetCanvas?.model, "activeCellRef", "ActiveCellRef", ""));
+            const cellCenter = (row, col) => {
+                const engine = window.tmSpreadsheetCanvas;
+                if (typeof engine?.getCellCenter === "function") {
+                    const point = engine.getCellCenter(grid, row, col);
+                    if (point && point.x >= 0) return point;
+                }
+                const state = grid.__tmSpreadsheetCanvas;
+                const model = state?.model || {};
+                const cell = state?.sheetState?.cellStore?.cells?.get(`${row}:${col}`);
+                if (!cell) return null;
+                const rowHeaderWidth = Number(readAny(model, "rowHeaderWidth", "RowHeaderWidth", 40));
+                const columnHeaderHeight = Number(readAny(model, "columnHeaderHeight", "ColumnHeaderHeight", 20));
+                return {
+                    x: rowHeaderWidth + Number(readAny(cell, "left", "Left", 0))
+                        - Number(readAny(model, "scrollLeft", "ScrollLeft", 0))
+                        + Number(readAny(cell, "width", "Width", 0)) / 2,
+                    y: columnHeaderHeight + Number(readAny(cell, "top", "Top", 0))
+                        - Number(readAny(model, "scrollTop", "ScrollTop", 0))
+                        + Number(readAny(cell, "height", "Height", 0)) / 2
+                };
+            };
+
+            const dispatch = (target, type, clientX, clientY, buttons) => {
+                target.dispatchEvent(new PointerEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    composed: true,
+                    pointerId: 1,
+                    pointerType: "mouse",
+                    isPrimary: true,
+                    button: 0,
+                    buttons,
+                    clientX,
+                    clientY
+                }));
+            };
+
+            const steps = Math.max(1, Number(settings.steps) || 8);
+            const startRow = Number(settings.startRow ?? 1);
+            const startCol = Number(settings.startCol ?? 2);
+            const endCol = Number(settings.endCol ?? 5);
+            const settleFrames = Math.max(1, Number(settings.settleFrames) || 2);
+            const rect = grid.getBoundingClientRect();
+            const before = debugMetrics(grid);
+            const start = performance.now();
+            let changedCells = 0;
+            let previous = activeRef();
+
+            for (let index = 0; index < steps; index++) {
+                const from = cellCenter(startRow + index, startCol);
+                const to = cellCenter(startRow + index, endCol);
+                if (!from || !to) continue;
+                const target = document.elementFromPoint(rect.left + from.x, rect.top + from.y) || grid;
+                dispatch(target, "pointerdown", rect.left + from.x, rect.top + from.y, 1);
+                dispatch(target, "pointermove", rect.left + (from.x + to.x) / 2, rect.top + from.y, 1);
+                dispatch(target, "pointermove", rect.left + to.x, rect.top + (from.y + to.y) / 2, 1);
+                dispatch(target, "pointerup", rect.left + to.x, rect.top + (from.y + to.y) / 2, 0);
+                for (let frameIndex = 0; frameIndex < settleFrames; frameIndex++) await frame();
+                const current = activeRef();
+                if (current && current !== previous) {
+                    changedCells += 1;
+                    previous = current;
+                }
+            }
+
+            await frame();
+            const durationMs = performance.now() - start;
+            const after = debugMetrics(grid);
+            const delta = name => (after[name] || 0) - (before[name] || 0);
+            return {
+                durationMs,
+                steps,
+                changedCells,
+                usable: changedCells > 0,
+                selectionPaintFrameCount: delta("selectionPaintFrameCount"),
+                headerLayerPaintCount: delta("headerLayerPaintCount"),
+                contentLayerPaintCount: delta("contentLayerPaintCount"),
+                redrawCount: delta("redrawCount"),
+                lastHeaderLayerMs: Number(after.lastHeaderLayerMs || 0),
+                lastSelectionLayerMs: Number(after.lastSelectionLayerMs || 0)
+            };
         }
     };
 })();

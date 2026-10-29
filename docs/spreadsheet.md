@@ -208,5 +208,48 @@ button a finger target (its HIT rect reaches the touch floor inside its own colu
 resolution is re-run whenever the `(pointer: coarse)` media query flips, so attaching a mouse to a
 tablet does not keep the touch density.
 
+### Density — the gutter scale and the hit areas
+
+`Density` (`SpreadsheetDensity.Auto|Compact|Comfortable`, `Auto` by default) is a RENDER scale: the
+workbook model (`DefaultRowHeight`, a per-row height, every column width and every XLSX value) never
+changes. `SpreadsheetDensityScale` is the single source of truth for the multipliers and the canvas
+frame carries the RESULT, so the component geometry, the canvas paint and the hit-testing cannot drift:
+
+| Scale | Compact (fine pointer) | Comfortable (`Auto` on a coarse pointer, or forced) |
+|---|---|---|
+| row height | 20 px | 30 px (x1.5) |
+| cell font | 10 pt | x1.25 |
+| fill handle | 10 px painted / **10 px hit box** on a fine pointer | x1.4 painted, **24 px hit box** on a coarse pointer |
+| row-header gutter (`RowHeaderWidth`) | 40 px | **56 px** (x1.4) |
+| column-header height (`ColumnHeaderHeight`) | 20 px | **28 px** (x1.4) |
+| header label font (`--tm-spreadsheet-header-font`) | the token exactly (11 px) | the same token x 1.25 (**13.75 px**) — scaled in `drawHeaders`, the token itself is never rewritten |
+| auto-filter button HIT rect | the painted glyph rect exactly | at least the 44 px touch floor, clamped into its own column and gutter |
+
+Consequences a host or a test must know:
+
+- **Never compute a cell position from the 40/20 constants.** The engine exposes two JS getters for
+  exactly this, so a spec or an integration test reads the live geometry instead:
+  `tmSpreadsheetCanvas.getCellCenter(root, row, col)` returns `{x, y}` in the ROOT ELEMENT's coordinate
+  space (what a Playwright `Locator.ClickAsync(Position)` wants; `{-1,-1}` for an unknown cell) and
+  `tmSpreadsheetCanvas.getGridGutters(root)` returns `{ rowHeaderWidth, columnHeaderHeight, density,
+  gutterScale }`. The grid's hit-testing reads the same frame gutters (`resolveContentPoint`), so a
+  scaled gutter moves the painted cells and the hit path together.
+- **The active header strip is OPAQUE in dark mode.** The light token chain resolves through
+  `--tm-color-primary-subtle` (`rgb(from ... / 0.15)`); the package's theme layer
+  (`wwwroot/css/theme-spreadsheet-dark.css`, imported by the package bundle) re-mixes it as
+  `color-mix(in srgb, var(--tm-color-primary) 22%, var(--tm-spreadsheet-header-bg))`. The canvas mixes
+  that `color-mix()` itself (`parseColor` / `resolveColorToken`), so the strip is opaque even where
+  `fillStyle` would refuse the function. A host that imports the individual CSS files instead of the
+  bundle must import that theme file too.
+- **Performance evidence**: the wall-clock A/B of the mouse selection drag (v2.9.0 against the current
+  canvas, alternating arms, median + IQR) lives in `eng/release-evidence/spreadsheet-perf-<yyyyMMdd>/`
+  and is produced by `SpreadsheetPerformanceE2ETests.SelectionDrag_AB_WithinBudget`
+  (`TestCategory=Performance`). The budget is `median(current) <= 1.10 x median(v2.9.0)`; an IQR above
+  30 % of the median makes the spec report `Inconclusive` with the numbers instead of passing. Each run
+  writes `selection-drag-ab-<HHmmss>.json` and `summary-<HHmmss>.md`, so a same-day re-run never
+  overwrites an earlier sample. **Current evidence (20261029): Inconclusive** (noise 50–63 %, ratio sign
+  flipped between two runs) — awaiting a run on an idle machine or the perf lane; the `v2.9.0` arm has
+  no header-highlight layer, so it is not a like-for-like arm for the selection-drag scenario.
+
 `prefers-reduced-motion` is honoured through the shared helpers (`reducedMotion` in every callback);
 the grid's touch path has no animation of its own to disable.

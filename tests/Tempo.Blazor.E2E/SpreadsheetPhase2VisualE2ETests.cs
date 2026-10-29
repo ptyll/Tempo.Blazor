@@ -70,6 +70,154 @@ public partial class SpreadsheetE2ETests
         }
     }
 
+    /// <summary>
+    /// Phase 7b (remaining tasks 1486043c / 8d17c608 / dd7c1fa1): on a 1024 tablet the Auto density must
+    /// resolve to Comfortable and scale the header GUTTERS (56/28) and the header LABEL (11 x 1.25 =
+    /// 13.75 px), asked from the engine rather than assumed. This is the UX-review shot
+    /// (phase7b-tablet-1024-comfortable-gutters.png) against spreadsheet--tablet.png.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Phase7b_Tablet1024_Touch_ComfortableGuttersAndHeaderFont()
+    {
+        var page = await OpenPhase2DemoAsync(1024, 768, touch: true);
+        var grid = DemoGrid(page);
+
+        var sample = await grid.EvaluateAsync<Phase7bGutterSample>(@"el => {
+            const engine = window.tmSpreadsheetCanvas;
+            const gutters = engine.getGridGutters(el);
+            if (!gutters) {
+                throw new Error('the canvas engine has no model yet - refusing to measure a 40/20 grid it never painted');
+            }
+            const palette = engine._internals.buildPalette(el);
+            const scales = engine._internals.resolveDensityFromModel(el.__tmSpreadsheetCanvas?.model || {});
+            return {
+                rowHeaderWidth: Number(gutters.rowHeaderWidth),
+                columnHeaderHeight: Number(gutters.columnHeaderHeight),
+                density: String(gutters.density),
+                gutterScale: Number(gutters.gutterScale),
+                headerFont: String(palette.headerFont),
+                scaledHeaderFont: String(engine._internals.resolveHeaderFont(palette.headerFont, scales.fontScale)),
+                fontScale: Number(scales.fontScale)
+            };
+        }");
+
+        Assert.AreEqual("comfortable", sample.Density.ToLowerInvariant(),
+            "Auto resolves to Comfortable on the coarse pointer of a 1024 tablet");
+        Assert.AreEqual(56.0, sample.RowHeaderWidth, "Comfortable scales the row-header gutter 40 -> 56");
+        Assert.AreEqual(28.0, sample.ColumnHeaderHeight, "Comfortable scales the column header 20 -> 28");
+        Assert.AreEqual(1.4, sample.GutterScale);
+        Assert.AreEqual(1.25, sample.FontScale);
+        StringAssert.Contains(sample.ScaleHeaderFont(), "13.75px",
+            $"the header label font must scale with the density (token '{sample.HeaderFont}' x 1.25)");
+
+        await ClickCanvasCellAsync(page, grid, "D5");
+        await PressCanvasKeyAsync(page, grid, "Enter");
+        await ShotPhase2Async(page, "phase7b-tablet-1024-comfortable-gutters");
+        await page.CloseAsync();
+    }
+
+    /// <summary>
+    /// Phase 7b (remaining task 7a4a41fc): the DARK active header strip must be OPAQUE and its label must
+    /// stay readable. The light token chain goes through `--tm-color-primary-subtle` (a relative colour at
+    /// 0.15 alpha), which over the dark header surface read as a barely-there wash; the package theme
+    /// layer mixes the primary INTO the header surface instead. This samples the real canvas: the engine
+    /// reports the token's alpha (1 = opaque) and the painted D/5 strip must match that resolved mix,
+    /// with a WCAG 3:1 contrast between the header text and the tint under it.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Phase2_DarkActiveHeader_IsOpaqueAndReadable()
+    {
+        foreach (var theme in new[] { "dark", "indigo-with-dark" })
+        {
+            var page = await OpenPhase2DemoAsync(1440, 900, touch: false);
+            var grid = DemoGrid(page);
+            await ApplyPhase2ThemeAsync(page, theme == "dark" ? "dark" : "indigo");
+            if (theme == "indigo-with-dark")
+            {
+                await ToggleDarkModeAsync(page);
+                // A LIVE theme flip without a resize leaves the canvas painting its previous palette
+                // (the palette is rebuilt from the ResizeObserver); nudge the viewport like
+                // ApplyPhase2ThemeAsync does for the other themes so the repaint reads the new tokens.
+                var size = page.ViewportSize;
+                await page.SetViewportSizeAsync(size!.Width - 2, size.Height);
+                await page.SetViewportSizeAsync(size.Width, size.Height);
+                await page.WaitForTimeoutAsync(400);
+            }
+
+            await page.WaitForSelectorAsync("[data-theme='dark']", new PageWaitForSelectorOptions { Timeout = 15_000 });
+            await ClickCanvasCellAsync(page, grid, "D5");
+            await PressCanvasKeyAsync(page, grid, "Enter");
+
+            var sample = await SamplePhase2ChromeAsync(grid);
+
+            Assert.AreEqual(1.0, sample.HeaderActiveAlpha,
+                $"{theme}: the dark active header token must resolve to an OPAQUE colour (the old "
+                + "primary-subtle wash was 0.15 alpha over the dark header surface)");
+            Assert.AreEqual(255, sample.ColumnD[3], $"{theme}: the painted active header strip must be opaque");
+            CollectionAssert.AreEqual(sample.ExpectedActiveHeader, sample.ColumnD,
+                $"{theme}: the active column header paints the resolve of the dark token mix");
+            CollectionAssert.AreEqual(sample.ExpectedActiveHeader, sample.Row5,
+                $"{theme}: the active row header paints the resolve of the dark token mix");
+
+            var contrast = Phase2Contrast(sample.ColumnD, sample.HeaderActiveText);
+            Assert.IsTrue(contrast >= 3.0,
+                $"{theme}: the active header label must keep at least 3:1 against the tint "
+                + $"(got {contrast:F2}:1 for {sample.HeaderActiveText} over {Describe(sample.ColumnD)})");
+
+            await ShotPhase2Async(page,
+                theme == "dark" ? "phase7b-dark-active-header--desktop" : "phase7b-dark-active-header--indigo");
+            await page.CloseAsync();
+        }
+    }
+
+    /// <summary>WCAG relative-luminance contrast of a CSS colour string against a sampled sRGB pixel.</summary>
+    private static double Phase2Contrast(int[] background, string foreground)
+    {
+        var (r, g, b) = Phase2ParseColour(foreground);
+        static double Channel(int value)
+        {
+            var normalized = value / 255.0;
+            return normalized <= 0.04045 ? normalized / 12.92 : Math.Pow((normalized + 0.055) / 1.055, 2.4);
+        }
+
+        var backgroundLuminance = 0.2126 * Channel(background[0]) + 0.7152 * Channel(background[1]) + 0.0722 * Channel(background[2]);
+        var foregroundLuminance = 0.2126 * Channel(r) + 0.7152 * Channel(g) + 0.0722 * Channel(b);
+        var lighter = Math.Max(backgroundLuminance, foregroundLuminance);
+        var darker = Math.Min(backgroundLuminance, foregroundLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    private static (int R, int G, int B) Phase2ParseColour(string value)
+    {
+        var colour = value.Trim();
+        var hex = System.Text.RegularExpressions.Regex.Match(colour, "^#([0-9a-fA-F]{6})$");
+        if (hex.Success)
+        {
+            var digits = hex.Groups[1].Value;
+            return (
+                Convert.ToInt32(digits[..2], 16),
+                Convert.ToInt32(digits[2..4], 16),
+                Convert.ToInt32(digits[4..6], 16));
+        }
+
+        var numbers = System.Text.RegularExpressions.Regex
+            .Matches(colour, "[0-9]*\\.?[0-9]+")
+            .Select(match => double.Parse(match.Value, System.Globalization.CultureInfo.InvariantCulture))
+            .ToList();
+        Assert.IsTrue(numbers.Count >= 3, $"cannot parse the colour '{value}'");
+        if (colour.StartsWith("color(srgb", StringComparison.OrdinalIgnoreCase))
+        {
+            return (
+                (int)Math.Round(numbers[0] * 255),
+                (int)Math.Round(numbers[1] * 255),
+                (int)Math.Round(numbers[2] * 255));
+        }
+
+        return ((int)Math.Round(numbers[0]), (int)Math.Round(numbers[1]), (int)Math.Round(numbers[2]));
+    }
+
     [TestMethod]
     [TestCategory("WASM")]
     public async Task Phase2_SelectionChange_RepaintsTheOldHeaderStrip_AndKeepsOneHeaderPaintPerFrame()
@@ -349,8 +497,14 @@ public partial class SpreadsheetE2ETests
                 const model = state?.model || {};
                 const cell = state?.sheetState?.cellStore?.cells?.get('3:2'); // C4, empty
                 if (!cell) throw new Error('C4 is not in the cell store');
-                const rowHeaderWidth = Number(model.rowHeaderWidth ?? model.rowHeaderWidth ?? 40);
-                const columnHeaderHeight = Number(model.columnHeaderHeight ?? model.columnHeaderHeight ?? 20);
+                // The gutters come from the ENGINE (the frame carries them density-scaled 40/20 or
+                // 56/28), never from a literal: a Comfortable gutter must move the sample with the cell.
+                const gutters = window.tmSpreadsheetCanvas.getGridGutters(el);
+                if (!gutters) {
+                    throw new Error('the canvas engine has no model yet - refusing to measure a 40/20 grid it never painted');
+                }
+                const rowHeaderWidth = Number(gutters.rowHeaderWidth);
+                const columnHeaderHeight = Number(gutters.columnHeaderHeight);
                 const scrollLeft = Number(model.scrollLeft ?? 0);
                 const scrollTop = Number(model.scrollTop ?? 0);
                 const left = rowHeaderWidth + Number(cell.left ?? 0) - scrollLeft;
@@ -529,8 +683,13 @@ public partial class SpreadsheetE2ETests
                     throw new Error('D5 is not in the cell store');
                 }
 
-                const rowHeaderWidth = Number(model.rowHeaderWidth ?? model.RowHeaderWidth ?? 40);
-                const columnHeaderHeight = Number(model.columnHeaderHeight ?? model.ColumnHeaderHeight ?? 20);
+                // Density-scaled gutters from the engine, not from 40/20 literals (phase 7b).
+                const gutters = window.tmSpreadsheetCanvas.getGridGutters(el);
+                if (!gutters) {
+                    throw new Error('the canvas engine has no model yet - refusing to measure a 40/20 grid it never painted');
+                }
+                const rowHeaderWidth = Number(gutters.rowHeaderWidth);
+                const columnHeaderHeight = Number(gutters.columnHeaderHeight);
                 const scrollLeft = Number(model.scrollLeft ?? model.ScrollLeft ?? 0);
                 const scrollTop = Number(model.scrollTop ?? model.ScrollTop ?? 0);
                 const left = Number(cell.left ?? cell.Left ?? 0);
@@ -577,6 +736,12 @@ public partial class SpreadsheetE2ETests
                 const headerActiveBg = token('--tm-spreadsheet-header-active-bg');
                 const selectionBorder = token('--tm-spreadsheet-selection-border');
                 const selectionFill = token('--tm-spreadsheet-selection-fill');
+                // A token the canvas normalises (the dark active header is a color-mix() mix) must be
+                // compared in the form the CANVAS paints, i.e. through the engine's own resolver.
+                const engine = window.tmSpreadsheetCanvas;
+                const resolveToken = value => (engine?._internals?.resolveColorToken
+                    ? engine._internals.resolveColorToken(el, value).value
+                    : value);
                 const selectionFillAlpha = Number(token('--tm-spreadsheet-selection-fill-alpha') || 0.12);
 
                 const alphaProbe = document.createElement('canvas');
@@ -589,9 +754,13 @@ public partial class SpreadsheetE2ETests
                 const fillPx = alphaCtx.getImageData(0, 0, 1, 1).data;
 
                 return {
-                    expectedHeader: paint(headerBg),
-                    expectedActiveHeader: paint(headerActiveBg, headerBg),
-                    expectedSelectionBorder: paint(selectionBorder, headerBg),
+                    expectedHeader: paint(resolveToken(headerBg)),
+                    expectedActiveHeader: paint(resolveToken(headerActiveBg), resolveToken(headerBg)),
+                    expectedSelectionBorder: paint(resolveToken(selectionBorder), resolveToken(headerBg)),
+                    headerActiveAlpha: engine?._internals?.buildPalette
+                        ? engine._internals.buildPalette(el).headerActiveBgAlpha
+                        : null,
+                    headerActiveText: token('--tm-spreadsheet-header-active-text'),
                     expectedSelectionFill: [fillPx[0], fillPx[1], fillPx[2], fillPx[3]],
                     // Sample off-centre so the header glyph never lands on the sample point.
                     columnD: read(headers, colX + 4, 4),
@@ -657,8 +826,13 @@ public partial class SpreadsheetE2ETests
                 const model = state?.model || {};
                 const cell = state?.sheetState?.cellStore?.cells?.get(`${row}:${col}`);
                 if (!cell) return { x: -1, y: -1, width: 0, height: 0 };
-                const rowHeaderWidth = Number(model.rowHeaderWidth ?? 40);
-                const columnHeaderHeight = Number(model.columnHeaderHeight ?? 20);
+                // Density-scaled gutters from the engine (40/20 Compact, 56/28 Comfortable).
+                const gutters = window.tmSpreadsheetCanvas.getGridGutters(el);
+                if (!gutters) {
+                    throw new Error('the canvas engine has no model yet - refusing to measure a 40/20 grid it never painted');
+                }
+                const rowHeaderWidth = Number(gutters.rowHeaderWidth);
+                const columnHeaderHeight = Number(gutters.columnHeaderHeight);
                 return {
                     x: rowHeaderWidth + Number(cell.left ?? 0) - Number(model.scrollLeft ?? 0),
                     y: columnHeaderHeight + Number(cell.top ?? 0) - Number(model.scrollTop ?? 0),
@@ -773,6 +947,21 @@ public partial class SpreadsheetE2ETests
         public int[] ColumnDRail { get; set; } = [];
         public int[] SelectionD5 { get; set; } = [];
         public string HeaderFont { get; set; } = string.Empty;
+        public double? HeaderActiveAlpha { get; set; }
+        public string HeaderActiveText { get; set; } = string.Empty;
+    }
+
+    private sealed class Phase7bGutterSample
+    {
+        public double RowHeaderWidth { get; set; }
+        public double ColumnHeaderHeight { get; set; }
+        public string Density { get; set; } = string.Empty;
+        public double GutterScale { get; set; }
+        public double FontScale { get; set; }
+        public string HeaderFont { get; set; } = string.Empty;
+        public string ScaledHeaderFont { get; set; } = string.Empty;
+
+        public string ScaleHeaderFont() => ScaledHeaderFont;
     }
 
     private sealed class Phase2Metrics

@@ -16,6 +16,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     const comfortableRowScale = 1.5;
     const comfortableFontScale = 1.25;
     const comfortableHandleScale = 1.4;
+    // Header gutters (row-header width 40 -> 56, column-header height 20 -> 28). This value MIRRORS
+    // SpreadsheetDensityScale.ComfortableGutterScale for the node lane and for a frame that does not
+    // carry the scales; the canvas itself never multiplies a gutter — the component ships the scaled
+    // RowHeaderWidth/ColumnHeaderHeight in the frame (one source of truth, see resolveContentPoint).
+    const comfortableGutterScale = 1.4;
     const selectionFillAlphaDefault = 0.12;
     const keyboardRepeatPauseMs = 500;
     const keyboardRepeatAccelerationEnabledDefault = true;
@@ -1978,6 +1983,175 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     }
 
     /**
+     * Splits a comma separated argument list at the TOP level (a `color(srgb …)` or a nested
+     * `color-mix()` keeps its own commas). Used by the colour-mix parser only.
+     */
+    function splitTopLevel(value) {
+        const parts = [];
+        let depth = 0;
+        let current = "";
+        for (const character of String(value)) {
+            if (character === "(") depth += 1;
+            if (character === ")") depth -= 1;
+            if (character === "," && depth === 0) {
+                parts.push(current.trim());
+                current = "";
+                continue;
+            }
+            current += character;
+        }
+        if (current.trim()) parts.push(current.trim());
+        return parts;
+    }
+
+    /**
+     * Parses the colour notations a COMPUTED component token can carry into `{ r, g, b, a }`:
+     * `#rgb`/`#rrggbb`/`#rrggbbaa`, `rgb()`/`rgba()`, `color(srgb r g b / a)` (what Chromium
+     * serialises a resolved `color-mix()` to) and `color-mix(in srgb, A p%, B)` (what an
+     * UNREGISTERED custom property keeps — custom properties substitute var() but never compute a
+     * colour function). `var(--x)` operands are resolved through `root` when a host hands one over.
+     * Anything else (a relative colour, `currentColor`) returns null so the caller keeps the raw
+     * token instead of painting garbage.
+     */
+    function parseColor(value, root) {
+        const text = String(value || "").trim();
+        if (!text) return null;
+
+        const varCall = /^var\(\s*(--[a-z0-9-]+)\s*(?:,[\s\S]*)?\)$/i.exec(text);
+        if (varCall) {
+            const resolved = root ? css(root, varCall[1], "") : "";
+            return resolved ? parseColor(resolved, root) : null;
+        }
+
+        const hex = /^#([0-9a-f]{3,8})$/i.exec(text);
+        if (hex) {
+            let digits = hex[1];
+            if (digits.length === 3 || digits.length === 4) {
+                digits = digits.split("").map(ch => ch + ch).join("");
+            }
+            if (digits.length !== 6 && digits.length !== 8) return null;
+            return {
+                r: parseInt(digits.slice(0, 2), 16),
+                g: parseInt(digits.slice(2, 4), 16),
+                b: parseInt(digits.slice(4, 6), 16),
+                a: digits.length === 8 ? parseInt(digits.slice(6, 8), 16) / 255 : 1
+            };
+        }
+
+        const rgb = /^rgba?\(([\s\S]*)\)$/i.exec(text);
+        if (rgb) {
+            const body = rgb[1].trim();
+            // A relative colour (`rgb(from …)`) is not a plain channel list — leave it to the browser.
+            if (/^from\b/i.test(body)) return null;
+            const [channels, alphaPart] = body.split("/");
+            const numbers = channels.split(/[,\s]+/).filter(Boolean);
+            if (numbers.length < 3 || numbers.some(part => !/^[\d.]+%?$/.test(part))) return null;
+            const channel = part => Math.round(part.endsWith("%")
+                ? (Number(part.slice(0, -1)) / 100) * 255
+                : Number(part));
+            let alpha = 1;
+            if (alphaPart != null) {
+                const trimmed = alphaPart.trim();
+                if (!/^[\d.]+%?$/.test(trimmed)) return null;
+                alpha = trimmed.endsWith("%") ? Number(trimmed.slice(0, -1)) / 100 : Number(trimmed);
+            } else if (numbers.length >= 4) {
+                const last = numbers[3];
+                alpha = last.endsWith("%") ? Number(last.slice(0, -1)) / 100 : Number(last);
+            }
+            return { r: channel(numbers[0]), g: channel(numbers[1]), b: channel(numbers[2]), a: alpha };
+        }
+
+        const color = /^color\(([\s\S]*)\)$/i.exec(text);
+        if (color) {
+            const body = color[1].trim();
+            const space = /^([a-z0-9-]+)\s+([\s\S]+)$/i.exec(body);
+            if (!space || space[1].toLowerCase() !== "srgb") return null;
+            const [channels, alphaPart] = space[2].split("/");
+            const numbers = channels.trim().split(/\s+/).filter(Boolean);
+            if (numbers.length < 3) return null;
+            const unit = part => {
+                if (part.endsWith("%")) return (Number(part.slice(0, -1)) / 100) * 255;
+                return Number(part) * 255;
+            };
+            const alpha = alphaPart == null
+                ? 1
+                : (alphaPart.trim().endsWith("%")
+                    ? Number(alphaPart.trim().slice(0, -1)) / 100
+                    : Number(alphaPart.trim()));
+            const parsed = { r: unit(numbers[0]), g: unit(numbers[1]), b: unit(numbers[2]), a: alpha };
+            // `none` and any other non-numeric component must NOT leak NaN into fillStyle — fall back.
+            return isFiniteColor(parsed) ? parsed : null;
+        }
+
+        const mix = /^color-mix\(([\s\S]*)\)$/i.exec(text);
+        if (mix) {
+            const parts = splitTopLevel(mix[1]);
+            if (parts.length < 3) return null;
+            const space = /^in\s+([a-z0-9-]+)$/i.exec(parts[0]);
+            if (!space) return null;
+            if (space[1].toLowerCase() !== "srgb") return null;
+            const operands = parts.slice(1).map(part => {
+                const percent = /\s([\d.]+)%\s*$/.exec(part);
+                return {
+                    color: parseColor(percent ? part.slice(0, percent.index).trim() : part, root),
+                    weight: percent ? Number(percent[1]) / 100 : null
+                };
+            });
+            if (operands.length !== 2 || !operands[0].color || !operands[1].color) return null;
+            const first = operands[0].weight ?? (operands[1].weight == null ? 0.5 : 1 - operands[1].weight);
+            const second = operands[1].weight ?? 1 - first;
+            const total = first + second || 1;
+            // Conservative contract: the canvas only MIXES two OPAQUE colours that add up to a full
+            // 100 %. A translucent operand or a short weight sum (< 100 %) would produce something the
+            // mixer cannot reason about, so the caller keeps the RAW token and the browser resolves it.
+            if (operands[0].color.a < 1 || operands[1].color.a < 1) return null;
+            if (total < 1 - 1e-6) return null;
+            const mixChannel = name =>
+                (operands[0].color[name] * first + operands[1].color[name] * second) / total;
+            const parsed = {
+                r: mixChannel("r"),
+                g: mixChannel("g"),
+                b: mixChannel("b"),
+                a: mixChannel("a")
+            };
+            return isFiniteColor(parsed) ? parsed : null;
+        }
+
+        return null;
+    }
+
+    /** True when every channel and the alpha of a parsed colour are finite numbers (no NaN from `none`). */
+    function isFiniteColor(parsed) {
+        return !!parsed
+            && Number.isFinite(parsed.r)
+            && Number.isFinite(parsed.g)
+            && Number.isFinite(parsed.b)
+            && Number.isFinite(parsed.a);
+    }
+
+    /** The canonical `rgb()`/`rgba()` string of a parsed colour (alpha 1 is never emitted as rgba). */
+    function formatColor(parsed) {
+        if (!parsed) return "";
+        const channel = value => Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+        const alpha = Math.max(0, Math.min(1, Number(parsed.a)));
+        if (alpha >= 1) return `rgb(${channel(parsed.r)}, ${channel(parsed.g)}, ${channel(parsed.b)})`;
+        return `rgba(${channel(parsed.r)}, ${channel(parsed.g)}, ${channel(parsed.b)}, ${Math.round(alpha * 1000) / 1000})`;
+    }
+
+    /**
+     * A token normalised for the canvas: the parsed colour when the notation is understood (so a
+     * `color-mix()` token is mixed HERE instead of being handed to `fillStyle`, where a browser that
+     * does not resolve it would silently keep the previous style), otherwise the raw token.
+     */
+    function resolveColorToken(root, value) {
+        const raw = String(value || "").trim();
+        if (!raw) return { value: raw, alpha: null };
+        const parsed = parseColor(raw, root);
+        if (!parsed) return { value: raw, alpha: null };
+        return { value: formatColor(parsed), alpha: Math.max(0, Math.min(1, Number(parsed.a))) };
+    }
+
+    /**
      * A translucent rgba() built from an OPAQUE token colour. Only hex and rgb()/rgba() tokens are
      * parsed; any other notation (a relative-colour or color-mix() token) is returned unchanged so the
      * browser keeps resolving it rather than the canvas receiving garbage.
@@ -2024,6 +2198,12 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             return { stroke, fill: withAlpha(stroke, 0.08) };
         });
         const fillAlpha = Number(css(root, "--tm-spreadsheet-selection-fill-alpha", ""));
+        // The active header strip: a `color-mix()` token (the OPAQUE dark override) is mixed here,
+        // because an unregistered custom property keeps the function unevaluated and a browser that
+        // refuses it in fillStyle would leave the previous style in place. `alpha` is null whenever the
+        // notation is not understood, so a caller can never claim opacity it does not have.
+        const headerActive = resolveColorToken(
+            root, cssToken(root, "--tm-spreadsheet-header-active-bg", "--tm-color-primary-subtle"));
 
         return {
             surface: css(root, "--tm-color-surface", ""),
@@ -2037,7 +2217,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             primarySubtle: cssToken(root, "--tm-color-primary-subtle", "--tm-color-primary-soft"),
             headerBg: cssToken(root, "--tm-spreadsheet-header-bg", "--tm-color-surface-elevated"),
             headerText: cssToken(root, "--tm-spreadsheet-header-text", "--tm-color-text-muted"),
-            headerActiveBg: cssToken(root, "--tm-spreadsheet-header-active-bg", "--tm-color-primary-subtle"),
+            headerActiveBg: headerActive.value,
+            headerActiveBgAlpha: headerActive.alpha,
             headerActiveText: cssToken(root, "--tm-spreadsheet-header-active-text", "--tm-color-primary-text"),
             headerFont: css(root, "--tm-spreadsheet-header-font", defaultHeaderFont),
             gridline: cssToken(root, "--tm-spreadsheet-gridline", "--tm-color-border-subtle"),
@@ -2318,7 +2499,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             comfortable,
             rowScale: comfortable ? comfortableRowScale : 1,
             fontScale: comfortable ? comfortableFontScale : 1,
-            handleScale: comfortable ? comfortableHandleScale : 1
+            handleScale: comfortable ? comfortableHandleScale : 1,
+            gutterScale: comfortable ? comfortableGutterScale : 1
         };
     }
 
@@ -2340,7 +2522,37 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             comfortable: resolved.comfortable,
             rowScale: scale(read(model, "DensityRowScale", 0), resolved.rowScale),
             fontScale: scale(read(model, "DensityFontScale", 0), resolved.fontScale),
-            handleScale: scale(read(model, "DensityHandleScale", 0), resolved.handleScale)
+            handleScale: scale(read(model, "DensityHandleScale", 0), resolved.handleScale),
+            gutterScale: scale(read(model, "DensityGutterScale", 0), resolved.gutterScale)
+        };
+    }
+
+    /**
+     * The header-label font at a density scale. The token is a CSS font SHORTHAND
+     * (`500 11px Inter, sans-serif`), so the size token inside it is scaled in place and the token
+     * itself is never rewritten (dimension + unit + family stay exactly what the host set).
+     */
+    function resolveHeaderFont(font, fontScale) {
+        const value = String(font || "");
+        const scale = Number(fontScale);
+        if (!value.trim() || !Number.isFinite(scale) || scale <= 0 || scale === 1) return value;
+        const size = /(^|\s)(\d*\.?\d+)(px|pt)(?=\s|\/|$)/.exec(value);
+        if (!size) return value;
+        const scaled = Math.round(Number(size[2]) * scale * 100) / 100;
+        return `${value.slice(0, size.index + size[1].length)}${scaled}${size[3]}${value.slice(size.index + size[0].length)}`;
+    }
+
+    /**
+     * The grid-body point of a client press: the header gutters and the logical scroll offset are the
+     * ONLY inputs, so a scaled gutter (Comfortable 56/28) shifts the hit path exactly the way it shifts
+     * the painted cells. `toContentPoint` feeds it the frame's own RowHeaderWidth/ColumnHeaderHeight.
+     */
+    function resolveContentPoint(input) {
+        const opts = input || {};
+        const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+        return {
+            x: number(opts.clientX) - number(opts.rectLeft) + number(opts.scrollLeft) - number(opts.rowHeaderWidth),
+            y: number(opts.clientY) - number(opts.rectTop) + number(opts.scrollTop) - number(opts.columnHeaderHeight)
         };
     }
 
@@ -2352,7 +2564,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             read(model, "PointerCoarse", false) ? 1 : 0,
             read(model, "DensityRowScale", 0),
             read(model, "DensityFontScale", 0),
-            read(model, "DensityHandleScale", 0)
+            read(model, "DensityHandleScale", 0),
+            read(model, "DensityGutterScale", 0)
         ].join("|");
         if (s?.densityScales?.key === key) return s.densityScales;
         const scales = { key, ...resolveDensityFromModel(model) };
@@ -2587,13 +2800,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     function toContentPoint(root, ev) {
         const s = getState(root);
         const model = s?.model || {};
-        const rowHeaderWidth = read(model, "RowHeaderWidth", 40);
-        const columnHeaderHeight = read(model, "ColumnHeaderHeight", 20);
         const rect = root.getBoundingClientRect();
-        return {
-            x: ev.clientX - rect.left + getLogicalScrollLeft(root) - rowHeaderWidth,
-            y: ev.clientY - rect.top + getLogicalScrollTop(root) - columnHeaderHeight
-        };
+        // The gutters come from the FRAME (the component scaled them per density), never from a
+        // constant: a 56/28 Comfortable gutter shifts the hit path exactly as it shifts the paint.
+        return resolveContentPoint({
+            clientX: ev.clientX,
+            clientY: ev.clientY,
+            rectLeft: rect.left,
+            rectTop: rect.top,
+            scrollLeft: getLogicalScrollLeft(root),
+            scrollTop: getLogicalScrollTop(root),
+            rowHeaderWidth: read(model, "RowHeaderWidth", 40),
+            columnHeaderHeight: read(model, "ColumnHeaderHeight", 20)
+        });
     }
 
     function screenX(model, col) {
@@ -5753,6 +5972,42 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     }
 
     /**
+     * The density a pointer-kind CHANGE re-resolves to, or `reResolve: false` when the host pinned the
+     * density (an explicit Compact/Comfortable is not the browser's business). Pure so the node lane
+     * can pin the "only Auto follows the pointer" rule.
+     */
+    function resolvePointerKindDensityDecision(input) {
+        const opts = input || {};
+        const requested = String(opts.requested ?? "").trim().toLowerCase();
+        const coarse = !!opts.coarse;
+        const resolved = resolveDensity(requested, coarse);
+        return {
+            reResolve: requested !== "compact" && requested !== "comfortable",
+            density: resolved.density,
+            coarse,
+            gutterScale: resolved.gutterScale
+        };
+    }
+
+    /**
+     * Attaches exactly one `(pointer: coarse)` change listener. `requestedDensity` is a value or a
+     * getter (the model can be re-rendered with another density while the grid lives). Returns the
+     * listener so `dispose` can detach it, or null when the query has no addEventListener (a host
+     * without matchMedia keeps the density it resolved on the first frame).
+     */
+    function attachPointerKindListener(query, requestedDensity, notify) {
+        if (!query || typeof query.addEventListener !== "function") return null;
+        const onChange = event => {
+            const requested = typeof requestedDensity === "function" ? requestedDensity() : requestedDensity;
+            const decision = resolvePointerKindDensityDecision({ requested, coarse: !!event?.matches });
+            if (!decision.reResolve) return;
+            if (typeof notify === "function") notify(decision.density, decision.coarse);
+        };
+        try { query.addEventListener("change", onChange); } catch (e) { return null; }
+        return onChange;
+    }
+
+    /**
      * Watches the `(pointer: coarse)` media query for the LIFETIME of a grid, so attaching a mouse to a
      * tablet (or undocking a 2-in-1) re-resolves the Auto density instead of keeping the first answer.
      */
@@ -5761,13 +6016,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         if (!s || !window.matchMedia) return;
         let query = null;
         try { query = window.matchMedia("(pointer: coarse)"); } catch (e) { return; }
-        if (!query || typeof query.addEventListener !== "function") return;
-        const onChange = event => {
-            const state = getState(root);
-            if (!state) return;
-            invokeDotNet(root, "OnCanvasPointerKindChanged", [!!event.matches], true).catch(() => {});
-        };
-        try { query.addEventListener("change", onChange); } catch (e) { return; }
+        const onChange = attachPointerKindListener(
+            query,
+            () => read(getState(root)?.model, "Density", "auto"),
+            (_density, coarse) => {
+                // .NET re-resolves the density itself (an explicit Compact/Comfortable stays pinned), so
+                // only the coarse flag crosses the boundary.
+                invokeDotNet(root, "OnCanvasPointerKindChanged", [coarse], true).catch(() => {});
+            });
+        if (!onChange) return;
         s.pointerKindQuery = query;
         s.pointerKindListener = onChange;
     }
@@ -7829,7 +8086,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         setContextStrokeStyle(ctx, palette.border, metrics);
         ctx.strokeRect(0.5, 0.5, rowHeaderWidth - 0.5, columnHeaderHeight - 0.5);
 
-        setContextFont(ctx, palette.headerFont, metrics);
+        // The label scales with the density font scale (the token itself is untouched): 11px labels on
+        // a 28px Comfortable gutter would read cramped next to the 12.5pt cells.
+        setContextFont(ctx, resolveHeaderFont(palette.headerFont, getDensityScales(root).fontScale), metrics);
         setContextTextAlign(ctx, "center", metrics);
         setContextTextBaseline(ctx, "middle", metrics);
 
@@ -8863,6 +9122,62 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     };
 
     /**
+     * The centre of a cell in the ROOT ELEMENT's coordinate space (what a Playwright
+     * `Locator.ClickAsync(Position)` needs), derived from the grid's own painted geometry: the header
+     * gutters, the logical scroll and the frozen panes all come from the frame, so a test never has to
+     * hardcode 40/20 and can never drift from the canvas after a density change. Returns {-1,-1} for a
+     * cell the grid does not know.
+     */
+    window.tmSpreadsheetCanvas.getCellCenter = function (root, row, col) {
+        const s = getState(root);
+        const model = s?.model;
+        if (!model || !Number.isFinite(Number(row)) || !Number.isFinite(Number(col))) {
+            return { x: -1, y: -1 };
+        }
+        const rowIndex = Number(row);
+        const colIndex = Number(col);
+        const rect = getCellScreenRect(root, rowIndex, colIndex);
+        if (rect) {
+            return {
+                x: Math.round(rect.x + rect.width / 2),
+                y: Math.round(rect.y + rect.height / 2)
+            };
+        }
+
+        // Outside the painted window the frame's own row/column frames still give the geometry
+        // (screenX/screenY apply the gutter, the frozen offset and the scroll).
+        const rowFrame = (read(model, "Rows", []) || []).find(entry => read(entry, "Index", -1) === rowIndex);
+        const colFrame = (read(model, "Columns", []) || []).find(entry => read(entry, "Index", -1) === colIndex);
+        if (!rowFrame || !colFrame) return { x: -1, y: -1 };
+        return {
+            x: Math.round(screenX(model, colFrame) + read(colFrame, "Width", 0) / 2),
+            y: Math.round(screenY(model, rowFrame) + read(rowFrame, "Height", 0) / 2)
+        };
+    };
+
+    /**
+     * The gutters the grid is actually laid out with (the component scaled them per density). E2E uses
+     * it to assert the painted geometry instead of assuming 40/20.
+     * <para>
+     * Returns NULL when the root has no engine state/model: a caller must fail loudly instead of
+     * silently measuring a 40/20 grid that the canvas never painted (getCellCenter returns {-1,-1} for
+     * the same reason).
+     * </para>
+     */
+    function resolveGridGutters(root) {
+        const model = getState(root)?.model;
+        if (!model) return null;
+        return {
+            rowHeaderWidth: read(model, "RowHeaderWidth", 40),
+            columnHeaderHeight: read(model, "ColumnHeaderHeight", 20),
+            density: String(read(model, "DensityResolved", "Compact")),
+            gutterScale: getDensityScales(root).gutterScale
+        };
+    }
+
+    window.tmSpreadsheetCanvas.getGridGutters = resolveGridGutters;
+
+    /**
      * Whether the document's focus currently sits on a control OUTSIDE this grid. The grid claims the
      * focus after a canvas activation, but a render can land AFTER the user has already moved on (a
      * command-log flush, the viewport sync that the grid's own focusout schedules). Yanking the focus
@@ -8909,6 +9224,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         resolveTouchHandleRects,
         clipTouchHandleRect,
         isCanvasShortcutCommand,
-        resolveFilterButtonHitRect
+        resolveFilterButtonHitRect,
+        // Phase 7b: the density gutter contract, the header font scale, the colour parser behind the
+        // OPAQUE dark active header and the live pointer-kind decision (only Auto follows the media
+        // query; an explicitly pinned density ignores it).
+        parseColor,
+        formatColor,
+        resolveColorToken,
+        resolveHeaderFont,
+        resolveContentPoint,
+        resolvePointerKindDensityDecision,
+        attachPointerKindListener,
+        // The engine getters are node-tested too: a root without a model must answer null/{ -1, -1 }
+        // instead of silently measuring a 40/20 grid the canvas never painted.
+        resolveGridGutters
     };
 })();

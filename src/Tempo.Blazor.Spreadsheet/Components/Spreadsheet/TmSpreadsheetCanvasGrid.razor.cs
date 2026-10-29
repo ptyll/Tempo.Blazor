@@ -1711,6 +1711,9 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             DensityRowScale = DensityScale.RowScale,
             DensityFontScale = DensityScale.FontScale,
             DensityHandleScale = DensityScale.HandleScale,
+            // The canvas never multiplies a gutter itself (RowHeaderWidth/ColumnHeaderHeight above are
+            // already scaled); this is the parity contract the node lane and the perf/UX evidence read.
+            DensityGutterScale = DensityScale.GutterScale,
             PointerCoarse = _pointerCoarse,
             FreezeRowCount = Math.Clamp(sheet.FreezeRowCount, 0, sheet.RowCount),
             FreezeColumnCount = Math.Clamp(sheet.FreezeColumnCount, 0, sheet.ColumnCount),

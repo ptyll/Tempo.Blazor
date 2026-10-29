@@ -5523,34 +5523,24 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
     }
 
+    /// <summary>
+    /// The centre of a cell in the grid element's own coordinate space, asked from the ENGINE
+    /// (<c>tmSpreadsheetCanvas.getCellCenter</c>) instead of being recomputed from model offsets and a
+    /// hardcoded 40/20 gutter. The engine subtracts the FRAME's header gutters — which the component
+    /// scales with the density (40/20 Compact, 56/28 Comfortable) — so a density change can never move
+    /// the cell centres out from under a spec again (the phase-2 learning).
+    /// </summary>
     private static async Task<CanvasCellPointResult> GetCanvasCellCenterAsync(ILocator grid, string cellRef)
     {
         var row = ParseRow(cellRef) - 1;
         var col = ParseColumn(cellRef) - 1;
         return await grid.EvaluateAsync<CanvasCellPointResult>(
             @"(el, args) => {
-                const row = Number(args?.row ?? 0);
-                const col = Number(args?.col ?? 0);
-                const key = `${row}:${col}`;
-                const state = el.__tmSpreadsheetCanvas;
-                const model = state?.model || {};
-                const cell = state?.sheetState?.cellStore?.cells?.get(key);
-                if (!cell) {
+                const engine = window.tmSpreadsheetCanvas;
+                if (!engine || typeof engine.getCellCenter !== 'function') {
                     return { x: -1, y: -1 };
                 }
-
-                const left = Number(cell.left ?? cell.Left ?? 0);
-                const top = Number(cell.top ?? cell.Top ?? 0);
-                const width = Number(cell.width ?? cell.Width ?? 0);
-                const height = Number(cell.height ?? cell.Height ?? 0);
-                const rowHeaderWidth = Number(model.rowHeaderWidth ?? model.RowHeaderWidth ?? 40);
-                const columnHeaderHeight = Number(model.columnHeaderHeight ?? model.ColumnHeaderHeight ?? 20);
-                const scrollLeft = Number(model.scrollLeft ?? model.ScrollLeft ?? 0);
-                const scrollTop = Number(model.scrollTop ?? model.ScrollTop ?? 0);
-                return {
-                    x: Math.round(rowHeaderWidth + left - scrollLeft + width / 2),
-                    y: Math.round(columnHeaderHeight + top - scrollTop + height / 2)
-                };
+                return engine.getCellCenter(el, Number(args?.row ?? 0), Number(args?.col ?? 0));
             }",
             new { row, col });
     }
