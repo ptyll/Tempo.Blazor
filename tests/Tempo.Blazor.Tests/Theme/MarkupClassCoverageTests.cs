@@ -212,7 +212,10 @@ public sealed class MarkupClassCoverageTests
         "tm-signature-capture__previous-preview",
         "tm-signature-capture__remember",
         "tm-spinner--sm",
-        "tm-split-button__text",
+        // TmGantt redesign phase 9 (126601f): the toolbar's no-wrap review gave the split button's
+        // label its first rule (.tm-gantt__toolbar ::deep .tm-split-button__text in
+        // TmGanttToolbar.razor.css, white-space: nowrap) — the entry left the unstyled population,
+        // struck off.
         "tm-splitter__pane--collapsible",
         "tm-stock-chart__ohlc",
         "tm-text-secondary",
