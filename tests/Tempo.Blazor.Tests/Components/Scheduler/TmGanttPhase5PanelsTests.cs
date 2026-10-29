@@ -655,9 +655,14 @@ public class TmGanttPhase5PanelsTests : LocalizationTestBase
         cut.FindAll(".tm-dropdown-item")[0].Click();
         cut.WaitForAssertion(() => calls.Should().Equal("edit:r2"));
         cut.Find("[data-testid='report-menu-r2'] .tm-dropdown-trigger").Click();
+        // Re-opening the kebab re-renders the overlay panel asynchronously on a loaded runner (CI's
+        // locale lane runs as a second lane on the same machine), so the menu items are only queried
+        // once the reopen render flushed - a bare FindAll raced it and indexed an empty menu.
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dropdown-item").Should().HaveCount(3));
         cut.FindAll(".tm-dropdown-item")[1].Click();
         cut.WaitForAssertion(() => calls.Should().Equal("edit:r2", "dup:r2"));
         cut.Find("[data-testid='report-menu-r2'] .tm-dropdown-trigger").Click();
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dropdown-item").Should().HaveCount(3));
         cut.FindAll(".tm-dropdown-item")[2].Click();
 
         cut.WaitForAssertion(() => calls.Should().Equal("edit:r2", "dup:r2", "del:r2"));

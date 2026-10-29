@@ -1,0 +1,32 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "A non-fatal problem found while importing. A warning carries code + data only — never a ready-made message: the language belongs to the UI that renders it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarning.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Row",
+      "kind": "Property",
+      "type": "int"
+    },
+    {
+      "name": "Column",
+      "kind": "Property",
+      "type": "string?"
+    },
+    {
+      "name": "Code",
+      "kind": "Property",
+      "type": "GanttImportWarningCode"
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "string?"
+    }
+  ],
+  "itemName": "GanttImportWarning"
+}

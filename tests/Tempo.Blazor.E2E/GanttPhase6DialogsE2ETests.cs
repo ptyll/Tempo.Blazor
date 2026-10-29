@@ -181,28 +181,31 @@ public sealed class GanttPhase6DialogsE2ETests : WasmTestBase
         var dialog = page.Locator(".tm-gantt__import-mapping-dialog");
         await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // "Task Name", "Begin", "Finish", "Done %" arrive pre-mapped.
+        // The sample workbook's headers arrive pre-mapped (Task Name, Start, Finish, Progress,
+        // wbs, predecessors, assignees — the demo imports this very file).
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-Task Name'] select")).ToHaveValueAsync("Title");
-        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-Begin'] select")).ToHaveValueAsync("Start");
+        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-Start'] select")).ToHaveValueAsync("Start");
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-Finish'] select")).ToHaveValueAsync("End");
-        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-Notes'] select")).ToHaveValueAsync("");
+        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-wbs'] select")).ToHaveValueAsync("WBS");
+        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-predecessors'] select")).ToHaveValueAsync("Predecessor");
+        await Assertions.Expect(dialog.Locator("[data-testid='mapping-select-assignees'] select")).ToHaveValueAsync("Assignees");
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-submit']")).ToBeEnabledAsync();
         await ShootBothAsync(page, "mapping-auto-1440");
 
         // Each select is named by a <label for>.
         var named = await dialog.Locator(".tm-gantt__mapping-row").EvaluateAllAsync<int>(
             "rows => rows.filter(r => { const s = r.querySelector('select'); return s && r.querySelector(`label[for='${s.id}']`); }).length");
-        Assert.AreEqual(5, named, "every mapping select has a label[for]");
+        Assert.AreEqual(7, named, "every mapping select has a label[for]");
 
         // A duplicate target is a warning, not an error.
-        await dialog.Locator("[data-testid='mapping-select-Notes'] select").SelectOptionAsync("Title");
+        await dialog.Locator("[data-testid='mapping-select-Progress'] select").SelectOptionAsync("Title");
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-duplicate']")).ToBeVisibleAsync();
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-submit']")).ToBeEnabledAsync();
         await ShootBothAsync(page, "mapping-duplicate-1440");
-        await dialog.Locator("[data-testid='mapping-select-Notes'] select").SelectOptionAsync("");
+        await dialog.Locator("[data-testid='mapping-select-Progress'] select").SelectOptionAsync("");
 
         // Un-mapping Start disables Import and names what is missing.
-        await dialog.Locator("[data-testid='mapping-select-Begin'] select").SelectOptionAsync("");
+        await dialog.Locator("[data-testid='mapping-select-Start'] select").SelectOptionAsync("");
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-submit']")).ToBeDisabledAsync();
         await Assertions.Expect(dialog.Locator("[data-testid='mapping-validation']")).ToContainTextAsync("Start");
         await ShootBothAsync(page, "mapping-invalid-1440");

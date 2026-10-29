@@ -636,6 +636,14 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     /// <summary>Fires when an import operation completes successfully.</summary>
     [Parameter] public EventCallback<IReadOnlyList<TmWorkItem>> OnImportCompleted { get; set; }
 
+    /// <summary>
+    /// Fires when a result-capable import completes with the full payload — tasks, dependencies and
+    /// warnings. Raised LAST, in the documented order: <see cref="OnImportCompleted"/> carries the
+    /// tasks first, then every new dependency is announced through <see cref="OnDependencyAdded"/>,
+    /// and this event closes the sequence with the full payload the host can reconcile from.
+    /// </summary>
+    [Parameter] public EventCallback<GanttImportResult> OnImportResultCompleted { get; set; }
+
     /// <summary>Fires when an import operation fails (contains error message).</summary>
     [Parameter] public EventCallback<string> OnImportError { get; set; }
 
@@ -2434,10 +2442,55 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         await OnExportRequested.InvokeAsync(opts);
     }
 
+    /// <summary>The visible (filtered) tasks the built-in export preview sketches.</summary>
+    private IReadOnlyList<TmWorkItem> VisiblePreviewTasks
+        => _visibleNodes.Count == Data.Count
+            ? Data
+            : _visibleNodes.Select(n => n.Task).ToArray();
+
+    /// <summary>The dependencies whose both ends are visible; a dependency on a filtered-out task would draw into nothing.</summary>
+    private IReadOnlyList<GanttDependency> VisiblePreviewDependencies
+    {
+        get
+        {
+            if (_visibleNodes.Count == Data.Count) return Dependencies;
+            var ids = _visibleNodes.Select(n => n.Task.Id).ToHashSet(StringComparer.Ordinal);
+            return Dependencies.Where(d => ids.Contains(d.FromId) && ids.Contains(d.ToId)).ToList();
+        }
+    }
+
+    /// <summary>The computed critical path, painted only when the export's critical-path option is on; null when empty.</summary>
+    private IReadOnlyList<string>? PreviewCriticalPathIds
+        => _criticalPathIds.Count > 0 ? [.. _criticalPathIds] : null;
+
     private async Task HandleImportCompletedAsync(IReadOnlyList<TmWorkItem> tasks)
     {
         _importDialogOpen = false;
         await OnImportCompleted.InvokeAsync(tasks);
+    }
+
+    /// <summary>
+    /// The full import result, raised in the documented order: <see cref="OnImportCompleted"/>
+    /// carries the tasks first, then every NEW dependency raises <see cref="OnDependencyAdded"/>
+    /// (the host keeps its single source of truth), and <see cref="OnImportResultCompleted"/> closes
+    /// the sequence with the full payload. Warnings KEEP THE DIALOG OPEN — the alert inside it is the
+    /// only place the user can read what to fix; a clean import closes it as before.
+    /// </summary>
+    private async Task HandleImportResultCompletedAsync(GanttImportResult result)
+    {
+        await OnImportCompleted.InvokeAsync(result.Tasks);
+
+        foreach (var dependency in result.Dependencies)
+        {
+            await OnDependencyAdded.InvokeAsync(dependency);
+        }
+
+        if (result.Warnings.Count == 0)
+        {
+            _importDialogOpen = false;
+        }
+
+        await OnImportResultCompleted.InvokeAsync(result);
     }
 
     /// <summary>The host is told; the dialog stays open, because its error alert is the only place the user can read why nothing was imported.</summary>

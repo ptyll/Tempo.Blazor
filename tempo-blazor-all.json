@@ -23353,6 +23353,12 @@
               "description": "Fires when an import operation fails (contains error message)."
             },
             {
+              "name": "OnImportResultCompleted",
+              "type": "EventCallback<GanttImportResult>",
+              "isRequired": false,
+              "description": "Fires when a result-capable import completes with the full payload — tasks, dependencies and warnings. Raised in addition to OnImportCompleted (which keeps carrying only the tasks), after every new dependency has also been announced through OnDependencyAdded."
+            },
+            {
               "name": "OnNewReportRequested",
               "type": "EventCallback",
               "isRequired": false,
@@ -23658,7 +23664,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a preview area.",
+          "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a live preview area with a built-in miniature of the chosen format and options.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportDialog.razor",
           "documentationStatus": "merged",
@@ -23688,7 +23694,80 @@
               "name": "PreviewContent",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Content of the preview area. When null (default) the area shows the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here."
+              "description": "Content of the preview area. When null (default) the area shows the built-in preview when PreviewTasks are supplied, otherwise the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here and always wins over the built-in preview."
+            },
+            {
+              "name": "PreviewCriticalPathIds",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Ids of the tasks on the critical path, painted when the critical-path option is on."
+            },
+            {
+              "name": "PreviewDependencies",
+              "type": "IReadOnlyList<GanttDependency>?",
+              "isRequired": false,
+              "description": "Dependencies between the PreviewTasks; drawn as short connectors."
+            },
+            {
+              "name": "PreviewTasks",
+              "type": "IReadOnlyList<TmWorkItem>?",
+              "isRequired": false,
+              "description": "The visible tasks the built-in preview sketches. When null or empty the area keeps the neutral placeholder (the dialog has nothing truthful to draw). The host's own PreviewContent slot always wins over the built-in preview."
+            },
+            {
+              "name": "ShowBuiltInPreview",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the built-in preview renders when PreviewTasks are supplied. Default true."
+            }
+          ]
+        },
+        {
+          "itemName": "TmGanttExportPreview",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal detail of TmGanttExportDialog: the built-in live preview of the chosen export format and options. Pure SVG/HTML (no JavaScript, no rasterization) — PDF/PNG draw the miniature page in the paper's aspect ratio with bars, optional critical path, today line and workload strip; Excel shows the first 20 rows of the selected columns; XML shows the task / dependency / milestone counts. The whole sketch is one role=\"img\" element with a localized summary label over an aria-hidden body, and it collapses into a details on a fullscreen mobile dialog. Render it through the dialog (PreviewTasks); the dialog's PreviewContent slot is the host's way in.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportPreview.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "CriticalPathIds",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Ids of the tasks on the critical path; painted only when the critical-path option asks for it."
+            },
+            {
+              "name": "Dependencies",
+              "type": "IReadOnlyList<GanttDependency>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Dependencies between the visible tasks (drawn as short connectors)."
+            },
+            {
+              "name": "Layout",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The resolved layout of the dialog; a fullscreen mobile dialog collapses the preview into a details."
+            },
+            {
+              "name": "Options",
+              "type": "GanttExportOptions",
+              "isRequired": true,
+              "description": "The dialog's current selection: format, paper, orientation, zoom, toggles, columns."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<TmWorkItem>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Visible tasks to sketch."
             }
           ]
         },
@@ -23901,7 +23980,7 @@
           "kind": "Component",
           "category": "Scheduler",
           "namespace": "Tempo.Blazor.Components.Scheduler",
-          "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, and an error TmAlert.",
+          "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, an error TmAlert and, on the Excel tab of a result-capable GanttXlsx package, a column-mapping step that produces the full import result (tasks, dependencies, warnings).",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor",
           "documentationStatus": "merged",
@@ -23909,6 +23988,12 @@
             "@using Tempo.Blazor.Components.Scheduler"
           ],
           "parameters": [
+            {
+              "name": "ImportMappings",
+              "type": "IReadOnlyList<GanttColumnMapping>?",
+              "isRequired": false,
+              "description": "Mappings the column-mapping dialog starts from (a remembered choice, a host's own defaults); forwarded to TmGanttImportMappingDialog.InitialMappings."
+            },
             {
               "name": "IsOpen",
               "type": "bool",
@@ -23925,13 +24010,19 @@
               "name": "OnImportCompleted",
               "type": "EventCallback<IReadOnlyList<TmWorkItem>>",
               "isRequired": false,
-              "description": "Fires when import completes successfully."
+              "description": "Fires when import completes successfully (tasks only; the full result travels through OnImportResultCompleted)."
             },
             {
               "name": "OnImportError",
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Fires when import fails with an error message."
+            },
+            {
+              "name": "OnImportResultCompleted",
+              "type": "EventCallback<GanttImportResult>",
+              "isRequired": false,
+              "description": "Fires when a result-capable Excel import finishes: tasks, dependencies and warnings in one payload. When handled, this event replaces the task-only OnImportCompleted for the Excel flow — MS Project and JIRA keep firing the task-only event. Warnings keep the dialog open so their alert can be read; the import itself is never blocked."
             }
           ]
         },
@@ -30057,11 +30148,11 @@
         }
       ],
       "summary": {
-        "itemCount": 401,
-        "manualItemCount": 401,
-        "generatedItemCount": 393,
+        "itemCount": 402,
+        "manualItemCount": 402,
+        "generatedItemCount": 394,
         "generatedOnlyItemCount": 0,
-        "componentCount": 216,
+        "componentCount": 217,
         "publicApiTypeCount": 177
       }
     },
@@ -46877,7 +46968,21 @@
           "description": "Imports Gantt tasks from an XLSX spreadsheet stream.",
           "packageId": "Tempo.Blazor.GanttXlsx",
           "sourcePath": "src/Tempo.Blazor.GanttXlsx/Services/GanttExcelImporter.cs",
-          "documentationStatus": "merged"
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "ReadHeaders",
+              "kind": "Method",
+              "type": "IReadOnlyList<string>",
+              "description": "The sheet's header row: the first row of the first worksheet.",
+              "parameters": [
+                {
+                  "name": "stream",
+                  "type": "Stream"
+                }
+              ]
+            }
+          ]
         },
         {
           "itemName": "GanttXlsxExporter",
@@ -83600,6 +83705,34 @@
           ]
         },
         {
+          "itemName": "GanttColumnValues",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "The one place a TmWorkItem becomes a flat cell value for an Excel export (or a preview of one). Both GanttXlsxExporter and the export dialog's built-in preview share it, and the format is invariant, so a cell and its preview never drift.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttColumnValues.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Format",
+              "kind": "Method",
+              "type": "string",
+              "description": "Formats the task's value for column; an empty string when the column carries nothing.",
+              "parameters": [
+                {
+                  "name": "task",
+                  "type": "TmWorkItem"
+                },
+                {
+                  "name": "column",
+                  "type": "GanttColumnKey"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "kind": "Class",
           "category": "Models",
           "namespace": "Tempo.Blazor.Abstractions.Models",
@@ -83697,6 +83830,36 @@
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttDependencyType.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "GanttExcelImportOptions",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "Options for an Excel Gantt import, e.g. a resolver turning the sheet's assignee names into real people.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttExcelImportOptions.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "DefaultIdPrefix",
+              "kind": "Field",
+              "type": "string",
+              "description": "Default IdPrefix."
+            },
+            {
+              "name": "AssigneeResolver",
+              "kind": "Property",
+              "type": "Func<string, TmWorkItemAssignee?>?",
+              "description": "Resolves an assignee name from the sheet into a real person. Return null to skip the name (the host does not know it). When null, every name becomes a plain TmWorkItemAssignee with the normalized name as its id."
+            },
+            {
+              "name": "IdPrefix",
+              "kind": "Property",
+              "type": "string",
+              "description": "Prefix of every imported task id: the id is {IdPrefix}{n}, where n is the 1-based data-row ordinal. The default keeps ids stable across imports of the same sheet (xlsx-row-3); pass a fresh value per import (e.g. xlsx-{8 random hex}-row-) when one stream can be imported more than once, so the ids of separate imports never collide."
+            }
+          ]
         },
         {
           "itemName": "GanttExportFormat",
@@ -83835,6 +83998,88 @@
           "description": "Thrown when an import source returns HTTP 401 Unauthorized.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportAuthException.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "GanttImportResult",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "The full outcome of an import: the tasks, the dependencies that reference them and the non-fatal warnings. Import never throws for data-level problems — they surface as warnings.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportResult.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Dependencies",
+              "kind": "Property",
+              "type": "IReadOnlyList<GanttDependency>",
+              "description": "Dependencies between the imported tasks (predecessor → task)."
+            },
+            {
+              "name": "Tasks",
+              "kind": "Property",
+              "type": "IReadOnlyList<TmWorkItem>",
+              "description": "Imported tasks, in sheet order. Task ids are stable per row within one import ({GanttExcelImportOptions.IdPrefix}{ordinal}, e.g. xlsx-row-3); predecessor row references and WBS lookups resolve against the same ordinals."
+            },
+            {
+              "name": "Warnings",
+              "kind": "Property",
+              "type": "IReadOnlyList<GanttImportWarning>",
+              "description": "Non-fatal problems; the import itself always succeeded when this result exists."
+            }
+          ]
+        },
+        {
+          "itemName": "GanttImportWarning",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "A non-fatal problem found while importing. A warning carries code + data only — never a ready-made message: the language belongs to the UI that renders it.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarning.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Code",
+              "kind": "Property",
+              "type": "GanttImportWarningCode",
+              "description": "What went wrong; the UI maps this to a localized message."
+            },
+            {
+              "name": "Column",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The source column header the warning came from, when the warning is tied to a column."
+            },
+            {
+              "name": "Row",
+              "kind": "Property",
+              "type": "int",
+              "description": "The 1-based data-row ordinal the warning came from (1 = first data row). Predecessor row references count these ordinals; UI text uses SheetRow instead."
+            },
+            {
+              "name": "SheetRow",
+              "kind": "Property",
+              "type": "int",
+              "description": "The 1-based sheet row number the warning came from, ready for display (the header row is 1; taken from the row's RowIndex, falling back to the ordinal plus the header offset)."
+            },
+            {
+              "name": "Value",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The offending raw value, when there is one (the unknown predecessor token, the duplicated WBS code…)."
+            }
+          ]
+        },
+        {
+          "itemName": "GanttImportWarningCode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "Why an import produced a warning. The UI localizes the code — a warning never carries ready-made text.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarningCode.cs",
           "documentationStatus": "merged"
         },
         {
@@ -105964,12 +106209,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1500,
-        "manualItemCount": 1500,
-        "generatedItemCount": 1483,
+        "itemCount": 1505,
+        "manualItemCount": 1505,
+        "generatedItemCount": 1488,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1483
+        "publicApiTypeCount": 1488
       }
     },
     {
@@ -122950,10 +123195,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3327,
-    "manualItemCount": 3327,
+    "itemCount": 3333,
+    "manualItemCount": 3333,
     "generatedOnlyItemCount": 0,
-    "componentCount": 499,
-    "publicApiTypeCount": 2775
+    "componentCount": 500,
+    "publicApiTypeCount": 2780
   }
 }

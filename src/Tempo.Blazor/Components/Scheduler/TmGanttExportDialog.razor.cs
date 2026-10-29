@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Models;
 
@@ -70,6 +71,51 @@ public partial class TmGanttExportDialog
     /// a host that renders its own preview (an image of the chart, a table) supplies it here.
     /// </summary>
     [Parameter] public RenderFragment? PreviewContent { get; set; }
+
+    /// <summary>
+    /// The visible tasks the built-in preview sketches. When <c>null</c> or empty the area keeps the neutral
+    /// placeholder (the dialog has nothing truthful to draw). The host's own <see cref="PreviewContent"/> slot
+    /// always wins over the built-in preview.
+    /// </summary>
+    [Parameter] public IReadOnlyList<TmWorkItem>? PreviewTasks { get; set; }
+
+    /// <summary>Dependencies between the <see cref="PreviewTasks"/>; drawn as short connectors.</summary>
+    [Parameter] public IReadOnlyList<GanttDependency>? PreviewDependencies { get; set; }
+
+    /// <summary>Ids of the tasks on the critical path, painted when the critical-path option is on.</summary>
+    [Parameter] public IReadOnlyList<string>? PreviewCriticalPathIds { get; set; }
+
+    /// <summary>Whether the built-in preview renders when <see cref="PreviewTasks"/> are supplied. Default true.</summary>
+    [Parameter] public bool ShowBuiltInPreview { get; set; } = true;
+
+    /// <summary>The resolved layout of the surrounding modal; a fullscreen mobile dialog collapses the preview into a details.</summary>
+    private TmLayoutMode _modalLayout = TmLayoutMode.Desktop;
+
+    private Task OnModalLayoutResolved(TmLayoutMode mode)
+    {
+        _modalLayout = mode;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The preview's model input: the CURRENT selection (not the confirmed one), so the sketch follows
+    /// every option change. Only the options that apply to the chosen format travel.
+    /// </summary>
+    private GanttExportOptions PreviewOptions() => IsImage
+        ? new GanttExportOptions(
+            Format: _format,
+            PaperSize: _paperSize,
+            Landscape: _landscape,
+            ZoomLevel: _zoomLevel,
+            IncludeCriticalPath: _includeCriticalPath,
+            IncludeToday: _includeToday,
+            IncludeWorkload: _includeWorkload)
+        : new GanttExportOptions(
+            Format: _format,
+            Columns: _format == GanttExportFormat.Xlsx ? SelectedColumns() : null);
+
+    private bool ShowBuiltIn =>
+        ShowBuiltInPreview && PreviewContent is null && PreviewTasks is { Count: > 0 };
 
     private bool IsImage => _format is GanttExportFormat.Pdf or GanttExportFormat.Png;
 

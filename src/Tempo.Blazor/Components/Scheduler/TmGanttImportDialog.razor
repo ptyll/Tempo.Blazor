@@ -23,6 +23,25 @@
             </TmAlert>
         }
 
+        @* The finished import's warnings: the import itself succeeded and the data has already
+           landed - the dialog stays open so the user can read (and expand) what to fix, then closes
+           it with the single Close button in the footer. *@
+        @if (_completedResult is { } completed && completed.Warnings.Count > 0)
+        {
+            <TmAlert Severity="AlertSeverity.Warning" Class="tm-gantt-import__warnings" data-testid="@TestId("import-warnings")">
+                <strong>@Loc.Plural("TmGantt_ImportWarningsTitle", completed.Warnings.Count)</strong>
+                <details class="tm-gantt-import__warning-list">
+                    <summary>@Loc["TmGantt_ImportWarningsShowDetails"]</summary>
+                    <ul>
+                        @foreach (var warning in completed.Warnings)
+                        {
+                            <li>@WarningText(warning)</li>
+                        }
+                    </ul>
+                </details>
+            </TmAlert>
+        }
+
         @* Import source tabs (ARIA tablist: roving tabindex; Left / Right wrap, Home / End jump; focus follows the selection). *@
         <div class="tm-gantt__import-tabs" role="tablist" aria-label="@Loc["TmGantt_ImportSource"]" @ref="_tabListRef" @onkeydown="HandleTabKeyDown">
             @foreach (var tab in Tabs)
@@ -101,12 +120,36 @@
         </div>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" data-testid="@TestId("import-cancel")">
-            @Loc["Tm_Cancel"]
-        </TmButton>
-        <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" Disabled="@(!CanImport)"
-                  IsLoading="_isImporting" data-testid="@TestId("import-submit")">
-            @Loc["TmGantt_Import"]
-        </TmButton>
+        @if (_completedResult is { } finished && finished.Warnings.Count > 0)
+        {
+            @* The import is done and its warnings are the only thing left to read: one primary
+               Close, no Cancel (it would only close an already completed dialog) and no Import
+               (the chosen file was dropped, so a second run cannot duplicate the tasks). *@
+            <TmButton Variant="ButtonVariant.Primary" OnClick="OnClose" data-testid="@TestId("import-close")">
+                @Loc["Tm_Close"]
+            </TmButton>
+        }
+        else
+        {
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" data-testid="@TestId("import-cancel")">
+                @Loc["Tm_Cancel"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" Disabled="@(!CanImport)"
+                      IsLoading="_isImporting" data-testid="@TestId("import-submit")">
+                @Loc["TmGantt_Import"]
+            </TmButton>
+        }
     </Footer>
 </TmModal>
+
+@* The mapping step renders as a SIBLING modal on top of the import dialog (both are core TmModals
+   in the browser top layer): it lists the chosen file's headers pre-mapped by name, seeded by the
+   host's ImportMappings. Cancelling returns to the file step with the file still chosen. *@
+@if (IsOpen && _mappingDialogOpen)
+{
+    <TmGanttImportMappingDialog IsOpen="true"
+                                SourceColumns="@_headers"
+                                InitialMappings="@ImportMappings"
+                                OnImport="ImportExcelResultAsync"
+                                OnClose="() => _mappingDialogOpen = false" />
+}

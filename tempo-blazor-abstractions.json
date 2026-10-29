@@ -15078,6 +15078,34 @@
       ]
     },
     {
+      "itemName": "GanttColumnValues",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The one place a TmWorkItem becomes a flat cell value for an Excel export (or a preview of one). Both GanttXlsxExporter and the export dialog's built-in preview share it, and the format is invariant, so a cell and its preview never drift.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttColumnValues.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Format",
+          "kind": "Method",
+          "type": "string",
+          "description": "Formats the task's value for column; an empty string when the column carries nothing.",
+          "parameters": [
+            {
+              "name": "task",
+              "type": "TmWorkItem"
+            },
+            {
+              "name": "column",
+              "type": "GanttColumnKey"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "kind": "Class",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
@@ -15175,6 +15203,36 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttDependencyType.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttExcelImportOptions",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Options for an Excel Gantt import, e.g. a resolver turning the sheet's assignee names into real people.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttExcelImportOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultIdPrefix",
+          "kind": "Field",
+          "type": "string",
+          "description": "Default IdPrefix."
+        },
+        {
+          "name": "AssigneeResolver",
+          "kind": "Property",
+          "type": "Func<string, TmWorkItemAssignee?>?",
+          "description": "Resolves an assignee name from the sheet into a real person. Return null to skip the name (the host does not know it). When null, every name becomes a plain TmWorkItemAssignee with the normalized name as its id."
+        },
+        {
+          "name": "IdPrefix",
+          "kind": "Property",
+          "type": "string",
+          "description": "Prefix of every imported task id: the id is {IdPrefix}{n}, where n is the 1-based data-row ordinal. The default keeps ids stable across imports of the same sheet (xlsx-row-3); pass a fresh value per import (e.g. xlsx-{8 random hex}-row-) when one stream can be imported more than once, so the ids of separate imports never collide."
+        }
+      ]
     },
     {
       "itemName": "GanttExportFormat",
@@ -15313,6 +15371,88 @@
       "description": "Thrown when an import source returns HTTP 401 Unauthorized.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportAuthException.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttImportResult",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The full outcome of an import: the tasks, the dependencies that reference them and the non-fatal warnings. Import never throws for data-level problems — they surface as warnings.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Dependencies",
+          "kind": "Property",
+          "type": "IReadOnlyList<GanttDependency>",
+          "description": "Dependencies between the imported tasks (predecessor → task)."
+        },
+        {
+          "name": "Tasks",
+          "kind": "Property",
+          "type": "IReadOnlyList<TmWorkItem>",
+          "description": "Imported tasks, in sheet order. Task ids are stable per row within one import ({GanttExcelImportOptions.IdPrefix}{ordinal}, e.g. xlsx-row-3); predecessor row references and WBS lookups resolve against the same ordinals."
+        },
+        {
+          "name": "Warnings",
+          "kind": "Property",
+          "type": "IReadOnlyList<GanttImportWarning>",
+          "description": "Non-fatal problems; the import itself always succeeded when this result exists."
+        }
+      ]
+    },
+    {
+      "itemName": "GanttImportWarning",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "A non-fatal problem found while importing. A warning carries code + data only — never a ready-made message: the language belongs to the UI that renders it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarning.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "GanttImportWarningCode",
+          "description": "What went wrong; the UI maps this to a localized message."
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The source column header the warning came from, when the warning is tied to a column."
+        },
+        {
+          "name": "Row",
+          "kind": "Property",
+          "type": "int",
+          "description": "The 1-based data-row ordinal the warning came from (1 = first data row). Predecessor row references count these ordinals; UI text uses SheetRow instead."
+        },
+        {
+          "name": "SheetRow",
+          "kind": "Property",
+          "type": "int",
+          "description": "The 1-based sheet row number the warning came from, ready for display (the header row is 1; taken from the row's RowIndex, falling back to the ordinal plus the header offset)."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The offending raw value, when there is one (the unknown predecessor token, the duplicated WBS code…)."
+        }
+      ]
+    },
+    {
+      "itemName": "GanttImportWarningCode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Why an import produced a warning. The UI localizes the code — a warning never carries ready-made text.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarningCode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -37442,11 +37582,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1500,
-    "manualItemCount": 1500,
-    "generatedItemCount": 1483,
+    "itemCount": 1505,
+    "manualItemCount": 1505,
+    "generatedItemCount": 1488,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1483
+    "publicApiTypeCount": 1488
   }
 }

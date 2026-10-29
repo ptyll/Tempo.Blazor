@@ -2,7 +2,7 @@
   "itemName": "TmGanttImportDialog",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, and an error TmAlert.",
+  "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, an error TmAlert and, on the Excel tab of a result-capable GanttXlsx package, a column-mapping step that produces the full import result (tasks, dependencies, warnings).",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor",
@@ -27,7 +27,19 @@
       "name": "OnImportCompleted",
       "type": "EventCallback<IReadOnlyList<GanttTask>>",
       "isRequired": false,
-      "description": "Fires when import completes successfully."
+      "description": "Fires when import completes successfully (tasks only; the full result travels through OnImportResultCompleted)."
+    },
+    {
+      "name": "OnImportResultCompleted",
+      "type": "EventCallback<GanttImportResult>",
+      "isRequired": false,
+      "description": "Fires when a result-capable Excel import finishes: tasks, dependencies and warnings in one payload. When handled, this event replaces the task-only OnImportCompleted for the Excel flow — MS Project and JIRA keep firing the task-only event. Warnings keep the dialog open so their alert can be read; the import itself is never blocked."
+    },
+    {
+      "name": "ImportMappings",
+      "type": "IReadOnlyList<GanttColumnMapping>?",
+      "isRequired": false,
+      "description": "Mappings the column-mapping dialog starts from (a remembered choice, a host's own defaults); forwarded to TmGanttImportMappingDialog.InitialMappings."
     },
     {
       "name": "OnImportError",

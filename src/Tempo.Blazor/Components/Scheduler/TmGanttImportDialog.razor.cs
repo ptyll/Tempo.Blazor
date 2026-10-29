@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
@@ -7,7 +8,12 @@ using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
 
-/// <summary>Dialog for importing tasks from Excel, MS Project XML, or JIRA.</summary>
+/// <summary>
+/// Dialog for importing tasks from Excel, MS Project XML, or JIRA. The Excel flow of a result-capable
+/// GanttXlsx package reads the sheet's headers first, confirms the column mapping in the
+/// <see cref="TmGanttImportMappingDialog"/> and then imports the full result (tasks, dependencies,
+/// warnings); an older package keeps today's direct import without the mapping step.
+/// </summary>
 public partial class TmGanttImportDialog : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor.js";
@@ -36,11 +42,24 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private Guid _inputKey = Guid.NewGuid();
     private readonly string _instanceId = Guid.NewGuid().ToString("N");
 
+    // The mapping step: the chosen file's headers, the open mapping dialog and the finished result
+    // whose warnings the alert below keeps readable until the user closes the dialog.
+    private IReadOnlyList<string> _headers = [];
+    private bool _mappingDialogOpen;
+    private GanttImportResult? _completedResult;
+
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
-    /// <summary>Fires when import completes successfully.</summary>
+    /// <summary>Fires when import completes successfully (tasks only; the full result travels through <see cref="OnImportResultCompleted"/>).</summary>
     [Parameter] public EventCallback<IReadOnlyList<TmWorkItem>> OnImportCompleted { get; set; }
+
+    /// <summary>
+    /// Fires when a result-capable Excel import finishes: tasks, dependencies and warnings in one
+    /// payload. When handled, this event replaces the task-only <see cref="OnImportCompleted"/> for
+    /// the Excel flow — MS Project and JIRA keep firing the task-only event.
+    /// </summary>
+    [Parameter] public EventCallback<GanttImportResult> OnImportResultCompleted { get; set; }
 
     /// <summary>Fires when import fails with an error message.</summary>
     [Parameter] public EventCallback<string> OnImportError { get; set; }
@@ -48,17 +67,26 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     /// <summary>Fires when the dialog should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// Mappings the column-mapping dialog starts from (a remembered choice, a host's own defaults);
+    /// forwarded to <see cref="TmGanttImportMappingDialog.InitialMappings"/>.
+    /// </summary>
+    [Parameter] public IReadOnlyList<GanttColumnMapping>? ImportMappings { get; set; }
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        // A dialog that is reopened starts from scratch: the previous file, error, busy flag and tab must not leak
-        // into the next import.
+        // A dialog that is reopened starts from scratch: the previous file, error, busy flag, tab,
+        // mapping step and warnings must not leak into the next import.
         if (IsOpen && !_wasOpen)
         {
             ResetFile();
             _errorMessage = null;
             _isImporting = false;
             _tab = ImportTab.Excel;
+            _headers = [];
+            _mappingDialogOpen = false;
+            _completedResult = null;
         }
 
         _wasOpen = IsOpen;
@@ -96,6 +124,8 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         _tab = tab;
         _focusSelectedTabAfterRender = true;
         _errorMessage = null;
+        _mappingDialogOpen = false;
+        _completedResult = null;
         // A chosen .xlsx must never be handed to the MS Project importer (or the other way round), so a tab
         // switch starts from no file. The recreated input also clears the native value.
         ResetFile();
@@ -129,6 +159,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     {
         ResetFile();
         _errorMessage = null;
+        _completedResult = null;
     }
 
     /// <inheritdoc />
@@ -184,6 +215,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         _selectedFile = e.File;
         _selectedFileName = e.File.Name;
         _errorMessage = null;
+        _completedResult = null;
     }
 
     /// <inheritdoc />
@@ -221,7 +253,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         _isImporting = true;
         try
         {
-            IReadOnlyList<TmWorkItem> tasks;
             if (_tab == ImportTab.Excel)
             {
                 if (ResolveGanttExcelImporterType() is not { } importerType)
@@ -232,12 +263,33 @@ public partial class TmGanttImportDialog : IAsyncDisposable
                     await OnImportError.InvokeAsync(_errorMessage);
                     return;
                 }
-                using var stream = _selectedFile!.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                tasks = ImportExcelTasks(stream, importerType);
+
+                if (ResolveExcelResultApi(importerType) is not { } api)
+                {
+                    // An older GanttXlsx: today's direct import, no mapping step, no result payload.
+                    await using var legacyStream = await BufferedAsync(_selectedFile!, 10 * 1024 * 1024);
+                    var legacyTasks = ImportExcelTasks(legacyStream, importerType);
+                    await CompleteLegacyImportAsync(legacyTasks);
+                    return;
+                }
+
+                // Result-capable: read the headers, then confirm the mapping before any import. The
+                // upload is buffered into a MemoryStream first: OpenXml seeks the stream, which the
+                // browser's upload stream does not support.
+                await using (var headersStream = await BufferedAsync(_selectedFile!, 10 * 1024 * 1024))
+                {
+                    _headers = await api.ReadHeadersAsync(headersStream);
+                }
+
+                _completedResult = null;
+                _mappingDialogOpen = true;
+                return;
             }
-            else if (_tab == ImportTab.Mpp)
+
+            IReadOnlyList<TmWorkItem> tasks;
+            if (_tab == ImportTab.Mpp)
             {
-                using var stream = _selectedFile!.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+                await using var stream = _selectedFile!.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
                 tasks = GanttMppImporter.Import(stream);
             }
             else
@@ -245,8 +297,8 @@ public partial class TmGanttImportDialog : IAsyncDisposable
                 using var importer = new GanttJiraImporter(new HttpClient());
                 tasks = await importer.ImportAsync(_jiraUrl, _jiraToken, _jiraProject);
             }
-            await OnImportCompleted.InvokeAsync(tasks);
-            await OnClose.InvokeAsync();
+
+            await CompleteLegacyImportAsync(tasks);
         }
         catch (Exception ex)
         {
@@ -258,6 +310,94 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             _isImporting = false;
         }
     }
+
+    /// <summary>
+    /// The chosen file as a seekable <see cref="MemoryStream"/>: OpenXml seeks the stream, and the
+    /// browser's upload stream (the only thing <c>InputFile</c> hands out) does not support that.
+    /// </summary>
+    private static async Task<MemoryStream> BufferedAsync(IBrowserFile file, long maxAllowedSize)
+    {
+        var buffered = new MemoryStream();
+        await using var upload = file.OpenReadStream(maxAllowedSize);
+        await upload.CopyToAsync(buffered);
+        buffered.Position = 0;
+        return buffered;
+    }
+
+    /// <summary>The task-only completion of the MS Project / JIRA flows and of a legacy GanttXlsx package.</summary>
+    private async Task CompleteLegacyImportAsync(IReadOnlyList<TmWorkItem> tasks)
+    {
+        await OnImportCompleted.InvokeAsync(tasks);
+        await OnClose.InvokeAsync();
+    }
+
+    /// <summary>The mapping dialog confirmed: run the import with the chosen mapping.</summary>
+    private async Task ImportExcelResultAsync(IReadOnlyList<GanttColumnMapping> mappings)
+    {
+        if (ResolveGanttExcelImporterType() is not { } importerType
+            || ResolveExcelResultApi(importerType) is not { } api)
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _isImporting = true;
+        try
+        {
+            await using var stream = await BufferedAsync(_selectedFile!, 10 * 1024 * 1024);
+            // A fresh prefix per import run: importing the same sheet twice must never mint
+            // colliding task ids (the default prefix is only stable for one import).
+            var options = new GanttExcelImportOptions
+            {
+                IdPrefix = $"xlsx-{Guid.NewGuid().ToString("N")[..8]}-row-",
+            };
+            var result = await api.ImportResultAsync(stream, mappings, options);
+            _mappingDialogOpen = false;
+
+            if (OnImportResultCompleted.HasDelegate)
+            {
+                // The host owns the completion (and, on warnings, keeps this dialog open so the
+                // alert below stays readable). Stash the result BEFORE raising so the alert exists
+                // as soon as the host's handler returns, and drop the chosen file: the footer now
+                // offers Close only, and nothing may re-import the same file from this dialog.
+                _completedResult = result;
+                ResetFile();
+                await OnImportResultCompleted.InvokeAsync(result);
+                if (result.Warnings.Count == 0)
+                {
+                    await OnClose.InvokeAsync();
+                }
+            }
+            else
+            {
+                // A host that only knows the task-only event keeps today's contract verbatim.
+                _completedResult = null;
+                await OnImportCompleted.InvokeAsync(result.Tasks);
+                await OnClose.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", ImportErrorDetail(ex));
+            await OnImportError.InvokeAsync(_errorMessage);
+        }
+        finally
+        {
+            _isImporting = false;
+        }
+    }
+
+    /// <summary>
+    /// Localized text of one warning — the code and its data are translated here, never in the model.
+    /// The row in the message is the SHEET row (<see cref="GanttImportWarning.SheetRow"/>, the header
+    /// row is 1) — the number the user sees in Excel; <see cref="GanttImportWarning.Row"/> stays the
+    /// data ordinal the predecessor references are built on.
+    /// </summary>
+    private string WarningText(GanttImportWarning warning) => warning.Code switch
+    {
+        GanttImportWarningCode.UnparsedValue => Loc["TmGantt_ImportWarningUnparsedValue", warning.SheetRow, warning.Column ?? "?", warning.Value ?? string.Empty],
+        _ => Loc[$"TmGantt_ImportWarning{warning.Code}", warning.SheetRow, warning.Value ?? string.Empty],
+    };
 
     /// <summary>
     /// Maps an import failure to a LOCALIZED detail - never <see cref="Exception.Message"/>:
@@ -287,6 +427,60 @@ public partial class TmGanttImportDialog : IAsyncDisposable
 
         return importMethod.Invoke(null, [stream, null]) as IReadOnlyList<TmWorkItem>
             ?? Array.Empty<TmWorkItem>();
+    }
+
+    /// <summary>
+    /// The result-capable surface of the GanttXlsx importer, resolved reflectively: the full
+    /// <c>ImportResult</c> plus <c>ReadHeaders</c>. Null on an older package — the caller falls
+    /// back to the plain <c>Import</c> and no mapping step.
+    /// </summary>
+    private static ExcelImportApi? ResolveExcelResultApi(Type importerType)
+    {
+        var importResult = importerType.GetMethods().FirstOrDefault(method =>
+        {
+            if (method.Name != "ImportResult") return false;
+            var parameters = method.GetParameters();
+            return parameters.Length >= 2
+                && parameters[0].ParameterType == typeof(Stream)
+                && typeof(System.Collections.IEnumerable).IsAssignableFrom(parameters[1].ParameterType);
+        });
+
+        var readHeaders = importerType.GetMethods().FirstOrDefault(method =>
+        {
+            if (method.Name != "ReadHeaders") return false;
+            var parameters = method.GetParameters();
+            return parameters.Length == 1 && parameters[0].ParameterType == typeof(Stream);
+        });
+
+        return importResult is not null && readHeaders is not null
+            ? new ExcelImportApi(importResult, readHeaders)
+            : null;
+    }
+
+    private sealed record ExcelImportApi(MethodInfo ImportResultMethod, MethodInfo ReadHeadersMethod)
+    {
+        public Task<IReadOnlyList<string>> ReadHeadersAsync(Stream stream) => Task.FromResult(
+            ReadHeadersMethod.Invoke(null, [stream]) as IReadOnlyList<string> ?? []);
+
+        public Task<GanttImportResult> ImportResultAsync(Stream stream,
+            IReadOnlyList<GanttColumnMapping> mappings, GanttExcelImportOptions options) => Task.FromResult(
+            ImportResultMethod.Invoke(null, BuildImportArgs(stream, mappings, options)) as GanttImportResult
+            ?? new GanttImportResult());
+
+        /// <summary>
+        /// Fills the importer's parameter list: an older result-capable package takes
+        /// (stream, mappings) only, the current one takes the options as a third parameter.
+        /// </summary>
+        private object?[] BuildImportArgs(Stream stream, IReadOnlyList<GanttColumnMapping> mappings,
+            GanttExcelImportOptions options)
+        {
+            var parameters = ImportResultMethod.GetParameters();
+            var args = new object?[parameters.Length];
+            args[0] = stream;
+            args[1] = mappings;
+            if (parameters.Length > 2) args[2] = options;
+            return args;
+        }
     }
 
     private static Type? ResolveGanttExcelImporterType()

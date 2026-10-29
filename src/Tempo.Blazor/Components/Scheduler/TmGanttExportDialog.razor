@@ -14,6 +14,7 @@
          Size="ModalSize.Large"
          MobilePresentation="MobilePresentation.Auto"
          FooterLayout="FooterLayout.Inline"
+         ResolvedLayoutChanged="OnModalLayoutResolved"
          OnClose="OnClose">
     <ChildContent>
         <div class="tm-gantt__export-section">
@@ -79,6 +80,14 @@
                 @if (PreviewContent is not null)
                 {
                     @PreviewContent
+                }
+                else if (ShowBuiltIn)
+                {
+                    <TmGanttExportPreview Tasks="@PreviewTasks"
+                                          Dependencies="@(PreviewDependencies ?? [])"
+                                          CriticalPathIds="@PreviewCriticalPathIds"
+                                          Options="@PreviewOptions()"
+                                          Layout="@_modalLayout" />
                 }
                 else
                 {

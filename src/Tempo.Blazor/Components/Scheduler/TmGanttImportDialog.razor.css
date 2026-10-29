@@ -150,6 +150,30 @@
     margin-bottom: var(--tm-space-3);
 }
 
+/* Import warnings surface: a TmAlert (warning) with the expandable per-row list. */
+.tm-gantt__import-panel ::deep .tm-gantt-import__warnings,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warnings {
+    margin-bottom: var(--tm-space-3);
+}
+
+.tm-gantt__import-panel ::deep .tm-gantt-import__warning-list summary,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warning-list summary {
+    cursor: pointer;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    padding: var(--tm-space-1) 0;
+}
+
+.tm-gantt__import-panel ::deep .tm-gantt-import__warning-list ul,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warning-list ul {
+    margin: var(--tm-space-1) 0 0;
+    padding-inline-start: var(--tm-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .tm-gantt__import-tab {
         transition: none;

@@ -364,7 +364,7 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
         "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "FilterPanelMode", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
         "Items", "LayoutMode", "NotificationSettings", "OnAttachmentRemoved", "OnAttachmentUpload", "OnAutoScheduled", "OnBaselineSaved",
         "OnBulkUpdate", "OnColumnsChanged", "OnCustomFieldChanged", "OnDataSorted", "OnDependencyAdded", "OnDependencyRemoved",
-        "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnNewReportRequested",
+        "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnImportResultCompleted", "OnNewReportRequested",
         "OnNotificationTriggered", "OnReportDelete", "OnReportDuplicate", "OnReportEdit", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
         "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports", "ResolvedLayoutChanged",

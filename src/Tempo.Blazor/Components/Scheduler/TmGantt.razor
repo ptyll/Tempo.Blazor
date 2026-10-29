@@ -362,21 +362,19 @@ else if (_taskPanelOpen && PanelsAsSheets && SelectedTask is not null)
 @* ── Mobile sheets + the limited long-press menu (read-mostly): a sibling part in the same overlay area. *@
 <TmGanttMobileOverlays Owner="this" />
 
-<!-- Export Dialog -->
 @if (_exportDialogOpen)
 {
-    <TmGanttExportDialog IsOpen="_exportDialogOpen"
-                         OnExport="HandleExportAsync"
-                         OnClose="CloseExportDialog" />
+    <TmGanttExportDialog IsOpen="_exportDialogOpen" OnExport="HandleExportAsync" OnClose="CloseExportDialog"
+                         PreviewTasks="@VisiblePreviewTasks"
+                         PreviewDependencies="@VisiblePreviewDependencies"
+                         PreviewCriticalPathIds="@PreviewCriticalPathIds" />
 }
 
-<!-- Import Dialog -->
 @if (_importDialogOpen)
 {
-    <TmGanttImportDialog IsOpen="_importDialogOpen"
-                         OnImportCompleted="HandleImportCompletedAsync"
-                         OnImportError="HandleImportErrorAsync"
-                         OnClose="CloseImportDialog" />
+    <TmGanttImportDialog IsOpen="_importDialogOpen" OnImportCompleted="HandleImportCompletedAsync"
+                         OnImportResultCompleted="HandleImportResultCompletedAsync"
+                         OnImportError="HandleImportErrorAsync" OnClose="CloseImportDialog" />
 }
 
 <!-- Filter Dialog (FilterPanelMode Dialog / Auto on a narrow container): always mounted, the TmModal toggles with Show,

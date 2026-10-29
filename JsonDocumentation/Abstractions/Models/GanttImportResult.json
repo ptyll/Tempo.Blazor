@@ -1,0 +1,27 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "The full outcome of an import: the tasks, the dependencies that reference them and the non-fatal warnings. Import never throws for data-level problems — they surface as warnings.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportResult.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Tasks",
+      "kind": "Property",
+      "type": "IReadOnlyList<TmWorkItem>"
+    },
+    {
+      "name": "Dependencies",
+      "kind": "Property",
+      "type": "IReadOnlyList<GanttDependency>"
+    },
+    {
+      "name": "Warnings",
+      "kind": "Property",
+      "type": "IReadOnlyList<GanttImportWarning>"
+    }
+  ],
+  "itemName": "GanttImportResult"
+}

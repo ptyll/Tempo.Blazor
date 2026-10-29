@@ -23351,6 +23351,12 @@
           "description": "Fires when an import operation fails (contains error message)."
         },
         {
+          "name": "OnImportResultCompleted",
+          "type": "EventCallback<GanttImportResult>",
+          "isRequired": false,
+          "description": "Fires when a result-capable import completes with the full payload — tasks, dependencies and warnings. Raised in addition to OnImportCompleted (which keeps carrying only the tasks), after every new dependency has also been announced through OnDependencyAdded."
+        },
+        {
           "name": "OnNewReportRequested",
           "type": "EventCallback",
           "isRequired": false,
@@ -23656,7 +23662,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a preview area.",
+      "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a live preview area with a built-in miniature of the chosen format and options.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportDialog.razor",
       "documentationStatus": "merged",
@@ -23686,7 +23692,80 @@
           "name": "PreviewContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content of the preview area. When null (default) the area shows the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here."
+          "description": "Content of the preview area. When null (default) the area shows the built-in preview when PreviewTasks are supplied, otherwise the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here and always wins over the built-in preview."
+        },
+        {
+          "name": "PreviewCriticalPathIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Ids of the tasks on the critical path, painted when the critical-path option is on."
+        },
+        {
+          "name": "PreviewDependencies",
+          "type": "IReadOnlyList<GanttDependency>?",
+          "isRequired": false,
+          "description": "Dependencies between the PreviewTasks; drawn as short connectors."
+        },
+        {
+          "name": "PreviewTasks",
+          "type": "IReadOnlyList<TmWorkItem>?",
+          "isRequired": false,
+          "description": "The visible tasks the built-in preview sketches. When null or empty the area keeps the neutral placeholder (the dialog has nothing truthful to draw). The host's own PreviewContent slot always wins over the built-in preview."
+        },
+        {
+          "name": "ShowBuiltInPreview",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the built-in preview renders when PreviewTasks are supplied. Default true."
+        }
+      ]
+    },
+    {
+      "itemName": "TmGanttExportPreview",
+      "kind": "Component",
+      "category": "Scheduler",
+      "namespace": "Tempo.Blazor.Components.Scheduler",
+      "description": "Internal detail of TmGanttExportDialog: the built-in live preview of the chosen export format and options. Pure SVG/HTML (no JavaScript, no rasterization) — PDF/PNG draw the miniature page in the paper's aspect ratio with bars, optional critical path, today line and workload strip; Excel shows the first 20 rows of the selected columns; XML shows the task / dependency / milestone counts. The whole sketch is one role=\"img\" element with a localized summary label over an aria-hidden body, and it collapses into a details on a fullscreen mobile dialog. Render it through the dialog (PreviewTasks); the dialog's PreviewContent slot is the host's way in.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportPreview.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Scheduler"
+      ],
+      "parameters": [
+        {
+          "name": "CriticalPathIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Ids of the tasks on the critical path; painted only when the critical-path option asks for it."
+        },
+        {
+          "name": "Dependencies",
+          "type": "IReadOnlyList<GanttDependency>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Dependencies between the visible tasks (drawn as short connectors)."
+        },
+        {
+          "name": "Layout",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The resolved layout of the dialog; a fullscreen mobile dialog collapses the preview into a details."
+        },
+        {
+          "name": "Options",
+          "type": "GanttExportOptions",
+          "isRequired": true,
+          "description": "The dialog's current selection: format, paper, orientation, zoom, toggles, columns."
+        },
+        {
+          "name": "Tasks",
+          "type": "IReadOnlyList<TmWorkItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Visible tasks to sketch."
         }
       ]
     },
@@ -23899,7 +23978,7 @@
       "kind": "Component",
       "category": "Scheduler",
       "namespace": "Tempo.Blazor.Components.Scheduler",
-      "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, and an error TmAlert.",
+      "description": "Dialog (a core TmModal) for importing tasks from Excel, MS Project XML, or JIRA: ARIA tabs for the source, a file input group (Choose file, the chosen name, Remove file) with a supported-formats hint, an error TmAlert and, on the Excel tab of a result-capable GanttXlsx package, a column-mapping step that produces the full import result (tasks, dependencies, warnings).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor",
       "documentationStatus": "merged",
@@ -23907,6 +23986,12 @@
         "@using Tempo.Blazor.Components.Scheduler"
       ],
       "parameters": [
+        {
+          "name": "ImportMappings",
+          "type": "IReadOnlyList<GanttColumnMapping>?",
+          "isRequired": false,
+          "description": "Mappings the column-mapping dialog starts from (a remembered choice, a host's own defaults); forwarded to TmGanttImportMappingDialog.InitialMappings."
+        },
         {
           "name": "IsOpen",
           "type": "bool",
@@ -23923,13 +24008,19 @@
           "name": "OnImportCompleted",
           "type": "EventCallback<IReadOnlyList<TmWorkItem>>",
           "isRequired": false,
-          "description": "Fires when import completes successfully."
+          "description": "Fires when import completes successfully (tasks only; the full result travels through OnImportResultCompleted)."
         },
         {
           "name": "OnImportError",
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Fires when import fails with an error message."
+        },
+        {
+          "name": "OnImportResultCompleted",
+          "type": "EventCallback<GanttImportResult>",
+          "isRequired": false,
+          "description": "Fires when a result-capable Excel import finishes: tasks, dependencies and warnings in one payload. When handled, this event replaces the task-only OnImportCompleted for the Excel flow — MS Project and JIRA keep firing the task-only event. Warnings keep the dialog open so their alert can be read; the import itself is never blocked."
         }
       ]
     },
@@ -30055,11 +30146,11 @@
     }
   ],
   "summary": {
-    "itemCount": 401,
-    "manualItemCount": 401,
-    "generatedItemCount": 393,
+    "itemCount": 402,
+    "manualItemCount": 402,
+    "generatedItemCount": 394,
     "generatedOnlyItemCount": 0,
-    "componentCount": 216,
+    "componentCount": 217,
     "publicApiTypeCount": 177
   }
 }

@@ -287,6 +287,12 @@
       "description": "Fires when an import operation completes successfully."
     },
     {
+      "name": "OnImportResultCompleted",
+      "type": "EventCallback<GanttImportResult>",
+      "isRequired": false,
+      "description": "Fires when a result-capable import completes with the full payload — tasks, dependencies and warnings. Raised in addition to OnImportCompleted (which keeps carrying only the tasks), after every new dependency has also been announced through OnDependencyAdded."
+    },
+    {
       "name": "OnImportError",
       "type": "EventCallback<string>",
       "isRequired": false,

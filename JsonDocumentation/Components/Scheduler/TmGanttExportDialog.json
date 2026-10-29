@@ -2,7 +2,7 @@
   "itemName": "TmGanttExportDialog",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a preview area.",
+  "description": "Dialog (a core TmModal) for configuring and triggering a Gantt export: format tiles (PDF, PNG, Excel, MS Project XML) as a radio group, the options that apply to the chosen format (paper, orientation, critical path, today line, workload, zoom for PDF/PNG; the columns for Excel) and a live preview area with a built-in miniature of the chosen format and options.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportDialog.razor",
@@ -27,7 +27,31 @@
       "name": "PreviewContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content of the preview area. When null (default) the area shows the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here."
+      "description": "Content of the preview area. When null (default) the area shows the built-in preview when PreviewTasks are supplied, otherwise the neutral \"Preview\" placeholder; a host that renders its own preview supplies it here and always wins over the built-in preview."
+    },
+    {
+      "name": "PreviewTasks",
+      "type": "IReadOnlyList<TmWorkItem>?",
+      "isRequired": false,
+      "description": "The visible tasks the built-in preview sketches. When null or empty the area keeps the neutral placeholder (the dialog has nothing truthful to draw). The host's own PreviewContent slot always wins over the built-in preview."
+    },
+    {
+      "name": "PreviewDependencies",
+      "type": "IReadOnlyList<GanttDependency>?",
+      "isRequired": false,
+      "description": "Dependencies between the PreviewTasks; drawn as short connectors."
+    },
+    {
+      "name": "PreviewCriticalPathIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Ids of the tasks on the critical path, painted when the critical-path option is on."
+    },
+    {
+      "name": "ShowBuiltInPreview",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the built-in preview renders when PreviewTasks are supplied. Default true."
     },
     {
       "name": "OnExport",

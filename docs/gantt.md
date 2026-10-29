@@ -19,6 +19,7 @@ read-mostly surface. This file is the contract; the calendar it embeds for `Gant
 | `TmGanttToolbar` / `TmGanttTree` / `TmGanttTimeline` / `TmGanttSidebar` / `TmGanttStatusChip` / `TmGanttPanelTabs` / `TmGanttViewSettings` / `TmGanttFilterBar` / `TmGanttMobileOverlays` | Internal parts of `TmGantt` (`[EditorBrowsable(Never)]`, public only because Razor cannot emit internal components). Never place them; they have JSON overlays so the doc guards stay closed. |
 | `TmGanttTaskPanel` / `TmGanttReportsPanel` / `TmGanttHistoryList` / `TmGanttHistoryDrawer` / `TmGanttFilterPanel` | Right-hand / drawer surfaces the chart composes. |
 | `TmGanttExportDialog` / `TmGanttImportDialog` / `TmGanttImportMappingDialog` | The export, import and column-mapping dialogs (core `TmModal`s). |
+| `TmGanttExportPreview` | Internal (`[EditorBrowsable(Never)]`): the export dialog's built-in live preview — pure SVG/HTML miniature of the chosen format and options. |
 
 ## Setup
 
@@ -245,14 +246,79 @@ Export (`gantt-export-btn`), import and column mapping open as core `TmModal`s (
 `role="dialog"` + `aria-modal`, focus trap, Escape, focus back to the trigger, bottom sheet on a
 mobile viewport). The per-dialog class (`tm-gantt__export-dialog` etc.) sits on the **overlay
 root**; page-scoped locators, never `.tm-gantt`-scoped ones. Export offers the format radiogroup
-(PDF / PNG / Excel / MS Project XML) with the PDF/PNG options and an Excel column picker. Import is
-a tablist (Excel | MS Project | XML), an input group with **Choose file** / the chosen name /
-**Remove file**, a supported-formats hint and a `TmAlert` error box; switching the Excel and
-MS Project tabs drops the chosen file. The mapping dialog pre-maps columns by header name, warns on
+(PDF / PNG / Excel / MS Project XML) with the PDF/PNG options and an Excel column picker, and a
+**built-in live preview** that reacts to every option: `TmGantt` passes its visible (filtered)
+tasks plus the dependencies between them (`PreviewTasks` / `PreviewDependencies` /
+`PreviewCriticalPathIds`; `ShowBuiltInPreview` default `true`). PDF/PNG draw the miniature page in
+the paper's aspect ratio (A4 / A3 / Letter, orientation) with bars, optional critical path, today
+line and workload strip; Excel shows the first 20 rows of the selected columns (formatted by the
+shared, culture-invariant `GanttColumnValues.Format`, the same helper `GanttXlsxExporter` uses);
+XML shows task / dependency / milestone counts. The sketch is one image for assistive tech: the
+root is `role="img"` with a localized summary label ("Preview: A4 landscape, 24 tasks, critical
+path") over an `aria-hidden` body — on a fullscreen mobile dialog the collapsed `<details>` branch
+keeps the same contract, wrapping the body in a `role="img"` element under the summary. A host's
+own `PreviewContent` slot always wins; without `PreviewTasks` the neutral placeholder renders as
+before.
+
+Import is a tablist (Excel | MS Project | XML), an input group with **Choose file** / the chosen
+name / **Remove file**, a supported-formats hint and a `TmAlert` error box; switching the Excel and
+MS Project tabs drops the chosen file. On the Excel tab a result-capable GanttXlsx package reads
+the sheet's headers first (`GanttExcelImporter.ReadHeaders`, which skips empty headers), confirms
+the column mapping in the `TmGanttImportMappingDialog` (rendered as a sibling modal; seeded by the
+dialog's `ImportMappings`) and then imports the full `GanttExcelImporter.ImportResult` — tasks,
+dependencies, warnings. The component raises the events in the documented order:
+`OnImportCompleted` carries the tasks first, then every new dependency is announced through
+`OnDependencyAdded`, and `OnImportResultCompleted` closes the sequence with the full payload (the
+dialog raises the same order for its own events). **Warnings never block the import**: the dialog
+stays open and shows a `TmAlert` with the count plus an expandable list localized from the
+warning's code and data ("Row 2: unknown predecessor '9'" — the row is the SHEET row, the header
+row is 1); the list expands under a "Show details" summary, the chosen file is dropped and the
+footer collapses to a single primary **Close** (no Cancel, no Import), so a completed import can
+never be re-run from the same dialog. The mapping dialog pre-maps columns by header name, warns on
 double targets, and **Import stays disabled until Task (title) and Start and End or Duration are
-mapped**. Wire the results through `OnExportRequested`, `OnImportCompleted` and `OnImportError`;
-wire `OnClose` to an explicit close method — never a `Toggle*()` that the action callback also
-calls, or the dialog reopens itself.
+mapped**. An older GanttXlsx package (no `ImportResult`/`ReadHeaders`) keeps the direct import
+without the mapping step. Wire the results through `OnExportRequested`,
+`OnImportResultCompleted` / `OnImportCompleted` and `OnImportError`; wire `OnClose` to an explicit
+close method — never a `Toggle*()` that the action callback also calls, or the dialog reopens
+itself.
+
+### Import data semantics (GanttExcelImporter)
+
+- Task ids are stable per row within one import: `{options.IdPrefix}{n}`, `n` = the 1-based
+  data-row ordinal. The default prefix is `xlsx-row-` (`xlsx-row-3`); the import dialog mints a
+  fresh prefix per import run (`xlsx-{8 hex}-row-`), so importing the same sheet twice never mints
+  colliding ids — pass your own `GanttExcelImportOptions.IdPrefix` when a host imports repeatedly.
+  Predecessor row references use the bare ordinal (1 = the first data row); a dotted or lettered
+  reference is a WBS code.
+- All targets the mapping dialog offers are imported: Title, Start, End, Duration (invariant days;
+  when End is unmapped or unparsable, End = Start + Duration), Progress, Status, Priority,
+  Deadline → `DueDate`, Estimation / TimeLog → `EstimationHours` / `LoggedHours` (invariant),
+  Assignees, Predecessor and WBS.
+- Parsing is culture-invariant: dates accept `yyyy-MM-dd`, `dd.MM.yyyy`, `MM/dd/yyyy`,
+  `yyyy-MM-ddTHH:mm:ss` and fall back to Excel serial numbers (OADate) for raw numeric cells;
+  Progress accepts `NN`, `NN%` and the stored 0–1 fraction scale (`0.5` = 50 %, `1` = 100 % — type
+  `NN%` to force an exact percent); hours and days use the invariant decimal point. A non-empty
+  Start / End / Duration / Deadline / Estimation / TimeLog / Progress / Status / Priority cell
+  that cannot be parsed is ignored and warns (`UnparsedValue` with row, column and raw value);
+  an empty cell is "no data" and never warns.
+- `WBS` → `ParentId`: the parent is the code without its last segment (`1.1.2` nests under `1.1`);
+  rows resolve in a second pass, so order does not matter. A missing parent leaves the task a root
+  and warns (`UnknownWbsParent`); a duplicated code warns (`DuplicateWbs`, first wins).
+- Duplicate headers: a header used by several columns maps its FIRST column only and warns
+  (`DuplicateHeader`); a host seeding `ImportMappings` with the same source column twice keeps the
+  first mapping (never a `ToDictionary` crash).
+- `Predecessors` → `GanttDependency`: tokens separated by `,` or `;`; an optional `FS|SS|FF|SF`
+  suffix (case-insensitive, FS default) and a `±N[d]` lag. A token whose lag cannot be parsed
+  (`3FS+2w`, `3+2 days`) is an unparsed value (`UnparsedValue`), not an unknown predecessor. The
+  same (from, to, type) trio imports once; an edge that would close a cycle is skipped
+  (`CircularDependency`); self references (`SelfDependency`) and unknown references
+  (`UnknownPredecessor`) produce warnings, never exceptions.
+- `Assignees` → people: split on `,`/`;`, trimmed, deduplicated case-insensitively. Without a
+  resolver the normalized name is both `Id` and `Name`; `GanttExcelImportOptions.AssigneeResolver`
+  turns a name into a real person, and a `null` answer skips the name.
+- Sparse rows are read by `CellReference` column index, so a skipped cell cannot slide the columns
+  that follow it. Every warning carries `Row` (the data ordinal predecessor references use) and
+  `SheetRow` (the 1-based sheet row, from the row's `RowIndex`, for display).
 
 ## Touch and pointer
 

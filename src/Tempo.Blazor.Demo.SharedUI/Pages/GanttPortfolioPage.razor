@@ -4,6 +4,7 @@
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Layout
 @inject IHttpClientFactory HttpFactory
+@inject NavigationManager Nav
 @inject ToastService Toast
 
 <PageTitle>Gantt Portfolio – Tempo.Blazor</PageTitle>
@@ -12,7 +13,8 @@
     <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Gantt Portfolio</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
         One <code>TmGanttPortfolio</code> card per project, each drawing the project's own tasks and dependencies,
-        plus the standalone <code>TmGanttImportMappingDialog</code> host.
+        plus a real import of the shared sample workbook through the standalone
+        <code>TmGanttImportMappingDialog</code> (WBS hierarchy, predecessors, assignees — and one bad row that reports a warning).
     </p>
 </div>
 
@@ -28,7 +30,7 @@ else
             <button class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400"
                     data-testid="gantt-demo-mapping-open"
                     @onclick="() => _mappingOpen = true">
-                Column mapping dialog
+                Import the sample workbook
             </button>
         </div>
         <div data-testid="gantt-demo-portfolio">
@@ -62,14 +64,52 @@ else
     private HttpClient Http => HttpFactory.CreateClient("DemoApi");
     private List<TmWorkItem> _tasks = [];
     private List<GanttDependency> _dependencies = [];
-    private readonly IReadOnlyList<string> _mappingColumns = ["Task Name", "Begin", "Finish", "Done %", "Notes"];
+    private byte[]? _sampleBytes;
+    private IReadOnlyList<string> _mappingColumns = [];
 
     protected override async Task OnInitializedAsync()
     {
         await Http.PostAsync("/api/gantt/reset", null);
         _tasks = await Http.GetFromJsonAsync<List<TmWorkItem>>("/api/gantt/tasks") ?? [];
         _dependencies = await Http.GetFromJsonAsync<List<GanttDependency>>("/api/gantt/dependencies") ?? [];
+        try
+        {
+            // The import demo runs against the shared sample workbook (WBS, predecessors, assignees).
+            // Resolved against the PAGE origin through the navigation manager: the static web assets
+            // are served by the WASM host, not by the demo API (the named client's base address).
+            _sampleBytes = await HttpFactory.CreateClient().GetByteArrayAsync(Nav.ToAbsoluteUri(SampleUrl));
+            _mappingColumns = ReadSampleHeaders(_sampleBytes);
+        }
+        catch (Exception)
+        {
+            // Without the asset the mapping dialog still opens; the confirm explains the missing file.
+        }
+
         _loading = false;
+    }
+
+    /// <summary>Static web assets of this library ship under the _content base path.</summary>
+    private const string SampleUrl = "_content/Tempo.Blazor.Demo.SharedUI/sample-data/gantt-import-sample.xlsx";
+
+    /// <summary>The sample's header row, read reflectively through the host's GanttXlsx importer.</summary>
+    private IReadOnlyList<string> ReadSampleHeaders(byte[] bytes)
+    {
+        if (ResolveGanttExcelImporterType()?.GetMethods().FirstOrDefault(m =>
+                m.Name == "ReadHeaders" && m.GetParameters() is { Length: 1 } p && p[0].ParameterType == typeof(Stream))
+            is not { } readHeaders)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(bytes);
+            return (IReadOnlyList<string>?)readHeaders.Invoke(null, [stream]) ?? [];
+        }
+        catch (Exception)
+        {
+            return [];
+        }
     }
 
     /// <summary>
@@ -124,6 +164,53 @@ else
         }
     }
 
+    /// <summary>
+    /// A real import of the shared sample workbook (WBS hierarchy, predecessors, assignees — and one
+    /// row with an unknown predecessor, so the warnings surface): the confirmed mapping runs through
+    /// the GanttXlsx importer and lands in the portfolio datasets, instead of only toasting.
+    /// </summary>
     private void HandleMappingImport(IReadOnlyList<GanttColumnMapping> mappings)
-        => Toast.ShowInfo($"Column mapping confirmed: {mappings.Count} columns.");
+    {
+        if (_sampleBytes is null)
+        {
+            Toast.ShowError("The sample workbook is not loaded yet.");
+            return;
+        }
+
+        var importerType = ResolveGanttExcelImporterType();
+        var importResult = importerType?.GetMethods().FirstOrDefault(m => m.Name == "ImportResult");
+        if (importResult is null)
+        {
+            Toast.ShowError("Add the Tempo.Blazor.GanttXlsx package to import Excel files.");
+            return;
+        }
+
+        GanttImportResult result;
+        try
+        {
+            using var stream = new MemoryStream(_sampleBytes);
+            // A fresh id prefix per import: the datasets here grow with every import, and two runs
+            // of the same workbook must never mint colliding task ids.
+            var options = new GanttExcelImportOptions { IdPrefix = $"xlsx-{Guid.NewGuid().ToString("N")[..8]}-row-" };
+            result = (GanttImportResult)(importResult.Invoke(null, [stream, mappings, options])
+                ?? new GanttImportResult());
+        }
+        catch (Exception)
+        {
+            Toast.ShowError("The sample workbook could not be imported.");
+            return;
+        }
+
+        _tasks.AddRange(result.Tasks);
+        _dependencies.AddRange(result.Dependencies);
+        Toast.ShowSuccess($"Imported {result.Tasks.Count} tasks, {result.Dependencies.Count} dependencies"
+            + (result.Warnings.Count > 0 ? $", {result.Warnings.Count} warnings." : "."));
+    }
+
+    /// <summary>The importer type of the GanttXlsx package, resolved reflectively (the page's host opts in).</summary>
+    private static Type? ResolveGanttExcelImporterType()
+        => Type.GetType("Tempo.Blazor.Services.GanttExcelImporter, Tempo.Blazor.GanttXlsx")
+           ?? AppDomain.CurrentDomain.GetAssemblies()
+               .Select(assembly => assembly.GetType("Tempo.Blazor.Services.GanttExcelImporter", throwOnError: false))
+               .FirstOrDefault(type => type is not null);
 }

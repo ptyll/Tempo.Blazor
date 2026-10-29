@@ -1,0 +1,124 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.Abstractions.Models
+
+@* The export dialog's built-in preview: pure SVG/HTML, no JS. The whole sketch is one image for
+   assistive tech (role="img" + a localized summary label); the decorative inside is aria-hidden —
+   in BOTH branches, so a collapsed mobile <details> keeps the same accessible name. *@
+@if (IsMobile)
+{
+    <details class="tm-gantt-export-preview" data-zoom="@Zoom" data-testid="@TestId("gantt-export-preview")">
+        <summary class="tm-gantt-export-preview__toggle">@Loc["TmGantt_ExportPreviewShow"]</summary>
+        <div role="img" aria-label="@AriaSummary">@Body</div>
+    </details>
+}
+else
+{
+    <div class="tm-gantt-export-preview" role="img" aria-label="@AriaSummary" data-zoom="@Zoom" data-testid="@TestId("gantt-export-preview")">
+        @Body
+    </div>
+}
+
+@code {
+    private RenderFragment Body => @<div class="tm-gantt-export-preview__body" aria-hidden="true">
+        @if (IsImage)
+        {
+            <div class="tm-gantt-export-preview__page"
+                 style="@($"aspect-ratio: {AspectRatio}")"
+                 data-paper="@(Options.PaperSize ?? "A4")">
+                <div class="tm-gantt-export-preview__axis">
+                    @for (var tick = 0; tick < AxisTicks; tick++)
+                    {
+                        <span></span>
+                    }
+                </div>
+                <div class="tm-gantt-export-preview__dates">
+                    <span>@Model.RangeStart.ToString("d", Loc.Culture)</span>
+                    <span>@Model.RangeEnd.ToString("d", Loc.Culture)</span>
+                </div>
+                <div class="tm-gantt-export-preview__canvas">
+                    @if (Model.TodayPercent is { } today)
+                    {
+                        <span class="tm-gantt-export-preview__today" style="@($"left: {Percent(today)}%")"></span>
+                    }
+                    @foreach (var connector in Model.Connectors)
+                    {
+                        var left = Math.Min(connector.FromPercent, connector.ToPercent);
+                        var width = Math.Abs(connector.ToPercent - connector.FromPercent);
+                        <span class="tm-gantt-export-preview__connector" style="@($"left: {Percent(left)}%; width: {Percent(width)}%")"></span>
+                    }
+                    @foreach (var bar in Model.Bars)
+                    {
+                        <span class="tm-gantt-export-preview__bar @(bar.IsCritical ? "tm-gantt-export-preview__bar--critical" : "")"
+                              style="@($"left: {Percent(bar.LeftPercent)}%; width: {Percent(bar.WidthPercent)}%")"></span>
+                    }
+                </div>
+                @if (Options.IncludeWorkload)
+                {
+                    <div class="tm-gantt-export-preview__workload">
+                        @for (var cell = 0; cell < WorkloadCells; cell++)
+                        {
+                            <span></span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (Options.Format == GanttExportFormat.Xlsx)
+        {
+            <table class="tm-gantt-export-preview__table">
+                <thead>
+                    <tr>
+                        @foreach (var column in Model.Columns)
+                        {
+                            <th scope="col">@GanttLabels.Column(Loc, column)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            @foreach (var cell in row)
+                            {
+                                <td>@cell</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (Model.HiddenRows > 0)
+            {
+                <p class="tm-gantt-export-preview__more" data-testid="@TestId("gantt-export-preview-more")">
+                    @Loc.Plural("TmGantt_ExportPreviewMoreRows", Model.HiddenRows)
+                </p>
+            }
+        }
+        else
+        {
+            <dl class="tm-gantt-export-preview__summary">
+                <div class="tm-gantt-export-preview__stat">
+                    <dt>@Loc["TmGantt_SidebarTasks"]</dt>
+                    <dd>@Model.TaskCount</dd>
+                </div>
+                <div class="tm-gantt-export-preview__stat">
+                    <dt>@Loc["TmGanttTaskPanel_Dependencies"]</dt>
+                    <dd>@Model.DependencyCount</dd>
+                </div>
+                <div class="tm-gantt-export-preview__stat">
+                    <dt>@Loc["TmGantt_DashboardMilestones"]</dt>
+                    <dd>@Model.MilestoneCount</dd>
+                </div>
+            </dl>
+        }
+    </div>;
+
+    /// <summary>Axis cells follow the zoom: a bigger zoom reads as a finer scale.</summary>
+    private int AxisTicks => Math.Clamp(Zoom / 50, 1, 4);
+
+    /// <summary>The workload strip's cells, loosely following the zoom too.</summary>
+    private int WorkloadCells => Math.Clamp(Zoom / 25, 2, 8);
+
+    private static string Percent(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

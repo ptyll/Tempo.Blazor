@@ -110,7 +110,21 @@
       "description": "Imports Gantt tasks from an XLSX spreadsheet stream.",
       "packageId": "Tempo.Blazor.GanttXlsx",
       "sourcePath": "src/Tempo.Blazor.GanttXlsx/Services/GanttExcelImporter.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ReadHeaders",
+          "kind": "Method",
+          "type": "IReadOnlyList<string>",
+          "description": "The sheet's header row: the first row of the first worksheet.",
+          "parameters": [
+            {
+              "name": "stream",
+              "type": "Stream"
+            }
+          ]
+        }
+      ]
     },
     {
       "itemName": "GanttXlsxExporter",
