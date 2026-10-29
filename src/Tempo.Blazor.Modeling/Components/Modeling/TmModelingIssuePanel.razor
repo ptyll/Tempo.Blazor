@@ -23,19 +23,24 @@
         @* MO1 (desktop restructure): the dock under the preview collapses to this header. The
            toggle is a native button (one activation per press), carries aria-expanded +
            aria-controls and rotates its chevron with the state; the collapsed state is the
-           host's — the editor drives the dock row height from it. *@
-        <button type="button"
-                class="tm-modeling-issue-panel__toggle"
-                data-testid="@TestId("modeling-issues-toggle")"
-                aria-expanded="@((!Collapsed).ToString().ToLowerInvariant())"
-                aria-controls="@_bodyId"
-                title="@ToggleLabel"
-                @onclick="ToggleCollapsedAsync">
-            <span class="tm-sr-only">@ToggleLabel</span>
-            <span class="tm-modeling-issue-panel__toggle-icon" aria-hidden="true">
-                <TmIcon Name="@(Collapsed ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Sm" />
-            </span>
-        </button>
+           host's — the editor drives the dock row height from it. Fáze 7 review: the mobile
+           Issues TAB hides the toggle (ShowToggle=false) — the tab body is the whole scroll
+           surface, so the header stays a plain heading there. *@
+        @if (ShowToggle)
+        {
+            <button type="button"
+                    class="tm-modeling-issue-panel__toggle"
+                    data-testid="@TestId("modeling-issues-toggle")"
+                    aria-expanded="@((!Collapsed).ToString().ToLowerInvariant())"
+                    aria-controls="@_bodyId"
+                    title="@ToggleLabel"
+                    @onclick="ToggleCollapsedAsync">
+                <span class="tm-sr-only">@ToggleLabel</span>
+                <span class="tm-modeling-issue-panel__toggle-icon" aria-hidden="true">
+                    <TmIcon Name="@(Collapsed ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Sm" />
+                </span>
+            </button>
+        }
     </header>
 
     @* The body ALWAYS renders (review fix, phase 5): a collapsed dock keeps the region in the

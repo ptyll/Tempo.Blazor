@@ -142,7 +142,7 @@ public partial class TmModelingEditor
     {
         "change-view" => OpenChangeViewAsync(),
         "generate" => GenerateDiagramFromLoadedModelAsync(),
-        "open-editor" => OpenEditorFromMobileAsync(),
+        "open-editor" => OpenEditorFromMobileAsync(MobileHeaderTriggerSelector),
         _ => Task.CompletedTask
     };
 
@@ -161,68 +161,100 @@ public partial class TmModelingEditor
     }
 
     /// <summary>Opens the open-editor dialog with the CURRENT document (the mobile entries have
-    /// no document argument — the dialog shows what the preview generated).</summary>
-    private Task OpenEditorFromMobileAsync()
-        => _document is null ? Task.CompletedTask : OpenGeneratedDiagramAsync(_document);
+    /// no document argument — the dialog shows what the preview generated). The trigger that
+    /// opened it is remembered, so the close returns focus there (the host-div proxy stays the
+    /// fallback part of the selector list — Fáze 7 review).</summary>
+    private Task OpenEditorFromMobileAsync(string returnTriggerSelector)
+    {
+        if (_document is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _openEditorFocusReturnSelector = returnTriggerSelector;
+        return OpenGeneratedDiagramAsync(_document);
+    }
 
     // ── The F5 action bar ────────────────────────────────────────────────────
 
     /// <summary>
-    /// The mobile action bar items: Reload / Change view / Issues on the bar and Generate
-    /// diagram + Open in editor behind "More" (MaxVisible=3). Deliberately NO "Settings" item —
-    /// the mockup's [E] entry is not part of the contract.
+    /// The mobile action bar items. With the workspace mounted: Reload / Change view / Issues on
+    /// the bar and Generate diagram + Open in editor behind "More" (MaxVisible=3). Deliberately
+    /// NO "Settings" item — the mockup's [E] entry is not part of the contract. Fáze 7 review
+    /// (blocker): the empty / error / loading-without-model screens keep the bar reachable with
+    /// the RECOVER entries only (Reload + Change view) — Generate/Open need a model and would be
+    /// dead tiles there. Generate carries its own icon (the wand), so it is never confused with
+    /// the adjacent Reload refresh glyph.
     /// </summary>
-    private IReadOnlyList<TmActionItem> MobileActionItems =>
-    [
-        new()
+    private IReadOnlyList<TmActionItem> MobileActionItems
+    {
+        get
         {
-            Id = "reload",
-            Label = Loc["TmModelingEditor_Reload"],
-            Icon = IconNames.Refresh,
-            OnClick = EventCallback.Factory.Create(this, ReloadModelAsync)
-        },
-        new()
-        {
-            Id = "change-view",
-            Label = Loc["TmModelingEditor_ChangeView"],
-            Icon = IconNames.Sliders,
-            OnClick = EventCallback.Factory.Create(this, OpenChangeViewAsync)
-        },
-        new()
-        {
-            Id = "issues",
-            Label = Loc["TmModelingEditor_Issues"],
-            Icon = IconNames.AlertCircle,
-            OnClick = EventCallback.Factory.Create(this, () => ActivatePanelAsync(ModelingEditorPanel.Issues))
-        },
-        new()
-        {
-            Id = "generate",
-            Label = Loc["TmModelingDiagramPreview_Generate"],
-            Icon = IconNames.Refresh,
-            TestId = TestId("modeling-action-generate"),
-            Disabled = _model is null || _state != ModelingEditorState.Loaded,
-            OnClick = EventCallback.Factory.Create(this, GenerateDiagramFromLoadedModelAsync)
-        },
-        new()
-        {
-            Id = "open-editor",
-            Label = Loc["TmModelingDiagramPreview_OpenInEditor"],
-            Icon = IconNames.ExternalLink,
-            TestId = TestId("modeling-action-open-editor"),
-            Disabled = _document is null,
-            OnClick = EventCallback.Factory.Create(this, OpenEditorFromMobileAsync)
+            var reload = new TmActionItem
+            {
+                Id = "reload",
+                Label = Loc["TmModelingEditor_Reload"],
+                Icon = IconNames.Refresh,
+                OnClick = EventCallback.Factory.Create(this, ReloadModelAsync)
+            };
+            var changeView = new TmActionItem
+            {
+                Id = "change-view",
+                Label = Loc["TmModelingEditor_ChangeView"],
+                Icon = IconNames.Sliders,
+                OnClick = EventCallback.Factory.Create(this, OpenChangeViewAsync)
+            };
+
+            if (!WorkspaceMounted)
+            {
+                return [reload, changeView];
+            }
+
+            return
+            [
+                reload,
+                changeView,
+                new()
+                {
+                    Id = "issues",
+                    Label = Loc["TmModelingEditor_Issues"],
+                    Icon = IconNames.AlertCircle,
+                    OnClick = EventCallback.Factory.Create(this, () => ActivatePanelAsync(ModelingEditorPanel.Issues))
+                },
+                new()
+                {
+                    Id = "generate",
+                    Label = Loc["TmModelingDiagramPreview_Generate"],
+                    Icon = IconNames.WandSparkles,
+                    TestId = TestId("modeling-action-generate"),
+                    Disabled = _model is null || _state != ModelingEditorState.Loaded,
+                    OnClick = EventCallback.Factory.Create(this, GenerateDiagramFromLoadedModelAsync)
+                },
+                new()
+                {
+                    Id = "open-editor",
+                    Label = Loc["TmModelingDiagramPreview_OpenInEditor"],
+                    Icon = IconNames.ExternalLink,
+                    TestId = TestId("modeling-action-open-editor"),
+                    Disabled = _document is null,
+                    OnClick = EventCallback.Factory.Create(this, () => OpenEditorFromMobileAsync(MobileActionBarTriggerSelector))
+                }
+            ];
         }
-    ];
+    }
 
     // ── Status card (the mobile replacement of the status strip) ─────────────
 
-    /// <summary>The four tiles of the mobile status card: Elements / Relationships / Nodes / Edges.</summary>
+    /// <summary>
+    /// The four tiles of the mobile status card. Nodes/Edges use the SHORT count labels (the
+    /// long "Diagram nodes/edges" pair crowded the 320px card and its cs/sk forms collided at a
+    /// glance); Elements/Relationships keep the shared strip labels.
+    /// </summary>
     private (string Label, int Count)[] StatusTiles =>
     [
         (Loc["TmModelingEditor_Elements"], _model?.Elements.Count ?? 0),
         (Loc["TmModelingEditor_Relationships"], _model?.Relationships.Count ?? 0),
-        (Loc["TmModelingEditor_DiagramNodes"], _document?.Nodes.Count ?? 0),
-        (Loc["TmModelingEditor_DiagramEdges"], _document?.Edges.Count ?? 0)
+        (Loc["TmModelingEditor_Nodes"], _document?.Nodes.Count ?? 0),
+        (Loc["TmModelingEditor_Edges"], _document?.Edges.Count ?? 0)
     ];
 }

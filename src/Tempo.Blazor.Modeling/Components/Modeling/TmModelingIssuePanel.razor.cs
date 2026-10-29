@@ -27,6 +27,13 @@ public partial class TmModelingIssuePanel
     /// <summary>Raised when the user toggles the panel through the header button.</summary>
     [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
 
+    /// <summary>
+    /// Whether the header renders the collapse toggle. Default <c>true</c> (the docked dock).
+    /// The mobile Issues TAB (Fáze 7 review) passes <c>false</c>: the tab body IS the whole
+    /// scroll surface, so there is nothing to collapse into — the header stays a plain heading.
+    /// </summary>
+    [Parameter] public bool ShowToggle { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
 

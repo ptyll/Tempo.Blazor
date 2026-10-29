@@ -80,6 +80,29 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>Stable, test-id-independent focus hook of the open-editor overlay close button.</summary>
     internal const string OpenEditorCloseFocusSelector = "[data-modeling-focus='open-editor-close']";
 
+    /// <summary>Focus-return trigger of the compact header "⋯" (the mobile open-editor entry).</summary>
+    internal const string MobileHeaderTriggerSelector = ".tm-modeling-editor__more .tm-dropdown-trigger";
+
+    /// <summary>Focus-return trigger of the mobile action bar's "More" overflow.</summary>
+    internal const string MobileActionBarTriggerSelector = ".tm-mobile-action-bar__more";
+
+    /// <summary>
+    /// The surface that opened the current open-editor dialog: the desktop preview trigger by
+    /// default, the mobile action-bar "More" or the compact header "⋯" when opened from there
+    /// (Fáze 7 review — focus returns to the ACTUAL trigger, with the
+    /// <see cref="OpenInEditorFocusSelector"/> host div kept as the fallback part of the list).
+    /// </summary>
+    private string _openEditorFocusReturnSelector = OpenInEditorFocusSelector;
+
+    /// <summary>
+    /// The focus-return selector list: the actual trigger FIRST, then the host-div proxy. A
+    /// single-part list (the desktop path) is passed through unchanged so the established
+    /// contract stays byte-equal.
+    /// </summary>
+    private string OpenEditorFocusReturnSelector => _openEditorFocusReturnSelector == OpenInEditorFocusSelector
+        ? OpenInEditorFocusSelector
+        : $"{_openEditorFocusReturnSelector}, {OpenInEditorFocusSelector}";
+
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
 
     /// <summary>
@@ -534,7 +557,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
-            await FocusWithinAsync(OpenInEditorFocusSelector);
+            await FocusWithinAsync(OpenEditorFocusReturnSelector);
         }
     }
 
@@ -741,16 +764,23 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         _selectedElement = element;
         _selectedRelationship = null;
-        return OpenInspectorOnTabletAsync();
+        return OpenInspectorForSelectionAsync();
     }
 
     /// <summary>
-    /// Fáze 6: on a tablet a selection is an editing intent — the inspector side sheet opens
-    /// (and the tree drawer yields, keeping the one-sheet rule). Every selection path funnels
-    /// through here; other layouts keep their docked panels untouched.
+    /// Every selection is an inspector intent: on a TABLET the inspector side sheet opens (and
+    /// the tree drawer yields, keeping the one-sheet rule); on MOBILE the Inspector panel tab
+    /// becomes active (Fáze 7 review — the selection must surface the element immediately, not
+    /// leave the user on the tab they tapped from). Other layouts keep their docked panels.
     /// </summary>
-    private Task OpenInspectorOnTabletAsync()
+    private Task OpenInspectorForSelectionAsync()
     {
+        if (IsMobileLayout)
+        {
+            _activePanel = ModelingEditorPanel.Inspector;
+            return Task.CompletedTask;
+        }
+
         if (!IsTablet || InspectorSheetOpen)
         {
             return Task.CompletedTask;
@@ -776,7 +806,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         _selectedElement = args.Element;
         _selectedRelationship = null;
         _draggedElement = null;
-        await OpenInspectorOnTabletAsync();
+        await OpenInspectorForSelectionAsync();
         await OnNodeDropped.InvokeAsync(args);
     }
 
@@ -808,7 +838,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = null;
             _selectedRelationship = relationship;
-            return OpenInspectorOnTabletAsync();
+            return OpenInspectorForSelectionAsync();
         }
 
         return Task.CompletedTask;
@@ -840,7 +870,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         {
             _selectedElement = element;
             _selectedRelationship = null;
-            return OpenInspectorOnTabletAsync();
+            return OpenInspectorForSelectionAsync();
         }
 
         return Task.CompletedTask;

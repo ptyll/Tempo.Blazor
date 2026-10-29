@@ -106,7 +106,7 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
             .ToList();
 
         labels[0].Should().Be("Preview", "the preview is the FIRST tab on mobile");
-        labels.Should().ContainSingle(label => label.Contains("Model tree"), "the tree is the second tab");
+        labels.Should().ContainSingle(label => label.Contains("Tree"), "the tree tab uses the short mobile label");
         labels.Should().Contain(label => label.Contains("Inspector"));
         labels[^1].Should().StartWith("Issues", "the issues tab exists on mobile and is ordered last");
 
@@ -312,13 +312,92 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
         var tileLabels = tiles.Select(tile => tile.TextContent).ToList();
         tileLabels.Should().Contain(text => text.Contains("Elements"));
         tileLabels.Should().Contain(text => text.Contains("Relationships"));
-        tileLabels.Should().Contain(text => text.Contains("Diagram nodes"));
-        tileLabels.Should().Contain(text => text.Contains("Diagram edges"));
+        tileLabels.Should().Contain(text => text.Contains("Nodes"), "the mobile tiles use the short Nodes label");
+        tileLabels.Should().Contain(text => text.Contains("Edges"), "the mobile tiles use the short Edges label");
+        // Nodes and Edges must stay distinguishable — no shared prefix collapsing them.
+        tileLabels.Count(text => text.Contains("Nodes")).Should().Be(1);
+        tileLabels.Count(text => text.Contains("Edges")).Should().Be(1);
 
         card.TextContent.Should().Contain("Last loaded:", "the card shows the loaded time");
 
         // The mobile layout replaces the desktop status strip — no duplicate count surfaces.
         cut.FindAll("[data-testid='modeling-status-strip']").Should().BeEmpty();
+    }
+
+    // ── Fáze 7 review: the empty / error / loading screens keep the mobile chrome ──
+
+    [Fact]
+    public void Mobile_empty_state_keeps_change_view_reachable()
+    {
+        using var cut = RenderMobileEditorWithProvider("tempo.tests.modeling.missing");
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("empty"));
+
+        // The mobile shell is the always-present chrome: header + reduced action bar, with the
+        // single-state screen where the tabs would be (no tab strip, no status card).
+        cut.Find("[data-testid='modeling-editor-empty']").Should().NotBeNull();
+        cut.Find(".tm-modeling-editor__mobile-shell").Should().NotBeNull("the empty screen keeps the mobile chrome");
+        cut.Find("[data-testid='modeling-editor-toolbar']").Should().NotBeNull();
+        cut.FindAll("[data-testid='modeling-panel-tabs']").Should().BeEmpty("no tab strip on the empty screen");
+        cut.FindAll("[data-testid='modeling-status-card']").Should().BeEmpty("no status card on the empty screen");
+
+        var actionIds = cut.FindAll(".tm-mobile-action-bar__bar [data-action-id]")
+            .Select(element => element.GetAttribute("data-action-id"))
+            .ToList();
+        actionIds.Should().BeEquivalentTo(["reload", "change-view"],
+            "the reduced bar carries only the recovery entries");
+        cut.FindAll("[data-action-id='generate']").Should().BeEmpty();
+        cut.FindAll("[data-action-id='open-editor']").Should().BeEmpty();
+
+        // The recovery path: the "Change view" sheet opens from the reduced bar.
+        cut.Find("[data-action-id='change-view']").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-change-view-sheet']").Should().NotBeNull());
+    }
+
+    [Fact]
+    public void Mobile_error_state_offers_reload()
+    {
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ProviderKey, "tempo.tests.modeling.throwing")
+            .Add(p => p.ModelLoaderOverride, (ModelingModelRequest _, CancellationToken _) =>
+                throw new InvalidOperationException("Provider failure")));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("error");
+            cut.Find("[data-testid='modeling-editor-error']").TextContent.Should().Contain("Provider failure");
+        });
+
+        cut.Find(".tm-modeling-editor__mobile-shell").Should().NotBeNull("the error screen keeps the mobile chrome");
+        cut.Find("[data-action-id='reload']").Should().NotBeNull("the error screen offers the reload");
+        cut.FindAll("[data-testid='modeling-panel-tabs']").Should().BeEmpty("no tab strip on the error screen");
+        cut.FindAll("[data-testid='modeling-status-card']").Should().BeEmpty("no status card on the error screen");
+    }
+
+    [Fact]
+    public void Mobile_issue_selection_switches_to_inspector_tab()
+    {
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new NavigableIssueMobileModelingModelProvider()));
+
+        using var cut = RenderMobileEditorWithProvider(NavigableIssueMobileModelingModelProvider.Key);
+        WaitForLoaded(cut);
+
+        cut.Find("[data-testid='modeling-panel-tab-issues']").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("issues"));
+
+        cut.Find("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-0']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-editor']").GetAttribute("data-active-panel").Should().Be("inspector",
+                "an issue tap is an inspector intent on mobile too");
+            cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull();
+            cut.Find("[data-testid='modeling-inspector-panel']").TextContent.Should().Contain("Approve request",
+                "the inspector shows the selected element");
+        });
     }
 
     // ── G2 scope: no drag on mobile ──────────────────────────────────────────
@@ -348,6 +427,36 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
         });
     }
 
+    // ── Fáze 7 review: mobile chrome details ─────────────────────────────────
+
+    [Fact]
+    public void Mobile_issues_tab_hides_the_collapse_toggle()
+    {
+        using var cut = RenderMobileEditor();
+        WaitForLoaded(cut);
+
+        cut.Find("[data-testid='modeling-panel-tab-issues']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-panel']").Should().NotBeNull();
+            cut.FindAll("[data-testid='modeling-issues-panel'] [data-testid='modeling-issues-toggle']")
+                .Should().BeEmpty("the tab body is the whole scroll surface — the header is a plain heading");
+        });
+    }
+
+    [Fact]
+    public void Mobile_header_overflow_sheet_is_titled_more_options()
+    {
+        using var cut = RenderMobileEditor();
+        WaitForLoaded(cut);
+
+        cut.Find("[data-testid='modeling-editor-toolbar'] .tm-modeling-editor__more .tm-dropdown-trigger").Click();
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-modeling-editor__more .tm-overlay-panel-sheet__title").TextContent.Should().Be("More options",
+                "the icon-only ⋯ names its mobile sheet through the AriaLabel"));
+    }
+
     // ── Open-in-editor dialog presentation ───────────────────────────────────
 
     [Fact]
@@ -371,7 +480,7 @@ public sealed class TmModelingEditorMobileTests : LocalizationTestBase
     }
 }
 
-/// <summary>Provider serving the shared model with one issue, for the tab badge.</summary>
+/// <summary>Provider serving the shared model with one sourceless issue, for the tab badge.</summary>
 internal sealed class IssueMobileModelingModelProvider : IModelingModelProvider
 {
     public const string Key = "tempo.tests.modeling.mobile-issue";
@@ -386,6 +495,27 @@ internal sealed class IssueMobileModelingModelProvider : IModelingModelProvider
         {
             Severity = ModelingIssueSeverity.Warning,
             Message = "Mobile badge issue"
+        });
+        return Task.FromResult(model);
+    }
+}
+
+/// <summary>Provider serving the shared model with a NAVIGABLE issue (points at an element).</summary>
+internal sealed class NavigableIssueMobileModelingModelProvider : IModelingModelProvider
+{
+    public const string Key = "tempo.tests.modeling.mobile-navigable-issue";
+
+    public string ProviderKey => Key;
+
+    public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var model = ModelingEditorTestModels.CreateModel();
+        model.Issues.Add(new ModelingIssueDto
+        {
+            Severity = ModelingIssueSeverity.Warning,
+            Message = "Navigable mobile issue",
+            SourceElementId = "task-a"
         });
         return Task.FromResult(model);
     }

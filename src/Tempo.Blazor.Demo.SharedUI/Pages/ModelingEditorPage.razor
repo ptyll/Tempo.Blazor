@@ -29,6 +29,18 @@
         .modeling-demo-page__index-link { display: inline-block; margin-top: 1rem; scroll-margin-top: 5rem; color: var(--tm-color-primary-700, #1d4ed8); text-decoration: underline; }
         .dark .modeling-demo-page__index-link, [data-theme="dark"] .modeling-demo-page__index-link { color: var(--tm-color-primary-300, #93c5fd); }
     }
+    /* Fáze 7 review (above the fold): the editor's default height contract (min(768px, 100vh - 32px))
+       plus the demo chrome (fixed 4rem mobile header + ~4.5rem top bar + the 2rem page padding)
+       pushed the in-flow F5 action bar below the fold at 390/320, so first paint needed a page
+       scroll. On narrow viewports the page gives the editor the exact remaining viewport height
+       instead — the action bar (and the tab strip) are inside the first paint at 390x844 and
+       320x640. Desktop/tablet keep the library contract. */
+    @@media (max-width: 1023.98px) {
+        .modeling-demo-page .tm-modeling-editor {
+            height: calc(100dvh - 11.5rem) !important;
+            min-height: 0 !important;
+        }
+    }
 </style>
 
 <div class="modeling-demo-page">

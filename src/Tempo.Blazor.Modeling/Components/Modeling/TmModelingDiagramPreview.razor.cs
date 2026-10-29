@@ -54,6 +54,16 @@ public partial class TmModelingDiagramPreview
     /// </summary>
     [Parameter] public bool ShowEditActions { get; set; } = true;
 
+    /// <summary>
+    /// Whether the embedded diagram editor renders its own chrome. Default <c>true</c>. The
+    /// mobile band (Fáze 7 review) passes <c>false</c>: there the DE header bar would hold ONLY
+    /// the "⋯" trigger (the title is hidden and the mobile chrome moves history/search/panels
+    /// into it) and the floating zoom pill duplicates the canvas pinch, so the preview shows
+    /// just the page tabs and the canvas. The reduction goes through the DE's public
+    /// <c>ShowToolbar</c> parameter only — never CSS on its internals.
+    /// </summary>
+    [Parameter] public bool ShowEmbeddedEditorChrome { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 

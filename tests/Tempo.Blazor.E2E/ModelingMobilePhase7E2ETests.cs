@@ -35,6 +35,8 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
         await page.Locator(".tm-mobile-action-bar__bar").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         Assert.IsTrue(await HasNoHorizontalOverflowAsync(page));
+        // Fáze 7 review: the bar is inside the first paint — no page scroll to reach it.
+        await AssertActionBarInsideViewportAsync(page);
 
         // ── Change view: the sheet opens from the bar, a notation pick regenerates and closes it ──
         await page.Locator("[data-action-id='change-view']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
@@ -91,27 +93,83 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
 
         await ShotSettledAsync(page, "modeling-mobile-390-dialog-edit");
 
-        // ── Close → focus back inside the editor chrome (the mobile focus-return host) ──
+        // ── Close → focus back on the ACTUAL trigger (the bar's More opened the dialog) ──
         await close.TapAsync(new LocatorTapOptions { Timeout = 10_000 });
         await page.WaitForFunctionAsync(
             "() => !document.querySelector(\"[data-testid='modeling-open-diagram-editor']\")",
             null, new PageWaitForFunctionOptions { Timeout = 10_000 });
-        var focusInside = await page.EvaluateAsync<bool>(
+        var focusOnTrigger = await page.EvaluateAsync<bool>(
             """
             () => {
                 const active = document.activeElement;
                 const editor = document.querySelector("[data-testid='modeling-editor']");
-                return !!(active && editor && editor.contains(active));
+                return !!(active && editor && editor.contains(active)
+                    && active.classList.contains('tm-mobile-action-bar__more'));
             }
             """);
-        Assert.IsTrue(focusInside, "focus returns into the editor chrome after the dialog closes");
+        Assert.IsTrue(focusOnTrigger, "focus returns to the action-bar More trigger that opened the dialog");
         await ShotSettledAsync(page, "modeling-mobile-390-after-close");
+    }
+
+    [TestMethod]
+    [Description("320 touch: the Issues tab scrolls INSIDE its panel — the shell never scrolls, the status card (Preview tab) stays above the bar")]
+    public async Task Mobile_320_IssuesTab_ScrollsInsidePanel()
+    {
+        var page = await OpenTouchAsync(320, 640, query: "?scenario=issues-mixed");
+        await WaitForEditorAttributeAsync(page, "data-active-panel", "preview");
+
+        // The Preview tab pins the status card above the scrolling canvas: the card ends above
+        // the action bar's bottom edge, and the shell itself never scrolls.
+        await AssertActionBarInsideViewportAsync(page);
+        var cardAboveBar = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const shell = document.querySelector(".tm-modeling-editor__mobile-shell");
+                const card = document.querySelector("[data-testid='modeling-status-card']");
+                const bar = document.querySelector(".tm-mobile-action-bar__bar");
+                if (!shell || !card || !bar) return false;
+                return bar.getBoundingClientRect().bottom >= card.getBoundingClientRect().bottom
+                    && shell.scrollTop === 0;
+            }
+            """);
+        Assert.IsTrue(cardAboveBar, "the pinned status card ends above the action bar and the shell does not scroll");
+
+        await page.Locator("[data-testid='modeling-panel-tab-issues']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        await page.Locator("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        // A long issue list scrolls INSIDE the tab panel: scrolling a row into view must not
+        // move the shell (scrollTop stays 0) or push the action bar out of the viewport.
+        await page.Locator("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-3']")
+            .ScrollIntoViewIfNeededAsync(new LocatorScrollIntoViewIfNeededOptions { Timeout = 10_000 });
+        var state = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const shell = document.querySelector(".tm-modeling-editor__mobile-shell");
+                const bar = document.querySelector(".tm-mobile-action-bar__bar");
+                if (!shell || !bar) return false;
+                const barRect = bar.getBoundingClientRect();
+                return shell.scrollTop === 0
+                    && barRect.bottom <= window.innerHeight + 1
+                    && barRect.bottom > 0;
+            }
+            """);
+        Assert.IsTrue(state, "after scrolling an issue into view the shell stays put and the bar stays visible");
+        await ShotSettledAsync(page, "modeling-mobile-320-issues-scroll");
+    }
+
+    [TestMethod]
+    [Description("390 touch: the action bar is fully within the viewport at first paint")]
+    public async Task Mobile_390_ActionBarVisibleAtFirstPaint()
+    {
+        var page = await OpenTouchAsync(390, 844);
+        await AssertActionBarInsideViewportAsync(page);
     }
 
     // ── Edge cases ───────────────────────────────────────────────────────────
 
     [TestMethod]
-    [Description("320 touch: nothing overflows horizontally, the header fits and the tablist still switches")]
+    [Description("320 touch: nothing overflows horizontally, the header fits, the tablist still switches, the tab strip and the action bar stay inside the editor")]
     public async Task Mobile_320_NoOverflow_And_TabsWork()
     {
         var page = await OpenTouchAsync(320, 640);
@@ -122,6 +180,11 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
             .BoundingBoxAsync();
         Assert.IsNotNull(titleBox);
         Assert.IsTrue(titleBox.Width <= 320, "the title stays inside the 320px header");
+
+        // Fáze 7 review: at first paint the action bar is fully within the viewport (no page
+        // scroll needed to reach it) and the Issues tab does not poke past the editor edge.
+        await AssertActionBarInsideViewportAsync(page);
+        await AssertIssuesTabInsideEditorAsync(page);
 
         await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
         await WaitForEditorAttributeAsync(page, "data-active-panel", "inspector");
@@ -168,7 +231,7 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Load error on mobile: the single-state error screen renders without the chrome")]
+    [Description("Load error on mobile: the single-state error screen keeps the mobile chrome with Reload; no tabs, no status card")]
     public async Task Mobile_LoadError_ShowsErrorState()
     {
         var page = await OpenTouchAsync(390, 844, query: "?scenario=error", expectedState: null);
@@ -176,8 +239,17 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await page.Locator("[data-testid='modeling-editor-error']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
-        Assert.AreEqual(0, await page.Locator(".tm-mobile-action-bar__bar").CountAsync(),
-            "the error screen replaces the workspace (and the bar with it)");
+        // Fáze 7 review (blocker): the error screen keeps the mobile shell with a REDUCED bar —
+        // Reload is reachable without any recovery surface.
+        await page.Locator("[data-action-id='reload']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        Assert.AreEqual(1, await page.Locator("[data-action-id='change-view']").CountAsync());
+        Assert.AreEqual(0, await page.Locator("[data-action-id='generate']").CountAsync(),
+            "Generate needs a model and is omitted from the reduced bar");
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-panel-tabs']").CountAsync(),
+            "the error screen renders no tab strip");
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-status-card']").CountAsync(),
+            "the error screen renders no status card");
         await ShotSettledAsync(page, "modeling-mobile-390-error");
     }
 
@@ -266,6 +338,42 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
         var close = overlay.Locator("[data-testid='modeling-open-diagram-close']").First;
         await close.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
         return (overlay, close);
+    }
+
+    private static async Task AssertActionBarInsideViewportAsync(IPage page)
+    {
+        var inside = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const bar = document.querySelector(".tm-modeling-editor__action-bar .tm-mobile-action-bar__bar")
+                    ?? document.querySelector(".tm-mobile-action-bar__bar");
+                if (!bar) return false;
+                const rect = bar.getBoundingClientRect();
+                return rect.height > 0 && rect.top >= 0 && rect.bottom <= window.innerHeight + 1;
+            }
+            """);
+        Assert.IsTrue(inside, "the mobile action bar is fully within the viewport");
+    }
+
+    private static async Task AssertIssuesTabInsideEditorAsync(IPage page)
+    {
+        var measured = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const editor = document.querySelector("[data-testid='modeling-editor']");
+                const tab = document.querySelector("[data-testid='modeling-panel-tab-issues']");
+                if (!editor || !tab) return 'missing';
+                return JSON.stringify({
+                    tabRight: tab.getBoundingClientRect().right,
+                    editorRight: editor.getBoundingClientRect().right
+                });
+            }
+            """);
+        Assert.IsTrue(
+            measured != "missing"
+            && System.Text.Json.JsonDocument.Parse(measured).RootElement.GetProperty("tabRight").GetDouble()
+                <= System.Text.Json.JsonDocument.Parse(measured).RootElement.GetProperty("editorRight").GetDouble() + 0.5,
+            $"the Issues tab's right edge stays inside the editor at 320 (measured {measured})");
     }
 
     private static Task<int> CountVisiblePanelsAsync(IPage page) =>

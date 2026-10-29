@@ -82,6 +82,13 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised when a relationship edge is selected in the generated preview."
+    },
+    {
+      "name": "ShowEmbeddedEditorChrome",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the embedded diagram editor renders its own chrome. Default true. The mobile band passes false: there the DE header bar would hold only the overflow trigger and the floating zoom pill duplicates the canvas pinch, so the preview shows the page tabs and the canvas. Reduction happens through the DE's public ShowToolbar parameter only."
     }
   ]
 }

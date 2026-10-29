@@ -173,6 +173,8 @@
     color: var(--tm-color-text);
     font: inherit;
     font-size: var(--tm-font-size-sm);
+    /* Fáze 7 review: long provider/notation names ellipsize instead of clipping mid-glyph. */
+    text-overflow: ellipsis;
 }
 
 /* Review fix (phase 3): the outline is the focus-VISIBLE affordance only — plain :focus keeps
@@ -280,7 +282,9 @@
 
 /* Fáze 7: the mobile chrome is one column — the compact header, the TmTabs panel strip (ONE
    panel at a time), the status card and the in-flow action bar. The shell is the focusWithin
-   surface (positioning context of the reload indicator) and the flex remainder of the editor. */
+   surface (positioning context of the reload indicator) and the flex remainder of the editor.
+   Fáze 7 review: overflow: CLIP — the shell itself never scrolls (the tab bodies scroll inside
+   their panels), so the action bar cannot be pushed below the fold by long tab content. */
 [data-layout='mobile'] .tm-modeling-editor__mobile-shell {
     position: relative;
     display: flex;
@@ -288,7 +292,7 @@
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
-    overflow: hidden;
+    overflow: clip;
     background: var(--tm-bg-workspace);
 }
 
@@ -302,37 +306,94 @@
     min-height: 0;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs {
+/* Fáze 7 review fix: these rules are anchored on .tm-modeling-editor__mobile-panels — the
+   EDITOR-rendered wrapper. Anchoring on .tm-modeling-editor__panel-tabs compiled to a scope
+   attribute that class never carries (it is the CHILD-rendered TmTabs root), so the whole
+   block was dead and the strip overflowed at 320. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-modeling-editor__panel-tabs {
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tabs__header {
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tabs__header {
     flex-shrink: 0;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tab {
+/* Fáze 7 review (320 tab strip): the four tabs + badge share the row — every tab may shrink
+   below its label (min-width 0) and ellipsizes instead of pushing the strip wider than the
+   editor; the tight padding-inline keeps enough letters readable. The label span (not the
+   button) carries the ellipsis: the button is an inline-flex with icon/badge siblings. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tab {
     min-height: var(--tm-touch-target);
-    flex: 1 1 0;
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: center;
+    padding-inline: var(--tm-space-2);
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tabs__panel {
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tab .tm-tab__label {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Fáze 7 review (Issues tab overflow at 320): the tab panel is a flex column that CLIPS — the
+   inner panel is the single scroll surface, so a long issue list can no longer push the status
+   card or the action bar below the fold. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tabs__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* The single visible panel body: it takes the tab panel's REMAINDER (the preview tab's status
+   card owns its own flex-shrink: 0 row above it) and SCROLLS itself (the compact inspector
+   stacks source + properties in one column). height:auto + flex-grow replaces the old
+   height:100% — a 100% child inside the clipped tab panel was what overflowed at 320. */
+[data-layout='mobile'] .tm-modeling-editor__panel {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* The scroll padding that keeps the last row reachable above the sticky action bar and the
+   home-indicator safe area — the Preview tab is excluded: the canvas fills its flex track
+   edge to edge (the padding used to paint a dead gap below the diagram). */
+[data-layout='mobile'] .tm-modeling-editor__tree,
+[data-layout='mobile'] .tm-modeling-editor__inspector,
+[data-layout='mobile'] .tm-modeling-editor__issues {
+    padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Fáze 7 review (mobile preview size): the preview section is a flex COLUMN that fills its tab
+   track — the diagram preview and the embedded editor host stretch over the full remaining
+   height, so no dead gap is left below the canvas (the old height:100% chain collapsed under
+   the clipped tab panel). The class names are the Modeling preview's own — the embedded editor
+   is only reached through the class IT carries (its host class), never its internals. */
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__canvas-shell {
     flex: 1 1 0;
     min-height: 0;
 }
 
-/* The single visible panel body: it fills the tab panel and SCROLLS (the compact inspector
-   stacks source + properties in one column). The padding-bottom keeps the last row reachable
-   above the sticky action bar and the home-indicator safe area. */
-[data-layout='mobile'] .tm-modeling-editor__panel {
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__editor {
+    flex: 1 1 0;
     height: 100%;
-    overflow: auto;
-    padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+    min-height: 0;
 }
 
 /* Reload affordance over the mounted workspace (force reload keeps _model alive, so the
@@ -597,6 +658,14 @@
     padding: 0;
 }
 
+/* Fáze 7 review: the fullscreen mobile header keeps ONE line — the summary subtitle clamps
+   (a wrapped second line would push the editor body down at 320). */
+[data-layout='mobile'] ::deep .tm-modeling-editor__open-editor-modal .tm-modal-subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .tm-modeling-editor__open-editor-body {
     height: 100%;
     min-height: 0;
@@ -688,7 +757,7 @@
     outline-offset: 2px;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__more ::deep .tm-dropdown-trigger {
+[data-layout='mobile'] .tm-modeling-editor__more-host ::deep .tm-dropdown-trigger {
     min-height: var(--tm-touch-target);
     min-width: var(--tm-touch-target);
     justify-content: center;
@@ -696,19 +765,23 @@
 }
 
 /* The status card: the four count tiles plus the loaded time — the mobile replacement of the
-   status strip (whose trailing item dropped off-screen at 390). */
+   status strip (whose trailing item dropped off-screen at 390). Fáze 7 review: the card lives
+   in the PREVIEW tab body, above the scrolling panel — a hairline under it (not on top) and
+   flex-shrink: 0 keep it a fixed header row of that one tab. */
 [data-layout='mobile'] .tm-modeling-editor__status-card {
     display: grid;
     gap: var(--tm-space-2);
     flex-shrink: 0;
     padding: var(--tm-space-2) var(--tm-space-3);
-    border-top: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
 }
 
+/* Fáze 7 review: two tiles per row — four columns squeezed the cs/sk labels into ellipses at
+   320, and the labels wrap instead of truncating. */
 [data-layout='mobile'] .tm-modeling-editor__status-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--tm-space-2);
 }
 
@@ -726,8 +799,7 @@
     overflow: hidden;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 [data-layout='mobile'] .tm-modeling-editor__status-tile strong {
@@ -763,6 +835,10 @@
 
 [data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector__field {
     width: 100%;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector__field select {
+    text-overflow: ellipsis;
 }
 
 /* ── Tablet layout (the editor container in the 768-1199 band) ───────────────────────

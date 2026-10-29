@@ -71,8 +71,12 @@
             @* The viewer keeps ONE toolbar row through the editor's own API: the Viewer group set
                minus export (a preview never exports) — the explicit flags override the preset,
                so no export group folds into a second row. Never CSS on the editor's internals.
-               The @ref backs GetViewport: the non-drag "Insert into preview" path targets the
-               center of what the user SEES, not the page center. *@
+               Fáze 7 review: on the mobile band the host drops the chrome entirely through
+               ShowToolbar=false — the DE header bar would hold ONLY the "⋯" trigger there (the
+               floating zoom pill duplicates the canvas pinch) and the page tabs stay (no public
+               hide switch — noted for the DE plan). The @ref backs GetViewport: the non-drag
+               "Insert into preview" path targets the center of what the user SEES, not the page
+               center. *@
             <TmDiagramEditor @ref="_editor"
                              Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
@@ -85,7 +89,7 @@
                              ShowLayersPanel="false"
                              ShowMinimap="false"
                              ShowPageView="false"
-                             ShowToolbar="true"
+                             ShowToolbar="@ShowEmbeddedEditorChrome"
                              OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
                              Class="tm-modeling-diagram-preview__editor" />
         </div>

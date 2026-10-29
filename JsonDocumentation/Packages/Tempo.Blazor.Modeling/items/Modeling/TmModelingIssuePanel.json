@@ -42,6 +42,13 @@
       "type": "EventCallback<bool>",
       "isRequired": false,
       "description": "Raised when the user toggles the panel through the header button; enables @bind-Collapsed."
+    },
+    {
+      "name": "ShowToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the header renders the collapse toggle. Default true (the docked dock). The mobile Issues tab passes false: the tab body is the whole scroll surface, so the header stays a plain heading."
     }
   ],
   "cssClasses": [

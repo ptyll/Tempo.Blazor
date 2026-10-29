@@ -54,23 +54,16 @@
                Generate diagram and Open in editor — never a "Settings" entry). The whole
                chrome is the focusWithin surface so the open-editor dialog's close button and
                the mobile focus return stay inside the scope. *@
-            @if (_state == ModelingEditorState.Loading && _model is null)
-            {
-                @SingleStateContent
-            }
-            else if (_state == ModelingEditorState.Empty)
-            {
-                @SingleStateContent
-            }
-            else if (_state == ModelingEditorState.Error)
-            {
-                @SingleStateContent
-            }
-            else
-            {
-                <div class="tm-modeling-editor__mobile-shell" @ref="_canvasSurface">
-                    <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@MobileHeaderContent</header>
+            @* Fáze 7 review fix (blocker): the mobile shell is the ALWAYS-PRESENT chrome — even on
+               the empty / error / loading-without-model screens it renders the compact header, the
+               "Change view" sheet and a reduced action bar (Reload + Change view), with the
+               single-state screen where the tabs would be. Without it those states had no reload
+               and no way back (no provider surface at all). *@
+            <div class="tm-modeling-editor__mobile-shell" @ref="_canvasSurface">
+                <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@MobileHeaderContent</header>
 
+                @if (WorkspaceMounted)
+                {
                     <div class="tm-modeling-editor__mobile-panels">
                         @* Force reload over a live model keeps the tab strip mounted (the workspace
                            stays; the source panel shows its IsLoading affordance) — the badge rides
@@ -87,6 +80,18 @@
                             <TmTabPanel Id="preview"
                                        TabAttributes="@PreviewTabAttributes"
                                        Title="@Loc["TmModelingEditor_Preview"]">
+                                @* Fáze 7 review fix: the status card lives in the PREVIEW tab body —
+                                   a shell-level card stole ~110px from every tab. It sits ABOVE the
+                                   scrolling panel (the tab panel is the flex column), so the canvas
+                                   still fills the tab and the other tabs get the full height. *@
+                                <div class="tm-modeling-editor__status-card"
+                                     data-testid="@TestId("modeling-status-card")"
+                                     role="status"
+                                     aria-live="polite"
+                                     aria-atomic="true"
+                                     aria-label="@Loc["TmModelingEditor_Status"]">
+                                    @MobileStatusCardContent
+                                </div>
                                 <section class="tm-modeling-editor__panel tm-modeling-editor__preview tm-modeling-editor__panel--active"
                                          data-testid="@TestId("modeling-preview-panel")"
                                          aria-label="@Loc["TmModelingEditor_Preview"]">
@@ -95,7 +100,7 @@
                             </TmTabPanel>
                             <TmTabPanel Id="tree"
                                        TabAttributes="@TreeTabAttributes"
-                                       Title="@Loc["TmModelingEditor_ModelTree"]">
+                                       Title="@Loc["TmModelingEditor_TreeShort"]">
                                 <aside class="tm-modeling-editor__panel tm-modeling-editor__tree tm-modeling-editor__panel--active"
                                        data-testid="@TestId("modeling-model-tree-panel")"
                                        aria-label="@Loc["TmModelingEditor_ModelTree"]">
@@ -123,27 +128,23 @@
                             </TmTabPanel>
                         </TmTabs>
                     </div>
+                }
+                else
+                {
+                    @SingleStateContent
+                }
 
-                    <div class="tm-modeling-editor__status-card"
-                         data-testid="@TestId("modeling-status-card")"
-                         role="status"
-                         aria-live="polite"
-                         aria-label="@Loc["TmModelingEditor_Status"]">
-                        @MobileStatusCardContent
-                    </div>
+                <TmMobileActionBar Items="@MobileActionItems"
+                                   Placement="ActionBarPlacement.StickyContainer"
+                                   MaxVisible="3"
+                                   LayoutMode="TmLayoutMode.Mobile"
+                                   Class="tm-modeling-editor__action-bar" />
 
-                    <TmMobileActionBar Items="@MobileActionItems"
-                                       Placement="ActionBarPlacement.StickyContainer"
-                                       MaxVisible="3"
-                                       LayoutMode="TmLayoutMode.Mobile"
-                                       Class="tm-modeling-editor__action-bar" />
-
-                    @* The mobile overlays live INSIDE the shell wrapper so the focusWithin scope
-                       (this element) contains both the close button and the focus-return host. *@
-                    @ChangeViewSheetContent
-                    @OpenEditorModalContent
-                </div>
-            }
+                @* The mobile overlays live INSIDE the shell wrapper so the focusWithin scope
+                   (this element) contains both the close button and the focus-return host. *@
+                @ChangeViewSheetContent
+                @OpenEditorModalContent
+            </div>
         }
         else
         {
@@ -308,7 +309,9 @@
                         LayoutMode="TmLayoutMode.Mobile"
                         OnSelect="HandleMobileHeaderMenuAsync">
                 <TmDropdownItem Value="change-view" Icon="@IconNames.Sliders">@Loc["TmModelingEditor_ChangeView"]</TmDropdownItem>
-                <TmDropdownItem Value="generate" Icon="@IconNames.Refresh" Disabled="@(_model is null || _state != ModelingEditorState.Loaded)">@Loc["TmModelingDiagramPreview_Generate"]</TmDropdownItem>
+                @* Fáze 7 review: Generate carries the wand icon — the bar's Reload keeps Refresh,
+                   so the two adjacent mobile entries are never the same glyph. *@
+                <TmDropdownItem Value="generate" Icon="@IconNames.WandSparkles" Disabled="@(_model is null || _state != ModelingEditorState.Loaded)">@Loc["TmModelingDiagramPreview_Generate"]</TmDropdownItem>
                 <TmDropdownItem Value="open-editor" Icon="@IconNames.ExternalLink" Disabled="@(_document is null)">@Loc["TmModelingDiagramPreview_OpenInEditor"]</TmDropdownItem>
             </TmDropdown>
         </div>
@@ -399,13 +402,16 @@
 
     /// <summary>The generated diagram preview — shared by both layouts. On the mobile band the
     /// edit actions are gone (G2: they live in the action bar and the header "⋯") and the
-    /// preview is not a drop target.</summary>
+    /// preview is not a drop target. Fáze 7 review: the mobile band also drops the embedded
+    /// editor's own chrome — its header bar would hold ONLY the "⋯" trigger there and the
+    /// floating zoom pill duplicates the canvas pinch — through the DE's public parameters.</summary>
     private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
                                                                         Document="@_document"
                                                                         DocumentChanged="UpdatePreviewDocumentAsync"
                                                                         ActiveDraggedElement="@_draggedElement"
                                                                         AllowNodeDrop="@EffectiveAllowNodeDrop"
                                                                         ShowEditActions="@(!IsMobileLayout)"
+                                                                        ShowEmbeddedEditorChrome="@(!IsMobileLayout)"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
                                                                         OnNodeDropped="HandleNodeDroppedAsync"
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
@@ -444,10 +450,13 @@
 
     /// <summary>
     /// The mobile Issues TAB content: the whole issue panel as the tab body (Fáze 7 — "Nálezy
-    /// na mobilu = celý obsah záložky"), with its own expanded-by-default collapsed flag.
+    /// na mobilu = celý obsah záložky"), expanded. Fáze 7 review: the tab body is the whole
+    /// scroll surface, so the collapse toggle is hidden there — the header stays a plain
+    /// heading (the desktop/tablet dock keeps its toggle).
     /// </summary>
     private RenderFragment MobileIssuesContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
                                                                          OnIssueSelected="SelectIssueAsync"
+                                                                         ShowToggle="false"
                                                                          Collapsed="@_mobileIssuesCollapsed"
                                                                          CollapsedChanged="SetIssuesCollapsedAsync" />;
 

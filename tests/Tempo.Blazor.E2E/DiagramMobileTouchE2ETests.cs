@@ -394,17 +394,21 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             null, new PageWaitForFunctionOptions { Timeout = 20_000 });
 
         // Viewer preview contract: no edit action bar INSIDE the embedded diagram editor and no
-        // panels sheet — only the floating zoom. (The Modeling editor's own F5 action bar is the
-        // phase-7 editor-level chrome and lives OUTSIDE the embedded editor.)
+        // panels sheet. Fáze 7 review: the modeling host also drops the editor chrome on this
+        // band through ShowToolbar=false — the header bar would hold ONLY the "⋯" trigger there
+        // (the floating zoom pill duplicates the canvas pinch, which the CDP tests below prove).
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor .tm-mobile-action-bar__bar").CountAsync(),
             "the Viewer preview has no edit action bar inside the embedded diagram editor on mobile");
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-editor-shell__sheet").CountAsync(),
             "the Viewer preview opens no panels sheet (no collision with the overlay header)");
-        Assert.IsTrue(await page.Locator(".tm-modeling-editor .tm-diagram-editor__zoom-overlay").CountAsync() > 0,
-            "the Viewer preview keeps the floating zoom");
+        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor__zoom-overlay").CountAsync(),
+            "the Viewer preview carries no floating zoom (chrome-free: the canvas pinch zooms)");
+        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor__header-bar").CountAsync(),
+            "the Viewer preview renders no header bar (it would hold only the overflow trigger)");
 
-        await page.EvaluateAsync(
-            "() => { const b = document.querySelector('.tm-modeling-editor .tm-diagram-editor__zoom-overlay'); b?.scrollIntoView({ block: 'center', behavior: 'instant' }); }");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('.tm-modeling-editor .tm-diagram-node').length > 0",
+            null, new PageWaitForFunctionOptions { Timeout = 20_000 });
         await page.WaitForTimeoutAsync(150);
         await ShotSettledAsync(page, "mobile-390-modeling-preview");
     }

@@ -19,7 +19,9 @@
  *  - focusTreeGroupHeader(treeRoot, groupKey): scroll + focus a tree GROUP treeitem (the APG
  *    `role="treeitem"` wrapper carrying `data-group-key`), same scoping as focusTreeElement.
  *  - focusWithin(root, selector): focus the first element matching the selector inside `root`,
- *    without scrolling.
+ *    without scrolling. `selector` may be a comma-separated priority list — parts are tried in
+ *    order and the first part with a match wins (used by the mobile focus return: the actual
+ *    trigger first, the host-div proxy as the fallback).
  */
 
 let dragBridgeRegistered = false;
@@ -75,7 +77,26 @@ export function focusTreeGroupHeader(treeRoot, groupKey) {
 
 export function focusWithin(root, selector) {
   const scope = queryRoot(root);
-  scope?.querySelector(selector)?.focus?.({ preventScroll: true });
+  if (!scope) {
+    return;
+  }
+
+  // The selector may be a comma-separated PRIORITY list (the mobile focus return asks for the
+  // actual trigger first and the host-div proxy second). Parts are tried in order — the first
+  // PART with a match wins, not the first match in document order. Single-part selectors
+  // (every other caller) behave exactly as before.
+  for (const part of selector.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const target = scope.querySelector(trimmed);
+    if (target) {
+      target.focus({ preventScroll: true });
+      return;
+    }
+  }
 }
 
 /**

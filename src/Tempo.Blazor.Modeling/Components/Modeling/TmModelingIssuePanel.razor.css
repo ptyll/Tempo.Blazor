@@ -246,10 +246,12 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     color: var(--tm-color-danger-text);
 }
 
+/* Fáze 7 review: break-word, not anywhere — `anywhere` breaks the long recommendation strings
+   at every glyph and blew the fix box out of narrow mobile rows. */
 .tm-modeling-issue-panel__message,
 .tm-modeling-issue-panel__fix {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     line-height: var(--tm-line-height-normal);
 }
 
@@ -259,10 +261,13 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 
 /* Suggested fix (gap #11): a toned box with an icon and a localized "Recommendation:"
    prefix, replacing the bare text — tinted with the ROW'S severity tokens (info is the
-   default severity), not a fixed primary. */
+   default severity), not a fixed primary. Fáze 7 review: the box WRAPS — the icon+label
+   lead and the text takes its own line when the row is too narrow, instead of the label
+   and a clipped single word fighting for one line. */
 .tm-modeling-issue-panel__fix {
     display: flex;
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: var(--tm-space-2);
     padding: var(--tm-space-2);
     border: 1px solid var(--tm-color-info-soft-border);
@@ -297,6 +302,10 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 
 .tm-modeling-issue-panel__fix-text {
     min-width: 0;
+    /* Fáze 7 review: the text takes the row remainder and wraps at word boundaries (growing
+       only past the 10rem basis) instead of forcing the whole box onto one clipped line. */
+    flex: 1 1 10rem;
+    overflow-wrap: break-word;
 }
 
 .tm-modeling-issue-panel__chevron {
