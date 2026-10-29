@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet;
+using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Spreadsheet;
@@ -199,5 +200,175 @@ public class TmSpreadsheetFormulaBarTests : LocalizationTestBase
         nameBox.KeyDown("Escape");
 
         nameBox.GetAttribute("value").Should().Be("C3");
+    }
+
+    // ── Ribbon v2 / formula bar polish (phase 5) ──
+
+    [Fact]
+    public void FormulaBar_FxLabel_AlwaysVisible()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.DisplayValue, "=C5-B5"));
+
+        var fx = cut.Find(".tm-spreadsheet-formula-bar__fx");
+        fx.TextContent.Trim().Should().Be("fx");
+
+        // It is a permanent part of the bar, not an edit-mode decoration: it survives editing too.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.DisplayValue, "=C5-B5")
+            .Add(p => p.IsEditing, true));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__fx").Count.Should().Be(1);
+    }
+
+    [Fact]
+    public void FormulaBar_ConfirmCancelButtons_CommitAndRevert()
+    {
+        string? committed = null;
+        var cancelled = false;
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, true)
+            .Add(p => p.OnValueCommitted, EventCallback.Factory.Create<string?>(this, v => committed = v))
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+
+        var confirm = cut.Find(".tm-spreadsheet-formula-bar__confirm");
+        confirm.GetAttribute("aria-label").Should().Be("Confirm formula");
+        var cancel = cut.Find(".tm-spreadsheet-formula-bar__cancel");
+        cancel.GetAttribute("aria-label").Should().Be("Cancel formula");
+
+        cut.Find(".tm-spreadsheet-formula-bar__input").Input("New Value");
+        cut.Find(".tm-spreadsheet-formula-bar__confirm").Click();
+
+        cut.WaitForAssertion(() => committed.Should().Be("New Value"));
+
+        // A fresh edit session (the host first drops IsEditing after the commit, then re-opens it),
+        // then the ✗ reverts instead of committing.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, false)
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, true)
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__input").Input("Changed");
+        cut.Find(".tm-spreadsheet-formula-bar__cancel").Click();
+        cut.WaitForAssertion(() => cancelled.Should().BeTrue());
+    }
+
+    [Fact]
+    public void FormulaBar_ConfirmCancelButtons_HiddenWhenNotEditing()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__confirm").Should().BeEmpty();
+        cut.FindAll(".tm-spreadsheet-formula-bar__cancel").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_ListsNamedRanges_AndNavigates()
+    {
+        var ranges = new List<SpreadsheetNamedRange>
+        {
+            new() { Name = "TaxRate", RefersTo = "=Sheet1!$B$2", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Total", RefersTo = "=Sheet1!$B$10", Scope = NamedRangeScope.Workbook },
+        };
+        string? navigated = null;
+
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test")
+            .Add(p => p.NamedRanges, ranges)
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, v => navigated = v)));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty("the list is closed until the chevron is used");
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+
+        var items = cut.FindAll(".tm-spreadsheet-formula-bar__ref-item");
+        items.Count.Should().Be(2);
+        items.Select(i => i.TextContent.Trim()).Should().ContainInOrder("TaxRate", "Total");
+
+        items.First(i => i.TextContent.Contains("Total")).Click();
+
+        navigated.Should().Be("Total");
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_NoNamedRanges_KeepsTheLegacyInput()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-toggle").Should().BeEmpty(
+            "a workbook without named ranges shows no empty dropdown");
+        cut.Find(".tm-spreadsheet-formula-bar__ref").Should().NotBeNull();
+    }
+
+    // ── Review round: list dismissal paths ──
+
+    [Fact]
+    public void FormulaBar_NameBox_EscapeOnTheToggle_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        var toggle = cut.Find(".tm-spreadsheet-formula-bar__ref-toggle");
+        toggle.Click();
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Count.Should().Be(1);
+
+        toggle.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_OutsideClick_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+        cut.Find(".tm-spreadsheet-formula-bar__ref-overlay").Click();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_FocusOutOfTheWrapper_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+        cut.Find(".tm-spreadsheet-formula-bar__name-box").FocusOut();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
     }
 }

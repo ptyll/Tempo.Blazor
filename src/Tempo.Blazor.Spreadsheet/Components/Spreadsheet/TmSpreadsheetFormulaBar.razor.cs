@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.Spreadsheet.Models;
 
 namespace Tempo.Blazor.Components.Spreadsheet;
 
@@ -13,6 +14,7 @@ public partial class TmSpreadsheetFormulaBar
     private ElementReference _rootRef;
     private ElementReference _inputRef;
     private ElementReference _nameBoxRef;
+    private ElementReference _nameBoxWrapperRef;
     private string? _editValue;
     private string? _nameBoxValue;
     private bool _shouldFocusAfterRender;
@@ -21,6 +23,7 @@ public partial class TmSpreadsheetFormulaBar
     private int _renderedSelectionEnd;
     private bool _localIsEditing;
     private bool _suppressExternalEditing;
+    private bool _isRefListOpen;
     private (int RowDelta, int ColDelta)? _pendingCommitNavigation;
 
     private sealed class SelectionSnapshot
@@ -102,6 +105,14 @@ public partial class TmSpreadsheetFormulaBar
 
     /// <summary>Called when the user enters a cell reference or named range in the name box and presses Enter.</summary>
     [Parameter] public EventCallback<string> OnNavigateToRef { get; set; }
+
+    /// <summary>
+    /// The workbook's named ranges, offered as a dropdown list next to the name box. When the list is
+    /// empty (or null) the chevron is not rendered at all and the name box stays the plain A1 input.
+    /// Selecting an entry raises <see cref="OnNavigateToRef"/> with the range NAME, exactly like typing
+    /// it into the box and pressing Enter.
+    /// </summary>
+    [Parameter] public IReadOnlyList<SpreadsheetNamedRange>? NamedRanges { get; set; }
 
     /// <summary>Called when the current formula session should move into the inline grid editor.</summary>
     [Parameter] public EventCallback OnTransferToInlineEditorRequested { get; set; }
@@ -276,6 +287,70 @@ public partial class TmSpreadsheetFormulaBar
     private void OnNameBoxBlur()
     {
         _nameBoxValue = ActiveCellRef;
+    }
+
+    private bool HasNamedRanges => NamedRanges is { Count: > 0 };
+
+    private void ToggleNamedRangeList()
+    {
+        _isRefListOpen = !_isRefListOpen;
+    }
+
+    private async Task SelectNamedRangeAsync(SpreadsheetNamedRange range)
+    {
+        _isRefListOpen = false;
+        _nameBoxValue = range.Name;
+        await OnNavigateToRef.InvokeAsync(range.Name);
+    }
+
+    /// <summary>Escape closes the list from the input, the toggle OR a list entry (the whole wrapper).</summary>
+    private void HandleNameBoxWrapperKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && _isRefListOpen)
+        {
+            _isRefListOpen = false;
+        }
+    }
+
+    /// <summary>Leaving the name box (Tab out, focus elsewhere) closes the list.</summary>
+    private async Task HandleNameBoxFocusOutAsync(FocusEventArgs e)
+    {
+        if (!_isRefListOpen)
+        {
+            return;
+        }
+
+        bool inside;
+        try
+        {
+            inside = await JS.InvokeAsync<bool>("tmSpreadsheetFormulaBar.isFocusWithin", _nameBoxWrapperRef);
+        }
+        catch
+        {
+            // No script (prerender/bUnit): treat the focus as gone, closing is the safe direction.
+            inside = false;
+        }
+
+        if (!inside)
+        {
+            _isRefListOpen = false;
+        }
+    }
+
+    private void CloseNamedRangeList() => _isRefListOpen = false;
+
+    /// <summary>The formula bar's ✓: commits the edited text (the same path as Enter).</summary>
+    private async Task ConfirmFromBarAsync()
+    {
+        _pendingCommitNavigation = null;
+        await CommitAsync();
+    }
+
+    /// <summary>The formula bar's ✗: reverts the edited text (the same path as Escape).</summary>
+    private Task CancelFromBarAsync()
+    {
+        Cancel();
+        return Task.CompletedTask;
     }
 
     private async Task CommitAsync()

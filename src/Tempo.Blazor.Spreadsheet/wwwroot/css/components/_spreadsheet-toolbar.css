@@ -2,3 +2,30 @@
    Spreadsheet Toolbar — global overrides
    Main styles are scoped in TmSpreadsheetToolbar.razor.css
    ═══════════════════════════════════════════════════════════════ */
+
+/* Ribbon menu panels (redesign phase 5, round-2 review finding).
+   The border picker, both colour pickers and the Delete split are core TmOverlayPanel roots: they are
+   moved to the browser top layer and their root carries TmOverlayPanel's own Blazor scope id, never the
+   toolbar's, so a scoped rule in TmSpreadsheetToolbar.razor.css can never paint them. Their surface is
+   therefore GLOBAL here. No position/inset/z-index: TmOverlayPanel owns placement. */
+.tm-overlay-panel.tm-border-picker__dropdown,
+.tm-overlay-panel.tm-spreadsheet-toolbar__split-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--tm-spreadsheet-menu-min-width);
+    max-height: var(--tm-spreadsheet-menu-max-height);
+    overflow-y: auto;
+    padding: var(--tm-spreadsheet-menu-padding-block) var(--tm-spreadsheet-menu-padding-inline);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-overlay-panel.tm-color-picker-inline__dropdown {
+    padding: var(--tm-space-2);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+}

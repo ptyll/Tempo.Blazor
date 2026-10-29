@@ -47,3 +47,85 @@
 .tm-spreadsheet__datatool-toast-close:hover {
     color: var(--tm-color-gray-50);
 }
+
+/* ── Document header (opt-in, G9/SP3) ──
+   Reference layout: document title on the left, file actions and the grid switch on the right.
+   Everything is a token; the reference's app-shell elements (Saved, hamburger, ⋮, document switcher)
+   are host slots and never render from here. */
+
+.tm-spreadsheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-4);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-spreadsheet__header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-spreadsheet__title {
+    overflow: hidden;
+    color: var(--tm-color-text);
+    font-size: var(--tm-text-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-spreadsheet__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet__header-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    height: 28px;
+    padding: 0 var(--tm-space-2);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text);
+    font-family: inherit;
+    font-size: var(--tm-text-sm);
+    cursor: pointer;
+}
+
+.tm-spreadsheet__header-action:hover {
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-color-border);
+}
+
+.tm-spreadsheet__header-action:focus-visible {
+    outline: 2px solid var(--tm-focus-ring);
+    outline-offset: 1px;
+}
+
+.tm-spreadsheet__header-action-label {
+    white-space: nowrap;
+}
+
+.tm-spreadsheet__header-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--tm-color-border);
+}
+
+.tm-spreadsheet__grid-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-muted);
+}

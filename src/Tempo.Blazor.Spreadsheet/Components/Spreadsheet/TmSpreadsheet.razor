@@ -13,19 +13,87 @@
      @attributes="AdditionalAttributes">
     @if (Mode == SpreadsheetMode.Full)
     {
+    @if (ShowHeader)
+    {
+        @* Document header (opt-in, G9/SP3). The title and both host slots are additive; the built-in
+           Open / Download actions render only for a host that listens to OnOpen / OnDownload, and the
+           "Show grid lines" switch is the core TmToggle driving the active sheet. The app-shell
+           elements of the reference ("Saved", hamburger, overflow menu, document switcher) are the
+           host's HeaderStart / HeaderActions content, never built in. *@
+        <header class="tm-spreadsheet__header" data-testid="tm-spreadsheet-header">
+            <div class="tm-spreadsheet__header-start">
+                @HeaderStart
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <span class="tm-spreadsheet__title">@Title</span>
+                }
+            </div>
+            <div class="tm-spreadsheet__header-actions">
+                @HeaderActions
+                @* A custom ribbon tool placed on the File tab has no File tab once the header owns the file
+                   actions; it renders as a header action instead of silently disappearing. *@
+                @foreach (var tool in HeaderCustomTools)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-tool-id="@tool.Id"
+                            title="@tool.Title"
+                            @onclick="() => OnCustomToolClick.InvokeAsync(tool)">
+                        <TmIcon Name="@(string.IsNullOrEmpty(tool.IconName) ? "link" : tool.IconName)" />
+                        <span class="tm-spreadsheet__header-action-label">@tool.Title</span>
+                    </button>
+                }
+                @if (OnOpen.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-testid="tm-spreadsheet-header-open"
+                            title="@Loc["TmSpreadsheet_OpenDocument"]"
+                            @onclick="TriggerFileInput">
+                        <TmIcon Name="folder-open" />
+                        <span class="tm-spreadsheet__header-action-label">@Loc["TmSpreadsheet_OpenDocument"]</span>
+                    </button>
+                }
+                @if (OnDownload.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-testid="tm-spreadsheet-header-download"
+                            title="@Loc["TmSpreadsheet_DownloadDocument"]"
+                            @onclick="DownloadXlsx">
+                        <TmIcon Name="download" />
+                        <span class="tm-spreadsheet__header-action-label">@Loc["TmSpreadsheet_DownloadDocument"]</span>
+                    </button>
+                }
+                @if (HasHeaderFileActions)
+                {
+                    <span class="tm-spreadsheet__header-divider" aria-hidden="true"></span>
+                }
+                <div class="tm-spreadsheet__grid-toggle">
+                    <TmIcon Name="grid" />
+                    <TmToggle Value="ShowGridLines"
+                              ValueChanged="SetGridLines"
+                              Label="@Loc["TmSpreadsheet_ShowGridLines"]" />
+                </div>
+            </div>
+        </header>
+    }
+
     <TmSpreadsheetToolbar CanUndo="CanUndo"
                           CanRedo="CanRedo"
-                          SelectedFontFamily="ToolbarFontFamily"
-                          SelectedFontSize="ToolbarFontSize"
+                          SelectedFontFamily="@ToolbarFontFamily"
+                          SelectedFontSize="@ToolbarFontSize"
                           IsBold="ToolbarIsBold"
                           IsItalic="ToolbarIsItalic"
                           IsUnderline="ToolbarIsUnderline"
                           IsStrikeThrough="ToolbarIsStrikeThrough"
                           IsFormatPainterActive="ToolbarIsFormatPainterActive"
-                          TextColor="ToolbarTextColor"
-                          BackgroundColor="ToolbarBackgroundColor"
-                          SelectedHorizontalAlign="ToolbarAlign"
-                          SelectedNumberFormat="ToolbarNumberFormat"
+                          TextColor="@ToolbarTextColor"
+                          BackgroundColor="@ToolbarBackgroundColor"
+                          SelectedHorizontalAlign="@ToolbarAlign"
+                          SelectedVerticalAlign="@ToolbarVerticalAlign"
+                          OnVerticalAlignChanged="ApplyVerticalAlign"
+                          SelectedNumberFormat="@ToolbarNumberFormat"
                           IsPercentageFormat="ToolbarIsPercentageFormat"
                           IsThousandsFormat="ToolbarIsThousandsFormat"
                           OnUndo="Undo"
@@ -77,9 +145,12 @@
                           OnPasteSpecial="OpenPasteSpecialDialog"
                           OnDataValidation="OpenDataValidationDialog"
                           OnCircleInvalidData="() => _ = CircleInvalidData()"
-                          OnClearValidationCircles="() => _ = ClearValidationCircles()" />
+                          OnClearValidationCircles="() => _ = ClearValidationCircles()"
+                          ShowFileTab="EffectiveShowFileTab"
+                          CustomTools="CustomTools"
+                          OnCustomToolClick="OnCustomToolClick" />
 
-    <InputFile id="tm-spreadsheet-file-input"
+    <InputFile id="@FileInputDomId"
                OnChange="HandleFileSelected"
                style="display:none"
                accept=".xlsx" />
@@ -94,6 +165,7 @@
                              OnValueChanged="@OnFormulaBarValueChanged"
                              OnTabPressed="@OnFormulaBarTabPressed"
                              OnTransferToInlineEditorRequested="@OnFormulaBarTransferToInlineEditorRequested"
+                             NamedRanges="NameBoxNamedRanges"
                              OnNavigateToRef="@OnNameBoxNavigate" />
     }
 

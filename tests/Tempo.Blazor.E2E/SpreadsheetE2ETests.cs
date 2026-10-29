@@ -14,8 +14,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // A stable instance, not a positional one: the demo page order is not a selector contract.
+        var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
         await grid.ClickAsync();
 
         var before = await grid.EvaluateAsync<double>("el => el.scrollTop");
@@ -40,8 +41,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // A stable instance, not a positional one: the demo page order is not a selector contract.
+        var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
         await grid.ClickAsync();
 
         var before = await grid.EvaluateAsync<double>("el => el.scrollLeft");
@@ -100,28 +102,28 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task DomRenderer_RemainsFunctionalAsFallback()
+    public async Task CanvasRenderer_IsTheOnlyGrid_AndArrowKeysMoveTheActiveCell()
     {
+        // The legacy DOM grid renderer is gone (TmSpreadsheetTests.Render_DoesNotRenderDomGrid pins that
+        // in bUnit); this spec used to click a DOM cell that no longer exists. It now guards the canvas
+        // contract that replaced it: one grid root, and the keyboard moves its active cell.
         var page = await CreatePageAsync();
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var a1 = grid.Locator("[title='A1']").First;
-        await a1.ClickAsync();
-        await grid.Locator("[title='A1'].tm-spreadsheet-cell--active").WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 10000
-        });
-        await page.Keyboard.PressAsync("ArrowRight");
+        var component = page.Locator("[data-testid='spreadsheet-demo']");
+        var grid = component.Locator(".tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
+        await grid.ClickAsync();
 
-        await grid.Locator("[title='B1'].tm-spreadsheet-cell--active").WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 10000
-        });
+        Assert.AreEqual(0, await component.Locator(".tm-spreadsheet-grid:not(.tm-spreadsheet-canvas-grid)").CountAsync(),
+            "the DOM renderer is gone: the canvas grid is the only grid");
+
+        var before = await GetCanvasActiveRefAsync(grid);
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.WaitForTimeoutAsync(300);
+        var after = await GetCanvasActiveRefAsync(grid);
+        Assert.AreNotEqual(before, after, "ArrowRight moves the canvas active cell");
     }
 
     [TestMethod]

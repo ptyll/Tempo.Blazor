@@ -2,24 +2,64 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
+@* Formula bar per spreadsheet--desktop.png: the name box (with a named-range list when the workbook has
+   any), the permanent fx mark, the editor and — while the bar is editing — the ✓ / ✗ commit and revert
+   buttons (SP4). The DOM contracts the grid and the E2E specs key off stay: __ref (the name box input),
+   __display, __input and the formula-bar input test id. *@
 <div class="tm-spreadsheet-formula-bar" @ref="_rootRef">
-    <input class="tm-spreadsheet-formula-bar__ref"
-           type="text"
-           @ref="_nameBoxRef"
-           title="@Loc["TmSpreadsheet_CellReference"]"
-           aria-label="@Loc["TmSpreadsheet_CellReference"]"
-           value="@_nameBoxValue"
-           @oninput="OnNameBoxInput"
-           @onkeydown="HandleNameBoxKeyDown"
-           @onblur="OnNameBoxBlur" />
-    <div class="tm-spreadsheet-formula-bar__editor">
-        @if (EditorIsEditing && CurrentSession.IsFormula)
+    <div class="tm-spreadsheet-formula-bar__name-box"
+         @ref="_nameBoxWrapperRef"
+         @onkeydown="HandleNameBoxWrapperKeyDown"
+         @onfocusout="HandleNameBoxFocusOutAsync">
+        <input class="tm-spreadsheet-formula-bar__ref"
+               type="text"
+               @ref="_nameBoxRef"
+               title="@Loc["TmSpreadsheet_CellReference"]"
+               aria-label="@Loc["TmSpreadsheet_CellReference"]"
+               value="@_nameBoxValue"
+               @oninput="OnNameBoxInput"
+               @onkeydown="HandleNameBoxKeyDown"
+               @onblur="OnNameBoxBlur" />
+        @if (HasNamedRanges)
         {
-            <div class="tm-spreadsheet-formula-bar__mode"
-                 aria-hidden="true">
-                fx
+            <button type="button"
+                    class="tm-spreadsheet-formula-bar__ref-toggle"
+                    title="@Loc["TmSpreadsheet_NamedRanges"]"
+                    aria-label="@Loc["TmSpreadsheet_NamedRanges"]"
+                    aria-haspopup="listbox"
+                    aria-expanded="@(_isRefListOpen ? "true" : "false")"
+                    @onclick="ToggleNamedRangeList">
+                <TmIcon Name="chevron-down" />
+            </button>
+        }
+        @if (_isRefListOpen)
+        {
+            @* A transparent outside-click catcher: the list is a small inline popover under the name
+               box, so a click anywhere else closes it without a global listener. *@
+            <div class="tm-spreadsheet-formula-bar__ref-overlay"
+                 aria-hidden="true"
+                 @onclick="CloseNamedRangeList"></div>
+            <div class="tm-spreadsheet-formula-bar__ref-list"
+                 role="listbox"
+                 aria-label="@Loc["TmSpreadsheet_NamedRanges"]">
+                @foreach (var range in NamedRanges!)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet-formula-bar__ref-item"
+                            role="option"
+                            aria-selected="false"
+                            @onmousedown:preventDefault
+                            @onclick="() => SelectNamedRangeAsync(range)">
+                        @range.Name
+                    </button>
+                }
             </div>
         }
+    </div>
+    <div class="tm-spreadsheet-formula-bar__fx" aria-hidden="true">
+        fx
+    </div>
+    <div class="tm-spreadsheet-formula-bar__editor">
         @if (EditorIsEditing)
         {
             <input class="tm-spreadsheet-formula-bar__input"
@@ -100,4 +140,25 @@
             </div>
         }
     </div>
+    @if (EditorIsEditing)
+    {
+        <div class="tm-spreadsheet-formula-bar__actions">
+            <button type="button"
+                    class="tm-spreadsheet-formula-bar__confirm"
+                    title="@Loc["TmSpreadsheet_FormulaConfirm"]"
+                    aria-label="@Loc["TmSpreadsheet_FormulaConfirm"]"
+                    @onmousedown:preventDefault
+                    @onclick="ConfirmFromBarAsync">
+                <TmIcon Name="check" />
+            </button>
+            <button type="button"
+                    class="tm-spreadsheet-formula-bar__cancel"
+                    title="@Loc["TmSpreadsheet_FormulaCancel"]"
+                    aria-label="@Loc["TmSpreadsheet_FormulaCancel"]"
+                    @onmousedown:preventDefault
+                    @onclick="CancelFromBarAsync">
+                <TmIcon Name="close" />
+            </button>
+        </div>
+    }
 </div>

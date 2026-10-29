@@ -34,6 +34,13 @@
     /* Find & Replace panel knobs: the floating desktop card reads these, so a host can widen or move
        it without overriding the panel's scoped rules. */
     --tm-spreadsheet-find-width: 30rem;
+    /* Ribbon menu knobs: the border picker, the Delete split and the colour popovers are core
+       TmOverlayPanel roots (browser top layer), so their surface lives in the package GLOBAL stylesheet
+       and reads these host-overridable knobs. */
+    --tm-spreadsheet-menu-min-width: 11.25rem;
+    --tm-spreadsheet-menu-max-height: 20rem;
+    --tm-spreadsheet-menu-padding-block: var(--tm-space-1);
+    --tm-spreadsheet-menu-padding-inline: 0;
 
     display: flex;
     flex-direction: column;

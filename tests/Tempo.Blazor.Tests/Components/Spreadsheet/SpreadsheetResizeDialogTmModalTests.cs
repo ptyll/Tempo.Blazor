@@ -20,13 +20,17 @@ namespace Tempo.Blazor.Tests.Components.Spreadsheet;
 [Collection("SpreadsheetClipboard")]
 public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
 {
-    public static TheoryData<string> ResizeDialogs => new() { "SetRowHeight", "SetColumnWidth" };
+    public static TheoryData<string, string> ResizeDialogs => new()
+    {
+        { "SetRowHeight", "Set row height" },
+        { "SetColumnWidth", "Set column width" },
+    };
 
     [Theory]
     [MemberData(nameof(ResizeDialogs))]
-    public async Task ResizeDialog_UsesTmModal_WithDialogRole(string locKey)
+    public async Task ResizeDialog_UsesTmModal_WithDialogRole(string locKey, string label)
     {
-        var (cut, grid) = await OpenResizeDialogAsync(locKey);
+        var (cut, grid) = await OpenResizeDialogAsync(locKey, label);
 
         cut.FindAll(".tm-modal-overlay.tm-spreadsheet-resize-dialog").Should().ContainSingle(
             $"{locKey} must render through the core TmModal");
@@ -37,7 +41,7 @@ public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
         scope.GetAttribute("aria-modal").Should().Be("true");
         var labelledBy = scope.GetAttribute("aria-labelledby");
         labelledBy.Should().NotBeNullOrWhiteSpace("a dialog needs an accessible name");
-        cut.Find($"[id='{labelledBy}']").TextContent.Should().Contain(locKey,
+        cut.Find($"[id='{labelledBy}']").TextContent.Should().Contain(label,
             "the frame header carries the dialog's own title");
 
         // The content contract the published tests key off survives.
@@ -51,9 +55,9 @@ public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
 
     [Theory]
     [MemberData(nameof(ResizeDialogs))]
-    public async Task ResizeDialog_Escape_Closes_AndRestoresFocusToTheGrid(string locKey)
+    public async Task ResizeDialog_Escape_Closes_AndRestoresFocusToTheGrid(string locKey, string label)
     {
-        var (cut, grid) = await OpenResizeDialogAsync(locKey);
+        var (cut, grid) = await OpenResizeDialogAsync(locKey, label);
 
         var gridRootId = grid.Find(".tm-spreadsheet-canvas-grid").Id;
         gridRootId.Should().NotBeNullOrWhiteSpace("the grid root is the focus-restore target");
@@ -68,7 +72,7 @@ public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
     }
 
     private async Task<(IRenderedComponent<TmSpreadsheet> Cut, IRenderedComponent<TmSpreadsheetCanvasGrid> Grid)>
-        OpenResizeDialogAsync(string locKey)
+        OpenResizeDialogAsync(string locKey, string label)
     {
         var workbook = new SpreadsheetWorkbook();
         var cut = Render<TmSpreadsheet>(p => p.Add(c => c.InitialWorkbook, workbook));
@@ -78,7 +82,7 @@ public class SpreadsheetResizeDialogTmModalTests : LocalizationTestBase
         await cut.InvokeAsync(() => grid.Instance.OnCanvasContextMenu(4, 4, 10, 10));
         grid.Render();
         grid.FindAll(".tm-spreadsheet-context-menu__item")
-            .First(item => item.TextContent.Contains(locKey, StringComparison.Ordinal))
+            .First(item => item.TextContent.Contains(label, StringComparison.Ordinal))
             .Click();
 
         return (cut, grid);

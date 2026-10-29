@@ -6,10 +6,12 @@
     user-select: none;
 }
 
+/* ── Tabs ── */
+
 .tm-spreadsheet-toolbar__tabs {
     display: flex;
-    gap: 2px;
-    padding: 4px 12px 0;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3) 0;
     background: var(--tm-color-surface);
     border-bottom: 1px solid var(--tm-color-border);
     overflow-x: auto;
@@ -22,17 +24,18 @@
 }
 
 .tm-spreadsheet-toolbar__tab {
-    padding: 6px 16px;
+    padding: var(--tm-space-2) var(--tm-space-4);
     border: none;
+    border-bottom: 2px solid transparent;
     background: transparent;
     color: var(--tm-color-text-muted);
     font-size: var(--tm-text-sm);
     font-weight: var(--tm-font-weight-medium);
+    font-family: inherit;
     cursor: pointer;
-    border-radius: var(--tm-radius-sm) var(--tm-radius-sm) 0 0;
-    transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
     position: relative;
     white-space: nowrap;
+    transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
 }
 
 .tm-spreadsheet-toolbar__tab:hover {
@@ -41,68 +44,141 @@
 }
 
 .tm-spreadsheet-toolbar__tab--active {
-    background: var(--tm-color-surface-elevated);
     color: var(--tm-color-primary);
     font-weight: var(--tm-font-weight-semibold);
+    border-bottom-color: var(--tm-color-primary);
 }
 
-.tm-spreadsheet-toolbar__tab--active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 4px;
-    right: 4px;
-    height: 2px;
-    background: var(--tm-color-primary);
-    border-radius: var(--tm-radius-xs) var(--tm-radius-xs) 0 0;
+.tm-spreadsheet-toolbar__tab:focus-visible {
+    outline: 2px solid var(--tm-focus-ring);
+    outline-offset: -2px;
 }
 
+/* ── Group row ── */
+
+/* One row, like the reference. A container narrower than the full group set scrolls the row
+   horizontally (a visible thin scrollbar is the affordance); the phase-6 responsive chrome replaces
+   this with the compact two-row / overflow-menu presentation. */
 .tm-spreadsheet-toolbar__tab-content {
     display: flex;
-    align-items: center;
+    align-items: stretch;
+    flex-wrap: nowrap;
     gap: var(--tm-space-1);
     padding: var(--tm-space-2) var(--tm-space-3);
-    flex-wrap: wrap;
-}
-
-.tm-spreadsheet-toolbar__tab-content::-webkit-scrollbar {
-    display: none;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
 
 .tm-spreadsheet-toolbar__group {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
     gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.tm-spreadsheet-toolbar__group-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-1);
+    min-height: 56px;
+}
+
+/* The Data tab is one wide group of text commands: its body wraps inside the ribbon instead of
+   pushing the last buttons under the component's clipped edge. */
+.tm-spreadsheet-toolbar__group-body--wrap {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+/* The Data tab is a single wide group of text commands: it wraps inside the ribbon instead of
+   pushing buttons under the component's clipped edge. */
+.tm-spreadsheet-toolbar__tab-content > .tm-spreadsheet-toolbar__group {
+    max-width: 100%;
+}
+
+.tm-spreadsheet-toolbar__group-body--column .tm-spreadsheet-toolbar__row {
+    flex-wrap: nowrap;
+}
+
+.tm-spreadsheet-toolbar__group-body--column {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+}
+
+.tm-spreadsheet-toolbar__row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tm-spreadsheet-toolbar__stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+}
+
+.tm-spreadsheet-toolbar__group-label {
+    display: block;
+    padding-bottom: var(--tm-space-0-5);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-text-xs);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .tm-spreadsheet-toolbar__divider {
     width: 1px;
-    height: 24px;
+    align-self: stretch;
+    margin: 0 var(--tm-space-1) var(--tm-space-4);
     background: var(--tm-color-border);
-    margin: 0 var(--tm-space-1);
-    flex-shrink: 0;
+    flex: 0 0 auto;
 }
 
+.tm-spreadsheet-toolbar__divider--inline {
+    height: 20px;
+    align-self: center;
+    margin: 0 var(--tm-space-1);
+}
+
+/* ── Buttons ── */
+
 .tm-spreadsheet-toolbar__button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
+    gap: var(--tm-space-1);
+    height: 24px;
+    min-width: 24px;
+    padding: 0 var(--tm-space-1);
     border: 1px solid transparent;
     border-radius: var(--tm-radius-sm);
     background: transparent;
     color: var(--tm-color-text);
+    font-family: inherit;
     font-size: var(--tm-text-sm);
+    line-height: 1;
     cursor: pointer;
+    flex: 0 0 auto;
     transition: background var(--tm-transition-fast), border-color var(--tm-transition-fast);
-    flex-shrink: 0;
 }
 
 .tm-spreadsheet-toolbar__button:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
     border-color: var(--tm-color-border);
+}
+
+.tm-spreadsheet-toolbar__button:focus-visible {
+    outline: 2px solid var(--tm-focus-ring);
+    outline-offset: 1px;
 }
 
 .tm-spreadsheet-toolbar__button:disabled {
@@ -116,24 +192,153 @@
     color: var(--tm-color-primary);
 }
 
-.tm-spreadsheet-toolbar__select {
-    min-width: 100px;
-    height: 28px;
+.tm-spreadsheet-toolbar__button--icon {
+    width: 26px;
+    min-width: 26px;
+    padding: 0;
+}
+
+.tm-spreadsheet-toolbar__button--large {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    height: auto;
+    min-height: 56px;
+    min-width: 52px;
+    max-width: 84px;
+    padding: 4px var(--tm-space-2);
     font-size: var(--tm-text-xs);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    padding: 0 var(--tm-space-1);
+    text-align: center;
 }
 
-.tm-spreadsheet-toolbar__select--narrow {
-    min-width: 56px;
+/* The reference wraps a long large-button label onto two lines ("Vložit řádek") instead of
+   truncating it ("Insert colu…"). */
+.tm-spreadsheet-toolbar__button--large .tm-spreadsheet-toolbar__button-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    line-height: 1.15;
 }
 
-.tm-spreadsheet-toolbar__select--wide {
-    min-width: 140px;
+.tm-spreadsheet-toolbar__button--small {
+    height: 22px;
+    padding: 0 var(--tm-space-2) 0 var(--tm-space-1);
+    font-size: var(--tm-text-xs);
+    white-space: nowrap;
 }
+
+.tm-spreadsheet-toolbar__button--text {
+    height: 24px;
+    padding: 0 var(--tm-space-2);
+    font-size: var(--tm-text-xs);
+    white-space: nowrap;
+}
+
+.tm-spreadsheet-toolbar__button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tm-spreadsheet-toolbar__button-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-spreadsheet-toolbar__button-glyph {
+    font-size: var(--tm-text-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    letter-spacing: -0.5px;
+}
+
+/* ── Selects ──
+   A TmSelect renders the host Class on its own wrapper, which carries the CHILD component's CSS
+   scope — so the host styles the FIELD it owns and reaches the child root through ::deep. */
+
+.tm-spreadsheet-toolbar__field {
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet-toolbar__field--font {
+    width: 108px;
+}
+
+.tm-spreadsheet-toolbar__field--size {
+    min-width: 4.25rem;
+    width: 4.25rem;
+}
+
+.tm-spreadsheet-toolbar__field--number {
+    width: 132px;
+}
+
+.tm-spreadsheet-toolbar__field ::deep .tm-spreadsheet-toolbar__select {
+    width: 100%;
+}
+
+.tm-spreadsheet-toolbar__field ::deep .tm-select {
+    height: 26px;
+    padding-block: 0;
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-toolbar__field ::deep .tm-select-arrow {
+    height: 26px;
+}
+
+/* ── Split button (border presets, delete row/column) ── */
+
+.tm-spreadsheet-toolbar__split {
+    display: inline-flex;
+    align-items: stretch;
+    position: relative;
+}
+
+.tm-spreadsheet-toolbar__split .tm-spreadsheet-toolbar__button {
+    border-radius: 0;
+}
+
+.tm-spreadsheet-toolbar__split > :first-child {
+    border-start-start-radius: var(--tm-radius-sm);
+    border-end-start-radius: var(--tm-radius-sm);
+}
+
+.tm-spreadsheet-toolbar__split > :last-child {
+    border-start-end-radius: var(--tm-radius-sm);
+    border-end-end-radius: var(--tm-radius-sm);
+}
+
+.tm-spreadsheet-toolbar__split-toggle {
+    width: 16px;
+    min-width: 16px;
+    height: auto;
+    align-self: stretch;
+    padding: 0;
+}
+
+
+/* ── Inline colour pickers ── */
+
+.tm-color-picker-inline {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-color-picker-inline__chevron {
+    width: 14px;
+    min-width: 14px;
+}
+
+/* The colour/border popovers are core TmOverlayPanel roots (browser top layer): their panel-root
+   surface rules live in the package's GLOBAL stylesheet (_spreadsheet-toolbar.css), because a scoped
+   rule on a class passed to TmOverlayPanel never matches. */
 
 .tm-spreadsheet-toolbar__color-preview {
     display: inline-flex;
@@ -151,47 +356,24 @@
     border-radius: var(--tm-radius-xs);
 }
 
-/* ── Border Picker ── */
-
-.tm-border-picker-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-dropdown);
-    background: transparent;
-}
+/* ── Border picker ── */
 
 .tm-border-picker {
     position: relative;
-    display: flex;
-    align-items: center;
+    display: inline-flex;
 }
 
 .tm-border-picker__chevron {
-    width: 16px !important;
-    font-size: var(--tm-text-xs) !important;
-    padding: 0 !important;
+    width: 14px;
+    min-width: 14px;
 }
 
-.tm-border-picker__dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: var(--tm-z-dropdown);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    box-shadow: var(--tm-shadow-lg);
-    min-width: 180px;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: var(--tm-space-1) 0;
-}
 
 .tm-border-picker__section-label {
-    font-size: var(--tm-text-xs);
+    padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-0-5);
     color: var(--tm-color-text-muted);
-    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-1);
-    font-weight: var(--tm-font-weight-medium);
+    font-size: var(--tm-text-xs);
+    font-weight: var(--tm-font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -201,106 +383,37 @@
     align-items: center;
     gap: var(--tm-space-2);
     width: 100%;
-    padding: var(--tm-space-1) var(--tm-space-3);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: none;
-    background: none;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
     color: var(--tm-color-text);
+    font-family: inherit;
     font-size: var(--tm-text-sm);
+    text-align: start;
     cursor: pointer;
-    text-align: left;
-    transition: background var(--tm-transition-fast);
 }
 
 .tm-border-picker__item:hover {
     background: var(--tm-color-surface-hover);
 }
 
+.tm-border-picker__item:focus-visible {
+    outline: 2px solid var(--tm-focus-ring);
+    outline-offset: -2px;
+}
+
 .tm-border-picker__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    font-size: var(--tm-text-sm);
-    flex-shrink: 0;
-    color: var(--tm-color-text-muted);
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
 }
 
 .tm-border-picker__divider {
     height: 1px;
-    background: var(--tm-color-border);
     margin: var(--tm-space-1) 0;
-}
-
-/* ── Inline Color Picker ── */
-
-.tm-color-picker-inline {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.tm-color-picker-inline__chevron {
-    width: 16px !important;
-    font-size: var(--tm-text-xs) !important;
-    padding: 0 !important;
-    margin-left: -2px;
-}
-
-.tm-color-picker-inline__dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: var(--tm-z-dropdown);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    box-shadow: var(--tm-shadow-lg);
-    padding: var(--tm-space-2);
-    min-width: 220px;
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-/* ── Responsive ── */
-@media (max-width: 768px) {
-    .tm-spreadsheet-toolbar__tab {
-        padding: 4px 12px;
-        font-size: var(--tm-font-size-xs);
-    }
-
-    .tm-spreadsheet-toolbar__tab-content {
-        padding: var(--tm-space-1) var(--tm-space-2);
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-    }
-
-    .tm-spreadsheet-toolbar__tab-content::-webkit-scrollbar {
-        display: none;
-    }
-
-    .tm-spreadsheet-toolbar__button {
-        width: 24px;
-        height: 24px;
-        font-size: var(--tm-font-size-xs);
-    }
-
-    .tm-spreadsheet-toolbar__select {
-        min-width: 80px;
-        height: 24px;
-        font-size: var(--tm-font-size-xs);
-    }
-
-    .tm-spreadsheet-toolbar__select--narrow {
-        min-width: 48px;
-    }
-
-    .tm-spreadsheet-toolbar__select--wide {
-        min-width: 100px;
-    }
-
-    .tm-spreadsheet-toolbar__divider {
-        height: 20px;
-    }
+    background: var(--tm-color-border);
 }

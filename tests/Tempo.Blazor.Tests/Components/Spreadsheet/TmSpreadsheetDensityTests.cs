@@ -165,7 +165,7 @@ public class TmSpreadsheetDensityTests : LocalizationTestBase
         await cut.InvokeAsync(() => grid.Instance.OnCanvasContextMenu(4, 4, 10, 10));
         grid.Render();
         var setRowHeight = grid.FindAll(".tm-spreadsheet-context-menu__item")
-            .First(item => item.TextContent.Contains("SetRowHeight", StringComparison.Ordinal));
+            .First(item => item.TextContent.Contains("Set row height", StringComparison.Ordinal));
         setRowHeight.Click();
 
         var input = grid.Find(".tm-spreadsheet-resize-dialog__input");

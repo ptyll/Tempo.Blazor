@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 
 namespace Tempo.Blazor.Components.Spreadsheet;
@@ -7,7 +8,11 @@ namespace Tempo.Blazor.Components.Spreadsheet;
 /// <summary>Tab bar for switching between workbook sheets with add, delete, and rename support.</summary>
 public partial class TmSpreadsheetSheetTabs
 {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
     private ElementReference _renameInput;
+    private ElementReference _scrollRef;
+    private bool _hasOverflow;
     private int _editingIndex = -1;
     private string? _editName;
     private bool _shouldFocusRenameInput;
@@ -37,6 +42,13 @@ public partial class TmSpreadsheetSheetTabs
 
     /// <summary>When true, hides add/delete/rename controls (embedded/readonly view).</summary>
     [Parameter] public bool IsReadonly { get; set; }
+
+    /// <summary>
+    /// Whether every tab paints its own × close affordance. Defaults to <c>true</c>. With
+    /// <c>false</c> the clean reference tab look is kept and deleting stays available from the tab's
+    /// context menu (the reader keeps both paths).
+    /// </summary>
+    [Parameter] public bool ShowTabCloseButtons { get; set; } = true;
 
     /// <summary>Whether formula-point mode is active (tab click selects sheet for formula rather than switching view).</summary>
     [Parameter] public bool IsFormulaPointMode { get; set; }
@@ -126,12 +138,42 @@ public partial class TmSpreadsheetSheetTabs
         }
     }
 
+    private async Task ScrollTabsAsync(string direction)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tmSpreadsheetSheetTabs.scrollTabs", _scrollRef, direction);
+        }
+        catch
+        {
+            // The package script may not be loaded (prerender, bUnit, a host without the script tag).
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_shouldFocusRenameInput)
         {
             _shouldFocusRenameInput = false;
             try { await _renameInput.FocusAsync(); } catch { /* ElementReference may not be bound yet */ }
+        }
+
+        // Overflow arrows are a measured affordance: ask the package script after every render and only
+        // re-render when the answer flips (the arrows live outside the scroller, so this settles).
+        var hasOverflow = false;
+        try
+        {
+            hasOverflow = await JS.InvokeAsync<bool>("tmSpreadsheetSheetTabs.hasOverflow", _scrollRef);
+        }
+        catch
+        {
+            // No script / prerender: keep the strip scrollable without arrows.
+        }
+
+        if (hasOverflow != _hasOverflow)
+        {
+            _hasOverflow = hasOverflow;
+            StateHasChanged();
         }
     }
 }

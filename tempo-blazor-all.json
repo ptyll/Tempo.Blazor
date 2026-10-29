@@ -26920,6 +26920,48 @@
               "isRequired": false,
               "default": "SpreadsheetDensity.Auto",
               "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The document title rendered in the header. Ignored while ShowHeader is false."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically."
+            },
+            {
+              "name": "CustomTools",
+              "type": "List<SpreadsheetCustomTool>?",
+              "isRequired": false,
+              "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+            },
+            {
+              "name": "OnCustomToolClick",
+              "type": "EventCallback<SpreadsheetCustomTool>",
+              "isRequired": false,
+              "description": "Called when a custom ribbon tool is clicked."
             }
           ],
           "cssClasses": [
@@ -44440,7 +44482,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "An Excel-like spreadsheet component for viewing and editing tabular data. Supports cell editing, formulas, styling, multi-sheet workbooks, and XLSX import/export.",
+          "description": "An Excel-like spreadsheet component for viewing and editing tabular data. Since the ribbon v2 redesign it renders (in Full mode) an optional document header, the tabbed ribbon with named command groups, the formula bar with the fx mark and the commit/revert buttons, the canvas grid, the sheet tabs and the status bar. Supports cell editing, formulas, styling, multi-sheet workbooks and XLSX import/export.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheet.razor",
           "documentationStatus": "merged",
@@ -44469,6 +44511,12 @@
               "description": "The default column width in pixels. Defaults to 64."
             },
             {
+              "name": "CustomTools",
+              "type": "List<SpreadsheetCustomTool>?",
+              "isRequired": false,
+              "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+            },
+            {
               "name": "Data",
               "type": "byte[]?",
               "isRequired": false,
@@ -44480,6 +44528,18 @@
               "isRequired": false,
               "default": "SpreadsheetDensity.Auto",
               "description": "How large the canvas draws rows and cell text. Defaults to Auto, which resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
             },
             {
               "name": "Height",
@@ -44514,6 +44574,12 @@
               "description": "Called when any cell value or formula changes."
             },
             {
+              "name": "OnCustomToolClick",
+              "type": "EventCallback<SpreadsheetCustomTool>",
+              "isRequired": false,
+              "description": "Called when a custom ribbon tool is clicked."
+            },
+            {
               "name": "OnDownload",
               "type": "EventCallback<SpreadsheetDownloadEventArgs>",
               "isRequired": false,
@@ -44544,6 +44610,25 @@
               "isRequired": false,
               "default": "200",
               "description": "The initial number of rows to render. Defaults to 200."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically, so the parameter only matters for hosts without a header."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The document title rendered in the header. Ignored while ShowHeader is false."
             },
             {
               "name": "Width",
@@ -45242,7 +45327,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Displays the active cell reference and provides an input for editing cell values and formulas. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
+          "description": "Displays the active cell reference and provides an input for editing cell values and formulas. The fx mark is a permanent part of the bar, the name box offers the workbook's named ranges, and while the bar is editing it exposes the ✓ commit and ✗ revert buttons with localized accessible names. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormulaBar.razor",
           "documentationStatus": "merged",
@@ -45267,6 +45352,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether the formula bar is in editing mode."
+            },
+            {
+              "name": "NamedRanges",
+              "type": "IReadOnlyList<SpreadsheetNamedRange>?",
+              "isRequired": false,
+              "description": "The workbook's named ranges, offered as a dropdown list next to the name box. When the list is empty the chevron is not rendered and the name box stays the plain A1 input; selecting an entry raises OnNavigateToRef with the range name."
             },
             {
               "name": "OnCommitNavigationRequested",
@@ -45596,7 +45687,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Tab bar for switching between workbook sheets with add, delete, and rename support.",
+          "description": "Tab bar for switching between workbook sheets with add, delete, and rename support. The active tab is underlined in the accent colour, and when the strip overflows it gains a pair of scroll arrows.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetSheetTabs.razor",
           "documentationStatus": "merged",
@@ -45657,6 +45748,13 @@
               "type": "List<SpreadsheetSheet>",
               "isRequired": true,
               "description": "All sheets in the workbook."
+            },
+            {
+              "name": "ShowTabCloseButtons",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether every tab paints its own × close affordance (default true). With false the clean reference tab look is kept and deleting stays available from the tab's context menu."
             }
           ]
         },
@@ -45839,7 +45937,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Ribbon-style toolbar for the spreadsheet with tabbed groups: Home, Insert, View, and File.",
+          "description": "Ribbon-style toolbar for the spreadsheet: one tab strip (Home, Insert, Data, View and the legacy File tab) followed by a row of named groups. Every group carries a stable, additive-only data-tm-group id (clipboard | font | alignment | number | cells | insert | links | data | view | file | custom), every tab and tabpanel carries data-tm-tab, custom groups also carry data-tool-id, and the tab strip follows the WAI-ARIA tabs pattern (per-instance ids, aria-controls/aria-labelledby, roving tabindex, ArrowLeft/Right/Home/End). Commands are large (icon above the label) or small (icon and label on one line); every icon is a TmIcon, and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG icons. The border picker, the colour pickers and the Delete split render through the core TmOverlayPanel (browser top layer), so the ribbon row's horizontal overflow can never clip them. Contract: docs/spreadsheet.md.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetToolbar.razor",
           "documentationStatus": "merged",
@@ -45847,6 +45945,19 @@
             "@using Tempo.Blazor.Components.Spreadsheet"
           ],
           "parameters": [
+            {
+              "name": "ActiveTab",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"Home\"",
+              "description": "The active ribbon tab id (\"Home\", \"Insert\", \"Data\", \"View\" or \"File\"). Two-way bindable through ActiveTabChanged; without a binding the toolbar switches tabs internally."
+            },
+            {
+              "name": "ActiveTabChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the selected tab id when the user changes the ribbon tab."
+            },
             {
               "name": "BackgroundColor",
               "type": "string?",
@@ -46214,6 +46325,12 @@
               "description": "Called when the Undo button is clicked."
             },
             {
+              "name": "OnVerticalAlignChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Called with \"top\", \"middle\" or \"bottom\" when a vertical alignment button in the Alignment group is clicked."
+            },
+            {
               "name": "SelectedFontFamily",
               "type": "string?",
               "isRequired": false,
@@ -46240,6 +46357,19 @@
               "isRequired": false,
               "default": "\"General\"",
               "description": "Currently selected number format."
+            },
+            {
+              "name": "SelectedVerticalAlign",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Current vertical alignment of the cell content: \"top\", \"middle\" or \"bottom\". The matching button in the Alignment group is marked active; null leaves all three unmarked (the default bottom is not highlighted)."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the legacy File tab is offered (default true). Hosts that render the document header, which owns the Open / Download actions, pass false."
             },
             {
               "name": "ShowGridLines",

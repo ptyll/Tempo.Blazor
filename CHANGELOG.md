@@ -12,6 +12,61 @@
 
 ### Breaking / Migration
 
+- **Spreadsheet redesign (phase 5): the ribbon is a grouped tabbed ribbon, the document header is opt-in and every toolbar glyph is an icon.** `TmSpreadsheetToolbar` now renders one tab strip (`Home`, `Insert`, `Data`, `View` and the compatibility `File` tab) above a row of named groups — `tm-spreadsheet-toolbar__group` with a visible `tm-spreadsheet-toolbar__group-label` (Clipboard, Font with the cell-border picker, Alignment, Number, Cells, Insert, Data, View, File) — whose commands are either **large** (`__button--large`, icon above the label: Undo, Redo, Paste, Insert row/column, Delete, Insert link/image) or **small** (`__button--small/--text`, e.g. Cut, Copy, the Data-tab text buttons). Every Unicode glyph is gone (`←|`, `|→`, `.0→`, `.00→`, `☐ ⊞ ▣ ◼ ▬ ▰ ═ ⊟ ▭ ▏ ▕ ⚙ ▾`): the standard marks are lucide `TmIcon`s and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG set (`SpreadsheetIcons`, `tm-ss-border-*`, `tm-ss-align-*`, `tm-ss-decimal-*`). Existing selectors survive: `.tm-spreadsheet-toolbar__tab`, `__button`, `__button--text`, `__select` and every command `title` (Filter, Sort ascending, Custom sort…, Remove duplicates, Text to columns, Paste special, Data validation..., Name Manager, …).
+
+  ```razor
+  <!-- before: one trailing group, the icon name painted as text, File tools lost with the File tab -->
+  <TmSpreadsheet CustomTools="@(new List<SpreadsheetCustomTool> { new() { IconName = "download", Title = "Archive", Tab = "File" } })" />
+
+  <!-- after: one group per tool (data-tm-group="custom", data-tool-id), TmIcon + Title, and a
+       File-tab tool appears as a header action while ShowHeader="true" -->
+  <TmSpreadsheet ShowHeader="true"
+                 CustomTools="@(new List<SpreadsheetCustomTool> { new() { Id = "archive", IconName = "download", Title = "Archive", Tab = "file" } })" />
+  ```
+
+  ```html
+  <!-- before: flat icon row, no group names, text glyphs as icons -->
+  <div class="tm-spreadsheet-toolbar__group">
+    <button class="tm-spreadsheet-toolbar__button" title="Increase Indent">←|</button>
+    <button class="tm-spreadsheet-toolbar__button" title="Increase decimal places">.0→</button>
+  </div>
+  <button class="tm-spreadsheet-toolbar__button" title="Border picker">☐</button>
+
+  <!-- after: named group + large/small buttons, icons only -->
+  <div class="tm-spreadsheet-toolbar__group">
+    <div class="tm-spreadsheet-toolbar__group-body">
+      <button class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon" title="Increase Indent">
+        <TmIcon Name="indent-increase" />
+      </button>
+      <button class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon" title="Increase decimal places">
+        <TmIcon Name="tm-ss-decimal-increase" />
+      </button>
+    </div>
+    <span class="tm-spreadsheet-toolbar__group-label">Alignment</span>
+  </div>
+  ```
+  Migrations that change behaviour:
+  - **Merge cells moved from the `View` tab to the `Home` tab's Alignment group.** `page.Locator(".tm-spreadsheet-toolbar__tab", new() { HasTextString = "View" })` before clicking `[title='Merge cells']` is no longer needed.
+  - **Delete row/column moved behind the large `Delete` split action in the `Cells` group.** `[title='Delete row']` / `[title='Delete column']` now live in the split menu; open it via `[title='Delete options']` first (`role="menu"`).
+  - **`ActiveTab` is a real parameter.** It was a public property without `[Parameter]`; it is now `[Parameter] ActiveTab` plus `[Parameter] ActiveTabChanged`, so a host can bind the active tab. Without a binding the toolbar still switches tabs internally, but a click now also raises `ActiveTabChanged`.
+  - **`Insert link` / `Insert image` also render on the `Home` tab** (the reference's `Vložení` quick-access group) in addition to the `Insert` tab; both tabs never render at the same time, so `[title='Insert link']` stays unique on screen.
+  - **New `ShowFileTab` (default `true`) on `TmSpreadsheet` and `TmSpreadsheetToolbar`.** With the document header on, the `File` tab is not rendered; the header owns Open / Download.
+  - **Custom ribbon tools render differently.** Each `CustomTools` entry is now its own ribbon group (`data-tm-group="custom"`, `data-tool-id="<tool.Id>"`), painted as a small button with its `IconName` through `TmIcon` plus its `Title` (before, the icon name was painted as literal text and every tool shared one trailing group). The `Tab` match is case-insensitive (`"home"`, `"Home"`). Because Merge cells moved to Home, a tool that was meant to sit next to Merge must use `Tab="Home"`.
+  - **A custom tool placed on `Tab="File"`** has no File tab while the document header renders; the header now renders such tools as its own actions (branded with `data-tool-id`) instead of silently dropping them.
+  - **Stable group/tab contract (additive-only).** Every ribbon group carries `data-tm-group` from the frozen set `clipboard | font | alignment | number | cells | insert | links | data | view | file | custom` (Home quick-insert = `insert`, the Insert tab = `links`), every tab and tabpanel carries `data-tm-tab` (`Home|Insert|Data|View|File`), custom groups also carry `data-tool-id`, and the tab strip follows the WAI-ARIA tabs pattern (per-instance ids, `aria-controls`/`aria-labelledby`, roving `tabindex`, ArrowLeft/Right/Home/End). Hosts and tests should key off these attributes, never off localized label text or position. Contract: [docs/spreadsheet.md](docs/spreadsheet.md#ribbon-contract).
+  - **The hidden XLSX input's id is per instance.** It was the fixed `tm-spreadsheet-file-input`, so a page with two spreadsheets always opened the first one's picker; it is now `tm-spreadsheet-file-input-{instance}` (no published selector used it).
+- **Spreadsheet redesign (phase 5): the document header is opt-in and additive (G9/SP3).** `TmSpreadsheet` gains `ShowHeader` (default `false`), `Title`, `HeaderStart`, `HeaderActions`, `ShowFileTab` and `CustomTools`/`OnCustomToolClick`; with `ShowHeader` the component renders `header.tm-spreadsheet__header` (title on the left, host slots, `Open` / `Download` only for a host that listens to `OnOpen` / `OnDownload`, and the core `TmToggle` labelled "Show grid lines"). "Saved", the hamburger, the ⋮ menu and the document switcher of the reference are host slots, never built in. The custom-tool buttons now render `TmIcon` and their `Title` instead of the icon name as text.
+
+  ```razor
+  <!-- before: no header; file actions only inside the legacy File tab -->
+  <TmSpreadsheet Height="500px" />
+  <!-- after (additive, still false by default) -->
+  <TmSpreadsheet ShowHeader="true" Title="Projekt Aurora"
+                 OnOpen="OnOpened" OnDownload="OnDownloaded"
+                 HeaderActions="@(builder => { /* Share */ })" Height="500px" />
+  ```
+- **Spreadsheet redesign (phase 5): formula bar and sheet tabs.** The formula bar's `fx` mark is now permanent (`tm-spreadsheet-formula-bar__fx`, previously an edit-mode decoration) and while editing it exposes the SP4 ✓ / ✗ buttons (`__confirm`, `__cancel`, localized `aria-label`s, same commit/revert paths as Enter/Escape). The name box gains a named-range dropdown (`__ref-toggle` + `__ref-list`/`__ref-item`, new `TmSpreadsheetFormulaBar.NamedRanges`; selecting an entry raises `OnNavigateToRef` with the range name, and a workbook without names renders no chevron). The sheet tabs gain `ShowTabCloseButtons` (default `true`; deleting always stays available from the right-click menu) and a pair of scroll arrows (`__scroll-button[data-direction=left|right]`) that appear only when the strip overflows. `.tm-spreadsheet-formula-bar__mode` (the old edit-only fx) is gone; `__ref`, `__display`, `__input` and the formula-bar test ids are unchanged.
+
 - **Fixed (core `TmSelect`): a non-nullable value type at its default now emits its `value`.** Before, `SelectedValueString` returned `null` whenever the value equalled `default(TValue)`, so a select bound to `0` / an enum's first member painted a blank control; every spreadsheet dialog that switched back to such an option (Sort order "A → Z", Sort on "Values", data validation "Any"/"Stop"/type "Whole", Format Cells "General", a column index of 0) looked empty. After, a non-nullable struct default renders `FormatOptionValue(Value)` (e.g. `value="0"`, `value="Sunday"`) while the option list keeps its `selected` marker. Nullable value types and reference types keep the empty-option rules unchanged.
 
   ```html

@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -165,7 +166,9 @@ public class TmSpreadsheetTests : LocalizationTestBase
         sheet.ActiveCellRef = "A2";
 
         cut.FindAll(".tm-spreadsheet-toolbar__button")
-            .First(b => b.GetAttribute("title") == "Delete row").Click();
+            .First(b => b.GetAttribute("title") == "Delete options").Click();
+        cut.FindAll("[title='Delete row']")
+            .First(b => b.ClassList.Contains("tm-border-picker__item")).Click();
 
         sheet.Cells["A1"].Value.Should().Be("top");
         sheet.Cells["A2"].Value.Should().Be("bottom");
@@ -198,7 +201,9 @@ public class TmSpreadsheetTests : LocalizationTestBase
         sheet.ActiveCellRef = "B1";
 
         cut.FindAll(".tm-spreadsheet-toolbar__button")
-            .First(b => b.GetAttribute("title") == "Delete column").Click();
+            .First(b => b.GetAttribute("title") == "Delete options").Click();
+        cut.FindAll("[title='Delete column']")
+            .First(b => b.ClassList.Contains("tm-border-picker__item")).Click();
 
         sheet.Cells["A1"].Value.Should().Be("left");
         sheet.Cells["B1"].Value.Should().Be("right");
@@ -345,4 +350,245 @@ public class TmSpreadsheetTests : LocalizationTestBase
         display.TextContent.Trim().Should().Be("=SUM(B1:B5)");
     }
 
+
+    // ── Ribbon v2 + document header (phase 5) ──
+
+    [Fact]
+    public void Spreadsheet_CustomTools_ForwardedToToolbar()
+    {
+        var tools = new List<SpreadsheetCustomTool>
+        {
+            new() { IconName = "copy", Title = "My Tool", Tab = "Home", Order = 0 }
+        };
+
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.CustomTools, tools));
+
+        cut.FindAll(".tm-spreadsheet-toolbar__button")
+            .Count(b => b.GetAttribute("title") == "My Tool")
+            .Should()
+            .Be(1);
+    }
+
+    [Fact]
+    public void Spreadsheet_ShowHeaderFalse_ByDefault_NoHeader()
+    {
+        var cut = Render<TmSpreadsheet>();
+
+        cut.FindAll(".tm-spreadsheet__header").Should().BeEmpty("the document header is opt-in (G9/SP3)");
+        cut.FindAll(".tm-spreadsheet-toolbar__tab")
+            .Select(t => t.TextContent.Trim())
+            .Should()
+            .Contain("File", "without the header the File tab stays the compatibility path");
+    }
+
+    [Fact]
+    public void Spreadsheet_Title_And_HeaderActions_RenderInHeader()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true)
+            .Add(p => p.Title, "Projekt Aurora")
+            .Add(p => p.HeaderStart, builder => { builder.OpenElement(0, "span"); builder.AddAttribute(1, "class", "host-start"); builder.AddContent(2, "start-slot"); builder.CloseElement(); })
+            .Add(p => p.HeaderActions, builder => { builder.OpenElement(0, "button"); builder.AddAttribute(1, "class", "host-action"); builder.AddContent(2, "share"); builder.CloseElement(); }));
+
+        var header = cut.Find(".tm-spreadsheet__header");
+        header.TextContent.Should().Contain("Projekt Aurora");
+        header.QuerySelector(".host-start").Should().NotBeNull();
+        header.QuerySelector(".host-action").Should().NotBeNull();
+        header.QuerySelector(".tm-spreadsheet__title")!.TextContent.Trim().Should().Be("Projekt Aurora");
+    }
+
+    [Fact]
+    public void Spreadsheet_Header_HidesFileTab()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true));
+
+        cut.FindAll(".tm-spreadsheet-toolbar__tab")
+            .Select(t => t.TextContent.Trim())
+            .Should()
+            .NotContain("File", "the document header replaces the File tab");
+    }
+
+    [Fact]
+    public void Spreadsheet_ShowFileTabFalse_HidesFileTabWithoutHeader()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowFileTab, false));
+
+        cut.FindAll(".tm-spreadsheet-toolbar__tab")
+            .Select(t => t.TextContent.Trim())
+            .Should()
+            .NotContain("File");
+    }
+
+    [Fact]
+    public void Spreadsheet_Header_FileActionsAndGridToggle()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true)
+            .Add(p => p.OnOpen, EventCallback.Factory.Create<SpreadsheetOpenEventArgs>(this, _ => { }))
+            .Add(p => p.OnDownload, EventCallback.Factory.Create<SpreadsheetDownloadEventArgs>(this, _ => { })));
+
+        var header = cut.Find(".tm-spreadsheet__header");
+
+        header.QuerySelector("[data-testid='tm-spreadsheet-header-open']").Should().NotBeNull();
+        header.QuerySelector("[data-testid='tm-spreadsheet-header-download']").Should().NotBeNull();
+
+        // The grid toggle is the core TmToggle (a real switch), named by the localized label.
+        header.QuerySelector(".tm-toggle-wrapper").Should().NotBeNull("the header grid toggle is the core TmToggle");
+        header.QuerySelector("input.tm-toggle-input[role='switch']").Should().NotBeNull();
+        header.QuerySelector("svg").Should().NotBeNull();
+        header.TextContent.Should().Contain("Show grid lines");
+    }
+
+    [Fact]
+    public void Spreadsheet_Header_FileActions_HiddenWithoutDelegates()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true));
+
+        cut.FindAll("[data-testid='tm-spreadsheet-header-open']").Should().BeEmpty(
+            "the built-in Open action only renders for a host that listens to OnOpen");
+        cut.FindAll("[data-testid='tm-spreadsheet-header-download']").Should().BeEmpty();
+        cut.FindAll(".tm-spreadsheet__header input.tm-toggle-input").Count.Should().Be(1);
+    }
+
+    [Fact]
+    public void Spreadsheet_Header_GridToggle_TogglesTheActiveSheet()
+    {
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true));
+
+        cut.Instance.Workbook.ActiveSheet!.ShowGridLines.Should().BeTrue();
+        cut.Find(".tm-spreadsheet__header input.tm-toggle-input").Change(false);
+        cut.Instance.Workbook.ActiveSheet!.ShowGridLines.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Spreadsheet_ToolbarSelects_BindTheActiveStyle_NotALiteralParameterName()
+    {
+        var cut = Render<TmSpreadsheet>();
+        var toolbar = cut.FindComponent<TmSpreadsheetToolbar>();
+
+        // The font/size/align/number-format parameters are EXPRESSIONS of the active style. A missing
+        // '@' turns them into the literal C# identifier, which matches no option and renders a blank
+        // select (the reported empty font/number-format dropdowns).
+        toolbar.Instance.SelectedFontFamily.Should().NotBeNullOrEmpty();
+        toolbar.Instance.SelectedFontSize.Should().NotBeNullOrEmpty();
+        toolbar.Instance.SelectedNumberFormat.Should().Be("General");
+        toolbar.Instance.SelectedHorizontalAlign.Should().NotBeNullOrEmpty();
+
+        var sheet = cut.Instance.Workbook.ActiveSheet!;
+        sheet.ActiveCellRef = "A1";
+        sheet.Cells["A1"] = new SpreadsheetCell
+        {
+            Value = "styled",
+            Style = new SpreadsheetCellStyle
+            {
+                FontFamily = "Courier New",
+                FontSize = 14,
+                NumberFormat = "0.00",
+                HorizontalAlign = SpreadsheetHorizontalAlign.Center,
+                VerticalAlign = SpreadsheetVerticalAlign.Middle,
+            }
+        };
+        cut.Render();
+
+        var refreshed = cut.FindComponent<TmSpreadsheetToolbar>().Instance;
+        refreshed.SelectedFontFamily.Should().Be("Courier New");
+        refreshed.SelectedFontSize.Should().Be("14");
+        refreshed.SelectedNumberFormat.Should().Be("0.00");
+        refreshed.SelectedHorizontalAlign.Should().Be("center");
+        refreshed.SelectedVerticalAlign.Should().Be("middle");
+    }
+
+    [Fact]
+    public void Spreadsheet_VerticalAlign_RaisesAndAppliesTheStyle()
+    {
+        var cut = Render<TmSpreadsheet>();
+        var sheet = cut.Instance.Workbook.ActiveSheet!;
+        sheet.ActiveCellRef = "A1";
+        sheet.Cells["A1"] = new SpreadsheetCell { Value = "x" };
+
+        var toolbar = cut.FindComponent<TmSpreadsheetToolbar>();
+        toolbar.InvokeAsync(() => toolbar.Instance.OnVerticalAlignChanged.InvokeAsync("middle"));
+        cut.WaitForAssertion(() =>
+            sheet.Cells["A1"].Style!.VerticalAlign.Should().Be(SpreadsheetVerticalAlign.Middle));
+    }
+
+    // ── Review round: header custom tools + name box ranges/navigation ──
+
+    [Fact]
+    public void Spreadsheet_Header_RendersFileCustomToolsAsHeaderActions()
+    {
+        SpreadsheetCustomTool? clicked = null;
+        var tools = new List<SpreadsheetCustomTool>
+        {
+            new() { Id = "file-tool", IconName = "download", Title = "Archive", Tab = "file", Order = 0 },
+            new() { Id = "home-tool", IconName = "copy", Title = "Home tool", Tab = "Home", Order = 0 },
+        };
+
+        var cut = Render<TmSpreadsheet>(parameters => parameters
+            .Add(p => p.ShowHeader, true)
+            .Add(p => p.CustomTools, tools)
+            .Add(p => p.OnCustomToolClick, EventCallback.Factory.Create<SpreadsheetCustomTool>(this, tool => clicked = tool)));
+
+        var header = cut.Find(".tm-spreadsheet__header");
+        var headerTool = header.QuerySelector("[data-tool-id='file-tool']");
+        headerTool.Should().NotBeNull("a File-tab custom tool has no File tab with the header on");
+        headerTool!.TextContent.Should().Contain("Archive");
+        header.QuerySelector("[data-tool-id='home-tool']").Should().BeNull(
+            "Home tools stay in the ribbon");
+
+        headerTool.Click();
+        cut.WaitForAssertion(() => clicked.Should().BeSameAs(tools[0]));
+    }
+
+    [Fact]
+    public void Spreadsheet_NameBox_OffersWorkbookAndActiveSheetRanges_SheetScopeWins()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        workbook.Sheets.Add(new SpreadsheetSheet { Name = "Sheet2" });
+        workbook.NamedRanges.Add(new SpreadsheetNamedRange { Name = "Total", RefersTo = "=A1", Scope = NamedRangeScope.Workbook });
+        workbook.NamedRanges.Add(new SpreadsheetNamedRange { Name = "Total", RefersTo = "=B2", Scope = NamedRangeScope.Sheet, SheetIndex = 0 });
+        workbook.NamedRanges.Add(new SpreadsheetNamedRange { Name = "Local", RefersTo = "=C3", Scope = NamedRangeScope.Sheet, SheetIndex = 0 });
+        workbook.NamedRanges.Add(new SpreadsheetNamedRange { Name = "OtherSheetOnly", RefersTo = "=D4", Scope = NamedRangeScope.Sheet, SheetIndex = 1 });
+
+        var cut = Render<TmSpreadsheet>(parameters => parameters.Add(p => p.InitialWorkbook, workbook));
+
+        var names = cut.FindComponent<TmSpreadsheetFormulaBar>().Instance.NamedRanges!
+            .Select(range => range.Name)
+            .ToArray();
+        names.Should().Equal("Local", "Total");
+        cut.FindComponent<TmSpreadsheetFormulaBar>().Instance.NamedRanges!
+            .Single(range => range.Name == "Total")
+            .RefersTo.Should().Be("=B2", "the sheet-scoped name wins over the workbook one");
+
+        cut.InvokeAsync(() => cut.Instance.Workbook.ActiveSheetIndex = 1);
+        cut.Render();
+
+        var sheet2Names = cut.FindComponent<TmSpreadsheetFormulaBar>().Instance.NamedRanges!
+            .Select(range => range.Name)
+            .ToArray();
+        sheet2Names.Should().Equal("OtherSheetOnly", "Total");
+        cut.FindComponent<TmSpreadsheetFormulaBar>().Instance.NamedRanges!
+            .Single(range => range.Name == "Total")
+            .Scope.Should().Be(NamedRangeScope.Workbook);
+    }
+
+    [Fact]
+    public void Spreadsheet_NameBox_SheetQualifiedReference_SwitchesTheActiveSheet()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        workbook.Sheets.Add(new SpreadsheetSheet { Name = "Sheet2" });
+
+        var cut = Render<TmSpreadsheet>(parameters => parameters.Add(p => p.InitialWorkbook, workbook));
+        cut.Instance.Workbook.ActiveSheetIndex.Should().Be(0);
+
+        var formulaBar = cut.FindComponent<TmSpreadsheetFormulaBar>().Instance;
+        cut.InvokeAsync(() => formulaBar.OnNavigateToRef.InvokeAsync("Sheet2!B2"));
+
+        cut.WaitForAssertion(() => cut.Instance.Workbook.ActiveSheetIndex.Should().Be(1));
+    }
 }

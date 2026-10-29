@@ -112,6 +112,48 @@
       "isRequired": false,
       "default": "SpreadsheetDensity.Auto",
       "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The document title rendered in the header. Ignored while ShowHeader is false."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+    },
+    {
+      "name": "ShowFileTab",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically."
+    },
+    {
+      "name": "CustomTools",
+      "type": "List<SpreadsheetCustomTool>?",
+      "isRequired": false,
+      "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+    },
+    {
+      "name": "OnCustomToolClick",
+      "type": "EventCallback<SpreadsheetCustomTool>",
+      "isRequired": false,
+      "description": "Called when a custom ribbon tool is clicked."
     }
   ],
   "cssClasses": [

@@ -47,6 +47,13 @@ public partial class TmSpreadsheet
     /// racing it while the grid is still inert.
     /// </summary>
     private string GridRootDomId => $"spreadsheet-grid-{_idSuffix}";
+
+    /// <summary>
+    /// The hidden XLSX picker's per-instance id. It used to be the fixed
+    /// <c>tm-spreadsheet-file-input</c>, so a page with two spreadsheets always opened the first one's
+    /// picker.
+    /// </summary>
+    private string FileInputDomId => $"tm-spreadsheet-file-input-{_idSuffix}";
     private SpreadsheetHyperlink? _editHyperlink;
     private SpreadsheetNamedRange? _editNamedRange;
     [Inject] private IJSRuntime JS { get; set; } = null!;
@@ -71,6 +78,41 @@ public partial class TmSpreadsheet
 
     /// <summary>Called when the workbook is downloaded/exported.</summary>
     [Parameter] public EventCallback<SpreadsheetDownloadEventArgs> OnDownload { get; set; }
+
+    /// <summary>
+    /// Shows the document header above the ribbon: the document title, the host slots
+    /// (<see cref="HeaderStart"/> / <see cref="HeaderActions"/>), the built-in Open and Download
+    /// actions and the "Show grid lines" toggle. Opt-in (default <c>false</c>); while it is on, the
+    /// toolbar's legacy File tab is not rendered because the header owns the file actions.
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; }
+
+    /// <summary>The document title rendered in the header. Ignored while <see cref="ShowHeader"/> is false.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// Header slot rendered before the title (e.g. a document switcher or a "saved" indicator). Only
+    /// rendered with <see cref="ShowHeader"/>.
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>
+    /// Header slot rendered before the built-in actions (e.g. Share). Only rendered with
+    /// <see cref="ShowHeader"/>.
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>
+    /// Whether the toolbar offers its legacy File tab. Defaults to <c>true</c>; the header hides it
+    /// automatically (the compatibility parameter keeps the old entry for hosts without a header).
+    /// </summary>
+    [Parameter] public bool ShowFileTab { get; set; } = true;
+
+    /// <summary>Custom tools injected into the ribbon (forwarded to <c>TmSpreadsheetToolbar.CustomTools</c>).</summary>
+    [Parameter] public List<SpreadsheetCustomTool>? CustomTools { get; set; }
+
+    /// <summary>Called when a custom ribbon tool is clicked.</summary>
+    [Parameter] public EventCallback<SpreadsheetCustomTool> OnCustomToolClick { get; set; }
 
     /// <summary>Called when any cell value or formula changes.</summary>
     [Parameter] public EventCallback<SpreadsheetChangeEventArgs> OnChange { get; set; }
@@ -134,8 +176,8 @@ public partial class TmSpreadsheet
     private bool CanUndo => _commandManager?.CanUndo ?? false;
     private bool CanRedo => _commandManager?.CanRedo ?? false;
 
-    private string? ToolbarFontFamily => GetActiveCellStyle()?.FontFamily;
-    private string? ToolbarFontSize => GetActiveCellStyle()?.FontSize.ToString();
+    private string ToolbarFontFamily => GetActiveCellStyle()?.FontFamily ?? "Arial";
+    private string ToolbarFontSize => (GetActiveCellStyle()?.FontSize ?? 11).ToString(CultureInfo.InvariantCulture);
     private bool ToolbarIsBold => GetActiveCellStyle()?.Bold ?? false;
     private bool ToolbarIsItalic => GetActiveCellStyle()?.Italic ?? false;
     private bool ToolbarIsUnderline => GetActiveCellStyle()?.Underline ?? false;
@@ -147,9 +189,11 @@ public partial class TmSpreadsheet
     {
         get
         {
+            // An explicit style wins; without one the VALUE decides what Excel-like alignment the cell
+            // paints (numbers right, booleans centered, everything else left), so the Alignment group
+            // always has one marked button instead of none.
             var style = GetActiveCellStyle();
-            if (style is null) return null;
-            if (style.HorizontalAlign != SpreadsheetHorizontalAlign.General)
+            if (style is not null && style.HorizontalAlign != SpreadsheetHorizontalAlign.General)
                 return style.HorizontalAlign.ToString().ToLowerInvariant();
             var cellRef = _workbook.ActiveSheet?.ActiveCellRef;
             var cell = cellRef is null ? null : _workbook.ActiveSheet?.Cells.GetValueOrDefault(cellRef);
@@ -161,6 +205,8 @@ public partial class TmSpreadsheet
             };
         }
     }
+    private string ToolbarVerticalAlign =>
+        (GetActiveCellStyle()?.VerticalAlign ?? SpreadsheetVerticalAlign.Bottom).ToString().ToLowerInvariant();
     private string? ToolbarNumberFormat => GetActiveCellStyle()?.NumberFormat ?? "General";
     private bool ToolbarIsPercentageFormat => (GetActiveCellStyle()?.NumberFormat ?? "General").Contains('%');
     private bool ToolbarIsThousandsFormat => (GetActiveCellStyle()?.NumberFormat ?? "General").Contains("#,#");
@@ -249,6 +295,34 @@ public partial class TmSpreadsheet
     }
 
     private bool ShowGridLines => _workbook.ActiveSheet?.ShowGridLines ?? true;
+
+    private bool EffectiveShowFileTab => ShowFileTab && !ShowHeader;
+
+    /// <summary>
+    /// Custom tools declared for the File tab. While the header owns the file actions there is no File
+    /// tab to host them, so the header renders them as its own actions.
+    /// </summary>
+    private IReadOnlyList<SpreadsheetCustomTool> HeaderCustomTools =>
+        ShowHeader && CustomTools is not null
+            ? CustomTools
+                .Where(tool => string.Equals(tool.Tab, "File", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(tool => tool.Order)
+                .ToArray()
+            : Array.Empty<SpreadsheetCustomTool>();
+
+    private bool HasHeaderFileActions => OnOpen.HasDelegate || OnDownload.HasDelegate;
+
+    private void SetGridLines(bool visible)
+    {
+        if (_workbook.ActiveSheet is null)
+        {
+            return;
+        }
+
+        _workbook.ActiveSheet.ShowGridLines = visible;
+        RequestCanvasJsEngineFullRender();
+        StateHasChanged();
+    }
 
     private SpreadsheetCellStyle? GetActiveCellStyle()
     {
@@ -648,6 +722,29 @@ public partial class TmSpreadsheet
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Named ranges the formula bar's name box offers: the ACTIVE sheet's sheet-scoped names plus the
+    /// workbook-scoped ones, de-duplicated by name with the sheet scope winning (the same precedence
+    /// typing the name into the box resolves with).
+    /// </summary>
+    private IReadOnlyList<SpreadsheetNamedRange> NameBoxNamedRanges
+    {
+        get
+        {
+            var activeSheetIndex = _workbook.ActiveSheetIndex;
+            var sheetScoped = _workbook.NamedRanges.Where(n =>
+                n.Scope == NamedRangeScope.Sheet && n.SheetIndex == activeSheetIndex);
+            var workbookScoped = _workbook.NamedRanges.Where(n => n.Scope == NamedRangeScope.Workbook);
+
+            return sheetScoped
+                .Concat(workbookScoped)
+                .GroupBy(n => n.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
     private async Task OnNameBoxNavigate(string refText)
     {
         if (_workbook.ActiveSheet is null || _grid is null) return;
@@ -655,7 +752,7 @@ public partial class TmSpreadsheet
         var targetRef = refText.Trim();
         if (string.IsNullOrEmpty(targetRef)) return;
 
-        // Try named range first (sheet-scope takes precedence, then workbook)
+        // Named range first: sheet-scope takes precedence over workbook scope.
         var namedRange = _workbook.NamedRanges
             .FirstOrDefault(n => string.Equals(n.Name, targetRef, StringComparison.OrdinalIgnoreCase)
                               && n.Scope == NamedRangeScope.Sheet
@@ -666,12 +763,17 @@ public partial class TmSpreadsheet
 
         if (namedRange is not null)
         {
-            var refersTo = namedRange.RefersTo.TrimStart('=').Replace("$", "");
-            // Extract A1 part from sheet-qualified refs like "Sheet1!A1" or "'Sheet 1'!A1:B2"
-            var bangIndex = refersTo.IndexOf('!');
-            if (bangIndex >= 0)
-                refersTo = refersTo[(bangIndex + 1)..];
-            targetRef = refersTo;
+            targetRef = namedRange.RefersTo.TrimStart('=').Replace("$", "");
+        }
+
+        // A sheet-qualified reference ("Sheet2!A1", "'My sheet'!A1:B2") navigates on THAT sheet: switch
+        // the active sheet first, then navigate (the same rule the hyperlink handler follows).
+        var bangIndex = targetRef.IndexOf('!');
+        if (bangIndex > 0)
+        {
+            var sheetName = targetRef[..bangIndex].Trim().Trim('\'');
+            SwitchToSheetByName(sheetName);
+            targetRef = targetRef[(bangIndex + 1)..];
         }
 
         // Try to parse as a single cell ref or range
@@ -686,6 +788,28 @@ public partial class TmSpreadsheet
         }
 
         await _grid.NavigateToCellAsync(targetRef);
+    }
+
+    /// <summary>
+    /// Switches the active sheet for a sheet-qualified reference. Same path as the hyperlink handler:
+    /// the index and the command manager move together, and the canvas gets a full render.
+    /// </summary>
+    private bool SwitchToSheetByName(string sheetName)
+    {
+        if (string.IsNullOrWhiteSpace(sheetName))
+        {
+            return false;
+        }
+
+        var index = _workbook.Sheets.FindIndex(s =>
+            string.Equals(s.Name, sheetName, StringComparison.OrdinalIgnoreCase));
+        if (index < 0 || index == _workbook.ActiveSheetIndex)
+        {
+            return index >= 0;
+        }
+
+        SwitchSheet(index);
+        return true;
     }
 
     private async Task OnGridHyperlinkClick(SpreadsheetHyperlink hyperlink)
@@ -1087,6 +1211,16 @@ public partial class TmSpreadsheet
         return Task.CompletedTask;
     }
 
+    private Task ApplyVerticalAlign(string? align)
+    {
+        if (Enum.TryParse<SpreadsheetVerticalAlign>(align, true, out var value))
+        {
+            return ApplyStyleToSelectionAsync(s => s.VerticalAlign = value);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private Task ApplyNumberFormat(string? format)
     {
         if (format is null) return Task.CompletedTask;
@@ -1471,7 +1605,7 @@ public partial class TmSpreadsheet
     // ── Open / Download ──
     private async Task TriggerFileInput()
     {
-        await JS.InvokeVoidAsync("eval", "document.getElementById('tm-spreadsheet-file-input').click()");
+        await JS.InvokeVoidAsync("eval", $"document.getElementById('{FileInputDomId}').click()");
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)

@@ -26,6 +26,51 @@
     </div>
 </section>
 
+<!-- Document header (opt-in) + the grouped ribbon -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Document Header &amp; Ribbon</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Ribbon v2</span>
+    </div>
+
+    <div class="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl mb-4">
+        <p class="text-sm text-primary-800 dark:text-primary-200">
+            <code>ShowHeader</code> (default <code>false</code>) renders the document header: the title, the
+            <code>HeaderStart</code> / <code>HeaderActions</code> slots, the built-in Open / Download actions
+            (only for a host that listens to <code>OnOpen</code> / <code>OnDownload</code>) and the
+            &bdquo;Show grid lines&ldquo; switch. While it is on, the toolbar's legacy <code>File</code> tab is gone —
+            the header owns the file actions. The ribbon groups (Clipboard, Font with the cell-border picker,
+            Alignment, Number, Cells and Insert for Home; Insert for the Insert tab; Data; View) carry visible
+            labels and large or small commands; every mark is an icon.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-header-demo">
+        <TmSpreadsheet @ref="_headerSpreadsheet"
+                       ShowHeader="true"
+                       Title="Projekt Aurora"
+                       OnOpen="OnHeaderOpen"
+                       OnDownload="OnHeaderDownload"
+                       RowsCount="24"
+                       ColumnsCount="10"
+                       Height="520px">
+            <HeaderStart>
+                <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300"
+                      data-testid="spreadsheet-header-doc-switcher">
+                    Rozpočet <span aria-hidden="true">▾</span>
+                </span>
+            </HeaderStart>
+            <HeaderActions>
+                <TmButton Variant="ButtonVariant.Outline" Size="ButtonSize.Sm">Sdílet</TmButton>
+            </HeaderActions>
+        </TmSpreadsheet>
+    </div>
+    @if (_headerStatus is not null)
+    {
+        <p class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="spreadsheet-header-status">@_headerStatus</p>
+    }
+</section>
+
 <!-- Dialogs on the shared frame (redesign phase 3) -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -224,8 +269,10 @@
     private TmSpreadsheet _formulaSpreadsheet = null!;
     private TmSpreadsheet _xlsxSpreadsheet = null!;
     private TmSpreadsheet _canvasSpreadsheet = null!;
+    private TmSpreadsheet _headerSpreadsheet = null!;
     private SpreadsheetChangeEventArgs? _lastChange;
     private string? _importStatus;
+    private string? _headerStatus;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -238,6 +285,12 @@
             _canvasSpreadsheet.SetCellValue("B2", "Formula/editor hot path");
         }
     }
+
+    private void OnHeaderOpen(SpreadsheetOpenEventArgs args)
+        => _headerStatus = $"Opened {args.FileName ?? "workbook"}";
+
+    private void OnHeaderDownload(SpreadsheetDownloadEventArgs args)
+        => _headerStatus = $"Downloaded {args.FileName ?? "workbook"}";
 
     private async Task InitializeFormulaSheetAsync()
     {

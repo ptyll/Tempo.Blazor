@@ -434,59 +434,242 @@ internal static class TempoNativeRendererDefinitions
         var rows = el.Props.GetInt("rows", 8);
         var cols = el.Props.GetInt("columns", 6);
         var sheets = el.Props.GetInt("sheetCount", 2);
+        var showHeader = el.Props.GetBool("showHeader", false);
+        var title = el.Props.GetString("title", "Spreadsheet");
         var sb = new StringBuilder();
+
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
-        sb.Append(Rect(0, 0, el.W, 28, FillDark, "none", 4));
-        sb.Append(HLine(0, el.W, 28));
-        sb.Append(Rect(4, 4, 36, 20, Fill, Border, 2));
-        sb.Append(Text("A1", 22, 14, 9, ColorText, "middle"));
-        sb.Append(VLine(40, 0, 28, Border));
-        sb.Append(Text("fx  =SUM(A1:A5)", 48, 14, 9, ColorMuted));
-        var headerH = 20.0;
-        var rowNumW = 28.0;
-        var gridY = 28.0;
-        var gridH = el.H - 28 - 24;
+
+        // ── Document header (opt-in; mirrors TmSpreadsheet.ShowHeader) ──
+        double y = 0;
+        if (showHeader)
+        {
+            const double headerH = 34;
+            sb.Append(Rect(0, 0, el.W, headerH, Fill, "none", 4));
+            sb.Append(Text(Ellipsize(title, el.W * 0.45, 13), 12, headerH / 2, 13, ColorText, "start", "600"));
+            sb.Append(Text("\u25be", 12 + Math.Min(el.W * 0.45, title.Length * 7.2) + 8, headerH / 2, 9, ColorMuted));
+            var actionX = el.W - 210;
+            sb.Append(Rect(actionX, headerH / 2 - 5, 10, 10, FillDark, BorderStrong, 2));
+            sb.Append(Text("Open", actionX + 14, headerH / 2, 9, ColorText));
+            sb.Append(Rect(actionX + 61, headerH / 2 - 5, 10, 10, FillDark, BorderStrong, 2));
+            sb.Append(Text("Download", actionX + 75, headerH / 2, 9, ColorText));
+            sb.Append(VLine(actionX + 124, 9, headerH - 9));
+            sb.Append(Rect(actionX + 136, headerH / 2 - 5, 10, 10, FillDark, BorderStrong, 2));
+            sb.Append(Text("Show grid lines", actionX + 150, headerH / 2, 9, ColorText));
+            sb.Append(Pill(actionX + 209, headerH / 2 - 7, 24, 14, Accent, "none"));
+            sb.Append($"<circle cx='{F(actionX + 226)}' cy='{F(headerH / 2)}' r='5' fill='{Fill}'></circle>");
+            sb.Append(HLine(0, el.W, headerH));
+            y = headerH;
+        }
+
+        // ── Ribbon tabs (Home is active in the mockup; Rozlo\u017een\u00ed/Revize/Vzorce are intentionally absent) ──
+        const double tabsH = 26;
+        string[] tabs = ["Home", "Insert", "Data", "View"];
+        sb.Append(Rect(0, y, el.W, tabsH, FillDark, "none", 0));
+        var tabX = 12.0;
+        for (var i = 0; i < tabs.Length; i++)
+        {
+            var active = i == 0;
+            var w = tabs[i].Length * 6.2 + 18;
+            sb.Append(Text(tabs[i], tabX, y + tabsH / 2, 9, active ? Accent : ColorMuted, "start", active ? "600" : "normal"));
+            if (active)
+            {
+                sb.Append(Rect(tabX, y + tabsH - 2, w - 18, 2, Accent, "none", 0));
+            }
+            tabX += w;
+        }
+        sb.Append(HLine(0, el.W, y + tabsH));
+        y += tabsH;
+
+        // ── Ribbon groups with visible labels and big / small commands ──
+        const double ribbonH = 62;
+        string[] groups = ["Clipboard", "Font", "Alignment", "Number", "Cells", "Insert"];
+        double[] weights = [1.55, 1.35, 1.05, 1.15, 1.25, 0.95];
+        var innerX = 8.0;
+        var innerW = el.W - 16;
+        var weightSum = 0.0;
+        foreach (var weight in weights)
+        {
+            weightSum += weight;
+        }
+
+        for (var g = 0; g < groups.Length; g++)
+        {
+            var groupW = innerW * weights[g] / weightSum;
+            var gx = innerX;
+            if (g > 0)
+            {
+                sb.Append(VLine(gx - 4, y + 6, y + ribbonH - 16));
+            }
+
+            if (g == 0)
+            {
+                // Large Undo / Redo, a column of small Cut / Copy, then large Paste.
+                sb.Append(LargeButton(gx + 25, y + 20, "Undo", canUndo: true));
+                sb.Append(LargeButton(gx + 25 + 40, y + 20, "Redo", canUndo: false));
+                sb.Append(SmallButton(gx + 78, y + 12, "Cut"));
+                sb.Append(SmallButton(gx + 78, y + 30, "Copy"));
+                sb.Append(LargeButton(gx + 148, y + 20, "Paste", canUndo: true));
+            }
+            else if (g == 1)
+            {
+                sb.Append(Rect(gx + 4, y + 8, Math.Max(40, groupW * 0.34), 16, Fill, Border, 3));
+                sb.Append(Text("Inter", gx + 10, y + 16, 8, ColorText));
+                sb.Append(Rect(gx + 6 + Math.Max(40, groupW * 0.34), y + 8, 30, 16, Fill, Border, 3));
+                sb.Append(Text("11", gx + 12 + Math.Max(40, groupW * 0.34), y + 16, 8, ColorText));
+                sb.Append(Text("B", gx + 8, y + 34, 10, ColorText, "start", "700"));
+                sb.Append(Text("I", gx + 26, y + 34, 10, ColorMuted, "start", "italic"));
+                sb.Append(Text("U", gx + 44, y + 34, 10, ColorMuted, "start", "600"));
+                sb.Append(Text("A", gx + 64, y + 34, 10, Accent, "start", "700"));
+                sb.Append(Rect(gx + 63, y + 38, 12, 2, Accent, "none", 0));
+            }
+            else if (g == 2)
+            {
+                // Alignment: horizontal row + vertical row (incl. merge cells).
+                for (var i = 0; i < 3; i++)
+                {
+                    sb.Append(AlignGlyph(gx + 8 + i * 18, y + 14, i));
+                    sb.Append(AlignGlyph(gx + 8 + i * 18, y + 32, i + 3));
+                }
+                sb.Append(MergeGlyph(gx + 62, y + 32));
+            }
+            else if (g == 3)
+            {
+                sb.Append(Rect(gx + 4, y + 8, Math.Max(46, groupW * 0.6), 16, Fill, Border, 3));
+                sb.Append(Text("Currency", gx + 10, y + 16, 8, ColorText));
+                sb.Append(Text("%", gx + 8, y + 34, 9, ColorText));
+                sb.Append(Text("000", gx + 26, y + 34, 8, ColorText));
+                sb.Append(Text("+.0", gx + 50, y + 34, 8, ColorText));
+                sb.Append(Text("-.00", gx + 70, y + 34, 8, ColorText));
+            }
+            else if (g == 4)
+            {
+                sb.Append(LargeButton(gx + 24, y + 20, "Insert row", canUndo: true));
+                sb.Append(LargeButton(gx + 24 + 44, y + 20, "Insert column", canUndo: true));
+                sb.Append(LargeButton(gx + 24 + 88, y + 20, "Delete", canUndo: false));
+            }
+            else
+            {
+                sb.Append(LargeButton(gx + 26, y + 20, "Insert link", canUndo: true));
+                sb.Append(LargeButton(gx + 26 + 52, y + 20, "Insert image", canUndo: true));
+            }
+
+            sb.Append(Text(groups[g], gx + groupW / 2 - 4, y + ribbonH - 8, 8, ColorMuted, "middle"));
+            innerX += groupW;
+        }
+
+        y += ribbonH;
+        sb.Append(HLine(0, el.W, y));
+
+        // ── Formula bar: name box, permanent fx, the value ──
+        const double barH = 26;
+        sb.Append(Rect(0, y, el.W, barH, Fill, "none", 0));
+        sb.Append(Rect(8, y + 4, 54, 18, Fill, Border, 3));
+        sb.Append(Text("A1", 18, y + 13, 9, ColorText));
+        sb.Append(Text("\u25be", 50, y + 13, 7, ColorMuted));
+        sb.Append(Text("fx", 74, y + 13, 9, ColorMuted, "start", "italic"));
+        sb.Append(VLine(88, y + 5, y + barH - 5));
+        sb.Append(Text("=SUM(A1:A5)", 96, y + 13, 9, ColorMuted));
+        sb.Append(Rect(0, y, el.W, barH, "none", Border, 0));
+        sb.Append(HLine(0, el.W, y + barH));
+        y += barH;
+
+        // ── Grid ──
+        var statusH = 20.0;
+        var tabBarH = 22.0;
+        var headerH2 = 18.0;
+        var rowNumW = 26.0;
+        var gridY = y;
+        var gridH = Math.Max(40, el.H - y - tabBarH - statusH);
         var colW = (el.W - rowNumW) / cols;
-        var rowH = (gridH - headerH) / rows;
-        sb.Append(Rect(rowNumW, gridY, el.W - rowNumW, headerH, FillDark, "none", 0));
-        sb.Append(HLine(0, el.W, gridY + headerH));
+        var rowH = Math.Max(8, (gridH - headerH2) / rows);
+
+        sb.Append(Rect(rowNumW, gridY, el.W - rowNumW, headerH2, FillDark, "none", 0));
+        sb.Append(HLine(0, el.W, gridY + headerH2));
         for (var c = 0; c < cols; c++)
         {
             var cx = rowNumW + c * colW;
             sb.Append(VLine(cx, gridY, gridY + gridH));
-            sb.Append(Text(((char)('A' + c)).ToString(), cx + colW / 2, gridY + headerH / 2, 9, ColorMuted, "middle"));
+            sb.Append(Text(((char)('A' + c % 26)).ToString(), cx + colW / 2, gridY + headerH2 / 2, 8, ColorMuted, "middle"));
         }
 
         for (var r = 0; r < rows; r++)
         {
-            var ry = gridY + headerH + r * rowH;
+            var ry = gridY + headerH2 + r * rowH;
             sb.Append(HLine(0, el.W, ry + rowH));
-            sb.Append(Text((r + 1).ToString(), rowNumW / 2, ry + rowH / 2, 9, ColorMuted, "middle"));
+            sb.Append(Text((r + 1).ToString(), rowNumW / 2, ry + rowH / 2, 8, ColorMuted, "middle"));
             if (r == 0)
             {
                 for (var c = 0; c < cols; c++)
                 {
                     var cx = rowNumW + c * colW;
                     sb.Append(Rect(cx + 1, ry + 1, colW - 1, rowH - 1, FillAccent, "none", 0));
-                    sb.Append(Text(c == 0 ? "Name" : c == 1 ? "Value" : "—", cx + 4, ry + rowH / 2, 8, Accent));
+                    sb.Append(Text(c == 0 ? "Name" : c == 1 ? "Value" : "\u2014", cx + 4, ry + rowH / 2, 8, Accent));
                 }
             }
         }
 
         sb.Append(VLine(rowNumW, gridY, gridY + gridH));
         sb.Append(HLine(0, el.W, gridY + gridH));
-        var tabY = el.H - 24;
-        sb.Append(Rect(0, tabY, el.W, 24, FillDark, "none", 0));
-        sb.Append(HLine(0, el.W, tabY));
-        for (var s = 0; s < sheets; s++)
-        {
-            sb.Append(Rect(4 + s * 62, tabY + 4, 56, 16, s == 0 ? Fill : FillDark, s == 0 ? Border : "none", 3));
-            sb.Append(Text($"Sheet {s + 1}", 32 + s * 62, tabY + 12, 8, s == 0 ? ColorText : ColorMuted, "middle"));
-        }
 
-        sb.Append(Text("+", el.W - 16, tabY + 12, 10, ColorMuted, "middle"));
+        // ── Sheet tabs (active tab underlined) + add ──
+        var tabY = gridY + gridH;
+        sb.Append(Rect(0, tabY, el.W, tabBarH, FillDark, "none", 0));
+        sb.Append(HLine(0, el.W, tabY));
+        sb.Append(Text("\u2039", 10, tabY + tabBarH / 2, 9, ColorMuted, "middle"));
+        for (var sIdx = 0; sIdx < sheets; sIdx++)
+        {
+            var tx = 22 + sIdx * 66;
+            var active = sIdx == 0;
+            sb.Append(Text($"Sheet {sIdx + 1}", tx, tabY + tabBarH / 2, 8, active ? ColorText : ColorMuted, "start", active ? "600" : "normal"));
+            if (active)
+            {
+                sb.Append(Rect(tx - 4, tabY + tabBarH - 2, 58, 2, Accent, "none", 0));
+            }
+        }
+        sb.Append(Text("+", el.W - 16, tabY + tabBarH / 2, 10, ColorMuted, "middle"));
+
+        // ── Status bar ──
+        var statusY = el.H - statusH;
+        sb.Append(Rect(0, statusY, el.W, statusH, Fill, "none", 0));
+        sb.Append(HLine(0, el.W, statusY));
+        sb.Append(Text("Ready", 10, statusY + statusH / 2, 8, ColorMuted));
+        sb.Append(Text("Sum: 0   Count: 0   Average: 0", el.W - 190, statusY + statusH / 2, 8, ColorMuted));
+        sb.Append(Text("100 %", el.W - 42, statusY + statusH / 2, 8, ColorMuted));
+
         Svg(b, sb.ToString());
     }
+
+    /// <summary>A ribbon large button: an icon square above a two-line label.</summary>
+    private static string LargeButton(double x, double y, string label, bool canUndo)
+        => Rect(x - 18, y - 14, 36, 22, FillDark, Border, 3) +
+           Rect(x - 8, y - 10, 8, 6, canUndo ? BorderStrong : Border, "none", 1) +
+           Rect(x + 2, y - 10, 6, 6, canUndo ? BorderStrong : Border, "none", 1) +
+           Text(label, x, y + 14, 7, canUndo ? ColorText : ColorMuted, "middle");
+
+    /// <summary>A ribbon small button: icon and label on one line.</summary>
+    private static string SmallButton(double x, double y, string label)
+        => Rect(x, y, 6, 6, BorderStrong, "none", 1) +
+           Text(label, x + 10, y + 3, 7, ColorText);
+
+    /// <summary>One horizontal or vertical alignment glyph (indexes 0-2 horizontal, 3-5 vertical).</summary>
+    private static string AlignGlyph(double x, double y, int variant)
+    {
+        var sb = new StringBuilder();
+        var lengths = variant % 3 == 0 ? new[] { 12, 9, 12, 7 } : variant % 3 == 1 ? new[] { 12, 7, 12, 9 } : new[] { 12, 12, 12, 12 };
+        for (var i = 0; i < 4; i++)
+        {
+            var lineW = lengths[i];
+            var lx = variant % 3 == 1 ? x + (12 - lineW) / 2 : variant % 3 == 2 ? x + 12 - lineW : x;
+            sb.Append($"<line x1='{F(lx)}' y1='{F(y + i * 3)}' x2='{F(lx + lineW)}' y2='{F(y + i * 3)}' stroke='{BorderStrong}' stroke-width='1.2'></line>");
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>The merge-cells glyph of the Alignment group.</summary>
+    private static string MergeGlyph(double x, double y)
+        => $"<rect x='{F(x)}' y='{F(y)}' width='12' height='10' rx='1' fill='none' stroke='{BorderStrong}' stroke-width='1.2'></rect>" +
+           $"<line x1='{F(x + 6)}' y1='{F(y)}' x2='{F(x + 6)}' y2='{F(y + 10)}' stroke='{Accent}' stroke-width='1.2' stroke-dasharray='2 2'></line>";
 
     private static void RenderGantt(WireframeElement el, RenderTreeBuilder b)
     {
