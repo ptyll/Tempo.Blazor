@@ -40,6 +40,56 @@
       "description": "How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon Rail (default) or a horizontal Tabs strip with text labels (ARIA tabs). ShowSidebar = false hides either."
     },
     {
+      "name": "ShowSummaryBand",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the summary band - the rollup strip (status donut, time, milestones, budget, WBS) under the tree + timeline, above a docked workload. Default false: the chart is unchanged. Shows in the chart views (Day / Week / Month / List) only; a desktop container renders five cards, a tablet two columns and the read-mostly mobile container a compact one-line strip with the full cards in the More sheet's Summary entry."
+    },
+    {
+      "name": "SummaryBandContent",
+      "type": "RenderFragment<GanttSummary>?",
+      "isRequired": false,
+      "description": "Replaces the built-in summary cards with host content; the context carries the computed GanttSummary. The band itself (its section, placement and the mobile compact strip) stays the component's."
+    },
+    {
+      "name": "BudgetTotal",
+      "type": "decimal?",
+      "isRequired": false,
+      "description": "The project's overall budget the budget card shows the actual cost against (\"320 000 of 500 000\"). Null (default): the budget card renders only when the tasks carry an actual cost, without a total."
+    },
+    {
+      "name": "BudgetCurrency",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Currency code appended to the budget amounts (e.g. \"CZK\"), formatted through the active culture. Null keeps bare numbers."
+    },
+    {
+      "name": "TimelineStart",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "Pins the timeline's first day, overriding the range computed from the data. The shared portfolio axis drives it (every card lays out against the union range, so the same date draws at the same x in every card); a host can pin its own axis too. Bars outside the range clip to the edge. A pinned axis locks the zoom: the effective preset is ZoomPreset, the pixels per day stay at zoom 100 and Ctrl+wheel zoom is ignored."
+    },
+    {
+      "name": "TimelineEnd",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "Pins the timeline's last day (see TimelineStart). Null keeps the data's maximum end."
+    },
+    {
+      "name": "ShowTimelineHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Hides the two-row timeline header (month + week / day) without hiding the grid below it. The shared portfolio axis renders ONE header above the cards and switches it off on every card — the tree header collapses with it (visually hidden, still a treegrid header for assistive tech), so the first tree row stays level with the first bar. Default true."
+    },
+    {
+      "name": "TreeWidth",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Pins the task tree's width as a CSS length (e.g. \"200px\"); the shared portfolio axis pins one width on every card so the timelines start at the same x. Null keeps the chart's own width logic."
+    },
+    {
       "name": "HeaderStart",
       "type": "RenderFragment?",
       "isRequired": false,

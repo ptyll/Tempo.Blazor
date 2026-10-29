@@ -69,6 +69,7 @@ else
         @ToggleChip("Filter dialog",         _filterDialog,            v => _filterDialog = v,           "bg-rose-600")
         @ToggleChip("Toolbar labels",        _toolbarLabels,           v => _toolbarLabels = v,          "bg-lime-600")
     @ToggleChip("Docked workload",       _dockedWorkload,          v => _dockedWorkload = v,         "bg-fuchsia-600")
+        @ToggleChip("Summary band", _showSummaryBand, v => _showSummaryBand = v, "bg-emerald-600")
         @ToggleChip("Adv. Context Menu", _viewSettings.ShowAdvancedContextButtons, v => { _viewSettings.ShowAdvancedContextButtons = v; }, "bg-amber-600")
         @ToggleChip("Progress %", _viewSettings.ShowProgressLabel, v => { _viewSettings.ShowProgressLabel = v; }, "bg-indigo-600")
     </div>
@@ -116,6 +117,9 @@ else
                  ToolbarLabels="@(_toolbarLabels ? ToolbarLabels.IconsWithText : ToolbarLabels.Icons)"
                  ShowQuickSearch="@_toolbarLabels"
                  ShowWorkloadPanel="@_showWorkloadPanel"
+                 ShowSummaryBand="@_showSummaryBand"
+                 BudgetTotal="500000m"
+                 BudgetCurrency="CZK"
                  WorkloadDisplayMode="@_workloadMode"
                  WorkloadDisplayModeChanged="@(m => _workloadMode = m)"
                  WorkloadPlacement="@(_dockedWorkload ? GanttWorkloadPlacement.Docked : GanttWorkloadPlacement.View)"
@@ -336,6 +340,7 @@ else
     private bool                  _tabsMode                = true;
     private bool                  _toolbarLabels           = true;
     private bool                  _dockedWorkload;
+    private bool                  _showSummaryBand;
     private bool                  _filterDialog;
 
     private IReadOnlyList<GanttFilter> _filters = [];

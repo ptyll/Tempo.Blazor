@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "The rollup behind the Gantt's optional summary band: counts by status, overdue count, logged and estimated hours (leaves only), milestones done/total, actual cost with the optional host budget, the deepest WBS level and the task count - computed by GanttHelper.ComputeSummary from the visible tasks. IsFiltered is stamped by the caller when the visible set is smaller than the full data.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSummary.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttSummary"
+}

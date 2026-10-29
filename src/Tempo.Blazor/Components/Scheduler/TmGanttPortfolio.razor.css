@@ -178,3 +178,86 @@
 .tm-gantt-portfolio__mini-bar--colored {
     background: var(--tm-gantt-portfolio-mini-color, var(--tm-color-primary-solid));
 }
+
+/* ─── Shared axis (phase 11): ONE sticky header above the cards ─── */
+
+/* The header is a flex row: a leading cell as wide as the cards' task tree (the component knob is set
+   inline by the markup, +1px for the embedded chart's own border, so the axis cells start exactly where
+   every card's timeline starts) plus the scrollable band. Both keep the card's 1px border, so the visible
+   widths match. */
+.tm-gantt-portfolio__axis {
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    overflow: hidden;
+}
+
+.tm-gantt-portfolio__axis--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: var(--tm-shadow-card);
+    display: flex;
+    align-items: stretch;
+    /* Component knob: the pinned tree width, set inline by the markup (the host's TreeWidth or 12rem);
+       the lead cell is 1px wider so the axis cells start where the embedded chart's timelines start. */
+    --tm-gantt-portfolio-tree-width: 12rem;
+}
+
+.tm-gantt-portfolio__axis-lead {
+    flex: 0 0 auto;
+    width: calc(var(--tm-gantt-portfolio-tree-width, 12rem) + 1px);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--tm-space-3);
+    border-right: 1px solid var(--tm-border-color);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__axis-scroll {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.tm-gantt-portfolio__axis-content {
+    position: relative;
+}
+
+.tm-gantt-portfolio__axis-row {
+    position: relative;
+    height: 1.25rem;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__axis-row:last-child {
+    border-bottom: none;
+}
+
+.tm-gantt-portfolio__axis-cell {
+    position: absolute;
+    top: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border-left: 1px solid var(--tm-border-color);
+    padding-inline-start: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.25rem;
+    color: var(--tm-text-secondary);
+}
+
+/* Mobile (G2): the shared band is a percent row over the mini-gantts (nothing scrolls). */
+.tm-gantt-portfolio__axis--mobile .tm-gantt-portfolio__axis-row--months {
+    height: 1.25rem;
+}
+
+/* With the shared axis the per-card month rows are redundant: the one band above the cards carries the dates. */
+.tm-gantt-portfolio--shared .tm-gantt-portfolio__mini-months {
+    display: none;
+}

@@ -48,6 +48,26 @@
       "isRequired": false,
       "default": "TmLayoutMode.Auto",
       "description": "The layout the cards follow. Auto (default) keeps the card with the embedded chart; a forced Mobile — or the host passing the chart's resolved layout — presents the read-only mobile card: the summary line, the percent with its progress bar and a mini-gantt of bars only (a tap raises OnProjectSelected; nothing is editable)."
+    },
+    {
+      "name": "AxisMode",
+      "type": "GanttPortfolioAxisMode",
+      "isRequired": false,
+      "default": "GanttPortfolioAxisMode.PerProject",
+      "description": "How the cards' date axes align. PerProject (default) keeps every card on its own range; Shared computes the union range of all projects, renders ONE sticky axis header above the cards and hands every card the same range, zoom and tree width (with ShowTimelineHeader=false), so the same date draws at the same x in every card and the cards scroll in step (tmGantt.linkScrollGroup)."
+    },
+    {
+      "name": "ZoomPreset",
+      "type": "GanttZoomPreset",
+      "isRequired": false,
+      "default": "GanttZoomPreset.Weeks",
+      "description": "The zoom preset of the shared axis header and, in the Shared axis mode, of every card."
+    },
+    {
+      "name": "TreeWidth",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The task tree width every card is pinned to in the Shared axis mode (a CSS length, e.g. \"200px\") — one width so the timelines start at the same x. Null uses the shared default (12rem)."
     }
   ]
 }

@@ -410,7 +410,9 @@ public sealed class MarkupClassCoverageTests
             // "tm-gantt-import-title-{Guid…}" stem is gone — 51 → 50.
             // TmGantt redesign phase 8: the mobile task sheet's field ids ($"tm-gantt-task-status-{Guid…}",
             // $"tm-gantt-task-percent-{Guid…}") add their two stems — 50 → 52.
-            ExpectedUnmeasurableStems: 52),
+            // TmGantt redesign phase 11: the portfolio's shared-axis scroll group id
+            // ($"tm-gantt-portfolio-{Guid…}") adds its stem — 52 → 53.
+            ExpectedUnmeasurableStems: 53),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

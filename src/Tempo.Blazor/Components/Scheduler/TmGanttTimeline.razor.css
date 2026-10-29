@@ -33,6 +33,14 @@
     flex-shrink: 0;
 }
 
+/* ShowTimelineHeader=false (the shared portfolio axis): the zero-height scroll carrier — see the markup. */
+.tm-gantt__timeline-header--carrier {
+    height: 0;
+    border: none;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .tm-gantt__timeline-header-cell {
     display: flex;
     align-items: center;

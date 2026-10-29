@@ -1,9 +1,51 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Feedback
-
-<div class="tm-gantt-portfolio @(IsMobile ? "tm-gantt-portfolio--mobile" : "") @Class" data-testid="@RootTestId()" @attributes="AdditionalAttributes">
+@* The portfolio (phase 11): PerProject (default) keeps today's independent cards; AxisMode=Shared computes
+   the union range of all projects, renders ONE sticky axis header above the cards and pins the same range,
+   zoom preset and tree width on every card (ShowTimelineHeader=false), so the same date draws at the same x.
+   The header's scroll and the cards' scroll are linked in the browser (tmGantt.linkScrollGroup). *@
+<div class="@RootClass" data-testid="@RootTestId()" @attributes="AdditionalAttributes">
+    @if (SharedAxis && !IsMobile)
+    {
+        @* The header is a flex row: a leading cell as wide as the cards' tree (plus the chart's own border,
+           so the axis cells start exactly where every card's timeline starts) holds the localized label, and
+           the band to its right is the scrollable member of the linkScrollGroup. *@
+        <div class="tm-gantt-portfolio__axis tm-gantt-portfolio__axis--sticky" data-testid="@TestId("gantt-portfolio-axis")"
+             style="--tm-gantt-portfolio-tree-width: @SharedTreeWidth">
+            <div class="tm-gantt-portfolio__axis-lead">@Loc["TmGanttPortfolio_SharedAxis"]</div>
+            <div class="tm-gantt-portfolio__axis-scroll" role="region" aria-label="@Loc["TmGanttPortfolio_SharedAxis"]"
+                 tabindex="0" @ref="_axisScrollRef">
+                <div class="tm-gantt-portfolio__axis-content" style="width: @(F(_axisTotalWidth))px">
+                    @foreach (var row in new[] { _axisRows.Upper, _axisRows.Lower })
+                    {
+                        <div class="tm-gantt-portfolio__axis-row">
+                            @foreach (var h in row)
+                            {
+                                <span class="tm-gantt-portfolio__axis-cell" style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    @if (SharedAxis && IsMobile)
+    {
+        @* G2: the one shared monthly band over the union range; the per-card month rows hide. The band is
+           decorative (the months are in every card's summary line), so assistive tech skips it entirely. *@
+        <div class="tm-gantt-portfolio__axis tm-gantt-portfolio__axis--mobile" data-testid="@TestId("gantt-portfolio-axis")"
+             aria-hidden="true">
+            <div class="tm-gantt-portfolio__axis-row tm-gantt-portfolio__axis-row--months">
+                @foreach (var (month, left, width) in _sharedMobileMonths)
+                {
+                    <span class="tm-gantt-portfolio__axis-cell" style="left: @(F(left))%; width: @(F(width))%">@month.ToString("MMM yyyy", Loc.Culture)</span>
+                }
+            </div>
+        </div>
+    }
     @foreach (var project in Projects)
     {
         var current = project;
@@ -36,7 +78,8 @@
                     }
                     <span class="tm-gantt-portfolio__project-count">@Loc["TmGanttPortfolio_TaskCount", project.Tasks.Count]</span>
                 </span>
-                <TmProgressBar Class="tm-gantt-portfolio__project-progress" Value="progress" ShowLabel="true" Size="ProgressBarSize.Sm" />
+                <TmProgressBar Class="tm-gantt-portfolio__project-progress" Value="progress" ShowLabel="true" Size="ProgressBarSize.Sm"
+                               aria-label="@Loc["TmGanttPortfolio_ProgressAria", project.Name]" />
                 @if (ProjectActions is not null)
                 {
                     <span class="tm-gantt-portfolio__project-actions">@ProjectActions(project)</span>
@@ -45,7 +88,8 @@
             @if (IsMobile)
             {
                 @* Mobile card (G2): the summary line, the weighted percent and a mini-gantt of bars only.
-                   Nothing is editable; a tap on the project name (or the header) selects the project. *@
+                   Nothing is editable; a tap on the project name (or the header) selects the project.
+                   With the shared axis the percentages are of the UNION range and the per-card months hide. *@
                 <div class="tm-gantt-portfolio__project-summary-mobile" data-testid="@TestId($"portfolio-summary-{project.Id}")">
                     <span class="tm-gantt-portfolio__project-count">@Loc["TmGanttPortfolio_TaskCount", project.Tasks.Count]</span>
                     @if (range is { } mr)
@@ -54,14 +98,17 @@
                     }
                     <span class="tm-gantt-portfolio__project-percent">@(((int)Math.Round(progress)).ToString(Loc.Culture))&#8202;%</span>
                 </div>
-                var mini = MiniLayout(project);
+                var mini = MiniLayout(project, SharedAxis ? _unionRange : null);
                 <div class="tm-gantt-portfolio__mini" role="img" aria-label="@Loc["TmGanttPortfolio_TaskCount", project.Tasks.Count]">
-                    <div class="tm-gantt-portfolio__mini-months" aria-hidden="true">
-                        @foreach (var (month, left, width) in mini.Months)
-                        {
-                            <span class="tm-gantt-portfolio__mini-month" style="left: @(F(left))%; width: @(F(width))%">@month.ToString("MMM yyyy", Loc.Culture)</span>
-                        }
-                    </div>
+                    @if (!SharedAxis)
+                    {
+                        <div class="tm-gantt-portfolio__mini-months" aria-hidden="true">
+                            @foreach (var (month, left, width) in mini.Months)
+                            {
+                                <span class="tm-gantt-portfolio__mini-month" style="left: @(F(left))%; width: @(F(width))%">@month.ToString("MMM yyyy", Loc.Culture)</span>
+                            }
+                        </div>
+                    }
                     @foreach (var bar in mini.Bars)
                     {
                         <div class="tm-gantt-portfolio__mini-row">
@@ -78,11 +125,21 @@
             else if (expanded)
             {
                 <div class="tm-gantt-portfolio__project-summary" id="@BodyId(project)" style="@SummaryStyle">
-                    <TmGantt TestIdPrefix="@TestId($"gantt-{project.Id}")"
+                    @* With the shared axis every card is pinned to the DESKTOP layout: a card that classified as
+                       mobile would swap its zoom to Days (and then to its own chrome) and break the shared alignment
+                       the axis header above the cards guarantees. *@
+                    <TmGantt @ref="_cardGanttRefs[current.Id]"
+                             TestIdPrefix="@TestId($"gantt-{project.Id}")"
                              Items="project.Tasks"
                              DependencyItems="project.Dependencies"
+                             LayoutMode="@(SharedAxis ? TmLayoutMode.Desktop : TmLayoutMode.Auto)"
                              ShowToolbar="false"
-                             ShowSidebar="false" />
+                             ShowSidebar="false"
+                             TimelineStart="@(SharedAxis ? _unionRange!.Value.Item1 : null)"
+                             TimelineEnd="@(SharedAxis ? _unionRange!.Value.Item2 : null)"
+                             ZoomPreset="@(SharedAxis ? ZoomPreset : GanttZoomPreset.Weeks)"
+                             ShowTimelineHeader="@(!SharedAxis)"
+                             TreeWidth="@(SharedAxis ? SharedTreeWidth : null)" />
                 </div>
             }
         </div>

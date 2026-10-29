@@ -328,6 +328,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         _mobileMoreOpen = false;
         _mobileMoreSettings = false;
         _mobileAddSheetOpen = false;
+        _mobileSummarySheetOpen = false;
         _historyDrawerOpen = false;
         _filterPanelOpen = false;
         if (_activeSidebarPanel == GanttSidebarPanel.Reports) _activeSidebarPanel = null;
@@ -367,6 +368,19 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         CloseMobileSurfaces();
         _activeSidebarPanel = GanttSidebarPanel.Reports;
     }
+
+    /// <summary>Whether the mobile summary sheet (the full cards of the band) is open; read by the mobile overlays part.</summary>
+    internal bool MobileSummarySheetOpen => _mobileSummarySheetOpen;
+    private bool _mobileSummarySheetOpen;
+
+    /// <summary>The More sheet's "Summary" entry: opens the full summary cards as a sheet (the one surface).</summary>
+    internal void MobileMoreSummary()
+    {
+        CloseMobileSurfaces();
+        _mobileSummarySheetOpen = true;
+    }
+
+    internal void CloseMobileSummarySheet() => _mobileSummarySheetOpen = false;
 
     /// <summary>The tiles of the mobile <c>TmMobileActionBar</c>: Add task (primary) | Expand all | Collapse all | More.</summary>
     internal IReadOnlyList<TmActionItem> MobileActionItems =>
@@ -496,6 +510,39 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     /// <summary>The progress label next to a bar: the host setting, and always on mobile (the read-mostly bar reads at a glance).</summary>
     internal bool ShowBarProgressLabels => ViewSettings.ShowProgressLabel || IsMobileLayout;
+
+    // ── Summary band + shared axis (phase 11) ─────────────────────
+
+    /// <summary>The rollup the summary band draws; null while the band is off (<see cref="ShowSummaryBand"/>) or an
+    /// alternate view is shown. Computed ONCE per <see cref="RefreshVisibleData"/> from the visible nodes — never in render.</summary>
+    internal GanttSummary? Summary { get; private set; }
+
+    /// <summary>The band's render scope (decision GANTT-SUMMARY-SCOPE): the <b>filtered</b> data — after the filters
+    /// and "show closed", but IGNORING the expand/collapse state, so collapsing a parent never changes the rollup of
+    /// the full-width strip below the tree. The band carries a localized "Filtered" note whenever that scope is
+    /// smaller than the data (a filter is active or closed tasks are hidden).</summary>
+    private void ComputeSummaryBand()
+    {
+        if (!ShowSummaryBand)
+        {
+            Summary = null;
+            return;
+        }
+
+        var filteredRoots = _activeFilters.Count > 0
+            ? GanttHelper.ApplyFilters(_treeRoots, _activeFilters)
+            : _treeRoots;
+        var scope = GanttHelper.FlattenAll(filteredRoots);
+        if (!ViewSettings.ShowClosedTasks)
+        {
+            scope = scope.Where(n => n.Task.Status is not TmWorkItemStatus.Done and not TmWorkItemStatus.Closed).ToList();
+        }
+
+        var computed = GanttHelper.ComputeSummary(scope, _today, BudgetTotal);
+        var isFiltered = _activeFilters.Count > 0
+            || (!ViewSettings.ShowClosedTasks && Data.Any(t => t.Status is TmWorkItemStatus.Done or TmWorkItemStatus.Closed));
+        Summary = isFiltered ? computed with { IsFiltered = true } : computed;
+    }
 
     // ── Parameters ───────────────────────────────────────────────
 
@@ -825,6 +872,67 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
     /// <summary>
+    /// Shows the summary band — the rollup strip (status donut, time, milestones, budget, WBS) under the tree +
+    /// timeline, above a docked workload. Default false: the chart is unchanged. The band shows in the chart views
+    /// (Day / Week / Month / List) only; a desktop container renders five cards, a tablet two columns and the
+    /// read-mostly mobile container a compact one-line strip with the full cards in the "More" sheet's Summary entry.
+    /// </summary>
+    [Parameter] public bool ShowSummaryBand { get; set; }
+
+    /// <summary>
+    /// Replaces the built-in summary cards with host content; the context carries the computed
+    /// <see cref="GanttSummary"/>. The band itself (its section, placement and the mobile compact strip) stays the component's.
+    /// </summary>
+    [Parameter] public RenderFragment<GanttSummary>? SummaryBandContent { get; set; }
+
+    /// <summary>The project's overall budget the budget card shows the actual cost against ("320 000 of 500 000").
+    /// Null (default): the budget card renders only when the tasks carry an actual cost, without a total.</summary>
+    [Parameter] public decimal? BudgetTotal { get; set; }
+
+    /// <summary>Currency code appended to the budget amounts (e.g. "CZK"), formatted through the active culture.
+    /// Null keeps bare numbers.</summary>
+    [Parameter] public string? BudgetCurrency { get; set; }
+
+    /// <summary>
+    /// Pins the timeline's first day, overriding the range <see cref="GanttHelper.GetTimeRange"/> computes from the
+    /// data. The shared portfolio axis drives it (every card lays out against the union range, so the same date draws
+    /// at the same x in every card); a host can pin its own axis too. Bars outside the range clip to the edge. A pinned
+    /// axis locks the zoom: the effective preset is <see cref="ZoomPreset"/>, the pixels per day stay at zoom 100 and
+    /// Ctrl+wheel zoom is ignored, so the chart cannot drift away from a header drawn above it.
+    /// </summary>
+    [Parameter] public DateTime? TimelineStart { get; set; }
+
+    /// <summary>Pins the timeline's last day (see <see cref="TimelineStart"/>). Null keeps the data's maximum end.</summary>
+    [Parameter] public DateTime? TimelineEnd { get; set; }
+
+    /// <summary>
+    /// Hides the two-row timeline header (month + week / day) without hiding the grid below it. The shared portfolio
+    /// axis renders ONE header above the cards and switches it off on every card — the tree header collapses with it
+    /// (visually hidden, still a treegrid header for assistive tech), so the first tree row stays level with the first
+    /// bar. Default true.
+    /// </summary>
+    [Parameter] public bool ShowTimelineHeader { get; set; } = true;
+
+    /// <summary>
+    /// Pins the task tree's width as a CSS length (e.g. "200px"); the shared portfolio axis pins one width on every
+    /// card so the timelines start at the same x. Null keeps the chart's own width logic.
+    /// </summary>
+    [Parameter] public string? TreeWidth { get; set; }
+
+    /// <summary>The timeline range the chart lays out against: the pinned <see cref="TimelineStart"/> / <see cref="TimelineEnd"/> when set, else the data's own range.</summary>
+    internal (DateTime Start, DateTime End) EffectiveTimelineRange
+    {
+        get
+        {
+            var (start, end) = GanttHelper.GetTimeRange(Data);
+            if (TimelineStart is { } pinnedStart) start = pinnedStart;
+            if (TimelineEnd is { } pinnedEnd) end = pinnedEnd;
+            if (end <= start) end = start.AddDays(1);
+            return (start, end);
+        }
+    }
+
+    /// <summary>
     /// How the task panel (and the Reports inspector) is presented: <see cref="GanttTaskPanelMode.Inline"/> (default) is the
     /// in-flow column at every width, <see cref="GanttTaskPanelMode.Overlay"/> a <c>TmSidePanel</c> side sheet with the tabs
     /// Detail | Attachments | Comments | History, and <see cref="GanttTaskPanelMode.Auto"/> picks the in-flow panel on a
@@ -1028,12 +1136,17 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             var baseline = Baselines.FirstOrDefault(b => b.Id == ActiveBaselineId);
             if (baseline is not null)
             {
-                var (tsStart, tsEnd) = GanttHelper.GetTimeRange(Data);
+                var (tsStart, tsEnd) = EffectiveTimelineRange;
                 var ppd = GetPixelPerDay();
+                var totalWidth = Math.Max(1, (tsEnd - tsStart).TotalDays * ppd);
                 foreach (var bt in baseline.Tasks)
                 {
-                    var (left, width) = GanttHelper.CalculateBarPosition(bt.Start, bt.End, tsStart, tsEnd,
-                        Math.Max(1, (tsEnd - tsStart).TotalDays * ppd));
+                    // The same clipping the task bars get (BuildTaskBars): a baseline outside the pinned
+                    // axis renders nothing, one that only reaches into it clips to the edge.
+                    var clippedStart = bt.Start < tsStart ? tsStart : bt.Start;
+                    var clippedEnd = bt.End > tsEnd ? tsEnd : bt.End;
+                    if (clippedEnd < clippedStart) continue;
+                    var (left, width) = GanttHelper.CalculateBarPosition(clippedStart, clippedEnd, tsStart, tsEnd, totalWidth);
                     _baselinePositions[bt.TaskId] = (left, Math.Max(4, width));
                 }
             }
@@ -1197,14 +1310,21 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     private bool _zoomPresetOverrideSet;
 
     /// <summary>
-    /// The zoom the timeline lays out with. The mobile read-mostly container (the mockup's day timeline) starts at the
-    /// Days preset — the horizontal scroll covers the days — while the zoom level keeps scaling the pixels per day. An
-    /// explicit choice (the Day | Week | Month segment through <see cref="SetViewAsync"/>) sets the override and wins on
-    /// the mobile container too, so the segment stays functional there.
+    /// The zoom the timeline lays out with. A pinned axis (<see cref="TimelineStart"/> / <see cref="TimelineEnd"/>,
+    /// the shared portfolio axis) always follows the host's <see cref="ZoomPreset"/> — the header above the cards draws
+    /// with it, so a per-session override (the Day | Week | Month segment) cannot desync a card. The mobile read-mostly
+    /// container (the mockup's day timeline) starts at the Days preset — the horizontal scroll covers the days — while
+    /// the zoom level keeps scaling the pixels per day. An explicit choice (the Day | Week | Month segment through
+    /// <see cref="SetViewAsync"/>) sets the override and wins on the mobile container too, so the segment stays functional there.
     /// </summary>
     internal GanttZoomPreset GetEffectiveZoomPreset() =>
-        IsMobileLayout && !_zoomPresetOverrideSet ? GanttZoomPreset.Days
+        IsTimelinePinned ? ZoomPreset
+        : IsMobileLayout && !_zoomPresetOverrideSet ? GanttZoomPreset.Days
         : _zoomPresetOverrideSet ? _zoomPresetOverride : ZoomPreset;
+
+    /// <summary>True when the host pinned the timeline's range (the shared portfolio axis does): the axis — and with
+    /// it the zoom preset and the scale — is locked, so every card lays out with the pixels per day the shared header draws.</summary>
+    internal bool IsTimelinePinned => TimelineStart is not null || TimelineEnd is not null;
 
     internal bool IsViewActive(GanttView view) => View == view;
 
@@ -2534,8 +2654,10 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             var currentLeft = await GetTimelineScrollLeftAsync();
             await SetTimelineScrollLeftAsync(currentLeft + e.DeltaY);
         }
-        else if (e.CtrlKey)
+        else if (e.CtrlKey && !IsTimelinePinned)
         {
+            // A pinned axis (the shared portfolio axis) is locked to the shared header's scale: Ctrl+wheel
+            // zoom would move this card's pixels per day away from every other card's.
             if (e.DeltaY < 0)
                 await ZoomInAsync();
             else
@@ -2580,7 +2702,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
             ? allVisible
             : allVisible.Where(n => n.Task.Status != TmWorkItemStatus.Done && n.Task.Status != TmWorkItemStatus.Closed).ToList();
 
-        var (timelineStart, timelineEnd) = GanttHelper.GetTimeRange(Data);
+        var (timelineStart, timelineEnd) = EffectiveTimelineRange;
         var pixelPerDay = GetPixelPerDay();
         var totalDays = (timelineEnd - timelineStart).TotalDays;
         _totalTimelineWidth = Math.Max(1, totalDays * pixelPerDay);
@@ -2589,6 +2711,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
         // (plus the clock) is read once instead of per row.
         _today = TodayInZone();
         _todayOffset = GanttHelper.GetTodayOffset(timelineStart, pixelPerDay, _today);
+
+        // The summary band's rollup: once per refresh, from the visible nodes (never in render).
+        ComputeSummaryBand();
 
         // Two-row headers via zoom preset
         var rows = GanttHelper.BuildTimelineHeaderRows(GetEffectiveZoomPreset(), timelineStart, timelineEnd, pixelPerDay);
@@ -2625,7 +2750,9 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
     internal double GetPixelPerDay()
     {
-        var zoomFactor = _zoomLevel / 100.0;
+        // A pinned axis (the shared portfolio axis) locks the scale: the shared header draws at zoom 100
+        // (TmGanttPortfolio.AxisPixelPerDay), so the cards must lay out with exactly those pixels per day.
+        var zoomFactor = IsTimelinePinned ? 1.0 : _zoomLevel / 100.0;
         return GetEffectiveZoomPreset() switch
         {
             GanttZoomPreset.Hours    => DayWidth * zoomFactor * 3,
@@ -2642,9 +2769,7 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
     {
         _taskBars = [];
         // Build a lookup of taskId → node for group detection
-        var nodesByTaskId = _treeRoots
-            .SelectMany(FlattenAll)
-            .ToDictionary(n => n.Task.Id);
+        var nodesByTaskId = GanttHelper.FlattenAll(_treeRoots).ToDictionary(n => n.Task.Id);
 
         for (int i = 0; i < _visibleNodes.Count; i++)
         {
@@ -2667,8 +2792,15 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
                 }
             }
 
-            var (left, width) = GanttHelper.CalculateBarPosition(
-                effectiveStart, effectiveEnd, timelineStart, timelineEnd, _totalTimelineWidth);
+            // A pinned axis (TimelineStart / TimelineEnd, the shared portfolio axis) can extend past the
+            // data: clip the bar's dates to the range FIRST (CalculateBarPosition already clamps its left
+            // offset, which would hide an out-of-range bar as a sliver at the edge instead). A task that
+            // only TOUCHES the range (a milestone on the edge) keeps its 1 px minimum from the helper.
+            var clippedStart = effectiveStart < timelineStart ? timelineStart : effectiveStart;
+            var clippedEnd = effectiveEnd > timelineEnd ? timelineEnd : effectiveEnd;
+            var (left, width) = clippedEnd >= clippedStart
+                ? GanttHelper.CalculateBarPosition(clippedStart, clippedEnd, timelineStart, timelineEnd, _totalTimelineWidth)
+                : (0d, 0d);
             var isDeadlineExceeded = task.DueDate.HasValue && task.End > task.DueDate.Value;
             var barTop = i * RowHeight + (RowHeight - 20) / 2;
 
@@ -2680,19 +2812,14 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
                 baselineWidth = bp.Width;
             }
 
+            // A fully clipped bar stays invisible (width 0); a visible one keeps the 4 px minimum.
+            var barWidth = width <= 0 ? 0 : Math.Max(4, width);
+
             _taskBars.Add(new TaskBarInfo(
-                task, left, Math.Max(4, width), barTop,
+                task, left, barWidth, barTop,
                 task.Color, isGroup, isDeadlineExceeded,
                 baselineLeft, baselineWidth));
         }
-    }
-
-    private static IEnumerable<GanttTaskNode> FlattenAll(GanttTaskNode node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
-            foreach (var n in FlattenAll(child))
-                yield return n;
     }
 
     private void BuildDependencyLines()
@@ -2707,6 +2834,11 @@ public partial class TmGantt : IDisposable, IAsyncDisposable
 
             var fromBar = _taskBars[fromIdx];
             var toBar = _taskBars[toIdx];
+
+            // A bar fully clipped out of a pinned axis rendered nothing (width 0): a line anchored on it
+            // would start or end at the axis edge and draw a dependency the chart does not show.
+            if (fromBar.Width <= 0 || toBar.Width <= 0)
+                continue;
 
             double x1, x2;
             switch (dep.DepType)

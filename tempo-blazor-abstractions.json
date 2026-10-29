@@ -15456,6 +15456,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "GanttPortfolioAxisMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How a TmGanttPortfolio aligns the date axes of its project cards: PerProject (default, every card on its own range) or Shared (one sticky axis header, every card pinned to the union range).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttPortfolioAxisMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttPortfolioProject",
       "kind": "Class",
       "category": "Models",
@@ -15636,6 +15646,84 @@
               "type": "TmWorkItem"
             }
           ]
+        }
+      ]
+    },
+    {
+      "itemName": "GanttSummary",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The rollup behind the Gantt's optional summary band: counts by status, overdue count, logged and estimated hours (leaves only), milestones done/total, actual cost with the optional host budget, the deepest WBS level and the task count - computed by GanttHelper.ComputeSummary from the visible tasks. IsFiltered is stamped by the caller when the visible set is smaller than the full data.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSummary.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ActualCost",
+          "kind": "Property",
+          "type": "decimal",
+          "description": "Sum of the actual cost of the leaf tasks."
+        },
+        {
+          "name": "BudgetTotal",
+          "kind": "Property",
+          "type": "decimal?",
+          "description": "The host's overall budget, when it has one; null otherwise (the band then hides the budget card when no actual cost exists either)."
+        },
+        {
+          "name": "EstimatedHours",
+          "kind": "Property",
+          "type": "double",
+          "description": "Sum of the estimated hours of the leaf tasks."
+        },
+        {
+          "name": "IsFiltered",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the caller knows the set is smaller than its full data (a filter is active or closed tasks are hidden) — the band then shows a \"Filtered\" note."
+        },
+        {
+          "name": "LoggedHours",
+          "kind": "Property",
+          "type": "double",
+          "description": "Sum of the logged hours of the leaf tasks."
+        },
+        {
+          "name": "MilestonesDone",
+          "kind": "Property",
+          "type": "int",
+          "description": "Milestones that are Done or Closed."
+        },
+        {
+          "name": "MilestonesTotal",
+          "kind": "Property",
+          "type": "int",
+          "description": "All milestones in the set."
+        },
+        {
+          "name": "OverdueCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Tasks whose end is before today and that are neither Done nor Closed (the same rule TmGantt.IsOverdue draws)."
+        },
+        {
+          "name": "StatusCounts",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<TmWorkItemStatus, int>",
+          "description": "Tasks per TmWorkItemStatus; only statuses with at least one task are present."
+        },
+        {
+          "name": "TaskCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of tasks in the set."
+        },
+        {
+          "name": "WbsLevels",
+          "kind": "Property",
+          "type": "int",
+          "description": "Deepest WBS level of the set (2 for tasks one level below their parents)."
         }
       ]
     },
@@ -37582,11 +37670,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1505,
-    "manualItemCount": 1505,
-    "generatedItemCount": 1488,
+    "itemCount": 1507,
+    "manualItemCount": 1507,
+    "generatedItemCount": 1490,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1488
+    "publicApiTypeCount": 1490
   }
 }

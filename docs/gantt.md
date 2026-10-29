@@ -14,9 +14,9 @@ read-mostly surface. This file is the contract; the calendar it embeds for `Gant
 | Component | Role |
 |-----------|------|
 | `TmGantt` | The chart. Hosts place only this. |
-| `TmGanttPortfolio` | Portfolio of project cards, each embedding a toolbar-less `TmGantt` (mobile: a summary line and a mini-gantt). |
+| `TmGanttPortfolio` | Portfolio of project cards, each embedding a toolbar-less `TmGantt` (mobile: a summary line and a mini-gantt); `AxisMode=Shared` aligns every card on one shared date axis with a sticky header. |
 | `TmGanttWorkloadView` | The workload week (person rows, utilization bars); docked panel or `GanttView.Workload` view. |
-| `TmGanttToolbar` / `TmGanttTree` / `TmGanttTimeline` / `TmGanttSidebar` / `TmGanttStatusChip` / `TmGanttPanelTabs` / `TmGanttViewSettings` / `TmGanttFilterBar` / `TmGanttMobileOverlays` | Internal parts of `TmGantt` (`[EditorBrowsable(Never)]`, public only because Razor cannot emit internal components). Never place them; they have JSON overlays so the doc guards stay closed. |
+| `TmGanttToolbar` / `TmGanttTree` / `TmGanttTimeline` / `TmGanttSidebar` / `TmGanttStatusChip` / `TmGanttPanelTabs` / `TmGanttViewSettings` / `TmGanttFilterBar` / `TmGanttMobileOverlays` / `TmGanttSummaryBand` | Internal parts of `TmGantt` (`[EditorBrowsable(Never)]`, public only because Razor cannot emit internal components). Never place them; they have JSON overlays so the doc guards stay closed. |
 | `TmGanttTaskPanel` / `TmGanttReportsPanel` / `TmGanttHistoryList` / `TmGanttHistoryDrawer` / `TmGanttFilterPanel` | Right-hand / drawer surfaces the chart composes. |
 | `TmGanttExportDialog` / `TmGanttImportDialog` / `TmGanttImportMappingDialog` | The export, import and column-mapping dialogs (core `TmModal`s). |
 | `TmGanttExportPreview` | Internal (`[EditorBrowsable(Never)]`): the export dialog's built-in live preview — pure SVG/HTML miniature of the chosen format and options. |
@@ -36,9 +36,13 @@ drag, the long-press menu and the Alt+Arrow reorder are missing, and `gantt.js` 
 warning.
 `window.tmGantt` exposes the interop surface: the scroll helpers
 (`get/setScrollLeft|Top`, `getClientWidth`), the docked-workload scroll link (`linkScroll` /
-`unlinkScroll`, idempotent, keyed off the workload element), the history drawer focus return
-(`noteOpener` / `restoreOpener`) and the pointer sessions `attachTimeline(id, timeline, body,
-treeBody, dotNet)` / `attachTree(id, treeBody, dotNet)` (plus the matching `detach*`). Sessions are
+`unlinkScroll`, idempotent, keyed off the workload element), the shared portfolio axis link
+(`linkScrollGroup(groupId, elements)` / `unlinkScrollGroup(groupId)`, idempotent per group id;
+pixel-mapped where the members' content widths match, a ratio of the scrollable distance where they
+differ), the
+history drawer focus return (`noteOpener` / `restoreOpener`) and the pointer sessions
+`attachTimeline(id, timeline, body, treeBody, dotNet)` / `attachTree(id, treeBody, dotNet)` (plus the
+matching `detach*`). Sessions are
 keyed by a caller-supplied id — Blazor removes the element before `DisposeAsync` runs — idempotent,
 and `attach*` resolve `true` only when every session registered, so a failed phase is retried on a
 later render.
@@ -153,6 +157,85 @@ rows being edited until Apply), `Auto` picks the dialog on a tablet or narrower 
 strip on a desktop one. The value editor follows the field type (Status/Priority enum selects, date
 inputs, Title text), and so do the operators.
 
+## Summary band
+
+`ShowSummaryBand` (default `false`; decision `GANTT-SUMMARY-SCOPE`) shows the rollup strip under the
+tree + timeline — full width of the chart, above a docked workload, in the chart views (Day / Week /
+Month / List) only. The summary is computed ONCE per data refresh from the **filtered** tasks — after
+the filters and "show closed", but IGNORING the expand/collapse state (`GanttHelper.FlattenAll`), so
+collapsing a parent never changes the numbers of the full-width strip below the tree. When that scope
+is smaller than the data — a filter is active, or closed tasks are hidden while the data has some —
+the band carries a localized "Filtered" note. Parents never contribute
+their hours or cost a second time (only leaves add up).
+
+| Card | Shows | Hidden when |
+|------|-------|-------------|
+| Status of tasks | `TmChart` Donut with the total in its hole + a legend with numbers (`role="img"` with a localized text summary) | never (any task) |
+| Time spent | "128 h of 320 h" + a `TmProgressBar` (logged hours only without estimates) | no estimates and no logged hours |
+| Milestones | "1 / 2" + a bar | no milestones |
+| Budget overview | "320 000 CZK of 500 000 CZK" + a bar | no cost and no `BudgetTotal` |
+| Work breakdown | "4 levels • 24 tasks" | no tasks |
+
+Layout: a desktop container renders the five cards in one row (`repeat(auto-fit, minmax(…))`), a
+tablet two columns, and the read-mostly mobile container a compact one-line strip
+("24 tasks • 40 % done • 1 overdue") with a **Summary** entry in the "More" sheet that opens the full
+cards as a bottom sheet. The section is `aria-label`ed, the card headings are `h3`, the donut is one
+image for assistive tech, and status is never colour alone (the legend repeats every count).
+`SummaryBandContent` (`RenderFragment<GanttSummary>`) replaces the built-in cards with host content
+(the band itself stays the component's), `BudgetTotal` supplies the budget total and `BudgetCurrency`
+a currency code appended through the active culture.
+
+```razor
+<TmGantt Items="tasks" ShowSummaryBand="true" BudgetTotal="500000m" BudgetCurrency="CZK" />
+<TmGantt Items="tasks" ShowSummaryBand="true">
+    <SummaryBandContent Context="summary"><MySummary Summary="@summary" /></SummaryBandContent>
+</TmGantt>
+```
+
+The wireframe `TmGantt` stencil exposes the same switch as its `showSummaryBand` prop.
+
+## Portfolio axis
+
+`TmGanttPortfolio.AxisMode` (`GanttPortfolioAxisMode`, default `PerProject`) picks how the cards'
+date axes align. `PerProject` keeps today's independent mini-gantts. `Shared` computes the union
+range of **all** projects (collapsed cards included, so collapsing never shifts the axis), renders
+ONE sticky axis header above the cards (`GanttHelper.BuildTimelineHeaderRows` over the portfolio's
+`ZoomPreset`, default Weeks) and pins every card to it: `TimelineStart` / `TimelineEnd`, the same
+`ZoomPreset` and one `TreeWidth` (the host's value, else 12rem) with `ShowTimelineHeader=false`. The
+same date therefore draws at the same x in every card, and the header's horizontal scroll and the
+cards' timelines scroll together through `tmGantt.linkScrollGroup(groupId, elements)` — entirely in
+the browser, no interop per scroll tick. On a mobile container the shared band is the single monthly
+strip above the mini-gantts (their percentages are of the union range; the per-card month rows hide,
+and the whole band is `aria-hidden`).
+
+The header is a flex row: a **leading cell** as wide as the pinned tree (plus the chart's own border)
+holds the localized "Shared timeline" label, and the scrollable band to its right is the scroll
+group's first member — the axis cells start exactly where every card's timeline starts, at every
+viewport. `linkScrollGroup` maps equal content widths **pixel-for-pixel** (clamped to the target's
+own range — the header's scroller is not as wide as a card's timeline) and falls back to the ratio of
+the scrollable distance only where the content widths differ.
+
+Shared mode **locks the cards' scale**: every card is forced to the desktop layout (a card that
+classified as mobile would swap its zoom and the chrome), a pinned axis (`TimelineStart` /
+`TimelineEnd`) makes `GetEffectiveZoomPreset` return the host's `ZoomPreset` — overriding the
+Day | Week | Month segment and the mobile Days default — keeps the pixels per day at zoom 100, and
+Ctrl+wheel zoom is ignored while pinned, so a card can never drift away from the header above it.
+
+With `ShowTimelineHeader=false` the card's tree header collapses with the timeline's carrier:
+visually hidden (the sr-only clip) while keeping `role="row"` and its `columnheader` cells, so the
+first tree row stays level with the first bar and assistive tech keeps the treegrid header.
+
+```razor
+<TmGanttPortfolio Projects="projects" AxisMode="GanttPortfolioAxisMode.Shared" ZoomPreset="GanttZoomPreset.Months" />
+```
+
+The underlying `TmGantt` parameters are public: `TimelineStart` / `TimelineEnd` pin the axis and
+override the data's range (bars and baselines outside it clip to the edge — a task that only touches
+the range keeps its 1 px minimum, and a dependency whose endpoint clipped away entirely renders no
+line; Fit to screen measures the pinned axis), `ShowTimelineHeader` (default
+`true`) hides the two-row header without hiding the grid, and `TreeWidth` pins the task tree's
+width. The wireframe `TmGanttPortfolio` stencil exposes `axisMode`.
+
 ## Views
 
 `View` / `ViewChanged` (`GanttView`): `Day`, `Week` (default), `Month` render the tree +
@@ -225,7 +308,9 @@ above the chart; `ShowSidebar=false` hides either.
 `ZoomPreset` (`GanttZoomPreset`: Hours, Days, Weeks (default), Months, Quarters, Years) drives the
 axis; the zoom slider and the view-settings entries override it per session, Fit to screen measures
 the timeline element in the browser (`gantt.js getClientWidth` — no `eval`, no global
-`querySelector`). `GanttViewSettings` carries the visual switches: `ViewDensity`
+`querySelector`). A pinned axis (`TimelineStart` / `TimelineEnd` set) locks the zoom: the effective
+preset is the `ZoomPreset` parameter, the pixels per day stay at zoom 100 and Ctrl+wheel zoom is
+ignored. `GanttViewSettings` carries the visual switches: `ViewDensity`
 (`Comfortable` / `Compact` / `Touch` — 44 px rows with the tree and timeline sharing one height,
 `data-density` on the root), `ShowTodayMarker` (the 2px solid line plus the localized "Today" pill),
 `ShowProgressLabel`, `ShowAvatarsOnChart`, `ShowDaysOff`, `ShowClosedTasks`,

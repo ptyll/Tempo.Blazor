@@ -45,7 +45,8 @@ public partial class TmGanttTimeline : TmGanttPart
         DateTime Today,
         string? Prefix,
         string Culture,
-        int FocusSeq);
+        int FocusSeq,
+        bool Header);
 
     /// <inheritdoc />
     protected override object? RenderState => new TimelineState(
@@ -55,7 +56,7 @@ public partial class TmGanttTimeline : TmGanttPart
         Owner.ActiveBaselineId, Owner.AllowDependencyCreation && !Owner.IsMobileLayout, Owner.GetEffectiveZoomPreset(),
         Owner.ViewSettings.ShowTodayMarker, Owner.ViewSettings.ShowDaysOff, Owner.ShowBarProgressLabels,
         Owner.ViewSettings.TaskNameLocation, Owner.RowHeight, Owner._today, Owner.TestIdPrefix, Loc.Culture.Name,
-        Owner.FocusRequest?.Seq ?? 0);
+        Owner.FocusRequest?.Seq ?? 0, Owner.ShowTimelineHeader);
 
     private readonly Dictionary<string, ElementReference> _barRefs = [];
     private int _handledFocusSeq;

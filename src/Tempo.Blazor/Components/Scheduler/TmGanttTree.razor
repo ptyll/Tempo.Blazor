@@ -8,8 +8,11 @@
     var focusRowId = Owner.EffectiveFocusRowId();
 }
 <div class="tm-gantt__tree" data-testid="@TestId("gantt-tree")" style="@TreeStyle">
-  <div class="tm-gantt__tree-grid" role="treegrid" aria-label="@Loc["TmGantt_TaskList"]" style="@(TreeWidth is { } minWidth ? $"min-width: {minWidth}px" : null)">
-    <div class="tm-gantt__tree-header" role="row">
+  <div class="tm-gantt__tree-grid" role="treegrid" aria-label="@Loc["TmGantt_TaskList"]" style="@GridMinWidth">
+    @* ShowTimelineHeader=false (the shared portfolio axis renders ONE header above the cards): the header row is
+       visually hidden (TreeHeaderClass) so the first tree row starts level with the first bar, but it keeps its
+       treegrid roles for assistive tech. *@
+    <div class="@TreeHeaderClass" role="row">
         @if (Owner.AllowBulkSelect)
         {
             <span class="tm-gantt__tree-header-cell tm-gantt__tree-header-cell--checkbox" role="columnheader" aria-label="@Loc["TmGantt_BulkSelectColumn"]"></span>
@@ -90,6 +93,7 @@
                 {
                     <span class="tm-gantt__tree-cell tm-gantt__tree-cell--checkbox" role="gridcell" @onclick:stopPropagation @onkeydown:stopPropagation="true" @onkeyup:stopPropagation="true">
                         <input type="checkbox" data-testid="@TestId($"bulk-select-{node.Task.Id}")"
+                               aria-label="@Loc["TmGantt_BulkSelectTask", node.Task.Title]"
                                checked="@Owner._selectedTaskIds.Contains(node.Task.Id)"
                                @onchange="e => Owner.ToggleBulkSelect(node.Task.Id, (bool)e.Value!)" />
                     </span>

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "How a TmGanttPortfolio aligns the date axes of its project cards: PerProject (default, every card on its own range) or Shared (one sticky axis header, every card pinned to the union range).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttPortfolioAxisMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttPortfolioAxisMode"
+}

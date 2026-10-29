@@ -1,0 +1,50 @@
+{
+  "itemName": "TmGanttSummaryBand",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (EditorBrowsable Never): the opt-in summary band under the tree + timeline - the rollup strip with the status donut, time spent, milestones, budget and WBS cards. A desktop container renders five cards in a row, a tablet two columns and the read-mostly mobile container a compact one-line strip (the full cards live in the mobile Summary sheet). Computed once per data refresh from the visible tasks; never place it - hosts set TmGantt.ShowSummaryBand instead.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttSummaryBand.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-gantt-summary",
+    "tm-gantt-summary--desktop",
+    "tm-gantt-summary--tablet",
+    "tm-gantt-summary--mobile",
+    "tm-gantt-summary--sheet",
+    "tm-gantt-summary__cards",
+    "tm-gantt-summary__cards--two",
+    "tm-gantt-summary__card",
+    "tm-gantt-summary__title",
+    "tm-gantt-summary__value",
+    "tm-gantt-summary__status-body",
+    "tm-gantt-summary__donut",
+    "tm-gantt-summary__total",
+    "tm-gantt-summary__legend",
+    "tm-gantt-summary__legend-item",
+    "tm-gantt-summary__legend-swatch",
+    "tm-gantt-summary__legend-label",
+    "tm-gantt-summary__legend-count",
+    "tm-gantt-summary__filtered",
+    "tm-gantt-summary__strip"
+  ],
+  "parameters": [
+    {
+      "name": "Owner",
+      "type": "TmGantt",
+      "isRequired": true,
+      "description": "The Gantt this band belongs to (hidden infrastructure parameter of the internal parts)."
+    },
+    {
+      "name": "Sheet",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "True inside the mobile Summary sheet: the full cards render there too (never the compact strip). Internal."
+    }
+  ]
+}

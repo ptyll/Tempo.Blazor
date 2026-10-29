@@ -57,6 +57,13 @@
                         <TmIcon Name="bar-chart-2" Size="IconSize.Sm" />
                         <span>@Loc["TmGantt_Reports"]</span>
                     </button>
+                    @if (Owner.ShowSummaryBand)
+                    {
+                        <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-summary")" @onclick="Owner.MobileMoreSummary">
+                            <TmIcon Name="pie-chart" Size="IconSize.Sm" />
+                            <span>@Loc["TmGantt_Summary_MoreEntry"]</span>
+                        </button>
+                    }
                     <button type="button" class="tm-gantt__more-entry" data-testid="@TestId("gantt-more-settings")" @onclick="Owner.OpenMobileSettings">
                         <TmIcon Name="settings" Size="IconSize.Sm" />
                         <span>@Loc["TmGantt_ViewSettings"]</span>
@@ -98,6 +105,18 @@
                     <p class="tm-gantt__add-error" data-testid="@TestId("gantt-add-error")" role="alert">@Owner.MobileAddError</p>
                 }
             </div>
+        </TmSidePanel>
+    }
+
+    @* The summary sheet (phase 11): the full summary cards of the band, read-only like every mobile surface.
+        Opened from the "More" sheet's Summary entry (only when the band is on), the focus returns to its tile. *@
+    @if (Owner.MobileSummarySheetOpen)
+    {
+        <TmSidePanel Presentation="SidePanelPresentation.Sheet" Open="true" OpenChanged="@(open => { if (!open) Owner.CloseMobileSummarySheet(); })"
+                     Title="@Loc["TmGantt_Summary_SectionLabel"]" Class="tm-gantt__sheet tm-gantt__summary-sheet" DataTestId="@TestId("gantt-summary-sheet-host")"
+                     RestoreFocusTargetId="@TestId("gantt-more-summary")"
+                     LayoutMode="TmLayoutMode.Mobile">
+            <TmGanttSummaryBand Owner="Owner" Sheet="true" />
         </TmSidePanel>
     }
 

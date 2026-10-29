@@ -2591,6 +2591,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("toolbarLabels", "Toolbar Labels", PropType.Bool, false, cat: "Appearance"),
                 P("sidebarMode", "Sidebar Mode", PropType.Enum, "rail", cat: "Appearance",
                     opts: ["rail","tabs"]),
+                P("showSummaryBand", "Show Summary Band", PropType.Bool, false, cat: "Appearance"),
             ]
         };
 
@@ -2601,6 +2602,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("projectCount", "Project Count", PropType.Int, 3, cat: "Appearance"),
+                P("axisMode", "Axis Mode", PropType.Enum, "perProject", cat: "Behavior",
+                    opts: ["perProject","shared"]),
             ]
         };
 

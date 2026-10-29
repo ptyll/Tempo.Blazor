@@ -23170,6 +23170,18 @@
               "description": "Named schedule snapshots for baseline comparison."
             },
             {
+              "name": "BudgetCurrency",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Currency code appended to the budget amounts (e.g. \"CZK\"), formatted through the active culture. Null keeps bare numbers."
+            },
+            {
+              "name": "BudgetTotal",
+              "type": "decimal?",
+              "isRequired": false,
+              "description": "The project's overall budget the budget card shows the actual cost against (\"320 000 of 500 000\"). Null (default): the budget card renders only when the tasks carry an actual cost, without a total."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -23538,6 +23550,13 @@
               "description": "When true (default), the left sidebar navigation is visible."
             },
             {
+              "name": "ShowSummaryBand",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the summary band - the rollup strip (status donut, time, milestones, budget, WBS) under the tree + timeline, above a docked workload. Default false: the chart is unchanged. Shows in the chart views (Day / Week / Month / List) only; a desktop container renders five cards, a tablet two columns and the read-mostly mobile container a compact one-line strip with the full cards in the More sheet's Summary entry.",
+              "default": "false"
+            },
+            {
               "name": "ShowTaskPanel",
               "type": "bool",
               "isRequired": false,
@@ -23548,6 +23567,13 @@
               "type": "EventCallback<bool>",
               "isRequired": false,
               "description": "Raised when the task panel's open state changes through an internal path (open on selection, toolbar toggle, sheet close). Pair with ShowTaskPanel for two-way binding."
+            },
+            {
+              "name": "ShowTimelineHeader",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Hides the two-row timeline header (month + week / day) without hiding the grid below it. The shared portfolio axis renders ONE header above the cards and switches it off on every card — the tree header collapses with it (visually hidden, still a treegrid header for assistive tech), so the first tree row stays level with the first bar. Default true."
             },
             {
               "name": "ShowToolbar",
@@ -23576,6 +23602,12 @@
               "description": "Secondary header line under the Title."
             },
             {
+              "name": "SummaryBandContent",
+              "type": "RenderFragment<GanttSummary>?",
+              "isRequired": false,
+              "description": "Replaces the built-in summary cards with host content; the context carries the computed GanttSummary. The band itself (its section, placement and the mobile compact strip) stays the component's."
+            },
+            {
               "name": "TaskBreadcrumb",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -23589,6 +23621,18 @@
               "description": "How the task panel and the Reports inspector are presented: Inline (default) is the in-flow column at every width, Overlay a TmSidePanel side sheet with the tabs Detail | Attachments | Comments | History, Auto the in-flow panel on a desktop container and the side sheet on a tablet or narrower one. On a narrow container at most one right-hand surface (task panel, reports, history) is open."
             },
             {
+              "name": "TimelineEnd",
+              "type": "DateTime?",
+              "isRequired": false,
+              "description": "Pins the timeline's last day (see TimelineStart). Null keeps the data's maximum end."
+            },
+            {
+              "name": "TimelineStart",
+              "type": "DateTime?",
+              "isRequired": false,
+              "description": "Pins the timeline's first day, overriding the range computed from the data. The shared portfolio axis drives it (every card lays out against the union range, so the same date draws at the same x in every card); a host can pin its own axis too. Bars outside the range clip to the edge. A pinned axis locks the zoom: the effective preset is ZoomPreset, the pixels per day stay at zoom 100 and Ctrl+wheel zoom is ignored."
+            },
+            {
               "name": "Title",
               "type": "string?",
               "isRequired": false,
@@ -23600,6 +23644,12 @@
               "isRequired": false,
               "default": "ToolbarLabels.Icons",
               "description": "How the toolbar buttons show their text. The default Icons keeps the icon-only row (the text stays the accessible name and the tooltip); IconsWithText shows every label; Auto shows them except on a toolbar narrower than 640px. Maps onto TmToolbar.Labels."
+            },
+            {
+              "name": "TreeWidth",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Pins the task tree's width as a CSS length (e.g. \"200px\"); the shared portfolio axis pins one width on every card so the timelines start at the same x. Null keeps the chart's own width logic."
             },
             {
               "name": "View",
@@ -24128,6 +24178,13 @@
           ],
           "parameters": [
             {
+              "name": "AxisMode",
+              "type": "GanttPortfolioAxisMode",
+              "isRequired": false,
+              "default": "GanttPortfolioAxisMode.PerProject",
+              "description": "How the cards' date axes align. PerProject (default) keeps every card on its own range; Shared computes the union range of all projects, renders ONE sticky axis header above the cards and hands every card the same range, zoom and tree width (with ShowTimelineHeader=false), so the same date draws at the same x in every card and the cards scroll in step (tmGantt.linkScrollGroup)."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -24164,6 +24221,19 @@
               "isRequired": false,
               "default": "[]",
               "description": "Projects to show; each card is collapsible and shows the project's date range, task count and weighted completion above its own Gantt."
+            },
+            {
+              "name": "TreeWidth",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The task tree width every card is pinned to in the Shared axis mode (a CSS length, e.g. \"200px\") — one width so the timelines start at the same x. Null uses the shared default (12rem)."
+            },
+            {
+              "name": "ZoomPreset",
+              "type": "GanttZoomPreset",
+              "isRequired": false,
+              "default": "GanttZoomPreset.Weeks",
+              "description": "The zoom preset of the shared axis header and, in the Shared axis mode, of every card."
             }
           ]
         },
@@ -24265,6 +24335,56 @@
               "isRequired": true,
               "description": "The status the chip shows."
             }
+          ]
+        },
+        {
+          "itemName": "TmGanttSummaryBand",
+          "kind": "Component",
+          "category": "Scheduler",
+          "namespace": "Tempo.Blazor.Components.Scheduler",
+          "description": "Internal part of TmGantt (EditorBrowsable Never): the opt-in summary band under the tree + timeline - the rollup strip with the status donut, time spent, milestones, budget and WBS cards. A desktop container renders five cards in a row, a tablet two columns and the read-mostly mobile container a compact one-line strip (the full cards live in the mobile Summary sheet). Computed once per data refresh from the visible tasks; never place it - hosts set TmGantt.ShowSummaryBand instead.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttSummaryBand.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Scheduler"
+          ],
+          "parameters": [
+            {
+              "name": "Sheet",
+              "type": "bool",
+              "isRequired": false,
+              "description": "True inside the mobile Summary sheet: the full cards render there too (never the compact strip). Internal.",
+              "default": "false"
+            },
+            {
+              "name": "Owner",
+              "type": "TmGantt",
+              "isRequired": true,
+              "description": "The Gantt this band belongs to (hidden infrastructure parameter of the internal parts)."
+            }
+          ],
+          "cssClasses": [
+            "tm-gantt-summary",
+            "tm-gantt-summary--desktop",
+            "tm-gantt-summary--tablet",
+            "tm-gantt-summary--mobile",
+            "tm-gantt-summary--sheet",
+            "tm-gantt-summary__cards",
+            "tm-gantt-summary__cards--two",
+            "tm-gantt-summary__card",
+            "tm-gantt-summary__title",
+            "tm-gantt-summary__value",
+            "tm-gantt-summary__status-body",
+            "tm-gantt-summary__donut",
+            "tm-gantt-summary__total",
+            "tm-gantt-summary__legend",
+            "tm-gantt-summary__legend-item",
+            "tm-gantt-summary__legend-swatch",
+            "tm-gantt-summary__legend-label",
+            "tm-gantt-summary__legend-count",
+            "tm-gantt-summary__filtered",
+            "tm-gantt-summary__strip"
           ]
         },
         {
@@ -30148,11 +30268,11 @@
         }
       ],
       "summary": {
-        "itemCount": 402,
-        "manualItemCount": 402,
-        "generatedItemCount": 394,
+        "itemCount": 403,
+        "manualItemCount": 403,
+        "generatedItemCount": 395,
         "generatedOnlyItemCount": 0,
-        "componentCount": 217,
+        "componentCount": 218,
         "publicApiTypeCount": 177
       }
     },
@@ -84083,6 +84203,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "GanttPortfolioAxisMode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "How a TmGanttPortfolio aligns the date axes of its project cards: PerProject (default, every card on its own range) or Shared (one sticky axis header, every card pinned to the union range).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttPortfolioAxisMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "GanttPortfolioProject",
           "kind": "Class",
           "category": "Models",
@@ -84263,6 +84393,84 @@
                   "type": "TmWorkItem"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "itemName": "GanttSummary",
+          "kind": "Record",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models",
+          "description": "The rollup behind the Gantt's optional summary band: counts by status, overdue count, logged and estimated hours (leaves only), milestones done/total, actual cost with the optional host budget, the deepest WBS level and the task count - computed by GanttHelper.ComputeSummary from the visible tasks. IsFiltered is stamped by the caller when the visible set is smaller than the full data.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSummary.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "ActualCost",
+              "kind": "Property",
+              "type": "decimal",
+              "description": "Sum of the actual cost of the leaf tasks."
+            },
+            {
+              "name": "BudgetTotal",
+              "kind": "Property",
+              "type": "decimal?",
+              "description": "The host's overall budget, when it has one; null otherwise (the band then hides the budget card when no actual cost exists either)."
+            },
+            {
+              "name": "EstimatedHours",
+              "kind": "Property",
+              "type": "double",
+              "description": "Sum of the estimated hours of the leaf tasks."
+            },
+            {
+              "name": "IsFiltered",
+              "kind": "Property",
+              "type": "bool",
+              "description": "True when the caller knows the set is smaller than its full data (a filter is active or closed tasks are hidden) — the band then shows a \"Filtered\" note."
+            },
+            {
+              "name": "LoggedHours",
+              "kind": "Property",
+              "type": "double",
+              "description": "Sum of the logged hours of the leaf tasks."
+            },
+            {
+              "name": "MilestonesDone",
+              "kind": "Property",
+              "type": "int",
+              "description": "Milestones that are Done or Closed."
+            },
+            {
+              "name": "MilestonesTotal",
+              "kind": "Property",
+              "type": "int",
+              "description": "All milestones in the set."
+            },
+            {
+              "name": "OverdueCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "Tasks whose end is before today and that are neither Done nor Closed (the same rule TmGantt.IsOverdue draws)."
+            },
+            {
+              "name": "StatusCounts",
+              "kind": "Property",
+              "type": "IReadOnlyDictionary<TmWorkItemStatus, int>",
+              "description": "Tasks per TmWorkItemStatus; only statuses with at least one task are present."
+            },
+            {
+              "name": "TaskCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "Number of tasks in the set."
+            },
+            {
+              "name": "WbsLevels",
+              "kind": "Property",
+              "type": "int",
+              "description": "Deepest WBS level of the set (2 for tasks one level below their parents)."
             }
           ]
         },
@@ -106209,12 +106417,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1505,
-        "manualItemCount": 1505,
-        "generatedItemCount": 1488,
+        "itemCount": 1507,
+        "manualItemCount": 1507,
+        "generatedItemCount": 1490,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1488
+        "publicApiTypeCount": 1490
       }
     },
     {
@@ -123195,10 +123403,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3333,
-    "manualItemCount": 3333,
+    "itemCount": 3336,
+    "manualItemCount": 3336,
     "generatedOnlyItemCount": 0,
-    "componentCount": 500,
-    "publicApiTypeCount": 2780
+    "componentCount": 501,
+    "publicApiTypeCount": 2782
   }
 }

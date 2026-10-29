@@ -37,6 +37,22 @@
     flex-shrink: 0;
 }
 
+/* ShowTimelineHeader=false (the shared portfolio axis): the timeline header above the bars is a
+   zero-height carrier, so the tree header leaves the flow the same way — visually hidden (the
+   sr-only clip) while the role=row / columnheader cells stay for assistive tech. Declared after the
+   base rule: the same specificity, so source order lets the clip win. */
+.tm-gantt__tree-header--vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
 .tm-gantt__tree-header-cell {
     flex: 1;
     white-space: nowrap;

@@ -289,6 +289,26 @@ public static class GanttHelper
     }
 
     /// <summary>
+    /// Flattens a tree back to a list in depth-first order IGNORING the expand/collapse state — every
+    /// node, the children of a collapsed parent included. The scope for computations that must not
+    /// depend on the current view, e.g. the summary band (collapsing a parent must not change its rollup).
+    /// </summary>
+    public static IReadOnlyList<GanttTaskNode> FlattenAll(IReadOnlyList<GanttTaskNode> roots)
+    {
+        var result = new List<GanttTaskNode>();
+        foreach (var root in roots)
+            FlattenAllRecursive(root, result);
+        return result;
+    }
+
+    private static void FlattenAllRecursive(GanttTaskNode node, List<GanttTaskNode> result)
+    {
+        result.Add(node);
+        foreach (var child in node.Children)
+            FlattenAllRecursive(child, result);
+    }
+
+    /// <summary>
     /// Computes the overall time range for a set of tasks.
     /// </summary>
     public static (DateTime Start, DateTime End) GetTimeRange(IReadOnlyList<TmWorkItem> tasks)
@@ -516,6 +536,90 @@ public static class GanttHelper
     {
         var now = DateTime.UtcNow;
         return log.Sum(e => ((e.StoppedAt ?? now) - e.StartedAt).TotalHours);
+    }
+
+    /// <summary>
+    /// Computes the <see cref="GanttSummary"/> of the given nodes — the rollup the Gantt's optional
+    /// summary band draws. The caller owns the scope: the Gantt passes its <b>filtered</b> nodes (after
+    /// the filters and "show closed", ignoring the expand/collapse state via <see cref="FlattenAll"/>)
+    /// and stamps <see cref="GanttSummary.IsFiltered"/> afterwards, so collapsing a parent never
+    /// changes the numbers and they always describe exactly what the filters select.
+    /// <para>
+    /// A task whose id is another given task's <see cref="TmWorkItem.ParentId"/> is a parent and adds
+    /// no hours and no cost of its own (the leaves already carry the rollup); statuses, the overdue
+    /// count, the milestones and the WBS depth count every task. <paramref name="budgetTotal"/> is the
+    /// host's overall budget — the band shows "actual of budget" only when it is set.
+    /// </para>
+    /// </summary>
+    public static GanttSummary ComputeSummary(IEnumerable<GanttTaskNode> nodes, DateTime today, decimal? budgetTotal = null)
+    {
+        var list = nodes as IReadOnlyList<GanttTaskNode> ?? nodes.ToList();
+        if (list.Count == 0)
+        {
+            return new GanttSummary(new Dictionary<TmWorkItemStatus, int>(), 0, 0, 0, 0, 0, 0m, budgetTotal, 0, 0, false);
+        }
+
+        var parentIds = new HashSet<string>(
+            list.Where(n => n.Task.ParentId is not null).Select(n => n.Task.ParentId!),
+            StringComparer.Ordinal);
+
+        var statusCounts = new Dictionary<TmWorkItemStatus, int>();
+        var todayDate = today.Date;
+        var overdue = 0;
+        var milestonesDone = 0;
+        var milestonesTotal = 0;
+        var wbsLevels = 0;
+        double logged = 0;
+        double estimated = 0;
+        decimal actualCost = 0m;
+
+        foreach (var node in list)
+        {
+            var task = node.Task;
+
+            statusCounts[task.Status] = statusCounts.TryGetValue(task.Status, out var count) ? count + 1 : 1;
+
+            if (task.End < todayDate && task.Status is not TmWorkItemStatus.Done and not TmWorkItemStatus.Closed)
+                overdue++;
+
+            if (!parentIds.Contains(task.Id))
+            {
+                logged += task.LoggedHours ?? 0;
+                estimated += task.EstimationHours ?? 0;
+                actualCost += task.ActualCost ?? 0m;
+            }
+
+            if (task.IsMilestone)
+            {
+                milestonesTotal++;
+                if (task.Status is TmWorkItemStatus.Done or TmWorkItemStatus.Closed)
+                    milestonesDone++;
+            }
+
+            var levels = WbsLevelsOf(node);
+            if (levels > wbsLevels)
+                wbsLevels = levels;
+        }
+
+        return new GanttSummary(statusCounts, overdue, logged, estimated, milestonesDone, milestonesTotal,
+            actualCost, budgetTotal, wbsLevels, list.Count, false);
+    }
+
+    /// <summary>Depth of one node in WBS terms: the dotted code when the tree assigned one, else the depth (a root is level 1).</summary>
+    private static int WbsLevelsOf(GanttTaskNode node)
+    {
+        if (!string.IsNullOrEmpty(node.WbsNumber))
+        {
+            var segments = 1;
+            for (var i = 0; i < node.WbsNumber.Length; i++)
+            {
+                if (node.WbsNumber[i] == '.') segments++;
+            }
+
+            return segments;
+        }
+
+        return node.Depth + 1;
     }
 }
 

@@ -46,7 +46,9 @@ public partial class TmGanttTree : TmGanttPart
         int FocusSeq,
         bool WbsInTitle,
         bool Narrow,
-        bool Mobile);
+        bool Mobile,
+        string? HostTreeWidth,
+        bool TimelineHeader);
 
     /// <inheritdoc />
     protected override object? RenderState => new TreeState(
@@ -56,7 +58,16 @@ public partial class TmGanttTree : TmGanttPart
         Owner.ShowOverdueHighlight, Owner._today, Owner.ActiveBaselineId, Owner._overloadedAssigneeIds.Count,
         Owner.TestIdPrefix, Loc.Culture.Name,
         Owner.EffectiveFocusRowId(), Owner.FocusRequest?.Seq ?? 0, Owner.ViewSettings.WbsInTitle, Owner.IsNarrowLayout,
-        Owner.IsMobileLayout);
+        Owner.IsMobileLayout, Owner.TreeWidth, Owner.ShowTimelineHeader);
+
+    /// <summary>
+    /// The header row's classes. With <see cref="TmGantt.ShowTimelineHeader"/> false (the shared portfolio axis renders
+    /// ONE header above the cards) the timeline header collapses to a zero-height carrier, so the tree header must leave
+    /// the flow too — visually hidden, roles kept — or the first tree row would start lower than the first bar.
+    /// </summary>
+    private string TreeHeaderClass => Owner.ShowTimelineHeader
+        ? "tm-gantt__tree-header"
+        : "tm-gantt__tree-header tm-gantt__tree-header--vh";
 
     /// <summary>
     /// Duration and Priority do not fit the 420px default, so the grid sizes to the columns it shows (the header and
@@ -77,7 +88,13 @@ public partial class TmGanttTree : TmGanttPart
     /// <summary>The custom-field columns; none on a narrow container.</summary>
     private IReadOnlyList<TmCustomFieldDefinition> ShownCustomFields => Owner.IsNarrowLayout ? [] : Owner.CustomFields;
 
-    private string? TreeStyle => Owner.IsNarrowLayout ? null : TreeWidth is { } width ? $"width: {width}px; max-width: 70%; flex-shrink: 0" : null;
+    /// <summary>
+    /// The tree's inline style. A host-supplied <see cref="TmGantt.TreeWidth"/> (a CSS length, the shared
+    /// portfolio axis pins one) wins at every width; the desktop grid otherwise sizes to the columns it shows.
+    /// </summary>
+    private string? TreeStyle => Owner.TreeWidth is { } hostWidth && !string.IsNullOrWhiteSpace(hostWidth)
+        ? $"width: {hostWidth}; max-width: 70%; flex-shrink: 0"
+        : Owner.IsNarrowLayout ? null : TreeWidth is { } width ? $"width: {width}px; max-width: 70%; flex-shrink: 0" : null;
 
     /// <summary>The grid's full width in pixels, or null when the stylesheet width stands.</summary>
     private int? TreeWidth
@@ -107,6 +124,11 @@ public partial class TmGanttTree : TmGanttPart
             return width;
         }
     }
+
+    /// <summary>The grid's min-width: the host width when one is pinned, else the computed column minimum.</summary>
+    private string? GridMinWidth => Owner.TreeWidth is { } hostWidth && !string.IsNullOrWhiteSpace(hostWidth)
+        ? $"min-width: {hostWidth}"
+        : TreeWidth is { } minWidth ? $"min-width: {minWidth}px" : null;
 
     private readonly Dictionary<string, ElementReference> _rowRefs = [];
     private int _handledFocusSeq;

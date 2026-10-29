@@ -33,6 +33,15 @@
 
     var helpersPromise = null;
 
+    /** The registered scroll groups of tmGantt.linkScrollGroup, keyed by the caller-supplied id. */
+    var groupLinks = new Map();
+
+    /** True when both lists hold the same members (identity, order-insensitive). */
+    function sameMembers(a, b) {
+        if (a.length !== b.length) return false;
+        return a.every(function (el) { return b.indexOf(el) !== -1; });
+    }
+
     /** Loads the shared helpers once; resolves null (after a console warning) when they cannot load. */
     function loadHelpers() {
         if (!helpersPromise) {
@@ -402,6 +411,85 @@
             workload.removeEventListener('scroll', link.toTimeline);
             link.timeline.removeEventListener('scroll', link.toWorkload);
             delete workload.__tmGanttLink;
+        },
+
+        // Shared portfolio axis (phase 11): links the horizontal scroll of a GROUP of elements (the sticky
+        // axis header plus every project card's timeline). All members show the same date range. Equal
+        // content widths map PIXEL-FOR-PIXEL, clamped to the target's own range (the client widths differ:
+        // the header's scroller is not as wide as a card's timeline); members whose content width differs
+        // fall back to the RATIO of the scrollable distance, exactly like linkScroll. One source event fans
+        // out to every other member in the browser, with no interop per scroll tick. Idempotent per groupId:
+        // a call with the same member set (identity) keeps the existing group; a changed set is rebuilt.
+        // Returns true while the group is registered, false when there is nothing to link (fewer than two
+        // elements).
+        linkScrollGroup: function (groupId, elements) {
+            if (!groupId || !elements) return false;
+            const list = Array.prototype.filter.call(elements, function (el) { return !!el; });
+            if (list.length < 2) {
+                window.tmGantt.unlinkScrollGroup(groupId);
+                return false;
+            }
+
+            const existing = groupLinks.get(groupId);
+            if (existing && sameMembers(existing.elements, list)) return true;
+            window.tmGantt.unlinkScrollGroup(groupId);
+
+            // The value a programmatic write produced: the echo scroll event it causes is swallowed once.
+            const written = new WeakMap();
+            const ratio = function (el) {
+                const max = el.scrollWidth - el.clientWidth;
+                return max > 0 ? el.scrollLeft / max : 0;
+            };
+            const mapTo = function (source, target) {
+                const max = Math.max(target.scrollWidth - target.clientWidth, 0);
+                if (target.scrollWidth === source.scrollWidth) {
+                    return Math.min(source.scrollLeft, max);
+                }
+                return ratio(source) * max;
+            };
+            // A write that does not move the target fires no scroll event, so it must leave no echo
+            // marker: a stale marker would swallow the user's real scroll to that position later.
+            const write = function (target, value) {
+                const previous = target.scrollLeft;
+                target.scrollLeft = value;
+                if (target.scrollLeft !== previous) written.set(target, target.scrollLeft);
+            };
+            const handlers = new Map();
+            list.forEach(function (source) {
+                const handler = function () {
+                    if (written.get(source) === source.scrollLeft) {
+                        written.delete(source);
+                        return;
+                    }
+                    list.forEach(function (target) {
+                        if (target === source) return;
+                        write(target, mapTo(source, target));
+                    });
+                };
+                source.addEventListener('scroll', handler, { passive: true });
+                handlers.set(source, handler);
+            });
+            groupLinks.set(groupId, { elements: list, handlers: handlers });
+
+            // Initial equalization (like linkScroll): members registered late converge on the first
+            // member's position, so a group linked after a scroll does not desync. Marked like every
+            // write, so the echo of the initial writes does not fan back out.
+            const first = list[0];
+            list.forEach(function (target) {
+                if (target === first) return;
+                write(target, mapTo(first, target));
+            });
+
+            return true;
+        },
+
+        unlinkScrollGroup: function (groupId) {
+            const link = groupLinks.get(groupId);
+            if (!link) return;
+            link.handlers.forEach(function (handler, source) {
+                source.removeEventListener('scroll', handler);
+            });
+            groupLinks.delete(groupId);
         },
 
         // History drawer focus return: the drawer notes the element that had focus when it opened (the History button

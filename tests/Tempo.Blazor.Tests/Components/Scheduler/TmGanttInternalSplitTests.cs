@@ -361,15 +361,15 @@ public class TmGanttInternalSplitTests : LocalizationTestBase
     private static readonly string[] ExpectedParameters =
     [
         "ActiveBaselineId", "ActiveTimerTaskId", "AdditionalAttributes", "AllowBulkSelect", "AllowDependencyCreation", "AutoSchedule",
-        "Baselines", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "FilterPanelMode", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
+        "Baselines", "BudgetCurrency", "BudgetTotal", "Class", "Columns", "ContainerWidth", "CustomFields", "DataTestId", "DependencyItems", "FilterPanelMode", "Filters", "HeaderActions", "HeaderStart", "History", "HistoryDrawerPlacement",
         "Items", "LayoutMode", "NotificationSettings", "OnAttachmentRemoved", "OnAttachmentUpload", "OnAutoScheduled", "OnBaselineSaved",
         "OnBulkUpdate", "OnColumnsChanged", "OnCustomFieldChanged", "OnDataSorted", "OnDependencyAdded", "OnDependencyRemoved",
         "OnDescriptionChanged", "OnExportRequested", "OnFiltersChanged", "OnImportCompleted", "OnImportError", "OnImportResultCompleted", "OnNewReportRequested",
         "OnNotificationTriggered", "OnReportDelete", "OnReportDuplicate", "OnReportEdit", "OnReportRun", "OnResourceCalendarChanged", "OnRollbackRequested", "OnStatusChanged",
         "OnTaskAdded", "OnTaskInserted", "OnTaskRemoved", "OnTaskReordered", "OnTaskSelected", "OnTaskUpdated", "OnTimeTravelRequested",
         "OnTimerStarted", "OnTimerStopped", "OnViewSettingsChanged", "OnVirtualResourceAdded", "RealtimeConnection", "Reports", "ResolvedLayoutChanged",
-        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowTaskPanel", "ShowTaskPanelChanged", "ShowToolbar",
-        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "TaskBreadcrumb", "TaskPanelMode", "TestIdPrefix", "Title", "ToolbarLabels", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
+        "ResourceCalendars", "SelectedTask", "ShowCriticalPath", "ShowHeader", "ShowOverdueHighlight", "ShowQuickSearch", "ShowSidebar", "ShowSummaryBand", "ShowTaskPanel", "ShowTaskPanelChanged", "ShowTimelineHeader", "ShowToolbar",
+        "ShowWorkloadPanel", "SidebarMode", "Subtitle", "SummaryBandContent", "TaskBreadcrumb", "TaskPanelMode", "TestIdPrefix", "TimelineEnd", "TimelineStart", "Title", "ToolbarLabels", "TreeWidth", "View", "ViewChanged", "ViewSettings", "WorkItemSource", "WorkingSchedule",
         "WorkloadDisplayMode", "WorkloadDisplayModeChanged", "WorkloadPlacement", "ZoomPreset",
     ];
 }

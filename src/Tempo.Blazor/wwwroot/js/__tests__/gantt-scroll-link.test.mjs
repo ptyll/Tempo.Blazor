@@ -147,6 +147,177 @@ test('linkScroll drops a stale link when the timeline is gone and reports false'
     assert.equal(timeline.has('scroll'), false);
     assert.equal(workload.has('scroll'), false);
 });
+// ── linkScrollGroup (phase 11): the shared portfolio axis + every card's timeline in one group ──
+
+function group() {
+    const a = scroller(2000, 500);
+    const b = scroller(1000, 500);
+    const c = scroller(4000, 500);
+    return { a, b, c };
+}
+
+test('linkScrollGroup fans one scroll out to every member as a ratio of the scrollable distance', () => {
+    const gantt = load();
+    const { a, b, c } = group();
+    assert.equal(gantt.linkScrollGroup('group-1', [a, b, c]), true);
+
+    a.scrollLeft = 375; // a quarter of a's distance (1500)
+    a.fire('scroll');
+    assert.equal(b.scrollLeft, 125, 'a quarter of b (500)');
+    assert.equal(c.scrollLeft, 875, 'a quarter of c (3500)');
+
+    c.scrollLeft = 1750; // half of c
+    c.fire('scroll');
+    assert.equal(a.scrollLeft, 750);
+    assert.equal(b.scrollLeft, 250);
+});
+
+test('linkScrollGroup swallows the echo events of its own programmatic writes', () => {
+    const gantt = load();
+    const { a, b } = group();
+    gantt.linkScrollGroup('group-2', [a, b]);
+
+    a.scrollLeft = 375; // a quarter of a's distance (1500)
+    a.fire('scroll');
+    const written = b.scrollLeft;
+    b.fire('scroll'); // the browser reports b's programmatic write back
+    assert.equal(a.scrollLeft, 375, 'the echo does not drive a back');
+    assert.equal(b.scrollLeft, written);
+});
+
+test('linkScrollGroup is idempotent for the same member set and rebuilds on a changed set', () => {
+    const gantt = load();
+    const { a, b, c } = group();
+    let adds = 0;
+    const add = a.addEventListener;
+    a.addEventListener = (type, fn, opts) => { adds++; add(type, fn, opts); };
+
+    assert.equal(gantt.linkScrollGroup('group-3', [a, b]), true);
+    assert.equal(gantt.linkScrollGroup('group-3', [b, a]), true, 'the same set in another order');
+    assert.equal(adds, 1, 'no second listener pair');
+
+    assert.equal(gantt.linkScrollGroup('group-3', [a, b, c]), true);
+    assert.equal(c.has('scroll'), true, 'the changed set is rebuilt with the new member');
+    assert.equal(adds, 2, 'a got one new listener for the rebuilt group');
+});
+
+test('linkScrollGroup with fewer than two elements unlinks and reports false', () => {
+    const gantt = load();
+    const { a, b } = group();
+    assert.equal(gantt.linkScrollGroup('group-4', [a]), false);
+    assert.equal(gantt.linkScrollGroup('group-4', []), false);
+    assert.equal(gantt.linkScrollGroup('group-4', null), false);
+    assert.equal(a.has('scroll'), false);
+
+    gantt.linkScrollGroup('group-4', [a, b]);
+    gantt.linkScrollGroup('group-5', [a]); // a second id over the same element unlinks group-4's entry on a
+    assert.equal(b.has('scroll'), true);
+});
+
+test('unlinkScrollGroup removes every listener and is idempotent', () => {
+    const gantt = load();
+    const { a, b, c } = group();
+    gantt.linkScrollGroup('group-6', [a, b, c]);
+
+    gantt.unlinkScrollGroup('group-6');
+    [a, b, c].forEach(el => assert.equal(el.has('scroll'), false));
+    gantt.unlinkScrollGroup('group-6'); // idempotent
+});
+
+test('different group ids never share listeners', () => {
+    const gantt = load();
+    const { a, b, c } = group();
+    gantt.linkScrollGroup('left', [a, b]);
+    gantt.linkScrollGroup('right', [b, c]);
+
+    a.scrollLeft = 1000; // two thirds of a's distance (1500)
+    a.fire('scroll');
+    assert.equal(b.scrollLeft, 1000 / 3, 'b follows a through the left group');
+    assert.equal(c.scrollLeft, 0, 'c is untouched by the left group');
+});
+
+// ── Members of different clientWidth (phase 11 review): the sticky header's scroller is wider than
+// a card's timeline, and the mapping must stay pixel-true whenever the content widths match. ──
+
+function sharedWidthGroup() {
+    return {
+        axis: scroller(2000, 800),    // the header's scroller: max 1200
+        card: scroller(2000, 500),    // a card timeline: max 1500
+        narrow: scroller(2000, 1200), // a wide-viewport card: max 800
+    };
+}
+
+test('equal scroll widths map pixel-for-pixel, clamped to each member range', () => {
+    const gantt = load();
+    const { axis, card, narrow } = sharedWidthGroup();
+    gantt.linkScrollGroup('px-1', [axis, card, narrow]);
+
+    axis.scrollLeft = 600;
+    axis.fire('scroll');
+    assert.equal(card.scrollLeft, 600, 'pixels, not a ratio (the ratio would give 750)');
+    assert.equal(narrow.scrollLeft, 600);
+
+    axis.scrollLeft = 1200; // the axis's own end
+    axis.fire('scroll');
+    assert.equal(card.scrollLeft, 1200);
+    assert.equal(narrow.scrollLeft, 800, 'clamped to the narrower member, never overscrolled');
+});
+
+test('different scroll widths still fall back to the ratio', () => {
+    const gantt = load();
+    const header = scroller(2000, 500);
+    const card = scroller(4000, 500); // twice the content: the pixel map cannot reach the end
+    gantt.linkScrollGroup('px-2', [header, card]);
+
+    header.scrollLeft = 750; // half of the header's distance
+    header.fire('scroll');
+    assert.equal(card.scrollLeft, 1750, 'half of the card distance (3500)');
+});
+
+test('a clamped no-op write leaves no echo marker, so a later real scroll is not swallowed', () => {
+    const gantt = load();
+    const { axis, narrow } = sharedWidthGroup();
+    gantt.linkScrollGroup('px-3', [axis, narrow]);
+
+    axis.scrollLeft = 1000;
+    axis.fire('scroll');
+    assert.equal(narrow.scrollLeft, 800, 'clamped');
+    narrow.fire('scroll'); // the browser reports the write back; the echo is swallowed
+    assert.equal(axis.scrollLeft, 1000);
+
+    axis.scrollLeft = 1200;
+    axis.fire('scroll');
+    assert.equal(narrow.scrollLeft, 800, 'still clamped — this write changed nothing');
+
+    narrow.scrollLeft = 400; // the user scrolls the clamped member
+    narrow.fire('scroll');
+    assert.equal(axis.scrollLeft, 400);
+
+    narrow.scrollLeft = 800; // …and back to exactly the clamped position
+    narrow.fire('scroll');
+    assert.equal(axis.scrollLeft, 800, 'the stale marker must not swallow the user scroll');
+});
+
+test('the initial equalization marks its writes so its echo does not fan back out', () => {
+    const gantt = load();
+    const a = scroller(2000, 500);
+    const b = scroller(2000, 500);
+    a.scrollLeft = 500;
+    gantt.linkScrollGroup('init-1', [a, b]);
+
+    assert.equal(b.scrollLeft, 500, 'equalized to the first member');
+    b.fire('scroll'); // the browser reports the initial write back
+    assert.equal(a.scrollLeft, 500, 'the echo of the initial write does not drive the leader');
+
+    a.scrollLeft = 300;
+    a.fire('scroll');
+    assert.equal(b.scrollLeft, 300);
+
+    a.scrollLeft = 500; // the user scrolls the leader back to the equalized position
+    a.fire('scroll');
+    assert.equal(b.scrollLeft, 500, 'no stale marker from the initial echo may swallow this');
+});
+
 // History drawer: focus returns to the button that opened it.
 function focusable(name, connected = true) {
     return { name, isConnected: connected, focused: 0, focus() { this.focused++; } };

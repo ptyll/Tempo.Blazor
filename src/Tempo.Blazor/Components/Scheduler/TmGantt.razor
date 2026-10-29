@@ -271,8 +271,10 @@
 
     @if (DockedWorkload)
     {
+        @* The summary band rides inside the center column: under the chart, above the docked workload. *@
         <div class="tm-gantt__center">
             @viewArea
+            <TmGanttSummaryBand Owner="this" />
             <div class="tm-gantt__docked-workload" data-testid="@TestId("gantt-workload-dock")">
                 @{ var dockRange = GanttHelper.GetTimeRange(Data); }
                 <TmGanttWorkloadView Tasks="Data" WorkingSchedule="WorkingSchedule"
@@ -284,10 +286,7 @@
             </div>
         </div>
     }
-    else
-    {
-        @viewArea
-    }
+    else { @viewArea }
 
     @* One right-hand surface at a time: the Reports inspector takes the place of the task panel while it is open.
        On a narrower container (TaskPanelMode Auto) or with Overlay the surface is a core TmSidePanel side sheet —
@@ -309,15 +308,12 @@
                                                       IsOverloaded="SelectedTaskOverloaded" BaselineTask="SelectedTaskBaseline"
                                                       OnClose="@(PanelsAsSheets ? default : EventCallback.Factory.Create(this, () => SetTaskPanelOpen(false)))" />;
     }
-    @if (ReportsPanelOpen && !PanelsAsSheets)
-    {
-        @reportsPanel
-    }
-    else if (_taskPanelOpen && !PanelsAsSheets)
-    {
-        @taskPanel
-    }
+    @if (ReportsPanelOpen && !PanelsAsSheets) { @reportsPanel }
+    else if (_taskPanelOpen && !PanelsAsSheets) { @taskPanel }
 </div> @* tm-gantt__content *@
+
+@* The summary band (not docked): a child of .tm-gantt under the content; the part renders only for the chart views. *@
+@if (!DockedWorkload) { <TmGanttSummaryBand Owner="this" /> }
 
     <!-- History Drawer (on the mobile container the read-only sheet of TmGanttMobileOverlays replaces it) -->
     @if (_historyDrawerOpen && !IsMobileLayout)

@@ -27,18 +27,30 @@ else
     <section class="demo-section" data-testid="gantt-demo-portfolio-section">
         <div class="flex items-center justify-between mb-3">
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Projects</h2>
-            <button class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400"
-                    data-testid="gantt-demo-mapping-open"
-                    @onclick="() => _mappingOpen = true">
-                Import the sample workbook
-            </button>
+            <div class="flex items-center gap-2">
+                <select class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                        data-testid="gantt-demo-axis-mode"
+                        value="@_axisMode" @onchange="HandleAxisModeChanged">
+                    @foreach (var mode in Enum.GetValues<GanttPortfolioAxisMode>())
+                    {
+                        <option value="@mode" selected="@(_axisMode == mode)">Axis: @mode</option>
+                    }
+                </select>
+                <button class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400"
+                        data-testid="gantt-demo-mapping-open"
+                        @onclick="() => _mappingOpen = true">
+                    Import the sample workbook
+                </button>
+            </div>
         </div>
         <div data-testid="gantt-demo-portfolio">
-            @* The cards follow the page's own width: on a phone the read-mostly mobile cards render. *@
+            @* The cards follow the page's own width: on a phone the read-mostly mobile cards render.
+               AxisMode=Shared pins the union range and one sticky header above the cards. *@
             <TmLayoutObserver IsContainer="false">
                 <LayoutContent Context="lay">
                     <TmGanttPortfolio Projects="@PortfolioProjects"
                                       LayoutMode="lay.Resolved"
+                                      AxisMode="@_axisMode"
                                       OnProjectSelected="@(project => Toast.ShowInfo($"Project selected: {project.Name}"))">
                         <ProjectActions Context="project">
                             <TmDropdown Text="" ShowChevron="false" Icon="more-horizontal" AriaLabel="@($"Actions for {project.Name}")"
@@ -61,6 +73,15 @@ else
 @code {
     private bool _loading = true;
     private bool _mappingOpen;
+    private GanttPortfolioAxisMode _axisMode = GanttPortfolioAxisMode.PerProject;
+
+    private void HandleAxisModeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<GanttPortfolioAxisMode>(e.Value?.ToString(), true, out var mode))
+        {
+            _axisMode = mode;
+        }
+    }
     private HttpClient Http => HttpFactory.CreateClient("DemoApi");
     private List<TmWorkItem> _tasks = [];
     private List<GanttDependency> _dependencies = [];

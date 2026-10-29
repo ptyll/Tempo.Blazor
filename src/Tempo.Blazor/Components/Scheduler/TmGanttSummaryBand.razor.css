@@ -1,0 +1,188 @@
+/* TmGanttSummaryBand — the opt-in rollup strip under the tree + timeline (phase 11).
+   Tokens only; the card surface, titles and bars reuse the core component styles. */
+
+.tm-gantt-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+/* ─── Cards row: desktop = auto-fit row of five, tablet = two columns ─── */
+
+/* The layout modifiers are the responsive hooks (and stable host selectors). */
+.tm-gantt-summary--desktop {
+    padding: var(--tm-space-3) var(--tm-space-4);
+}
+
+.tm-gantt-summary--tablet {
+    padding: var(--tm-space-3);
+}
+
+.tm-gantt-summary--mobile {
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-gantt-summary__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt-summary--tablet .tm-gantt-summary__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tm-gantt-summary__cards--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tm-gantt-summary__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-workspace);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    min-width: 0;
+}
+
+.tm-gantt-summary__title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-summary__value {
+    margin: 0;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt-summary__value--split {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-gantt-summary__dot {
+    color: var(--tm-text-tertiary);
+}
+
+.tm-gantt-summary__bar {
+    margin-top: auto;
+}
+
+/* ─── Status card: donut + centre total, legend with numbers ─── */
+
+.tm-gantt-summary__status-body {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-gantt-summary__donut {
+    position: relative;
+    width: 88px;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.tm-gantt-summary__chart {
+    height: 88px;
+}
+
+.tm-gantt-summary__total {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    line-height: 1.2;
+    padding: 0 14px;
+}
+
+.tm-gantt-summary__legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-gantt-summary__legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-summary__legend-swatch {
+    width: var(--tm-space-2);
+    height: var(--tm-space-2);
+    border-radius: 2px;
+    flex-shrink: 0;
+    background: var(--tm-color-primary);
+}
+
+.tm-gantt-summary__legend-swatch--overdue {
+    background: var(--tm-color-danger);
+}
+
+.tm-gantt-summary__legend-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-gantt-summary__legend-count {
+    margin-inline-start: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--tm-text-primary);
+}
+
+/* ─── "Filtered" note: the band's scope is the visible set (decision GANTT-SUMMARY-SCOPE) ─── */
+
+.tm-gantt-summary__filtered {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-full, 999px);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.6;
+}
+
+/* ─── Mobile (G2): the compact one-line strip replaces the cards ─── */
+
+.tm-gantt-summary__strip {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The mobile sheet renders the full cards stacked. */
+.tm-gantt-summary--sheet .tm-gantt-summary__cards {
+    grid-template-columns: minmax(0, 1fr);
+}

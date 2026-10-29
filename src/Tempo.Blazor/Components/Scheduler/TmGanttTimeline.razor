@@ -9,28 +9,41 @@
      @ref="Owner._timelineContainerRef"
      @onwheel="Owner.OnTimelineWheel">
 
-    <!-- Two-row Timeline Header -->
-    <div class="tm-gantt__timeline-header" style="width: @(F(Owner._totalTimelineWidth))px">
-        <div class="tm-gantt__timeline-header--upper">
-            @foreach (var h in Owner._upperHeaders)
+    <!-- Two-row Timeline Header (ShowTimelineHeader=false hides the rows; the grid below stays,
+         so the shared portfolio axis can render ONE header above the cards) -->
+    @if (Owner.ShowTimelineHeader)
+    {
+        <div class="tm-gantt__timeline-header" style="width: @(F(Owner._totalTimelineWidth))px">
+            <div class="tm-gantt__timeline-header--upper">
+                @foreach (var h in Owner._upperHeaders)
+                {
+                    <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--upper"
+                         style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
+                }
+            </div>
+            <div class="tm-gantt__timeline-header--lower">
+                @foreach (var h in Owner._lowerHeaders)
+                {
+                    <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower"
+                         style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
+                }
+            </div>
+            @if (Owner.ViewSettings.ShowTodayMarker)
             {
-                <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--upper"
-                     style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
+                <span class="tm-gantt__today-label" data-testid="@TestId("today-label")"
+                      style="left: @(F(Owner._todayOffset))px">@Loc["TmGantt_Today"]</span>
             }
         </div>
-        <div class="tm-gantt__timeline-header--lower">
-            @foreach (var h in Owner._lowerHeaders)
-            {
-                <div class="tm-gantt__timeline-header-cell tm-gantt__timeline-header-cell--lower"
-                     style="left: @(F(h.Offset))px; width: @(F(h.Width))px">@h.Label</div>
-            }
-        </div>
-        @if (Owner.ViewSettings.ShowTodayMarker)
-        {
-            <span class="tm-gantt__today-label" data-testid="@TestId("today-label")"
-                  style="left: @(F(Owner._todayOffset))px">@Loc["TmGantt_Today"]</span>
-        }
-    </div>
+    }
+    else
+    {
+        @* ShowTimelineHeader=false (the shared portfolio axis renders ONE header above the cards): a
+           zero-height carrier keeps the horizontal overflow — the header is what gives the scroller its
+           scroll width (the body clips at overflow-x: hidden), so without it the card could not scroll
+           with the shared axis. *@
+        <div class="tm-gantt__timeline-header tm-gantt__timeline-header--carrier"
+             style="width: @(F(Owner._totalTimelineWidth))px" aria-hidden="true"></div>
+    }
 
     <!-- Timeline Body -->
     <div class="tm-gantt__timeline-body"
@@ -104,9 +117,13 @@
                 }
             }
 
-            <!-- Task bars -->
+            <!-- Task bars (a bar clipped fully out of a pinned axis renders nothing: no ghost element to focus) -->
             @foreach (var bar in Owner._taskBars)
             {
+                if (bar.Width <= 0)
+                {
+                    continue;
+                }
                 <div class="tm-gantt__task-row"
                      @key="bar.Task.Id"
                      style="top: @(F(bar.Top))px; height: @(Owner.RowHeight)px">

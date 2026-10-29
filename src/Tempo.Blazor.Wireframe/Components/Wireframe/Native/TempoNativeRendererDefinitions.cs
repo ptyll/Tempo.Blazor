@@ -495,6 +495,9 @@ internal static class TempoNativeRendererDefinitions
         var showProgressLabel = el.Props.GetBool("showProgressLabel", false);
         var toolbarLabels = el.Props.GetBool("toolbarLabels", false);
         var tabs = el.Props.GetString("sidebarMode", "rail") == "tabs";
+        // Phase 11: the opt-in rollup band under the chart (five miniature cards).
+        var showSummaryBand = el.Props.GetBool("showSummaryBand", false);
+        var summaryH = showSummaryBand ? 34.0 : 0.0;
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
 
@@ -536,7 +539,7 @@ internal static class TempoNativeRendererDefinitions
         var listW = el.W * 0.3;
         var chartW = el.W - listW;
         var headerH = 28.0;
-        var rowH = (el.H - top - headerH) / taskCount;
+        var rowH = (el.H - top - headerH - summaryH) / taskCount;
         sb.Append(Rect(0, top, el.W, headerH, FillDark, "none", 4));
         sb.Append(HLine(0, el.W, top + headerH));
         sb.Append(Text("Task", 12, top + headerH / 2, 10, ColorMuted));
@@ -576,9 +579,25 @@ internal static class TempoNativeRendererDefinitions
 
         // Today: a solid line with a pill in the header, as in the redesigned chart.
         var todayX = listW + chartW * 0.38;
-        sb.Append(VLine(todayX, top + headerH, el.H, "#ef4444"));
+        sb.Append(VLine(todayX, top + headerH, el.H - summaryH, "#ef4444"));
         sb.Append(Rect(todayX - 14, top + headerH - 8, 28, 16, "#ef4444", "none", 8));
         sb.Append(Text("Today", todayX, top + headerH, 7, "#ffffff", "middle", "500"));
+
+        // Phase 11: the summary band — one strip of five miniature cards under the chart.
+        if (showSummaryBand)
+        {
+            var bandY = el.H - summaryH;
+            sb.Append(HLine(0, el.W, bandY));
+            var labels = new[] { "Status", "Time", "Miles.", "Budget", "WBS" };
+            var cardW = (el.W - 16 - 4 * 6) / labels.Length;
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var cx = 8 + i * (cardW + 6);
+                sb.Append(Rect(cx, bandY + 5, cardW, 24, Fill, Border, 3));
+                sb.Append(Text(labels[i], cx + 4, bandY + 12, 6, ColorMuted));
+                sb.Append(Rect(cx + 4, bandY + 17, cardW * (0.25 + i * 0.12), 5, Accent, "none", 2));
+            }
+        }
 
         Svg(b, sb.ToString());
     }
