@@ -437,4 +437,31 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         Notation = "bpmn",
         Name = $"Element {id}"
     };
+
+    [Fact]
+    public void Mobile_preview_has_no_edit_actions_only_viewer_controls()
+    {
+        // Fáze 7 (G2): on a mobile layout the preview header carries NO edit actions — the
+        // generate / open-in-editor entries live in the editor's action bar and header overflow,
+        // and the drop affordances follow AllowNodeDrop=false.
+        var document = CreateDocument(nodeCount: 1);
+        var element = CreateElement("task-mobile", "source/task-mobile");
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.ActiveDraggedElement, element)
+            .Add(p => p.AllowNodeDrop, false)
+            .Add(p => p.ShowEditActions, false));
+
+        cut.FindAll("[data-testid='modeling-generate-diagram-button']").Should().BeEmpty(
+            "generate is an editor-level action on mobile, not a preview header button");
+        cut.FindAll("[data-testid='modeling-open-in-editor-button']").Should().BeEmpty(
+            "open-in-editor is an editor-level action on mobile, not a preview header button");
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty(
+            "no drop hint without the drag affordance");
+        cut.Find("[data-testid='modeling-diagram-preview']").GetAttribute("data-drop-enabled")
+            .Should().Be("false");
+        // The viewer controls stay: the embedded editor keeps its toolbar.
+        cut.Find("[data-testid='diagram-editor']").Should().NotBeNull();
+    }
 }

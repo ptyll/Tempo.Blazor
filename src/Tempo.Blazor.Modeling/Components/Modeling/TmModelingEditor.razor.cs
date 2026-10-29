@@ -464,6 +464,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         ModelingEditorPanel.Tree => "tree",
         ModelingEditorPanel.Inspector => "inspector",
+        ModelingEditorPanel.Issues => "issues",
         _ => "preview"
     };
 
@@ -850,6 +851,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         _effectiveNotationKey = string.IsNullOrWhiteSpace(notationKey) ? null : notationKey;
         _effectiveViewpointKey = null;
         _activePanel = ModelingEditorPanel.Preview;
+        _changeViewOpen = false;
         RegenerateDiagramFromLoadedModel();
         RefreshActiveLoadKeyForLoadedModel();
         await OnNotationChanged.InvokeAsync(_effectiveNotationKey);
@@ -858,6 +860,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     private async Task ChangeViewpointAsync(string? viewpointKey)
     {
         _effectiveViewpointKey = string.IsNullOrWhiteSpace(viewpointKey) ? null : viewpointKey;
+        _changeViewOpen = false;
         RegenerateDiagramFromLoadedModel();
         RefreshActiveLoadKeyForLoadedModel();
         await OnViewpointChanged.InvokeAsync(_effectiveViewpointKey);
@@ -883,6 +886,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         _effectiveProviderKey = normalized;
         _effectiveNotationKey = string.IsNullOrWhiteSpace(NotationKey) ? null : NotationKey;
         _effectiveViewpointKey = string.IsNullOrWhiteSpace(ViewpointKey) ? null : ViewpointKey;
+        _changeViewOpen = false;
         // The opened diagram-editor overlay closes through the regular close path so the focus
         // restore onto the preview's "Open in editor" trigger still runs (review fix, phase 3).
         await CloseGeneratedDiagramAsync();
@@ -1008,6 +1012,14 @@ public partial class TmModelingEditor : IAsyncDisposable
             return Task.CompletedTask;
         }
 
+        if (IsMobileLayout)
+        {
+            // Fáze 7: the mobile Issues tab owns its flag (the tab shows the whole panel, which
+            // starts expanded — unlike the tablet dock).
+            _mobileIssuesCollapsed = collapsed;
+            return Task.CompletedTask;
+        }
+
         if (_issuesCollapsed == collapsed)
         {
             return Task.CompletedTask;
@@ -1017,15 +1029,11 @@ public partial class TmModelingEditor : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private string GetPanelTabClass(ModelingEditorPanel panel)
-        => panel == _activePanel
-            ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"
-            : "tm-modeling-editor__panel-tab";
-
     /// <summary>
-    /// The tablet tabs' state follows the SHEET flags (the compact `_activePanel` is a different
+    /// The tablet tabs' state follows the SHEET flags (the mobile `_activePanel` is a different
     /// state machine): Tree is active while the drawer is open, Inspector while the sheet is,
     /// Preview when the preview is alone — the visual state always agrees with aria-expanded.
+    /// The mobile band uses the TmTabs tab strip, so it has no custom tab class.
     /// </summary>
     private string GetTabletPanelTabClass(ModelingEditorPanel panel)
     {
@@ -1039,11 +1047,6 @@ public partial class TmModelingEditor : IAsyncDisposable
             ? "tm-modeling-editor__panel-tab tm-modeling-editor__panel-tab--active"
             : "tm-modeling-editor__panel-tab";
     }
-
-    private string GetPanelClass(ModelingEditorPanel panel, string baseClass)
-        => panel == _activePanel
-            ? $"{baseClass} tm-modeling-editor__panel--active"
-            : baseClass;
 
     private ModelingDiagramGenerationResultDto GenerateDiagram(ModelingModelDto model)
         => DiagramGenerator.Generate(CreateGenerationModel(model), new ModelingDiagramGenerationOptionsDto
@@ -1156,6 +1159,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         Tree,
         Preview,
-        Inspector
+        Inspector,
+        Issues
     }
 }

@@ -51,6 +51,7 @@ public partial class TmModelingEditor
         }
 
         var wasTablet = _resolvedLayout == TmLayoutMode.Tablet;
+        var wasMobile = _resolvedLayout == TmLayoutMode.Mobile;
         _resolvedLayout = mode;
         if (mode == TmLayoutMode.Tablet && !wasTablet)
         {
@@ -62,6 +63,15 @@ public partial class TmModelingEditor
         {
             _tabletTreeOpen = false;
             _tabletInspectorOpen = false;
+        }
+
+        // Fáze 7: entering the mobile band resets ITS surfaces — the change-view sheet is closed
+        // and the Issues tab shows the whole panel expanded. Leaving mobile keeps nothing (the
+        // band's state is re-seeded on the next entry, like the tablet's sheets).
+        if (mode == TmLayoutMode.Mobile && !wasMobile)
+        {
+            _changeViewOpen = false;
+            _mobileIssuesCollapsed = false;
         }
     }
 

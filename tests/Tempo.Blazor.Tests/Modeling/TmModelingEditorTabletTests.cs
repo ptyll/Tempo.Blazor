@@ -364,11 +364,16 @@ public sealed class TmModelingEditorTabletTests : LocalizationTestBase
     [Fact]
     public void Editor_css_resolves_the_dialog_presentation_from_the_editor_container()
     {
-        // Fáze 6: the open-editor dialog is sized by the EDITOR's container, not the viewport —
-        // the viewport @media is gone; a container query on the editor's own container decides.
+        // Fáze 6: the open-editor dialog presentation keys off the EDITOR's own resolved layout,
+        // not the viewport — the viewport @media is gone; Fáze 7 moved the footprint decision
+        // into TmModal's MobilePresentation (Fullscreen on the editor's mobile band, the ~90vw
+        // dialog otherwise) and the stylesheet only scopes the size rule to the non-fullscreen
+        // overlay.
         var css = ReadPackageCss("TmModelingEditor.razor.css");
-        css.Should().Contain("@container tm-modeling-editor (width < 768px)",
-            "the near-fullscreen dialog footprint keys off the editor container");
+        css.Should().Contain("tm-modeling-editor__open-editor-modal:not(.tm-modal--fullscreen-presentation)",
+            "the ~90vw dialog size never fights the fullscreen mobile presentation");
+        css.Should().Contain(".tm-modal--fullscreen-presentation .tm-modal-body",
+            "the fullscreen mobile presentation gives the diagram editor a full-height body");
         css.Should().NotContain("@media (max-width: 48rem)",
             "the editor must not resolve its presentation from the viewport (responsive-conventions.md)");
     }

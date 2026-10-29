@@ -278,16 +278,61 @@
    viewport, so a 500px editor inside a wide page gets the compact workspace and a 390px
    viewport inside a wide container never does (responsive-conventions.md). */
 
-/* The workspace is the single visible panel host: one column, the flex remainder of the editor. */
-[data-layout='mobile'] .tm-modeling-editor__workspace {
+/* Fáze 7: the mobile chrome is one column — the compact header, the TmTabs panel strip (ONE
+   panel at a time), the status card and the in-flow action bar. The shell is the focusWithin
+   surface (positioning context of the reload indicator) and the flex remainder of the editor. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-shell {
     position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    padding: var(--tm-space-2);
+    min-width: 0;
     overflow: hidden;
     background: var(--tm-bg-workspace);
+}
+
+/* The panel area: the TmTabs fills the remainder; the tab BODY scrolls inside so the tab
+   strip, the status card and the action bar never move while the content scrolls. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__panel-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tabs__header {
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tab {
+    min-height: var(--tm-touch-target);
+    flex: 1 1 0;
+    justify-content: center;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__panel-tabs ::deep .tm-tabs__panel {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* The single visible panel body: it fills the tab panel and SCROLLS (the compact inspector
+   stacks source + properties in one column). The padding-bottom keeps the last row reachable
+   above the sticky action bar and the home-indicator safe area. */
+[data-layout='mobile'] .tm-modeling-editor__panel {
+    height: 100%;
+    overflow: auto;
+    padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Reload affordance over the mounted workspace (force reload keeps _model alive, so the
@@ -527,8 +572,11 @@
    with a scrim, a focus scope and Escape. The in-editor overlay box (position:absolute inside
    the editor root, its own header and close button) is gone; only the dialog BODY styling
    remains. The size rides on the modal panel through the overlay class: ~90vw × 90vh on the
-   desktop (TmModal's own --xl/--fullscreen caps are intentionally replaced). */
-::deep .tm-modeling-editor__open-editor-modal .tm-modal {
+   docked layouts (TmModal's own --xl/--fullscreen caps are intentionally replaced). Fáze 7:
+   the editor's own MOBILE band presents the dialog through TmModal's Fullscreen presentation
+   (the .tm-modal--fullscreen-presentation class the component adds), so the 90vw rule is
+   scoped to the non-fullscreen overlay and must not fight it. */
+::deep .tm-modeling-editor__open-editor-modal:not(.tm-modal--fullscreen-presentation) .tm-modal {
     width: 90vw;
     max-width: 90vw;
     height: 90vh;
@@ -541,6 +589,14 @@
     padding: var(--tm-space-4);
 }
 
+/* The fullscreen mobile presentation drops the body padding: the diagram editor IS the dialog
+   body — a full-height container under the one header row (its DE bottom sheet and action bar
+   must not collide with the modal header or the editor's own action bar, which stays inert
+   under the overlay). */
+::deep .tm-modeling-editor__open-editor-modal.tm-modal--fullscreen-presentation .tm-modal-body {
+    padding: 0;
+}
+
 .tm-modeling-editor__open-editor-body {
     height: 100%;
     min-height: 0;
@@ -551,68 +607,8 @@
     min-height: calc(var(--tm-space-16) * 7);
 }
 
-/* Fáze 6: below the editor's own mobile threshold the dialog keeps the pre-TmModal footprint:
-   a near-fullscreen panel instead of the desktop 90vw x 90vh (the final mobile presentation is
-   phase 7). The decision comes from the EDITOR's own container — the modal paints fixed, but
-   container queries still match through the nearest ancestor container
-   (docs/responsive-conventions.md), so a 500px editor inside a wide viewport gets the compact
-   dialog and a tablet editor the ~90% one. No viewport @media in this stylesheet. */
-@container tm-modeling-editor (width < 768px) {
-    ::deep .tm-modeling-editor__open-editor-modal .tm-modal {
-        width: 100%;
-        max-width: 100%;
-        height: 100%;
-        max-height: 100%;
-        margin: 0;
-    }
+/* Fáze 7: the compact header is a single row — see the mobile chrome section below. */
 
-    ::deep .tm-modeling-editor__open-editor-modal .tm-modal-body {
-        padding: 0;
-    }
-}
-
-/* Compact layout chrome: the header stacks, the panel tabs appear and exactly ONE panel is
-   visible (the data-active-panel state), the status strip never wraps. */
-[data-layout='mobile'] .tm-modeling-editor__toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--tm-space-3);
-    padding: var(--tm-space-3);
-}
-
-/* Review fix (phase 3): stacked header — the context group fills the row and every labeled
-   field takes the full column (the view selector fields come from the child component,
-   hence ::deep). */
-[data-layout='mobile'] .tm-modeling-editor__context {
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    justify-content: flex-start;
-}
-
-[data-layout='mobile'] .tm-modeling-editor__context ::deep .tm-modeling-view-selector__field {
-    flex: 1 1 100%;
-    width: 100%;
-}
-
-[data-layout='mobile'] .tm-modeling-editor__field,
-[data-layout='mobile'] .tm-modeling-editor__chips {
-    width: 100%;
-    max-width: 100%;
-}
-
-[data-layout='mobile'] .tm-modeling-editor__chip {
-    max-width: 100%;
-    padding: var(--tm-space-2);
-}
-
-[data-layout='mobile'] .tm-modeling-editor__chip span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-[data-layout='mobile'] .tm-modeling-editor__panel-tabs,
 [data-layout='tablet'] .tm-modeling-editor__panel-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -623,7 +619,6 @@
     flex-shrink: 0;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab,
 [data-layout='tablet'] .tm-modeling-editor__panel-tab {
     min-width: 0;
     min-height: calc(var(--tm-space-8) + var(--tm-space-1));
@@ -642,20 +637,17 @@
     cursor: pointer;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab:hover,
 [data-layout='tablet'] .tm-modeling-editor__panel-tab:hover {
     border-color: var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab:focus-visible,
 [data-layout='tablet'] .tm-modeling-editor__panel-tab:focus-visible {
     outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel-tab--active,
 [data-layout='tablet'] .tm-modeling-editor__panel-tab--active {
     border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-surface);
@@ -663,21 +655,114 @@
     box-shadow: var(--tm-shadow-sm);
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel {
-    display: none;
-    height: 100%;
-    /* The compact inspector stacks source + properties + issues in one column: the panel itself
-       scrolls (the docked layouts delegate scrolling to the inner containers instead). */
-    overflow: auto;
+/* Fáze 7: the compact header is a single row — the title group and the "⋯" overflow share it;
+   the context group (selects) is a docked-layout surface only. */
+[data-layout='mobile'] .tm-modeling-editor__toolbar {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
 }
 
-[data-layout='mobile'] .tm-modeling-editor__panel--active {
-    display: block;
-}
-
-[data-layout='mobile'] .tm-modeling-editor__status {
+[data-layout='mobile'] .tm-modeling-editor__title {
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: var(--tm-font-size-md);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__title-group {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more-host {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more-host:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more ::deep .tm-dropdown-trigger {
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    justify-content: center;
+    padding: 0;
+}
+
+/* The status card: the four count tiles plus the loaded time — the mobile replacement of the
+   status strip (whose trailing item dropped off-screen at 390). */
+[data-layout='mobile'] .tm-modeling-editor__status-card {
+    display: grid;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-top: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-tile {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-tile span {
+    overflow: hidden;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-tile strong {
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-loaded {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* The "Change view" sheet body: the labeled selects stack in one column (the shared
+   ProviderSelectContent fragment carries the .tm-modeling-editor__field shape; the view
+   selector fields come from the child component, hence ::deep). */
+[data-layout='mobile'] .tm-modeling-editor__change-view-body {
+    display: grid;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-4);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector__field {
+    width: 100%;
 }
 
 /* ── Tablet layout (the editor container in the 768-1199 band) ───────────────────────
@@ -710,8 +795,7 @@
    fields, the latter a child component hence ::deep). The tree nodes and group headers, the
    issue rows and the source panel's load button carry the same rule in their own stylesheets. */
 @media (pointer: coarse) {
-    [data-layout='tablet'] .tm-modeling-editor__panel-tab,
-    [data-layout='mobile'] .tm-modeling-editor__panel-tab {
+    [data-layout='tablet'] .tm-modeling-editor__panel-tab {
         min-height: var(--tm-touch-target);
     }
 

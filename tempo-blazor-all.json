@@ -43904,6 +43904,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "DOM id for the \"Open in editor\" trigger, owned by the hosting editor so its dialog can name the trigger as the focus-scope restore target. Null renders no id (the default)."
+            },
+            {
+              "name": "ShowEditActions",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the preview header renders its edit actions (the \"Generate diagram\" and \"Open in editor\" buttons). Default true. The mobile layout (Fáze 7, G2) passes false: those entries live in the editor action bar and header overflow there, so the preview shows only viewer controls (the embedded editor toolbar)."
             }
           ]
         },

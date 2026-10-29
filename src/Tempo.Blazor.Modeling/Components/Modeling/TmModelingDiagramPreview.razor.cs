@@ -46,6 +46,14 @@ public partial class TmModelingDiagramPreview
     /// <summary>Raised when a relationship edge is selected in the generated preview.</summary>
     [Parameter] public EventCallback<string> OnRelationshipSelected { get; set; }
 
+    /// <summary>
+    /// Whether the preview header renders its edit actions (the "Generate diagram" and
+    /// "Open in editor" buttons). Default <c>true</c>. The mobile layout (Fáze 7, G2) passes
+    /// <c>false</c>: those entries live in the editor's action bar and header overflow there,
+    /// so the preview shows only viewer controls (the embedded editor's own toolbar).
+    /// </summary>
+    [Parameter] public bool ShowEditActions { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 

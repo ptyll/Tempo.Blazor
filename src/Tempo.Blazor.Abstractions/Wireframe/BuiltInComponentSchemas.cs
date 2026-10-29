@@ -2690,6 +2690,12 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title", "Title", PropType.String, "Model", cat: "Content"),
                 P("showProviderSelector", "Show Provider Selector", PropType.Bool, true, cat: "Content"),
+                // The editor's responsive band is a stated wireframe decision (the tablet band
+                // docks through the shell, the mobile band is the G2 viewing + light-edit
+                // presentation with the tablist panels and the in-flow action bar) — mirrors
+                // TmDiagramEditor.layoutMode.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

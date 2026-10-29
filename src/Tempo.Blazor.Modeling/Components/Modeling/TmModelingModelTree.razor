@@ -98,8 +98,8 @@
                                             data-testid="@($"modeling-tree-node-{element.Id}")"
                                             data-element-id="@element.Id"
                                             data-semantic-type="@element.SemanticType"
-                                            data-modeling-drag-element-id="@element.Id"
-                                            draggable="true"
+                                            data-modeling-drag-element-id="@(AllowNodeDrop ? element.Id : null)"
+                                            draggable="@(AllowNodeDrop ? "true" : null)"
                                             role="treeitem"
                                             aria-level="2"
                                             aria-setsize="@group.Elements.Count"
@@ -122,9 +122,15 @@
                                             <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
                                             <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
                                         </span>
-                                        <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
-                                            <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
-                                        </span>
+                                        @if (AllowNodeDrop)
+                                        {
+                                            @* Fáze 7 (G2): the grip affordance belongs to the DRAG — a layout
+                                               that ignores drops (mobile) renders no handle, so the row
+                                               never promises a gesture it cannot do. *@
+                                            <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
+                                                <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
+                                            </span>
+                                        }
                                     </button>
                                     @if (CanInsertIntoPreview)
                                     {

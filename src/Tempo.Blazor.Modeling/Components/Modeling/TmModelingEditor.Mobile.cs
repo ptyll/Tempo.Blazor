@@ -1,0 +1,228 @@
+using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Icons;
+
+namespace Tempo.Blazor.Components.Modeling;
+
+/// <summary>
+/// The Fáze 7 mobile half of <see cref="TmModelingEditor"/> (G2 — viewing + light edits), kept in
+/// its own partial so the main code-behind respects the source ceiling: the compact panel-tab
+/// state (a real tablist whose panels are Preview / Tree / Inspector / Issues), the "Change
+/// view" sheet state and the in-flow F5 action bar items. Dragging from the tree into the
+/// preview and full editing stay tablet+ — the mobile open-editor dialog presents the diagram
+/// editor's own mobile mode.
+/// </summary>
+public partial class TmModelingEditor
+{
+    /// <summary>Whether the "Change view" sheet (provider / notation / viewpoint selects) is open.
+    /// A mobile-only surface — it can only be opened from the compact DOM.</summary>
+    private bool _changeViewOpen;
+
+    /// <summary>The issues dock flag of the mobile band: the Issues TAB shows the whole panel
+    /// expanded (unlike the tablet band, which starts collapsed).</summary>
+    private bool _mobileIssuesCollapsed;
+
+    /// <summary>Whether the editor's own container currently resolves the mobile band.</summary>
+    private bool IsMobileLayout => _resolvedLayout == TmLayoutMode.Mobile;
+
+    /// <summary>
+    /// G2 scope: the tree→preview drag is a desktop/tablet affordance. On mobile the tree rows
+    /// are not draggable and the preview is not a drop target (<c>AllowNodeDrop</c> stays the
+    /// host's switch — the mobile band just cannot express it).
+    /// </summary>
+    private bool EffectiveAllowNodeDrop => AllowNodeDrop && !IsMobileLayout;
+
+    /// <summary>The TestIdPrefix the cached mobile attribute dictionaries were built with.</summary>
+    private string? _cachedMobileTestIdPrefix;
+
+    /// <summary>Per-instance attributes of the mobile panel tabs strip (the preserved test id).</summary>
+    private Dictionary<string, object> MobilePanelTabsAttributes => BuildMobileAttributes(ref _mobilePanelTabsAttributes);
+
+    private Dictionary<string, object>? _mobilePanelTabsAttributes;
+
+    /// <summary>Per-tab test ids of the mobile tab strip (the frozen tab test ids the docked
+    /// layouts' tablet row also carries).</summary>
+    private IReadOnlyDictionary<string, object>? PreviewTabAttributes => BuildMobileAttributes(ref _previewTabAttributes);
+
+    private Dictionary<string, object>? _previewTabAttributes;
+
+    private IReadOnlyDictionary<string, object>? TreeTabAttributes => BuildMobileAttributes(ref _treeTabAttributes);
+
+    private Dictionary<string, object>? _treeTabAttributes;
+
+    private IReadOnlyDictionary<string, object>? InspectorTabAttributes => BuildMobileAttributes(ref _inspectorTabAttributes);
+
+    private Dictionary<string, object>? _inspectorTabAttributes;
+
+    private IReadOnlyDictionary<string, object>? IssuesTabAttributes => BuildMobileAttributes(ref _issuesTabAttributes);
+
+    private Dictionary<string, object>? _issuesTabAttributes;
+
+    /// <summary>Attributes of the "Change view" sheet overlay (the sheet test id).</summary>
+    private Dictionary<string, object> ChangeViewSheetAttributes => BuildMobileAttributes(ref _changeViewSheetAttributes);
+
+    private Dictionary<string, object>? _changeViewSheetAttributes;
+
+    /// <summary>
+    /// Returns the cached dictionary, rebuilding ALL of the mobile ones when the
+    /// <see cref="TmComponentBase.TestIdPrefix"/> changed (the same pattern the open-editor
+    /// modal attributes use) — the test ids stay prefix-aware.
+    /// </summary>
+    private Dictionary<string, object> BuildMobileAttributes(ref Dictionary<string, object>? cached)
+    {
+        if (cached is null || _cachedMobileTestIdPrefix != TestIdPrefix)
+        {
+            _cachedMobileTestIdPrefix = TestIdPrefix;
+            _mobilePanelTabsAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-panel-tabs")
+            };
+            _previewTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-panel-tab-preview")
+            };
+            _treeTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-panel-tab-tree")
+            };
+            _inspectorTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-panel-tab-inspector")
+            };
+            _issuesTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-panel-tab-issues")
+            };
+            _changeViewSheetAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-change-view-sheet")
+            };
+        }
+
+        return cached;
+    }
+
+    /// <summary>The mobile panel tab strip is a TmTabs whose ids match <see cref="_activePanel"/>.</summary>
+    private string MobilePanelTabId => MobilePanelName(_activePanel);
+
+    private static string MobilePanelName(ModelingEditorPanel panel) => panel switch
+    {
+        ModelingEditorPanel.Tree => "tree",
+        ModelingEditorPanel.Inspector => "inspector",
+        ModelingEditorPanel.Issues => "issues",
+        _ => "preview"
+    };
+
+    /// <summary>TmTabs selection receiver: stores the active panel the strip reports.</summary>
+    private Task SelectMobilePanelAsync(string tabId)
+    {
+        _activePanel = tabId switch
+        {
+            "tree" => ModelingEditorPanel.Tree,
+            "inspector" => ModelingEditorPanel.Inspector,
+            "issues" => ModelingEditorPanel.Issues,
+            _ => ModelingEditorPanel.Preview
+        };
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The Issues tab badge: the issue count as visible text; null (no badge span) at zero.</summary>
+    private string? IssueTabBadge => IssueCount > 0
+        ? IssueCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : null;
+
+    // ── The compact header "⋯" overflow ──────────────────────────────────────
+
+    /// <summary>
+    /// The TmDropdown selection receiver of the compact header "⋯": every entry closes the menu
+    /// first (TmDropdown's own contract) and then performs the editor-level action.
+    /// </summary>
+    private Task HandleMobileHeaderMenuAsync(string key) => key switch
+    {
+        "change-view" => OpenChangeViewAsync(),
+        "generate" => GenerateDiagramFromLoadedModelAsync(),
+        "open-editor" => OpenEditorFromMobileAsync(),
+        _ => Task.CompletedTask
+    };
+
+    // ── The "Change view" sheet (F2/F3) ──────────────────────────────────────
+
+    private Task OpenChangeViewAsync()
+    {
+        _changeViewOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseChangeViewAsync()
+    {
+        _changeViewOpen = false;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the open-editor dialog with the CURRENT document (the mobile entries have
+    /// no document argument — the dialog shows what the preview generated).</summary>
+    private Task OpenEditorFromMobileAsync()
+        => _document is null ? Task.CompletedTask : OpenGeneratedDiagramAsync(_document);
+
+    // ── The F5 action bar ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The mobile action bar items: Reload / Change view / Issues on the bar and Generate
+    /// diagram + Open in editor behind "More" (MaxVisible=3). Deliberately NO "Settings" item —
+    /// the mockup's [E] entry is not part of the contract.
+    /// </summary>
+    private IReadOnlyList<TmActionItem> MobileActionItems =>
+    [
+        new()
+        {
+            Id = "reload",
+            Label = Loc["TmModelingEditor_Reload"],
+            Icon = IconNames.Refresh,
+            OnClick = EventCallback.Factory.Create(this, ReloadModelAsync)
+        },
+        new()
+        {
+            Id = "change-view",
+            Label = Loc["TmModelingEditor_ChangeView"],
+            Icon = IconNames.Sliders,
+            OnClick = EventCallback.Factory.Create(this, OpenChangeViewAsync)
+        },
+        new()
+        {
+            Id = "issues",
+            Label = Loc["TmModelingEditor_Issues"],
+            Icon = IconNames.AlertCircle,
+            OnClick = EventCallback.Factory.Create(this, () => ActivatePanelAsync(ModelingEditorPanel.Issues))
+        },
+        new()
+        {
+            Id = "generate",
+            Label = Loc["TmModelingDiagramPreview_Generate"],
+            Icon = IconNames.Refresh,
+            TestId = TestId("modeling-action-generate"),
+            Disabled = _model is null || _state != ModelingEditorState.Loaded,
+            OnClick = EventCallback.Factory.Create(this, GenerateDiagramFromLoadedModelAsync)
+        },
+        new()
+        {
+            Id = "open-editor",
+            Label = Loc["TmModelingDiagramPreview_OpenInEditor"],
+            Icon = IconNames.ExternalLink,
+            TestId = TestId("modeling-action-open-editor"),
+            Disabled = _document is null,
+            OnClick = EventCallback.Factory.Create(this, OpenEditorFromMobileAsync)
+        }
+    ];
+
+    // ── Status card (the mobile replacement of the status strip) ─────────────
+
+    /// <summary>The four tiles of the mobile status card: Elements / Relationships / Nodes / Edges.</summary>
+    private (string Label, int Count)[] StatusTiles =>
+    [
+        (Loc["TmModelingEditor_Elements"], _model?.Elements.Count ?? 0),
+        (Loc["TmModelingEditor_Relationships"], _model?.Relationships.Count ?? 0),
+        (Loc["TmModelingEditor_DiagramNodes"], _document?.Nodes.Count ?? 0),
+        (Loc["TmModelingEditor_DiagramEdges"], _document?.Edges.Count ?? 0)
+    ];
+}

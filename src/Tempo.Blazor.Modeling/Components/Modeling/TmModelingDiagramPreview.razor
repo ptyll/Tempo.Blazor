@@ -14,29 +14,35 @@
             <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
             <span>@SummaryText</span>
         </div>
-        <div class="tm-modeling-diagram-preview__actions">
-            @if (OnGenerateRequested.HasDelegate)
-            {
-                <TmButton Variant="ButtonVariant.Secondary"
+        @* Fáze 7 (G2): on a mobile layout the preview shows viewer controls only — the edit
+           entries (generate / open in editor) live in the editor's action bar and header
+           overflow, so no header actions render here. *@
+        @if (ShowEditActions)
+        {
+            <div class="tm-modeling-diagram-preview__actions">
+                @if (OnGenerateRequested.HasDelegate)
+                {
+                    <TmButton Variant="ButtonVariant.Secondary"
+                              Size="ButtonSize.Sm"
+                              Icon="@IconNames.Refresh"
+                              OnClick="HandleGenerateRequestedAsync"
+                              data-testid="@TestId("modeling-generate-diagram-button")">
+                        @Loc["TmModelingDiagramPreview_Generate"]
+                    </TmButton>
+                }
+                <TmButton Variant="ButtonVariant.Primary"
                           Size="ButtonSize.Sm"
-                          Icon="@IconNames.Refresh"
-                          OnClick="HandleGenerateRequestedAsync"
-                          data-testid="@TestId("modeling-generate-diagram-button")">
-                    @Loc["TmModelingDiagramPreview_Generate"]
+                          Icon="@IconNames.ExternalLink"
+                          Disabled="@(Document is null)"
+                          OnClick="HandleOpenInEditorAsync"
+                          AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
+                          data-modeling-focus="open-in-editor"
+                          id="@OpenInEditorTriggerId"
+                          data-testid="@TestId("modeling-open-in-editor-button")">
+                    @Loc["TmModelingDiagramPreview_OpenInEditor"]
                 </TmButton>
-            }
-            <TmButton Variant="ButtonVariant.Primary"
-                      Size="ButtonSize.Sm"
-                      Icon="@IconNames.ExternalLink"
-                      Disabled="@(Document is null)"
-                      OnClick="HandleOpenInEditorAsync"
-                      AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
-                      data-modeling-focus="open-in-editor"
-                      id="@OpenInEditorTriggerId"
-                      data-testid="@TestId("modeling-open-in-editor-button")">
-                @Loc["TmModelingDiagramPreview_OpenInEditor"]
-            </TmButton>
-        </div>
+            </div>
+        }
     </header>
 
     @if (Document is null)
@@ -83,11 +89,12 @@
                              OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
                              Class="tm-modeling-diagram-preview__editor" />
         </div>
-        @if (ActiveDraggedElement is not null)
+        @if (ActiveDraggedElement is not null && AllowNodeDrop)
         {
             @* Only while a model-tree drag is live (review fix, phase 5): a permanent hint row
                ate a slice of the canvas column at every viewport, and the dashed drop-zone
-               border read as a permanent affordance. *@
+               border read as a permanent affordance. Gated on AllowNodeDrop too — a layout that
+               ignores drops (mobile, Fáze 7) never paints the affordance. *@
             <div class="tm-modeling-diagram-preview__drop-hint" data-testid="@TestId("modeling-diagram-preview-drop-hint")">
                 @Loc["TmModelingDiagramPreview_DropHint"]
             </div>

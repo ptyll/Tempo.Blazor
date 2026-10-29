@@ -393,9 +393,11 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             "() => document.querySelector('.tm-modeling-editor .tm-diagram-editor')?.getAttribute('data-editor-layout') === 'mobile'",
             null, new PageWaitForFunctionOptions { Timeout = 20_000 });
 
-        // Viewer preview contract: no edit action bar, no panels sheet — only the floating zoom.
-        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-mobile-action-bar__bar").CountAsync(),
-            "the Viewer preview has no edit action bar on mobile");
+        // Viewer preview contract: no edit action bar INSIDE the embedded diagram editor and no
+        // panels sheet — only the floating zoom. (The Modeling editor's own F5 action bar is the
+        // phase-7 editor-level chrome and lives OUTSIDE the embedded editor.)
+        Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-diagram-editor .tm-mobile-action-bar__bar").CountAsync(),
+            "the Viewer preview has no edit action bar inside the embedded diagram editor on mobile");
         Assert.AreEqual(0, await page.Locator(".tm-modeling-editor .tm-editor-shell__sheet").CountAsync(),
             "the Viewer preview opens no panels sheet (no collision with the overlay header)");
         Assert.IsTrue(await page.Locator(".tm-modeling-editor .tm-diagram-editor__zoom-overlay").CountAsync() > 0,
