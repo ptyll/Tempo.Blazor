@@ -1,0 +1,208 @@
+{
+  "totals": {
+    "passed": 12,
+    "failed": 4,
+    "skipped": 0,
+    "total": 16
+  },
+  "shards": [
+    {
+      "shard": "shard-1-failures",
+      "file": "shard-1-failures.trx",
+      "outcome": "Failed",
+      "passed": 12,
+      "failed": 4,
+      "skipped": 0,
+      "total": 16,
+      "classes": {
+        "DataTableErgonomicsE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "NotionNavBlocksE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "NotionMentionMenuE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "SpreadsheetE2ETests": {
+          "passed": 2,
+          "failed": 1,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": [
+            "Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets"
+          ]
+        },
+        "NotionBlockOpsE2ETests": {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "DocumentEditorLegalFilingE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "NotionMyTasksE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "DashboardF6SelectorE2ETests": {
+          "passed": 0,
+          "failed": 2,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": [
+            "Selector_Desktop1440_SidebarFilter_AddedState_AndKeyboardOnly",
+            "Selector_Mobile390_Sheet_ChipFilter"
+          ]
+        },
+        "NewChartTypesE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "RelativeTimeE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "OverlayMobilePresentationE2ETests": {
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": [
+            "DatePicker_At390_InModalSheet_OpensNestedSheet"
+          ]
+        }
+      },
+      "failures": [
+        "Tempo.Blazor.E2E.DashboardF6SelectorE2ETests.Selector_Desktop1440_SidebarFilter_AddedState_AndKeyboardOnly",
+        "Tempo.Blazor.E2E.SpreadsheetE2ETests.Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets",
+        "Tempo.Blazor.E2E.DashboardF6SelectorE2ETests.Selector_Mobile390_Sheet_ChipFilter",
+        "Tempo.Blazor.E2E.OverlayMobilePresentationE2ETests.DatePicker_At390_InModalSheet_OpensNestedSheet"
+      ]
+    }
+  ],
+  "perClass": {
+    "DashboardF6SelectorE2ETests": {
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": [
+        "Selector_Desktop1440_SidebarFilter_AddedState_AndKeyboardOnly",
+        "Selector_Mobile390_Sheet_ChipFilter"
+      ]
+    },
+    "DataTableErgonomicsE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "DocumentEditorLegalFilingE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "NewChartTypesE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "NotionBlockOpsE2ETests": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "NotionMentionMenuE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "NotionMyTasksE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "NotionNavBlocksE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "OverlayMobilePresentationE2ETests": {
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": [
+        "DatePicker_At390_InModalSheet_OpensNestedSheet"
+      ]
+    },
+    "RelativeTimeE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": []
+    },
+    "SpreadsheetE2ETests": {
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "shard-1-failures",
+      "failures": [
+        "Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets"
+      ]
+    }
+  }
+}

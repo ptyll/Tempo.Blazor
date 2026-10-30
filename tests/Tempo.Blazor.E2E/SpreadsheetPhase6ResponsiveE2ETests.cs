@@ -473,6 +473,32 @@ public partial class SpreadsheetE2ETests
             Assert.IsTrue(box!.Y >= 0 && box.Y + box.Height <= viewportHeight + 1,
                 $"{action} is reachable ({box.Y:0}..{box.Y + box.Height:0} of {viewportHeight})");
         }
+
+        // The grid must still show rows. At 568x320 the fixed chrome (toolbar + formula bar + column
+        // headers + sheet tabs + action bar) used to squeeze the grid to ~0px, so the editor rendered an
+        // empty sheet - the sheet was editable in theory and invisible in practice. The phone layout now
+        // keeps --tm-spreadsheet-grid-min-height and scrolls its own box instead of clipping.
+        var grid = await modal.Locator(".tm-spreadsheet-canvas-grid").First.BoundingBoxAsync();
+        Assert.IsNotNull(grid, "the canvas grid renders inside the modal");
+        Assert.IsTrue(grid!.Height >= 96,
+            $"the phone grid keeps a usable floor in a {viewportHeight}px host (got {grid.Height:0}px)");
+
+        // …and it is reachable: the phone root scrolls the grid into view when chrome + floor cannot fit.
+        await page.EvaluateAsync(@"() => {
+            const root = document.querySelector('.tm-notion-spreadsheet-edit-modal .tm-spreadsheet--layout-mobile');
+            const grid = root && root.querySelector('.tm-spreadsheet-canvas-grid');
+            if (!root || !grid) { return; }
+            const rootTop = root.getBoundingClientRect().top;
+            root.scrollTop += grid.getBoundingClientRect().top - rootTop - 4;
+        }");
+        await page.WaitForTimeoutAsync(150);
+
+        var scrolled = await modal.Locator(".tm-spreadsheet-canvas-grid").First.BoundingBoxAsync();
+        var visible = Math.Min(scrolled!.Y + scrolled.Height, viewportHeight) - Math.Max(scrolled.Y, 0);
+        Assert.IsTrue(visible >= 96,
+            $"the grid is reachable by scrolling the phone root (visible {visible:0}px of {viewportHeight})");
+        Assert.IsTrue(await modal.Locator(".tm-spreadsheet-canvas-grid__canvas").First.CountAsync() > 0,
+            "the grid paints its canvases, so the rows are not an empty placeholder");
     }
 
     // ── Review round: the tablet chrome in a reference-width (~1000px) container ──

@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Components.Spreadsheet.Models
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Dialogs
+@inherits Tempo.Blazor.Components.TmComponentBase
 
 <div class="tm-spreadsheet @(Mode == SpreadsheetMode.Full ? "tm-spreadsheet--workspace" : "tm-spreadsheet--chrome-flat") tm-spreadsheet--layout-@(LayoutName) @Class"
      style="width: @EffectiveWidth; height: @EffectiveHeight;"
@@ -11,6 +12,7 @@
      data-formula-argument-separator="@FormulaArgumentSeparator"
      data-formula-decimal-separator="@FormulaDecimalSeparator"
      data-formula-culture="@FormulaCultureName"
+     data-testid="@RootTestId()"
      @attributes="AdditionalAttributes">
     @* The layout is measured from the spreadsheet's OWN container (never the viewport). The OBSERVER's root
        (`div.tm-spreadsheet__layout`, a NEW wrapper element inside the component root) is the named
@@ -38,7 +40,7 @@
            OnOpen / OnDownload, and the "Show grid lines" switch is the core TmToggle driving the active
            sheet. The app-shell elements of the reference ("Saved", hamburger, overflow menu, document
            switcher) are the host's HeaderStart / HeaderActions content, never built in. *@
-        <header class="tm-spreadsheet__header" data-testid="tm-spreadsheet-header">
+        <header class="tm-spreadsheet__header" data-testid="@TestId("tm-spreadsheet-header")">
             <div class="tm-spreadsheet__header-start">
                 @HeaderStart
                 @if (!string.IsNullOrWhiteSpace(Title))
@@ -65,7 +67,7 @@
                 {
                     <button type="button"
                             class="tm-spreadsheet__header-action"
-                            data-testid="tm-spreadsheet-header-open"
+                            data-testid="@TestId("tm-spreadsheet-header-open")"
                             title="@Loc["TmSpreadsheet_OpenDocument"]"
                             @onclick="TriggerFileInput">
                         <TmIcon Name="folder-open" />
@@ -76,7 +78,7 @@
                 {
                     <button type="button"
                             class="tm-spreadsheet__header-action"
-                            data-testid="tm-spreadsheet-header-download"
+                            data-testid="@TestId("tm-spreadsheet-header-download")"
                             title="@Loc["TmSpreadsheet_DownloadDocument"]"
                             @onclick="DownloadXlsx">
                         <TmIcon Name="download" />
@@ -103,7 +105,7 @@
            It renders ONLY when the host actually gives it content: an empty 50px row above a phone grid is
            worse than no row at all, and the undo/redo pair therefore leads the mobile FORMATTING row
            (SpreadsheetToolbarLayout) so their availability never depends on the header. *@
-        <header class="tm-spreadsheet__mobile-header" data-testid="tm-spreadsheet-mobile-header">
+        <header class="tm-spreadsheet__mobile-header" data-testid="@TestId("tm-spreadsheet-mobile-header")">
             <div class="tm-spreadsheet__mobile-header-start">
                 @HeaderStart
                 @if (!string.IsNullOrWhiteSpace(Title))

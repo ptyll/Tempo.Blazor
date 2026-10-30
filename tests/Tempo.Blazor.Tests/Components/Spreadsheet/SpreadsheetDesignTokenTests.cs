@@ -308,6 +308,30 @@ public sealed class SpreadsheetDesignTokenTests
     }
 
     [Fact]
+    public void MobileLayout_KeepsAUsableGridFloor_WhenTheHostIsShorterThanTheChrome()
+    {
+        // The Notion fullscreen edit modal at 568x320 overrides the phone height floor
+        // (--tm-spreadsheet-mobile-min-height: 0) so the Save / Discard footer cannot be pushed out of the
+        // viewport. Before this rule the fixed chrome (toolbar + formula bar + column headers + sheet tabs +
+        // action bar) ate the whole 100% box, the grid resolved to ~0px and the editor showed NO rows at
+        // all. The grid therefore keeps its own floor and the component's box scrolls when the host cannot
+        // fit chrome + floor; a host with enough height never sees a scrollbar.
+        var stylesheet = ThemeCss.StripComments(File.ReadAllText(Path.Combine(
+            PackageDirectory(), "wwwroot", "css", "components", "_spreadsheet.css")));
+
+        var mobile = RuleBodies(stylesheet, ".tm-spreadsheet--layout-mobile");
+        mobile.Should().NotBeEmpty("the phone layout must own the short-host fallback");
+        mobile.Should().Contain(body => body.Contains("overflow-y: auto", StringComparison.Ordinal),
+            "the phone root scrolls when the host is shorter than the chrome + the grid floor");
+
+        var grid = RuleBodies(stylesheet, ".tm-spreadsheet--layout-mobile .tm-spreadsheet-canvas-grid");
+        grid.Should().NotBeEmpty("the phone grid needs its own min-height floor");
+        grid.Should().Contain(body => body.Contains(
+                "min-height: var(--tm-spreadsheet-grid-min-height", StringComparison.Ordinal),
+            "the floor is a host-overridable component token, not a literal");
+    }
+
+    [Fact]
     public void CanvasScript_ResolvesEveryColourThroughBuildPalette()
     {
         var script = File.ReadAllText(Path.Combine(PackageDirectory(), "wwwroot", "js", "spreadsheet-canvas.js"));
@@ -385,6 +409,14 @@ public sealed class SpreadsheetDesignTokenTests
 
         return null;
     }
+
+    /// <summary>Every declaration body whose selector list contains EXACTLY the given selector.</summary>
+    private static IReadOnlyList<string> RuleBodies(string stylesheet, string selector)
+        => RuleBlock.Matches(stylesheet)
+            .Where(rule => ThemeCss.SelectorParts(rule.Groups["selector"].Value)
+                .Any(part => string.Equals(part, selector, StringComparison.Ordinal)))
+            .Select(rule => rule.Groups["body"].Value)
+            .ToList();
 
     private static Dictionary<string, string> DeclaredValues(string body)
     {

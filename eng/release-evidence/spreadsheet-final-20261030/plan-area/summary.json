@@ -1,0 +1,120 @@
+{
+  "totals": {
+    "passed": 15,
+    "failed": 1,
+    "skipped": 0,
+    "total": 16
+  },
+  "shards": [
+    {
+      "shard": "phase8-fixes",
+      "file": "phase8-fixes.trx",
+      "outcome": "Completed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "total": 4,
+      "classes": {
+        "WireframeSpreadsheetStencilE2ETests": {
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "SpreadsheetE2ETests": {
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        }
+      },
+      "failures": []
+    },
+    {
+      "shard": "phone-overflow-rerun",
+      "file": "phone-overflow-rerun.trx",
+      "outcome": "Failed",
+      "passed": 8,
+      "failed": 1,
+      "skipped": 0,
+      "total": 9,
+      "classes": {
+        "SpreadsheetE2ETests": {
+          "passed": 7,
+          "failed": 1,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": [
+            "Phase6_Mobile_390_CompactChrome_WithActionBar"
+          ]
+        },
+        "RteDialogsTopLayerE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        }
+      },
+      "failures": [
+        "Tempo.Blazor.E2E.SpreadsheetE2ETests.Phase6_Mobile_390_CompactChrome_WithActionBar"
+      ]
+    },
+    {
+      "shard": "review-fixes",
+      "file": "review-fixes.trx",
+      "outcome": "Completed",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "total": 3,
+      "classes": {
+        "WireframeSpreadsheetStencilE2ETests": {
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        },
+        "SpreadsheetE2ETests": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "seconds": 0,
+          "failures": []
+        }
+      },
+      "failures": []
+    }
+  ],
+  "perClass": {
+    "RteDialogsTopLayerE2ETests": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "phone-overflow-rerun",
+      "failures": []
+    },
+    "SpreadsheetE2ETests": {
+      "passed": 10,
+      "failed": 1,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "phase8-fixes",
+      "failures": [
+        "Phase6_Mobile_390_CompactChrome_WithActionBar"
+      ]
+    },
+    "WireframeSpreadsheetStencilE2ETests": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 0,
+      "shard": "phase8-fixes",
+      "failures": []
+    }
+  }
+}

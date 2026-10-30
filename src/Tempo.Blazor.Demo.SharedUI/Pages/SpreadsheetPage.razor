@@ -1,5 +1,6 @@
 @page "/spreadsheet"
 @inject IJSRuntime JS
+@inject ITmLocalizer Loc
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Spreadsheet
 @using Tempo.Blazor.Components.Spreadsheet.Enums
@@ -241,6 +242,23 @@
                            Height="430px" />
         </div>
     </div>
+
+    @* A live switch: the parameter is a plain [Parameter], so re-render with a new value repaints the
+       canvas (rows, cell text, gutters, fill handle) without touching the workbook model. *@
+    <div class="showcase-card mt-4" data-testid="spreadsheet-density-switch">
+        <div class="max-w-xs">
+            <TmSelect TValue="SpreadsheetDensity"
+                      Label="@Loc["TmSpreadsheetDemo_DensitySwitch"]"
+                      Options="_densityOptions"
+                      @bind-Value="_density" />
+        </div>
+        <div class="showcase-card p-0 overflow-hidden mt-4" data-testid="spreadsheet-density-live">
+            <TmSpreadsheet Density="_density"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="360px" />
+        </div>
+    </div>
 </section>
 
 <!-- Responsive chrome (redesign phase 6): the mode follows the CONTAINER, never the viewport -->
@@ -305,6 +323,20 @@
     private SpreadsheetChangeEventArgs? _lastChange;
     private string? _importStatus;
     private string? _headerStatus;
+    private SpreadsheetDensity _density = SpreadsheetDensity.Comfortable;
+    private IReadOnlyList<SelectOption<SpreadsheetDensity>> _densityOptions = [];
+
+    protected override void OnInitialized()
+    {
+        // Localized enum labels, the same pattern the DataTable demo uses for its switches.
+        _densityOptions = Enum.GetValues<SpreadsheetDensity>()
+            .Select(value => new SelectOption<SpreadsheetDensity>
+            {
+                Value = value,
+                Label = Loc[$"TmSpreadsheetDemo_Enum_SpreadsheetDensity_{value}"],
+            })
+            .ToList();
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {

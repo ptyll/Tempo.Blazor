@@ -128,6 +128,25 @@ zoom and **summary** groups: the status bar is hidden on a phone, so its zoom co
 aggregations are re-offered there (`TmActionItem.Group == "zoom"` / `"summary"`; the summary rows are
 inert information).
 
+### A host shorter than the chrome (phase 8)
+
+The phone height chain has two knobs and a host may move both:
+
+| Token | Default | Meaning |
+|-------|---------|---------|
+| `--tm-spreadsheet-mobile-min-height` | `32rem` | the floor of the phone layout, so an auto-height host cannot collapse the grid |
+| `--tm-spreadsheet-grid-min-height` | `9rem` | the floor of the **grid** when the host is shorter than the fixed chrome (toolbar + formula bar + column headers + sheet tabs + action bar) |
+
+A host that owns a tight frame (the Notion fullscreen edit modal at 568×320 sets the first knob to `0`
+so its Save / Discard footer can never be pushed out of the viewport) leaves the fixed chrome more than
+the whole box. Before the second knob existed the grid resolved to ~0px and the editor showed **no
+rows at all** — editable in theory, invisible in practice. Now the grid keeps its floor and the phone
+root becomes the scroll container (`overflow-y: auto` on `.tm-spreadsheet--layout-mobile`), so the rows
+are reachable by scrolling; a host tall enough for chrome + floor never sees a scrollbar. Guarded by
+`SpreadsheetDesignTokenTests.MobileLayout_KeepsAUsableGridFloor_WhenTheHostIsShorterThanTheChrome` (CSS
+contract) and `SpreadsheetPhase6ResponsiveE2ETests.Phase6_NotionEditModal_At390_IsMobile_AndKeepsTheFooterInView`
+(grid ≥ 96px and reachable by scrolling the phone root, at 844 and 320 px of viewport height).
+
 `LayoutMode` is a pass-through on the overlays too (`TmSpreadsheetFindReplaceDialog`,
 `TmSpreadsheetFilterDropdown`, `TmSpreadsheetCanvasGrid`): the filter dropdown becomes a bottom sheet
 with 44px rows and a sticky Cancel / OK bar, the grid context menu becomes a `TmDrawer` sheet, and
@@ -241,6 +260,28 @@ SHEET (the modal does not zoom), and the phone sheet renders as a sibling of the
 the modal's stacking context cannot clip it. Scroll chaining: the menu contains its own overflow
 (`overscroll-behavior: contain`); the grid deliberately keeps the platform's default chaining, because
 a nested editor that swallows an edge scroll traps the page.
+
+### `TmSpreadsheetCanvasGrid.SuppressFocusRestore` — a host surface that owns the focus
+
+`TmSpreadsheet` renders the grid with `SuppressFocusRestore="@IsHostSurfaceFocused"`, i.e. `true` while
+one of the component's own surfaces (the anchored context menu, the phone sheet, a resize dialog) is
+open. A host that renders `TmSpreadsheetCanvasGrid` **directly** and draws its own overlay over the grid
+must pass the same flag itself:
+
+```razor
+<TmSpreadsheetCanvasGrid @ref="_grid" Sheet="_sheet"
+                         OnContextMenuRequested="OpenMyMenu"
+                         SuppressFocusRestore="@(_myMenu is not null)" />
+```
+
+Why it is a parameter and not a timing fix: a pointer activation that opens a surface arms the grid's
+focus restore, and the grid and the surface run `OnAfterRenderAsync` in the SAME batch, so the grid's
+"did the focus move away?" probe answers before the overlay focused its first entry and the stale answer
+stole the caret back (phase 7d — the context menu's ArrowDown / Home / End were dead in a real browser,
+green in bUnit). With the flag the precedence is explicit: the host surface owns the focus. An EXPLICIT
+navigation (`NavigateToCellAsync`, the name box, Find next) still wins over both, and a
+pointer-originated restore keeps using the atomic `tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway`
+(check and focus in ONE task, never a probe followed by `FocusAsync`).
 
 ## Scripts and CSP
 

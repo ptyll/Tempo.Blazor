@@ -10,6 +10,90 @@
 > `docs/email-templates/MIGRATION-2.9-to-2.10.md` and the hosting contract is
 > `docs/email-templates/HOSTING.md`.
 
+### Spreadsheet redesign — plan summary (plan 8959eebe, phases 1–8)
+
+The `Tempo.Blazor.Spreadsheet` package was rebuilt against 57 reference mockups
+(`output/imagegen/tempo-reimagined/Tempo.Blazor.Spreadsheet/`, gap analysis in
+`output/imagegen/tempo-reimagined/analysis/spreadsheet.md`) under four binding decisions:
+
+- **G2** — a phone is *viewing plus basic editing* (select, edit a value, scroll/zoom, basic format,
+  filter); full editing starts at the tablet. Nothing below the tablet breakpoint is silently missing:
+  the mobile command model simply does not contain the advanced tools, so the toolbar cannot re-offer
+  them.
+- **G6** — all 14 dialogs ride the core `TmModal` (phone: bottom sheet / fullscreen panel, focus trap,
+  Escape, focus back to the grid); Find & Replace stays non-modal on purpose.
+- **SP1** — grid density is a RENDER scale (`Density`, `Auto|Compact|Comfortable`) driven by
+  `(pointer: coarse)`; the workbook model and every XLSX value are untouched.
+- **SP2/SP3/SP4** — no Layout/Review/Formulas tabs, the document header is opt-in
+  (`ShowHeader`/`Title`/`HeaderStart`/`HeaderActions`) and takes over the file actions, the formula bar
+  carries ✓/✗ and the grid-line toggle.
+
+Per phase (each entry below carries its own breaking-change contract):
+
+| Phase | Result |
+|---|---|
+| 1 | Name Manager / Named Range Edit / Hyperlink / Insert Image wrapped in the core `TmFocusScope`; new `TmSpreadsheetValidationAlert` (alertdialog); roving tabindex in the Format Cells listbox and the Name Manager rows |
+| 2 | Component tokens on `.tm-spreadsheet`, token-only package CSS, the canvas palette built from tokens (light/dark/indigo), active row/column header highlight, `SpreadsheetDensity`, workspace vs flat chrome, `npm run test:spreadsheet` |
+| 3 | Every dialog on the core `TmModal` with the phone presentation, focus trap and focus restore; `TmSpreadsheetInsertImageDialog`; core additive `MobilePresentation.AutoFullscreen`, `TmModal.RestoreFocus`/`DialogRole`/`AriaDescribedBy` |
+| 4 | Dialog content and hierarchy follow the references (core inputs, phone cards for Sort/Name Manager, SVG border icons, validation card) |
+| 5 | Ribbon v2 (Home/Insert/Data/View + labelled groups, frozen `data-tm-group`), the opt-in document header, the `fx` + ✓/✗ formula bar with the named-range list, sheet tabs with underline/close/overflow arrows |
+| 6 | Container-driven responsive chrome (`TmLayoutObserver` + `TmLayoutMode`), the tablet two-row model on the core overflow toolbar, the phone compact row + core `TmMobileActionBar` + sheets |
+| 7 / 7b / 7c / 7d | Canvas touch interaction on the shared core `pointer-drag.js`/`pointer-gesture.js` (tap, double-tap edit, long-press menu, pinch zoom, corner drops, touch fill handle, `touch-action: pan-x pan-y`), density gutters + header font scaling, the opaque dark active header and the live theme flip, geometry getters for E2E, the 320 px dialog pass, and the class-by-class regression gate that closed two real regressions |
+| 8 | Documentation (this summary, `docs/spreadsheet.md`, `COMPONENTS.md`, the demo page), the full per-project test run, and the final UX review; the phone grid now keeps `--tm-spreadsheet-grid-min-height` in a host shorter than its chrome (the Notion edit modal at 568×320 used to show no rows at all) |
+
+What a consumer must do (details and before/after in every "Spreadsheet redesign (phase N)" entry of
+`### Breaking / Migration` below):
+
+1. **Serve `_content/Tempo.Blazor/js/` alongside `_content/Tempo.Blazor.Spreadsheet/js/`.** The canvas
+   dynamically imports the shared `pointer-drag.js` / `pointer-gesture.js`; without them the grid keeps
+   its mouse path, logs one warning, and touch gestures are off. A per-file CSP hash must list
+   `spreadsheet-canvas.js`, `pointer-drag.js` and `pointer-gesture.js`.
+2. **Import the package bundle, or the package theme layer too.** `_spreadsheet.css` reads kernel tokens;
+   the dark active header lives in `wwwroot/css/theme-spreadsheet-dark.css`, which the bundle
+   (`tempo-blazor-spreadsheet.css`) imports. A host that imports individual component files must import
+   that theme file as well.
+3. **Key off the frozen contracts, never positional DOM.** `data-tm-tab`, `data-tm-group`,
+   `data-command-id`, `data-toolbar-row`/`data-toolbar-layout`, `data-layout` and the `data-testid`s are
+   the host surface; the internal chrome DOM (ribbon → compact rows → phone row) changes with the
+   container width by design.
+4. **Host a dialog overlay outside `.tm-spreadsheet__layout`.** That wrapper is an inline-size query
+   container (`contain: layout`), so a `position: fixed` descendant would be trapped inside the card —
+   the component's own dialogs and sheets are siblings for exactly this reason.
+
+Evidence: the regression lanes (`eng/release-evidence/spreadsheet-lanes-20261030/`), the final
+per-project run plus the PARTIAL full E2E lane (`eng/release-evidence/spreadsheet-final-20261030/` —
+shard 1 of the eight class shards plus the isolated re-run of its failures; its `README.md` holds the UX
+findings table and the per-leg results) and the two perf runs
+(`eng/release-evidence/spreadsheet-perf-20261029/`).
+
+**Open / unfinished, tracked in the plan's remaining tasks:**
+
+- **The full E2E lane is not finished** (cd641f4a). The 8-shard run was stopped in shard 1 after 4 h 40 m
+  because this box runs ~60–90 s per test under concurrent load (~20–25 h for the ~1500-test suite); the
+  runner writes one TRX per shard at the END, so shard 1 produced no TRX. Resume on an idle box with
+  `bash eng/release-evidence/spreadsheet-final-20261030/run-e2e-shards.sh <dir> 8` (add an `OnlyShard`
+  list such as `8 3,5` to repeat single shards) and then summarise with `node e2e-summary.mjs <dir>`.
+  What IS proven on this tree: the isolated re-run of shard 1's 16 failures (12 green) and a plan-area
+  lane that is 4/4 green (the demo density switch, the 568×320 Notion modal, both wireframe-stencil
+  captures).
+- **`SpreadsheetE2ETests.Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets` is red**
+  (f25a9d47), and the bisect puts it on the phase-6 container-driven chrome commit (`e0febc25`): phase 5
+  (`b1a8fc10`) passes, phase 7c (`32305292`), phase 7d (`50aa7fbc`) and this tree all fail identically.
+  Before phase 6 a 1024 px viewport resolved the DESKTOP chrome, so *Custom sort…* sat on the ribbon;
+  from phase 6 the ~700 px demo container resolves the TABLET chrome, the command moves into the row's
+  core `ActionOverflowMenu` "More" panel, and that panel is anchored BELOW its trigger — with the trigger
+  near the bottom of the viewport its entries are painted outside the viewport and nothing scrolls a
+  top-layer panel into view. The phase-7d lane evidence recorded this group green, so the regression
+  slipped between that run and now. Not fixed here: the placement is core (shared with the diagram,
+  wireframe and dashboard toolbars) and `e0febc25` is outside this phase's budget — a flip-up placement
+  or the documented open-on-desktop-then-resize pattern in that one spec are the two candidates.
+- **The wall-clock performance budget is *Inconclusive*** (12bc2afb, fcee0469, dc12ae21):
+  `SpreadsheetPerformanceE2ETests.SelectionDrag_AB_WithinBudget` measured a rAF cadence swinging between
+  ~5 and ~36 fps, so the 30 % IQR guard trips in both directions and the ratio sign flips between runs;
+  the deterministic counters (one header paint per selection change, unchanged content paints) are green.
+  It must be re-run on an idle machine or the dedicated perf lane (`scripts/run-e2e-perf.ps1`) before the
+  ≤ +10 % budget is claimed.
+
 ### Breaking / Migration
 
 - **Spreadsheet redesign (phase 7c): the Sort dialog wraps its content in `div.tm-spreadsheet-sort__body`.** The wrapper is the inline-size query container the phone toolbar needs (it is the element the 320 px "stack the options" rule measures), and it carries the phone modifier `tm-spreadsheet-sort__body--mobile`. Every existing hook still matches — `.tm-spreadsheet-sort__toolbar`, `.tm-spreadsheet-sort__toggles`, `.tm-spreadsheet-sort__table`, `.tm-spreadsheet-sort__card`, `.tm-spreadsheet-sort__tool`, `__btn--ok` / `__btn--cancel` are untouched — but a selector that assumed the toolbar was a DIRECT child of the modal body must become a descendant selector:
@@ -456,7 +540,31 @@
 - **Core (additive): `TmModal.DialogRole` and `TmModal.AriaDescribedBy`, `TmFocusScope.AriaDescribedBy`.** A surface that IS a message (the Spreadsheet validation alert) can now render `role="alertdialog"` and point `aria-describedby` at its message through the shared frame, instead of dropping out of `TmModal` to hand-roll an `alertdialog`. Both default to the previous behaviour (`"dialog"`, unset), so nothing else changes.
 
 
+### Fixed
+
+- **Spreadsheet redesign (phase 8): a host shorter than the phone chrome no longer renders an empty
+  grid.** `TmSpreadsheet` keeps a new `--tm-spreadsheet-grid-min-height` (default `9rem`) floor on the
+  phone grid and `.tm-spreadsheet--layout-mobile` may scroll its own box, so a host that overrides the
+  phone height floor (the Notion fullscreen editor sets `--tm-spreadsheet-mobile-min-height: 0` at
+  568×320 so its Save / Discard footer stays visible) shows rows again instead of a grid resolved to
+  ~0px. A host tall enough for the chrome plus the floor never scrolls. Guards:
+  `SpreadsheetDesignTokenTests.MobileLayout_KeepsAUsableGridFloor_WhenTheHostIsShorterThanTheChrome` and
+  `SpreadsheetPhase6ResponsiveE2ETests.Phase6_NotionEditModal_At390_IsMobile_AndKeepsTheFooterInView`
+  (grid ≥ 96 px and reachable by scrolling at 844 and 320 px).
+- **Spreadsheet redesign (phase 8): the wireframe `TmSpreadsheet` stencil stops drawing command chips
+  under the phone "More" chip.** The mobile variant used to paint the alignment/merge chips onward
+  across `el.W - 30` (the "More" chip) on a 340 px element; a chip that would reach the "More" chip is
+  now skipped, and no coordinate of a compact row exceeds `el.W - 18`.
+
 ### Added
+- **Spreadsheet redesign (phase 8): `TmSpreadsheet` honours the core `data-testid` contract.**
+  The component now derives from `TmComponentBase` and its root renders
+  `data-testid="@RootTestId()"` before the splatted attributes, so `DataTestId` labels the root (and a
+  host can still override it through `AdditionalAttributes`) while `TestIdPrefix` namespaces the
+  internal ids (`tm-spreadsheet-header`, `-header-open`, `-header-download`, `tm-spreadsheet-mobile-header`
+  → `{prefix}-…`). Without `DataTestId` the root carries no `data-testid`, so no existing DOM changes;
+  guarded by `TmSpreadsheetTestIdTests`.
+
 
 - **Wireframe stencil: the `TmSpreadsheet` stencil draws the tablet and phone chrome (`layoutMode`, additive).** The stencil used to preview the DESKTOP tabbed ribbon only, so a designer could not show what a spreadsheet looks like on a tablet or a phone. `TempoNativeRendererDefinitions.RenderSpreadsheet` now reads the same `layoutMode` prop (`auto | desktop | tablet | mobile`, default `auto`) the diagram editor and dashboard stencils already expose, and the `TmSpreadsheet` wireframe schema offers it in the inspector's Behavior group:
 

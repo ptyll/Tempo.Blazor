@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
@@ -112,6 +113,27 @@ public class WireframeSpreadsheetRendererTests
         // The grid and the sheet tabs stay on every layout.
         foreach (var region in new[] { "formula-bar", "grid", "sheet-tabs" })
             HasRegion(svg, region).Should().BeTrue($"mobile keeps the '{region}' region");
+    }
+
+    [Fact]
+    public async Task RenderSpreadsheet_MobileOverflow_StopsBeforeTheMoreChip()
+    {
+        // A phone is 340-390 px wide, so the compact command row cannot hold every chip. The row used to
+        // paint the alignment/merge chips straight across the trailing "More" chip (el.W - 30), which read
+        // as overlapping controls in the UX capture. A chip that would reach "More" is now skipped, so no
+        // coordinate of the row may pass the More chip's label (el.W - 19).
+        const int width = 340;
+        var svg = await RenderAsync(width, 520, ("layoutMode", P("mobile")));
+
+        var row = Regex.Match(svg, "<g data-region='command-row'[\\s\\S]*?</g>");
+        row.Success.Should().BeTrue("the phone chrome draws the compact command row");
+
+        var coordinates = Regex.Matches(row.Value, @"(?:\bx|\bcx)='([0-9.]+)'")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .ToList();
+        coordinates.Should().NotBeEmpty("the row paints at least the history chips and the More chip");
+        coordinates.Max().Should().BeLessThanOrEqualTo(width - 18,
+            "nothing in the compact row may be drawn under the trailing More chip");
     }
 
     [Fact]

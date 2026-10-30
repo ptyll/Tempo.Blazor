@@ -155,6 +155,8 @@ public sealed class MyStencilProvider : IDiagramStencilProvider
 
 `TmPdfTemplateDesigner` loads its ES module from `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js`. If your host app uses CSP or a static-asset allowlist, include that path. `TmSignatureCapture` still uses the core `_content/Tempo.Blazor/js/signature-capture.js` asset.
 
+**Split editors that need the core pointer helpers** (`TmSpreadsheet`, `TmWireframeEditor`, `TmDiagramEditor`) serve `_content/Tempo.Blazor/js/` as well as their own assets: their canvases dynamically `import()` the shared `pointer-drag.js` / `pointer-gesture.js` from the CORE package folder, so a per-file CSP hash must list the package script **and** both helpers (a host-wide nonce covers all of them). Without them the surface keeps its mouse path, logs one warning and touch gestures are off. `TmSpreadsheet` additionally needs its package theme layer (`_content/Tempo.Blazor.Spreadsheet/css/theme-spreadsheet-dark.css`) when a host imports the individual component stylesheets instead of the bundle `tempo-blazor-spreadsheet.css`, which imports it. Contracts: [docs/spreadsheet.md](docs/spreadsheet.md#scripts-and-csp), [docs/touch-interaction.md](docs/touch-interaction.md).
+
 ### 3. Add Toast Container to Layout
 
 ```razor

@@ -44,6 +44,10 @@
     /* The floor of the mobile layout's `height: 100%` (SP3): a host whose own height is auto would
        otherwise collapse the grid to zero. */
     --tm-spreadsheet-mobile-min-height: 32rem;
+    /* The phone GRID floor (phase 8): a host shorter than the fixed chrome (the Notion fullscreen edit
+       modal at 568x320 overrides the mobile height floor so its footer stays visible) must still show
+       rows. The grid keeps this height and the phone root scrolls instead of squeezing the grid to 0. */
+    --tm-spreadsheet-grid-min-height: 9rem;
 
     display: flex;
     flex-direction: column;
@@ -1718,6 +1722,17 @@
 .tm-spreadsheet--layout-mobile {
     min-height: var(--tm-spreadsheet-mobile-min-height);
     max-height: 100dvh;
+    /* A host may override the mobile floor (the Notion fullscreen edit modal sets it to 0 so its footer
+       cannot be pushed out of a 568x320 viewport). The phone root then becomes the scroll container
+       instead of clipping the grid to zero height; a host that fits the chrome never scrolls. */
+    overflow-y: auto;
+}
+
+/* The short-host fallback: the grid keeps a readable floor, so the phone chrome overflowing the host is
+   reachable by scrolling rather than the grid disappearing. The floor is a token because the host knows
+   how much room its own frame needs. */
+.tm-spreadsheet--layout-mobile .tm-spreadsheet-canvas-grid {
+    min-height: var(--tm-spreadsheet-grid-min-height);
 }
 
 .tm-spreadsheet--layout-mobile.tm-spreadsheet--workspace {

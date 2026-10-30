@@ -319,6 +319,66 @@ public partial class SpreadsheetE2ETests
         await page.CloseAsync();
     }
 
+    /// <summary>
+    /// Phase 8 (the demo contract of SP1): the demo page's LIVE density switch drives ONE instance
+    /// through its plain <c>Density</c> parameter — a re-render repaints the canvas at the new row
+    /// height while the workbook model keeps its 20px default (density is a render scale, never a model
+    /// edit). The two fixed instances of the section above cannot prove this: they are two components.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Phase8_DensitySwitch_RepaintsTheSameInstance_AndLeavesTheModelAlone()
+    {
+        var page = await CreatePageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/spreadsheet");
+
+        var live = page.Locator("[data-testid='spreadsheet-density-live'] .tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, live);
+
+        // The switch starts on Comfortable (the demo's initial value).
+        Assert.AreEqual("comfortable", await live.GetAttributeAsync("data-density"));
+        Assert.AreEqual(30, await ReadPhase2RowHeightAsync(live, row: 0), 0.6,
+            "Comfortable draws the 20px model row at 1.5x");
+
+        // Flip the switch: the SAME element repaints at the Compact scale.
+        var select = page.Locator("[data-testid='spreadsheet-density-switch'] select").First;
+        await select.SelectOptionAsync("Compact");
+        await page.WaitForFunctionAsync(
+            @"() => document.querySelector(""[data-testid='spreadsheet-density-live'] .tm-spreadsheet-canvas-grid"")
+                    ?.getAttribute('data-density') === 'compact'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual("compact", await live.GetAttributeAsync("data-density"));
+        Assert.AreEqual(20, await ReadPhase2RowHeightAsync(live, row: 0), 0.6,
+            "the same instance repaints at the Compact scale");
+
+        // …and back: Density is a plain [Parameter], so EVERY value repaints the same instance (a
+        // one-way switch would pass the assertions above just as well).
+        await select.SelectOptionAsync("Comfortable");
+        await page.WaitForFunctionAsync(
+            @"() => document.querySelector(""[data-testid='spreadsheet-density-live'] .tm-spreadsheet-canvas-grid"")
+                    ?.getAttribute('data-density') === 'comfortable'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual(30, await ReadPhase2RowHeightAsync(live, row: 0), 0.6,
+            "switching back repaints the same instance at 1.5x again");
+
+        var section = page.Locator("[data-testid='spreadsheet-density-switch']");
+        await section.ScrollIntoViewIfNeededAsync();
+        await section.ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = ShotPath("phase8-density-switch--desktop"),
+            Type = ScreenshotType.Png,
+            Timeout = 60_000,
+        });
+        TestContext.AddResultFile(ShotPath("phase8-density-switch--desktop"));
+        await page.CloseAsync();
+    }
+
     [TestMethod]
     [TestCategory("WASM")]
     public async Task Phase2_FullMode_IsWorkspaceChrome_EmbeddedGridInsideTheNotionBlockIsFlat()
