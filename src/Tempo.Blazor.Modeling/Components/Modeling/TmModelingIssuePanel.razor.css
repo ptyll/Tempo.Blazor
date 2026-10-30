@@ -108,6 +108,13 @@
     display: none;
 }
 
+/* Fáze 11: when the filter bar renders, the body gains a row for it — the bar takes its own
+   auto row and the list keeps the scrolling minmax(0, 1fr) row (without the bar the list is
+   the only child and fills the single row as before). */
+.tm-modeling-issue-panel__content--with-filterbar {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
 /* Count-only badge (gap #12): the visible text is the bare number; the localized
    "Issues: {0}" formulation lives on the aria-label. */
 .tm-modeling-issue-panel__count {
@@ -341,5 +348,162 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 
     .tm-modeling-issue-panel__chevron {
         color: CanvasText;
+    }
+}
+
+/* ── Fáze 11: the filter bar (severity chips, text search, sort select) ─────────────────
+   One wrapping row above the list: chips + input + select share the row when it fits and
+   wrap without horizontal overflow on the narrow bands (mobile tab). The bar lives INSIDE
+   the collapsible body, so a collapsed dock hides it with the list. */
+.tm-modeling-issue-panel__filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+}
+
+.tm-modeling-issue-panel__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+/* Severity chips are native toggle buttons (aria-pressed): one activation per press and
+   keyboard reachable by construction. Styling follows the chip vocabulary with tokens only. */
+.tm-modeling-issue-panel__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-height: var(--tm-space-7);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full, var(--tm-radius-md));
+    background: var(--tm-color-surface);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    line-height: var(--tm-line-height-tight);
+    cursor: pointer;
+}
+
+.tm-modeling-issue-panel__chip:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-modeling-issue-panel__chip[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-issue-panel__chip:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-modeling-issue-panel__chip--error[aria-pressed="true"] {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-issue-panel__chip--warning[aria-pressed="true"] {
+    border-color: var(--tm-color-warning-soft-border);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__chip--info[aria-pressed="true"] {
+    border-color: var(--tm-color-info-soft-border, var(--tm-color-border));
+    background: var(--tm-color-info-subtle, var(--tm-bg-surface-secondary));
+    color: var(--tm-color-info-text, var(--tm-text-secondary));
+}
+
+.tm-modeling-issue-panel__chip-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: var(--tm-space-4);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full, var(--tm-radius-md));
+    background: var(--tm-bg-surface-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The search input and the sort select shrink to fit the row remainder and wrap below the
+   chips on narrow bands; the input height rides the shared input token. */
+.tm-modeling-issue-panel__filter-input {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
+    min-height: var(--tm-input-height-md);
+}
+
+.tm-modeling-issue-panel__filter-sort {
+    flex: 0 1 12rem;
+    min-width: 0;
+}
+
+/* The no-match state (every row filtered out) keeps the empty-state vocabulary and adds the
+   one-press clear action. */
+.tm-modeling-issue-panel__empty--no-match {
+    align-items: center;
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-issue-panel__clear {
+    flex: 0 0 auto;
+    min-height: var(--tm-space-7);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-color-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-issue-panel__clear:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
+}
+
+.tm-modeling-issue-panel__clear:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Fáze 11 (touch): every filter bar control reaches the shared 44px target on a coarse
+   pointer — chips, the search input, the sort select and the clear action alike. */
+@media (pointer: coarse) {
+    .tm-modeling-issue-panel__chip {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-input {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort ::deep .tm-select-container {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__clear {
+        min-height: var(--tm-touch-target);
     }
 }

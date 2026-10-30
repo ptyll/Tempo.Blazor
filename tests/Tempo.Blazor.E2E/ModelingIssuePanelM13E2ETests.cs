@@ -138,6 +138,51 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
             "The static item carries no click handler.");
     }
 
+    [TestMethod]
+    [Description("Fáze 11: chip + text + sort work together and navigation from a FILTERED issue still selects its element")]
+    public async Task IssuePanel_FilterChipTextSortAndFilteredNavigation()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+
+        var panel = page.Locator("[data-testid='modeling-issue-panel']");
+
+        // Chip filter: the Error chip narrows the four-issue scenario to its single error row.
+        await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '1'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.AreEqual("true", await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .GetAttributeAsync("aria-pressed"));
+
+        // Navigation from the FILTERED issue selects the element (the filter never blocks it).
+        await panel.Locator("[data-source-element-id='bpmn-ship-order']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-ship-order']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        // Text filter over the source NAME, then the Source sort — the row order must follow
+        // the resolved names with the sourceless orphan last (original input indexes kept).
+        await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await panel.Locator("[data-testid='modeling-issue-filter-input']").FillAsync("validate order");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '2'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await panel.Locator("[data-testid='modeling-issue-filter-input']").FillAsync(string.Empty);
+        await panel.Locator("[data-testid='modeling-issue-sort'] select")
+            .SelectOptionAsync(new SelectOptionValue { Label = "Source" });
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const rows = [...document.querySelectorAll("[data-testid='modeling-issue-list'] > li > *")]
+                    .map(row => row.getAttribute('data-testid'));
+                return rows.join(',') === 'modeling-issue-2,modeling-issue-0,modeling-issue-1,modeling-issue-3';
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

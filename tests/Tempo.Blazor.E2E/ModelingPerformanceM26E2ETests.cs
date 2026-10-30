@@ -206,6 +206,63 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
         Assert.IsTrue(switchMs < 1000, $"Notation switch should repaint the 200 item tree under 1000 ms. Actual: {switchMs:0.0} ms.");
     }
 
+    [TestMethod]
+    [Description("Fáze 11: filtering 500 issues updates the visible count under the 200 ms budget (the memoized projection)")]
+    public async Task IssueFilterLatency_500Issues_AnswersUnderBudget()
+    {
+        // The same calibration viewport as the tree-filter budget (see above): the docked
+        // desktop band is where the issues dock exists without any sheet gymnastics.
+        var page = await OpenIssues500ModelAsync(width: 1440, height: 900);
+
+        var latencyMs = await page.EvaluateAsync<double>(
+            """
+            async () => {
+                const panel = document.querySelector('[data-testid="modeling-issue-panel"]');
+                const input = panel?.querySelector('[data-testid="modeling-issue-filter-input"]');
+                if (!panel || !input) throw new Error('The issue filter bar was not found in the dock.');
+                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                const start = performance.now();
+                setter.call(input, 'validation');
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'validation' }));
+                while (performance.now() - start < 5000) {
+                    const visible = Number(panel.getAttribute('data-visible-issue-count') ?? '0');
+                    const total = Number(panel.getAttribute('data-total-issue-count') ?? '0');
+                    if (total > 0 && visible > 0 && visible < total) {
+                        return performance.now() - start;
+                    }
+                    await new Promise(requestAnimationFrame);
+                }
+                throw new Error(`The 500-issue filter never narrowed the list. Visible: ${panel.getAttribute('data-visible-issue-count')}`);
+            }
+            """);
+
+        // Always logged: the number is the evidence the Performance lane records.
+        Console.WriteLine($"[perf] issue filter latency (500 issues)={latencyMs:0.0} ms");
+        Assert.IsTrue(latencyMs < 200, $"The 500-issue filter latency should stay under 200 ms. Actual: {latencyMs:0.0} ms.");
+    }
+
+    /// <summary>Opens the issues-500 scenario on the docked desktop band (the phase's 500-issue
+    /// stress model) and waits for the loaded editor plus the populated dock.</summary>
+    private async Task<IPage> OpenIssues500ModelAsync(int width, int height)
+    {
+        var context = await CreateContextAsync();
+        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(width, height);
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?scenario=issues-500", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = 60000
+        });
+        await WaitForAppReadyAsync(page);
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
+        await page.WaitForFunctionAsync(
+            "() => Number(document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-total-issue-count') ?? '0') >= 500",
+            null, new PageWaitForFunctionOptions { Timeout = 20000 });
+        return page;
+    }
+
     private async Task<IPage> OpenPerformanceModelAsync(int width = 1280, int height = 720)
     {
         var context = await CreateContextAsync();

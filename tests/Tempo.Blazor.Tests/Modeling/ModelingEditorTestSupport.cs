@@ -83,6 +83,54 @@ internal sealed class CountingModelingModelProvider : IModelingModelProvider
 }
 
 /// <summary>
+/// Provider whose model carries a fixed mixed-severity issue set (Fáze 11 filter/sort tests):
+/// two errors tied to the shared element, one warning and one sourceless info issue — the
+/// element carries a name so source-name search and Source sorting have something to match.
+/// </summary>
+internal sealed class IssueModelingModelProvider : IModelingModelProvider
+{
+    public const string Key = "tempo.tests.modeling.issues";
+
+    public string ProviderKey => Key;
+
+    public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var model = ModelingEditorTestModels.CreateModel();
+        model.Issues.Add(new ModelingIssueDto
+        {
+            Id = "issue-error-a",
+            Severity = ModelingIssueSeverity.Error,
+            Category = "Validation",
+            SourceElementId = "task-a",
+            Message = "Broken mapping for the approval task."
+        });
+        model.Issues.Add(new ModelingIssueDto
+        {
+            Id = "issue-error-b",
+            Severity = ModelingIssueSeverity.Error,
+            Category = "Generator",
+            SourceElementId = "task-a",
+            Message = "Second error for stability ordering."
+        });
+        model.Issues.Add(new ModelingIssueDto
+        {
+            Id = "issue-warning-c",
+            Severity = ModelingIssueSeverity.Warning,
+            Category = "Validation",
+            Message = "Lane assignment missing."
+        });
+        model.Issues.Add(new ModelingIssueDto
+        {
+            Id = "issue-info-d",
+            Severity = ModelingIssueSeverity.Info,
+            Message = "Note without a source."
+        });
+        return Task.FromResult(model);
+    }
+}
+
+/// <summary>
 /// A TimeProvider that keeps the editor's SHORT loading delays off the real-timer path:
 /// every delay at or below <see cref="ImmediateThreshold"/> fires its callback on the spot
 /// (so <c>Task.Delay(minimum-loading, this)</c> completes synchronously and the load pipeline

@@ -147,14 +147,39 @@ elements across ALL groups) and `data-rendered-count` (nodes actually in the DOM
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `Issues` | `IReadOnlyList<ModelingIssueDto>` | — | The issues to list. |
+| `Issues` | `IReadOnlyList<ModelingIssueDto>` | — | The issues to present. The panel renders a filtered/sorted **projection**; the collection is never mutated. Row `data-testid`s carry the ORIGINAL input index, so filter/sort state never renumbers rows. |
 | `OnIssueSelected` | `EventCallback<ModelingIssueDto>` | — | Navigable issue activated (source element/relationship). |
-| `Collapsed` / `CollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way dock collapse. The body always renders (the `aria-controls` id is never missing); a collapsed dock hides the body with `hidden`. |
+| `Collapsed` / `CollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way dock collapse. The body always renders (the `aria-controls` id is never missing); a collapsed dock hides the body — including the filter bar — with `hidden`. |
 | `ShowToggle` | `bool` | `true` | The header collapse toggle (`modeling-issues-toggle`, `aria-expanded`/`aria-controls`). The editor's mobile Issues tab passes `false` and shows a plain heading. |
+| `ShowFilterBar` | `bool` | `false` | The Fáze 11 filter bar above the list: severity chips with counts, text search, sort select. Renders only when `Issues` is not empty; the hosting editor passes `true` on every band. |
+| `SeverityFilter` / `SeverityFilterChanged` | `IReadOnlyCollection<ModelingIssueSeverity>?` / `EventCallback<…>` | `null` | Two-way active severity set; `null` (or empty) = all. Seeds on a new collection, never assigned internally (the `CollapsedGroups` pattern) — the editor owns the state. |
+| `FilterText` / `FilterTextChanged` | `string?` / `EventCallback<string?>` | `null` | Two-way text filter (seed/echo like `TmModelingModelTree.FilterText`, incl. echo recording so a host reset re-seeds). Matches message, category and source element/relationship NAME — case- and accent-insensitively. |
+| `SortMode` / `SortModeChanged` | `ModelingIssueSortMode` / `EventCallback<ModelingIssueSortMode>` | `Input` | Two-way sort: `Input` (never re-sorts), `Severity` (Error > Warning > Info, stable within a group), `Source` (resolved source display name, unmatched ids fall back to the id, sourceless last). |
+| `Elements` | `IReadOnlyList<ModelingElementDto>?` | `null` | Element list for source-name search and the `Source` sort. |
+| `Relationships` | `IReadOnlyList<ModelingRelationshipDto>?` | `null` | Relationship list (as `Elements`). |
 | `Class` | `string?` | `null` | Extra class. |
+
+Root attributes: `data-issue-count` and `data-total-issue-count` (both the TOTAL) plus
+`data-visible-issue-count` (the filtered count — equals the total unfiltered). While a filter
+hides rows, the header badge shows the visible-of-total pair (`2 / 4` visible, localized
+`TmModelingIssuePanel_CountFiltered` "Issues: {0} of {1}" on the sr-only span). When the
+filters hide EVERY row the body renders the localized no-match state
+(`modeling-issue-no-match`) with a "Clear filters" button (`modeling-issue-clear-filters`)
+that resets both filters through the two-way bindings. The rendered list is memoized (key =
+the `Issues` reference + filter + sort + culture + `Elements`/`Relationships` references;
+M26: 500 issues stay inside the budget and an unrelated parent re-render renders nothing —
+the panel owns a render gate like the model tree). Severity chips are NATIVE `aria-pressed`
+toggle buttons (`modeling-issue-severity-chip-{error|warning|info}` — one activation per
+press, keyboard reachable, 44px targets on a coarse pointer), the search field is
+`modeling-issue-filter-input` and the sort select `modeling-issue-sort` (visible label).
 
 Issues without a source element/relationship render as a plain non-interactive `<div>` (same
 `data-testid`, `data-severity`, `data-source-*`, same text) — never a button.
+
+`TmModelingEditor` owns the filter state (`TmModelingEditor.IssueFilter.cs`:
+`_issueSeverityFilter` / `_issueFilterText` / `_issueSortMode`) and hands the same fields to
+the desktop dock, the tablet sheet and the mobile Issues tab, so a filter survives a dock
+collapse, a sheet toggle and a tab switch; the mobile tab badge still shows the TOTAL count.
 
 ### `TmModelingViewSelector`, `TmModelingSourcePanel`, `TmModelingInspector`
 
@@ -287,8 +312,11 @@ All user-facing strings resolve through `ITmLocalizer` keys in the four core tab
 `TmModelingIssuePanel_Collapse`/`_Expand` (fr/sk name the *issues panel*),
 `TmModelingEditor_ChangeView`/`_Reload`/`_MoreOptions`, the short mobile labels
 `TmModelingEditor_TreeShort`/`_ElementsShort`/`_RelationshipsShort`/`_Nodes`/`_Edges` and
-`_CloseIssues`/`_ToggleIssues` (the tablet issues sheet), and the neutral count key
-`TmModelingIssuePanel_Count` ("Issues: {0}" — a plain key, no plural family).
+`_CloseIssues`/`_ToggleIssues` (the tablet issues sheet), the neutral count key
+`TmModelingIssuePanel_Count` ("Issues: {0}" — a plain key, no plural family) and the Fáze 11
+filter/sort keys `TmModelingIssuePanel_FilterPlaceholder`, `_SortLabel`, `_SortInput`,
+`_SortSeverity`, `_SortSource`, `_SeverityFilterLabel`, `_NoMatch`, `_ClearFilters` and
+`_CountFiltered` ("Issues: {0} of {1}" / "Nálezy: {0} z {1}" — a plain key, no plural family).
 
 ## Demo
 

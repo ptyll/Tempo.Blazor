@@ -406,6 +406,48 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    [TestMethod]
+    [Description("Fáze 11: 390×844 Issues tab — the filter bar wraps below the chips without horizontal overflow and the filter survives a tab switch")]
+    public async Task Mobile_390_IssuesTab_FilterBarWrapsWithoutHorizontalOverflow()
+    {
+        var page = await OpenTouchAsync(390, 844, query: "?scenario=issues-mixed");
+
+        await page.Locator("[data-testid='modeling-panel-tab-issues']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        var panel = page.Locator("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-panel']");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        Assert.AreEqual(1, await panel.Locator("[data-testid='modeling-issue-filterbar']").CountAsync(),
+            "the mobile Issues tab carries the filter bar (the editor turns it on per band)");
+
+        // Relative to the total — the demo's generated issues ride along in the display list.
+        await panel.Locator("[data-testid='modeling-issue-filter-input']").FillAsync("ship");
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const panel = document.querySelector("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-panel']");
+                const visible = Number(panel?.getAttribute('data-visible-issue-count') ?? '-1');
+                const total = Number(panel?.getAttribute('data-total-issue-count') ?? '0');
+                return total > 0 && visible >= 0 && visible < total;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.IsTrue(await HasNoHorizontalOverflowAsync(page),
+            "the wrapped filter bar must not introduce horizontal overflow on 390");
+
+        // One panel at a time — the filter comes back from the editor state.
+        await page.Locator("[data-testid='modeling-panel-tab-preview']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => !document.querySelector(\"[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-filter-input']\")",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await page.Locator("[data-testid='modeling-panel-tab-issues']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            """() => document.querySelector("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-filter-input']")?.value === 'ship'""",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.IsTrue(await HasNoHorizontalOverflowAsync(page));
+    }
+
     private async Task<IPage> OpenTouchAsync(int width, int height, string query = "?notation=bpmn&viewpoint=overview",
         string? expectedState = "loaded")
     {

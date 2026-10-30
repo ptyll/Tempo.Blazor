@@ -247,9 +247,18 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
         var cursorRules = CursorPointerRuleSelectors(css);
 
         cursorRules.Should().NotBeEmpty("navigable issues keep the pointer affordance");
-        cursorRules.Should().AllSatisfy(selector => selector
-            .Should().Contain("tm-modeling-issue-panel__item--navigable",
-                "sourceless issues must not get a pointer cursor — it implies navigation that does not exist"));
+
+        // Fáze 11: the filter bar's own interactive controls (severity chip buttons and the
+        // no-match clear action) are also pointer-afforded — they are real buttons, not issue
+        // rows, so they are allowed beyond the navigable-row gate.
+        var filterBarControls = new[] { ".tm-modeling-issue-panel__chip", ".tm-modeling-issue-panel__clear" };
+        foreach (var rule in cursorRules)
+        {
+            rule.Should().Match(selector =>
+                selector.Contains("tm-modeling-issue-panel__item--navigable", StringComparison.Ordinal)
+                || filterBarControls.Any(control => selector.Contains(control, StringComparison.Ordinal)),
+            "sourceless issues must not get a pointer cursor — it implies navigation that does not exist (filter bar controls excepted: they are real buttons)");
+        }
     }
 
     private static string FindComponentFile(string fileName)
@@ -318,6 +327,353 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
         messageElement.TextContent.Should().Be(message);
         messageElement.ClassList.Should().Contain("tm-modeling-issue-panel__message");
     }
+
+    // ── Fáze 11: severity/text filter bar + sorting ──────────────────────────
+
+    [Fact]
+    public void Default_renders_input_order_without_filter_bar()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues()));
+
+        cut.FindAll("[data-testid='modeling-issue-filterbar']").Should().BeEmpty(
+            "the filter bar is opt-in (ShowFilterBar defaults to false)");
+
+        var root = cut.Find("[data-testid='modeling-issue-panel']");
+        root.GetAttribute("data-visible-issue-count").Should().Be("3");
+        root.GetAttribute("data-total-issue-count").Should().Be("3");
+
+        // Input-order regression (default SortMode=Input, no filter): the rows keep the
+        // input sequence and keep their original input indexes as test ids.
+        VisibleMessages(cut).Should().Equal("Informational issue", "Warning issue", "Error issue");
+        cut.FindAll("[data-testid='modeling-issue-list'] > li > *")
+            .Select(row => row.GetAttribute("data-testid"))
+            .Should().Equal("modeling-issue-0", "modeling-issue-1", "modeling-issue-2");
+    }
+
+    [Fact]
+    public void Severity_chips_show_counts_and_aria_pressed()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true));
+
+        var errorChip = cut.Find("[data-testid='modeling-issue-severity-chip-error']");
+        errorChip.TagName.Should().Be("BUTTON",
+            "severity chips are native toggle buttons (one activation per press, keyboard reachable)");
+        errorChip.GetAttribute("aria-pressed").Should().Be("false",
+            "no severity filter is active when the panel renders unfiltered");
+        errorChip.TextContent.Should().Contain("Error").And.Contain("2",
+            "the chip shows its per-severity count");
+
+        cut.Find("[data-testid='modeling-issue-severity-chip-warning']").TextContent
+            .Should().Contain("Warning").And.Contain("1");
+        cut.Find("[data-testid='modeling-issue-severity-chip-info']").TextContent
+            .Should().Contain("Info").And.Contain("1");
+
+        // The bar lives INSIDE the collapsible body, so a collapsed dock hides it too.
+        cut.Find(".tm-modeling-issue-panel__content [data-testid='modeling-issue-filterbar']")
+            .Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Toggling_severity_chip_filters_and_raises_SeverityFilterChanged()
+    {
+        IReadOnlyCollection<ModelingIssueSeverity>? raised = null;
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilterChanged, EventCallback.Factory
+                .Create<IReadOnlyCollection<ModelingIssueSeverity>?>(this, value => raised = value)));
+
+        cut.Find("[data-testid='modeling-issue-severity-chip-error']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            VisibleMessages(cut).Should().HaveCount(2, "only the error rows survive the chip filter");
+            cut.Find("[data-testid='modeling-issue-severity-chip-error']")
+                .GetAttribute("aria-pressed").Should().Be("true");
+        });
+        raised.Should().NotBeNull("the two-way binding observes every chip toggle");
+        raised!.Should().Equal(ModelingIssueSeverity.Error);
+
+        cut.Find("[data-testid='modeling-issue-severity-chip-error']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            VisibleMessages(cut).Should().HaveCount(4, "toggling the last active chip off shows every issue");
+            cut.Find("[data-testid='modeling-issue-severity-chip-error']")
+                .GetAttribute("aria-pressed").Should().Be("false");
+        });
+        raised.Should().BeNull("an empty active set is reported as null (the 'all severities' contract)");
+    }
+
+    [Fact]
+    public void Filter_text_matches_message_category_and_source_name_case_insensitive()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateSearchIssues())
+            .Add(p => p.Elements, CreateSearchElements())
+            .Add(p => p.ShowFilterBar, true));
+
+        // By message (case-insensitive).
+        SetFilterText(cut, "BROKEN");
+        cut.WaitForAssertion(() => VisibleMessages(cut)
+            .Should().BeEquivalentTo(new[] { "Broken mapping message" }));
+
+        // By category.
+        SetFilterText(cut, "governance");
+        cut.WaitForAssertion(() => VisibleMessages(cut)
+            .Should().BeEquivalentTo(new[] { "Governance note" }));
+
+        // By the SOURCE ELEMENT NAME (the element list is what makes name search possible).
+        SetFilterText(cut, "review task");
+        cut.WaitForAssertion(() => VisibleMessages(cut)
+            .Should().BeEquivalentTo(new[] { "Review task is unmapped" }));
+
+        // Nothing survives a filter that matches nothing → the localized no-match state.
+        SetFilterText(cut, "no-such-issue-anywhere");
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-issue-no-match']").Should().NotBeNull());
+    }
+
+    [Fact]
+    public void Sort_by_severity_is_stable_within_severity()
+    {
+        var issues = new[]
+        {
+            new ModelingIssueDto { Id = "i-0", Severity = ModelingIssueSeverity.Info, Message = "Info first in input" },
+            new ModelingIssueDto { Id = "i-1", Severity = ModelingIssueSeverity.Error, Message = "Error one" },
+            new ModelingIssueDto { Id = "i-2", Severity = ModelingIssueSeverity.Warning, Message = "Warning one" },
+            new ModelingIssueDto { Id = "i-3", Severity = ModelingIssueSeverity.Error, Message = "Error two" }
+        };
+
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.SortMode, ModelingIssueSortMode.Severity));
+
+        // Error > Warning > Info and the two errors keep their INPUT relative order
+        // (stable sort — the original input indexes stay on the rows as test ids).
+        RenderedRowTestIds(cut).Should().Equal(
+            "modeling-issue-1", "modeling-issue-3", "modeling-issue-2", "modeling-issue-0");
+    }
+
+    [Fact]
+    public void Sort_by_source_puts_sourceless_last()
+    {
+        var issues = new[]
+        {
+            new ModelingIssueDto { Id = "s-0", Severity = ModelingIssueSeverity.Warning, Message = "Orphan — no source" },
+            new ModelingIssueDto { Id = "s-1", Severity = ModelingIssueSeverity.Warning, SourceElementId = "ghost-element", Message = "Ghost element id" },
+            new ModelingIssueDto { Id = "s-2", Severity = ModelingIssueSeverity.Warning, SourceRelationshipId = "rel-beta", Message = "Relationship issue" },
+            new ModelingIssueDto { Id = "s-3", Severity = ModelingIssueSeverity.Warning, SourceElementId = "el-alpha", Message = "Element issue" }
+        };
+
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, CreateSearchElements())
+            .Add(p => p.Relationships, CreateSearchRelationships())
+            .Add(p => p.SortMode, ModelingIssueSortMode.Source));
+
+        // Source NAME order: "Alpha Element" < "Beta Relationship" < the unmatched id fallback
+        // ("ghost-element") — and the sourceless orphan renders last.
+        RenderedRowTestIds(cut).Should().Equal(
+            "modeling-issue-3", "modeling-issue-2", "modeling-issue-1", "modeling-issue-0");
+    }
+
+    [Fact]
+    public void Sort_mode_select_raises_SortModeChanged_and_re_sorts()
+    {
+        var issues = new[]
+        {
+            new ModelingIssueDto { Id = "s-0", Severity = ModelingIssueSeverity.Error, Message = "Error one" },
+            new ModelingIssueDto { Id = "s-1", Severity = ModelingIssueSeverity.Info, Message = "Info one" }
+        };
+        ModelingIssueSortMode? raised = null;
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SortModeChanged, EventCallback.Factory
+                .Create<ModelingIssueSortMode>(this, value => raised = value)));
+
+        var sortSelect = cut.Find("[data-testid='modeling-issue-sort'] select");
+        cut.Find("[data-testid='modeling-issue-sort'] label").TextContent.Should().Be("Sort",
+            "the sort select carries a VISIBLE label (the plan's 'TmSelect řazení s viditelným labelem')");
+        cut.FindAll("[data-testid='modeling-issue-sort'] option").Should().HaveCount(3, "Input | Severity | Source");
+
+        var severityOption = cut.FindAll("[data-testid='modeling-issue-sort'] option")
+            .Single(option => option.TextContent == "Severity");
+        sortSelect.Change(severityOption.GetAttribute("value"));
+
+        cut.WaitForAssertion(() =>
+        {
+            raised.Should().Be(ModelingIssueSortMode.Severity);
+            RenderedRowTestIds(cut).Should().Equal("modeling-issue-0", "modeling-issue-1");
+        });
+    }
+
+    [Fact]
+    public void Empty_filter_result_renders_localized_no_match_state_with_clear_action()
+    {
+        IReadOnlyCollection<ModelingIssueSeverity>? severityRaised = null;
+        string? textRaised = null;
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilterChanged, EventCallback.Factory
+                .Create<IReadOnlyCollection<ModelingIssueSeverity>?>(this, value => severityRaised = value))
+            .Add(p => p.FilterTextChanged, EventCallback.Factory
+                .Create<string?>(this, value => textRaised = value)));
+
+        SetFilterText(cut, "no-such-thing");
+        cut.WaitForAssertion(() =>
+        {
+            var noMatch = cut.Find("[data-testid='modeling-issue-no-match']");
+            noMatch.TextContent.Should().Contain("No issues match the current filters");
+            noMatch.QuerySelector("[data-testid='modeling-issue-clear-filters']")!
+                .TextContent.Should().Contain("Clear filters");
+            cut.FindAll("[data-testid='modeling-issue-list']").Should().BeEmpty();
+        });
+
+        cut.Find("[data-testid='modeling-issue-clear-filters']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            VisibleMessages(cut).Should().HaveCount(3, "clearing restores the full list");
+            textRaised.Should().Be(string.Empty, "the clear action resets the text filter through the binding");
+            severityRaised.Should().BeNull("the clear action resets the severity filter through the binding");
+        });
+    }
+
+    [Fact]
+    public void Header_count_shows_visible_of_total_when_filtered()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilter, new[] { ModelingIssueSeverity.Error }));
+
+        var root = cut.Find("[data-testid='modeling-issue-panel']");
+        root.GetAttribute("data-visible-issue-count").Should().Be("2");
+        root.GetAttribute("data-total-issue-count").Should().Be("4");
+
+        var badge = cut.Find("[data-testid='modeling-issue-count']");
+        badge.QuerySelector(".tm-sr-only")!.TextContent.Should().Be("Issues: 2 of 4",
+            "the filtered header count uses the neutral visible-of-total formulation");
+        badge.QuerySelector("span[aria-hidden='true']")!.TextContent.Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Should().Contain("2").And.Contain("4");
+    }
+
+    [Fact]
+    public void Host_severity_reset_to_null_unfilters_the_list()
+    {
+        var filter = new[] { ModelingIssueSeverity.Error };
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilter, filter));
+
+        cut.WaitForAssertion(() => VisibleMessages(cut).Should().HaveCount(2));
+
+        // The host clears the filter: a RESET to null must re-seed even though the chips had
+        // already echoed the active set back (the dc39149a host-reset contract).
+        var resetTask = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?>
+            {
+                [nameof(TmModelingIssuePanel.Issues)] = CreateCountedIssues(),
+                [nameof(TmModelingIssuePanel.ShowFilterBar)] = true,
+                [nameof(TmModelingIssuePanel.SeverityFilter)] = (IReadOnlyCollection<ModelingIssueSeverity>?)null
+            })));
+
+        resetTask.Wait(TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => VisibleMessages(cut).Should().HaveCount(4));
+    }
+
+    [Fact]
+    public void Filter_bar_controls_are_44px_on_coarse_pointer()
+    {
+        var css = File.ReadAllText(FindComponentFile("TmModelingIssuePanel.razor.css"));
+        var coarseBlock = ExtractMediaQueryBlock(css, "(pointer: coarse)");
+
+        coarseBlock.Should().NotBeNull("the filter bar owns a coarse-pointer block");
+        coarseBlock.Should().Contain(".tm-modeling-issue-panel__chip", "severity chips reach the touch target");
+        coarseBlock.Should().Contain(".tm-modeling-issue-panel__filter-input", "the search input reaches the touch target");
+        coarseBlock.Should().Contain(".tm-modeling-issue-panel__filter-sort", "the sort select reaches the touch target");
+        coarseBlock.Should().Contain("var(--tm-touch-target)", "44px comes from the shared touch token");
+    }
+
+    private static void SetFilterText(IRenderedComponent<TmModelingIssuePanel> cut, string text)
+        => cut.Find("[data-testid='modeling-issue-filter-input']").Input(text);
+
+    private static List<string> VisibleMessages(IRenderedComponent<TmModelingIssuePanel> cut)
+        => cut.FindAll(".tm-modeling-issue-panel__message").Select(message => message.TextContent).ToList();
+
+    private static List<string> RenderedRowTestIds(IRenderedComponent<TmModelingIssuePanel> cut)
+        => cut.FindAll("[data-testid='modeling-issue-list'] > li > *")
+            .Select(row => row.GetAttribute("data-testid")!)
+            .ToList();
+
+    /// <summary>Extracts the balanced-brace bodies of ALL top-level <c>@media</c> queries matching
+    /// the feature, concatenated (the file owns several coarse-pointer blocks by phase).</summary>
+    private static string? ExtractMediaQueryBlock(string css, string mediaFeature)
+    {
+        var matched = new System.Text.StringBuilder();
+        var headerIndex = css.IndexOf("@media", StringComparison.Ordinal);
+        while (headerIndex >= 0)
+        {
+            var braceIndex = css.IndexOf('{', headerIndex);
+            if (braceIndex < 0)
+            {
+                break;
+            }
+
+            var header = css[headerIndex..braceIndex];
+            if (header.Contains(mediaFeature, StringComparison.Ordinal))
+            {
+                var depth = 1;
+                var cursor = braceIndex + 1;
+                while (cursor < css.Length && depth > 0)
+                {
+                    depth += css[cursor] switch { '{' => 1, '}' => -1, _ => 0 };
+                    cursor++;
+                }
+
+                matched.Append(css[(braceIndex + 1)..(cursor - 1)]);
+                headerIndex = css.IndexOf("@media", cursor, StringComparison.Ordinal);
+                continue;
+            }
+
+            headerIndex = css.IndexOf("@media", braceIndex, StringComparison.Ordinal);
+        }
+
+        return matched.Length == 0 ? null : matched.ToString();
+    }
+
+    private static ModelingIssueDto[] CreateCountedIssues() =>
+    [
+        new() { Id = "c-1", Severity = ModelingIssueSeverity.Error, SourceElementId = "el-alpha", Message = "Error one" },
+        new() { Id = "c-2", Severity = ModelingIssueSeverity.Error, SourceElementId = "el-alpha", Message = "Error two" },
+        new() { Id = "c-3", Severity = ModelingIssueSeverity.Warning, SourceElementId = "el-alpha", Message = "Warning one" },
+        new() { Id = "c-4", Severity = ModelingIssueSeverity.Info, Message = "Info one" }
+    ];
+
+    private static ModelingIssueDto[] CreateSearchIssues() =>
+    [
+        new() { Id = "q-1", Severity = ModelingIssueSeverity.Error, Category = "Validation", SourceElementId = "el-alpha", Message = "Broken mapping message" },
+        new() { Id = "q-2", Severity = ModelingIssueSeverity.Info, Category = "Governance", Message = "Governance note" },
+        new() { Id = "q-3", Severity = ModelingIssueSeverity.Warning, SourceElementId = "el-review", Message = "Review task is unmapped" },
+        new() { Id = "q-4", Severity = ModelingIssueSeverity.Warning, SourceRelationshipId = "rel-beta", Message = "Relationship note" }
+    ];
+
+    private static ModelingElementDto[] CreateSearchElements() =>
+    [
+        new() { Id = "el-alpha", Name = "Alpha Element" },
+        new() { Id = "el-review", Name = "Review Task" }
+    ];
+
+    private static ModelingRelationshipDto[] CreateSearchRelationships() =>
+    [
+        new() { Id = "rel-beta", Name = "Beta Relationship" }
+    ];
 
     private static ModelingIssueDto[] CreateIssues() =>
     [

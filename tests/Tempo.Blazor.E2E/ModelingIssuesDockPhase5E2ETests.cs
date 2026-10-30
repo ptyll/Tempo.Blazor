@@ -145,6 +145,44 @@ public sealed class ModelingIssuesDockPhase5E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(page, "issues-dock-500.png");
     }
 
+    [TestMethod]
+    [Description("Fáze 11: collapsing the dock with an ACTIVE filter hides the bar with the body and the filter state survives the collapse (it lives in the editor)")]
+    public async Task IssuesDock_CollapseWithActiveFilter_HidesBarAndKeepsState()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+
+        var panel = page.Locator("[data-testid='modeling-issue-panel']");
+
+        // Activate a severity chip filter first (the Error chip narrows the list to one row).
+        await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '1'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+
+        // Collapse: the bar (inside the body) hides with the list.
+        await page.Locator("[data-testid='modeling-issues-toggle']").ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content\")?.hasAttribute('hidden') === true",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        var barHidden = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const bar = document.querySelector("[data-testid='modeling-issue-panel'] [data-testid='modeling-issue-filterbar']");
+                return !!bar && bar.closest('.tm-modeling-issue-panel__content').hasAttribute('hidden');
+            }
+            """);
+        Assert.IsTrue(barHidden, "the collapsed dock hides the filter bar with the body");
+
+        // Expand: the chip state comes back — the filter lives in the EDITOR.
+        await page.Locator("[data-testid='modeling-issues-toggle']").ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '1'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.AreEqual("true", await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .GetAttributeAsync("aria-pressed"), "the chip state survives the dock collapse");
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

@@ -1,9 +1,12 @@
 @using Tempo.Blazor.Modeling
+@using Tempo.Blazor.Models
 @inherits Tempo.Blazor.Components.TmComponentBase
 
 <section class="@RootClass"
          data-testid="@TestId("modeling-issue-panel")"
-         data-issue-count="@Issues.Count"
+         data-issue-count="@TotalIssueCount"
+         data-visible-issue-count="@VisibleIssueCount"
+         data-total-issue-count="@TotalIssueCount"
          aria-label="@Loc["TmModelingIssuePanel_Title"]">
     <header class="tm-modeling-issue-panel__header">
         @* Review fix (phase 5): the count sits NEXT TO the title in one heading wrapper — not
@@ -13,11 +16,15 @@
             @* Neutral count formulation (B16) rendered as a COUNT-ONLY badge (gap #12): the visible
                text is the bare number, the localized "Issues: {0}" formulation lives on the
                visually-hidden span, so no language has to pick a grammatical form in the visible
-               header and the accessible name comes from the real content. *@
+               header and the accessible name comes from the real content. Fáze 11: while a filter
+               hides rows the badge reports the visible-of-total pair (visible text "2 / 4", the
+               localized "Issues: 2 of 4" on the sr-only span). *@
             <span class="tm-modeling-issue-panel__count"
                   data-testid="@TestId("modeling-issue-count")">
-                <span aria-hidden="true">@Issues.Count</span>
-                <span class="tm-sr-only">@Loc["TmModelingIssuePanel_Count", Issues.Count]</span>
+                <span aria-hidden="true">@(ShowsFilteredCount ? $"{VisibleIssueCount} / {TotalIssueCount}" : $"{TotalIssueCount}")</span>
+                <span class="tm-sr-only">@(ShowsFilteredCount
+                    ? Loc["TmModelingIssuePanel_CountFiltered", VisibleIssueCount, TotalIssueCount]
+                    : Loc["TmModelingIssuePanel_Count", TotalIssueCount])</span>
             </span>
         </div>
         @* MO1 (desktop restructure): the dock under the preview collapses to this header. The
@@ -46,8 +53,48 @@
     @* The body ALWAYS renders (review fix, phase 5): a collapsed dock keeps the region in the
        DOM under [hidden], so the toggle's aria-controls never points at a missing id. The
        canvas-body grid row (auto when collapsed) plus [hidden] keep it out of sight and out of
-       the tab order. *@
-    <div id="@_bodyId" class="tm-modeling-issue-panel__content" hidden="@Collapsed">
+       the tab order. Fáze 11: the filter bar lives INSIDE the body, so a collapsed dock hides
+       it with the list. *@
+    <div id="@_bodyId"
+         class="@GetContentClass()"
+         hidden="@Collapsed">
+        @if (ShowsFilterBar)
+        {
+            <div class="tm-modeling-issue-panel__filterbar"
+                 role="group"
+                 data-testid="@TestId("modeling-issue-filterbar")"
+                 aria-label="@Loc["TmModelingIssuePanel_SeverityFilterLabel"]">
+                <div class="tm-modeling-issue-panel__chips" role="group" aria-label="@Loc["TmModelingIssuePanel_SeverityFilterLabel"]">
+                    @* Severity chips are NATIVE toggle buttons (aria-pressed): one activation per
+                       press and keyboard reachable by construction — the keyboard-activation
+                       convention rules out an emulated clickable span for a new control. The
+                       visible label carries the localized severity name plus its count. *@
+                    @foreach (var severity in new[] { ModelingIssueSeverity.Error, ModelingIssueSeverity.Warning, ModelingIssueSeverity.Info })
+                    {
+                        <button type="button"
+                                class="@GetChipClass(severity)"
+                                data-testid="@TestId($"modeling-issue-severity-chip-{GetSeverityKey(severity)}")"
+                                aria-pressed="@IsSeverityActive(severity).ToString().ToLowerInvariant()"
+                                @onclick="() => ToggleSeverityAsync(severity)">
+                            <span class="tm-modeling-issue-panel__chip-label">@GetSeverityChipLabel(severity)</span>
+                            <span class="tm-modeling-issue-panel__chip-count" aria-hidden="true">@CountBySeverity(severity)</span>
+                        </button>
+                    }
+                </div>
+                <TmSearchInput Value="@_filterText"
+                               ValueChanged="HandleFilterTextChangedAsync"
+                               Placeholder="@Loc["TmModelingIssuePanel_FilterPlaceholder"]"
+                               Class="tm-modeling-issue-panel__filter-input"
+                               data-testid="@TestId("modeling-issue-filter-input")" />
+                <TmSelect TValue="ModelingIssueSortMode"
+                          Label="@Loc["TmModelingIssuePanel_SortLabel"]"
+                          Options="@SortOptions"
+                          Value="@_sortMode"
+                          ValueChanged="HandleSortModeChangedAsync"
+                          Class="tm-modeling-issue-panel__filter-sort"
+                          data-testid="@TestId("modeling-issue-sort")" />
+            </div>
+        }
         @if (Issues.Count == 0)
         {
             <div class="tm-modeling-issue-panel__empty" data-testid="@TestId("modeling-issue-empty")">
@@ -55,10 +102,25 @@
                 <span>@Loc["TmModelingIssuePanel_EmptyText"]</span>
             </div>
         }
+        else if (VisibleIssues.Count == 0)
+        {
+            @* Fáze 11: the filters hide every row — a distinct localized state with a one-press
+               way back (clearing BOTH filters through the two-way bindings). *@
+            <div class="tm-modeling-issue-panel__empty tm-modeling-issue-panel__empty--no-match"
+                 data-testid="@TestId("modeling-issue-no-match")">
+                <strong>@Loc["TmModelingIssuePanel_NoMatch"]</strong>
+                <button type="button"
+                        class="tm-modeling-issue-panel__clear"
+                        data-testid="@TestId("modeling-issue-clear-filters")"
+                        @onclick="ClearFiltersAsync">
+                    @Loc["TmModelingIssuePanel_ClearFilters"]
+                </button>
+            </div>
+        }
         else
         {
             <ol class="tm-modeling-issue-panel__list" data-testid="@TestId("modeling-issue-list")">
-            @foreach (var issue in Issues.Select((value, index) => (value, index)))
+            @foreach (var issue in VisibleIssues)
             {
                 <li role="listitem">
                     @* Nálezy bez zdroje (no SourceElementId/SourceRelationshipId) have no navigation
@@ -66,28 +128,30 @@
                        cursor, no hover affordance, no chevron. Navigable issues keep the button
                        whose accessible name is its visible content (NO aria-label override) plus a
                        visually-hidden navigation hint. Both wrappers share ONE body fragment below,
-                       so the row content can never drift between the two variants. *@
-                    @if (IsNavigable(issue.value))
+                       so the row content can never drift between the two variants. The row test id
+                       is the issue's ORIGINAL input index, so filter/sort state never renumbers
+                       rows (hosts and E2E key rows off the input position). *@
+                    @if (IsNavigable(issue.Issue))
                     {
                         <button type="button"
-                                class="@GetIssueClass(issue.value) tm-modeling-issue-panel__item--navigable"
-                                data-testid="@($"modeling-issue-{issue.index}")"
-                                data-severity="@GetSeverityKey(issue.value)"
-                                data-source-element-id="@issue.value.SourceElementId"
-                                data-source-relationship-id="@issue.value.SourceRelationshipId"
-                                @onclick="() => SelectIssueAsync(issue.value)">
-                            @IssueBody(issue.value, issue.index)
+                                class="@GetIssueClass(issue.Issue) tm-modeling-issue-panel__item--navigable"
+                                data-testid="@($"modeling-issue-{issue.Index}")"
+                                data-severity="@GetSeverityKey(issue.Issue)"
+                                data-source-element-id="@issue.Issue.SourceElementId"
+                                data-source-relationship-id="@issue.Issue.SourceRelationshipId"
+                                @onclick="() => SelectIssueAsync(issue.Issue)">
+                            @IssueBody(issue.Issue, issue.Index)
                             <span class="tm-sr-only">@Loc["TmModelingIssuePanel_NavigateHint"]</span>
                         </button>
                     }
                     else
                     {
-                        <div class="@GetIssueClass(issue.value)"
-                             data-testid="@($"modeling-issue-{issue.index}")"
-                             data-severity="@GetSeverityKey(issue.value)"
-                             data-source-element-id="@issue.value.SourceElementId"
-                             data-source-relationship-id="@issue.value.SourceRelationshipId">
-                            @IssueBody(issue.value, issue.index)
+                        <div class="@GetIssueClass(issue.Issue)"
+                             data-testid="@($"modeling-issue-{issue.Index}")"
+                             data-severity="@GetSeverityKey(issue.Issue)"
+                             data-source-element-id="@issue.Issue.SourceElementId"
+                             data-source-relationship-id="@issue.Issue.SourceRelationshipId">
+                            @IssueBody(issue.Issue, issue.Index)
                         </div>
                     }
                 </li>
@@ -98,6 +162,14 @@
 </section>
 
 @code {
+    /// <summary>The sort select's option list — Input | Severity | Source, localized per render.</summary>
+    private IReadOnlyList<SelectOption<ModelingIssueSortMode>> SortOptions =>
+    [
+        new(ModelingIssueSortMode.Input, Loc["TmModelingIssuePanel_SortInput"]),
+        new(ModelingIssueSortMode.Severity, Loc["TmModelingIssuePanel_SortSeverity"]),
+        new(ModelingIssueSortMode.Source, Loc["TmModelingIssuePanel_SortSource"])
+    ];
+
     /// <summary>
     /// The shared row body (severity icon, meta, message, suggested fix) rendered by BOTH the
     /// navigable button and the sourceless div wrapper — one source of truth for the content.

@@ -481,12 +481,22 @@
     /// <summary>
     /// The issues dock — MO1 places it UNDER the preview, collapsed to its header on demand. The
     /// collapsed state is bound to the editor (the canvas grid owns the row height); the panel
-    /// keeps its own min/max-height-free sizing.
+    /// keeps its own min/max-height-free sizing. Fáze 11: the editor turns the filter bar on and
+    /// owns the filter/sort state — the SAME fields feed the tablet sheet and the mobile tab.
     /// </summary>
     private RenderFragment IssuesDockContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
                                                                        OnIssueSelected="SelectIssueAsync"
                                                                        Collapsed="@IssuesCollapsed"
-                                                                       CollapsedChanged="SetIssuesCollapsedAsync" />;
+                                                                       CollapsedChanged="SetIssuesCollapsedAsync"
+                                                                       ShowFilterBar="true"
+                                                                       SeverityFilter="@_issueSeverityFilter"
+                                                                       SeverityFilterChanged="SetIssueSeverityFilterAsync"
+                                                                       FilterText="@_issueFilterText"
+                                                                       FilterTextChanged="SetIssueFilterTextAsync"
+                                                                       SortMode="@_issueSortMode"
+                                                                       SortModeChanged="SetIssueSortModeAsync"
+                                                                       Elements="@_model?.Elements"
+                                                                       Relationships="@_model?.Relationships" />;
 
     /// <summary>
     /// The tablet issues side sheet (final UX review M2): the same non-modal TmFocusScope sheet
@@ -526,7 +536,16 @@
                                               OnIssueSelected="SelectIssueAsync"
                                               ShowToggle="false"
                                               Collapsed="false"
-                                              CollapsedChanged="SetIssuesCollapsedAsync" />
+                                              CollapsedChanged="SetIssuesCollapsedAsync"
+                                              ShowFilterBar="true"
+                                              SeverityFilter="@_issueSeverityFilter"
+                                              SeverityFilterChanged="SetIssueSeverityFilterAsync"
+                                              FilterText="@_issueFilterText"
+                                              FilterTextChanged="SetIssueFilterTextAsync"
+                                              SortMode="@_issueSortMode"
+                                              SortModeChanged="SetIssueSortModeAsync"
+                                              Elements="@_model?.Elements"
+                                              Relationships="@_model?.Relationships" />
                     </div>
                 </TmFocusScope>
             </div>
@@ -562,7 +581,16 @@
                                                                          OnIssueSelected="SelectIssueAsync"
                                                                          ShowToggle="false"
                                                                          Collapsed="@_mobileIssuesCollapsed"
-                                                                         CollapsedChanged="SetIssuesCollapsedAsync" />;
+                                                                         CollapsedChanged="SetIssuesCollapsedAsync"
+                                                                         ShowFilterBar="true"
+                                                                         SeverityFilter="@_issueSeverityFilter"
+                                                                         SeverityFilterChanged="SetIssueSeverityFilterAsync"
+                                                                         FilterText="@_issueFilterText"
+                                                                         FilterTextChanged="SetIssueFilterTextAsync"
+                                                                         SortMode="@_issueSortMode"
+                                                                         SortModeChanged="SetIssueSortModeAsync"
+                                                                         Elements="@_model?.Elements"
+                                                                         Relationships="@_model?.Relationships" />;
 
     /// <summary>The mobile status card: four tiles with a SHORT visible label above the count
     /// (final UX review M3 — the sr-only-only numbers were unreadable without the card's
