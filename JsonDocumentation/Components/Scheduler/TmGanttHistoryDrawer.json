@@ -27,19 +27,45 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Fires when the drawer should close."
+      "description": "Fires when the drawer should close (close button or Escape)."
     },
     {
       "name": "OnRollbackRequested",
       "type": "EventCallback<TmActivityEntry>",
       "isRequired": false,
-      "description": "Fires when the user requests rollback to a specific history entry."
+      "description": "Fires when the user confirms the rollback of a history entry (the drawer asks for confirmation first)."
     },
     {
       "name": "OnTimeTravelRequested",
       "type": "EventCallback<DateTime>",
       "isRequired": false,
       "description": "Fires when the user requests time-travel to a specific timestamp."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Zone the entry timestamps are shown in. Defaults to the machine's local zone; TmGantt passes the user's display zone."
+    },
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<TmWorkItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Tasks the entries refer to: resolves the task titles shown (and linked) in each entry."
+    },
+    {
+      "name": "Placement",
+      "type": "GanttHistoryDrawerPlacement",
+      "isRequired": false,
+      "default": "GanttHistoryDrawerPlacement.Component",
+      "description": "What the drawer is positioned against: the Gantt component (default) or the viewport."
+    },
+    {
+      "name": "OnTaskSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the user clicks the task of an entry (arg = task id)."
     }
   ]
 }

@@ -2,6 +2,11 @@
     display: grid;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
+    container: tm-submission-status-timeline / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-submission-status-timeline__empty {
@@ -30,7 +35,7 @@
     height: var(--tm-space-7);
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-primary);
-    color: var(--tm-color-white);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-submission-status-timeline__item--success .tm-submission-status-timeline__marker {

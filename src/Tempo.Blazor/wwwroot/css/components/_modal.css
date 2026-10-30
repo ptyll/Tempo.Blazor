@@ -172,6 +172,15 @@
   min-width: 0;
 }
 
+/* Host actions slot in the header row (Fáze 10): a text close button or other host actions,
+   rendered between the header content and the built-in close button. */
+.tm-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex-shrink: 0;
+}
+
 .tm-modal-title {
   font-size: var(--tm-font-size-lg);
   font-weight: var(--tm-font-weight-semibold);

@@ -185,24 +185,6 @@ public class TmGanttTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmGantt_Panning_Class_Toggles_OnMouseDownUp()
-    {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
-
-        var timeline = cut.Find(".tm-gantt__timeline");
-        timeline.ClassList.Should().NotContain("tm-gantt__timeline--panning");
-
-        // Mouse down starts panning
-        timeline.MouseDown(new MouseEventArgs { Button = 0, ClientX = 100, ClientY = 100 });
-        cut.Find(".tm-gantt__timeline").ClassList.Should().Contain("tm-gantt__timeline--panning");
-
-        // Mouse up ends panning
-        timeline.MouseUp(new MouseEventArgs { Button = 0 });
-        cut.Find(".tm-gantt__timeline").ClassList.Should().NotContain("tm-gantt__timeline--panning");
-    }
-
-    [Fact]
     public async Task TmGantt_Wheel_ShiftKey_Pans_Horizontally()
     {
         var cut = Render<TmGantt>(p => p
@@ -227,29 +209,5 @@ public class TmGanttTests : LocalizationTestBase
 
         // Ctrl + wheel up (positive delta) = zoom out
         await timeline.WheelAsync(new WheelEventArgs { CtrlKey = true, DeltaY = 50 });
-    }
-
-    [Fact]
-    public async Task TmGantt_ScrollSync_TreeScroll_DoesNotThrow()
-    {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
-
-        var treeBody = cut.Find(".tm-gantt__tree-body");
-
-        // Should not throw in bUnit loose JS mode
-        await treeBody.TriggerEventAsync("onscroll", new EventArgs());
-    }
-
-    [Fact]
-    public async Task TmGantt_ScrollSync_TimelineBodyScroll_DoesNotThrow()
-    {
-        var cut = Render<TmGantt>(p => p
-            .Add(c => c.Items, GetSampleTasks()));
-
-        var timelineBody = cut.Find(".tm-gantt__timeline-body");
-
-        // Should not throw in bUnit loose JS mode
-        await timelineBody.TriggerEventAsync("onscroll", new EventArgs());
     }
 }

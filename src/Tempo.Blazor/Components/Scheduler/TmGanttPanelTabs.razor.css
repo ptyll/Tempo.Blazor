@@ -1,0 +1,57 @@
+/* TmGanttPanelTabs: the horizontal text tab strip that replaces the icon rail (SidebarMode = Tabs). */
+
+.tm-gantt__panel-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: var(--tm-space-1);
+    padding: 0 var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border-bottom: 1px solid var(--tm-border-color);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.tm-gantt__panel-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: 2.5rem;
+    padding: 0 var(--tm-space-3);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tm-gantt__panel-tab:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__panel-tab--active {
+    color: var(--tm-color-primary-text);
+    border-bottom-color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-gantt__panel-tab:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-gantt__panel-tab--active {
+        border-bottom-color: Highlight;
+        forced-color-adjust: none;
+        color: Highlight;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__panel-tab {
+        min-height: var(--tm-touch-target);
+    }
+}

@@ -3,15 +3,18 @@
 
 <section class="@RootClass" data-testid="@TestId("modeling-source-panel")" data-freshness="@FreshnessState">
     <div class="tm-modeling-source-panel__header">
-        <div>
-            <h3>@Loc["TmModelingSourcePanel_Title"]</h3>
-            <span>@FreshnessLabel</span>
-        </div>
+        @* Phase 2 (gap #14): the freshness state lives ONLY on the badge — the old duplicate
+           header subtitle under the title is gone. *@
+        <h3 class="tm-modeling-source-panel__title">@Loc["TmModelingSourcePanel_Title"]</h3>
         @if (Metadata is not null)
         {
-            <span class="@FreshnessBadgeClass" data-testid="@TestId("modeling-source-freshness-indicator")">
+            <TmBadge Variant="@FreshnessBadgeVariant"
+                     Style="BadgeStyle.Subtle"
+                     Pill="true"
+                     Icon="@FreshnessIcon"
+                     data-testid="@TestId("modeling-source-freshness-indicator")">
                 @FreshnessLabel
-            </span>
+            </TmBadge>
         }
     </div>
 
@@ -25,16 +28,31 @@
     else
     {
         <dl class="tm-modeling-source-panel__metadata">
-            <div>
-                <dt>@Loc["TmModelingSourcePanel_SourceSystem"]</dt>
+            <div class="tm-modeling-source-panel__metadata-row">
+                <dt class="tm-modeling-source-panel__term">
+                    <span class="tm-modeling-source-panel__metadata-icon" aria-hidden="true">
+                        <TmIcon Name="@IconNames.Database" Size="IconSize.Xs" />
+                    </span>
+                    @Loc["TmModelingSourcePanel_SourceSystem"]
+                </dt>
                 <dd class="tm-modeling-source-panel__value" data-testid="@TestId("modeling-source-system")" title="@Metadata.SourceSystem">@DisplaySourceSystem</dd>
             </div>
-            <div>
-                <dt>@Loc["TmModelingSourcePanel_SourceVersion"]</dt>
+            <div class="tm-modeling-source-panel__metadata-row">
+                <dt class="tm-modeling-source-panel__term">
+                    <span class="tm-modeling-source-panel__metadata-icon" aria-hidden="true">
+                        <TmIcon Name="@IconNames.Tag" Size="IconSize.Xs" />
+                    </span>
+                    @Loc["TmModelingSourcePanel_SourceVersion"]
+                </dt>
                 <dd class="tm-modeling-source-panel__value" data-testid="@TestId("modeling-source-version")" title="@Metadata.SourceVersion">@DisplaySourceVersion</dd>
             </div>
-            <div>
-                <dt>@Loc["TmModelingSourcePanel_LoadedAt"]</dt>
+            <div class="tm-modeling-source-panel__metadata-row">
+                <dt class="tm-modeling-source-panel__term">
+                    <span class="tm-modeling-source-panel__metadata-icon" aria-hidden="true">
+                        <TmIcon Name="@IconNames.Calendar" Size="IconSize.Xs" />
+                    </span>
+                    @Loc["TmModelingSourcePanel_LoadedAt"]
+                </dt>
                 <dd class="tm-modeling-source-panel__value" data-testid="@TestId("modeling-source-loaded-at")">@DisplayLoadedAt</dd>
             </div>
         </dl>
@@ -42,25 +60,25 @@
         @if (!Metadata.IsFresh)
         {
             <div class="tm-modeling-source-panel__warning" data-testid="@TestId("modeling-source-freshness-warning")" role="status">
-                <span class="tm-modeling-source-panel__warning-icon" aria-hidden="true">!</span>
-                <span>@Loc["TmModelingSourcePanel_StaleWarning"]</span>
+                <span class="tm-modeling-source-panel__warning-icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                </span>
+                <span class="tm-modeling-source-panel__warning-text">@Loc["TmModelingSourcePanel_StaleWarning"]</span>
             </div>
         }
     }
 
-    <button type="button"
-            class="tm-modeling-source-panel__load"
-            data-testid="@TestId("modeling-source-load-button")"
-            disabled="@EffectiveIsLoading"
-            @onclick="HandleLoadRequestedAsync">
-        @if (EffectiveIsLoading)
-        {
-            <TmSpinner Size="SpinnerSize.Sm" />
-            <span>@Loc["TmModelingSourcePanel_Loading"]</span>
-        }
-        else
-        {
-            <span>@Loc["TmModelingSourcePanel_LoadModel"]</span>
-        }
-    </button>
+    @* Phase 2 (gap #15): a real TmButton — primary, Refresh icon, host-driven loading state.
+       The _localLoadPending guard in HandleLoadRequestedAsync keeps the double-click
+       protection (a second synchronous activation cannot re-enter the load path). *@
+    <TmButton Variant="ButtonVariant.Primary"
+              Size="ButtonSize.Md"
+              Icon="@LoadButtonIcon"
+              IsLoading="@EffectiveIsLoading"
+              LoadingText="@Loc["TmModelingSourcePanel_Loading"]"
+              OnClick="HandleLoadRequestedAsync"
+              Class="tm-modeling-source-panel__load"
+              data-testid="@TestId("modeling-source-load-button")">
+        @Loc["TmModelingSourcePanel_LoadModel"]
+    </TmButton>
 </section>

@@ -1,6 +1,8 @@
 .tm-modeling-view-selector {
     display: flex;
-    align-items: end;
+    /* Review fix (phase 5): fields align to the START so the hint under the disabled Viewpoint
+       select grows that field downward without shifting the notation row. */
+    align-items: start;
     flex-wrap: wrap;
     gap: var(--tm-space-3);
     min-width: 0;
@@ -21,7 +23,8 @@
 .tm-modeling-view-selector__field select {
     width: 100%;
     min-width: 0;
-    padding: var(--tm-space-2) var(--tm-space-8) var(--tm-space-2) var(--tm-space-3);
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-8) 0 var(--tm-space-3);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
@@ -30,19 +33,31 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* Review fix (phase 3): the outline is the focus-VISIBLE affordance only — plain :focus keeps
+   the border change so mouse clicks do not draw a ring around the select. */
 .tm-modeling-view-selector__field select:focus {
     border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
 }
 
-.tm-modeling-view-selector__empty-viewpoints {
-    max-width: calc(var(--tm-space-16) * 3);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+/* Fáze 6 (touch): the selects reach the shared 44px target on a coarse pointer (the hosting
+   editor pins the same rule through ::deep for its own chrome contract — this keeps the
+   component's own stylesheet truthful when read on its own). */
+@media (pointer: coarse) {
+    .tm-modeling-view-selector__field select {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-modeling-view-selector__field select:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Review fix (phase 3): the hint under the disabled Viewpoint select is a plain span — no
+   border, no background, just secondary text (the extra specificity out-ranks the shared
+   __field span label rule). */
+.tm-modeling-view-selector__field .tm-modeling-view-selector__hint {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
-    line-height: var(--tm-line-height-normal);
+    font-weight: normal;
 }

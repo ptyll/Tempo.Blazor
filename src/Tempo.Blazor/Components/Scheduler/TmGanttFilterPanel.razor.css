@@ -1,0 +1,160 @@
+.tm-gantt__filter-panel-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-gantt__filter-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--tm-space-1);
+}
+
+.tm-gantt__filter-panel-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-gantt__filter-panel-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--tm-text-secondary);
+    padding: var(--tm-space-1);
+    display: flex;
+    align-items: center;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-gantt__filter-panel-close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* .tm-input is width:100%, which stacks the three controls; the row sizes them explicitly:
+   [Field] [operator] [value ........] [x]. */
+.tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-row .tm-gantt__filter-op {
+    flex: 0 0 9rem;
+    width: auto;
+    font-size: var(--tm-font-size-sm);
+    height: 1.75rem;
+}
+
+.tm-gantt__filter-row .tm-gantt__filter-value {
+    flex: 1 1 10rem;
+    width: auto;
+    min-width: 7.5rem;
+    font-size: var(--tm-font-size-sm);
+    height: 1.75rem;
+}
+
+.tm-gantt__filter-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--tm-text-secondary);
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    display: flex;
+    align-items: center;
+}
+
+.tm-gantt__filter-remove:hover {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
+}
+
+.tm-gantt__filter-add {
+    display: flex;
+    margin-top: var(--tm-space-1);
+}
+
+/* The footer: Clear all (a link) sits on the left, Cancel and Apply on the right. The slot is a plain element of this
+   component, so the rule is scoped in both presentations (the TmModal footer and the inline strip). */
+.tm-gantt__filter-panel-actions {
+    display: flex;
+    gap: var(--tm-space-2);
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: var(--tm-space-1);
+}
+
+.tm-gantt__filter-clear-slot {
+    margin-right: auto;
+}
+
+/* The dialog presentation: roomier rows; the TmModal footer takes the actions. */
+.tm-gantt__filter-panel-inner--dialog {
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-op,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-value {
+    height: 2.25rem;
+}
+
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-field,
+.tm-gantt__filter-panel-inner--dialog .tm-gantt__filter-row .tm-gantt__filter-op {
+    flex-basis: 8.5rem;
+}
+
+/* ─── Mobile bottom sheet (phase 8, G2) ────────────────────────── */
+
+/* The dialog overlay is rendered by TmModal (the Class lands on the overlay root), so only ::deep
+   reaches it. The overlay is its own size container: the condition rows resolve THEIR mobile layout
+   against the sheet they sit in, not against the viewport. */
+::deep .tm-gantt__filter-dialog {
+    container-type: inline-size;
+}
+
+@container (max-width: 767.99px) {
+    /* One condition = two lines: the field select alone, then the operator + value pair. 44px targets. */
+    .tm-gantt__filter-row {
+        align-items: stretch;
+        row-gap: var(--tm-space-2);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-field {
+        flex: 1 1 100%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-op {
+        flex: 1 1 40%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-row .tm-gantt__filter-value {
+        flex: 1 1 55%;
+        min-width: 0;
+        min-height: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-gantt__filter-remove {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    /* A rule on the button element, not on .tm-btn (another component's class). */
+    .tm-gantt__filter-add button {
+        min-height: var(--tm-touch-target);
+    }
+}

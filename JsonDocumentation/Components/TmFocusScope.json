@@ -45,6 +45,12 @@
       "description": "The id of the element that names the scope, wired to aria-labelledby."
     },
     {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description, and a surface whose body text is the point of the surface (an alertdialog message) names it here. Null renders no attribute."
+    },
+    {
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
@@ -112,12 +118,6 @@
       "type": "string?",
       "isRequired": false,
       "description": "Extra CSS classes appended to the root."
-    },
-    {
-      "name": "AriaDescribedBy",
-      "type": "string",
-      "isRequired": false,
-      "description": "The id of the element that describes the scope, wired to aria-describedby. A surface whose body text is the point of the surface (an alertdialog message) names it here."
     }
   ],
   "cssClasses": [

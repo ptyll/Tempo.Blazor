@@ -1,0 +1,101 @@
+{
+  "itemName": "TmModelingRelatedElementsPanel",
+  "kind": "Component",
+  "category": "Modeling",
+  "description": "The Relations body of the modeling inspector: the selected element's outgoing and incoming relationships (relationship type plus the counterpart with its semantic-type icon) and, for a selected relationship, its source and target as navigable rows. Activations route through the editor's existing selection paths; the by-element relationship index is built once per Relationships reference.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingRelatedElementsPanel.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Modeling"
+  ],
+  "parameters": [
+    {
+      "name": "Element",
+      "type": "ModelingElementDto?",
+      "isRequired": false,
+      "description": "The selected modeling element; renders its outgoing/incoming relationship groups. Takes precedence when a relationship is supplied too."
+    },
+    {
+      "name": "Relationship",
+      "type": "ModelingRelationshipDto?",
+      "isRequired": false,
+      "description": "The selected modeling relationship; renders its source and target as navigable rows."
+    },
+    {
+      "name": "Elements",
+      "type": "IReadOnlyList<ModelingElementDto>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Elements used to resolve counterpart display names and semantic-type icons."
+    },
+    {
+      "name": "Relationships",
+      "type": "IReadOnlyList<ModelingRelationshipDto>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The loaded model's relationships — the source of the memoized outgoing/incoming index (built once per collection reference)."
+    },
+    {
+      "name": "OnElementSelected",
+      "type": "EventCallback<ModelingElementDto>",
+      "isRequired": false,
+      "description": "Raised when the user activates a counterpart (or a source/target row) to select that element."
+    },
+    {
+      "name": "OnRelationshipSelected",
+      "type": "EventCallback<ModelingRelationshipDto>",
+      "isRequired": false,
+      "description": "Raised when the user activates a relationship type to select that relationship."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class applied to the panel root."
+    }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-related",
+      "description": "Root section of the panel (data-kind=element|relationship|empty)."
+    },
+    {
+      "name": "tm-modeling-related__group",
+      "description": "One relationship group (Outgoing / Incoming / Source / Target) with its heading and rows."
+    },
+    {
+      "name": "tm-modeling-related__group-title",
+      "description": "The group heading with the localized label and the count badge."
+    },
+    {
+      "name": "tm-modeling-related__count",
+      "description": "Count badge inside a group heading (visible digits + sr-only plural)."
+    },
+    {
+      "name": "tm-modeling-related__row",
+      "description": "One relationship row (a li carrying the modeling-related-{direction}-{relationshipId} test id)."
+    },
+    {
+      "name": "tm-modeling-related__nav",
+      "description": "The counterpart / endpoint navigation button (static variant renders the Unknown fallback)."
+    },
+    {
+      "name": "tm-modeling-related__type",
+      "description": "The relationship-type action on an element row (trailing chip with the Link2 icon)."
+    },
+    {
+      "name": "tm-modeling-related__icon",
+      "description": "Semantic-type icon tile of a row action."
+    },
+    {
+      "name": "tm-modeling-related__text",
+      "description": "Truncated display text of a row action."
+    },
+    {
+      "name": "tm-modeling-related__empty",
+      "description": "The localized empty state shown without a selection or with no related relationships."
+    }
+  ]
+}

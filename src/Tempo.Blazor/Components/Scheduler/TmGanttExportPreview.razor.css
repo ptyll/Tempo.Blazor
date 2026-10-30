@@ -1,0 +1,164 @@
+/* TmGanttExportPreview — the export dialog's built-in live preview.
+   Pure SVG/HTML miniature; only --tm-* tokens (strict audit), dark mode arrives through them. */
+
+.tm-gantt-export-preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-gantt-export-preview__toggle {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    padding: var(--tm-space-2) 0;
+}
+
+.tm-gantt-export-preview__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+/* The miniature page keeps the paper's shape; its content is a decorative sketch. */
+.tm-gantt-export-preview__page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    width: 100%;
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface);
+}
+
+.tm-gantt-export-preview__axis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--tm-space-1);
+}
+
+.tm-gantt-export-preview__axis span {
+    height: var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-border);
+}
+
+.tm-gantt-export-preview__dates {
+    display: flex;
+    justify-content: space-between;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-gantt-export-preview__canvas {
+    position: relative;
+    flex: 1;
+    min-height: var(--tm-space-16);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    overflow: hidden;
+}
+
+.tm-gantt-export-preview__bar {
+    position: absolute;
+    top: 25%;
+    height: var(--tm-space-3);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-primary);
+    opacity: 0.75;
+}
+
+.tm-gantt-export-preview__bar--critical {
+    background: var(--tm-color-danger);
+    opacity: 1;
+}
+
+.tm-gantt-export-preview__connector {
+    position: absolute;
+    top: 50%;
+    height: var(--tm-border-width);
+    background: var(--tm-color-text-secondary);
+    opacity: 0.6;
+}
+
+.tm-gantt-export-preview__today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--tm-border-width);
+    background: var(--tm-color-warning);
+}
+
+.tm-gantt-export-preview__workload {
+    display: flex;
+    gap: var(--tm-space-1);
+    align-items: flex-end;
+    height: var(--tm-space-4);
+}
+
+.tm-gantt-export-preview__workload span {
+    flex: 1;
+    border-radius: var(--tm-radius-full) var(--tm-radius-full) 0 0;
+    background: var(--tm-color-primary);
+    opacity: 0.5;
+}
+
+/* The Excel preview: a compact table of the workbook's head. */
+.tm-gantt-export-preview__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-gantt-export-preview__table th,
+.tm-gantt-export-preview__table td {
+    text-align: left;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: var(--tm-border-width) solid var(--tm-border-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 12ch;
+}
+
+.tm-gantt-export-preview__table th {
+    color: var(--tm-color-text-secondary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-gantt-export-preview__more {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* The XML summary: three labeled counts. */
+.tm-gantt-export-preview__summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--tm-space-2);
+    margin: 0;
+}
+
+.tm-gantt-export-preview__stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-gantt-export-preview__stat dt {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-gantt-export-preview__stat dd {
+    margin: 0;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+}

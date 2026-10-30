@@ -1,0 +1,9 @@
+{
+  "itemName": "ModelingIssueSortMode",
+  "kind": "Enum",
+  "category": "Modeling",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Sort mode of the modeling issues list (Fáze 11). Input (the default) keeps the provider's input order untouched — the panel never re-sorts. Severity orders Error > Warning > Info, stable within each group (rows of the same severity keep their input relative order). Source orders by the source element/relationship display name — an unmatched source id falls back to the id itself — with sourceless issues last.",
+  "sourcePath": "src/Tempo.Blazor.Modeling/ModelingIssueSortMode.cs"
+}

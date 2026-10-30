@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
@@ -53,6 +54,27 @@ public partial class TmSigningFieldOverlay
     /// <summary>Fallback culture used when localized text is missing.</summary>
     [Parameter] public string? FallbackCulture { get; set; }
 
+    /// <summary>
+    /// Submitter role colour rendered as the inline <c>--tm-signing-role-color</c> custom property
+    /// (plus the <c>tm-signing-field--role</c> class), from which the stylesheet derives the
+    /// overlay's border and background with <c>color-mix()</c>. Accepts hex, a
+    /// <c>var(--tm-signing-role-N)</c> token reference, an rgb/hsl/oklch function or one of the CSS
+    /// basic colour keywords; every other value is dropped by the sanitizer. When null (or dropped)
+    /// the overlay keeps the primary-tint default.
+    /// </summary>
+    [Parameter] public string? RoleColor { get; set; }
+
+    /// <summary>
+    /// Short prompt rendered inside the overlay while it is NOT completed (Signing redesign
+    /// phase 3) — the runner passes the localized "Click to sign / fill in" call to action for
+    /// the CURRENT field only, and only while that field is empty and required. Hidden once the
+    /// field is completed or when null/whitespace, so the designer's compact presentation stays
+    /// prompt-free. The label + prompt head is a plain flex pair (no size container and no
+    /// width-based hiding — a container truncated labels to stubs), so a host that wants a prompt
+    /// on every field should keep the set small for the same readability reasons.
+    /// </summary>
+    [Parameter] public string? Prompt { get; set; }
+
     /// <summary>Callback invoked when the overlay is clicked.</summary>
     [Parameter] public EventCallback<TmSigningFieldOverlayPointerEventArgs> OnClick { get; set; }
 
@@ -81,6 +103,49 @@ public partial class TmSigningFieldOverlay
 
     private bool StopMouseDownPropagation => Draggable;
 
+    /// <summary>
+    /// The CSS basic colour keywords accepted as a bare colour name (case-insensitive). The sanitizer
+    /// only admits this closed set, so an arbitrary word can never ride the inline style.
+    /// </summary>
+    private static readonly HashSet<string> BasicColorKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "aqua", "black", "blue", "fuchsia", "gray", "green", "lime", "maroon",
+        "navy", "olive", "purple", "red", "silver", "teal", "white", "yellow"
+    };
+
+    /// <summary>
+    /// Allow-list for the inline <c>--tm-signing-role-color</c> value: 3–8 digit hex, a Tempo role
+    /// token reference, a functional rgb/hsl/oklch colour, or one of the CSS basic colour keywords
+    /// (<see cref="BasicColorKeywords"/>). Everything else — and therefore every character that
+    /// could break out of the inline style — is dropped.
+    /// </summary>
+    private static readonly Regex RoleColorPattern = new(
+        @"^(#[0-9a-fA-F]{3,8}|var\(--tm-[a-z0-9-]+\)|(?:rgb|hsl|oklch)a?\([0-9.,%\s/]+\))$",
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(5));
+
+    /// <summary>The role colour when it matches the allow-list, otherwise <c>null</c>.</summary>
+    private string? SafeRoleColor
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(RoleColor))
+            {
+                return null;
+            }
+
+            var candidate = RoleColor.Trim();
+
+            return RoleColorPattern.IsMatch(candidate) || BasicColorKeywords.Contains(candidate)
+                ? candidate
+                : null;
+        }
+    }
+
+    private bool HasRoleColor => SafeRoleColor is not null;
+
+    private bool ShowPrompt => !Completed && !string.IsNullOrWhiteSpace(Prompt);
+
     private string Label => SigningTextResolver.FieldLabel(Field, Culture, FallbackCulture, Loc);
 
     private string AriaLabel => Field?.Required == true
@@ -93,25 +158,9 @@ public partial class TmSigningFieldOverlay
 
     private string LocalizedTypeName => SigningTextResolver.FieldTypeLabel(Field?.Type ?? SigningFieldType.Text, Loc);
 
-    private string IconName => Field?.Type switch
-    {
-        SigningFieldType.Signature or SigningFieldType.Initials => "edit",
-        SigningFieldType.Date or SigningFieldType.DateNow => "calendar",
-        SigningFieldType.Number => "hash",
-        SigningFieldType.Image => "image",
-        SigningFieldType.File => "file",
-        SigningFieldType.Select or SigningFieldType.Multiple => "list",
-        SigningFieldType.Checkbox => "check-square",
-        SigningFieldType.Radio => "circle",
-        SigningFieldType.Cells => "grid",
-        SigningFieldType.Stamp => "shield",
-        SigningFieldType.Phone => "phone",
-        SigningFieldType.Verification or SigningFieldType.Kba => "lock",
-        SigningFieldType.Payment => "tag",
-        SigningFieldType.Heading => "type",
-        SigningFieldType.Strikethrough => "minus",
-        _ => "file-text"
-    };
+    // Signing redesign phase 3: the map moved to the shared SigningFieldTypeIcons so the palette,
+    // the overlays and the runner's field list render the same icon per field type.
+    private string IconName => SigningFieldTypeIcons.Get(Field?.Type ?? SigningFieldType.Text);
 
     private string RootClass
     {
@@ -126,6 +175,7 @@ public partial class TmSigningFieldOverlay
             AddClass(classes, Selected, "tm-signing-field--selected");
             AddClass(classes, Selected, "tm-signing-field-overlay--selected");
             AddClass(classes, Focused, "tm-signing-field--focused");
+            AddClass(classes, HasRoleColor, "tm-signing-field--role");
             AddClass(classes, Invalid, "tm-signing-field--invalid");
             AddClass(classes, Completed, "tm-signing-field--completed");
             AddClass(classes, ReadOnly || Field?.ReadOnly == true, "tm-signing-field--read-only");
@@ -145,14 +195,19 @@ public partial class TmSigningFieldOverlay
     {
         get
         {
+            var roleColor = SafeRoleColor;
+            var roleStyle = roleColor is null
+                ? string.Empty
+                : string.Create(CultureInfo.InvariantCulture, $" --tm-signing-role-color:{roleColor};");
+
             if (Area is null)
             {
-                return string.Empty;
+                return roleStyle.TrimStart();
             }
 
             return string.Create(
                 CultureInfo.InvariantCulture,
-                $"left: {FormatPercent(Area.X)}%; top: {FormatPercent(Area.Y)}%; width: {FormatPercent(Area.Width)}%; height: {FormatPercent(Area.Height)}%;");
+                $"left: {FormatPercent(Area.X)}%; top: {FormatPercent(Area.Y)}%; width: {FormatPercent(Area.Width)}%; height: {FormatPercent(Area.Height)}%;{roleStyle}");
         }
     }
 

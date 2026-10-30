@@ -1,0 +1,181 @@
+/* ─── Import dialog ──────────────────────────────────────────────── *
+   The shell is the core TmModal; this file styles only the content it renders. */
+
+.tm-gantt__import-tabs {
+    display: flex;
+    gap: var(--tm-space-1);
+    margin-bottom: var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__import-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: var(--tm-radius-sm) var(--tm-radius-sm) 0 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    transition: color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-gantt__import-tab:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__import-tab:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-gantt__import-tab--active {
+    border-bottom-color: var(--tm-color-primary);
+    color: var(--tm-color-primary-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-gantt__import-panel {
+    min-height: 7.5rem;
+}
+
+.tm-gantt__import-file-area {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+/* The wrapper exists only to hand JS an ElementReference - display:contents keeps it out of the
+   flex column's slot accounting so the empty box adds no gap. */
+.tm-gantt__import-file-input-wrap {
+    display: contents;
+}
+
+/* ::deep on purpose: the <input type=file> is rendered by the framework's InputFile child component, so it never
+   carries this component's scope attribute and a plain selector would leave the native "Choose File" button visible. */
+/* Visually hidden but still present: the chooser button clicks this input programmatically
+   (the native listener registered by registerFilePickerTrigger in TmGanttImportDialog.razor.js)
+   inside the same user gesture. display:none was replaced by the standard sr-only geometry so the
+   click works identically in every engine; the input itself is aria-hidden + tabindex=-1, so it
+   never reaches AT or the tab order. */
+.tm-gantt__import-file-area ::deep .tm-gantt__import-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The input group: [Choose file] [chosen name ........ x]. */
+.tm-gantt__import-file-group {
+    display: flex;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+.tm-gantt__import-trigger {
+    flex: 0 0 auto;
+}
+
+.tm-gantt__import-file-name {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-gantt__import-file-name--empty {
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__import-file-remove {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-gantt__import-file-remove:hover {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__import-file-remove:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-gantt__import-hint {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__import-jira-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+/* Import failure surface: a TmAlert (error); this only spaces it from the tabs. */
+.tm-gantt__import-panel ::deep .tm-gantt-import__error,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__error {
+    margin-bottom: var(--tm-space-3);
+}
+
+/* Import warnings surface: a TmAlert (warning) with the expandable per-row list. */
+.tm-gantt__import-panel ::deep .tm-gantt-import__warnings,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warnings {
+    margin-bottom: var(--tm-space-3);
+}
+
+.tm-gantt__import-panel ::deep .tm-gantt-import__warning-list summary,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warning-list summary {
+    cursor: pointer;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    padding: var(--tm-space-1) 0;
+}
+
+.tm-gantt__import-panel ::deep .tm-gantt-import__warning-list ul,
+.tm-gantt__import-dialog ::deep .tm-gantt-import__warning-list ul {
+    margin: var(--tm-space-1) 0 0;
+    padding-inline-start: var(--tm-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-gantt__import-tab {
+        transition: none;
+    }
+}

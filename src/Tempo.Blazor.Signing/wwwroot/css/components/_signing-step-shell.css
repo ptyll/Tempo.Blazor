@@ -6,6 +6,11 @@
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
+    container: tm-signing-step-shell / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-signing-step-shell__header {
@@ -26,6 +31,18 @@
     color: var(--tm-text-primary);
     font-size: var(--tm-font-size-base);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The title is the step's focus target (tabindex="-1", focused programmatically after every step
+   change): a mouse/programmatic focus must not paint a ring, while keyboard focus keeps the
+   shared token focus ring (WCAG 2.4.7). */
+.tm-signing-step-shell__title:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.tm-signing-step-shell__title:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
 }
 
 .tm-signing-step-shell__required,
@@ -126,6 +143,22 @@
 .tm-signing-external-step__questions {
     display: grid;
     gap: var(--tm-space-2);
+}
+
+/* The choice groups are real fieldsets named by a visually hidden legend: reset the browser
+   chrome, keep the layout of the old div-based groups. */
+.tm-signing-choice-step__group {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+}
+
+.tm-signing-choice-step__legend {
+    margin: 0;
+    padding: 0;
 }
 
 .tm-signing-choice-step__option {

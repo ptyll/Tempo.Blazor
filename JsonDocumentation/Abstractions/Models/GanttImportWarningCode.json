@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "Why an import produced a warning. The UI localizes the code — a warning never carries ready-made text.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarningCode.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttImportWarningCode"
+}

@@ -1,24 +1,38 @@
+/* MO1 (desktop restructure): the dock height belongs to the PARENT — the editor's canvas body
+   grid owns the collapsed/expanded row (auto vs a clamped block), so the panel itself only
+   stays shrinkable (the former min/max-height pair is gone). The root grid keeps the header
+   pinned above the scrollable body. */
 .tm-modeling-issue-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    min-height: calc(var(--tm-space-16) * 3);
-    max-height: calc(var(--tm-space-16) * 5);
+    min-height: 0;
     border-top: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
 }
 
+/* Review fix (phase 5): the dock header is a compact strip — 0.5rem/1rem padding keeps more of
+   the clamped dock row for the issue list itself. */
 .tm-modeling-issue-panel__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
-    padding: var(--tm-space-3) var(--tm-space-4);
+    padding: var(--tm-space-2) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
 }
 
-.tm-modeling-issue-panel__header h3 {
+/* The count badge sits next to the title (review fix, phase 5) — one wrapper so the number
+   reads as part of the heading and the toggle keeps its own trailing edge. */
+.tm-modeling-issue-panel__heading {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__title {
     margin: 0;
     overflow: hidden;
     font-size: var(--tm-font-size-sm);
@@ -28,17 +42,107 @@
     white-space: nowrap;
 }
 
-.tm-modeling-issue-panel__header span {
+/* The collapse toggle: an icon-only native button that meets the coarse-pointer target and
+   keeps its visible label for assistive tech through the sr-only span. NO pointer cursor —
+   the pointer affordance is bound to navigable ISSUE rows only (M13 contract), the toggle
+   signals itself through the hover/focus affordances below. */
+.tm-modeling-issue-panel__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
     color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
 }
 
-.tm-modeling-issue-panel__empty {
+@media (pointer: coarse) {
+    .tm-modeling-issue-panel__toggle {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    /* Fáze 6 (touch): the issue rows are the panel's primary tap targets — a row must reach
+       the shared 44px target, not just the header toggle. */
+    .tm-modeling-issue-panel__item {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-modeling-issue-panel__toggle:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-modeling-issue-panel__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Reduced motion: the chevron flips as a plain swap (no rotation transition) — nothing to
+   disable, kept explicit so the reduced-motion audit sees the subject. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-issue-panel__toggle-icon {
+        transition: none;
+    }
+}
+
+/* The collapsible body wrapper: min-height 0 keeps the row contract (the list scrolls inside
+   the height the parent's grid row gives the panel). */
+.tm-modeling-issue-panel__content {
     display: grid;
-    align-content: center;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+}
+
+/* Review fix (phase 5): the rule above overrides the UA sheet's `[hidden] { display: none }`,
+   so a COLLAPSED dock still painted its body and its rows stayed in the tab order. Restate
+   the attribute's display:none explicitly — the body stays in the DOM (aria-controls) but is
+   genuinely hidden and unfocusable while collapsed. */
+.tm-modeling-issue-panel__content[hidden] {
+    display: none;
+}
+
+/* Fáze 11: when the filter bar renders, the body gains a row for it — the bar takes its own
+   auto row and the list keeps the scrolling minmax(0, 1fr) row (without the bar the list is
+   the only child and fills the single row as before). */
+.tm-modeling-issue-panel__content--with-filterbar {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* Count-only badge (gap #12): the visible text is the bare number; the localized
+   "Issues: {0}" formulation lives on the aria-label. */
+.tm-modeling-issue-panel__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: var(--tm-space-6);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+/* Final UX review (M1): the empty state is ONE compact line in the dock — the centered
+   two-line grid cost a full dock row at the desktop baselines for a message the header
+   already contextualizes ("Issues: 0"). The row still wraps on a narrow sheet (320px tab). */
+.tm-modeling-issue-panel__empty {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     gap: var(--tm-space-2);
-    min-height: calc(var(--tm-space-16) * 2);
-    padding: var(--tm-space-4);
+    min-height: 0;
+    padding: var(--tm-space-2) var(--tm-space-4);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
     line-height: var(--tm-line-height-normal);
@@ -55,7 +159,9 @@
     gap: var(--tm-space-2);
     min-height: 0;
     margin: 0;
-    padding: var(--tm-space-3);
+    /* Review fix (phase 5): the tighter padding keeps two full issue rows inside the clamped
+       dock row at the 1440x900/1280x800 baselines (the dock is a minority of the column). */
+    padding: var(--tm-space-2);
     overflow: auto;
     list-style: none;
 }
@@ -68,46 +174,37 @@
     min-width: 0;
     padding: var(--tm-space-2);
     border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-color-text);
     font: inherit;
     text-align: left;
+}
+
+/* Navigable issues only: the pointer cursor and hover affordance signal that activating
+   the row selects its source element. Sourceless issues are plain list items. The chevron
+   needs a third grid column the non-navigable rows never render. */
+button.tm-modeling-issue-panel__item--navigable {
+    grid-template-columns: auto minmax(0, 1fr) auto;
     cursor: pointer;
 }
 
-.tm-modeling-issue-panel__item:hover {
+button.tm-modeling-issue-panel__item--navigable:hover {
     border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-primary-subtle);
 }
 
-.tm-modeling-issue-panel__item:focus-visible {
-    border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
-}
-
-.tm-modeling-issue-panel__item--info {
-    border-inline-start: 3px solid var(--tm-color-info);
-}
-
-.tm-modeling-issue-panel__item--warning {
-    border-inline-start: 3px solid var(--tm-color-warning);
-}
-
-.tm-modeling-issue-panel__item--error {
-    border-inline-start: 3px solid var(--tm-color-danger);
+button.tm-modeling-issue-panel__item--navigable:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-issue-panel__icon {
     display: grid;
     place-items: center;
-    width: var(--tm-space-6);
-    height: var(--tm-space-6);
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     border-radius: var(--tm-radius-full);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-bold);
-    line-height: 1;
 }
 
 .tm-modeling-issue-panel__icon--info {
@@ -140,15 +237,30 @@
     font-size: var(--tm-font-size-xs);
 }
 
-.tm-modeling-issue-panel__meta strong {
+/* Severity label tinted with its severity text token, next to the neutral category. */
+.tm-modeling-issue-panel__severity {
     color: var(--tm-color-text);
     font-weight: var(--tm-font-weight-semibold);
 }
 
+.tm-modeling-issue-panel__severity--info {
+    color: var(--tm-color-info-text);
+}
+
+.tm-modeling-issue-panel__severity--warning {
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__severity--error {
+    color: var(--tm-color-danger-text);
+}
+
+/* Fáze 7 review: break-word, not anywhere — `anywhere` breaks the long recommendation strings
+   at every glyph and blew the fix box out of narrow mobile rows. */
 .tm-modeling-issue-panel__message,
 .tm-modeling-issue-panel__fix {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     line-height: var(--tm-line-height-normal);
 }
 
@@ -156,9 +268,61 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* Suggested fix (gap #11): a toned box with an icon and a localized "Recommendation:"
+   prefix, replacing the bare text — tinted with the ROW'S severity tokens (info is the
+   default severity), not a fixed primary. Fáze 7 review: the box WRAPS — the icon+label
+   lead and the text takes its own line when the row is too narrow, instead of the label
+   and a clipped single word fighting for one line. */
 .tm-modeling-issue-panel__fix {
-    color: var(--tm-text-secondary);
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-info-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
     font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-issue-panel__fix--warning {
+    border-color: var(--tm-color-warning-soft-border);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__fix--error {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-issue-panel__fix-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+}
+
+.tm-modeling-issue-panel__fix-label {
+    flex: 0 0 auto;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-issue-panel__fix-text {
+    min-width: 0;
+    /* Fáze 7 review: the text takes the row remainder and wraps at word boundaries (growing
+       only past the 10rem basis) instead of forcing the whole box onto one clipped line. */
+    flex: 1 1 10rem;
+    overflow-wrap: break-word;
+}
+
+.tm-modeling-issue-panel__chevron {
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
 }
 
 @media (forced-colors: active) {
@@ -176,15 +340,215 @@
         border-color: Highlight;
     }
 
-    .tm-modeling-issue-panel__item--info,
-    .tm-modeling-issue-panel__item--warning,
-    .tm-modeling-issue-panel__item--error {
-        border-inline-start-color: Highlight;
-    }
-
     .tm-modeling-issue-panel__icon,
     .tm-modeling-issue-panel__fix {
         color: CanvasText;
         background: Canvas;
+    }
+
+    .tm-modeling-issue-panel__chevron {
+        color: CanvasText;
+    }
+}
+
+/* ── Fáze 11: the filter bar (severity chips, text search, sort select) ─────────────────
+   Review fix (final UX pass): ONE compact row — the bar targets ~40px at a fine pointer
+   (44px on a coarse pointer), the controls ride the row and wrap only on the narrow bands.
+   The 32px control height (--tm-space-8) plus the 4px vertical padding lands the 40px row;
+   the 38px input token is intentionally compacted INSIDE the bar only. */
+.tm-modeling-issue-panel__filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    padding: var(--tm-space-1) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+}
+
+.tm-modeling-issue-panel__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+/* Severity chips are the CORE TmChip pressed variant (native toggle buttons, aria-pressed).
+   The core sheet owns the chip vocabulary — layout, radius, font, the focus ring, the
+   coarse-pointer floor and forced-colors — so the panel keeps only the compact row sizing and
+   the severity palette: a bordered surface chip at rest, the severity tint while pressed.
+   Review fix (phase 15b BLOCKER): the chip button is rendered by the CORE TmChip, so the
+   panel's scope attribute NEVER lands on it — every chip rule keys off the PANEL-OWNED
+   chips wrapper plus ::deep (compiles to .tm-modeling-issue-panel__chips[scope] …). The
+   compact padding + tight line-height keep the chip on the ~41px filter bar row (the 28px
+   --tm-space-7 body + the bar's 2×--tm-space-1 padding). */
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip {
+    min-height: var(--tm-space-7);
+    padding: 0 var(--tm-space-3);
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface);
+    color: var(--tm-text-secondary);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--error[aria-pressed="true"] {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--warning[aria-pressed="true"] {
+    border-color: var(--tm-color-warning-soft-border);
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--info[aria-pressed="true"] {
+    border-color: var(--tm-color-info-soft-border, var(--tm-color-border));
+    background: var(--tm-color-info-subtle, var(--tm-bg-surface-secondary));
+    color: var(--tm-color-info-text, var(--tm-text-secondary));
+}
+
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: var(--tm-space-4);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full, var(--tm-radius-md));
+    background: var(--tm-bg-surface-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The search input and the sort select shrink to fit the row remainder and wrap below the
+   chips on narrow bands. Review fix: both controls are compacted to the 32px row so the bar
+   measures ~40px (the 38px input token would blow the single-row target). The wrappers are
+   PANEL-OWNED elements — the panel's scope attribute never lands on a child component root.
+   Review fix (phase 13, UnconstrainedClassOwnershipTests): the child internals are NOT claimed
+   from here — the core `.tm-input`/`.tm-select` already consume `--tm-input-height-md`, so the
+   compaction is a token OVERRIDE on the wrapper (custom properties inherit into the child)
+   instead of a second `::deep` height claim on a core class. */
+.tm-modeling-issue-panel__filter-input {
+    display: flex;
+    flex: 1 1 12rem;
+    align-items: center;
+    min-width: 0;
+    --tm-input-height-md: var(--tm-space-8);
+}
+
+.tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
+    min-height: var(--tm-space-8);
+}
+
+/* Review fix: the sort control is a single-row wrapper — the visible label sits INLINE left
+   of the select (TmSelect's own column wrapper would push the bar to two rows), the label
+   never wraps and the select takes the remainder. */
+.tm-modeling-issue-panel__filter-sort {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-wrapper {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-container {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select {
+    height: var(--tm-space-8);
+}
+
+/* The no-match state (every row filtered out) keeps the empty-state vocabulary and adds the
+   one-press clear action. */
+.tm-modeling-issue-panel__empty--no-match {
+    align-items: center;
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-issue-panel__clear {
+    flex: 0 0 auto;
+    min-height: var(--tm-space-7);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-color-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-issue-panel__clear:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
+}
+
+.tm-modeling-issue-panel__clear:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Fáze 11 (touch): every filter bar control reaches the shared 44px target on a coarse
+   pointer — chips, the search input, the sort select and the clear action alike. The bar
+   itself lands on the 44px row: the padding collapses so the 44px controls ARE the height. */
+@media (pointer: coarse) {
+    .tm-modeling-issue-panel__filterbar {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    /* ::deep through the panel-owned chips wrapper — the chip button is rendered by the core
+       TmChip, so the scope attribute never lands on it (see the BLOCKER note above). */
+    .tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-input {
+        min-height: var(--tm-touch-target);
+        --tm-input-height-md: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort ::deep .tm-select-container {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort ::deep .tm-select {
+        height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__clear {
+        min-height: var(--tm-touch-target);
     }
 }

@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Writes edited modeling model data back to the source that IModelingModelProvider loaded it from (Fáze 14, decision MODELING-INSPECTOR-EDITING). The provider contract stays READ-ONLY: a host that wants an editable inspector registers a separate writer resolved by ProviderKey.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "IModelingModelWriter"
+}

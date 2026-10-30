@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "Badge",
+      "type": "string?",
+      "isRequired": false,
+      "description": "A short count or marker shown as a small pill on the button (e.g. the number of active filters). Decorative (aria-hidden): put the meaning in Tooltip, the accessible name of an icon button. Null or empty renders nothing."
+    },
+    {
       "name": "Text",
       "type": "string?",
       "isRequired": false,

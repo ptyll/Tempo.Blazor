@@ -2,7 +2,7 @@
   "itemName": "TmGanttPortfolio",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Portfolio overview that renders multiple projects, each shown as a summary TmGantt with its own tasks and dependencies, giving a roll-up view across several project schedules.",
+  "description": "Portfolio overview that renders multiple projects, each in its own card with an embedded TmGantt that draws the project's tasks and dependencies, giving an overview across several project schedules. Every nested Gantt gets its own test-id prefix (gantt-{project.Id}, after the portfolio's own prefix) so ids of tasks shared across projects stay unique.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttPortfolio.razor",
@@ -15,7 +15,80 @@
       "name": "Projects",
       "type": "IReadOnlyList<GanttPortfolioProject>",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Projects to show; each card is collapsible and shows the project's date range, task count and weighted completion above its own Gantt."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes appended to the root element."
+    },
+    {
+      "name": "OnProjectSelected",
+      "type": "EventCallback<GanttPortfolioProject>",
+      "isRequired": false,
+      "description": "Fires when the user clicks a project's name. Without a handler the name is plain text."
+    },
+    {
+      "name": "ProjectActions",
+      "type": "RenderFragment<GanttPortfolioProject>?",
+      "isRequired": false,
+      "description": "Host content at the end of each card header (a menu, a status chip); the project is the context."
+    },
+    {
+      "name": "ProjectMaxHeight",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Maximum height of the Gantt area of a card as a CSS length (e.g. 400px). Default: the stylesheet value (15rem)."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the cards follow. Auto (default) keeps the card with the embedded chart; a forced Mobile — or the host passing the chart's resolved layout — presents the read-only mobile card: the summary line, the percent with its progress bar and a mini-gantt of bars only (a tap raises OnProjectSelected; nothing is editable)."
+    },
+    {
+      "name": "AxisMode",
+      "type": "GanttPortfolioAxisMode",
+      "isRequired": false,
+      "default": "GanttPortfolioAxisMode.PerProject",
+      "description": "How the cards' date axes align. PerProject (default) keeps every card on its own range; Shared computes the union range of all projects, renders ONE sticky axis header above the cards and hands every card the same range, zoom and tree width (with ShowTimelineHeader=false), so the same date draws at the same x in every card and the cards scroll in step (tmGantt.linkScrollGroup)."
+    },
+    {
+      "name": "ZoomPreset",
+      "type": "GanttZoomPreset",
+      "isRequired": false,
+      "default": "GanttZoomPreset.Weeks",
+      "description": "The zoom preset of the shared axis header and, in the Shared axis mode, of every card."
+    },
+    {
+      "name": "TreeWidth",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The task tree width every card is pinned to in the Shared axis mode (a CSS length, e.g. \"200px\") — one width so the timelines start at the same x. Null uses the shared default (12rem)."
+    },
+    {
+      "name": "Virtualization",
+      "type": "GanttVirtualizationMode",
+      "isRequired": false,
+      "default": "GanttVirtualizationMode.Off",
+      "description": "Forwarded to every expanded card's TmGantt. A portfolio card virtualizes only when the host asks for it — Off (the default) keeps today's card."
+    },
+    {
+      "name": "VirtualizationThreshold",
+      "type": "int",
+      "isRequired": false,
+      "default": "300",
+      "description": "Forwarded to every card: the visible-row count from which Auto virtualizes."
+    },
+    {
+      "name": "OverscanRows",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "Forwarded to every card: the rows rendered above and below the window."
     }
   ]
 }

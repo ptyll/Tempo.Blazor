@@ -2,13 +2,18 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@CurrentValidationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
                     ValidationMessageId="@ValidationDescriptionId"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
+    @* The shell title carries this instance's stable id; the input references it with
+       aria-labelledby (and the description / validation ids, when they render) so getByLabel
+       resolves and assistive technology hears why the field is invalid. *@
     @if (IsMultiline)
     {
         <textarea class="tm-signing-text-step__input tm-signing-text-step__textarea"
@@ -16,7 +21,9 @@
                   disabled="@Disabled"
                   maxlength="@MaxLength"
                   placeholder="@PlaceholderText"
-                  aria-describedby="@ValidationDescriptionId"
+                  aria-labelledby="@_titleId"
+                  aria-describedby="@DescribedBy"
+                  aria-invalid="@BoolText(HasValidationMessage)"
                   @onchange="HandleValueChangedAsync"></textarea>
     }
     else
@@ -27,7 +34,9 @@
                disabled="@Disabled"
                maxlength="@MaxLength"
                placeholder="@PlaceholderText"
-               aria-describedby="@ValidationDescriptionId"
+               aria-labelledby="@_titleId"
+               aria-describedby="@DescribedBy"
+               aria-invalid="@BoolText(HasValidationMessage)"
                @onchange="HandleValueChangedAsync" />
     }
 </TmSigningStepShell>

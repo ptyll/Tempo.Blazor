@@ -121,6 +121,24 @@ public sealed class ModelingDragDropM16E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(page, "drag-after.png");
     }
 
+    [TestMethod]
+    [Description("Dragging a NESTED hierarchy node (a level-2 child of the ?scenario=hierarchy subprocess) onto the canvas creates a reused node")]
+    public async Task DragNestedHierarchyNodeToCanvasCreatesNode()
+    {
+        // Phase 12: the hierarchy tree nests the order activities under the BPMN subprocess —
+        // the same drag bridge must work from an indented, aria-level=2 row.
+        var page = await OpenLoadedModelingPageAsync("?scenario=hierarchy&notation=bpmn");
+        var nested = page.Locator($"[data-testid='modeling-tree-node-{DragElementId}']");
+        Assert.AreEqual("2", await nested.GetAttributeAsync("aria-level"), "the dragged row is a nested hierarchy node");
+        var before = await GetPreviewNodeCountAsync(page);
+
+        await DragElementToCanvasAsync(page, DragElementId, 180, 220);
+
+        await WaitForPreviewNodeCountAsync(page, before + 1);
+        var sourceCountAfter = await GetSourceNodeCountAsync(page, DragElementSourceId);
+        Assert.IsTrue(sourceCountAfter >= 1, "the dropped node reuses the nested element's SourceId.");
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

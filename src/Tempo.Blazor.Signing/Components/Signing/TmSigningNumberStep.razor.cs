@@ -7,6 +7,12 @@ namespace Tempo.Blazor.Components.Signing;
 /// <summary>Renders a numeric signing step with min, max, step, and required validation.</summary>
 public partial class TmSigningNumberStep
 {
+    // Per-instance accessible plumbing (Signing redesign phase 2): ids are owned by THIS component
+    // instance and handed to the shell, so two rendered steps never share an id even when they
+    // represent the same field uuid.
+    private readonly string _titleId = $"tm-signing-step-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"tm-signing-step-description-{Guid.NewGuid():N}";
+    private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
     private string? _validationMessage;
 
     /// <summary>Signing field represented by this step.</summary>
@@ -37,11 +43,50 @@ public partial class TmSigningNumberStep
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The runner's step validation, cascaded by <see cref="TmSigningFormRunner"/> (absent for standalone steps).</summary>
+    [CascadingParameter(Name = "TmSigningRunnerValidation")]
+    private string? RunnerValidationMessage { get; set; }
+
     private string? FormattedValue => Value?.ToString(CultureInfo.InvariantCulture);
 
     private string PlaceholderText => SigningLocalizationResolver.ResolveFieldPlaceholder(Field, Culture, FallbackCulture, Loc["TmSigningStep_NumberPlaceholder"]);
 
+    private bool HasDescription => !string.IsNullOrWhiteSpace(SigningTextResolver.FieldDescription(Field, Culture, FallbackCulture));
+
+    /// <summary>The message the shell renders as the step's single alert (own message first, then the runner's).</summary>
+    private string? EffectiveValidationMessage => !string.IsNullOrWhiteSpace(_validationMessage)
+        ? _validationMessage
+        : RunnerValidationMessage;
+
+    private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);
+
+    /// <summary>
+    /// The ids the input references — per-instance, and the SAME instances the shell renders (they
+    /// are passed to the shell as parameters), so every reference resolves inside the rendered DOM
+    /// (Signing redesign phase 2).
+    /// </summary>
+    private string? DescribedBy
+    {
+        get
+        {
+            var parts = new List<string>(2);
+            if (HasDescription)
+            {
+                parts.Add(_descriptionId);
+            }
+
+            if (HasValidationMessage)
+            {
+                parts.Add(_validationId);
+            }
+
+            return parts.Count == 0 ? null : string.Join(" ", parts);
+        }
+    }
+
     private string ShellClass => string.Join(" ", new[] { "tm-signing-number-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));
+
+    private static string BoolText(bool value) => value ? "true" : "false";
 
     private async Task HandleValueChangedAsync(ChangeEventArgs args)
     {

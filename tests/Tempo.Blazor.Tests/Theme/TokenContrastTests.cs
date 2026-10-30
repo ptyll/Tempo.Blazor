@@ -18,7 +18,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// convention <c>tokens-dark.css</c> already documents for <c>--tm-sort-indicator-active</c> and
 /// <c>--tm-color-on-primary</c>.
 /// </remarks>
-public sealed class TokenContrastTests
+public sealed partial class TokenContrastTests
 {
     /// <summary>
     /// Text×surface pairs held to AA. The denominator is this list itself: a token that vanishes from
@@ -476,6 +476,12 @@ public sealed class TokenContrastTests
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
+            // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
+            // paper-backdrop gray, dark rides the workspace tone so the white page floats on
+            // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the
+            // generic --tm-canvas-backdrop in the phase 15b review; the DiagramEditor keeps
+            // a --tm-diagram-backdrop alias on .tm-diagram-canvas.
+            "--tm-canvas-backdrop",
             "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
             "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
             "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",
@@ -1097,22 +1103,4 @@ public sealed class TokenContrastTests
             .Should().BeGreaterThanOrEqualTo(3, "checkbox accent, {0}", dark ? "dark" : "light");
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void StateFocusRings_HoldThreeToOne_AgainstTheSurface(bool indigo, bool dark)
-    {
-        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
-        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
-
-        foreach (var ring in new[] { "--tm-focus-ring-danger", "--tm-focus-ring-success" })
-        {
-            ThemeCss.Contrast(ThemeCss.LastShadowColour(tokens[ring], tokens), surface)
-                .Should().BeGreaterThanOrEqualTo(3,
-                    "{0} je non-text indikátor a musí držet 3:1 proti povrchu ({1} {2})",
-                    ring, indigo ? "indigo" : "default", dark ? "dark" : "light");
-        }
-    }
 }

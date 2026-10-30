@@ -4,5 +4,8 @@ namespace Tempo.Blazor.Abstractions.Models;
 public enum GanttViewDensity
 {
     Comfortable,
-    Compact
+    Compact,
+
+    /// <summary>Finger-sized rows (44 px) for touch devices: tree rows and timeline rows share the height.</summary>
+    Touch
 }

@@ -18,6 +18,39 @@
       "description": "The task being edited."
     },
     {
+      "name": "CanMoveUp",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "True when the task can move one place up among its siblings. Disables the Move up command; both move flags false hide the pair (there is nothing a move could do without a reorder handler upstream)."
+    },
+    {
+      "name": "CanMoveDown",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "True when the task can move one place down among its siblings. Disables the Move down command."
+    },
+    {
+      "name": "Tabbed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The tabbed presentation (the side sheet of a tablet container): the panel draws no header (the sheet owns the title and the close button) and splits its sections into the tabs Detail | Attachments | Comments | History. Default false is the single scrolling form of the desktop panel."
+    },
+    {
+      "name": "History",
+      "type": "IReadOnlyList<TmActivityEntry>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Audit entries; the History tab shows those whose EntityRef.EntityId is the edited task."
+    },
+    {
+      "name": "TimeZone",
+      "type": "TimeZoneInfo?",
+      "isRequired": false,
+      "description": "Zone the History tab shows its times in. Null: the machine zone."
+    },    {
       "name": "ActiveTimerTaskId",
       "type": "string?",
       "isRequired": false,
@@ -96,6 +129,44 @@
       "type": "EventCallback<(string TaskId, GanttTimeLogEntry Entry)>",
       "isRequired": false,
       "description": "Fires when the user stops the timer (arg = taskId + completed log entry)."
+    },
+    {
+      "name": "OnStatusChanged",
+      "type": "EventCallback<(string TaskId, TmWorkItemStatus NewStatus)>",
+      "isRequired": false,
+      "description": "Fires on Save when the Status field was changed (arg = task id + the new status); like the priority, the status is a draft until Save and Cancel reverts it. TmGantt applies it to the task and raises its own OnStatusChanged."
+    },
+    {
+      "name": "OnAction",
+      "type": "EventCallback<GanttTaskAction>",
+      "isRequired": false,
+      "description": "Fires when the user picks a command of the Actions section (mark done, add above / below / child, duplicate, delete). The section renders only when the host handles this callback."
+    },
+    {
+      "name": "IsOverloaded",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true the Progress section states that one of the task's assignees is over capacity (read-only)."
+    },
+    {
+      "name": "BaselineTask",
+      "type": "GanttBaselineTask?",
+      "isRequired": false,
+      "description": "The task's entry in the active baseline; when set the Progress section shows the start / end deviation from it (read-only)."
+    },
+    {
+      "name": "Breadcrumb",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional breadcrumb shown above the task title in the panel header."
+    },
+    {
+      "name": "MobileReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The mobile read-mostly presentation (decision G2): the panel is a fact sheet — Name, Start and End read-only, Status and Percent editable — and draws no footer (the sheet's sticky Cancel | Save commits through SaveAsync). The full editor stays tablet+."
     }
   ]
 }

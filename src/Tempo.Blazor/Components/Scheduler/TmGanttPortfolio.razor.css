@@ -1,0 +1,263 @@
+/* Portfolio View: one card per project. */
+.tm-gantt-portfolio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-3);
+}
+.tm-gantt-portfolio__project {
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    overflow: hidden;
+}
+.tm-gantt-portfolio__project-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+.tm-gantt-portfolio__project-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    padding: 0;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+.tm-gantt-portfolio__project-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+.tm-gantt-portfolio__project-toggle:focus-visible,
+.tm-gantt-portfolio__project-name--link:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+.tm-gantt-portfolio__project-name {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: var(--tm-font-size-md);
+    color: var(--tm-text-primary);
+}
+.tm-gantt-portfolio__project-name--link {
+    padding: 0;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: none;
+    font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+.tm-gantt-portfolio__project-name--link:hover {
+    text-decoration: underline;
+}
+.tm-gantt-portfolio__project-meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--tm-space-3);
+    margin-inline-start: auto;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+.tm-gantt-portfolio__project-progress {
+    flex: 0 1 8rem;
+    min-width: 4rem;
+}
+.tm-gantt-portfolio__project-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+.tm-gantt-portfolio__project-summary {
+    overflow: hidden;
+    max-height: 15rem;
+}
+
+.tm-gantt-portfolio__project-range,
+.tm-gantt-portfolio__project-count {
+    white-space: nowrap;
+}
+
+/* ─── Mobile card (phase 8, G2) ────────────────────────────────── */
+
+/* Component knob: a task with its own colour tints its mini-gantt bar (set inline by the markup). */
+.tm-gantt-portfolio__project {
+    --tm-gantt-portfolio-mini-color: var(--tm-color-primary-solid);
+}
+
+/* The mobile header lets the name and the percent wrap onto their own lines; the meta line moves
+   into the summary row below. */
+.tm-gantt-portfolio--mobile .tm-gantt-portfolio__project-meta {
+    display: none;
+}
+
+.tm-gantt-portfolio__project-summary-mobile {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__project-percent {
+    margin-inline-start: auto;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+/* The mini-gantt: month header spans over bar rows, percentages of the project range. Read-only. */
+.tm-gantt-portfolio__mini {
+    display: flex;
+    flex-direction: column;
+    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__mini-months {
+    position: relative;
+    height: 1.25rem;
+    margin-bottom: var(--tm-space-1);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__mini-month {
+    position: absolute;
+    top: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__mini-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+}
+
+.tm-gantt-portfolio__mini-name {
+    flex: 0 0 7.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt-portfolio__mini-track {
+    position: relative;
+    flex: 1;
+    height: 0.875rem;
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-gantt-portfolio__mini-bar {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-primary-solid);
+}
+
+.tm-gantt-portfolio__mini-bar--colored {
+    background: var(--tm-gantt-portfolio-mini-color, var(--tm-color-primary-solid));
+}
+
+/* ─── Shared axis (phase 11): ONE sticky header above the cards ─── */
+
+/* The header is a flex row: a leading cell as wide as the cards' task tree (the component knob is set
+   inline by the markup, +1px for the embedded chart's own border, so the axis cells start exactly where
+   every card's timeline starts) plus the scrollable band. Both keep the card's 1px border, so the visible
+   widths match. */
+.tm-gantt-portfolio__axis {
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    overflow: hidden;
+}
+
+.tm-gantt-portfolio__axis--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: var(--tm-shadow-card);
+    display: flex;
+    align-items: stretch;
+    /* Component knob: the pinned tree width, set inline by the markup (the host's TreeWidth or 12rem);
+       the lead cell is 1px wider so the axis cells start where the embedded chart's timelines start. */
+    --tm-gantt-portfolio-tree-width: 12rem;
+}
+
+.tm-gantt-portfolio__axis-lead {
+    flex: 0 0 auto;
+    width: calc(var(--tm-gantt-portfolio-tree-width, 12rem) + 1px);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--tm-space-3);
+    border-right: 1px solid var(--tm-border-color);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt-portfolio__axis-scroll {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.tm-gantt-portfolio__axis-content {
+    position: relative;
+}
+
+.tm-gantt-portfolio__axis-row {
+    position: relative;
+    height: 1.25rem;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt-portfolio__axis-row:last-child {
+    border-bottom: none;
+}
+
+.tm-gantt-portfolio__axis-cell {
+    position: absolute;
+    top: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border-left: 1px solid var(--tm-border-color);
+    padding-inline-start: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.25rem;
+    color: var(--tm-text-secondary);
+}
+
+/* Mobile (G2): the shared band is a percent row over the mini-gantts (nothing scrolls). */
+.tm-gantt-portfolio__axis--mobile .tm-gantt-portfolio__axis-row--months {
+    height: 1.25rem;
+}
+
+/* With the shared axis the per-card month rows are redundant: the one band above the cards carries the dates. */
+.tm-gantt-portfolio--shared .tm-gantt-portfolio__mini-months {
+    display: none;
+}

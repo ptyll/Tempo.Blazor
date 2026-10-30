@@ -12,6 +12,136 @@
   ],
   "parameters": [
     {
+      "name": "ToolbarLabels",
+      "type": "ToolbarLabels",
+      "isRequired": false,
+      "default": "ToolbarLabels.Icons",
+      "description": "How the toolbar buttons show their text. The default Icons keeps the icon-only row (the text stays the accessible name and the tooltip); IconsWithText shows every label; Auto shows them except on a toolbar narrower than 640px. Maps onto TmToolbar.Labels."
+    },
+    {
+      "name": "ShowQuickSearch",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the toolbar ends with a \"Search tasks…\" box that writes a Title/Contains entry into Filters (raising OnFiltersChanged); emptying the box removes it."
+    },
+    {
+      "name": "FilterPanelMode",
+      "type": "GanttFilterPanelMode",
+      "isRequired": false,
+      "default": "GanttFilterPanelMode.Inline",
+      "description": "How the filter editor is presented: Inline (default) is a strip under the toolbar, Dialog a modal dialog (a bottom sheet on a mobile viewport) whose footer is Clear all | Cancel | Apply, and Auto picks by the Gantt's own container (a dialog on a tablet or narrower container, the inline strip on a desktop one). Active filters also show as removable chips under the toolbar."
+    },
+    {
+      "name": "SidebarMode",
+      "type": "GanttSidebarMode",
+      "isRequired": false,
+      "default": "GanttSidebarMode.Rail",
+      "description": "How the Tasks / Workload / History / Notifications / Reports panels are offered: the vertical icon Rail (default) or a horizontal Tabs strip with text labels (ARIA tabs). ShowSidebar = false hides either."
+    },
+    {
+      "name": "ShowSummaryBand",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the summary band - the rollup strip (status donut, time, milestones, budget, WBS) under the tree + timeline, above a docked workload. Default false: the chart is unchanged. Shows in the chart views (Day / Week / Month / List) only; a desktop container renders five cards, a tablet two columns and the read-mostly mobile container a compact one-line strip with the full cards in the More sheet's Summary entry."
+    },
+    {
+      "name": "SummaryBandContent",
+      "type": "RenderFragment<GanttSummary>?",
+      "isRequired": false,
+      "description": "Replaces the built-in summary cards with host content; the context carries the computed GanttSummary. The band itself (its section, placement and the mobile compact strip) stays the component's."
+    },
+    {
+      "name": "BudgetTotal",
+      "type": "decimal?",
+      "isRequired": false,
+      "description": "The project's overall budget the budget card shows the actual cost against (\"320 000 of 500 000\"). Null (default): the budget card renders only when the tasks carry an actual cost, without a total."
+    },
+    {
+      "name": "BudgetCurrency",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Currency code appended to the budget amounts (e.g. \"CZK\"), formatted through the active culture. Null keeps bare numbers."
+    },
+    {
+      "name": "TimelineStart",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "Pins the timeline's first day, overriding the range computed from the data. The shared portfolio axis drives it (every card lays out against the union range, so the same date draws at the same x in every card); a host can pin its own axis too. Bars outside the range clip to the edge. A pinned axis locks the zoom: the effective preset is ZoomPreset, the pixels per day stay at zoom 100 and Ctrl+wheel zoom is ignored."
+    },
+    {
+      "name": "TimelineEnd",
+      "type": "DateTime?",
+      "isRequired": false,
+      "description": "Pins the timeline's last day (see TimelineStart). Null keeps the data's maximum end."
+    },
+    {
+      "name": "ShowTimelineHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Hides the two-row timeline header (month + week / day) without hiding the grid below it. The shared portfolio axis renders ONE header above the cards and switches it off on every card — the tree header collapses with it (visually hidden, still a treegrid header for assistive tech), so the first tree row stays level with the first bar. Default true."
+    },
+    {
+      "name": "TreeWidth",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Pins the task tree's width as a CSS length (e.g. \"200px\"); the shared portfolio axis pins one width on every card so the timelines start at the same x. Null keeps the chart's own width logic."
+    },
+    {
+      "name": "Virtualization",
+      "type": "GanttVirtualizationMode",
+      "isRequired": false,
+      "default": "GanttVirtualizationMode.Off",
+      "description": "Window virtualization for large data sets. Off (default) renders every visible row exactly as before; On renders only the visible window of rows plus OverscanRows on each side (the tree and the timeline, one mechanism at every layout); Auto virtualizes only once the visible set reaches VirtualizationThreshold rows. The window is computed arithmetically from the fixed RowHeight in the browser (gantt.js); without JS (prerender, a missing script) the first OverscanRows × 3 rows render and the keyboard still pins what it focuses."
+    },
+    {
+      "name": "VirtualizationThreshold",
+      "type": "int",
+      "isRequired": false,
+      "default": "300",
+      "description": "Visible-row count from which Auto starts to virtualize. Below it the full render is cheaper than the window bookkeeping."
+    },
+    {
+      "name": "OverscanRows",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "Extra rows rendered above and below the window so a scroll step never shows an unpainted edge."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content at the start of the header row, after the Title (a project switcher, a breadcrumb)."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions at the end of the header row (Share, Save…). The Gantt has no built-in header actions."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Header title text. The header renders only when at least one of Title, Subtitle, HeaderStart or HeaderActions is set."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Secondary header line under the Title."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Set false to hide the header row even when its slots are filled. With no slot set there is no header (today's look)."
+    },
+    {
       "name": "Items",
       "type": "IReadOnlyList<TmWorkItem>",
       "isRequired": false,
@@ -55,7 +185,14 @@
     {
       "name": "ShowTaskPanel",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Whether the task panel is shown. The Gantt never assigns this parameter: internal changes update the internal open state and raise ShowTaskPanelChanged (two-way), and a changed incoming value re-seeds it."
+    },
+    {
+      "name": "ShowTaskPanelChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the task panel's open state changes through an internal path (open on selection, toolbar toggle, sheet close). Pair with ShowTaskPanel for two-way binding."
     },
     {
       "name": "OnTaskAdded",
@@ -118,7 +255,7 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Fires when the user clicks \"Run\" on a report."
+      "description": "Additional CSS classes appended to the root element."
     },
     {
       "name": "Columns",
@@ -219,6 +356,12 @@
       "type": "EventCallback<IReadOnlyList<GanttTask>>",
       "isRequired": false,
       "description": "Fires when an import operation completes successfully."
+    },
+    {
+      "name": "OnImportResultCompleted",
+      "type": "EventCallback<GanttImportResult>",
+      "isRequired": false,
+      "description": "Fires when a result-capable import completes with the full payload — tasks, dependencies and warnings. Raised in addition to OnImportCompleted (which keeps carrying only the tasks), after every new dependency has also been announced through OnDependencyAdded."
     },
     {
       "name": "OnImportError",
@@ -335,7 +478,7 @@
       "name": "ShowWorkloadPanel",
       "type": "bool",
       "isRequired": false,
-      "description": "When true, shows the workload panel below the Gantt timeline."
+      "description": "Computes the workload overload that drives the warning icons next to a task's assignees (nothing is drawn by this flag itself; the docked panel is switched on with WorkloadPlacement). Unchanged."
     },
     {
       "name": "ViewSettings",
@@ -366,7 +509,103 @@
     {
       "name": "ContainerWidth",
       "type": "double?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Obsolete: use LayoutMode. Width in pixels the Fit to screen action fits the timeline into. When null (default) the timeline element is measured in the browser. While LayoutMode is Auto, a width set here is also classified into a layout (below 640 mobile, below 1024 tablet, otherwise desktop)."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the Gantt renders. Auto (default) measures the Gantt's own container (desktop from 1024 px, tablet from 640 px, otherwise mobile); a forced value, or a forced cascading TmLayoutContext ancestor, pins it. Tablet renders a two-row toolbar with a More overflow, a narrower task tree and finger-sized targets; the layout is stamped as data-layout on the root."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes (never for the initial value). Do not pair it with LayoutMode."
+    },
+    {
+      "name": "TaskBreadcrumb",
+      "type": "Microsoft.AspNetCore.Components.RenderFragment",
+      "isRequired": false,
+      "description": "Optional breadcrumb (a host-drawn project / parent path) for the task detail: the task panel header and the mobile task sheet render it above the task title. Null renders nothing."
+    },
+    {
+      "name": "TaskPanelMode",
+      "type": "GanttTaskPanelMode",
+      "isRequired": false,
+      "default": "GanttTaskPanelMode.Inline",
+      "description": "How the task panel and the Reports inspector are presented: Inline (default) is the in-flow column at every width, Overlay a TmSidePanel side sheet with the tabs Detail | Attachments | Comments | History, Auto the in-flow panel on a desktop container and the side sheet on a tablet or narrower one. On a narrow container at most one right-hand surface (task panel, reports, history) is open."
+    },
+    {
+      "name": "OnNewReportRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user asks for a new report from the Reports panel. The \"New report\" button is only rendered when the host handles this callback."
+    },
+    {
+      "name": "OnDescriptionChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires when the user edits the description of the selected task in the task panel (live)."
+    },
+    {
+      "name": "OnAttachmentUpload",
+      "type": "EventCallback<IBrowserFile>",
+      "isRequired": false,
+      "description": "Fires when the user picks a file to attach to the selected task in the task panel. Persisting the file is the host's job."
+    },
+    {
+      "name": "OnAttachmentRemoved",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the user removes an attachment of the selected task in the task panel (argument = attachment id)."
+    },
+    {
+      "name": "WorkloadDisplayModeChanged",
+      "type": "EventCallback<WorkloadDisplayMode>",
+      "isRequired": false,
+      "description": "Raised when the user flips the Hours | Percent segment of the docked workload panel (arg = the new mode; two-way with WorkloadDisplayMode)."
+    },
+    {
+      "name": "WorkloadPlacement",
+      "type": "GanttWorkloadPlacement",
+      "isRequired": false,
+      "default": "GanttWorkloadPlacement.View",
+      "description": "Where the workload is shown. View (default) keeps the alternate Workload view; Docked adds a panel under the timeline that shares the Gantt's date range and scrolls horizontally with it. The panel renders whatever ShowWorkloadPanel says - that flag only switches on the overload computation behind the warning icons; its semantics are unchanged."
+    },
+    {
+      "name": "HistoryDrawerPlacement",
+      "type": "GanttHistoryDrawerPlacement",
+      "isRequired": false,
+      "default": "GanttHistoryDrawerPlacement.Component",
+      "description": "What the history drawer is positioned against: Component (default) pins it to the right edge of this Gantt; Viewport restores the pre-redesign full-viewport-height panel."
+    },
+    {
+      "name": "ShowToolbar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false the command toolbar is not rendered (a nested Gantt of the portfolio, a host that drives the chart through its own chrome). The panel tabs / sidebar are switched off separately by ShowSidebar."
+    },
+    {
+      "name": "OnReportEdit",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Edit in a report card's menu. The menu item (and the menu) exist only when this is handled."
+    },
+    {
+      "name": "OnReportDelete",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Delete in a report card's menu. The menu item (and the menu) exist only when this is handled."
+    },
+    {
+      "name": "OnReportDuplicate",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Duplicate in a report card's menu. The menu item (and the menu) exist only when this is handled."
     }
   ]
 }

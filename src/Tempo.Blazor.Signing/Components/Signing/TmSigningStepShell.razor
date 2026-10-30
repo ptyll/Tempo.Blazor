@@ -2,11 +2,13 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <section @attributes="AdditionalAttributes"
-         class="@RootClass"
-         aria-invalid="@BoolText(HasValidationMessage)">
+         class="@RootClass">
     <header class="tm-signing-step-shell__header">
         <div class="tm-signing-step-shell__heading">
-            <h3 class="tm-signing-step-shell__title">@DisplayLabel</h3>
+            @* The title is the step's focus target and the accessible name of the step's
+               unlabelled inputs: stable id (also cascaded via TmSigningStepShellContext) and
+               tabindex="-1" so FocusAsync can move to it after a step change. *@
+            <h3 id="@TitleElementId" class="tm-signing-step-shell__title" tabindex="-1" @ref="_titleElement">@DisplayLabel</h3>
             @if (IsRequired)
             {
                 <span class="tm-signing-step-shell__required">@Loc["TmSigning_Required"]</span>
@@ -23,17 +25,19 @@
         }
     </header>
 
-    @if (!string.IsNullOrWhiteSpace(ResolvedDescription))
+    @if (HasDescription)
     {
-        <div class="tm-signing-step-shell__description">@((MarkupString)FormatDescription(ResolvedDescription))</div>
+        <div id="@DescriptionElementId" class="tm-signing-step-shell__description">@((MarkupString)FormatDescription(ResolvedDescription))</div>
     }
 
     <div class="tm-signing-step-shell__content">
-        @ChildContent
+        <CascadingValue Value="Context" IsFixed="false">
+            @ChildContent
+        </CascadingValue>
     </div>
 
     @if (HasValidationMessage)
     {
-        <div id="@ValidationMessageId" class="tm-signing-step-shell__validation" role="alert">@ValidationMessage</div>
+        <div id="@ValidationMessageElementId" class="tm-signing-step-shell__validation" role="alert">@EffectiveValidationMessage</div>
     }
 </section>

@@ -8,6 +8,32 @@ namespace Tempo.Blazor.E2E;
 [TestCategory("WASM")]
 public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
 {
+    [TestMethod]
+    [Description("Fáze 14: the editing inputs carry visible labels and the name-required error is announced")]
+    public async Task Editing_InputsLabeledAndValidationErrorAnnounced()
+    {
+        var page = await OpenLoadedModelingPageAsync("?editing=1");
+
+        await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+        var name = page.Locator("#modeling-inspector-name");
+        await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        // Every editing input is labeled (the label's for= points at the input).
+        var labelFor = await page.Locator("label[for='modeling-inspector-name']").GetAttributeAsync("for");
+        Assert.AreEqual("modeling-inspector-name", labelFor);
+        Assert.AreEqual(1, await page.Locator("label[for='modeling-inspector-description']").CountAsync(),
+            "the description textarea is labeled");
+        Assert.AreEqual(1, await page.Locator("label[for='modeling-inspector-property-owner']").CountAsync(),
+            "the scalar property input is labeled");
+
+        // An empty name commit shows the localized required message and marks the field invalid.
+        await name.FillAsync(string.Empty);
+        await name.PressAsync("Enter");
+        var error = page.Locator("[data-testid='modeling-inspector'] .tm-input-error-message").First;
+        await error.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        Assert.AreEqual("true", await name.GetAttributeAsync("aria-invalid"), "the invalid name is aria-invalid");
+    }
+
     private const string ModelingEditorUrl = "/modeling-editor";
 
     [TestMethod]
@@ -45,10 +71,20 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
 
+        // Phase 5 (MO1): the reload control lives in the inspector's Source tab on the docked
+        // layout — open it first, then the tab walk reaches the button.
+        await page.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        await page.Locator("[data-testid='modeling-source-load-button']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
         await FocusByTabAsync(page, "modeling-source-load-button", 120);
         await page.Keyboard.PressAsync("Enter");
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Back to the Properties tab: only the ACTIVE inspector tab renders its body (MO1), and
+        // the inspector assertions below read the Properties body.
+        await page.Locator("[data-testid='modeling-tab-properties']").ClickAsync(new LocatorClickOptions { Timeout = 15000 });
 
         await FocusByTabAsync(page, "modeling-generate-diagram-button", 160);
         await page.Keyboard.PressAsync("Enter");
@@ -60,11 +96,15 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         var focusedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
         Assert.IsFalse(string.IsNullOrWhiteSpace(focusedElementId), $"Focused tree node '{focusedTreeNodeTestId}' should expose data-element-id.");
 
-        await page.Keyboard.PressAsync("ArrowDown");
+        // The flat visible list interleaves group treeitems and nodes: walk forward until the
+        // focus lands on a DIFFERENT node (the entry after a node may be the next header).
         var navigatedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
-        if (string.Equals(focusedElementId, navigatedElementId, StringComparison.Ordinal))
+        for (var guard = 0;
+             guard < 20 && (string.IsNullOrWhiteSpace(navigatedElementId)
+                 || string.Equals(navigatedElementId, focusedElementId, StringComparison.Ordinal));
+             guard++)
         {
-            await page.Keyboard.PressAsync("ArrowUp");
+            await page.Keyboard.PressAsync("ArrowDown");
             navigatedElementId = await ReadActiveElementAttributeAsync(page, "data-element-id");
         }
 
@@ -88,10 +128,17 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         await page.Locator("[data-testid='modeling-open-in-editor-button']").FocusAsync();
         await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
 
+        // Phase 4: the dialog is a core TmModal — the preserved test id rides on the overlay
+        // root, the dialog semantics (role/aria-modal/aria-labelledby) on its .tm-modal panel.
         var overlay = page.Locator("[data-testid='modeling-open-diagram-editor']");
         await Assertions.Expect(overlay).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
-        await Assertions.Expect(overlay).ToHaveAttributeAsync("role", "dialog");
-        await Assertions.Expect(overlay).ToHaveAttributeAsync("aria-modal", "true");
+        var dialog = overlay.Locator(".tm-modal");
+        await Assertions.Expect(dialog).ToHaveAttributeAsync("role", "dialog");
+        await Assertions.Expect(dialog).ToHaveAttributeAsync("aria-modal", "true");
+        var labelledBy = await dialog.GetAttributeAsync("aria-labelledby");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(labelledBy), "The dialog is named by its title element.");
+        await Assertions.Expect(overlay.Locator($"[id='{labelledBy}']")).ToBeVisibleAsync();
+
         await WaitForActiveTestIdAsync(page, "modeling-open-diagram-close");
 
         await page.Locator("[data-testid='modeling-open-diagram-close']").ClickAsync();
@@ -100,7 +147,7 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Issues and status changes expose screen-reader metadata through listitem roles, aria-labels, and live status")]
+    [Description("Issues expose screen-reader metadata: navigable issues are buttons whose accessible name is their visible content plus a hidden hint, sourceless issues keep accessible text")]
     public async Task IssuePanelAndStatusStrip_ExposeScreenReaderMetadata()
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
@@ -108,16 +155,43 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         var issueItems = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem']");
         await Assertions.Expect(issueItems).Not.ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
         var itemCount = await issueItems.CountAsync();
-        var buttonCount = await page.Locator("[data-testid='modeling-issue-list'] button[aria-label]").CountAsync();
-        Assert.AreEqual(itemCount, buttonCount, "Every issue list item should expose a labeled interactive target.");
+
+        // Only issues WITH a source element/relationship render as buttons. The button's
+        // accessible name is its visible content (there is deliberately NO aria-label
+        // override) plus a visually-hidden navigation hint.
+        var navigableButtons = page.Locator("[data-testid='modeling-issue-list'] button[data-severity]");
+        var navigableCount = await navigableButtons.CountAsync();
+        Assert.IsTrue(navigableCount > 0, "Navigable issues should expose a button target.");
 
         var unlabeledIssues = await page.EvaluateAsync<string[]>(
             """
             () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] button'))
-                .filter(button => (button.getAttribute('aria-label') || '').trim().length < 12)
+                .filter(button => (button.textContent || '').replace(/\s+/g, ' ').trim().length < 12)
                 .map(button => button.textContent.trim())
             """);
-        Assert.AreEqual(0, unlabeledIssues.Length, "Issue buttons should have readable aria-labels.");
+        Assert.AreEqual(0, unlabeledIssues.Length, "Issue buttons should expose readable content as their accessible name.");
+
+        var hintSpans = await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] button .tm-sr-only'))
+                .map(span => (span.textContent || '').trim())
+            """);
+        Assert.AreEqual(navigableCount, hintSpans.Length, "Every navigable issue button carries the visually-hidden navigate hint.");
+
+        // Sourceless issues are NOT buttons — they keep their accessible text in the reading order.
+        var staticItems = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem'] > div[data-severity]");
+        var staticCount = await staticItems.CountAsync();
+        Assert.AreEqual(itemCount, navigableCount + staticCount,
+            "Every issue item is either a labeled button (navigable) or a text-only item (sourceless).");
+        Assert.IsTrue(staticCount > 0, "The issues-mixed scenario carries a sourceless issue.");
+
+        var staticTexts = await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelectorAll('[data-testid="modeling-issue-list"] > li[role="listitem"] > div[data-severity]'))
+                .map(item => (item.textContent || '').replace(/\s+/g, ' ').trim())
+            """);
+        Assert.IsTrue(staticTexts.All(text => text.Length >= 12),
+            "Sourceless issue items keep their accessible text: " + string.Join(" | ", staticTexts));
 
         var status = page.Locator("[data-testid='modeling-status-strip']");
         await Assertions.Expect(status).ToHaveAttributeAsync("role", "status");
@@ -136,6 +210,56 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
         var dark = await OpenLoadedModelingPageAsync("?scenario=issues-mixed", dark: true);
         var darkFailures = await CaptureContrastFailuresAsync(dark);
         Assert.AreEqual(0, darkFailures.Length, "Dark theme contrast failures:" + Environment.NewLine + string.Join(Environment.NewLine, darkFailures));
+    }
+
+    [TestMethod]
+    [Description("The canvas area OUTSIDE the page follows the theme (phase 15b): in the open-editor dialog the dark backdrop is dark (not a light frame around the white paper), light keeps the paper-backdrop gray")]
+    public async Task CanvasBackdrop_FollowsTheTheme()
+    {
+        static string? BackdropFill(IPage page) => page.EvaluateAsync<string?>(
+            """
+            () => {
+                const rect = document.querySelector("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas'] .tm-diagram-page-backdrop");
+                return rect ? getComputedStyle(rect).fill : null;
+            }
+            """).GetAwaiter().GetResult();
+
+        static int[] Rgb(string fill) => fill.Split(',')
+            .Select(part => int.Parse(part.Trim().TrimStart("rgb(".ToCharArray()).TrimEnd(')')))
+            .ToArray();
+
+        // The page-backdrop rect renders only where the embedded editor shows the page view —
+        // the modeling preview runs ShowPageView=false, so the probe targets the embedded
+        // editor inside the "Open in editor" dialog (the surface F8 m5 shipped the defect on).
+        var light = await OpenEditorDialogAsync("?scenario=issues-mixed");
+        var lightFill = BackdropFill(light);
+        Assert.IsNotNull(lightFill, "the dialog's embedded canvas renders the page-backdrop rect");
+        var lightRgb = Rgb(lightFill!);
+        Assert.IsTrue(lightRgb[0] > 200 && lightRgb[1] > 200 && lightRgb[2] > 200,
+            $"light backdrop stays the paper-backdrop gray, got '{lightFill}'");
+        Assert.IsFalse(lightRgb[0] > 250 && lightRgb[1] > 250 && lightRgb[2] > 250,
+            $"light backdrop is the gray-100 paper backdrop, not the white paper itself, got '{lightFill}'");
+
+        var dark = await OpenEditorDialogAsync("?scenario=issues-mixed", dark: true);
+        var darkFill = BackdropFill(dark);
+        Assert.IsNotNull(darkFill, "the dark dialog's embedded canvas renders the page-backdrop rect");
+        var darkRgb = Rgb(darkFill!);
+        Assert.IsTrue(darkRgb[0] < 80 && darkRgb[1] < 80 && darkRgb[2] < 80,
+            $"dark backdrop follows the theme (workspace tone), got '{darkFill}' — a light frame around the paper is the F8 m5 defect");
+    }
+
+    /// <summary>Opens the modeling page and the "Open in editor" dialog, waiting for the
+    /// embedded DiagramEditor canvas to be visible (the same waits the M23 demo route uses).</summary>
+    private async Task<IPage> OpenEditorDialogAsync(string query, bool dark = false)
+    {
+        var page = await OpenLoadedModelingPageAsync(query, dark);
+        await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
+        await page.Locator("[data-testid='modeling-open-diagram-editor']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.WaitForTimeoutAsync(300);
+        return page;
     }
 
     [TestMethod]
@@ -226,15 +350,38 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
 
         if (dark)
         {
-            await page.EvaluateAsync(
-                """
-                () => {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    document.documentElement.classList.add('tm-dark', 'dark');
-                    document.body.classList.add('tm-dark', 'dark');
-                    document.querySelector('[data-theme]')?.setAttribute('data-theme', 'dark');
-                }
-                """);
+            // Click the demo's ThemeToggle (the ThemeService owns .demo-shell's data-theme + the
+            // Tailwind dark class) and WAIT for the dark scope: stamping <html> alone was not
+            // enough — querySelector('[data-theme]') returned the html we had just stamped, so
+            // .demo-shell stayed light and the dark contrast pass measured a light page.
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                // Review fix (phase 5): the demo page hides the sidebar from 1264px of viewport
+                // up — the toggle is display:none, so dispatch the click instead of pointing a
+                // cursor at it (the wireframe phase-2 pattern).
+                await toggle.First.DispatchEventAsync("click");
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
             await page.WaitForTimeoutAsync(300);
         }
 
@@ -266,6 +413,18 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
             if (activeTestId.StartsWith("modeling-tree-node-", StringComparison.Ordinal))
             {
                 return activeTestId;
+            }
+
+            // The APG tree exposes ONE Tab stop (the roving tabindex on the active treeitem);
+            // once inside, the flat visible list is walked with the arrow keys.
+            if (activeTestId.StartsWith("modeling-tree-group-", StringComparison.Ordinal))
+            {
+                await page.Keyboard.PressAsync("ArrowDown");
+                var afterArrow = await ReadActiveTestIdAsync(page);
+                if (afterArrow.StartsWith("modeling-tree-node-", StringComparison.Ordinal))
+                {
+                    return afterArrow;
+                }
             }
 
             await page.Keyboard.PressAsync("Tab");

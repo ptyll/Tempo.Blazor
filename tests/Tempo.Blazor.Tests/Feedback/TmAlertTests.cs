@@ -21,6 +21,24 @@ public class TmAlertTests : LocalizationTestBase
         cut.Find("[role='alert']").Should().NotBeNull();
     }
 
+    /// <summary>
+    /// The Role parameter is the EFFECTIVE role on the root (Signing redesign phase 3 review): the
+    /// signing runner's all-done banner passes <c>status</c> so the news announces politely instead
+    /// of interrupting as a second alert.
+    /// </summary>
+    [Fact]
+    public void Alert_Role_Parameter_IsTheEffectiveRole()
+    {
+        var cut = Render<TmAlert>(p => p
+            .Add(x => x.Severity, AlertSeverity.Success)
+            .Add(x => x.Role, "status")
+            .AddChildContent("All done"));
+
+        var root = cut.Find(".tm-alert");
+        root.GetAttribute("role").Should().Be("status", "the parameter is the effective role");
+        cut.FindAll("[role='alert']").Should().BeEmpty("no hardcoded alert role may survive the override");
+    }
+
     [Fact]
     public void Alert_RendersChildContent()
     {

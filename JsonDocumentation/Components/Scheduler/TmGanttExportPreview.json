@@ -1,0 +1,45 @@
+{
+  "itemName": "TmGanttExportPreview",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal detail of TmGanttExportDialog: the built-in live preview of the chosen export format and options. Pure SVG/HTML (no JavaScript, no rasterization) — PDF/PNG draw the miniature page in the paper's aspect ratio with bars, optional critical path, today line and workload strip; Excel shows the first 20 rows of the selected columns; XML shows the task / dependency / milestone counts. The whole sketch is one role=\"img\" element with a localized summary label over an aria-hidden body, and it collapses into a details on a fullscreen mobile dialog. Render it through the dialog (PreviewTasks); the dialog's PreviewContent slot is the host's way in.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttExportPreview.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<TmWorkItem>",
+      "isRequired": false,
+      "description": "Visible tasks to sketch."
+    },
+    {
+      "name": "Dependencies",
+      "type": "IReadOnlyList<GanttDependency>",
+      "isRequired": false,
+      "description": "Dependencies between the visible tasks (drawn as short connectors)."
+    },
+    {
+      "name": "CriticalPathIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Ids of the tasks on the critical path; painted only when the critical-path option asks for it."
+    },
+    {
+      "name": "Options",
+      "type": "GanttExportOptions",
+      "isRequired": false,
+      "description": "The dialog's current selection: format, paper, orientation, zoom, toggles, columns."
+    },
+    {
+      "name": "Layout",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The resolved layout of the dialog; a fullscreen mobile dialog collapses the preview into a details."
+    }
+  ]
+}

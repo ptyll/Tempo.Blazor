@@ -70,11 +70,26 @@ internal static class ThemeCss
 
     public static string Normalise(string text) => Whitespace.Replace(text, " ").Trim();
 
-    /// <summary>All <c>--tm-*</c> declarations of a file, later declarations winning.</summary>
+    /// <summary>
+    /// A rule whose every selector part is a light island (<c>[data-theme="light"]</c>, tokens-dark.css). The
+    /// flat readers model "the dark theme layered over the light one", so the island - which exists to reset
+    /// a dark ancestor - must not win "later declaration" over the dark block. <c>ThemeLightIslandTests</c>
+    /// reads it on its own.
+    /// </summary>
+    private static readonly Regex LightIsland =
+        new(@"(?<selector>[^{}]*\[data-theme\s*=\s*""light""\][^{}]*)\{[^{}]*\}", RegexOptions.Compiled, RegexTimeout);
+
+    private static string WithoutLightIslands(string css) =>
+        LightIsland.Replace(css, match =>
+            SelectorParts(match.Groups["selector"].Value).All(part => part.Contains("[data-theme=\"light\"]", StringComparison.Ordinal))
+                ? " "
+                : match.Value);
+
+    /// <summary>All <c>--tm-*</c> declarations of a file, later declarations winning (light islands excluded).</summary>
     public static Dictionary<string, string> Declarations(string path)
     {
         var declarations = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (Match match in Declaration.Matches(StripComments(File.ReadAllText(path))))
+        foreach (Match match in Declaration.Matches(WithoutLightIslands(StripComments(File.ReadAllText(path)))))
         {
             declarations[match.Groups["name"].Value] = Normalise(match.Groups["value"].Value);
         }

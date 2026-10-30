@@ -1,0 +1,141 @@
+/* TmGanttMobileOverlays: the read-mostly sheets (the "More" menu of the action bar, the minimal
+   add-task sheet, the read-only history sheet) and the limited long-press menu of the mobile
+   container (phase 8, G2). The sheets' chrome (header, close, footer slot) is the core TmSidePanel;
+   these rules paint only the entries and the forms this component renders. */
+
+/* The "More" sheet: full-width 44px entries with the icon at the start. */
+.tm-gantt__more-menu {
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-gantt__more-back {
+    padding-bottom: var(--tm-space-2);
+    margin-bottom: var(--tm-space-1);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__more-entry {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-3);
+    border: 0;
+    background: transparent;
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-gantt__more-entry:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-gantt__more-entry:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The minimal add-task sheet: one field per row, the two dates side by side. */
+.tm-gantt__add-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__add-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-gantt__add-label {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__add-dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__add-error {
+    margin: 0;
+    color: var(--tm-color-danger);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The sticky footer of the add-task sheet (the TmSidePanel FooterContent slot). */
+.tm-gantt__add-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3) calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+/* The limited long-press menu: the same popover reading as the desktop context menu, but the
+   desktop rules live in TmGantt.razor.css (scoped to TmGantt) and can never reach this component's
+   elements - scoped CSS of a parent does not style a child component's markup. */
+.tm-gantt__mobile-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+}
+
+.tm-gantt__mobile-menu {
+    position: absolute;
+    max-height: calc(100% - var(--tm-space-4));
+    overflow-y: auto;
+    min-width: 180px;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    box-shadow: var(--tm-shadow-popover);
+    padding: var(--tm-space-1, 0.25rem) 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-gantt__mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    background: transparent;
+    border: none;
+    color: var(--tm-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s ease;
+}
+
+.tm-gantt__mobile-menu-item:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-gantt__mobile-menu-item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-gantt__mobile-menu-divider {
+    height: 1px;
+    background: var(--tm-border-color);
+    margin: var(--tm-space-1, 0.25rem) 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-gantt__mobile-menu-item {
+        transition: none;
+    }
+}

@@ -1,0 +1,67 @@
+/* ─── History drawer ─────────────────────────────────────────────── */
+
+/* Positioned against the Gantt root (position: relative there): the drawer covers the component, not the page. */
+.tm-gantt__history-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(380px, 95%);
+    background: var(--tm-bg-surface);
+    border-left: 1px solid var(--tm-border-color);
+    box-shadow: var(--tm-shadow-popover);
+    z-index: var(--tm-z-sticky);
+    display: flex;
+    flex-direction: column;
+    outline: none;
+}
+
+/* Opt-in (HistoryDrawerPlacement.Viewport): the pre-redesign full-height panel on the viewport edge. */
+.tm-gantt__history-drawer--viewport {
+    position: fixed;
+    bottom: auto;
+    height: 100vh;
+    width: min(380px, 95vw);
+    z-index: 900;
+}
+
+.tm-gantt__history-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__history-drawer-title {
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: var(--tm-font-size-lg);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__history-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--tm-space-3) var(--tm-space-4);
+}
+
+/* The drawer's own close button (it used to borrow the removed dialog shell's .tm-gantt__dialog-close). */
+.tm-gantt__dialog-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--tm-text-secondary);
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    display: flex;
+    align-items: center;
+}
+
+.tm-gantt__dialog-close:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-gantt__dialog-close:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}

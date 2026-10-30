@@ -165,7 +165,7 @@
 
 .tm-cbl__add-label:disabled {
     border-color: var(--tm-border-color);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-tertiary);
     opacity: 0.55;
 }
@@ -179,7 +179,7 @@
     margin: 0;
     padding: var(--tm-space-2);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-tertiary);
     font-size: var(--tm-font-size-sm);
 }

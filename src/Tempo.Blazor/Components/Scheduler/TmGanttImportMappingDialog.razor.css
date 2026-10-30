@@ -1,0 +1,56 @@
+/* ─── Import mapping dialog ──────────────────────────────────────── *
+   The shell is the core TmModal; this file styles only the content it renders. */
+
+.tm-gantt__mapping-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--tm-space-3);
+    padding-bottom: var(--tm-space-2);
+    margin-bottom: var(--tm-space-1);
+    border-bottom: 1px solid var(--tm-border-color);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__mapping-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--tm-space-3);
+    align-items: center;
+    padding: var(--tm-space-2) 0;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-gantt__mapping-row--duplicate {
+    background: var(--tm-color-warning-subtle);
+    box-shadow: -0.25rem 0 0 var(--tm-color-warning-subtle), 0.25rem 0 0 var(--tm-color-warning-subtle);
+}
+
+.tm-gantt__mapping-source {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+/* ::deep: Class="…" on TmSelect / TmAlert lands on the CHILD component's root, which carries no scope attribute of
+   this component. */
+.tm-gantt__mapping-row ::deep .tm-gantt__mapping-select {
+    width: 100%;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__mapping-row ::deep .tm-gantt__mapping-select select {
+    height: 2rem;
+}
+
+.tm-gantt__mapping-header ~ ::deep .tm-gantt__mapping-duplicate {
+    margin-top: var(--tm-space-3);
+}
+
+.tm-gantt__mapping-validation {
+    margin: var(--tm-space-3) 0 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}

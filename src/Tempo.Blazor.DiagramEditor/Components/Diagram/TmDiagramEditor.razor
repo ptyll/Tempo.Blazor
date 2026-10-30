@@ -50,9 +50,236 @@
                    MobileSheetSnapPoints="MobileSheetSnapPoints"
                    ShowMobilePanelsToggle="@(!HasMobileActionBar)"
                    LeftWidth="220px" MinLeftWidth="180" MaxLeftWidth="360"
-                   RightWidth="300px" MinRightWidth="240" MaxRightWidth="440">
-        <Header>
-            @* ── Page tabs (DI3: pages stay on top) ──────────────────────────── *@
+                   RightWidth="300px" MinRightWidth="240" MaxRightWidth="440"
+                   Header="@HeaderSlot">
+
+        <Canvas>
+            @* ── Search panel ────────────────────────────────────────────────── *@
+            @if (_showSearchPanel)
+            {
+                <TmDiagramSearchPanel Query="@_searchQuery"
+                                      QueryChanged="OnSearchQueryChanged"
+                                      ResultsCount="_searchResults.Count"
+                                      CurrentIndex="_searchCurrentIndex"
+                                      CurrentIndexChanged="OnSearchIndexChanged"
+                                      SearchAllPages="_searchAllPages"
+                                      SearchAllPagesChanged="OnSearchAllPagesChanged"
+                                      ReplaceQuery="@_replaceQuery"
+                                      ReplaceQueryChanged="OnReplaceQueryChanged"
+                                      UseRegex="_searchUseRegex"
+                                      UseRegexChanged="OnSearchUseRegexChanged"
+                                      RegexError="@_regexError"
+                                      ReadOnly="@IsReadOnly"
+                                      OnReplace="OnReplace"
+                                      OnReplaceAll="OnReplaceAll"
+                                      OnClose="CloseSearchPanel" />
+            }
+
+            @* ── Import / export error banners ───────────────────────────────── *@
+            @if (_importError is not null)
+            {
+                <TmAlert Severity="AlertSeverity.Error"
+                         Dismissable="true"
+                         OnDismiss="() => _importError = null"
+                         Class="tm-diagram-editor__banner">
+                    @_importError
+                </TmAlert>
+            }
+
+            @if (_exportError is not null)
+            {
+                <TmAlert Severity="AlertSeverity.Error"
+                         Dismissable="true"
+                         OnDismiss="() => _exportError = null"
+                         Class="tm-diagram-editor__banner">
+                    @_exportError
+                </TmAlert>
+            }
+
+            <div class="tm-diagram-editor__canvas-wrap @(_showRulers ? "tm-diagram-editor__canvas-wrap--rulers" : "")">
+                @if (_showRulers)
+                {
+                    <div class="tm-diagram-editor__ruler-corner"></div>
+                    <div class="tm-diagram-editor__ruler-h">
+                        <TmDiagramRuler Orientation="horizontal"
+                                        ViewportX="_rulerViewportX"
+                                        ViewportY="_rulerViewportY"
+                                        ViewportW="_rulerViewportW"
+                                        ViewportH="_rulerViewportH"
+                                        Zoom="_zoomLevel"
+                                        Unit="_document?.ActivePage?.RulerUnit ?? MeasurementUnit.Px"
+                                        Scale="_document?.ActivePage?.PageScale ?? 1.0"
+                                        CursorX="_rulerCursorX"
+                                        CursorY="_rulerCursorY" />
+                    </div>
+                    <div class="tm-diagram-editor__ruler-v">
+                        <TmDiagramRuler Orientation="vertical"
+                                        ViewportX="_rulerViewportX"
+                                        ViewportY="_rulerViewportY"
+                                        ViewportW="_rulerViewportW"
+                                        ViewportH="_rulerViewportH"
+                                        Zoom="_zoomLevel"
+                                        Unit="_document?.ActivePage?.RulerUnit ?? MeasurementUnit.Px"
+                                        Scale="_document?.ActivePage?.PageScale ?? 1.0"
+                                        CursorX="_rulerCursorX"
+                                        CursorY="_rulerCursorY" />
+                    </div>
+                }
+                <TmDiagramCanvas @ref="_canvas"
+                                 Document="@_document"
+                                 DocumentChanged="OnDocumentChanged"
+                                 ShowGrid="@ShowGrid"
+                                 GridSize="@GridSize"
+                                 ReadOnly="@IsReadOnly"
+                                 ShowTransformHandles="@(!IsMobileLayout)"
+                                 ShowConnectArrows="@(!IsMobileLayout)"
+                                 Zoom="@_zoomLevel"
+                                 ShowPageView="@ShowPageView"
+                                 OnSelectionChanged="OnSelectionChanged"
+                                 OnToolModeChanged="OnCanvasToolModeChanged"
+                                 ZoomChanged="OnCanvasZoomChanged"
+                                 ViewportChanged="OnCanvasViewportChanged"
+                                 OnToolboxDrop="OnToolboxDrop"
+                                 OnPortMouseDownEvent="OnPortMouseDownEvent"
+                                 OnEdgeCreated="OnEdgeCreated"
+                                 OnNodeContextMenu="OnNodeContextMenu"
+                                 OnEdgeContextMenu="OnEdgeContextMenu"
+                                 OnTableCellContextMenu="OnTableCellContextMenu"
+                                 OnCanvasContextMenu="OnCanvasContextMenu"
+                                 OnCloseContextMenu="CloseContextMenu"
+                                 OnConnectArrowClicked="OnConnectArrowClicked"
+                                 OnShowSearch="OpenSearchPanel"
+                                 OnShowReplace="OpenReplacePanel"
+                                 OnCloseSearch="HandleSearchEscape"
+                                 OnCloseViewMenu="HandleViewMenuEscape"
+                                 OnQuickInsert="HandleQuickInsert"
+                                 OnNavigateToCorner="HandleNavigateToCorner"
+                                 OnSwitchPage="HandleSwitchPage"
+                                 OnGroupSelected="HandleGroupSelected"
+                                 OnLockSelected="HandleLockSelected"
+                                 OnEnterGroup="HandleEnterGroup"
+                                 OnExitGroup="HandleExitGroup"
+                                 OnToggleBold="HandleToggleBold"
+                                 OnToggleItalic="HandleToggleItalic"
+                                 OnToggleUnderline="HandleToggleUnderline"
+                                 OnNodeLinkClicked="HandleNodeLinkClicked"
+                                 ActiveGroupId="@ActiveGroupId"
+                                 SelectedTableCells="_selectedTableCells"
+                                 OnTableCellSelect="HandleTableCellSelect"
+                                 OnClearTableCellSelection="HandleClearTableCellSelection"
+                                 Class="tm-diagram-editor__canvas" />
+                @* ── Floating zoom overlay (phase 7, mobile) and the minimap overlay (DI3, phase 6):
+                   both live in the MobileChrome partial so this razor stays under the length
+                   ceiling. The pill reads − | % | + | fit; the minimap floats over the canvas
+                   corner with a header-strip collapse button. *@
+                @if (ShowsMobileZoomOverlay)
+                {
+                    @MobileZoomOverlaySlot
+                }
+                @MinimapOverlaySlot
+                @* Context menu (long-press / right-click). Desktop/tablet keep the anchored
+                   position:fixed menu; phase 7 (G2) presents the same commands as the shared F3
+                   bottom sheet on a mobile layout — the long-press has no hover-accurate anchor
+                   and a fixed menu clips at phone widths. The items are ONE fragment
+                   (<see cref="ContextMenuItems"/>) so the two presentations cannot drift. *@
+                @if (_contextMenuOpen && !IsMobileLayout)
+                {
+                    <div @ref="_contextMenuRef" class="tm-diagram-editor__context-menu" role="menu"
+                         data-screen-x="@_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-screen-y="@_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-anchor="@(_contextMenuOrigin == "touch" ? "touch" : null)"
+                         style="@($"position:fixed;left:{_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;top:{_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;z-index:var(--tm-z-popover);")"
+                         @onclick:stopPropagation
+                         @oncontextmenu:preventDefault>
+                        @ContextMenuItems
+                    </div>
+                }
+                @if (_contextMenuOpen && IsMobileLayout)
+                {
+                    <TmOverlayPanel IsOpen="true"
+                                    IsOpenChanged="OnContextMenuSheetOpenChanged"
+                                    MobilePresentation="PanelPresentation.Sheet"
+                                    LayoutMode="TmLayoutMode.Mobile"
+                                    InitialMode="TmLayoutMode.Mobile"
+                                    Role="menu"
+                                    Title="@Loc["TmDiagramEditor_ActionsSheetTitle"]"
+                                    AriaLabel="@Loc["TmDiagramEditor_ActionsSheetTitle"]"
+                                    Class="tm-diagram-editor__context-sheet">
+                        @ContextMenuItems
+                    </TmOverlayPanel>
+                }
+
+            </div>
+        </Canvas>
+    </TmEditorShell>
+
+    @* UX review phase 4 (high): the table picker must never be a descendant of a toolbar item —
+       a group that collapses into "More" turns its bar copy inert and hidden and would take the
+       picker with it. It renders at the editor root as a fixed popover anchored where the user
+       invoked it (the Insert trigger on the bar, the "More" trigger once collapsed); both entry
+       points — the bar dropdown and the More "Table" entry — open this same surface. *@
+    @if (_showTableInserter)
+    {
+        <div class="tm-diagram-table-inserter-popover" style="@TableInserterStyle">
+            <TmDiagramTableInserter OnInsert="HandleTableInsert" />
+        </div>
+    }
+
+</div>
+
+@* Connect stencil picker (DI4): its own component — the default palette is the source
+   node's stencil set, "Show all" opts into the whole node library, focus returns to the
+   canvas through the modal's public focus scope. The editor's resolved layout is passed as
+   the dialog's LayoutMode so the picker opens directly in grid/list form — a forced value
+   never measures, so there is no grid→list flash while the modal resolves on a phone.
+   The recents travel as a per-render snapshot: the internal list mutates in place, and a
+   stable reference would let the renderer skip the (possibly open) dialog on a re-render. *@
+<TmDiagramConnectDialog Show="@_connectModalOpen"
+                        SourceStencilId="@ConnectSourceStencilId"
+                        RecentStencilIds="@_recentStencilIds.ToArray()"
+                        SourceLabel="@ConnectSourceLabel"
+                        LayoutMode="@(LayoutMode != TmLayoutMode.Auto ? LayoutMode : _resolvedLayout)"
+                        OnClose="CloseConnectModal"
+                        OnStencilSelected="OnStencilSelectedForConnect"
+                        RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
+
+@* SQL Import dialog *@
+<TmDiagramSqlImportDialog Show="@_sqlImportDialogOpen"
+                          OnClose="CloseSqlImportDialog"
+                          OnImport="OnSqlImport"
+                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
+
+@* CSV Import dialog *@
+<TmDiagramCsvImportDialog Show="@_csvImportDialogOpen"
+                          OnClose="CloseCsvImportDialog"
+                          OnImport="OnCsvImport"
+                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
+
+@* Template gallery *@
+<TmDiagramTemplateGallery Show="@_showTemplateGallery"
+                            OnClose="CloseTemplateGallery"
+                            OnSelect="OnTemplateSelected"
+                            RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
+
+</CascadingValue>
+
+@* Hidden download anchor for export *@
+<a @ref="_downloadAnchor" style="display:none"></a>
+
+@code {
+    /// <summary>
+    /// The shell's header region (Fáze 9 review): the page tabs and/or the header bar. NULL when
+    /// NEITHER renders — an embedded viewer (<see cref="ShowPageTabs"/>) with a chrome-less or
+    /// slot-less header (<see cref="ShowsHeaderBar"/>) must not leave the shell's empty
+    /// <c>.tm-editor-shell__header</c> wrapper div behind.
+    /// </summary>
+    private RenderFragment? HeaderSlot => ShowPageTabs || ShowsHeaderBar ? @<text>
+            @* ── Page tabs (DI3: pages stay on top). Fáze 9: an embedded viewer (a 1-page
+               Modeling preview) drops the row through the public ShowPageTabs knob — in EVERY
+               layout, never through CSS; a host switches pages by setting the document's
+               ActivePageIndex. *@
+            @if (ShowPageTabs)
+            {
             <div class="tm-diagram-editor__page-tabs"
                  role="@(IsReadOnly ? null : "tablist")"
                  aria-label="@(IsReadOnly ? null : Loc["TmDiagramEditor_PageName"])"
@@ -126,6 +353,7 @@
                     }
                 }
             </div>
+            }
 
             @* ── Header bar: host slot, title, named panel toggles, "⋯" view settings ── *@
             @if (ShowsHeaderBar)
@@ -245,7 +473,7 @@
                    even while closed, so the data-tm-group contract stays stable). *@
                 @if (ShowsViewMenu)
                 {
-                    <div class="tm-diagram-editor__view-menu" @onkeydown="OnViewMenuKeyDown">
+                    <div class="tm-diagram-editor__view-menu" data-open="@(_viewMenuOpen ? "true" : null)" @onkeydown="OnViewMenuKeyDown">
                         @if (_viewMenuOpen)
                         {
                             <div class="tm-diagram-editor__view-menu-backdrop" @onclick="CloseViewMenu"></div>
@@ -352,220 +580,8 @@
                 }
             </div>
             }
-        </Header>
+    </text> : null;
 
-        <Canvas>
-            @* ── Search panel ────────────────────────────────────────────────── *@
-            @if (_showSearchPanel)
-            {
-                <TmDiagramSearchPanel Query="@_searchQuery"
-                                      QueryChanged="OnSearchQueryChanged"
-                                      ResultsCount="_searchResults.Count"
-                                      CurrentIndex="_searchCurrentIndex"
-                                      CurrentIndexChanged="OnSearchIndexChanged"
-                                      SearchAllPages="_searchAllPages"
-                                      SearchAllPagesChanged="OnSearchAllPagesChanged"
-                                      ReplaceQuery="@_replaceQuery"
-                                      ReplaceQueryChanged="OnReplaceQueryChanged"
-                                      UseRegex="_searchUseRegex"
-                                      UseRegexChanged="OnSearchUseRegexChanged"
-                                      RegexError="@_regexError"
-                                      ReadOnly="@IsReadOnly"
-                                      OnReplace="OnReplace"
-                                      OnReplaceAll="OnReplaceAll"
-                                      OnClose="CloseSearchPanel" />
-            }
-
-            @* ── Import / export error banners ───────────────────────────────── *@
-            @if (_importError is not null)
-            {
-                <TmAlert Severity="AlertSeverity.Error"
-                         Dismissable="true"
-                         OnDismiss="() => _importError = null"
-                         Class="tm-diagram-editor__banner">
-                    @_importError
-                </TmAlert>
-            }
-
-            @if (_exportError is not null)
-            {
-                <TmAlert Severity="AlertSeverity.Error"
-                         Dismissable="true"
-                         OnDismiss="() => _exportError = null"
-                         Class="tm-diagram-editor__banner">
-                    @_exportError
-                </TmAlert>
-            }
-
-            <div class="tm-diagram-editor__canvas-wrap @(_showRulers ? "tm-diagram-editor__canvas-wrap--rulers" : "")">
-                @if (_showRulers)
-                {
-                    <div class="tm-diagram-editor__ruler-corner"></div>
-                    <div class="tm-diagram-editor__ruler-h">
-                        <TmDiagramRuler Orientation="horizontal"
-                                        ViewportX="_rulerViewportX"
-                                        ViewportY="_rulerViewportY"
-                                        ViewportW="_rulerViewportW"
-                                        ViewportH="_rulerViewportH"
-                                        Zoom="_zoomLevel"
-                                        Unit="_document?.ActivePage?.RulerUnit ?? MeasurementUnit.Px"
-                                        Scale="_document?.ActivePage?.PageScale ?? 1.0"
-                                        CursorX="_rulerCursorX"
-                                        CursorY="_rulerCursorY" />
-                    </div>
-                    <div class="tm-diagram-editor__ruler-v">
-                        <TmDiagramRuler Orientation="vertical"
-                                        ViewportX="_rulerViewportX"
-                                        ViewportY="_rulerViewportY"
-                                        ViewportW="_rulerViewportW"
-                                        ViewportH="_rulerViewportH"
-                                        Zoom="_zoomLevel"
-                                        Unit="_document?.ActivePage?.RulerUnit ?? MeasurementUnit.Px"
-                                        Scale="_document?.ActivePage?.PageScale ?? 1.0"
-                                        CursorX="_rulerCursorX"
-                                        CursorY="_rulerCursorY" />
-                    </div>
-                }
-                <TmDiagramCanvas @ref="_canvas"
-                                 Document="@_document"
-                                 DocumentChanged="OnDocumentChanged"
-                                 ShowGrid="@ShowGrid"
-                                 GridSize="@GridSize"
-                                 ReadOnly="@IsReadOnly"
-                                 ShowTransformHandles="@(!IsMobileLayout)"
-                                 ShowConnectArrows="@(!IsMobileLayout)"
-                                 Zoom="@_zoomLevel"
-                                 ShowPageView="@ShowPageView"
-                                 OnSelectionChanged="OnSelectionChanged"
-                                 OnToolModeChanged="OnCanvasToolModeChanged"
-                                 ZoomChanged="OnCanvasZoomChanged"
-                                 ViewportChanged="OnCanvasViewportChanged"
-                                 OnToolboxDrop="OnToolboxDrop"
-                                 OnPortMouseDownEvent="OnPortMouseDownEvent"
-                                 OnEdgeCreated="OnEdgeCreated"
-                                 OnNodeContextMenu="OnNodeContextMenu"
-                                 OnEdgeContextMenu="OnEdgeContextMenu"
-                                 OnTableCellContextMenu="OnTableCellContextMenu"
-                                 OnCanvasContextMenu="OnCanvasContextMenu"
-                                 OnCloseContextMenu="CloseContextMenu"
-                                 OnConnectArrowClicked="OnConnectArrowClicked"
-                                 OnShowSearch="OpenSearchPanel"
-                                 OnShowReplace="OpenReplacePanel"
-                                 OnQuickInsert="HandleQuickInsert"
-                                 OnNavigateToCorner="HandleNavigateToCorner"
-                                 OnSwitchPage="HandleSwitchPage"
-                                 OnGroupSelected="HandleGroupSelected"
-                                 OnLockSelected="HandleLockSelected"
-                                 OnEnterGroup="HandleEnterGroup"
-                                 OnExitGroup="HandleExitGroup"
-                                 OnToggleBold="HandleToggleBold"
-                                 OnToggleItalic="HandleToggleItalic"
-                                 OnToggleUnderline="HandleToggleUnderline"
-                                 OnNodeLinkClicked="HandleNodeLinkClicked"
-                                 ActiveGroupId="@ActiveGroupId"
-                                 SelectedTableCells="_selectedTableCells"
-                                 OnTableCellSelect="HandleTableCellSelect"
-                                 OnClearTableCellSelection="HandleClearTableCellSelection"
-                                 Class="tm-diagram-editor__canvas" />
-                @* ── Floating zoom overlay (phase 7, mobile) and the minimap overlay (DI3, phase 6):
-                   both live in the MobileChrome partial so this razor stays under the length
-                   ceiling. The pill reads − | % | + | fit; the minimap floats over the canvas
-                   corner with a header-strip collapse button. *@
-                @if (IsMobileLayout && ShowToolbar && Shows(DiagramToolbarGroups.Zoom))
-                {
-                    @MobileZoomOverlaySlot
-                }
-                @MinimapOverlaySlot
-                @* Context menu (long-press / right-click). Desktop/tablet keep the anchored
-                   position:fixed menu; phase 7 (G2) presents the same commands as the shared F3
-                   bottom sheet on a mobile layout — the long-press has no hover-accurate anchor
-                   and a fixed menu clips at phone widths. The items are ONE fragment
-                   (<see cref="ContextMenuItems"/>) so the two presentations cannot drift. *@
-                @if (_contextMenuOpen && !IsMobileLayout)
-                {
-                    <div @ref="_contextMenuRef" class="tm-diagram-editor__context-menu" role="menu"
-                         data-screen-x="@_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                         data-screen-y="@_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                         data-anchor="@(_contextMenuOrigin == "touch" ? "touch" : null)"
-                         style="@($"position:fixed;left:{_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;top:{_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;z-index:var(--tm-z-popover);")"
-                         @onclick:stopPropagation
-                         @oncontextmenu:preventDefault>
-                        @ContextMenuItems
-                    </div>
-                }
-                @if (_contextMenuOpen && IsMobileLayout)
-                {
-                    <TmOverlayPanel IsOpen="true"
-                                    IsOpenChanged="OnContextMenuSheetOpenChanged"
-                                    MobilePresentation="PanelPresentation.Sheet"
-                                    LayoutMode="TmLayoutMode.Mobile"
-                                    InitialMode="TmLayoutMode.Mobile"
-                                    Role="menu"
-                                    Title="@Loc["TmDiagramEditor_ActionsSheetTitle"]"
-                                    AriaLabel="@Loc["TmDiagramEditor_ActionsSheetTitle"]"
-                                    Class="tm-diagram-editor__context-sheet">
-                        @ContextMenuItems
-                    </TmOverlayPanel>
-                }
-
-            </div>
-        </Canvas>
-    </TmEditorShell>
-
-    @* UX review phase 4 (high): the table picker must never be a descendant of a toolbar item —
-       a group that collapses into "More" turns its bar copy inert and hidden and would take the
-       picker with it. It renders at the editor root as a fixed popover anchored where the user
-       invoked it (the Insert trigger on the bar, the "More" trigger once collapsed); both entry
-       points — the bar dropdown and the More "Table" entry — open this same surface. *@
-    @if (_showTableInserter)
-    {
-        <div class="tm-diagram-table-inserter-popover" style="@TableInserterStyle">
-            <TmDiagramTableInserter OnInsert="HandleTableInsert" />
-        </div>
-    }
-
-</div>
-
-@* Connect stencil picker (DI4): its own component — the default palette is the source
-   node's stencil set, "Show all" opts into the whole node library, focus returns to the
-   canvas through the modal's public focus scope. The editor's resolved layout is passed as
-   the dialog's LayoutMode so the picker opens directly in grid/list form — a forced value
-   never measures, so there is no grid→list flash while the modal resolves on a phone.
-   The recents travel as a per-render snapshot: the internal list mutates in place, and a
-   stable reference would let the renderer skip the (possibly open) dialog on a re-render. *@
-<TmDiagramConnectDialog Show="@_connectModalOpen"
-                        SourceStencilId="@ConnectSourceStencilId"
-                        RecentStencilIds="@_recentStencilIds.ToArray()"
-                        SourceLabel="@ConnectSourceLabel"
-                        LayoutMode="@(LayoutMode != TmLayoutMode.Auto ? LayoutMode : _resolvedLayout)"
-                        OnClose="CloseConnectModal"
-                        OnStencilSelected="OnStencilSelectedForConnect"
-                        RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
-
-@* SQL Import dialog *@
-<TmDiagramSqlImportDialog Show="@_sqlImportDialogOpen"
-                          OnClose="CloseSqlImportDialog"
-                          OnImport="OnSqlImport"
-                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
-
-@* CSV Import dialog *@
-<TmDiagramCsvImportDialog Show="@_csvImportDialogOpen"
-                          OnClose="CloseCsvImportDialog"
-                          OnImport="OnCsvImport"
-                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
-
-@* Template gallery *@
-<TmDiagramTemplateGallery Show="@_showTemplateGallery"
-                            OnClose="CloseTemplateGallery"
-                            OnSelect="OnTemplateSelected"
-                            RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
-
-</CascadingValue>
-
-@* Hidden download anchor for export *@
-<a @ref="_downloadAnchor" style="display:none"></a>
-
-@code {
     /// <summary>The palette rail content (phase 6): a labelled expand affordance beside the
     /// shell's chevron, so the 44px rail names what it opens.</summary>
     private RenderFragment? ToolboxRail => ShowToolbox
@@ -670,7 +686,9 @@
                 break;
 
             case ContextMenuType.Edge:
-                <button class="tm-diagram-editor__context-item" role="menuitem" @onclick="ContextMenuEditEdgeLabel">@Loc["TmDiagramEditor_EditLabel"]</button>
+                @* data-action: stable E2E/test hook on the context items (additive) — tests key
+                   off it instead of the localized text or the item's position. *@
+                <button class="tm-diagram-editor__context-item" role="menuitem" data-action="edit-edge-label" @onclick="ContextMenuEditEdgeLabel">@Loc["TmDiagramEditor_EditLabel"]</button>
                 <div class="tm-diagram-editor__context-sep" role="separator"></div>
                 <span class="tm-diagram-editor__context-heading">@Loc["TmDiagramEditor_Connector"]</span>
                 <div class="tm-diagram-edge-routing-picker">
@@ -740,6 +758,8 @@
                                   ReadOnly="@IsReadOnly"
                                   ShowTitle="@(!IsMobileLayout)"
                                   CollapseCategoriesExceptFirst="@IsMobileLayout"
+                                  PreferredStencilIds="@PreferredStencilIds"
+                                  PreferredStencilsLabel="@PreferredStencilsLabel"
                                   Class="tm-diagram-editor__toolbox" />
             </div>;
         }
@@ -1087,7 +1107,7 @@
                         <TmToolbarButton Icon="@IconNames.Minus" Tooltip="@Loc["TmDiagramEditor_ZoomOut"]" OnClick="ZoomOut" Disabled="@(!CanZoomOut)" />
                         <span class="tm-diagram-editor__zoom-label" role="status" aria-live="polite" aria-label="@(string.Format(Loc["TmDiagramEditor_ZoomAria"], _zoomLabel))">@_zoomLabel</span>
                         <TmToolbarButton Icon="@IconNames.Plus" Tooltip="@Loc["TmDiagramEditor_ZoomIn"]" OnClick="ZoomIn" Disabled="@(!CanZoomIn)" />
-                        <TmToolbarButton Icon="@IconNames.Maximize2" Tooltip="@Loc["TmDiagramEditor_FitToView"]" OnClick="FitToView" />
+                        <TmToolbarButton Icon="@IconNames.Maximize2" Tooltip="@Loc["TmDiagramEditor_FitToView"]" OnClick="@(async () => await FitToView())" />
                     </div>
                 }
                 <div class="tm-diagram-editor__statusbar-spacer"></div>

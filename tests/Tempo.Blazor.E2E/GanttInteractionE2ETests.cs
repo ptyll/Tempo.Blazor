@@ -39,8 +39,15 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_ContextMenu_AddsTaskBelow()
     {
         var page = await CreatePageAsync();
+        // The 1280 default classifies the demo Gantt as a tablet; the desktop context menu spec pins the wide
+        // viewport, like every phase-7 desktop spec.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
+        // The viewport change re-classifies the container (the boot happened at 1280): wait for the flip
+        // render to replace the rows before the right-click.
+        await page.WaitForFunctionAsync("(l) => document.querySelector('.tm-gantt')?.getAttribute('data-layout') === l", "desktop", new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await page.WaitForTimeoutAsync(600);
 
         var gantt = page.Locator(".tm-gantt").First;
         await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -49,9 +56,12 @@ public class GanttInteractionE2ETests : WasmTestBase
         var firstRow = gantt.Locator(".tm-gantt__tree-row").First;
         await firstRow.ClickAsync(new LocatorClickOptions { Button = MouseButton.Right });
         await page.WaitForTimeoutAsync(200);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestResults", "gantt", "phase8", "diag-context-menu.png") });
 
-        // Click "Add task below"
-        var belowOption = gantt.Locator(".tm-gantt__context-menu-item").Filter(new LocatorFilterOptions { HasText = "below" });
+        // Click "Add task below". The context menu renders as a SIBLING of .tm-gantt (the phase-7
+        // overlay move: a size container is the containing block of fixed descendants), so the locator
+        // is page-scoped, not scoped to the chart.
+        var belowOption = page.Locator(".tm-gantt__context-menu-item").Filter(new LocatorFilterOptions { HasText = "below" });
         await belowOption.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
@@ -163,6 +173,9 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_ZoomButtons_ChangeZoomLevel()
     {
         var page = await CreatePageAsync();
+        // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
+        // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -201,6 +214,9 @@ public class GanttInteractionE2ETests : WasmTestBase
     public async Task Gantt_ImportDialog_FileChooser_KeyboardAccessible()
     {
         var page = await CreatePageAsync();
+        // Phase 7: the Gantt resolves its layout from its OWN container; the default 1280px viewport leaves the demo Gantt under 1024px (tablet: the
+        // commands sit in "More"), so a spec of the desktop toolbar runs at the 1440px desktop viewport.
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/gantt");
         await WaitForAppReadyAsync(page);
 
@@ -209,7 +225,7 @@ public class GanttInteractionE2ETests : WasmTestBase
         await gantt.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
 
         var dialog = page.Locator(".tm-gantt__import-dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         var chooseBtn = dialog.Locator("[data-testid='import-choose-file']");
         await Expect(chooseBtn).ToBeVisibleAsync();

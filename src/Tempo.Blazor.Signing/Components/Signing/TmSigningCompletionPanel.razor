@@ -1,14 +1,36 @@
 @namespace Tempo.Blazor.Components.Signing
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
 
-<section @attributes="AdditionalAttributes"
-         class="@RootClass"
-         data-state="@(IsWaitingForOthers ? "waiting" : "completed")">
-    <TmIcon Name="@IconName" Size="IconSize.Lg" />
+@* The splat renders LAST so a host passing data-testid as an unmatched attribute wins over the
+   component's own default (Signing redesign phase 3 review); data-state stays ahead of it because
+   the waiting-state CSS keys off it. *@
+<section class="@RootClass"
+         data-state="@(IsWaitingForOthers ? "waiting" : "completed")"
+         data-testid="@RootTestId("signing-completion-panel")"
+         @attributes="AdditionalAttributes">
+    @* The hero circle is the ONLY element the waiting state colours (phase 3): the card itself
+       keeps the neutral surface, so the waiting panel reads as a status, not as an alarm. *@
+    <span class="tm-signing-completion-panel__hero" aria-hidden="true">
+        <TmIcon Name="@IconName" Size="IconSize.Xl" />
+    </span>
 
-    <div class="tm-signing-completion-panel__content">
-        <h2 class="tm-signing-completion-panel__title">@PanelTitle</h2>
+    @* role="status" lives on the CONTENT (title + description), not on the whole panel: the
+       actions stay outside the live region, so an activation inside the panel is not re-announced
+       and the status is announced politely (never as a role="alert" interruption). *@
+    <div class="tm-signing-completion-panel__content" role="status">
+        @* tabindex="-1": the panel moves focus onto its title after the first render so screen
+           readers announce the status without the signer having to hunt for it. The focus paint
+           is suppressed (`__title:focus { outline: none }`) — the move is programmatic. *@
+        <h2 class="tm-signing-completion-panel__title" tabindex="-1" @ref="_titleElement">@PanelTitle</h2>
         <p class="tm-signing-completion-panel__description">@PanelDescription</p>
     </div>
+
+    @if (ChildContent is not null)
+    {
+        <div class="tm-signing-completion-panel__body">@ChildContent</div>
+    }
 
     <div class="tm-signing-completion-panel__actions">
         @if (!string.IsNullOrWhiteSpace(DownloadUrl))
@@ -53,6 +75,9 @@
 </section>
 
 @code {
+    private ElementReference _titleElement;
+    private bool _titleFocused;
+
     /// <summary>Optional completed title override.</summary>
     [Parameter] public string? Title { get; set; }
 
@@ -74,11 +99,26 @@
     /// <summary>Optional custom action icon.</summary>
     [Parameter] public string? CustomActionIcon { get; set; }
 
+    /// <summary>
+    /// Optional host content rendered between the description and the action row (Signing redesign
+    /// phase 3) — for example a submission status timeline or a next-steps hint.
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
     /// <summary>Callback invoked when download is requested and no DownloadUrl is set.</summary>
     [Parameter] public EventCallback OnDownload { get; set; }
 
     /// <summary>Callback invoked when sending a copy is requested.</summary>
     [Parameter] public EventCallback OnSendCopy { get; set; }
+
+    /// <summary>
+    /// Whether the panel moves focus onto its title after the first render (default <c>true</c>)
+    /// so assistive technology announces the completion status. Hosts that render the panel next
+    /// to other content — or several instances on one screen — pass <c>false</c>: a programmatic
+    /// focus move from each instance would yank the signer's scroll/focus to the last rendered
+    /// panel.
+    /// </summary>
+    [Parameter] public bool FocusTitleOnRender { get; set; } = true;
 
     /// <summary>Callback invoked when the custom action is clicked.</summary>
     [Parameter] public EventCallback OnCustomAction { get; set; }
@@ -88,6 +128,20 @@
 
     /// <summary>Additional HTML attributes passed to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _titleFocused || !FocusTitleOnRender)
+        {
+            return;
+        }
+
+        _titleFocused = true;
+        // Best effort: a static/prerendered view has no live JS runtime behind the reference.
+        // preventScroll keeps the announcement from yanking a scrolled signer back to the panel.
+        await SigningFocus.TryFocusAsync(_titleElement, preventScroll: true);
+    }
 
     private string RootClass => string.IsNullOrWhiteSpace(Class)
         ? "tm-signing-completion-panel"

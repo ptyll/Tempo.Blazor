@@ -251,6 +251,7 @@ public partial class TmPdfTemplateDesigner
                 builder.OpenComponent<TmSigningFieldOverlay>(sequence++);
                 builder.AddAttribute(sequence++, "Field", currentField);
                 builder.AddAttribute(sequence++, "Area", currentArea);
+                builder.AddAttribute(sequence++, "RoleColor", GetFieldRoleColor(currentField));
                 builder.AddAttribute(sequence++, "Selected", _selectedFieldUuids.Contains(currentField.Uuid));
                 builder.AddAttribute(sequence++, "Draggable", !Disabled && !_drawType.HasValue);
                 builder.AddAttribute(sequence++, "Editable", !Disabled && _selectedFieldUuids.Contains(currentField.Uuid));
@@ -290,6 +291,17 @@ public partial class TmPdfTemplateDesigner
 
         builder.CloseElement();
     };
+
+    /// <summary>
+    /// The colour of the submitter role that owns <paramref name="field"/>, painted on the field's
+    /// overlay through <see cref="TmSigningFieldOverlay.RoleColor"/>. A field whose role carries no
+    /// colour gets the palette token of the role's order; a field without a matching role keeps the
+    /// primary-tint default.
+    /// </summary>
+    private string? GetFieldRoleColor(SigningField field)
+    {
+        return SigningRolePalette.ResolveRoleColor(SubmitterRoles, field.SubmitterUuid);
+    }
 
     private Task SelectFieldTypeAsync(SigningFieldType type)
     {
@@ -1077,22 +1089,8 @@ public partial class TmPdfTemplateDesigner
 
     private static string GetIconName(SigningFieldType type)
     {
-        return type switch
-        {
-            SigningFieldType.Signature or SigningFieldType.Initials => "edit",
-            SigningFieldType.Date or SigningFieldType.DateNow => "calendar",
-            SigningFieldType.Number or SigningFieldType.Payment => "hash",
-            SigningFieldType.Checkbox => "check-square",
-            SigningFieldType.Radio => "circle-dot",
-            SigningFieldType.Select or SigningFieldType.Multiple => "list",
-            SigningFieldType.File => "paperclip",
-            SigningFieldType.Image => "image",
-            SigningFieldType.Stamp => "stamp",
-            SigningFieldType.Phone => "phone",
-            SigningFieldType.Heading => "heading",
-            SigningFieldType.Strikethrough => "strikethrough",
-            _ => "type"
-        };
+        // Signing redesign phase 3: the shared map (overlay + designer + runner field list).
+        return SigningFieldTypeIcons.Get(type);
     }
 
     private static string GetPageKey(SigningDocumentPage page) => $"{page.AttachmentUuid}:{page.PageIndex}";

@@ -1,0 +1,78 @@
+/* TmGanttViewSettings: the today / days-off / progress / closed-tasks toggles, the task name location,
+   the row density, the theme and the notification preferences. The toolbar renders the list as the
+   popover of the "View settings" button (the wrapper, the trigger button and their styles belong to
+   TmGanttToolbar); the mobile "More" sheet renders the same list as a static block (phase 8). */
+
+.tm-gantt__view-settings-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+}
+
+.tm-gantt__view-settings-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 51;
+    min-width: 220px;
+    max-height: min(30rem, calc(100vh - 6rem));
+    overflow-y: auto;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    box-shadow: var(--tm-shadow-popover);
+    padding: var(--tm-space-2, 0.5rem) 0;
+}
+
+/* The More sheet's second view: the same list, in flow (no popover positioning), scrolling in the sheet body. */
+.tm-gantt__view-settings-menu--sheet {
+    position: static;
+    z-index: auto;
+    min-width: 0;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.tm-gantt__view-settings-label {
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--tm-text-tertiary);
+}
+
+.tm-gantt__view-settings-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
+    font-size: 0.875rem;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.tm-gantt__view-settings-item:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-gantt__view-settings-item input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.tm-gantt__view-settings-divider {
+    height: 1px;
+    background: var(--tm-border-color);
+    margin: var(--tm-space-1, 0.25rem) 0;
+}
+
+/* A finger needs the same 44px target the rest of the mobile chrome has. */
+@media (pointer: coarse) {
+    .tm-gantt__view-settings-item {
+        min-height: var(--tm-touch-target);
+    }
+}

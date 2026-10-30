@@ -1,0 +1,21 @@
+{
+  "itemName": "TmGanttTree",
+  "kind": "Component",
+  "category": "Scheduler",
+  "description": "Internal part of TmGantt (hidden from the editor): the task grid - header, rows, inline edit, drag-and-drop reorder and the bulk-action bar. Place TmGantt, not this component.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Scheduler",
+  "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttTree.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "Owner",
+      "type": "TmGantt",
+      "isRequired": false,
+      "description": "The TmGantt this part belongs to. Internal: TmGantt places the part itself; a host never does."
+    }
+  ]
+}

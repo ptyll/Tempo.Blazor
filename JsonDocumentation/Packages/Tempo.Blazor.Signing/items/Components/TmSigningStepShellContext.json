@@ -1,0 +1,30 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "The accessible-name plumbing of one signing step: the shell's title id (the accessible name of every unlabelled input of the step) and, when they exist, the description and validation ids. The shell cascades the context to its content, so a step's inputs (or a host's custom step content) can reference the ids with aria-labelledby / aria-describedby and Playwright's getByLabel resolves every runner input. The ids are unique per rendered step component — the step components own them and pass them to the shell through its TitleId / DescriptionId / ValidationMessageId parameters, so two rendered steps never share an id even for the same field uuid.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningStepShell.razor.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "TitleId",
+      "kind": "Property",
+      "type": "string",
+      "description": "HTML id of the step title heading — the accessible name of the step's unlabelled inputs."
+    },
+    {
+      "name": "DescriptionId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "HTML id of the step description block; null when the step renders no description."
+    },
+    {
+      "name": "ValidationMessageId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "HTML id of the step validation alert; null when the step shows no validation message."
+    }
+  ],
+  "itemName": "TmSigningStepShellContext"
+}

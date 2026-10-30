@@ -426,6 +426,10 @@
                                 ValueChanged="value => _stepPhoneValue = value"
                                 OnSendCode="HandleStepPhoneCodeSent"
                                 data-testid="signing-step-phone" />
+            <TmSigningSignatureStep Field="@_stepSignatureField"
+                                    Value="@_stepSignatureValue"
+                                    ValueChanged="value => _stepSignatureValue = value"
+                                    data-testid="signing-step-signature" />
             <TmSigningExternalStep Field="@_stepPaymentField"
                                    OnCheckout="HandleStepCheckout"
                                    data-testid="signing-step-payment" />
@@ -449,6 +453,7 @@
     <div class="showcase-card">
         <TmSigningFormRunner Pages="@_runnerPages"
                              Fields="@_runnerFields"
+                             SubmitterRoles="@_templateRoles"
                              Values="@_runnerValues"
                              ValuesChanged="HandleRunnerValuesChanged"
                              OnAutoSave="HandleRunnerAutoSave"
@@ -477,16 +482,32 @@
     </div>
 
     <div class="showcase-card">
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <TmSigningCompletionPanel DownloadUrl="/sample-signed.pdf"
-                                      CustomActionText="Back to documents"
-                                      CustomActionIcon="folder-open"
-                                      OnSendCopy="HandleCompletionSendCopy"
-                                      OnCustomAction="HandleCompletionCustomAction"
-                                      data-testid="signing-completion-panel" />
-            <TmSigningCompletionPanel IsWaitingForOthers="true"
-                                      DownloadUrl="/sample-draft.pdf"
-                                      data-testid="signing-completion-waiting" />
+        @* Signing redesign phase 3 demo-only composition: the completion panel next to the
+           submission status timeline and audit trail viewer, the way a host assembles the
+           post-signing screen. items-start keeps each card at its own content height. *@
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+            <div class="grid gap-4">
+                @* FocusTitleOnRender="false" for the demo pair: two panels side by side must not
+                   fight over the initial focus (the last rendered instance would win). *@
+                <TmSigningCompletionPanel DownloadUrl="/sample-signed.pdf"
+                                          CustomActionText="Back to documents"
+                                          CustomActionIcon="folder-open"
+                                          OnSendCopy="HandleCompletionSendCopy"
+                                          OnCustomAction="HandleCompletionCustomAction"
+                                          FocusTitleOnRender="false"
+                                          DataTestId="signing-completion-panel" />
+                <TmSigningCompletionPanel IsWaitingForOthers="true"
+                                          DownloadUrl="/sample-draft.pdf"
+                                          FocusTitleOnRender="false"
+                                          DataTestId="signing-completion-waiting" />
+            </div>
+            <div class="grid gap-4 content-start">
+                <TmSubmissionStatusTimeline Events="@_submissionStatusEvents"
+                                            data-testid="submission-status-timeline-completion" />
+                <TmAuditTrailViewer Trail="@_auditTrail"
+                                    LocalizationSnapshot="@_auditLocalizationSnapshot"
+                                    data-testid="audit-trail-viewer-completion" />
+            </div>
         </div>
         <div class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="signing-completion-status">
             @_completionStatus
@@ -736,7 +757,11 @@
     private string? _fieldEditorCulture = "en-US";
     private string? _designerCulture = "cs-CZ";
     private string? _runnerCulture = "en-US";
-    private IReadOnlyList<SigningSubmitterRole> _templateRoles = [];
+    private IReadOnlyList<SigningSubmitterRole> _templateRoles =
+    [
+        new SigningSubmitterRole { Uuid = "template-signer", Name = "Signer 1", Color = SigningRolePalette.DefaultColors[0], Order = 0 },
+        new SigningSubmitterRole { Uuid = "template-approver", Name = "Signer 2", Color = SigningRolePalette.DefaultColors[1], Order = 1 }
+    ];
     private IReadOnlyList<SigningSubmitterRole> _submissionRecipients = [];
     private string _templateRoleStatus = "2 roles";
     private string _submissionRecipientStatus = "2 recipients";
@@ -1236,6 +1261,14 @@
         Type = SigningFieldType.Phone,
         Required = true
     };
+    private readonly SigningField _stepSignatureField = new()
+    {
+        Uuid = "step-signature",
+        Name = "Signature",
+        Type = SigningFieldType.Signature,
+        Required = true
+    };
+    private string? _stepSignatureValue;
     private readonly SigningField _stepPaymentField = new()
     {
         Uuid = "step-payment",
@@ -1782,14 +1815,14 @@
             {
                 Uuid = "template-signer",
                 Name = Loc["SigningComponents_Role_Signer"],
-                Color = "#2563eb",
+                Color = SigningRolePalette.DefaultColors[0],
                 Order = 0
             },
             new SigningSubmitterRole
             {
                 Uuid = "template-approver",
                 Name = Loc["SigningComponents_Role_Approver"],
-                Color = "#16a34a",
+                Color = SigningRolePalette.DefaultColors[1],
                 Order = 1,
                 InviteByRoleUuid = "template-signer"
             }
@@ -1804,7 +1837,7 @@
                 FullName = "Alex Johnson",
                 Email = "alex@example.test",
                 Phone = "+420555010101",
-                Color = "#2563eb",
+                Color = SigningRolePalette.DefaultColors[0],
                 Order = 0
             },
             new SigningSubmitterRole
@@ -1814,7 +1847,7 @@
                 FullName = "Nora Lee",
                 Email = "nora@example.test",
                 Phone = "+420555010102",
-                Color = "#16a34a",
+                Color = SigningRolePalette.DefaultColors[1],
                 Order = 1,
                 IsOptional = true,
                 OptionalInviteByRoleUuid = "recipient-signer"

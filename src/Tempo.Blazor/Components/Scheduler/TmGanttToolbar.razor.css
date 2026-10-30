@@ -1,0 +1,256 @@
+/* TmGanttToolbar: command row, Day | Week | Month segment, zoom controls, view-settings menu. */
+
+/* ─── Segmented Day | Week | Month ─────────────────────────────── */
+
+.tm-gantt__segment {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-gantt__segment-btn {
+    min-height: 1.75rem;
+    padding: 0 var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__segment-btn:hover {
+    color: var(--tm-text-primary);
+}
+
+/* The fill alone is ~1.1:1 against the tray, under the 3:1 a control boundary needs (1.4.11): the
+   strong border is the boundary, the weight and the shadow carry the selection beyond it. */
+.tm-gantt__segment-btn--active {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
+    font-weight: var(--tm-font-weight-semibold);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-gantt__segment-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-gantt__segment-btn--active {
+        background: Highlight;
+        color: HighlightText;
+        forced-color-adjust: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__segment-btn {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ─── Toolbar ──────────────────────────────────────────────────── */
+
+.tm-gantt__toolbar {
+    padding: 0;
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+    flex-shrink: 0;
+}
+
+/* The row is the core TmToolbar (a child component), so its own box and the group wrappers it renders do not carry
+   this stylesheet's scope: ::deep is the documented way to reach them. The bar wraps instead of overflowing - the
+   items already state their Priority for the Overflow=Menu bar the tablet / mobile phases switch to. */
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar {
+    flex-wrap: wrap;
+    border-bottom: 0;
+    background: transparent;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    row-gap: var(--tm-space-1);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__toolbar-bar .tm-toolbar-start {
+    flex-wrap: wrap;
+    row-gap: var(--tm-space-1);
+}
+
+/* A labelled group is a role=group wrapper; the segment, the zoom slider and the search box sit inside it. */
+.tm-gantt__toolbar ::deep [data-tm-toolbar-group] {
+    flex-wrap: wrap;
+}
+
+.tm-gantt__quick-search {
+    margin-inline-start: auto;
+    min-width: 12rem;
+    max-width: 18rem;
+}
+
+/* The filter badge sits on the button; the pressed Primary variant keeps it readable. */
+.tm-gantt__toolbar ::deep .tm-toolbar-btn--primary .tm-toolbar-btn-badge {
+    background: var(--tm-color-on-primary);
+    color: var(--tm-color-primary);
+}
+
+/* The split button's label never wraps inside the button (phase 9 review: "Add task" broke onto two
+   lines at ~1024) — the button keeps its min-content width or leaves into "More" as a whole. */
+.tm-gantt__toolbar ::deep .tm-split-button__text {
+    white-space: nowrap;
+}
+
+.tm-gantt__zoom-level {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--tm-text-secondary);
+    min-width: 40px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ─── View Settings dropdown ───────────────────────────────────── */
+
+/* The trigger button's positioning wrapper. The overlay, the menu and the list styles are
+   TmGanttViewSettings's (the markup moved there in phase 8, so the mobile More sheet can reuse it). */
+.tm-gantt__view-settings-wrapper {
+    position: relative;
+}
+
+/* ─── Phase 2: Zoom slider ──────────────────────────────────────── */
+
+/* The slider and its readout are ONE measured toolbar item (TmToolbarItem, see the markup): an
+   inline-flex that never wraps, so the "100%" cannot drop below the segment (phase 9 review) — when
+   an Overflow=Menu row runs out of room the item leaves into "More" as a whole. */
+.tm-gantt__toolbar ::deep .tm-gantt__zoom-control {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.tm-gantt__zoom-slider {
+    width: 80px;
+    height: 4px;
+    accent-color: var(--tm-color-primary);
+    cursor: pointer;
+    margin: 0 var(--tm-space-1, 0.25rem);
+}
+
+/* The column menu is a core TmColumnPicker (outline button); inside the toolbar it reads like its ghost siblings. */
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle {
+    border-color: transparent;
+    background: transparent;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle:hover,
+.tm-gantt__toolbar ::deep .tm-gantt__column-picker .tm-column-picker-toggle[aria-expanded="true"] {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-primary);
+}
+
+/* ─── Tablet: two rows, each an Overflow=Menu bar (phase 7) ───────── */
+
+/* The bars no longer wrap: a command that does not fit leaves into the bar's own "More" menu, so a 1024px
+   container never grows a horizontal scrollbar on the toolbar. */
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar {
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar .tm-toolbar-start {
+    flex-wrap: nowrap;
+}
+
+/* The search box shares the second row with the panel / data commands: it yields width to them. */
+.tm-gantt__toolbar--two-rows .tm-gantt__quick-search {
+    min-width: 8rem;
+    max-width: 12rem;
+}
+
+.tm-gantt__toolbar--two-rows ::deep .tm-gantt__toolbar-bar--secondary {
+    border-top: 1px solid var(--tm-border-color);
+}
+
+@media (pointer: coarse) {
+    .tm-gantt__zoom-slider {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ─── Mobile read-mostly chrome (phase 8) ──────────────────────── */
+
+/* The compact chrome replaces the command row on a container below 768 px: the full-width view
+   segment and the chips. The data commands (export / import / mapping) are not part of it. */
+.tm-gantt__mobile-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
+/* The segment spans the container width; the three views share it equally (44px targets). */
+.tm-gantt__segment--full {
+    display: flex;
+    width: 100%;
+}
+
+.tm-gantt__segment--full .tm-gantt__segment-btn {
+    flex: 1 1 0;
+    min-height: var(--tm-touch-target);
+}
+
+.tm-gantt__mobile-chips {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* The filter chip is the last one and reads at the far end, like the mockup. */
+.tm-gantt__mobile-chip:last-child {
+    margin-inline-start: auto;
+}
+
+.tm-gantt__mobile-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-gantt__mobile-chip:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-gantt__mobile-chip:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The active-filter dot sits on the chip's corner. */
+.tm-gantt__mobile-chip-dot {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--tm-color-primary);
+}

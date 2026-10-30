@@ -438,7 +438,7 @@
                     <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Color"]</span>
                     <input class="tm-signing-field-editor-panel__color"
                            type="color"
-                           value="@(_field.Preferences.Color ?? "#2563eb")"
+                           value="@ColorInputValue"
                            disabled="@ReadOnly"
                            @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Color = value)" />
                 </label>

@@ -67,20 +67,5 @@ public static class GanttXlsxExporter
         return row;
     }
 
-    private static string GetCellValue(TmWorkItem task, GanttColumnKey col) => col switch
-    {
-        GanttColumnKey.Title     => task.Title,
-        GanttColumnKey.Start     => task.Start.ToString("yyyy-MM-dd"),
-        GanttColumnKey.End       => task.End.ToString("yyyy-MM-dd"),
-        GanttColumnKey.Progress  => task.PercentComplete.ToString(),
-        GanttColumnKey.Status    => task.Status.ToString(),
-        GanttColumnKey.Priority  => task.Priority.ToString(),
-        GanttColumnKey.Duration  => ((int)task.Duration.TotalDays).ToString(),
-        GanttColumnKey.Deadline  => task.DueDate?.ToString("yyyy-MM-dd") ?? "",
-        GanttColumnKey.Estimation => task.EstimationHours?.ToString("F1") ?? "",
-        GanttColumnKey.TimeLog   => task.LoggedHours?.ToString("F1") ?? "",
-        GanttColumnKey.Assignees => string.Join(", ", task.Assignees.Select(a => a.Name)),
-        GanttColumnKey.Comments  => task.Comments.Count.ToString(),
-        _                        => ""
-    };
+    private static string GetCellValue(TmWorkItem task, GanttColumnKey col) => GanttColumnValues.Format(task, col);
 }

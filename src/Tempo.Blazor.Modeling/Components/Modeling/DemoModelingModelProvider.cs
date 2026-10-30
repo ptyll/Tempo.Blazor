@@ -9,6 +9,10 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
     /// <summary>Provider key used for the built-in demo modeling data.</summary>
     public const string ProviderKeyValue = "tempo.demo.modeling";
 
+    /// <summary>Identifier of the default demo model (shared with <see cref="DemoModelingModelWriter"/>
+    /// so the in-memory demo writer can resolve the persisted copy).</summary>
+    public const string ModelIdValue = "demo-modeling-model";
+
     private static readonly DateTimeOffset LoadedAt = new(2026, 6, 6, 8, 0, 0, TimeSpan.Zero);
 
     /// <inheritdoc />
@@ -21,11 +25,58 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
         return Task.FromResult(CreateModel());
     }
 
-    private static ModelingModelDto CreateModel()
+    /// <summary>
+    /// The <c>?scenario=hierarchy</c> demo model (Fáze 12): the default mixed model enriched
+    /// with a BPMN subprocess that parents the order activities through
+    /// <see cref="ModelingElementDto.ParentId"/> — the model tree flips to the nested hierarchy
+    /// view while the default model above stays flat (a model without parents must look and
+    /// behave exactly as before).
+    /// </summary>
+    public static ModelingModelDto CreateHierarchyModel()
+    {
+        var model = CreateModel();
+        // Inserted FIRST so the container paints below its children (the generator orders
+        // nodes parents-first, but the declaration order is the tie-break-free baseline).
+        model.Elements.Insert(0, Element(
+            id: "bpmn-subprocess-fulfillment",
+            sourceId: "demo/bpmn/subprocess-fulfillment",
+            sourceType: "bpmn-subprocess",
+            sourcePath: "/Order fulfillment/Order fulfillment",
+            notation: "bpmn",
+            semanticType: "subprocess",
+            name: "Order fulfillment",
+            description: "BPMN subprocess containing the order activities.",
+            tags: ["bpmn", "subprocess", "order"],
+            properties: new()
+            {
+                ["stencilId"] = Json("bpmn2.subprocess")
+            }));
+        foreach (var element in model.Elements)
+        {
+            if (element.Id is "bpmn-start-order" or "bpmn-validate-order" or "bpmn-ship-order")
+            {
+                element.ParentId = "bpmn-subprocess-fulfillment";
+            }
+        }
+
+        model.Views[0].Nodes.Add(new ModelingViewNodeDto
+        {
+            ElementId = "bpmn-subprocess-fulfillment",
+            X = 40,
+            Y = 60,
+            Width = 620,
+            Height = 190
+        });
+        return model;
+    }
+
+    /// <summary>The default demo model. Public so the demo writer can build its in-memory
+    /// persisted copy from the same deterministic source.</summary>
+    public static ModelingModelDto CreateModel()
     {
         return new ModelingModelDto
         {
-            Id = "demo-modeling-model",
+            Id = ModelIdValue,
             Title = "Demo order fulfillment model",
             Notation = "mixed",
             SupportedNotations = ["bpmn", "archimate"],

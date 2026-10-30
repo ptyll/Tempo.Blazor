@@ -2,7 +2,10 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@_validationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
@@ -16,6 +19,8 @@
     }
     else
     {
+        @* The upload input keeps its wrapping label as the visible name and references the shell's
+           description / validation ids, carrying the invalid state while a message shows. *@
         <label class="tm-signing-attachment-step__drop">
             <TmIcon Name="upload" Size="IconSize.Sm" />
             <span>@(Field.Type == SigningFieldType.Image ? Loc["TmSigningStep_ImageUpload"] : Loc["TmSigningStep_FileUpload"])</span>
@@ -23,6 +28,8 @@
                        multiple="@AllowMultiple"
                        accept="@Accept"
                        disabled="@Disabled"
+                       aria-describedby="@DescribedBy"
+                       aria-invalid="@BoolText(HasValidationMessage)"
                        OnChange="HandleFilesSelectedAsync" />
         </label>
 

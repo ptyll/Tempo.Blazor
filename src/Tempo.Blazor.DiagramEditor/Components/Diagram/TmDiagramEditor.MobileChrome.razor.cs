@@ -127,6 +127,9 @@ public partial class TmDiagramEditor
         builder.AddAttribute(seq++, "role", "group");
         builder.AddAttribute(seq++, "aria-label", Loc["TmDiagramEditor_ZoomControls"]);
         builder.AddAttribute(seq++, "data-testid", TestId("diagram-editor-zoom-overlay"));
+        // E2E contract (Fáze 9): the pill's current zoom, kept in step with the label by the
+        // same _zoomLevel source (OnCanvasZoomChanged reports it back from the JS engine).
+        builder.AddAttribute(seq++, "data-diagram-zoom", _zoomLabel);
 
         // UX review: the pill reads − | % | + | fit (zoom-out first, matching the desktop status
         // bar order) so the "make it smaller" control is never between the label and "+".
@@ -169,7 +172,7 @@ public partial class TmDiagramEditor
         builder.AddAttribute(seq++, "class", "tm-diagram-editor__zoom-overlay-btn");
         builder.AddAttribute(seq++, "aria-label", Loc["TmDiagramEditor_FitToView"]);
         builder.AddAttribute(seq++, "title", Loc["TmDiagramEditor_FitToView"]);
-        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, FitToView));
+        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => FitToView()));
         builder.OpenComponent<TmIcon>(seq++);
         builder.AddComponentParameter(seq++, nameof(TmIcon.Name), IconNames.Maximize2);
         builder.AddComponentParameter(seq++, nameof(TmIcon.Size), IconSize.Sm);

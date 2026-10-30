@@ -1,67 +1,31 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.Feedback
 
 @if (IsOpen)
 {
-    <div class="tm-gantt__history-drawer" data-testid="@TestId("gantt-history-drawer")">
+    <div class="@DrawerClass" data-testid="@TestId("gantt-history-drawer")" tabindex="-1" @ref="_drawer"
+         role="complementary" aria-label="@Loc["TmGantt_History"]" @onkeydown="OnKeyDownAsync">
         <div class="tm-gantt__history-drawer-header">
             <span class="tm-gantt__history-drawer-title">@Loc["TmGantt_History"]</span>
-            <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose">
+            <button type="button" class="tm-gantt__dialog-close" @onclick="CloseAsync"
+                    aria-label="@Loc["TmGantt_HistoryClose"]">
                 <TmIcon Name="x" />
             </button>
         </div>
         <div class="tm-gantt__history-drawer-body">
-            @if (History is null || !History.Any())
-            {
-                <div class="tm-gantt__history-empty">
-                    <TmIcon Name="clock" Size="IconSize.Lg" />
-                    <span>@Loc["TmGantt_History"]</span>
-                </div>
-            }
-            else
-            {
-                <ul class="tm-gantt__history-list">
-                    @foreach (var entry in History.OrderByDescending(e => e.Timestamp))
-                    {
-                        <li class="tm-gantt__history-entry" data-testid="@TestId($"history-entry-{entry.Id}")">
-                            <div class="tm-gantt__history-entry-header">
-                                <span class="tm-gantt__history-entry-type">@GetChangeTypeLabel(entry.Action)</span>
-                                <span class="tm-gantt__history-entry-author">@(entry.Actor?.DisplayName ?? entry.Actor?.Id ?? "")</span>
-                                <span class="tm-gantt__history-entry-time">@entry.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
-                            </div>
-                            @if (entry.Before is not null || entry.After is not null)
-                            {
-                                <div class="tm-gantt__history-entry-values">
-                                    @if (entry.Before is not null)
-                                    {
-                                        <span class="tm-gantt__history-old">@entry.Before</span>
-                                        <TmIcon Name="arrow-right" Size="IconSize.Xs" />
-                                    }
-                                    @if (entry.After is not null)
-                                    {
-                                        <span class="tm-gantt__history-new">@entry.After</span>
-                                    }
-                                </div>
-                            }
-                            <div class="tm-gantt__history-entry-actions">
-                                <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
-                                          OnClick="() => TimeTravelAsync(entry.Timestamp)"
-                                          data-testid="@($"history-timetravel-{entry.Id}")">
-                                    <TmIcon Name="clock" Size="IconSize.Xs" />
-                                    @Loc["TmGantt_TimeTravel"]
-                                </TmButton>
-                                <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
-                                          OnClick="() => RollbackAsync(entry)"
-                                          data-testid="@($"history-rollback-{entry.Id}")">
-                                    <TmIcon Name="rotate-ccw" Size="IconSize.Xs" />
-                                    @Loc["TmGantt_Rollback"]
-                                </TmButton>
-                            </div>
-                        </li>
-                    }
-                </ul>
-            }
+            <TmGanttHistoryList History="History" Tasks="Tasks" TimeZone="TimeZone" ShowActions="true"
+                                TestIdPrefix="@TestIdPrefix"
+                                OnTaskSelected="OnTaskSelected"
+                                OnTimeTravelRequested="OnTimeTravelRequested"
+                                OnRollbackRequested="RequestRollbackAsync" />
         </div>
     </div>
+
+    @* A sibling of the drawer (not a child): the dialog's Escape must not also close the drawer. *@
+    <TmDialog Show="@(_pendingRollback is not null)" Type="DialogType.Confirm" Variant="DialogVariant.Warning"
+              Title="@Loc["TmGantt_RollbackConfirmTitle"]" Message="@RollbackMessage"
+              OkButtonText="@Loc["TmGantt_Rollback"]"
+              OnResult="ConfirmRollbackAsync" />
 }

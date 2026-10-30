@@ -1,4 +1,9 @@
 /* Tempo.Blazor.Signing component styles. */
+
+/* 1. Design tokens (role palette; light + dark) — tokens live here, not in components. */
+@import "tokens-signing.css";
+
+/* 2. Components */
 @import "components/_document-page-viewer.css";
 @import "components/_document-comments.css";
 @import "components/_signing-field-overlay.css";

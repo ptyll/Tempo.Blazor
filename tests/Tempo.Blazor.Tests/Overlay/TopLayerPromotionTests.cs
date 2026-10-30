@@ -179,8 +179,8 @@ public class TopLayerPromotionTests : LocalizationTestBase
     {
         var cut = Render<TmGanttImportDialog>(p => p.Add(d => d.IsOpen, true));
 
-        cut.Find(".tm-gantt__dialog-overlay").GetAttribute("popover").Should().Be("manual",
-            "the import dialog traps focus and anchors to the viewport — it must promote like TmModal");
+        cut.Find(".tm-modal-overlay.tm-gantt__import-dialog").GetAttribute("popover").Should().Be("manual",
+            "the import dialog traps focus and anchors to the viewport — it IS a TmModal since TmGantt phase 6");
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class TopLayerPromotionTests : LocalizationTestBase
     {
         var cut = Render<TmGanttImportDialog>(p => p.Add(d => d.IsOpen, false));
 
-        cut.FindAll(".tm-gantt__dialog-overlay").Should().BeEmpty();
+        cut.FindAll(".tm-modal-overlay").Should().BeEmpty();
     }
 
     [Fact]

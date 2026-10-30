@@ -1,0 +1,237 @@
+@page "/gantt-portfolio"
+@using Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Layout
+@inject IHttpClientFactory HttpFactory
+@inject NavigationManager Nav
+@inject ToastService Toast
+
+<PageTitle>Gantt Portfolio – Tempo.Blazor</PageTitle>
+
+<div class="mb-4">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Gantt Portfolio</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">
+        One <code>TmGanttPortfolio</code> card per project, each drawing the project's own tasks and dependencies,
+        plus a real import of the shared sample workbook through the standalone
+        <code>TmGanttImportMappingDialog</code> (WBS hierarchy, predecessors, assignees — and one bad row that reports a warning).
+    </p>
+</div>
+
+@if (_loading)
+{
+    <p class="text-slate-500 dark:text-slate-400">Loading project data…</p>
+}
+else
+{
+    <section class="demo-section" data-testid="gantt-demo-portfolio-section">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Projects</h2>
+            <div class="flex items-center gap-2">
+                <select class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                        data-testid="gantt-demo-axis-mode"
+                        value="@_axisMode" @onchange="HandleAxisModeChanged">
+                    @foreach (var mode in Enum.GetValues<GanttPortfolioAxisMode>())
+                    {
+                        <option value="@mode" selected="@(_axisMode == mode)">Axis: @mode</option>
+                    }
+                </select>
+                <button class="px-2.5 py-1 text-xs font-medium rounded-full border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400"
+                        data-testid="gantt-demo-mapping-open"
+                        @onclick="() => _mappingOpen = true">
+                    Import the sample workbook
+                </button>
+            </div>
+        </div>
+        <div data-testid="gantt-demo-portfolio">
+            @* The cards follow the page's own width: on a phone the read-mostly mobile cards render.
+               AxisMode=Shared pins the union range and one sticky header above the cards. *@
+            <TmLayoutObserver IsContainer="false">
+                <LayoutContent Context="lay">
+                    <TmGanttPortfolio Projects="@PortfolioProjects"
+                                      LayoutMode="lay.Resolved"
+                                      AxisMode="@_axisMode"
+                                      OnProjectSelected="@(project => Toast.ShowInfo($"Project selected: {project.Name}"))">
+                        <ProjectActions Context="project">
+                            <TmDropdown Text="" ShowChevron="false" Icon="more-horizontal" AriaLabel="@($"Actions for {project.Name}")"
+                                        OnSelect="@(action => Toast.ShowInfo($"{action}: {project.Name}"))">
+                                <TmDropdownItem Value="Open">Open project</TmDropdownItem>
+                                <TmDropdownItem Value="Archive">Archive</TmDropdownItem>
+                            </TmDropdown>
+                        </ProjectActions>
+                    </TmGanttPortfolio>
+                </LayoutContent>
+            </TmLayoutObserver>
+        </div>
+        <TmGanttImportMappingDialog IsOpen="_mappingOpen"
+                                    SourceColumns="@_mappingColumns"
+                                    OnImport="@HandleMappingImport"
+                                    OnClose="() => _mappingOpen = false" />
+    </section>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _mappingOpen;
+    private GanttPortfolioAxisMode _axisMode = GanttPortfolioAxisMode.PerProject;
+
+    private void HandleAxisModeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<GanttPortfolioAxisMode>(e.Value?.ToString(), true, out var mode))
+        {
+            _axisMode = mode;
+        }
+    }
+    private HttpClient Http => HttpFactory.CreateClient("DemoApi");
+    private List<TmWorkItem> _tasks = [];
+    private List<GanttDependency> _dependencies = [];
+    private byte[]? _sampleBytes;
+    private IReadOnlyList<string> _mappingColumns = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Http.PostAsync("/api/gantt/reset", null);
+        _tasks = await Http.GetFromJsonAsync<List<TmWorkItem>>("/api/gantt/tasks") ?? [];
+        _dependencies = await Http.GetFromJsonAsync<List<GanttDependency>>("/api/gantt/dependencies") ?? [];
+        try
+        {
+            // The import demo runs against the shared sample workbook (WBS, predecessors, assignees).
+            // Resolved against the PAGE origin through the navigation manager: the static web assets
+            // are served by the WASM host, not by the demo API (the named client's base address).
+            _sampleBytes = await HttpFactory.CreateClient().GetByteArrayAsync(Nav.ToAbsoluteUri(SampleUrl));
+            _mappingColumns = ReadSampleHeaders(_sampleBytes);
+        }
+        catch (Exception)
+        {
+            // Without the asset the mapping dialog still opens; the confirm explains the missing file.
+        }
+
+        _loading = false;
+    }
+
+    /// <summary>Static web assets of this library ship under the _content base path.</summary>
+    private const string SampleUrl = "_content/Tempo.Blazor.Demo.SharedUI/sample-data/gantt-import-sample.xlsx";
+
+    /// <summary>The sample's header row, read reflectively through the host's GanttXlsx importer.</summary>
+    private IReadOnlyList<string> ReadSampleHeaders(byte[] bytes)
+    {
+        if (ResolveGanttExcelImporterType()?.GetMethods().FirstOrDefault(m =>
+                m.Name == "ReadHeaders" && m.GetParameters() is { Length: 1 } p && p[0].ParameterType == typeof(Stream))
+            is not { } readHeaders)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(bytes);
+            return (IReadOnlyList<string>?)readHeaders.Invoke(null, [stream]) ?? [];
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Two projects built from the demo dataset: the first root's child subtrees are split between them
+    /// (a task whose parent is not in its project becomes that project's root).
+    /// </summary>
+    private IReadOnlyList<GanttPortfolioProject> PortfolioProjects
+    {
+        get
+        {
+            var firstRoot = _tasks.FirstOrDefault(t => t.ParentId is null);
+            if (firstRoot is null) return [];
+
+            var topLevel = _tasks.Where(t => t.ParentId == firstRoot.Id).Select(t => t.Id).ToList();
+            var alphaTops = topLevel.Take((topLevel.Count + 1) / 2).ToHashSet();
+            var byId = _tasks.ToDictionary(t => t.Id);
+
+            string TopOf(TmWorkItem t)
+            {
+                var current = t;
+                while (current.ParentId is not null && current.ParentId != firstRoot.Id && byId.TryGetValue(current.ParentId, out var parent))
+                {
+                    current = parent;
+                }
+                return current.Id;
+            }
+
+            GanttPortfolioProject Build(string id, string name, Func<TmWorkItem, bool> pick)
+            {
+                var picked = _tasks.Where(pick).ToList();
+                var ids = picked.Select(t => t.Id).ToHashSet();
+                var tasks = picked.Select(t => t.ParentId is not null && ids.Contains(t.ParentId) ? t : new TmWorkItem
+                {
+                    Id = t.Id, Title = t.Title, Start = t.Start, End = t.End, PercentComplete = t.PercentComplete,
+                    Status = t.Status, Priority = t.Priority, Color = t.Color, IsMilestone = t.IsMilestone,
+                    Assignees = t.Assignees, ParentId = null,
+                }).ToList();
+                return new GanttPortfolioProject
+                {
+                    Id = id,
+                    Name = name,
+                    Tasks = tasks,
+                    Dependencies = _dependencies.Where(d => ids.Contains(d.FromId) && ids.Contains(d.ToId)).ToList(),
+                };
+            }
+
+            return
+            [
+                Build("alpha", "Project Alpha", t => t.Id == firstRoot.Id || alphaTops.Contains(TopOf(t))),
+                Build("beta", "Project Beta", t => t.Id != firstRoot.Id && !alphaTops.Contains(TopOf(t))),
+            ];
+        }
+    }
+
+    /// <summary>
+    /// A real import of the shared sample workbook (WBS hierarchy, predecessors, assignees — and one
+    /// row with an unknown predecessor, so the warnings surface): the confirmed mapping runs through
+    /// the GanttXlsx importer and lands in the portfolio datasets, instead of only toasting.
+    /// </summary>
+    private void HandleMappingImport(IReadOnlyList<GanttColumnMapping> mappings)
+    {
+        if (_sampleBytes is null)
+        {
+            Toast.ShowError("The sample workbook is not loaded yet.");
+            return;
+        }
+
+        var importerType = ResolveGanttExcelImporterType();
+        var importResult = importerType?.GetMethods().FirstOrDefault(m => m.Name == "ImportResult");
+        if (importResult is null)
+        {
+            Toast.ShowError("Add the Tempo.Blazor.GanttXlsx package to import Excel files.");
+            return;
+        }
+
+        GanttImportResult result;
+        try
+        {
+            using var stream = new MemoryStream(_sampleBytes);
+            // A fresh id prefix per import: the datasets here grow with every import, and two runs
+            // of the same workbook must never mint colliding task ids.
+            var options = new GanttExcelImportOptions { IdPrefix = $"xlsx-{Guid.NewGuid().ToString("N")[..8]}-row-" };
+            result = (GanttImportResult)(importResult.Invoke(null, [stream, mappings, options])
+                ?? new GanttImportResult());
+        }
+        catch (Exception)
+        {
+            Toast.ShowError("The sample workbook could not be imported.");
+            return;
+        }
+
+        _tasks.AddRange(result.Tasks);
+        _dependencies.AddRange(result.Dependencies);
+        Toast.ShowSuccess($"Imported {result.Tasks.Count} tasks, {result.Dependencies.Count} dependencies"
+            + (result.Warnings.Count > 0 ? $", {result.Warnings.Count} warnings." : "."));
+    }
+
+    /// <summary>The importer type of the GanttXlsx package, resolved reflectively (the page's host opts in).</summary>
+    private static Type? ResolveGanttExcelImporterType()
+        => Type.GetType("Tempo.Blazor.Services.GanttExcelImporter, Tempo.Blazor.GanttXlsx")
+           ?? AppDomain.CurrentDomain.GetAssemblies()
+               .Select(assembly => assembly.GetType("Tempo.Blazor.Services.GanttExcelImporter", throwOnError: false))
+               .FirstOrDefault(type => type is not null);
+}

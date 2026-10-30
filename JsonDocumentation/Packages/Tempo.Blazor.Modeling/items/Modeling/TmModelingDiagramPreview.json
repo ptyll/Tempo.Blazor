@@ -2,7 +2,7 @@
   "itemName": "TmModelingDiagramPreview",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Shows a generated modeling diagram through the diagram editor canvas.",
+  "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the CENTER OF THE VIEWPORT through the embedded editor's GetViewport() (the page center while no viewport is known — SSR, prerender, bUnit) via the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramPreview.razor",
@@ -11,12 +11,6 @@
     "@using Tempo.Blazor.Components.Modeling"
   ],
   "parameters": [
-    {
-      "name": "Document",
-      "type": "DiagramDocument?",
-      "isRequired": false,
-      "description": "Generated diagram document to show in the preview. Null renders the pre-generation empty state."
-    },
     {
       "name": "ActiveDraggedElement",
       "type": "ModelingElementDto?",
@@ -37,10 +31,29 @@
       "description": "Additional CSS class applied to the preview root."
     },
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Generated diagram document to show in the preview. Null renders the pre-generation empty state."
+    },
+    {
       "name": "DocumentChanged",
       "type": "EventCallback<DiagramDocument>",
       "isRequired": false,
       "description": "Raised when the embedded diagram editor reports a document mutation."
+    },
+    {
+      "name": "LegendDefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the legend card starts expanded (the hosting editor seeds it from the resolved layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins."
+    },
+    {
+      "name": "LegendEntries",
+      "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+      "isRequired": false,
+      "description": "The legend entries (the shared ModelingNotationCatalog filtered to the document's types). Null (no notation catalog data) renders no card even when ShowLegend is true; an EMPTY list renders the card with the localized empty text."
     },
     {
       "name": "OnDrop",
@@ -71,6 +84,51 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised when a relationship edge is selected in the generated preview."
+    },
+    {
+      "name": "OpenInEditorTriggerId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "DOM id for the \"Open in editor\" trigger, owned by the hosting editor so its dialog can name the trigger as the focus-scope restore target. Null renders no id (the default)."
+    },
+    {
+      "name": "ShowEditActions",
+      "type": "bool",
+      "description": "Whether the preview header renders its edit actions (the \"Generate diagram\" and \"Open in editor\" buttons). Default true. The mobile layout (Fáze 7, G2) passes false: those entries live in the editor action bar and header overflow there, so the preview shows only viewer controls (the embedded editor toolbar)."
+    },
+    {
+      "name": "ShowEmbeddedEditorChrome",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the embedded diagram editor renders its own chrome. Default true. The mobile band passes false: there the DE header bar would hold only the overflow trigger and the floating zoom pill duplicates the canvas pinch, so the preview shows the page tabs and the canvas. Reduction happens through the DE's public ShowToolbar parameter only."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
+    },
+    {
+      "name": "ShowLegend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the embedded editor — never inside it). Default false — purely additive. The hosting editor passes its ShowPreviewLegend and owns the mobile band's \"⋯\" sheet instead; the card only renders while a document AND legend entries exist."
+    },
+    {
+      "name": "ShowSummary",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the header renders the nodes/edges summary subtitle. Default true. The hosting editor passes false (final UX review M1): on the docked bands the status bar already carries the counts, and the subtitle row cost the diagram canvas height. The title and the edit actions are unaffected."
+    },
+    {
+      "name": "ShowZoomOverlay",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Opt in to the embedded editor's floating mobile zoom pill (ShowMobileZoomOverlay) plus a fit-to-width first load (FitOnDocumentLoad=Width). Default false; the hosting editor turns it on for its mobile band. The pinch keeps working either way."
     }
   ]
 }

@@ -220,6 +220,58 @@ public sealed class BpmnNotationProfileM17Tests : LocalizationTestBase
             && issue.Message.Contains("AiTask", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Bpmn_relationship_rules_resolve_containment_via_semantic_ParentId()
+    {
+        // Phase 12: a model that reports the hierarchy ONLY through ModelingElementDto.ParentId
+        // (no poolId/subProcessId property at all) must resolve the pool/subprocess containers
+        // the same way the Properties-based models do.
+        var rules = CreateRules();
+
+        var samePoolSequence = rules.ValidateRelationship(CreateRelationshipContext(
+            Relationship("seq-parent-same-pool", "task-a", "task-b", "SequenceFlow"),
+            Element("pool-a", "Pool", "Sales pool"),
+            Element("task-a", "UserTask", "A", parentId: "pool-a"),
+            Element("task-b", "ServiceTask", "B", parentId: "pool-a")));
+        samePoolSequence.IsValid.Should().BeTrue("SequenceFlow inside one ParentId pool stays valid");
+
+        var samePoolMessage = rules.ValidateRelationship(CreateRelationshipContext(
+            Relationship("message-parent-same-pool", "task-a", "task-b", "MessageFlow"),
+            Element("pool-a", "Pool", "Sales pool"),
+            Element("task-a", "UserTask", "A", parentId: "pool-a"),
+            Element("task-b", "ServiceTask", "B", parentId: "pool-a")));
+        samePoolMessage.IsValid.Should().BeFalse("MessageFlow within one pool is refused");
+        samePoolMessage.Message.Should().Contain("MessageFlow");
+
+        var crossPoolSequence = rules.ValidateRelationship(CreateRelationshipContext(
+            Relationship("seq-parent-cross-pool", "task-a", "task-b", "SequenceFlow"),
+            Element("pool-a", "Pool", "Sales pool"),
+            Element("pool-b", "Pool", "Warehouse pool"),
+            Element("task-a", "UserTask", "A", parentId: "pool-a"),
+            Element("task-b", "ServiceTask", "B", parentId: "pool-b")));
+        crossPoolSequence.IsValid.Should().BeFalse("SequenceFlow cannot cross pools reported via ParentId");
+
+        var crossPoolMessage = rules.ValidateRelationship(CreateRelationshipContext(
+            Relationship("message-parent-cross-pool", "task-a", "task-b", "MessageFlow"),
+            Element("pool-a", "Pool", "Sales pool"),
+            Element("pool-b", "Pool", "Warehouse pool"),
+            Element("task-a", "UserTask", "A", parentId: "pool-a"),
+            Element("task-b", "ServiceTask", "B", parentId: "pool-b")));
+        crossPoolMessage.IsValid.Should().BeTrue();
+
+        // A SubProcess container resolved through ParentId only: a boundary crossing between a
+        // subprocess child and a pool child is refused (the old property-only walk returned an
+        // empty container on both sides and let the flow through).
+        var acrossContainers = rules.ValidateRelationship(CreateRelationshipContext(
+            Relationship("seq-parent-subprocess-vs-pool", "task-a", "task-b", "SequenceFlow"),
+            Element("sub-1", "SubProcess", "Inner subprocess"),
+            Element("pool-a", "Pool", "Sales pool"),
+            Element("task-a", "UserTask", "A", parentId: "sub-1"),
+            Element("task-b", "ServiceTask", "B", parentId: "pool-a")));
+        acrossContainers.IsValid.Should().BeFalse(
+            "SequenceFlow cannot cross the SubProcess/Pool boundary reported by ParentId");
+    }
+
     private static BpmnRelationshipRulesProvider CreateRules()
     {
         var registry = CreateProfileRegistry();
@@ -282,7 +334,7 @@ public sealed class BpmnNotationProfileM17Tests : LocalizationTestBase
         };
     }
 
-    private static ModelingElementDto Element(string id, string semanticType, string name, string? poolId = null)
+    private static ModelingElementDto Element(string id, string semanticType, string name, string? poolId = null, string? parentId = null)
     {
         var element = new ModelingElementDto
         {
@@ -292,7 +344,8 @@ public sealed class BpmnNotationProfileM17Tests : LocalizationTestBase
             SourcePath = $"/M17/{id}",
             Notation = "bpmn2",
             SemanticType = semanticType,
-            Name = name
+            Name = name,
+            ParentId = parentId ?? string.Empty
         };
 
         if (!string.IsNullOrWhiteSpace(poolId))

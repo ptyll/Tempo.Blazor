@@ -1,0 +1,133 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.WorkItems
+@using Tempo.Blazor.Components.Charts
+@using Tempo.Blazor.Components.Feedback
+@* The summary band (phase 11): the rollup under the tree + timeline. The owner computed the GanttSummary
+   once per refresh; this part draws it — five cards on desktop, two columns on tablet, a compact strip
+   on the read-mostly mobile container (the full cards render in the mobile Summary sheet, Sheet=true).
+   A card without data hides (a zero card would only repeat zero). Status is never colour alone: the
+   legend carries the numbers. *@
+@if (Owner.Summary is { } summary && Owner.ShowSummaryBand && IsChartView(Owner.View))
+{
+    <section class="@SectionClass" data-layout="@LayoutName"
+             data-testid="@TestId(Sheet ? "gantt-summary-sheet" : "gantt-summary-band")"
+             aria-label="@Loc["TmGantt_Summary_SectionLabel"]">
+        @if (summary.IsFiltered)
+        {
+            <span class="tm-gantt-summary__filtered" data-testid="@TestId("gantt-summary-filtered")">@Loc["TmGantt_Summary_Filtered"]</span>
+        }
+
+        @if (Owner.IsMobileLayout && !Sheet)
+        {
+            @* G2: the read-mostly strip — one line, the full cards live in the More sheet's Summary entry. *@
+            <p class="tm-gantt-summary__strip" data-testid="@TestId("gantt-summary-compact")">@CompactText(summary)</p>
+        }
+        else if (Owner.SummaryBandContent is { } template)
+        {
+            @template(summary)
+        }
+        else
+        {
+            <div class="tm-gantt-summary__cards @TwoColumnClass">
+                @if (StatusVisible(summary))
+                {
+                    <article class="tm-gantt-summary__card" data-testid="@TestId("gantt-summary-status")">
+                        <h3 class="tm-gantt-summary__title">@Loc["TmGantt_Summary_StatusTitle"]</h3>
+                        <div class="tm-gantt-summary__status-body">
+                            <div class="tm-gantt-summary__donut" role="img" aria-label="@DonutAria(summary)">
+                                <TmChart Type="ChartType.Donut"
+                                         Data="StatusChartData(summary)"
+                                         ShowLegend="false" ShowGrid="false" ShowTooltip="false"
+                                         Animated="false" Height="88px" Class="tm-gantt-summary__chart" />
+                                <span class="tm-gantt-summary__total">@Loc.Plural("TmGantt_Summary_TasksCount", summary.TaskCount)</span>
+                            </div>
+                            <ul class="tm-gantt-summary__legend">
+                                @foreach (var (status, count) in summary.StatusCounts)
+                                {
+                                    <li class="tm-gantt-summary__legend-item" data-status="@($"GanttStatus_{status}")">
+                                        <span class="tm-gantt-summary__legend-swatch" style="background: @StatusColor(status)" aria-hidden="true"></span>
+                                        <span class="tm-gantt-summary__legend-label">@Loc[$"GanttStatus_{status}"]</span>
+                                        <span class="tm-gantt-summary__legend-count">@count.ToString("N0", Loc.Culture)</span>
+                                    </li>
+                                }
+                                <li class="tm-gantt-summary__legend-item" data-status="overdue">
+                                    <span class="tm-gantt-summary__legend-swatch tm-gantt-summary__legend-swatch--overdue" aria-hidden="true"></span>
+                                    <span class="tm-gantt-summary__legend-label">@Loc["TmGantt_Summary_Overdue"]</span>
+                                    <span class="tm-gantt-summary__legend-count">@summary.OverdueCount.ToString("N0", Loc.Culture)</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </article>
+                }
+                @if (TimeVisible(summary))
+                {
+                    <article class="tm-gantt-summary__card" data-testid="@TestId("gantt-summary-time")">
+                        <h3 class="tm-gantt-summary__title">@Loc["TmGantt_Summary_TimeTitle"]</h3>
+                        <p class="tm-gantt-summary__value">@TimeText(summary)</p>
+                        <TmProgressBar Value="TimeBarValue(summary)" Max="TimeBarMax(summary)"
+                                       ShowLabel="true" Size="ProgressBarSize.Sm" Class="tm-gantt-summary__bar"
+                                       aria-label="@Loc["TmGantt_Summary_TimeTitle"]" />
+                    </article>
+                }
+                @if (MilestonesVisible(summary))
+                {
+                    <article class="tm-gantt-summary__card" data-testid="@TestId("gantt-summary-milestones")">
+                        <h3 class="tm-gantt-summary__title">@Loc["TmGantt_Summary_MilestonesTitle"]</h3>
+                        <p class="tm-gantt-summary__value">@Loc["TmGantt_Summary_MilestonesDone", summary.MilestonesDone, summary.MilestonesTotal]</p>
+                        <TmProgressBar Value="summary.MilestonesDone" Max="summary.MilestonesTotal"
+                                       ShowLabel="true" Size="ProgressBarSize.Sm" Class="tm-gantt-summary__bar"
+                                       aria-label="@Loc["TmGantt_Summary_MilestonesTitle"]" />
+                    </article>
+                }
+                @if (BudgetVisible(summary))
+                {
+                    <article class="tm-gantt-summary__card" data-testid="@TestId("gantt-summary-budget")">
+                        <h3 class="tm-gantt-summary__title">@Loc["TmGantt_Summary_BudgetTitle"]</h3>
+                        @if (summary.BudgetTotal is { } budget && budget > 0)
+                        {
+                            <p class="tm-gantt-summary__value">@Loc["TmGantt_Summary_BudgetOf", Money(summary.ActualCost), Money(budget)]</p>
+                            <TmProgressBar Value="(double)summary.ActualCost" Max="(double)budget"
+                                           ShowLabel="true" Size="ProgressBarSize.Sm" Class="tm-gantt-summary__bar"
+                                           aria-label="@Loc["TmGantt_Summary_BudgetTitle"]" />
+                        }
+                        else
+                        {
+                            <p class="tm-gantt-summary__value">@Money(summary.ActualCost)</p>
+                        }
+                    </article>
+                }
+                @if (WbsVisible(summary))
+                {
+                    <article class="tm-gantt-summary__card" data-testid="@TestId("gantt-summary-wbs")">
+                        <h3 class="tm-gantt-summary__title">@Loc["TmGantt_Summary_WbsTitle"]</h3>
+                        <p class="tm-gantt-summary__value tm-gantt-summary__value--split">
+                            <span>@Loc.Plural("TmGantt_Summary_WbsLevels", summary.WbsLevels)</span>
+                            <span class="tm-gantt-summary__dot" aria-hidden="true">•</span>
+                            <span>@Loc.Plural("TmGantt_Summary_TasksCount", summary.TaskCount)</span>
+                        </p>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    /// <summary>The status donut: one slice per status with the token colour, no legend of its own (the card's list is the legend).</summary>
+    private ChartData StatusChartData(GanttSummary summary) => new()
+    {
+        Labels = summary.StatusCounts.Keys.Select(status => Loc[$"GanttStatus_{status}"]).ToArray(),
+        Datasets =
+        [
+            new ChartDataset
+            {
+                Label = Loc["TmGantt_Summary_StatusTitle"],
+                Values = summary.StatusCounts.Values.Select(count => (double)count).ToArray(),
+                Color = "var(--tm-color-primary)",
+                BackgroundColors = summary.StatusCounts.Keys.Select(StatusColor).ToArray(),
+            },
+        ],
+    };
+}

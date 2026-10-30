@@ -1,332 +1,572 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.WorkItems
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Avatars
 @using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Components.Files
 @using Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Abstractions.Shared
 @using Microsoft.AspNetCore.Components.Forms
 
 @if (Task is not null)
 {
-    <div class="tm-gantt-task-panel">
+    <div class="@RootClass" data-dirty="@((Tabbed || MobileReadOnly) && IsDirty ? "true" : null)">
+        @if (MobileReadOnly)
+        {
+            @* Mobile read-mostly (G2): the detail is a fact sheet — Name, Start and End are read-only,
+               Status and Percent stay editable. Save / Cancel live in the sheet's sticky footer (TmGantt). *@
+            <div class="tm-gantt-task-panel__mobile">
+                @if (Breadcrumb is not null)
+                {
+                    <div class="tm-gantt-task-panel__breadcrumb">@Breadcrumb</div>
+                }
+                <div class="tm-gantt-task-panel__mobile-facts">
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_Title"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-name")">@Task.Title</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_Start"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-start")">@Task.Start.ToString("d", Loc.Culture)</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <span class="tm-gantt-task-panel__mobile-label">@Loc["TmGanttTaskPanel_End"]</span>
+                        <span class="tm-gantt-task-panel__mobile-value" data-testid="@TestId("task-mobile-end")">@Task.End.ToString("d", Loc.Culture)</span>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <label class="tm-gantt-task-panel__mobile-label" for="@_statusFieldId">@Loc["TmGantt_Status"]</label>
+                        <select id="@_statusFieldId" class="tm-input tm-gantt-task-panel__mobile-input" data-testid="@TestId("task-mobile-status")"
+                                value="@_editStatus.ToString()" @onchange="OnMobileStatusChanged">
+                            @foreach (var option in _statusOptions)
+                            {
+                                <option value="@option.Value.ToString()" selected="@(option.Value == _editStatus)">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="tm-gantt-task-panel__mobile-fact">
+                        <label class="tm-gantt-task-panel__mobile-label" for="@_percentFieldId">@Loc["TmGanttTaskPanel_PercentComplete"]</label>
+                        <input @key="@_percentFieldSync" id="@_percentFieldId" type="number" class="tm-input tm-gantt-task-panel__mobile-input" min="0" max="100" inputmode="numeric"
+                               data-testid="@TestId("task-mobile-percent")" value="@_editPercent" @onchange="e => SetMobilePercent(e.Value?.ToString())" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(_validationError))
+                {
+                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("task-validation-error")" role="alert">
+                        <TmIcon Name="alert-circle" />
+                        <span>@_validationError</span>
+                    </div>
+                }
+                <p class="tm-gantt-task-panel__mobile-hint" data-testid="@TestId("task-mobile-hint")">
+                    <TmIcon Name="monitor" Size="IconSize.Sm" />
+                    <span>@Loc["TmGantt_MobileFullEditingHint"]</span>
+                </p>
+            </div>
+        }
+        else
+        {
+        @* Tabbed (the side sheet): the TmSidePanel owns the title and the close button, so the panel draws no header of its own. *@
+        @if (!Tabbed)
+        {
         <div class="tm-gantt-task-panel__header">
-            <span class="tm-gantt-task-panel__header-title">@Task.Title</span>
+            <div class="tm-gantt-task-panel__header-main">
+                @if (Breadcrumb is not null)
+                {
+                    <div class="tm-gantt-task-panel__breadcrumb">@Breadcrumb</div>
+                }
+                <span class="tm-gantt-task-panel__header-title">@Task.Title</span>
+            </div>
             @if (OnClose.HasDelegate)
             {
                 <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
                           OnClick="() => OnClose.InvokeAsync()"
                           data-testid="@TestId("task-panel-close")"
-                          Title="@Loc["TmGanttTaskPanel_Close"]">
+                          Title="@Loc["TmGanttTaskPanel_Close"]"
+                          AriaLabel="@Loc["TmGanttTaskPanel_Close"]">
                     <TmIcon Name="x" Size="IconSize.Sm" />
                 </TmButton>
             }
         </div>
-        <div class="tm-gantt-task-panel__scroll">
-        <div class="tm-gantt-task-panel__grid">
-            <!-- Title (editable input) -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_Title"]" data-testid="@TestId("task-title")">
-                <TmTextInput @bind-Value="_editTitle" Placeholder="@Loc["TmGanttTaskPanel_TitlePlaceholder"]" />
-            </TmFormField>
+        }
+        @if (Tabbed)
+        {
+            <TmTabs ActiveTabId="@_tab" ActiveTabIdChanged="SelectTab" AriaLabel="@Loc["TmGanttTaskPanel_Tabs"]" Class="tm-gantt-task-panel__tabs">
+                <TmTabPanel Id="detail" Title="@Loc["TmGanttTaskPanel_TabDetail"]">@Scroll</TmTabPanel>
+                <TmTabPanel Id="attachments" Title="@Loc["GanttTask_Attachments"]" Badge="@CountBadge(Task.Attachments.Count)">@Scroll</TmTabPanel>
+                <TmTabPanel Id="comments" Title="@Loc["GanttTask_Comments"]" Badge="@CountBadge(Task.Comments.Count)">@Scroll</TmTabPanel>
+                <TmTabPanel Id="history" Title="@Loc["TmGantt_History"]">@Scroll</TmTabPanel>
+            </TmTabs>
+        }
+        else
+        {
+            @Scroll
+        }
 
-            <!-- Start -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_Start"]" data-testid="@TestId("task-start")">
-                <TmTextInput Type="date" @bind-Value="_editStart" />
-            </TmFormField>
+        @if (Tabbed && _tab != "detail" && IsDirty)
+        {
+            @* The draft survives a tab switch; this says where it waits. *@
+            <p class="tm-gantt-task-panel__dirty" role="status" data-testid="@TestId("task-dirty")">
+                <TmIcon Name="alert-circle" Size="IconSize.Sm" />
+                <span>@Loc["TmGanttTaskPanel_UnsavedChanges"]</span>
+            </p>
+        }
 
-            <!-- End -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_End"]" data-testid="@TestId("task-end")">
-                <TmTextInput Type="date" @bind-Value="_editEnd" />
-            </TmFormField>
-
-            <!-- Duration (computed, read-only) -->
-            @{
-                var durDays = 0;
-                if (DateTime.TryParseExact(_editStart, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var s1) &&
-                    DateTime.TryParseExact(_editEnd,   "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var e1))
-                    durDays = (int)(e1 - s1).TotalDays;
-            }
-            <TmFormField Label="@Loc["TmGanttTaskPanel_Duration"]" data-testid="@TestId("task-duration")">
-                <span class="tm-gantt-task-panel__duration-display">@durDays @Loc["TmGanttTaskPanel_Days"]</span>
-            </TmFormField>
-
-            <!-- Deadline -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_Deadline"]" data-testid="@TestId("task-deadline")">
-                <TmTextInput Type="date" @bind-Value="_editDeadline" />
-            </TmFormField>
-
-            <!-- Percent Complete -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_PercentComplete"]" data-testid="@TestId("task-percent")">
-                <TmNumberInput @bind-Value="_editPercent" Min="0" Max="100" />
-            </TmFormField>
-
-            <!-- Estimation -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_Estimation"]" data-testid="@TestId("task-estimation")">
-                <input type="number" class="tm-input" min="0" step="0.5"
-                       value="@_editEstimation"
-                       @onchange="e => _editEstimation = double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null" />
-            </TmFormField>
-
-            <!-- Time Log -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_TimeLog"]" data-testid="@TestId("task-timelog")">
-                <input type="number" class="tm-input" min="0" step="0.5"
-                       value="@_editLoggedHours"
-                       @onchange="e => _editLoggedHours = double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v2) ? v2 : null" />
-            </TmFormField>
-
-            <!-- Is Milestone -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_IsMilestone"]" data-testid="@TestId("task-milestone")">
-                <TmToggle @bind-Value="_editIsMilestone" />
-            </TmFormField>
-
-            <!-- Parent Task -->
-            <TmFormField Label="@Loc["TmGanttTaskPanel_ParentTask"]" data-testid="@TestId("task-parent")">
-                <TmSelect TValue="string?" @bind-Value="_editParentId"
-                          Options="_parentOptions"
-                          Placeholder="@Loc["TmGanttTaskPanel_NoParent"]" />
-            </TmFormField>
-        </div>
-
-        <!-- Color Picker -->
-        <div class="tm-gantt-task-panel__section" data-testid="@TestId("task-color-picker")">
-            <span class="tm-gantt-task-panel__section-label">@Loc["TmGanttTaskPanel_Color"]</span>
-            <div class="tm-gantt-task-panel__color-swatches">
-                @foreach (var hex in ColorSwatches)
-                {
-                    <button type="button"
-                            class="tm-gantt__panel-color-swatch @(_editColor == hex ? "tm-gantt__panel-color-swatch--selected" : "")"
-                            style="background-color: @hex"
-                            title="@hex"
-                            @onclick="() => _editColor = _editColor == hex ? null : hex"
-                            @onclick:stopPropagation></button>
-                }
-            </div>
-        </div>
-
+        @if (!Tabbed || _tab == "detail" || IsDirty)
+        {
         @if (!string.IsNullOrEmpty(_validationError))
         {
-            <div class="tm-gantt-task-panel__error" data-testid="@TestId("task-validation-error")">
+            <div class="tm-gantt-task-panel__error tm-gantt-task-panel__error--footer" data-testid="@TestId("task-validation-error")" role="alert">
                 <TmIcon Name="alert-circle" />
                 <span>@_validationError</span>
             </div>
         }
 
-        <!-- Description -->
-        <div class="tm-gantt-task-panel__section" data-testid="@TestId("task-description")">
-            <span class="tm-gantt-task-panel__section-label">@Loc["GanttTask_Description"]</span>
-            <textarea class="tm-input tm-gantt-task-panel__description"
-                      rows="4"
-                      value="@_editDescription"
-                      @onchange="OnDescriptionInputAsync"
-                      placeholder="@Loc["GanttTask_DescriptionPlaceholder"]"></textarea>
+        @* The transactional footer is OUTSIDE the scroller: it stays in view while the fields scroll. Cancel first,
+           the primary action last (right), the order of the other inspectors. *@
+        <div class="tm-gantt-task-panel__actions">
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelAsync" data-testid="@TestId("task-cancel")">
+                @Loc["TmGanttTaskPanel_Cancel"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync" data-testid="@TestId("task-save")">
+                @Loc["TmGanttTaskPanel_Save"]
+            </TmButton>
         </div>
+        }
+        }
+    </div>
+}
 
-        <!-- Attachments -->
-        <div class="tm-gantt-task-panel__section" data-testid="@TestId("attachment-list")">
-            <span class="tm-gantt-task-panel__section-label">@Loc["GanttTask_Attachments"]</span>
-            @if (Task?.Attachments.Count > 0)
+@code {
+    /// <summary>The scrolling body. In the tabbed presentation every tab renders it and each section shows only on its own tab.</summary>
+    private RenderFragment Scroll => @<div class="tm-gantt-task-panel__scroll">
+
+            @* ── Plan: title, dates, duration, deadline ── *@
+            @if (ShowSection("detail"))
             {
-                <ul class="tm-gantt-task-panel__attachment-list">
-                    @foreach (var att in Task.Attachments)
-                    {
-                        <li class="tm-gantt-task-panel__attachment-item" data-testid="@TestId($"attachment-item-{att.Id}")">
-                            <TmIcon Name="paperclip" Size="IconSize.Sm" />
-                            <a href="@att.Url" target="_blank" class="tm-gantt-task-panel__attachment-link">@att.FileName</a>
-                            <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
-                                      OnClick="() => RemoveAttachmentAsync(att.Id)"
-                                      data-testid="@($"attachment-remove-{att.Id}")">
-                                <TmIcon Name="x" Size="IconSize.Xs" />
-                            </TmButton>
-                        </li>
-                    }
-                </ul>
-            }
-            <TmFileDropZone OnFilesSelected="OnAttachmentFileChangedAsync" Multiple="true"
-                            data-testid="@TestId("attachment-upload")" />
-        </div>
-
-        <!-- Comments -->
-        <div class="tm-gantt-task-panel__section" data-testid="@TestId("comment-list")">
-            <span class="tm-gantt-task-panel__section-label">@Loc["GanttTask_Comments"]</span>
-            <TmActivityComments Comments="GetCommentEntries()"
-                                OnCommentAdded="AddCommentFromHtmlAsync"
-                                ShowAddButton="true" />
-        </div>
-
-        <!-- Budget & Cost -->
-        <div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--budget" data-testid="@TestId("task-budget-section")">
-            <span class="tm-gantt-task-panel__section-label">@Loc["TmGanttTaskPanel_BudgetSection"]</span>
-            <div class="tm-gantt-task-panel__budget-grid">
-                <TmFormField Label="@Loc["GanttTask_Budget"]" data-testid="@TestId("task-budget")">
-                    <input type="number" class="tm-input" min="0" step="0.5"
-                           value="@_editBudgetHours"
-                           @onchange="e => _editBudgetHours = double.TryParse(e.Value?.ToString(),
-                               System.Globalization.NumberStyles.Any,
-                               System.Globalization.CultureInfo.InvariantCulture, out var vb) ? vb : (double?)null" />
-                </TmFormField>
-                <TmFormField Label="@Loc["GanttTask_ActualCost"]" data-testid="@TestId("task-actual-cost")">
-                    <input type="number" class="tm-input" min="0" step="0.01"
-                           value="@_editActualCost"
-                           @onchange="e => _editActualCost = decimal.TryParse(e.Value?.ToString(),
-                               System.Globalization.NumberStyles.Any,
-                               System.Globalization.CultureInfo.InvariantCulture, out var vc) ? vc : (decimal?)null" />
-                </TmFormField>
-            </div>
-        </div>
-
-        <!-- Time Log & Timer -->
-        <div class="tm-gantt-task-panel__section tm-gantt-task-panel__section--timelog" data-testid="@TestId("task-timelog-section")">
-            <div class="tm-gantt-task-panel__timelog-header">
-                <span class="tm-gantt-task-panel__section-label">@Loc["TmGantt_TimeLog"]</span>
-                @if (ActiveTimerTaskId == Task?.Id)
-                {
-                    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger"
-                              data-testid="@TestId("timer-stop-btn")"
-                              OnClick="StopTimerAsync">
-                        <TmIcon Name="stop-circle" Size="IconSize.Sm" />
-                        @Loc["TmGantt_StopTimer"]
-                    </TmButton>
-                }
-                else
-                {
-                    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                              data-testid="@TestId("timer-start-btn")"
-                              OnClick="StartTimerAsync">
-                        <TmIcon Name="play-circle" Size="IconSize.Sm" />
-                        @Loc["TmGantt_StartTimer"]
-                    </TmButton>
-                }
-            </div>
-            <div class="tm-gantt-task-panel__timelog-total" data-testid="@TestId("task-timelog-total")">
-                @Loc["TmGantt_TotalLogged"]: @GanttHelper.CalculateTotalLoggedHours(Task?.TimeLog ?? []).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) h
-            </div>
-            @if (Task?.TimeLog?.Count > 0)
-            {
-                <ul class="tm-gantt-task-panel__timelog-list">
-                    @foreach (var entry in Task.TimeLog)
-                    {
-                        <li class="tm-gantt-task-panel__timelog-entry" data-testid="@($"timelog-entry-{entry.Id}")">
-                            <span class="tm-gantt-task-panel__timelog-range">
-                                @entry.StartedAt.ToString("dd.MM HH:mm")
-                                @if (entry.StoppedAt.HasValue)
-                                {
-                                    <span> – @entry.StoppedAt.Value.ToString("HH:mm")</span>
-                                    <span class="tm-gantt-task-panel__timelog-duration">
-                                        (@((entry.StoppedAt.Value - entry.StartedAt).TotalHours.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))h)
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="tm-gantt-task-panel__timelog-running">@Loc["TmGantt_TimerRunning"]</span>
-                                }
-                            </span>
-                            @if (!string.IsNullOrEmpty(entry.Notes))
-                            {
-                                <span class="tm-gantt-task-panel__timelog-notes">@entry.Notes</span>
-                            }
-                        </li>
-                    }
-                </ul>
-            }
-        </div>
-
-        <!-- Dependencies -->
-        <div class="tm-gantt-task-panel__deps" data-testid="@TestId("task-dependencies")">
-            <span class="tm-gantt-task-panel__deps-label">@Loc["TmGanttTaskPanel_Dependencies"]</span>
-
-            @if (!string.IsNullOrEmpty(_dependencyError))
-            {
-                <div class="tm-gantt-task-panel__error" data-testid="@TestId("task-dependency-error")">
-                    <TmIcon Name="alert-circle" />
-                    <span>@_dependencyError</span>
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-plan")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionPlan"]</h3>
+                <div class="tm-gantt-task-panel__grid">
+                    <div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--wide">
+                        <TmFormField Label="@Loc["TmGanttTaskPanel_Title"]" data-testid="@TestId("task-title")">
+                            <TmTextInput @bind-Value="_editTitle" Placeholder="@Loc["TmGanttTaskPanel_TitlePlaceholder"]" />
+                        </TmFormField>
+                    </div>
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_Start"]" data-testid="@TestId("task-start")">
+                        <TmTextInput Type="date" @bind-Value="_editStart" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_End"]" data-testid="@TestId("task-end")">
+                        <TmTextInput Type="date" @bind-Value="_editEnd" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_Duration"]" data-testid="@TestId("task-duration")">
+                        <TmTextInput ReadOnly="true" Value="@DurationText" />
+                    </TmFormField>
+                    <div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
+                        <TmFormField Label="@Loc["TmGanttTaskPanel_Deadline"]" data-testid="@TestId("task-deadline")">
+                            <TmTextInput Type="date" @bind-Value="_editDeadline" />
+                        </TmFormField>
+                    </div>
                 </div>
+            </section>
             }
 
-            @foreach (var dep in _taskDependencies)
+            @* ── Progress: status, priority, percent, hours, assignees (read-only), overload and baseline notes ── *@
+            @if (ShowSection("detail"))
             {
-                <div class="tm-gantt-task-panel__dep-chip" data-testid="@TestId("task-dep-item")">
-                    @if (_pendingRemoveDepId == dep.Id)
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-progress")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionProgress"]</h3>
+                <div class="tm-gantt-task-panel__grid">
+                    <TmFormField Label="@Loc["TmGantt_Status"]" data-testid="@TestId("task-status")">
+                        <TmSelect TValue="TmWorkItemStatus" Value="_editStatus" ValueChanged="OnStatusSelected"
+                                  Options="_statusOptions" AriaLabel="@Loc["TmGantt_Status"]" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGantt_Priority"]" data-testid="@TestId("task-priority")">
+                        <TmSelect TValue="TmWorkItemPriority" @bind-Value="_editPriority"
+                                  Options="_priorityOptions" AriaLabel="@Loc["TmGantt_Priority"]" />
+                    </TmFormField>
+                    <div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
+                        <TmFormField Label="@Loc["TmGanttTaskPanel_PercentComplete"]" data-testid="@TestId("task-percent")">
+                            <TmNumberInput @bind-Value="_editPercent" Min="0" Max="100" Suffix="%" />
+                        </TmFormField>
+                    </div>
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_Estimation"]" data-testid="@TestId("task-estimation")">
+                        <TmDecimalInput Value="Dec(_editEstimation)" ValueChanged="v => _editEstimation = Dbl(v)"
+                                        DecimalPlaces="1" UseGrouping="false" Step="0.5m" Min="0" Culture="Loc.Culture" ShowButtons="false" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_TimeLog"]" data-testid="@TestId("task-timelog")">
+                        <TmDecimalInput Value="Dec(_editLoggedHours)" ValueChanged="v => _editLoggedHours = Dbl(v)"
+                                        DecimalPlaces="1" UseGrouping="false" Step="0.5m" Min="0" Culture="Loc.Culture" ShowButtons="false" />
+                    </TmFormField>
+                    <div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--wide">
+                        <TmFormField Label="@Loc["TmGantt_ColumnAssignees"]" data-testid="@TestId("task-assignees")">
+                            @if (Task.Assignees.Count == 0)
+                            {
+                                <span class="tm-gantt-task-panel__assignees-empty">@Loc["TmGanttTaskPanel_NoAssignees"]</span>
+                            }
+                            else
+                            {
+                                <div class="tm-gantt-task-panel__assignees">
+                                    <TmAvatarGroup Size="AvatarSize.Sm">
+                                        @for (var i = 0; i < Task.Assignees.Count; i++)
+                                        {
+                                            var assignee = Task.Assignees[i];
+                                            <TmAvatar Src="@assignee.AvatarUrl" Name="@assignee.Name" Alt="@assignee.Name"
+                                                      Size="AvatarSize.Sm" Color="@AssigneeColor(i)" />
+                                        }
+                                    </TmAvatarGroup>
+                                    <span class="tm-gantt-task-panel__assignee-names">@string.Join(", ", Task.Assignees.Select(a => a.Name))</span>
+                                </div>
+                            }
+                        </TmFormField>
+                    </div>
+                </div>
+                @if (IsOverloaded)
+                {
+                    <div class="tm-gantt-task-panel__note tm-gantt-task-panel__note--warning" data-testid="@TestId("task-overload")">
+                        <TmIcon Name="alert-triangle" Size="IconSize.Sm" />
+                        <span>@Loc["TmGantt_Overloaded"]</span>
+                    </div>
+                }
+                @if (BaselineTask is not null)
+                {
+                    <div class="tm-gantt-task-panel__note" data-testid="@TestId("task-baseline-deviation")">
+                        <span class="tm-gantt-task-panel__note-label">@Loc["TmGanttTaskPanel_BaselineDeviation"]</span>
+                        <span>@BaselineStartText</span>
+                        <span>@BaselineEndText</span>
+                    </div>
+                }
+            </section>
+            }
+
+            @* ── Structure: milestone, parent ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-structure")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionStructure"]</h3>
+                <div class="tm-gantt-task-panel__grid">
+                    <TmFormField Label="@Loc["TmGanttTaskPanel_IsMilestone"]" data-testid="@TestId("task-milestone")">
+                        <TmToggle @bind-Value="_editIsMilestone" />
+                    </TmFormField>
+                    <div class="tm-gantt-task-panel__cell tm-gantt-task-panel__cell--span-2">
+                        <TmFormField Label="@Loc["TmGanttTaskPanel_ParentTask"]" data-testid="@TestId("task-parent")">
+                            <TmSelect TValue="string?" @bind-Value="_editParentId"
+                                      Options="_parentOptions"
+                                      Placeholder="@Loc["TmGanttTaskPanel_NoParent"]" />
+                        </TmFormField>
+                    </div>
+                </div>
+            </section>
+            }
+
+            @* ── Appearance: colour ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-appearance")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_SectionAppearance"]</h3>
+                <div data-testid="@TestId("task-color-picker")">
+                    <div class="tm-gantt-task-panel__color-swatches">
+                        @foreach (var hex in ColorSwatches)
+                        {
+                            <button type="button"
+                                    class="tm-gantt__panel-color-swatch @(_editColor == hex ? "tm-gantt__panel-color-swatch--selected" : "")"
+                                    style="background-color: @hex"
+                                    title="@hex"
+                                    aria-label="@($"{Loc["TmGanttTaskPanel_Color"]} {hex}")"
+                                    aria-pressed="@(_editColor == hex ? "true" : "false")"
+                                    @onclick="() => _editColor = _editColor == hex ? null : hex"
+                                    @onclick:stopPropagation></button>
+                        }
+                    </div>
+                </div>
+            </section>
+            }
+
+            @* ── Description ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-description")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Description"]</h3>
+                <div data-testid="@TestId("task-description")">
+                    <textarea class="tm-input tm-gantt-task-panel__description"
+                              rows="4"
+                              aria-label="@Loc["GanttTask_Description"]"
+                              value="@_editDescription"
+                              @onchange="OnDescriptionInputAsync"
+                              placeholder="@Loc["GanttTask_DescriptionPlaceholder"]"></textarea>
+                </div>
+            </section>
+            }
+
+            @* ── Attachments: cards (name; size and date when the model carries them) ── *@
+            @if (ShowSection("attachments"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-attachments")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Attachments"]</h3>
+                <div data-testid="@TestId("attachment-list")">
+                    @if (Task.Attachments.Count > 0)
                     {
-                        <span class="tm-gantt-task-panel__dep-confirm-text">@Loc["TmGanttTaskPanel_ConfirmRemoveDependency"]</span>
-                        <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Primary"
-                                  OnClick="ConfirmRemoveDependencyAsync"
-                                  data-testid="@TestId("task-dep-confirm-yes")">
-                            @Loc["Tm_Yes"]
-                        </TmButton>
-                        <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
-                                  OnClick="CancelRemoveDependency"
-                                  data-testid="@TestId("task-dep-confirm-no")">
-                            @Loc["Tm_No"]
+                        <ul class="tm-gantt-task-panel__attachment-list">
+                            @foreach (var att in Task.Attachments)
+                            {
+                                <li class="tm-gantt-task-panel__attachment-card" data-testid="@TestId($"attachment-item-{att.Id}")">
+                                    <span class="tm-gantt-task-panel__attachment-icon"><TmIcon Name="paperclip" Size="IconSize.Md" /></span>
+                                    <span class="tm-gantt-task-panel__attachment-text">
+                                        <a href="@att.Url" target="_blank" rel="noopener" class="tm-gantt-task-panel__attachment-link">@att.FileName</a>
+                                        <span class="tm-gantt-task-panel__attachment-meta">@AttachmentMeta(att)</span>
+                                    </span>
+                                    <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
+                                              OnClick="() => RemoveAttachmentAsync(att.Id)"
+                                              AriaLabel="@($"{Loc["TmGantt_RemoveAttachment"]}: {att.FileName}")"
+                                              data-testid="@($"attachment-remove-{att.Id}")">
+                                        <TmIcon Name="x" Size="IconSize.Xs" />
+                                    </TmButton>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+                <TmFileDropZone OnFilesSelected="OnAttachmentFileChangedAsync" Multiple="true"
+                                data-testid="@TestId("attachment-upload")" />
+            </section>
+            }
+
+            @* ── Comments ── *@
+            @if (ShowSection("comments"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-comments")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["GanttTask_Comments"]</h3>
+                <div data-testid="@TestId("comment-list")">
+                    <TmActivityComments Comments="GetCommentEntries()"
+                                        OnCommentAdded="AddCommentFromHtmlAsync"
+                                        ShowAddButton="true" />
+                </div>
+            </section>
+            }
+
+            @* ── Budget & cost ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-budget")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_BudgetSection"]</h3>
+                <div data-testid="@TestId("task-budget-section")">
+                    <div class="tm-gantt-task-panel__budget-grid">
+                        <TmFormField Label="@Loc["GanttTask_Budget"]" data-testid="@TestId("task-budget")">
+                            <TmDecimalInput Value="Dec(_editBudgetHours)" ValueChanged="v => _editBudgetHours = Dbl(v)"
+                                            DecimalPlaces="1" UseGrouping="false" Step="0.5m" Min="0" Culture="Loc.Culture" ShowButtons="false" />
+                        </TmFormField>
+                        <TmFormField Label="@Loc["GanttTask_ActualCost"]" data-testid="@TestId("task-actual-cost")">
+                            <TmDecimalInput @bind-Value="_editActualCost"
+                                            DecimalPlaces="2" UseGrouping="false" Step="0.01m" Min="0" Culture="Loc.Culture" ShowButtons="false" />
+                        </TmFormField>
+                    </div>
+                </div>
+            </section>
+            }
+
+            @* ── Time log & timer ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-timelog")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGantt_TimeLog"]</h3>
+                <div data-testid="@TestId("task-timelog-section")">
+                    <div class="tm-gantt-task-panel__timelog-header">
+                        <div class="tm-gantt-task-panel__timelog-total" data-testid="@TestId("task-timelog-total")">
+                            @Loc["TmGantt_TotalLogged"]: @GanttHelper.CalculateTotalLoggedHours(Task?.TimeLog ?? []).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) h
+                        </div>
+                        @if (ActiveTimerTaskId == Task?.Id)
+                        {
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger"
+                                      data-testid="@TestId("timer-stop-btn")"
+                                      OnClick="StopTimerAsync">
+                                <TmIcon Name="stop-circle" Size="IconSize.Sm" />
+                                @Loc["TmGantt_StopTimer"]
+                            </TmButton>
+                        }
+                        else
+                        {
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                                      data-testid="@TestId("timer-start-btn")"
+                                      OnClick="StartTimerAsync">
+                                <TmIcon Name="play-circle" Size="IconSize.Sm" />
+                                @Loc["TmGantt_StartTimer"]
+                            </TmButton>
+                        }
+                    </div>
+                    @if (Task?.TimeLog?.Count > 0)
+                    {
+                        <ul class="tm-gantt-task-panel__timelog-list">
+                            @foreach (var entry in Task.TimeLog)
+                            {
+                                <li class="tm-gantt-task-panel__timelog-entry" data-testid="@($"timelog-entry-{entry.Id}")">
+                                    <span class="tm-gantt-task-panel__timelog-range">
+                                        @entry.StartedAt.ToString("dd.MM HH:mm")
+                                        @if (entry.StoppedAt.HasValue)
+                                        {
+                                            <span> – @entry.StoppedAt.Value.ToString("HH:mm")</span>
+                                            <span class="tm-gantt-task-panel__timelog-duration">
+                                                (@((entry.StoppedAt.Value - entry.StartedAt).TotalHours.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))h)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="tm-gantt-task-panel__timelog-running">@Loc["TmGantt_TimerRunning"]</span>
+                                        }
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(entry.Notes))
+                                    {
+                                        <span class="tm-gantt-task-panel__timelog-notes">@entry.Notes</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </section>
+            }
+
+            @* ── Dependencies ── *@
+            @if (ShowSection("detail"))
+            {
+            <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-dependencies")">
+                <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGanttTaskPanel_Dependencies"]</h3>
+                <div class="tm-gantt-task-panel__deps" data-testid="@TestId("task-dependencies")">
+                    @if (!string.IsNullOrEmpty(_dependencyError))
+                    {
+                        <div class="tm-gantt-task-panel__error" data-testid="@TestId("task-dependency-error")">
+                            <TmIcon Name="alert-circle" />
+                            <span>@_dependencyError</span>
+                        </div>
+                    }
+
+                    @foreach (var dep in _taskDependencies)
+                    {
+                        <div class="tm-gantt-task-panel__dep-chip" data-testid="@TestId("task-dep-item")">
+                            @if (_pendingRemoveDepId == dep.Id)
+                            {
+                                <span class="tm-gantt-task-panel__dep-confirm-text">@Loc["TmGanttTaskPanel_ConfirmRemoveDependency"]</span>
+                                <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Primary"
+                                          OnClick="ConfirmRemoveDependencyAsync"
+                                          data-testid="@TestId("task-dep-confirm-yes")">
+                                    @Loc["Tm_Yes"]
+                                </TmButton>
+                                <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
+                                          OnClick="CancelRemoveDependency"
+                                          data-testid="@TestId("task-dep-confirm-no")">
+                                    @Loc["Tm_No"]
+                                </TmButton>
+                            }
+                            else
+                            {
+                                <span>@GetDependencyLabel(dep)</span>
+                                <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
+                                          OnClick="() => PromptRemoveDependency(dep.Id)"
+                                          AriaLabel="@Loc["TmGanttTaskPanel_RemoveDependency", GetDependencyLabel(dep)]"
+                                          data-testid="@($"task-dep-remove-{dep.Id}")">
+                                    <TmIcon Name="x" />
+                                </TmButton>
+                            }
+                        </div>
+                    }
+
+                    @if (!_showAddDependency)
+                    {
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                                  OnClick="() => _showAddDependency = true"
+                                  data-testid="@TestId("task-add-dep")">
+                            <TmIcon Name="plus" />
+                            @Loc["TmGanttTaskPanel_AddDependency"]
                         </TmButton>
                     }
                     else
                     {
-                        <span>@GetDependencyLabel(dep)</span>
-                        <TmButton Size="ButtonSize.Xs" Variant="ButtonVariant.Ghost"
-                                  OnClick="() => PromptRemoveDependency(dep.Id)"
-                                  data-testid="@($"task-dep-remove-{dep.Id}")">
-                            <TmIcon Name="x" />
-                        </TmButton>
+                        <div class="tm-gantt-task-panel__add-dep-form">
+                            <TmFormField Label="@Loc["TmGanttTaskPanel_DependencyFrom"]" data-testid="@TestId("task-add-dep-from")">
+                                <select class="tm-select"
+                                        @onchange="e => _newDepFromId = e.Value?.ToString()">
+                                    <option value="">@Loc["TmGanttTaskPanel_SelectTask"]</option>
+                                    @foreach (var opt in _dependencyFromOptions)
+                                    {
+                                        <option value="@opt.Value" selected="@(_newDepFromId == opt.Value?.ToString())">@opt.Label</option>
+                                    }
+                                </select>
+                            </TmFormField>
+                            <TmFormField Label="@Loc["TmGanttTaskPanel_DependencyType"]" data-testid="@TestId("task-add-dep-type")">
+                                <select class="tm-select"
+                                        @onchange="e => _newDepType = int.TryParse(e.Value?.ToString(), out var t) ? t : 0">
+                                    @foreach (var opt in _dependencyTypeOptions)
+                                    {
+                                        <option value="@opt.Value" selected="@(_newDepType == opt.Value)">@opt.Label</option>
+                                    }
+                                </select>
+                            </TmFormField>
+                            <div class="tm-gantt-task-panel__add-dep-actions">
+                                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary"
+                                          OnClick="AddDependencyAsync" data-testid="@TestId("task-add-dep-confirm")">
+                                    @Loc["TmGanttTaskPanel_Confirm"]
+                                </TmButton>
+                                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                                          OnClick="CancelAddDependency">
+                                    @Loc["TmGanttTaskPanel_CancelAdd"]
+                                </TmButton>
+                            </div>
+                        </div>
                     }
                 </div>
+            </section>
             }
 
-            @if (!_showAddDependency)
+            @* ── Actions: the commands of the task context menu (only when the host handles them) ── *@
+            @* ── History: the audit entries of THIS task (the tabbed presentation) ── *@
+            @if (Tabbed && ShowSection("history"))
             {
-                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                          OnClick="() => _showAddDependency = true"
-                          data-testid="@TestId("task-add-dep")">
-                    <TmIcon Name="plus" />
-                    @Loc["TmGanttTaskPanel_AddDependency"]
-                </TmButton>
+                <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-history")">
+                    <h3 class="tm-gantt-task-panel__group-title">@Loc["TmGantt_History"]</h3>
+                    <TmGanttHistoryList History="TaskHistory" Tasks="AllTasks" TimeZone="TimeZone"
+                                        TestIdPrefix="@TestIdPrefix" />
+                </section>
             }
-            else
+
+            @if (OnAction.HasDelegate && ShowSection("detail"))
             {
-                <div class="tm-gantt-task-panel__add-dep-form">
-                    <TmFormField Label="@Loc["TmGanttTaskPanel_DependencyFrom"]" data-testid="@TestId("task-add-dep-from")">
-                        <select class="tm-select"
-                                @onchange="e => _newDepFromId = e.Value?.ToString()">
-                            <option value="">@Loc["TmGanttTaskPanel_SelectTask"]</option>
-                            @foreach (var opt in _dependencyFromOptions)
-                            {
-                                <option value="@opt.Value" selected="@(_newDepFromId == opt.Value?.ToString())">@opt.Label</option>
-                            }
-                        </select>
-                    </TmFormField>
-                    <TmFormField Label="@Loc["TmGanttTaskPanel_DependencyType"]" data-testid="@TestId("task-add-dep-type")">
-                        <select class="tm-select"
-                                @onchange="e => _newDepType = int.TryParse(e.Value?.ToString(), out var t) ? t : 0">
-                            @foreach (var opt in _dependencyTypeOptions)
-                            {
-                                <option value="@opt.Value" selected="@(_newDepType == opt.Value)">@opt.Label</option>
-                            }
-                        </select>
-                    </TmFormField>
-                    <div class="tm-gantt-task-panel__add-dep-actions">
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary"
-                                  OnClick="AddDependencyAsync" data-testid="@TestId("task-add-dep-confirm")">
-                            @Loc["TmGanttTaskPanel_Confirm"]
-                        </TmButton>
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
-                                  OnClick="CancelAddDependency">
-                            @Loc["TmGanttTaskPanel_CancelAdd"]
-                        </TmButton>
+                <section class="tm-gantt-task-panel__group" data-testid="@TestId("task-section-actions")">
+                    <h3 class="tm-gantt-task-panel__group-title">@Loc[Tabbed ? "TmGanttTaskPanel_MoreActions" : "TmGanttTaskPanel_SectionActions"]</h3>
+                    <div class="tm-gantt-task-panel__action-list">
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="check"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.MarkDone)"
+                                  data-testid="@TestId("task-action-mark-done")">@Loc["TmGanttTaskPanel_Action_MarkDone"]</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="arrow-up"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.AddAbove)"
+                                  data-testid="@TestId("task-action-add-above")">@Loc["TmGantt_AddTaskAbove"]</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="arrow-down"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.AddBelow)"
+                                  data-testid="@TestId("task-action-add-below")">@Loc["TmGantt_AddTaskBelow"]</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="corner-down-right"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.AddChild)"
+                                  data-testid="@TestId("task-action-add-child")">@Loc["TmGantt_AddTaskChild"]</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="copy"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.Duplicate)"
+                                  data-testid="@TestId("task-action-duplicate")">@Loc["TmGantt_DuplicateTask"]</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" Icon="trash-2"
+                                  OnClick="() => RaiseActionAsync(GanttTaskAction.Delete)"
+                                  data-testid="@TestId("task-action-delete")">@Loc["TmGantt_DeleteTask"]</TmButton>
+                        @if (Tabbed && (CanMoveUp || CanMoveDown))
+                        {
+                            @* The non-drag alternative of the tree reorder (WCAG 2.5.7): the panel is reachable by touch and keyboard.
+                               The pair hides when neither move is possible (no reorder handler upstream); a move at the row's edge stays visible but disabled. *@
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="chevron-up"
+                                      Disabled="@(!CanMoveUp)"
+                                      OnClick="() => RaiseActionAsync(GanttTaskAction.MoveUp)"
+                                      data-testid="@TestId("task-action-move-up")">@Loc["TmGantt_MoveUp"]</TmButton>
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="chevron-down"
+                                      Disabled="@(!CanMoveDown)"
+                                      OnClick="() => RaiseActionAsync(GanttTaskAction.MoveDown)"
+                                      data-testid="@TestId("task-action-move-down")">@Loc["TmGantt_MoveDown"]</TmButton>
+                        }
                     </div>
-                </div>
+                </section>
             }
-        </div>
-
-        <!-- Buttons -->
-        <div class="tm-gantt-task-panel__actions">
-            <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync" data-testid="@TestId("task-save")">
-                @Loc["TmGanttTaskPanel_Save"]
-            </TmButton>
-            <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelAsync" data-testid="@TestId("task-cancel")">
-                @Loc["TmGanttTaskPanel_Cancel"]
-            </TmButton>
-        </div>
-        </div>@* end tm-gantt-task-panel__scroll *@
-    </div>
+        </div>;
 }

@@ -1,17 +1,42 @@
 .tm-signing-completion-panel {
     display: grid;
+    /* Signing redesign phase 3 review: the panel is placed by its host — inside a taller grid
+       cell it must NOT stretch to the row height; the card hugs its own content and aligns to
+       the row start. */
+    align-content: start;
+    align-self: start;
     justify-items: center;
     gap: var(--tm-space-4);
     padding: var(--tm-space-6);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     text-align: center;
+    container: tm-signing-completion-panel / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
-.tm-signing-completion-panel[data-state="waiting"] {
+/* Signing redesign phase 3: the WAITING state colours only the hero circle — the card itself
+   keeps the neutral surface, so waiting reads as a status, not as an alarm (previously the whole
+   panel turned warning-subtle). */
+.tm-signing-completion-panel__hero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-16);
+    height: var(--tm-space-16);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success-text);
+}
+
+.tm-signing-completion-panel[data-state="waiting"] .tm-signing-completion-panel__hero {
     background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
 }
 
 .tm-signing-completion-panel__content {
@@ -22,13 +47,30 @@
 
 .tm-signing-completion-panel__title {
     margin: 0;
-    font-size: var(--tm-font-size-xl);
+    font-size: var(--tm-font-size-2xl);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The title is focused PROGRAMMATICALLY after the first render (status announcement, the
+   FocusTitleOnRender opt-out): the move must not paint a focus ring — it is not a keyboard
+   stop. Keyboard users tabbing onto nothing here: the title is not focusable by tab (tabindex
+   is -1), so no keyboard focus indicator is lost. */
+.tm-signing-completion-panel__title:focus {
+    outline: none;
 }
 
 .tm-signing-completion-panel__description {
     margin: 0;
+    /* The status line stays readable at a glance — cap the measure around ~40 characters. */
+    max-width: 42ch;
+    margin-inline: auto;
     color: var(--tm-text-secondary);
+}
+
+.tm-signing-completion-panel__body {
+    max-width: calc(var(--tm-space-16) * 10);
+    color: var(--tm-text-primary);
+    text-align: start;
 }
 
 .tm-signing-completion-panel__actions {
@@ -40,4 +82,19 @@
 
 .tm-signing-completion-panel__download {
     text-decoration: none;
+}
+
+@container tm-signing-completion-panel (width < 640px) {
+    .tm-signing-completion-panel__actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    /* Full-width, 48px-tall touch targets on a phone-width container. */
+    .tm-signing-completion-panel__actions .tm-btn,
+    .tm-signing-completion-panel__download {
+        width: 100%;
+        min-height: var(--tm-space-12);
+    }
 }

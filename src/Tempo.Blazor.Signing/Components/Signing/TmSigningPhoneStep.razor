@@ -2,16 +2,23 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@_validationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
     <div class="tm-signing-phone-step__row">
+        @* Placeholders are not accessible names: every control carries an explicit label
+           (Signing redesign phase 2); the phone input also references the shell's description and
+           validation ids and carries the invalid state while a message shows. *@
         <select class="tm-signing-phone-step__country"
                 value="@CountryCode"
                 disabled="@Disabled"
+                aria-label="@Loc["TmSigningStep_CountryCodeAria"]"
                 @onchange="HandleCountryChangedAsync">
             @foreach (var option in CountryOptions)
             {
@@ -24,7 +31,10 @@
                @bind:set="HandlePhoneInputAsync"
                @bind:event="oninput"
                disabled="@Disabled"
-               placeholder="@PhonePlaceholderText" />
+               placeholder="@PhonePlaceholderText"
+               aria-label="@Loc["TmSigningStep_PhoneInputAria"]"
+               aria-describedby="@DescribedBy"
+               aria-invalid="@BoolText(HasValidationMessage)" />
         <button type="button"
                 class="tm-signing-phone-step__send"
                 disabled="@Disabled"
@@ -42,7 +52,8 @@
                    @bind:event="oninput"
                    inputmode="numeric"
                    disabled="@Disabled"
-                   placeholder="@OtpPlaceholderText" />
+                   placeholder="@OtpPlaceholderText"
+                   aria-label="@Loc["TmSigningStep_OtpInputAria"]" />
             <span class="tm-signing-phone-step__resend">@Loc["TmSigningStep_ResendIn", ResendSeconds]</span>
         </div>
     }

@@ -58,6 +58,79 @@
     box-shadow: 0 0 0 2px var(--tm-chip-color, var(--tm-color-primary-500));
 }
 
+/* ── Pressed (toggle) ─────────────────────────────────────
+   The native <button aria-pressed> variant (TmChip.Pressed). NO Enter/Space emulation —
+   the browser turns keys into clicks itself, exactly one activation per press
+   (docs/keyboard-activation-convention.md). Token-only: the focus ring rides the shared
+   --tm-focus-ring and the coarse-pointer floor the shared --tm-touch-target, so a host
+   rebrand moves both. NO new animated subject: the element carries .tm-chip too, so the
+   base transition already covers it (ReducedMotionSelectorTests).
+   Review fix (phase 15b MAJOR): a <button> carries the UA chrome the legacy <span> root
+   never had (system font, ButtonFace background, outset border, appearance), so the reset
+   below strips it. It rides :where() — ZERO specificity — so the variant classes
+   (.tm-chip--soft/--filled/--outlined set background/color/border) and hosts still win
+   without !important; the bare properties would not. The PRESSED affordance is an inset
+   ring that survives every variant, and the focus ring moved to outline so focus and
+   pressed never overwrite each other's box-shadow. */
+:where(.tm-chip--pressed) {
+    appearance: none;
+    margin: 0;
+    font: inherit;
+    font-weight: 500;
+    line-height: var(--tm-line-height-tight);
+    border: 1px solid transparent;
+    background: transparent;
+}
+
+.tm-chip--pressed {
+    cursor: pointer;
+}
+
+.tm-chip--pressed[aria-pressed="true"] {
+    box-shadow: inset 0 0 0 2px var(--tm-chip-color, var(--tm-color-primary));
+}
+
+.tm-chip--pressed:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+    .tm-chip--pressed {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (forced-colors: active) {
+    .tm-chip--pressed {
+        border: 1px solid ButtonBorder;
+        color: ButtonText;
+    }
+
+    .tm-chip--pressed[aria-pressed="true"] {
+        border: 1px solid Highlight;
+        color: Highlight;
+    }
+}
+
+/* ── Disabled ─────────────────────────────────────────────
+   Both roots carry .tm-chip-disabled when Disabled (the span chip and the pressed toggle
+   button, whose [disabled] attribute the component also sets). The token is the shared
+   disabled opacity — the same value the toolbar/buttons use. */
+.tm-chip-disabled {
+    opacity: var(--tm-opacity-disabled, 0.5);
+    cursor: not-allowed;
+}
+
+/* ── Pressed + removable shell ─────────────────────────────
+   When the toggle coexists with the remove action, this bare wrapper keeps the pressed
+   button and the remove button SIBLINGS (a button must never nest inside a button).
+   Layout only — the paint lives on the pressed button itself. */
+.tm-chip__shell {
+    display: inline-flex;
+    align-items: center;
+}
+
 /* ── Icon ──────────────────────────────────────────────── */
 .tm-chip__icon {
     display: inline-flex;

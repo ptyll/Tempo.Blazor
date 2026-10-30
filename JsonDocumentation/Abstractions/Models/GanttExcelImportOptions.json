@@ -1,0 +1,17 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "Options for an Excel Gantt import, e.g. a resolver turning the sheet's assignee names into real people.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttExcelImportOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "AssigneeResolver",
+      "kind": "Property",
+      "type": "Func<string, TmWorkItemAssignee?>?"
+    }
+  ],
+  "itemName": "GanttExcelImportOptions"
+}

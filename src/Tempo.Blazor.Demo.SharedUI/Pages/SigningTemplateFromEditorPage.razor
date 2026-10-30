@@ -81,6 +81,7 @@
         <div class="showcase-card">
             <TmSigningFormRunner Pages="_inlinePages"
                                  Fields="_inlineFields"
+                                 SubmitterRoles="_roles"
                                  Values="_inlineValues"
                                  ValuesChanged="v => _inlineValues = v"
                                  data-testid="signing-from-editor-inline-runner" />
@@ -143,6 +144,7 @@
         <div class="showcase-card">
             <TmSigningFormRunner Pages="_pages"
                                  Fields="_fields"
+                                 SubmitterRoles="_roles"
                                  Values="_values"
                                  ValuesChanged="HandleValuesChanged"
                                  data-testid="signing-from-editor-runner" />
@@ -186,8 +188,8 @@
 
     private readonly IReadOnlyList<SigningSubmitterRole> _roles =
     [
-        new SigningSubmitterRole { Uuid = SignerRoleUuid, Name = "Signer", Color = "#2563eb", Order = 0 },
-        new SigningSubmitterRole { Uuid = ApproverRoleUuid, Name = "Approver", Color = "#16a34a", Order = 1 }
+        new SigningSubmitterRole { Uuid = SignerRoleUuid, Name = "Signer", Color = SigningRolePalette.DefaultColors[0], Order = 0 },
+        new SigningSubmitterRole { Uuid = ApproverRoleUuid, Name = "Approver", Color = SigningRolePalette.DefaultColors[1], Order = 1 }
     ];
 
     protected override void OnInitialized()

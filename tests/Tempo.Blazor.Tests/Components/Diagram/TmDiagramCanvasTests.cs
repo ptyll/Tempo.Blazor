@@ -1,8 +1,10 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Diagram;
+using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Diagram.Stencils;
 using Tempo.Blazor.Tests.Localization;
@@ -292,5 +294,56 @@ public class TmDiagramCanvasTests : LocalizationTestBase
         // Verify source and target were swapped
         edge.SourceNodeId.Should().Be(n2.Id);
         edge.TargetNodeId.Should().Be(n1.Id);
+    }
+
+    [Fact]
+    public async Task Escape_in_edge_label_input_cancels_without_command()
+    {
+        // Fáze 10: the capture-phase inline-edit consumer cancels the edge-label edit — the value
+        // reverts, NOTHING is pushed to the command stack and the edit closes. A host dialog (the
+        // open-editor TmModal) stays open because the JS consumer marked the Escape handled.
+        var doc = new DiagramDocument();
+        var n1 = new DiagramNode { StencilId = "general.rectangle", X = 0, Y = 0, W = 100, H = 50 };
+        var n2 = new DiagramNode { StencilId = "general.rectangle", X = 200, Y = 0, W = 100, H = 50 };
+        doc.Nodes.Add(n1);
+        doc.Nodes.Add(n2);
+        var edge = new DiagramEdge { SourceNodeId = n1.Id, TargetNodeId = n2.Id, Label = "before" };
+        doc.Edges.Add(edge);
+
+        var commandStack = new DiagramCommandStack();
+        using var cut = Render<DiagramCanvasCommandStackHost>(p => p
+            .Add(h => h.Stack, commandStack)
+            .AddChildContent<TmDiagramCanvas>(c => c
+                .Add(x => x.Document, doc)
+                .Add(x => x.ReadOnly, false)));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>().Instance;
+        await cut.InvokeAsync(() => canvas.StartEdgeLabelEdit(edge.Id));
+        cut.Find(".tm-diagram-edge-label-input").Should().NotBeNull();
+
+        // The JS capture consumer's callback: the edit is cancelled, not committed.
+        await cut.InvokeAsync(canvas.JsOnInlineEditEscape);
+
+        cut.FindAll(".tm-diagram-edge-label-input").Should().BeEmpty("the edit input is gone");
+        edge.Label.Should().Be("before", "the original label is untouched");
+        commandStack.CanUndo.Should().BeFalse("Escape cancels — no UpdateEdgeLabelCommand is pushed");
+        commandStack.CanRedo.Should().BeFalse();
+    }
+
+    /// <summary>Host that cascades a real <see cref="DiagramCommandStack"/> onto the canvas —
+    /// the same cascade the editor installs through its ActiveCommandStack.</summary>
+    private sealed class DiagramCanvasCommandStackHost : ComponentBase
+    {
+        [Parameter] public DiagramCommandStack Stack { get; set; } = default!;
+        [Parameter] public RenderFragment? ChildContent { get; set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<CascadingValue<DiagramCommandStack>>(0);
+            builder.AddAttribute(1, "Value", Stack);
+            builder.AddAttribute(2, "IsFixed", false);
+            builder.AddAttribute(3, "ChildContent", ChildContent);
+            builder.CloseComponent();
+        }
     }
 }

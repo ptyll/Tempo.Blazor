@@ -1,58 +1,155 @@
 {
-  "itemName": "TmModelingModelTree",
-  "kind": "Component",
-  "category": "Modeling",
-  "description": "Displays semantic modeling elements grouped by type with live filtering and selection.",
-  "packageId": "Tempo.Blazor.Modeling",
-  "namespace": "Tempo.Blazor.Components.Modeling",
-  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
-  "documentationStatus": "generated",
-  "requiredImports": [
-    "@using Tempo.Blazor.Components.Modeling"
-  ],
-  "parameters": [
-    {
-      "name": "Elements",
-      "type": "IReadOnlyList<ModelingElementDto>",
-      "isRequired": false,
-      "default": "[]",
-      "description": "Elements rendered by the tree. They are grouped by SemanticType."
-    },
-    {
-      "name": "Class",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Additional CSS class applied to the tree root."
-    },
-    {
-      "name": "OnElementDragEnded",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when the user ends a drag operation from a tree node."
-    },
-    {
-      "name": "OnElementDragStarted",
-      "type": "EventCallback<ModelingElementDto>",
-      "isRequired": false,
-      "description": "Raised when the user starts dragging an element node. Reserved for canvas drop support."
-    },
-    {
-      "name": "OnElementSelected",
-      "type": "EventCallback<ModelingElementDto>",
-      "isRequired": false,
-      "description": "Raised when the user selects an element node."
-    },
-    {
-      "name": "SelectedElement",
-      "type": "ModelingElementDto?",
-      "isRequired": false,
-      "description": "Currently selected element."
-    },
-    {
-      "name": "SelectedElementChanged",
-      "type": "EventCallback<ModelingElementDto?>",
-      "isRequired": false,
-      "description": "Raised when <see cref=\"SelectedElement\"/> changes."
-    }
-  ]
+ "itemName": "TmModelingModelTree",
+ "kind": "Component",
+ "category": "Modeling",
+ "description": "Displays semantic modeling elements with live filtering and selection (Fáze 12). The default Grouping=Auto renders the ParentId hierarchy as a nested APG tree — every element is a treeitem at its own aria-level with aria-setsize/posinset among the visible siblings, parents are disclosures (chevron + direct child count, aria-expanded) and keyboard navigation walks ONE flat visible list over the unchanged modeling-editor.js focusTreeElement/focusTreeGroupHeader API; indentation is token-driven via the --tm-modeling-tree-level variable. Grouping=SemanticType keeps the flat type groups; a model without resolvable ParentId falls back to it under Auto, and a parent cycle is broken deterministically to the root (never a stack overflow). The filter keeps every ancestor of a match visible and expanded, and the matching-element count on data-visible-count never drops when only the subtree is collapsed. CollapsedElementIds/CollapsedElementIdsChanged two-way bind the hierarchy's collapsed nodes (element ids — a separate key space from CollapsedGroups, which stays the flat mode's group keys); the state is seeded from the host on a new collection and raised with a fresh snapshot on every user toggle. External selection reveals the whole collapsed ancestor chain before scrolling it into view. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the CENTER of the diagram viewport. The action names its row (\"Insert {0} into preview\"), stays out of the tab order (tabindex=-1) — the keyboard path is the node treeitem's Insert / Ctrl+Enter (aria-keyshortcuts) — and renders only when AllowNodeDrop is set AND a listener is bound to OnInsertIntoPreview. FilterText/FilterTextChanged optionally two-way bind the live filter so the hosting editor can own the value across tree remounts.",
+ "packageId": "Tempo.Blazor.Modeling",
+ "namespace": "Tempo.Blazor.Components.Modeling",
+ "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
+ "documentationStatus": "generated",
+ "requiredImports": [
+  "@using Tempo.Blazor.Components.Modeling"
+ ],
+ "parameters": [
+  {
+   "name": "AllowNodeDrop",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the tree offers the non-drag \"Insert into preview\" action (Fáze 6, WCAG 2.5.7). Default true mirrors the hosting editor's AllowNodeDrop: when the host opts out of tree reuse the action disappears with the drop zone, so no alternative path offers what the drop zone refuses."
+  },
+  {
+   "name": "OnInsertIntoPreview",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user activates the row-level \"Insert into preview\" action. The HOST computes the drop geometry (the tree knows nothing about the document or its viewport): the hosting editor routes the request through the preview's existing drop path at the viewport center. Keyboard- and touch-reachable by construction (a native button beside the node treeitem, revealed on (hover: none) and :focus-within)."
+  },
+  {
+   "name": "Class",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Additional CSS class applied to the tree root."
+  },
+  {
+   "name": "CollapsedGroups",
+   "type": "IReadOnlyCollection<string>?",
+   "isRequired": false,
+   "description": "Optional two-way binding of the collapsed group keys. Seeded from when the instance is given a new collection; every user toggle raises CollapsedGroupsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+  },
+  {
+   "name": "CollapsedGroupsChanged",
+   "type": "EventCallback<IReadOnlyCollection<string>>",
+   "isRequired": false,
+   "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
+  },
+  {
+   "name": "Grouping",
+   "type": "ModelingTreeGrouping",
+   "isRequired": false,
+   "default": "ModelingTreeGrouping.Auto",
+   "description": "How the tree structures its elements (Fáze 12). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without parents looks and behaves exactly as before."
+  },
+  {
+   "name": "CollapsedElementIds",
+   "type": "IReadOnlyCollection<string>?",
+   "isRequired": false,
+   "description": "Optional two-way binding of the collapsed ELEMENT ids of the hierarchy view (Fáze 12) — a separate key space from CollapsedGroups (group keys are semantic types, these are element ids; no migration between them). Seeded whenever the host hands over a new collection; every user toggle raises CollapsedElementIdsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+  },
+  {
+   "name": "CollapsedElementIdsChanged",
+   "type": "EventCallback<IReadOnlyCollection<string>>",
+   "isRequired": false,
+   "description": "Raised when the user collapses or expands a hierarchy node (not while a filter drives the transient state)."
+  },
+  {
+   "name": "Elements",
+   "type": "IReadOnlyList<ModelingElementDto>",
+   "isRequired": false,
+   "default": "[]",
+   "description": "Elements rendered by the tree. They are grouped by SemanticType."
+  },
+  {
+   "name": "FilterText",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS the internal filter whenever the host hands over a new value and is never assigned inside the component — user edits update the working copy, clear the transient filter-collapse set and raise FilterTextChanged. The hosting editor owns the field, so the filter survives a tree remount (a layout flip)."
+  },
+  {
+   "name": "FilterTextChanged",
+   "type": "EventCallback<string?>",
+   "isRequired": false,
+   "description": "Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling @bind-FilterText."
+  },
+  {
+   "name": "OnElementDragEnded",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Raised when the user ends a drag operation from a tree node."
+  },
+  {
+   "name": "OnElementDragStarted",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user starts dragging an element node. Reserved for canvas drop support."
+  },
+  {
+   "name": "OnElementSelected",
+   "type": "EventCallback<ModelingElementDto>",
+   "isRequired": false,
+   "description": "Raised when the user selects an element node."
+  },
+  {
+   "name": "SelectedElement",
+   "type": "ModelingElementDto?",
+   "isRequired": false,
+   "description": "Currently selected element."
+  },
+  {
+   "name": "SelectedElementChanged",
+   "type": "EventCallback<ModelingElementDto?>",
+   "isRequired": false,
+   "description": "Raised when <see cref=\"SelectedElement\"/> changes."
+  },
+  {
+   "name": "ShowTitle",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the tree renders its own heading block (title + element count). Fáze 6 review: the hosting editor hides it inside the tablet drawer, where the shell's sheet title already says \"Model tree\" — the search field always renders (it is the live filter). When the block is absent the role=\"tree\" element is named by aria-label instead of the (dangling) aria-labelledby. Default true."
+  }
+ ],
+ "cssClasses": [
+  {
+   "name": "tm-modeling-model-tree__group-header",
+   "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-chevron",
+   "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-icon",
+   "description": "Semantic-type icon of the group."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-label",
+   "description": "Group label text (the semantic type)."
+  },
+  {
+   "name": "tm-modeling-model-tree__group-count",
+   "description": "Element count pill of the group."
+  },
+  {
+   "name": "tm-modeling-model-tree__type-icon",
+   "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
+  },
+  {
+   "name": "tm-modeling-model-tree__node-body",
+   "description": "Name + meta stack inside the node button."
+  },
+  {
+   "name": "tm-modeling-model-tree__drag-handle",
+   "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
+  }
+ ]
 }

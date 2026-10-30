@@ -1,0 +1,517 @@
+/* TmGanttTree: task grid (header, rows, cells, inline edit, bulk bar). The status chip is TmGanttStatusChip. */
+
+/* ─── Task Tree ────────────────────────────────────────────────── */
+
+.tm-gantt__tree {
+    width: 420px;
+    min-width: 300px;
+    border-right: 1px solid var(--tm-border-color);
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-bg-surface);
+    /* Past 70% of the main area (a wide column set, custom fields) the grid scrolls instead of clipping. */
+    max-width: 70%;
+    overflow-x: auto;
+}
+
+/* The treegrid wrapper is a layout pass-through: header and body are its flex children, exactly as before. */
+.tm-gantt__tree-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tm-gantt__tree-header {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--tm-space-3, 0.75rem);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tm-text-secondary);
+    flex-shrink: 0;
+}
+
+/* ShowTimelineHeader=false (the shared portfolio axis): the timeline header above the bars is a
+   zero-height carrier, so the tree header leaves the flow the same way — visually hidden (the
+   sr-only clip) while the role=row / columnheader cells stay for assistive tech. Declared after the
+   base rule: the same specificity, so source order lets the clip win. */
+.tm-gantt__tree-header--vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.tm-gantt__tree-header-cell {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-gantt__tree-header-cell--narrow {
+    flex: 0 0 80px;
+    text-align: center;
+}
+
+.tm-gantt__tree-header-cell--status {
+    flex: 0 0 90px;
+    text-align: center;
+}
+
+.tm-gantt__tree-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* The out-of-window pinned rows (virtualization) anchor at their absolute row offset inside it. */
+    position: relative;
+    /* See the timeline body: the window re-renders must not be fought by scroll anchoring. */
+    overflow-anchor: none;
+}
+
+/* Window virtualization (Fáze 12): the rows above / below the window are two plain spacers of the exact
+   remaining height, so the scroll area and the timeline's content keep the full size. aria-hidden in the
+   markup; no content of its own. */
+.tm-gantt__tree-spacer {
+    flex-shrink: 0;
+    pointer-events: none;
+    contain: strict;
+}
+
+/* A pinned row OUTSIDE the window (the roving tab stop, a selection, an inline edit, a dragged row or a
+   drop target): absolutely positioned at its true row offset, so it stays findable and focusable without
+   pushing the window rows off their bars. */
+.tm-gantt__tree-row--pinned-out {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
+}
+
+.tm-gantt__tree-row {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--tm-space-3, 0.75rem);
+    border-bottom: 1px solid var(--tm-border-color);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.tm-gantt__tree-row:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* A row is a roving tab stop (treegrid): its focus ring is inset so the scroller does not clip it. */
+.tm-gantt__tree-row:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
+}
+
+.tm-gantt__tree-row--selected {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-gantt__tree-cell {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1, 0.25rem);
+    font-size: 0.875rem;
+    color: var(--tm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The header cell shares the row cell's min-width, or a cramped grid collapses the header title to nothing and every
+   other header slides left of its column. */
+.tm-gantt__tree-header-cell--title,
+.tm-gantt__tree-cell--title {
+    flex: 1 0 var(--tm-gantt-title-min, 12rem);
+    min-width: 150px;
+}
+
+.tm-gantt__tree-cell--narrow {
+    flex: 0 0 80px;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--tm-text-secondary);
+}
+
+.tm-gantt__tree-cell--status {
+    flex: 0 0 90px;
+    justify-content: center;
+}
+
+/* Priority column: glyph + text, never colour alone (the glyph shape differs per level). */
+.tm-gantt__tree-header-cell--priority,
+.tm-gantt__tree-cell--priority {
+    flex: 0 0 90px;
+}
+
+.tm-gantt__tree-cell--priority {
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__priority-glyph {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.tm-gantt__priority-glyph--highest { color: var(--tm-priority-highest); }
+
+.tm-gantt__priority-glyph--high { color: var(--tm-priority-high); }
+
+.tm-gantt__priority-glyph--medium { color: var(--tm-priority-medium); }
+
+.tm-gantt__priority-glyph--low { color: var(--tm-priority-low); }
+
+.tm-gantt__priority-glyph--lowest { color: var(--tm-priority-lowest); }
+
+.tm-gantt__priority-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* WBS as a prefix of the title (ViewSettings.WbsInTitle). */
+.tm-gantt__task-wbs {
+    margin-inline-end: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ─── Drag handle ──────────────────────────────────────────────── */
+
+.tm-gantt__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 20px;
+    color: var(--tm-text-tertiary);
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+}
+
+.tm-gantt__tree-row:hover .tm-gantt__drag-handle {
+    opacity: 1;
+}
+
+.tm-gantt__tree-row--dragging { opacity: 0.4; }
+
+.tm-gantt__tree-row--drop-before { border-top: 2px solid var(--tm-color-primary); }
+
+.tm-gantt__tree-row--drop-after { border-bottom: 2px solid var(--tm-color-primary); }
+
+.tm-gantt__tree-row--drop-child {
+    background: var(--tm-color-primary-subtle);
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+/* ─── Expand button ────────────────────────────────────────────── */
+
+.tm-gantt__expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: var(--tm-text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.tm-gantt__expand-spacer {
+    display: inline-block;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+/* ─── Priority dot ─────────────────────────────────────────────── */
+
+.tm-gantt__priority-icon {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tm-gantt__priority-icon--highest{ background: var(--tm-priority-highest); }
+
+.tm-gantt__priority-icon--high   { background: var(--tm-priority-high); }
+
+.tm-gantt__priority-icon--medium { background: var(--tm-priority-medium); }
+
+.tm-gantt__priority-icon--low    { background: var(--tm-priority-low); }
+
+.tm-gantt__priority-icon--lowest { background: var(--tm-priority-lowest); }
+
+/* ─── Milestone icon ───────────────────────────────────────────── */
+
+.tm-gantt__milestone-icon {
+    color: var(--tm-color-warning);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.tm-gantt__task-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Phase 2: WBS Column ──────────────────────────────────────── */
+
+.tm-gantt__tree-header-cell--wbs,
+.tm-gantt__tree-cell--wbs {
+    width: 50px;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ─── Phase 2: Inline Edit ─────────────────────────────────────── */
+
+.tm-gantt__inline-edit {
+    flex: 1;
+    min-width: 60px;
+    padding: 0 var(--tm-space-1, 0.25rem);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: inherit;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
+}
+
+/* ─── Phase 2: Progress mini-bar ───────────────────────────────── */
+
+.tm-gantt__progress-mini {
+    display: inline-block;
+    width: 48px;
+    height: 6px;
+    background: var(--tm-bg-surface-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.tm-gantt__progress-mini-fill {
+    height: 100%;
+    background: var(--tm-color-primary);
+    border-radius: 3px;
+    transition: width 0.2s ease;
+}
+
+.tm-gantt__progress-mini-label {
+    font-size: 0.75rem;
+    color: var(--tm-text-secondary);
+}
+
+/* ─── Phase 2: Bulk select ─────────────────────────────────────── */
+
+.tm-gantt__tree-header-cell--checkbox,
+.tm-gantt__tree-cell--checkbox {
+    /* A fixed column: the generic cell is flex: 1, which let the checkbox column swallow the grid once it was narrower than its columns. */
+    flex: 0 0 32px;
+    width: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tm-gantt__bulk-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    background: var(--tm-color-primary-subtle);
+    border-top: 1px solid var(--tm-color-primary);
+    font-size: 0.875rem;
+}
+
+.tm-gantt__bulk-toolbar-count {
+    font-weight: 600;
+    color: var(--tm-color-primary);
+    margin-right: var(--tm-space-2, 0.5rem);
+}
+
+/* ─── Phase 2: Overdue highlight ───────────────────────────────── */
+
+.tm-gantt__tree-row--overdue {
+    background: var(--tm-color-danger-subtle) !important;
+}
+
+/* ─── Phase 3: Deviation badge ───────────────────────────────────── */
+
+.tm-gantt__deviation-badge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.tm-gantt__deviation-badge--late {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
+}
+
+.tm-gantt__deviation-badge--early {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success);
+}
+
+/* ─── Phase 3: Custom field columns ─────────────────────────────── */
+
+.tm-gantt__custom-field-header,
+.tm-gantt__custom-field-cell {
+    min-width: 80px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ─── Phase 4: Inline badges ────────────────────────────────────── */
+
+.tm-gantt__inline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 4px;
+    cursor: default;
+}
+
+.tm-gantt__inline-badge--attachment {
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning);
+}
+
+.tm-gantt__inline-badge--comment {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* ── Phase 5: Alternate Views ── */
+
+/* List View */
+.tm-gantt__main--list-view .tm-gantt__tree {
+    flex: 1;
+    max-width: 100%;
+}
+
+/* ── Overloaded assignee icon (F5.1.5) ─────────────────── */
+.tm-gantt__overload-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-danger);
+    font-size: 0.7rem;
+    margin-left: 2px;
+    vertical-align: middle;
+}
+
+/* ─── Density, tablet and touch (phase 7) ──────────────────────── */
+
+/* The row height is one value for the tree and the timeline: Compact 28px, Touch 44px (--tm-touch-target). The bars are laid out
+   from the same number in TmGantt.RowHeight, so a row and its bar can never drift. */
+[data-density="compact"] .tm-gantt__tree-row {
+    height: 28px;
+}
+
+[data-density="touch"] .tm-gantt__tree-row {
+    height: 44px;
+}
+
+/* Mobile read-mostly (phase 8): the two-line rows are 56px — the same number the timeline bars sit on. */
+[data-density="mobile"] .tm-gantt__tree-row {
+    height: 56px;
+}
+
+/* A tablet container narrows the tree so the timeline keeps room: the grid scrolls inside it past the width.
+   The mobile container is different: the tree IS the pinned name column, so it takes only what it needs. */
+[data-layout="tablet"] .tm-gantt__tree {
+    width: min(28rem, 50%);
+    min-width: 0;
+}
+
+[data-layout="mobile"] .tm-gantt__tree {
+    width: min(14rem, 55%);
+    min-width: 0;
+    border-inline-end: 1px solid var(--tm-border-color);
+}
+
+/* The mobile two-line cell: the title over the date range. */
+.tm-gantt__mobile-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.tm-gantt__mobile-cell-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-gantt__mobile-cell-range {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+@media (pointer: coarse) {
+    /* The row height is computed in C# (the bars sit on the same grid), so a coarse pointer does not resize a row: the
+       finger-sized hit area of the small controls grows around them instead, and GanttViewDensity.Touch makes the row 44px. */
+    .tm-gantt__expand-btn {
+        position: relative;
+    }
+
+    .tm-gantt__expand-btn::after {
+        content: "";
+        position: absolute;
+        inset: -12px;
+    }
+
+    /* The grip is an HTML5 drag affordance for a mouse; a finger reorders with the row menu / Alt+arrow alternative. */
+    .tm-gantt__drag-handle {
+        display: none;
+    }
+}

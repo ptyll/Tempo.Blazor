@@ -2,7 +2,7 @@
   "itemName": "TmSigningCompletionPanel",
   "kind": "Component",
   "category": "Signing",
-  "description": "Confirmation panel shown after a signer finishes, reflecting either a completed or waiting-for-others state. Offers actions to download the signed document, send a copy by email, and an optional custom action.",
+  "description": "Confirmation panel shown after a signer finishes, reflecting either a completed or waiting-for-others state. Offers actions to download the signed document, send a copy by email, and an optional custom action. Announces through a role=\"status\" region on its content (title + description), optionally focuses the title after the first render (FocusTitleOnRender) and colours only the hero circle in the waiting state.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningCompletionPanel.razor",
@@ -11,6 +11,12 @@
     "@using Tempo.Blazor.Components.Signing"
   ],
   "parameters": [
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional host content rendered between the description and the action row (Signing redesign phase 3) — for example a submission status timeline or a next-steps hint."
+    },
     {
       "name": "Title",
       "type": "string?",
@@ -46,6 +52,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional completed document download URL."
+    },
+    {
+      "name": "FocusTitleOnRender",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the panel moves focus onto its title after the first render (default true) so assistive technology announces the completion status. Hosts that render the panel next to other content — or several instances on one screen — pass false: a programmatic focus move from each instance would yank the signer's scroll/focus to the last rendered panel."
     },
     {
       "name": "IsWaitingForOthers",

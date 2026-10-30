@@ -2,12 +2,17 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@_validationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
+    @* The shell title is the input's accessible name (this instance's stable id), the description
+       (when the field carries one) and the validation alert (while one shows) its descriptions. *@
     <input class="tm-signing-number-step__input"
            type="number"
            value="@FormattedValue"
@@ -16,5 +21,8 @@
            step="@Field.Validation?.Step"
            disabled="@Disabled"
            placeholder="@PlaceholderText"
+           aria-labelledby="@_titleId"
+           aria-describedby="@DescribedBy"
+           aria-invalid="@BoolText(HasValidationMessage)"
            @onchange="HandleValueChangedAsync" />
 </TmSigningStepShell>

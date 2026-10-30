@@ -76,17 +76,22 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
         var input = panel.Locator("input.tm-signing-text-step__input").First;
         await input.FillAsync("Alex Johnson");
+        // The text input commits on change (blur) — Tab so the completed-field progress below
+        // reflects the entered value.
+        await input.PressAsync("Tab");
 
         await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Celé jméno");
         await Assertions.Expect(input).ToHaveValueAsync("Alex Johnson");
-        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__progress")).ToContainTextAsync("1");
+        // Phase 3: the progress counts completed FIELDS ("1 of 6 done") — the count survives the
+        // language switch together with the value.
+        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__progress")).ToContainTextAsync("1 of 6 done");
         await Assertions.Expect(await GetByTestIdAsync(page, "signing-runner-status")).ToContainTextAsync("Language snapshot: cs-CZ");
     }
 
@@ -97,7 +102,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await panel.Locator("input.tm-signing-text-step__input").First.FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
@@ -120,7 +125,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
         var language = panel.Locator(".tm-signing-form-runner__language-select").First;
 
         await language.FocusAsync();
@@ -179,12 +184,12 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__validation")).ToContainTextAsync("Full name is required.");
+        await Assertions.Expect(panel.Locator(".tm-signing-step-shell__validation")).ToContainTextAsync("Full name is required.");
     }
 
     [TestMethod]
@@ -194,7 +199,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
 

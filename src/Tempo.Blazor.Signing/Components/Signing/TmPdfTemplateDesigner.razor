@@ -15,7 +15,10 @@
     }
     else
     {
+        @* The workspace is the CSS size container (see _pdf-template-designer.css); its grid lives
+           on an inner element because a @container rule can never restyle the container itself. *@
         <div class="tm-pdf-template-designer__workspace">
+            <div class="tm-pdf-template-designer__workspace-grid">
             @if (!Disabled)
             {
                 <aside class="@PaletteClass" aria-label="@Loc["TmPdfTemplateDesigner_Palette"]">
@@ -198,6 +201,7 @@
                                            ShowLocalizationEditor="ShowCulturePreview"
                                            CopyToAllPagesRequested="CopyFieldToAllPagesAsync" />
             </aside>
+            </div>
         </div>
     }
 

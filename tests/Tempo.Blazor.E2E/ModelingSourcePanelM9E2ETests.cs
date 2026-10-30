@@ -15,6 +15,7 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
     public async Task SourcePanel_ShowsDemoProviderMetadata()
     {
         var page = await OpenLoadedModelingPageAsync();
+        await OpenSourceTabAsync(page);
 
         await ExpectVisibleAsync(page, "[data-testid='modeling-source-panel']");
         await ExpectTextContainsAsync(page, "[data-testid='modeling-source-system']", "Tempo.Blazor Demo");
@@ -27,6 +28,7 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?delay=500");
         var initialLoadCount = await GetLoadCountAsync(page);
+        await OpenSourceTabAsync(page);
 
         await page.Locator("[data-testid='modeling-source-load-button']").ClickAsync();
         await ExpectVisibleAsync(page, "[data-testid='modeling-editor-loading']");
@@ -40,6 +42,7 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
     public async Task SourcePanel_StaleMetadata_ShowsWarning()
     {
         var page = await OpenLoadedModelingPageAsync("?fresh=false");
+        await OpenSourceTabAsync(page);
 
         await ExpectVisibleAsync(page, "[data-testid='modeling-source-freshness-warning']");
         await ExpectTextContainsAsync(page, "[data-testid='modeling-source-freshness-warning']", "Source data may be out of date");
@@ -52,6 +55,7 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?delay=500");
         var initialLoadCount = await GetLoadCountAsync(page);
+        await OpenSourceTabAsync(page);
 
         await page.EvaluateAsync(
             """
@@ -86,10 +90,12 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
     public async Task SourcePanel_CapturesM9Screenshots()
     {
         var fresh = await OpenLoadedModelingPageAsync();
+        await OpenSourceTabAsync(fresh);
         await TakeScreenshotAsync(fresh, "source-panel-fresh");
         await SaveStableScreenshotAsync(fresh, "source-panel-fresh.png");
 
         var stale = await OpenLoadedModelingPageAsync("?fresh=false");
+        await OpenSourceTabAsync(stale);
         await ExpectVisibleAsync(stale, "[data-testid='modeling-source-freshness-warning']");
         await TakeScreenshotAsync(stale, "source-panel-stale");
         await SaveStableScreenshotAsync(stale, "source-panel-stale.png");
@@ -110,6 +116,23 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         return page;
+    }
+
+    /// <summary>
+    /// Phase 5 (MO1): the source panel lives in the inspector's "Source" tab on the docked
+    /// layouts — open it and wait for the panel. A no-op on the compact layout, where the panel
+    /// is stacked in the inspector (the tab button does not exist there).
+    /// </summary>
+    private static async Task OpenSourceTabAsync(IPage page)
+    {
+        var tab = page.Locator("[data-testid='modeling-tab-source']");
+        if (await tab.CountAsync() == 0)
+        {
+            return;
+        }
+
+        await tab.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await ExpectVisibleAsync(page, "[data-testid='modeling-source-panel']");
     }
 
     private static async Task WaitForLoadedEditorAsync(IPage page)

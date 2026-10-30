@@ -14,6 +14,8 @@
 </div>
 
 @code {
+    private Microsoft.JSInterop.IJSObjectReference? _appReadyModule;
+
     protected override void OnInitialized()
     {
         ThemeService.OnChanged += StateHasChanged;
@@ -24,7 +26,21 @@
         if (firstRender)
         {
             // The same readiness marker MainLayout sets; WaitForAppReadyAsync waits on it.
-            await JS.InvokeVoidAsync("eval", "document.body.setAttribute('data-blazor-ready', 'true')");
+            // CSP-safe: a module import (no eval) keeps the ?csp=1 demo variant working.
+            try
+            {
+                _appReadyModule ??= await JS.InvokeAsync<Microsoft.JSInterop.IJSObjectReference>(
+                    "import", "./_content/Tempo.Blazor.Demo.SharedUI/js/demo-app-ready.js");
+                await _appReadyModule.InvokeVoidAsync("markBodyReady");
+            }
+            catch (Microsoft.JSInterop.JSException)
+            {
+                // Progressive enhancement only.
+            }
+            catch (Microsoft.JSInterop.JSDisconnectedException)
+            {
+                // The circuit is gone; there is nothing left to mark.
+            }
         }
     }
 

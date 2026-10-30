@@ -1,0 +1,155 @@
+/* ── Fáze 13: the Relations tab body (related elements / relationships) ──────
+   Grouped lists under the inspector's tab; every color, spacing and radius rides the shared
+   --tm-* tokens (no hard-coded values) and rows grow to 44px targets on a coarse pointer. */
+.tm-modeling-related {
+    display: grid;
+    gap: var(--tm-space-4);
+    align-content: start;
+    padding: var(--tm-space-4);
+    color: var(--tm-color-text);
+
+    /* Component-local knobs (review fix, phase 13 — no bare literals in the rules below):
+       the trailing relationship-type chip truncates at 7x the base spacing unit and the group
+       heading keeps a subtle tracking for its small-caps look. */
+    --tm-modeling-related-type-max-width: calc(var(--tm-space-8) * 7);
+    --tm-modeling-related-group-tracking: 0.02em;
+}
+
+.tm-modeling-related__group {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-related__group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tm-modeling-related-group-tracking);
+}
+
+.tm-modeling-related__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-6);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.tm-modeling-related__rows {
+    display: grid;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-modeling-related__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--tm-space-1);
+    align-items: stretch;
+    min-width: 0;
+}
+
+/* The two row actions: the counterpart (primary nav, fills the row) and the relationship type
+   (compact trailing chip). Both are native buttons with a visible focus ring. */
+.tm-modeling-related__nav,
+.tm-modeling-related__type {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 0;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-modeling-related__nav {
+    min-height: var(--tm-space-8);
+}
+
+.tm-modeling-related__nav:hover,
+.tm-modeling-related__type:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-modeling-related__nav:focus-visible,
+.tm-modeling-related__type:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The relationship-type chip reads as metadata, not as the primary row action. */
+.tm-modeling-related__type {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-related__type .tm-modeling-related__text {
+    max-width: var(--tm-modeling-related-type-max-width);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A dangling endpoint renders the Unknown fallback as plain content — never a dead button. */
+.tm-modeling-related__nav--static {
+    cursor: default;
+}
+
+.tm-modeling-related__nav--static:hover {
+    background: transparent;
+}
+
+.tm-modeling-related__nav--endpoint {
+    width: 100%;
+    min-height: var(--tm-space-8);
+}
+
+.tm-modeling-related__icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-related__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-modeling-related__empty {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* WCAG 2.5.7 / touch contract: the row actions reach the 44px target on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-modeling-related__nav,
+    .tm-modeling-related__type,
+    .tm-modeling-related__nav--endpoint {
+        min-height: var(--tm-touch-target);
+    }
+}

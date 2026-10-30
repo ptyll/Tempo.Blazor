@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "One notation entry of the shared ModelingNotationCatalog: a semantic type mapped to the diagram stencil that draws it.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingNotationCatalogEntry"
+}

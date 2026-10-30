@@ -1,0 +1,10 @@
+{
+  "itemName": "ModelingSaveMode",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "How committed edits reach the IModelingModelWriter: Manual (default) aggregates until SaveModelChangesAsync; Immediate saves after every field commit.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingSaveMode.cs",
+  "documentationStatus": "generated"
+}

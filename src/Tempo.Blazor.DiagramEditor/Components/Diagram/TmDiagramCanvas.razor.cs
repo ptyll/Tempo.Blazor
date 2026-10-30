@@ -80,6 +80,21 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Raised when the user presses Ctrl+F.</summary>
     [Parameter] public EventCallback OnShowSearch { get; set; }
 
+    /// <summary>
+    /// Raised when Escape is consumed by the editor's capture-phase consumer because the search
+    /// panel is open (and the focus is inside the editor). The host closes the panel; the event is
+    /// marked as handled first, so an overlay behind the editor (a dialog focus trap) does not also
+    /// close. Additive — hosts that do not bind it keep the previous behavior.
+    /// </summary>
+    [Parameter] public EventCallback OnCloseSearch { get; set; }
+
+    /// <summary>
+    /// Raised when Escape is consumed by the editor's capture-phase consumer because the "⋯" view
+    /// menu is open (and the focus is inside the editor). The host closes the menu. Additive —
+    /// hosts that do not bind it keep the previous behavior.
+    /// </summary>
+    [Parameter] public EventCallback OnCloseViewMenu { get; set; }
+
     /// <summary>Raised when the user presses Ctrl+H (find and replace).</summary>
     [Parameter] public EventCallback OnShowReplace { get; set; }
 
@@ -345,10 +360,30 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             try { await JS.InvokeVoidAsync("tmDiagramEditor.typesetMath", _containerRef); }
             catch { /* ignore MathJax errors */ }
         }
+
+        // Fáze 9: the deferred FitOnDocumentLoad fit — AFTER the init await above, so the JS
+        // instance always exists here (the editor's render hook fires before this canvas').
+        if (_jsInitialized && !_disposed && _pendingFitWhenReady is { } fitWhenReady)
+        {
+            _pendingFitWhenReady = null;
+            var fitCompleted = _fitCompleted;
+            _fitCompleted = null;
+            await FitToView(fitWhenReady);
+            // The editor tracks its fit through this callback: the fit has now REALLY happened,
+            // so a still-owed flag on the editor's side can retire (Fáze 9 review — the editor
+            // re-arms the fit on a remounted canvas until this fires).
+            fitCompleted?.Invoke();
+        }
     }
+
+    // Set in DisposeAsync: a canvas the shell replaced (mobile↔docked flip) may still have a
+    // deferred fit waiting behind the init await — that fit must never run (it would fit a dead
+    // JS instance and falsely retire the editor's owed flag).
+    private bool _disposed;
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         if (_jsInitialized)
         {
             try { await JS.InvokeVoidAsync("tmDiagramEditor.destroy", _containerRef); }
@@ -1263,6 +1298,47 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnShowSearch")]
     public async Task JsOnShowSearch()
         => await OnShowSearch.InvokeAsync();
+
+    /// <summary>
+    /// Raised by the capture-phase Escape consumer when the editor root hosts an OPEN search panel
+    /// (or "⋯" view menu) and the focus is inside the editor: Escape closes THAT surface and must
+    /// not reach a host overlay behind the editor. The consumer marks the event
+    /// (<c>preventDefault</c> + <c>tmEscapeHandled</c>) before invoking, so a document-level bubble
+    /// listener (the TmModal focus trap) skips it regardless of registration order.
+    /// </summary>
+    [JSInvokable("OnSearchEscape")]
+    public async Task JsOnSearchEscape()
+        => await OnCloseSearch.InvokeAsync();
+
+    /// <summary>
+    /// Raised by the same capture-phase Escape consumer while the editor's "⋯" view menu is open
+    /// (<c>data-open</c> on <c>.tm-diagram-editor__view-menu</c>): Escape closes the menu without
+    /// closing a host overlay behind the editor.
+    /// </summary>
+    [JSInvokable("OnViewMenuEscape")]
+    public async Task JsOnViewMenuEscape()
+        => await OnCloseViewMenu.InvokeAsync();
+
+    /// <summary>
+    /// Fáze 10: raised by the capture-phase Escape consumer when the focus sits in an INLINE EDIT
+    /// of the canvas (the <c>.tm-diagram-edge-label-input</c> foreignObject input, or a node
+    /// inline editor routed through its <c>TmDiagramStencilShape</c>). The consumer has already
+    /// marked the Escape (<c>preventDefault</c> + <c>tmEscapeHandled</c>), so a host overlay (the
+    /// open-editor dialog) stays open and the NEXT Escape continues with the confirmed layer
+    /// order. This handler CANCELS the edge-label edit — the value reverts and nothing is pushed
+    /// to the undo stack. The Blazor <c>OnLabelInputKeyDown</c> Escape branch stays as the
+    /// idempotent fallback path. After the cancel the focus returns to the canvas container —
+    /// the edit input unmounts and the focus must not drop to <c>body</c> (the node inline-editor
+    /// path mirrors this from JS via <c>container.focus({preventScroll:true})</c>).
+    /// </summary>
+    [JSInvokable("OnInlineEditEscape")]
+    public async Task JsOnInlineEditEscape()
+    {
+        if (_editingEdgeLabelId is null) return;
+        CancelEdgeLabelEdit();
+        StateHasChanged();
+        await FocusCanvasAsync();
+    }
 
     [JSInvokable("OnShowReplace")]
     public async Task JsOnShowReplace()
@@ -2374,12 +2450,58 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await JS.InvokeVoidAsync("tmDiagramEditor.zoomTo", _containerRef, scale);
     }
 
-    public async Task FitToView()
+    /// <summary>
+    /// Fits the content to the canvas. Fáze 9: the optional <paramref name="mode"/> is additive —
+    /// <see cref="DiagramFitMode.Page"/> (default) keeps today's fit both axes,
+    /// <see cref="DiagramFitMode.Width"/> asks the JS engine to scale by the container width only.
+    /// Returns the fitted scale; with <see cref="ShowPageView"/> the page-view margin is applied
+    /// AFTER the fit and the returned (final, smaller) scale is the one AFTER the margin — the
+    /// single fit path the editor's own fit button and <c>FitToViewAsync</c> go through (Fáze 9
+    /// review), so the zoom label can never show a pre-margin scale.
+    /// </summary>
+    public async Task<double> FitToView(DiagramFitMode mode = DiagramFitMode.Page)
     {
-        if (!_jsInitialized) return;
-        await JS.InvokeVoidAsync("tmDiagramEditor.fitToView", _containerRef, 40);
+        if (!_jsInitialized) return _currentScale;
+        var scale = await JS.InvokeAsync<double>("tmDiagramEditor.fitToView", _containerRef, 40, mode == DiagramFitMode.Width ? "width" : null);
         if (ShowPageView)
-            await JS.InvokeVoidAsync("tmDiagramEditor.addPageViewMargin", _containerRef, PageViewMargin);
+        {
+            // The margin grows the viewBox, so the scale shrinks — the JS returns the final
+            // scale (and reports it back through OnZoomChanged for the zoom label). A mock/host
+            // JS that does not return a number keeps the fit scale (a real engine always
+            // reports a positive MIN_SCALE-clamped value).
+            var finalScale = await JS.InvokeAsync<double>("tmDiagramEditor.addPageViewMargin", _containerRef, PageViewMargin);
+            if (finalScale > 0) scale = finalScale;
+        }
+        return scale;
+    }
+
+    // Fáze 9: a fit handed over by the hosting editor (FitOnDocumentLoad) and consumed at the END
+    // of this OnAfterRenderAsync — AFTER the init await, so the JS instance always exists and the
+    // fit can never race the boot (the editor's own render hook fires BEFORE this canvas').
+    private DiagramFitMode? _pendingFitWhenReady;
+
+    /// <summary>Invoked once the deferred fit above has actually run (Fáze 9 review): the editor
+    /// retires its still-owed fit flag through it.</summary>
+    private Action? _fitCompleted;
+
+    /// <summary>
+    /// Defers a fit until the canvas' JS engine is initialized (Fáze 9). The editor arms it from
+    /// its render hook (which runs before this canvas' own), and the fit executes right after
+    /// the boot — the JS engine reports the fitted scale back through <see cref="ZoomChanged"/>.
+    /// <paramref name="onFitted"/> (Fáze 9 review) fires once the fit has really run, so the
+    /// editor can retire its owed-fit bookkeeping. When the engine is ALREADY initialized
+    /// (a late arm — the editor hands the fit over after this canvas' render pass), a render is
+    /// requested so the deferred fit runs promptly instead of waiting for the next render.
+    /// </summary>
+    public void RequestFitWhenReady(DiagramFitMode mode, Action? onFitted = null)
+    {
+        _pendingFitWhenReady = mode;
+        _fitCompleted = onFitted;
+        if (_jsInitialized)
+        {
+            MarkContentDirty();
+            _ = InvokeAsync(StateHasChanged);
+        }
     }
 
     public async Task SetSelection(params string[] ids)
@@ -2453,6 +2575,15 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await ZoomToRect(node.X, node.Y, node.W, node.H, 40);
         await SetSelection(nodeId);
     }
+
+    /// <summary>
+    /// Moves the focus onto the canvas container. The editor's search-close path uses it so the
+    /// focus does not drop to <c>body</c> when the panel unmounts (the input that held the focus
+    /// dies with it) — the canvas stays the active element and the next Escape reaches the editor
+    /// root's own consumers first.
+    /// </summary>
+    public async Task FocusCanvasAsync()
+        => await _containerRef.FocusAsync();
 
     public async Task FocusOnEdge(string edgeId)
     {

@@ -1,0 +1,27 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits TmGanttPart
+@using Tempo.Blazor.Components.Filters
+
+@* The filter strip of TmGantt: the active filters as removable chips directly under the toolbar (only while a filter
+   exists) and the filter editor - inline, right here. The DIALOG presentation (FilterPanelMode = Dialog / Auto on a
+   narrow container) renders OUTSIDE the chart root, from TmGantt itself: .tm-gantt is a CSS container (inline-size),
+   and a container is the containing block of fixed-position descendants, which would confine the modal. *@
+@if (Owner.ActiveFilterCount > 0)
+{
+    <div class="tm-gantt__filter-chips" role="group" aria-label="@Loc["TmGantt_ActiveFilters"]" data-testid="@TestId("gantt-filter-chips")">
+        @foreach (var chip in Owner.FilterChips())
+        {
+            var source = chip.Source;
+            <TmFilterChip Filter="chip.Chip" OnRemove="() => Owner.RemoveFilterChipAsync(source)" OnEdit="Owner.OpenFilterPanel" />
+        }
+    </div>
+}
+
+@if (!Owner.FilterPanelAsDialog && Owner._filterPanelOpen)
+{
+    <div class="tm-gantt__filter-panel" data-testid="@TestId("gantt-filter-panel")">
+        <TmGanttFilterPanel Filters="Owner.ActiveFiltersSnapshot()"
+                            OnFiltersChanged="async filters => await Owner.ApplyFiltersAsync(filters)"
+                            OnClose="Owner.ToggleFilterPanel" />
+    </div>
+}

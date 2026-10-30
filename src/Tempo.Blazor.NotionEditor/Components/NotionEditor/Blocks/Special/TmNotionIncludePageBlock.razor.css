@@ -136,7 +136,7 @@
 .tm-include-page__state {
     padding: var(--tm-space-2);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-tertiary);
     font-size: var(--tm-font-size-sm);
 }
@@ -223,7 +223,7 @@
     gap: var(--tm-space-2);
     padding: var(--tm-space-2);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-include-page__callout-icon {
@@ -234,7 +234,7 @@
     margin: 0;
     padding: var(--tm-space-3);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     color: var(--tm-text-primary);
     overflow: auto;
     font-family: var(--tm-font-mono);
@@ -262,7 +262,7 @@
 }
 
 .tm-include-page__table th {
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
     font-weight: var(--tm-font-weight-semibold);
 }
 

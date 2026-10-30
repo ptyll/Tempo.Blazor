@@ -12233,6 +12233,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "IModelingModelWriter",
+      "kind": "Interface",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Writes edited modeling model data back to the source that IModelingModelProvider loaded it from (Fáze 14, decision MODELING-INSPECTOR-EDITING). The provider contract stays READ-ONLY: a host that wants an editable inspector registers a separate writer resolved by ProviderKey.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "IModelingNotationProfile",
       "kind": "Interface",
       "category": "Modeling",
@@ -12323,6 +12333,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingElementChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingElementDto",
       "kind": "Class",
       "category": "Modeling",
@@ -12373,6 +12393,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelChangeSet",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync (ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, Elements, Relationships).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingModelDto",
       "kind": "Class",
       "category": "Modeling",
@@ -12393,6 +12423,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelSaveResult",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The outcome of IModelingModelWriter.SaveChangesAsync (Succeeded, IsConflict, Message, Model?, Issues).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingNotationProfileRegistry",
       "kind": "Class",
       "category": "Modeling",
@@ -12400,6 +12440,16 @@
       "description": "DI-backed registry of modeling notation profiles.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingNotationProfiles.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingRelationshipChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -12884,10 +12934,156 @@
       "kind": "Record",
       "category": "Models",
       "namespace": "Tempo.Blazor.Models",
-      "description": "Represents a single message in a chat conversation.",
+      "description": "Represents a single message in a chat conversation. A pure data record — TmChat renders it and never mutates it. Besides the rendering fields it carries a host-owned custom-template contract: Kind (a free-form routing string the host's MessageTemplate switches on), Metadata (a read-only dictionary, default empty, read via ChatMessageContext.GetMetadata<T>) and Payload (the original host DTO, read back via ChatMessageContext.PayloadAs<T>). TmChat does not interpret any of the three and never serializes them (Payload is JsonIgnore'd).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/ChatMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Unique identifier; also the data-message-id scroll/focus anchor TmChat renders on the message wrapper."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "Message text content."
+        },
+        {
+          "name": "Author",
+          "kind": "Property",
+          "type": "ChatUser?",
+          "description": "Author of the message."
+        },
+        {
+          "name": "Timestamp",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "Timestamp when the message was sent."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "ChatMessageType",
+          "description": "Message direction / type (Incoming, Outgoing, System)."
+        },
+        {
+          "name": "Attachments",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatAttachment>",
+          "description": "Optional attachments."
+        },
+        {
+          "name": "IsRead",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message has been read by the recipient."
+        },
+        {
+          "name": "IsSending",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message is currently being sent."
+        },
+        {
+          "name": "IsError",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message failed to send."
+        },
+        {
+          "name": "ErrorMessage",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional error text when sending failed."
+        },
+        {
+          "name": "ReplyToId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the specific message this one replies to, when it is a reply."
+        },
+        {
+          "name": "ThreadRootId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the root message of the thread this message belongs to (the root's own Id for a thread starter, the root id for its replies). Null for standalone messages."
+        },
+        {
+          "name": "ReplyCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of replies in this message's thread (meaningful on a thread root)."
+        },
+        {
+          "name": "Reactions",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatReaction>",
+          "description": "Emoji reactions on this message, grouped by emoji."
+        },
+        {
+          "name": "ReadBy",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChatReadReceipt>",
+          "description": "Per-user read receipts for this message."
+        },
+        {
+          "name": "EditedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Timestamp of the last edit, or null when the message was never edited."
+        },
+        {
+          "name": "IsDeleted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message has been deleted (rendered as a tombstone)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Free-form kind of the message, e.g. \"ai-draft\", \"queued\", \"tip\". TmChat itself does NOT interpret the value — it only carries it into the message template (ChatMessageContext.Message) and mirrors it on the message wrapper's data-kind attribute. Hosts use it to route a RenderFragment<ChatMessageContext> MessageTemplate (typically paired with UseTemplateFor) or their own grouping logic. Null for plain messages."
+        },
+        {
+          "name": "Metadata",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, object?>",
+          "description": "Host-defined metadata entries. TmChat does NOT interpret them — they are handed to the message template untouched (read via ChatMessageContext.GetMetadata<T>(key, fallback)). Defaults to an empty read-only dictionary, never null. Values must be in-process CLR objects; after a host-side JSON round-trip they become JsonElement instances instead of the original CLR types."
+        },
+        {
+          "name": "Payload",
+          "kind": "Property",
+          "type": "object?",
+          "description": "The host's original DTO this message was mapped from. TmChat does NOT interpret it — the message template reads it back type-safely via ChatMessageContext.PayloadAs<T>(). Never serialized into any component event or log output (JsonIgnore)."
+        },
+        {
+          "name": "IsEdited",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the message carries an edit timestamp."
+        },
+        {
+          "name": "IsReply",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the message is a reply within a thread."
+        },
+        {
+          "name": "IsReadByUser",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Returns true when userId has read this message (its own IsRead flag or the ReadBy receipts).",
+          "parameters": [
+            {
+              "name": "userId",
+              "type": "string"
+            }
+          ]
+        }
+      ]
     },
     {
       "itemName": "ChatMessageEdit",
@@ -15078,6 +15274,34 @@
       ]
     },
     {
+      "itemName": "GanttColumnValues",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The one place a TmWorkItem becomes a flat cell value for an Excel export (or a preview of one). Both GanttXlsxExporter and the export dialog's built-in preview share it, and the format is invariant, so a cell and its preview never drift.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttColumnValues.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Format",
+          "kind": "Method",
+          "type": "string",
+          "description": "Formats the task's value for column; an empty string when the column carries nothing.",
+          "parameters": [
+            {
+              "name": "task",
+              "type": "TmWorkItem"
+            },
+            {
+              "name": "column",
+              "type": "GanttColumnKey"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "kind": "Class",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
@@ -15175,6 +15399,36 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttDependencyType.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttExcelImportOptions",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Options for an Excel Gantt import, e.g. a resolver turning the sheet's assignee names into real people.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttExcelImportOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultIdPrefix",
+          "kind": "Field",
+          "type": "string",
+          "description": "Default IdPrefix."
+        },
+        {
+          "name": "AssigneeResolver",
+          "kind": "Property",
+          "type": "Func<string, TmWorkItemAssignee?>?",
+          "description": "Resolves an assignee name from the sheet into a real person. Return null to skip the name (the host does not know it). When null, every name becomes a plain TmWorkItemAssignee with the normalized name as its id."
+        },
+        {
+          "name": "IdPrefix",
+          "kind": "Property",
+          "type": "string",
+          "description": "Prefix of every imported task id: the id is {IdPrefix}{n}, where n is the 1-based data-row ordinal. The default keeps ids stable across imports of the same sheet (xlsx-row-3); pass a fresh value per import (e.g. xlsx-{8 random hex}-row-) when one stream can be imported more than once, so the ids of separate imports never collide."
+        }
+      ]
     },
     {
       "itemName": "GanttExportFormat",
@@ -15276,6 +15530,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "GanttFilterPanelMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt presents its filter editor: Inline (default, a strip under the toolbar), Dialog (a modal dialog, a bottom sheet on a mobile viewport) or Auto (picks by the Gantt's own container: a dialog on a tablet or narrower container, the inline strip on a desktop one).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilterPanelMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttHelper",
       "kind": "Class",
       "category": "Models",
@@ -15286,6 +15550,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "GanttHistoryDrawerPlacement",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "What the Gantt history drawer is positioned against: the Gantt component (default) or the viewport.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHistoryDrawerPlacement.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttImportAuthException",
       "kind": "Class",
       "category": "Models",
@@ -15293,6 +15567,98 @@
       "description": "Thrown when an import source returns HTTP 401 Unauthorized.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportAuthException.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttImportResult",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The full outcome of an import: the tasks, the dependencies that reference them and the non-fatal warnings. Import never throws for data-level problems — they surface as warnings.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Dependencies",
+          "kind": "Property",
+          "type": "IReadOnlyList<GanttDependency>",
+          "description": "Dependencies between the imported tasks (predecessor → task)."
+        },
+        {
+          "name": "Tasks",
+          "kind": "Property",
+          "type": "IReadOnlyList<TmWorkItem>",
+          "description": "Imported tasks, in sheet order. Task ids are stable per row within one import ({GanttExcelImportOptions.IdPrefix}{ordinal}, e.g. xlsx-row-3); predecessor row references and WBS lookups resolve against the same ordinals."
+        },
+        {
+          "name": "Warnings",
+          "kind": "Property",
+          "type": "IReadOnlyList<GanttImportWarning>",
+          "description": "Non-fatal problems; the import itself always succeeded when this result exists."
+        }
+      ]
+    },
+    {
+      "itemName": "GanttImportWarning",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "A non-fatal problem found while importing. A warning carries code + data only — never a ready-made message: the language belongs to the UI that renders it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarning.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "GanttImportWarningCode",
+          "description": "What went wrong; the UI maps this to a localized message."
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The source column header the warning came from, when the warning is tied to a column."
+        },
+        {
+          "name": "Row",
+          "kind": "Property",
+          "type": "int",
+          "description": "The 1-based data-row ordinal the warning came from (1 = first data row). Predecessor row references count these ordinals; UI text uses SheetRow instead."
+        },
+        {
+          "name": "SheetRow",
+          "kind": "Property",
+          "type": "int",
+          "description": "The 1-based sheet row number the warning came from, ready for display (the header row is 1; taken from the row's RowIndex, falling back to the ordinal plus the header offset)."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The offending raw value, when there is one (the unknown predecessor token, the duplicated WBS code…)."
+        }
+      ]
+    },
+    {
+      "itemName": "GanttImportWarningCode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Why an import produced a warning. The UI localizes the code — a warning never carries ready-made text.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttImportWarningCode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttPortfolioAxisMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How a TmGanttPortfolio aligns the date axes of its project cards: PerProject (default, every card on its own range) or Shared (one sticky axis header, every card pinned to the union range).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttPortfolioAxisMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -15425,6 +15791,16 @@
       ]
     },
     {
+      "itemName": "GanttSidebarMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt offers its panels: the vertical icon Rail (default) or a horizontal Tabs strip with text labels.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSidebarMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttSidebarPanel",
       "kind": "Enum",
       "category": "Models",
@@ -15470,6 +15846,94 @@
       ]
     },
     {
+      "itemName": "GanttSummary",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "The rollup behind the Gantt's optional summary band: counts by status, overdue count, logged and estimated hours (leaves only), milestones done/total, actual cost with the optional host budget, the deepest WBS level and the task count - computed by GanttHelper.ComputeSummary from the visible tasks. IsFiltered is stamped by the caller when the visible set is smaller than the full data.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSummary.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ActualCost",
+          "kind": "Property",
+          "type": "decimal",
+          "description": "Sum of the actual cost of the leaf tasks."
+        },
+        {
+          "name": "BudgetTotal",
+          "kind": "Property",
+          "type": "decimal?",
+          "description": "The host's overall budget, when it has one; null otherwise (the band then hides the budget card when no actual cost exists either)."
+        },
+        {
+          "name": "EstimatedHours",
+          "kind": "Property",
+          "type": "double",
+          "description": "Sum of the estimated hours of the leaf tasks."
+        },
+        {
+          "name": "IsFiltered",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the caller knows the set is smaller than its full data (a filter is active or closed tasks are hidden) — the band then shows a \"Filtered\" note."
+        },
+        {
+          "name": "LoggedHours",
+          "kind": "Property",
+          "type": "double",
+          "description": "Sum of the logged hours of the leaf tasks."
+        },
+        {
+          "name": "MilestonesDone",
+          "kind": "Property",
+          "type": "int",
+          "description": "Milestones that are Done or Closed."
+        },
+        {
+          "name": "MilestonesTotal",
+          "kind": "Property",
+          "type": "int",
+          "description": "All milestones in the set."
+        },
+        {
+          "name": "OverdueCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Tasks whose end is before today and that are neither Done nor Closed (the same rule TmGantt.IsOverdue draws)."
+        },
+        {
+          "name": "StatusCounts",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<TmWorkItemStatus, int>",
+          "description": "Tasks per TmWorkItemStatus; only statuses with at least one task are present."
+        },
+        {
+          "name": "TaskCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of tasks in the set."
+        },
+        {
+          "name": "WbsLevels",
+          "kind": "Property",
+          "type": "int",
+          "description": "Deepest WBS level of the set (2 for tasks one level below their parents)."
+        }
+      ]
+    },
+    {
+      "itemName": "GanttTaskAction",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "A command of the Actions section of the Gantt task panel (mark done, add above / below / child, duplicate, delete, move up / down among the siblings).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskAction.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "GanttTaskNameLocation",
       "kind": "Enum",
       "category": "Models",
@@ -15487,6 +15951,16 @@
       "description": "A node in the Gantt task tree.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHelper.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttTaskPanelMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "How the Gantt presents its task panel: Inline (default, the in-flow column), Overlay (a TmSidePanel side sheet with tabs at every width) or Auto (in-flow on a desktop container, side sheet on a tablet or narrower one).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttTaskPanelMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -15546,7 +16020,7 @@
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Abstractions.Models",
-      "description": "Controls row height density in the Gantt grid.",
+      "description": "Controls row height density in the Gantt grid: Comfortable (40 px), Compact (28 px) or Touch (44 px finger-sized rows).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttViewDensity.cs",
       "documentationStatus": "merged"
@@ -15586,6 +16060,12 @@
           "description": "Shade non-working days (weekends/holidays) in the timeline. Default: true."
         },
         {
+          "name": "ShowProgressLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Show the completion percentage next to every task bar. Default: false."
+        },
+        {
           "name": "ShowTodayMarker",
           "kind": "Property",
           "type": "bool",
@@ -15601,15 +16081,41 @@
           "name": "Theme",
           "kind": "Property",
           "type": "GanttTheme",
-          "description": "Color theme applied to the component. Default: Auto."
+          "description": "Color theme applied to the component. Default: Auto, which follows the ambient theme (the cascaded data-theme / the registered ThemeService); Light and Dark force data-theme on the Gantt root."
         },
         {
           "name": "ViewDensity",
           "kind": "Property",
           "type": "GanttViewDensity",
           "description": "Row height density. Default: Comfortable (40 px)."
+        },
+        {
+          "name": "WbsInTitle",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Show the WBS number (1.2.3) as a prefix of the task title in the tree. Default: false."
         }
       ]
+    },
+    {
+      "itemName": "GanttVirtualizationMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Whether the Gantt window-virtualizes its tree and timeline for large data sets: Off (default, every row renders), Auto (from the VirtualizationThreshold of visible rows) or On (always). The window is computed arithmetically from the fixed row height in the browser; Off keeps the pre-virtualization DOM byte for byte.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttVirtualizationMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "GanttWorkloadPlacement",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models",
+      "description": "Where the Gantt shows its workload: as the alternate Workload view (default) or as a panel docked under the timeline.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttWorkloadPlacement.cs",
+      "documentationStatus": "merged"
     },
     {
       "itemName": "GanttZoomPreset",
@@ -37392,11 +37898,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1495,
-    "manualItemCount": 1495,
-    "generatedItemCount": 1478,
+    "itemCount": 1514,
+    "manualItemCount": 1514,
+    "generatedItemCount": 1497,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1478
+    "publicApiTypeCount": 1497
   }
 }

@@ -1,0 +1,113 @@
+@namespace Tempo.Blazor.Components.Signing
+@using System.ComponentModel
+@using Tempo.Blazor.Abstractions.Models
+@attribute [EditorBrowsable(EditorBrowsableState.Never)]
+
+@* SI4 (Signing redesign phase 3): the runner's PERMANENT field list, extracted from
+   TmSigningFormRunner so the wizard markup stays readable. It is an implementation part of the
+   runner — a host places TmSigningFormRunner, never this component (the runner owns the step
+   plan, the selection state and the single-panel invariant B25). *@
+<nav class="tm-signing-form-runner__field-list"
+     aria-label="@Loc["TmSigningFormRunner_FieldListAria"]">
+    <ol class="tm-signing-form-runner__field-items">
+        @foreach (var step in Steps.Select((value, index) => new { value, index }))
+        {
+            <li class="tm-signing-form-runner__field-item">
+                <button type="button"
+                        class="@FieldItemClass(step.index)"
+                        aria-current="@(step.index == CurrentIndex ? "step" : null)"
+                        data-field-uuid="@step.value.Field.Uuid"
+                        @onclick="() => OnSelect.InvokeAsync(step.index)">
+                    <span class="tm-signing-form-runner__field-icon"
+                          data-icon="@SigningFieldTypeIcons.Get(step.value.Field.Type)"
+                          aria-hidden="true">
+                        <TmIcon Name="@SigningFieldTypeIcons.Get(step.value.Field.Type)" Size="IconSize.Xs" />
+                    </span>
+                    <span class="tm-signing-form-runner__field-label">@GetStepLabel(step.value)</span>
+                    <span class="tm-signing-form-runner__field-meta">
+                        @if (step.value.Area is not null)
+                        {
+                            <span class="tm-signing-form-runner__field-page">@Loc["TmSigningFormRunner_PageLabel", step.value.Area.Page + 1]</span>
+                        }
+                        <span class="@FieldStatusClass(step.value)">
+                            @if (IsStepFilled(step.value))
+                            {
+                                @* The done state is never colour-only (WCAG 1.4.1): the check rides
+                                   the "Done" text, both inside the status chip. *@
+                                <TmIcon Name="check" Size="IconSize.Xs" />
+                            }
+                            @FieldStatusText(step.value)
+                        </span>
+                    </span>
+                </button>
+            </li>
+        }
+    </ol>
+</nav>
+
+@code {
+    /// <summary>The runner's planned steps, in field order (already submitter-filtered).</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public IReadOnlyList<SigningStepItem> Steps { get; set; } = [];
+
+    /// <summary>Index of the step the runner currently presents; it renders <c>aria-current="step"</c>.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public int CurrentIndex { get; set; }
+
+    /// <summary>
+    /// The runner's completeness predicate for a step (every field of the step has a value) — the
+    /// "Done" status and the check icon read from it.
+    /// </summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public Func<SigningStepItem, bool> IsStepFilled { get; set; } = _ => false;
+
+    /// <summary>Raised with the clicked step index; the runner selects and focuses that step.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public EventCallback<int> OnSelect { get; set; }
+
+    /// <summary>Culture used to resolve the localized field labels.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public string? Culture { get; set; }
+
+    /// <summary>Fallback culture used when a field's translation is missing.</summary>
+    [Parameter, EditorBrowsable(EditorBrowsableState.Never)] public string? FallbackCulture { get; set; }
+
+    private string FieldItemClass(int index)
+    {
+        var classes = new List<string> { "tm-signing-form-runner__field-button" };
+        if (index == CurrentIndex)
+        {
+            classes.Add("tm-signing-form-runner__field-button--active");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetStepLabel(SigningStepItem step)
+    {
+        return SigningLocalizationResolver.ResolveFieldLabel(step.Field, Culture, FallbackCulture, step.Field.Type.ToString());
+    }
+
+    private string FieldStatusClass(SigningStepItem step)
+    {
+        var classes = new List<string> { "tm-signing-form-runner__field-status" };
+        if (IsStepFilled(step))
+        {
+            classes.Add("tm-signing-form-runner__field-status--done");
+        }
+        else if (step.Field.Required)
+        {
+            classes.Add("tm-signing-form-runner__field-status--required");
+        }
+        else
+        {
+            classes.Add("tm-signing-form-runner__field-status--optional");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string FieldStatusText(SigningStepItem step)
+    {
+        return IsStepFilled(step)
+            ? Loc["TmSigningFormRunner_FieldStatusDone"]
+            : step.Field.Required
+                ? Loc["TmSigningFormRunner_FieldStatusRequired"]
+                : Loc["TmSigningFormRunner_FieldStatusOptional"];
+    }
+}

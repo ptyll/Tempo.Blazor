@@ -531,6 +531,35 @@ end. A plain arrow stays the roving key of the grid. Touch move is a 400 ms long
 (`pointer-drag.js`, loaded by `scheduler.js`). `ShowTouchHint` (default `false`) opts into the
 localized hint, shown only on a coarse pointer.
 
+### Gantt
+| Component | Description |
+|-----------|-------------|
+| `TmGantt` | Tree grid + zoomable timeline chart: dependencies, baselines, workload, filtering, import/export, history, reports. Contract: [docs/gantt.md](docs/gantt.md) |
+| `TmGanttPortfolio` | Portfolio of project cards, each an embedded toolbar-less Gantt |
+| `TmGanttWorkloadView` | The workload week (person rows, utilization bars); alternate view or docked panel |
+
+```razor
+@* The chart measures its own container (LayoutMode, default Auto): tablet gets a two-row toolbar
+   and a tabbed side-sheet task panel; a mobile container is read-mostly (viewing, status / %,
+   add task). Pin a layout only for tests or a forced presentation. *@
+<TmGantt Items="tasks"
+         DependencyItems="deps"
+         @bind-View="_view"
+         SelectedTask="_selected"
+         OnTaskSelected="t => _selected = t"
+         OnTaskUpdated="SaveTask"
+         TaskPanelMode="GanttTaskPanelMode.Auto"
+         ShowQuickSearch="true"
+         Title="Project Aurora">
+    <HeaderActions><TmButton>Share</TmButton></HeaderActions>
+</TmGantt>
+```
+
+Keyboard alternative to drag (WCAG 2.5.7): the treegrid has one roving tab stop (↑ ↓ Home End,
+→ expand, ← collapse, Enter opens the panel) and Alt+↑/↓ reorders a row. Touch: a 500 ms
+long-press opens the context menu, the dependency drag and the mouse-only pan are sessions of
+`pointer-drag.js` loaded by `gantt.js` (serve the whole `_content/Tempo.Blazor/js/` folder).
+
 ### Import & Export
 | Component | Description |
 |-----------|-------------|

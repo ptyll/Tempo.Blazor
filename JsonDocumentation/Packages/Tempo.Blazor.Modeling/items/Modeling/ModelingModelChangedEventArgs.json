@@ -1,0 +1,10 @@
+{
+  "itemName": "ModelingModelChangedEventArgs",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "Event payload of TmModelingEditor.OnModelChanged: the change set of the commit plus the current model (Fáze 14).",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingModelChangedEventArgs.cs",
+  "documentationStatus": "generated"
+}

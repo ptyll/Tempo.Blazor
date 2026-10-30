@@ -1,115 +1,155 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Forms
 @using Microsoft.AspNetCore.Components.Forms
 
-@if (IsOpen)
-{
-    @* Round 3 (V2): the import dialog is a modal viewport-anchored surface — its overlay root
-       carries popover="manual" and promotes after the opening render, like TmModal. *@
-    <div class="tm-gantt__dialog-overlay" popover="manual" @ref="_overlay" @onclick="OnClose">
-        @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
-           interop completed — an unpromoted popover root can be display:none and the
-           initial-focus move would land on <body>. *@
-        <TmFocusScope @ref="_scope" Class="tm-gantt__dialog tm-gantt__import-dialog"
-                      Active="@(_gate?.ScopeActive == true)" NoteOpenerOnMount="true"
-                      CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
-                      @onclick:stopPropagation>
-            <div class="tm-gantt__dialog-header">
-                <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
-                <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose"
-                        aria-label="@Loc["TmGantt_ImportDialogClose"]">
-                    <TmIcon Name="x" />
+@* G6: the dialog is the core TmModal (top layer, focus trap, Escape, focus return to the trigger). The per-dialog
+   class rides the overlay root; the tm-gantt__import-* classes stay on the content. *@
+<TmModal Show="IsOpen"
+         Class="tm-gantt__import-dialog"
+         Title="@Loc["TmGantt_Import"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         OnClose="OnClose">
+    <ChildContent>
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <TmAlert Severity="AlertSeverity.Error" Class="tm-gantt-import__error" data-testid="@TestId("import-error")">
+                @_errorMessage
+            </TmAlert>
+        }
+
+        @* The finished import's warnings: the import itself succeeded and the data has already
+           landed - the dialog stays open so the user can read (and expand) what to fix, then closes
+           it with the single Close button in the footer. *@
+        @if (_completedResult is { } completed && completed.Warnings.Count > 0)
+        {
+            <TmAlert Severity="AlertSeverity.Warning" Class="tm-gantt-import__warnings" data-testid="@TestId("import-warnings")">
+                <strong>@Loc.Plural("TmGantt_ImportWarningsTitle", completed.Warnings.Count)</strong>
+                <details class="tm-gantt-import__warning-list">
+                    <summary>@Loc["TmGantt_ImportWarningsShowDetails"]</summary>
+                    <ul>
+                        @foreach (var warning in completed.Warnings)
+                        {
+                            <li>@WarningText(warning)</li>
+                        }
+                    </ul>
+                </details>
+            </TmAlert>
+        }
+
+        @* Import source tabs (ARIA tablist: roving tabindex; Left / Right wrap, Home / End jump; focus follows the selection). *@
+        <div class="tm-gantt__import-tabs" role="tablist" aria-label="@Loc["TmGantt_ImportSource"]" @ref="_tabListRef" @onkeydown="HandleTabKeyDown">
+            @foreach (var tab in Tabs)
+            {
+                var selected = _tab == tab;
+                <button type="button" role="tab" @ref="_tabRefs[tab]"
+                        id="@TabId(tab)" aria-controls="@PanelId"
+                        class="tm-gantt__import-tab @(selected ? "tm-gantt__import-tab--active" : "")"
+                        aria-selected="@(selected ? "true" : "false")"
+                        tabindex="@(selected ? 0 : -1)"
+                        data-testid="@TestId($"import-tab-{tab.ToString().ToLowerInvariant()}")"
+                        @onclick="() => SelectTab(tab)">
+                    <TmIcon Name="@TabIcon(tab)" Size="IconSize.Sm" />
+                    <span>@Loc[TabLabelKey(tab)]</span>
                 </button>
-            </div>
+            }
+        </div>
 
-            <div class="tm-gantt__dialog-body">
-                @if (!string.IsNullOrEmpty(_errorMessage))
-                {
-                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("import-error")" role="alert">
-                        <TmIcon Name="alert-circle" />
-                        <span>@_errorMessage</span>
+        <div class="tm-gantt__import-panel" role="tabpanel" id="@PanelId" aria-labelledby="@TabId(_tab)">
+            @if (_tab == ImportTab.Excel || _tab == ImportTab.Mpp)
+            {
+                <div class="tm-gantt__import-file-area">
+                    @* The InputFile stays in the DOM visually hidden - NOT display:none, so the JS-triggered
+                       input.click() inside the button's native click listener reliably opens the native chooser in
+                       every engine - including WebKit, which ignores input.click() issued after a Blazor interop
+                       round-trip (N204). The label-for-input trick was unreachable from the keyboard: a <label> can
+                       never take focus. The @key recreates the input after "Remove file" / a tab switch, which is the
+                       only way to clear a native file input without JS (and lets the same file be chosen again). *@
+                    <div class="tm-gantt__import-file-input-wrap" @ref="_fileInputWrap">
+                        <InputFile @key="_inputKey" OnChange="OnFileChangedAsync" accept="@(_tab == ImportTab.Excel ? ".xlsx,.xls" : ".xml,.mpp")"
+                                   class="tm-gantt__import-file-input" aria-hidden="true" tabindex="-1" />
                     </div>
-                }
-
-                <!-- Import source tabs -->
-                <div class="tm-gantt__import-tabs">
-                    <button type="button"
-                            class="tm-gantt__import-tab @(_tab == ImportTab.Excel ? "tm-gantt__import-tab--active" : "")"
-                            @onclick="() => _tab = ImportTab.Excel">
-                        <TmIcon Name="table" Size="IconSize.Sm" />
-                        @Loc["TmGantt_ImportExcel"]
-                    </button>
-                    <button type="button"
-                            class="tm-gantt__import-tab @(_tab == ImportTab.Mpp ? "tm-gantt__import-tab--active" : "")"
-                            @onclick="() => _tab = ImportTab.Mpp">
-                        <TmIcon Name="calendar" Size="IconSize.Sm" />
-                        @Loc["TmGantt_ImportMpp"]
-                    </button>
-                    <button type="button"
-                            class="tm-gantt__import-tab @(_tab == ImportTab.Jira ? "tm-gantt__import-tab--active" : "")"
-                            @onclick="() => _tab = ImportTab.Jira">
-                        <TmIcon Name="link" Size="IconSize.Sm" />
-                        @Loc["TmGantt_ImportJira"]
-                    </button>
-                </div>
-
-                @if (_tab == ImportTab.Excel || _tab == ImportTab.Mpp)
-                {
-                    <div class="tm-gantt__import-file-area">
-                        @* The InputFile stays in the DOM visually hidden — NOT display:none, so the
-                           JS-triggered input.click() inside the button's native click listener
-                           reliably opens the native chooser in every engine — including WebKit,
-                           which ignores input.click() issued after a Blazor interop round-trip
-                           (N204). The label-for-input trick was unreachable from the keyboard:
-                           a <label> can never take focus. *@
-                        <div class="tm-gantt__import-file-input-wrap" @ref="_fileInputWrap">
-                            <InputFile OnChange="OnFileChangedAsync" accept="@(_tab == ImportTab.Excel ? ".xlsx,.xls" : ".xml,.mpp")"
-                                       class="tm-gantt__import-file-input" aria-hidden="true" tabindex="-1" />
-                        </div>
-                        @* The native listener is wired by registerFilePickerTrigger, re-attempted
-                           on every render while this element exists — the JS dedupes per element
-                           via a dataset marker, so a freshly recreated button (tab round-trip,
-                           reopen) always ends up wired. There is deliberately NO @onclick here:
-                           the whole C# interop path would sit between the click and input.click()
+                    @* An input group: the chooser, the chosen name (a persistent live region - assistive tech must
+                       register it BEFORE a file lands, or the update would never be announced, N153) and Remove. *@
+                    <div class="tm-gantt__import-file-group">
+                        @* The native listener is wired by registerFilePickerTrigger, re-attempted on every render
+                           while this element exists - the JS dedupes per element via a dataset marker, so a freshly
+                           recreated button (tab round-trip, reopen) always ends up wired. There is deliberately NO
+                           @onclick here: the whole C# interop path would sit between the click and input.click()
                            and sever the user-activation chain. *@
-                        <div @ref="_triggerWrapRef">
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="upload"
+                        <div class="tm-gantt__import-trigger" @ref="_triggerWrapRef">
+                            <TmButton Variant="ButtonVariant.Secondary" Icon="upload"
                                       data-testid="@TestId("import-choose-file")">
                                 @Loc["TmGantt_ChooseFile"]
                             </TmButton>
                         </div>
-                        @* Persistent live region: assistive tech must register it BEFORE a file
-                           lands, or the file-name update would never be announced (N153). *@
-                        <span class="tm-gantt__import-file-name" aria-live="polite">@_selectedFileName</span>
+                        <span class="tm-gantt__import-file-name @(_selectedFile is null ? "tm-gantt__import-file-name--empty" : "")"
+                              aria-live="polite">@(_selectedFileName ?? Loc["TmGantt_ImportNoFile"])</span>
+                        @if (_selectedFile is not null)
+                        {
+                            <button type="button" class="tm-gantt__import-file-remove"
+                                    aria-label="@Loc["TmGantt_ImportRemoveFile"]" title="@Loc["TmGantt_ImportRemoveFile"]"
+                                    data-testid="@TestId("import-remove-file")"
+                                    @onclick="RemoveFile">
+                                <TmIcon Name="x" Size="IconSize.Sm" />
+                            </button>
+                        }
                     </div>
-                }
-                else if (_tab == ImportTab.Jira)
-                {
-                    <div class="tm-gantt__import-jira-form">
-                        <TmFormField Label="@Loc["TmGantt_ImportJiraUrl"]">
-                            <TmTextInput @bind-Value="_jiraUrl" Placeholder="https://yourcompany.atlassian.net" />
-                        </TmFormField>
-                        <TmFormField Label="@Loc["TmGantt_ImportJiraToken"]">
-                            <TmTextInput @bind-Value="_jiraToken" Type="password" />
-                        </TmFormField>
-                        <TmFormField Label="@Loc["TmGantt_ImportJiraProject"]">
-                            <TmTextInput @bind-Value="_jiraProject" Placeholder="PROJ" />
-                        </TmFormField>
-                    </div>
-                }
-            </div>
+                    <p class="tm-gantt__import-hint">@Loc["TmGantt_ImportSupportedFormats", SupportedFormats]</p>
+                </div>
+            }
+            else
+            {
+                <div class="tm-gantt__import-jira-form">
+                    <TmFormField Label="@Loc["TmGantt_ImportJiraUrl"]">
+                        <TmTextInput @bind-Value="_jiraUrl" Placeholder="https://yourcompany.atlassian.net" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGantt_ImportJiraToken"]">
+                        <TmTextInput @bind-Value="_jiraToken" Type="password" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmGantt_ImportJiraProject"]">
+                        <TmTextInput @bind-Value="_jiraProject" Placeholder="PROJ" />
+                    </TmFormField>
+                </div>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (_completedResult is { } finished && finished.Warnings.Count > 0)
+        {
+            @* The import is done and its warnings are the only thing left to read: one primary
+               Close, no Cancel (it would only close an already completed dialog) and no Import
+               (the chosen file was dropped, so a second run cannot duplicate the tasks). *@
+            <TmButton Variant="ButtonVariant.Primary" OnClick="OnClose" data-testid="@TestId("import-close")">
+                @Loc["Tm_Close"]
+            </TmButton>
+        }
+        else
+        {
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" data-testid="@TestId("import-cancel")">
+                @Loc["Tm_Cancel"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" Disabled="@(!CanImport)"
+                      IsLoading="_isImporting" data-testid="@TestId("import-submit")">
+                @Loc["TmGantt_Import"]
+            </TmButton>
+        }
+    </Footer>
+</TmModal>
 
-            <div class="tm-gantt__dialog-actions">
-                <TmButton Variant="ButtonVariant.Primary" OnClick="ImportAsync" IsDisabled="_isImporting">
-                    @Loc["TmGantt_Import"]
-                </TmButton>
-                <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
-                    @Loc["Tm_Cancel"]
-                </TmButton>
-            </div>
-        </TmFocusScope>
-    </div>
+@* The mapping step renders as a SIBLING modal on top of the import dialog (both are core TmModals
+   in the browser top layer): it lists the chosen file's headers pre-mapped by name, seeded by the
+   host's ImportMappings. Cancelling returns to the file step with the file still chosen. *@
+@if (IsOpen && _mappingDialogOpen)
+{
+    <TmGanttImportMappingDialog IsOpen="true"
+                                SourceColumns="@_headers"
+                                InitialMappings="@ImportMappings"
+                                OnImport="ImportExcelResultAsync"
+                                OnClose="() => _mappingDialogOpen = false" />
 }

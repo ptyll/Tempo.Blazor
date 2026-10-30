@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Abstractions.WorkItems;
+using Tempo.Blazor.Components.Avatars;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Models;
 
@@ -33,6 +35,46 @@ public partial class TmGanttTaskPanel
     private string _newCommentText = string.Empty;
     private List<SelectOption<string?>> _parentOptions = [];
     private string? _currentTaskId;
+    private TmWorkItemStatus _editStatus;
+    private TmWorkItemPriority _editPriority;
+    private string _tab = "detail";
+
+    /// <summary>The audit entries of the edited task (an entry belongs to a task through its entity id).</summary>
+    private IReadOnlyList<TmActivityEntry> TaskHistory =>
+        (History ?? []).Where(e => e?.EntityRef is not null && string.Equals(e.EntityRef.EntityId, Task?.Id, StringComparison.Ordinal)).ToList();
+
+    /// <summary>The single scrolling form shows every section; a tabbed panel shows the one of the active tab.</summary>
+    private bool ShowSection(string tab) => !Tabbed || _tab == tab;
+
+    private void SelectTab(string tab) => _tab = tab;
+
+    private static string? CountBadge(int count) => count > 0 ? count.ToString(CultureInfo.InvariantCulture) : null;
+
+    /// <summary>True while an edit field differs from the task: the tabs keep the draft, the Detail tab says so.</summary>
+    private bool IsDirty => Task is not null
+        && (_editTitle != Task.Title
+            || _editStart != Task.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            || _editEnd != Task.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            || (_editDeadline ?? string.Empty) != (Task.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty)
+            || (_editPercent ?? 0) != Task.PercentComplete
+            || _editIsMilestone != Task.IsMilestone
+            || _editParentId != Task.ParentId
+            || _editStatus != Task.Status
+            || _editPriority != Task.Priority
+            || _editColor != Task.Color
+            || _editEstimation != Task.EstimationHours
+            || _editLoggedHours != Task.LoggedHours
+            || _editBudgetHours != Task.BudgetHours
+            || _editActualCost != Task.ActualCost
+            || (_editDescription ?? string.Empty) != (Task.Description ?? string.Empty));
+
+    /// <summary>The dirty-draft state for <see cref="TmGantt"/>'s close guard: closing the task sheet over an unsaved edit asks first (Discard / Keep editing).</summary>
+    internal bool IsDraftDirty => IsDirty;
+
+    // The task values the edit fields were last synchronised with: a change made OUTSIDE the panel (the board,
+    // "Mark done", a realtime update) re-syncs the field instead of leaving a stale copy behind.
+    private TmWorkItemStatus _seenStatus;
+    private int _seenPercent;
 
     // Timer state
     private DateTime? _timerStartedAt;
@@ -60,6 +102,60 @@ public partial class TmGanttTaskPanel
 
     /// <summary>The task being edited.</summary>
     [Parameter] public TmWorkItem? Task { get; set; }
+
+    /// <summary>True when the task can move one place up among its siblings. Disables the Move up command; both move flags false hide the pair (there is nothing a move could do without a reorder handler upstream).</summary>
+    [Parameter] public bool CanMoveUp { get; set; }
+
+    /// <summary>True when the task can move one place down among its siblings. Disables the Move down command.</summary>
+    [Parameter] public bool CanMoveDown { get; set; }
+
+    /// <summary>
+    /// The tabbed presentation (the side sheet of a tablet container): the panel draws no header (the sheet owns the title and
+    /// the close button) and splits its sections into the tabs Detail | Attachments | Comments | History. Default false: the single
+    /// scrolling form of the desktop panel.
+    /// </summary>
+    [Parameter] public bool Tabbed { get; set; }
+
+    /// <summary>
+    /// The mobile read-mostly presentation (decision G2): the panel is a fact sheet — Name, Start and End read-only,
+    /// Status and Percent editable — and draws no footer (the sheet's sticky Cancel | Save drives
+    /// <see cref="SaveAsync"/> / <see cref="CancelAsync"/>). The full editor stays tablet+.
+    /// </summary>
+    [Parameter] public bool MobileReadOnly { get; set; }
+
+    private string RootClass => MobileReadOnly
+        ? "tm-gantt-task-panel tm-gantt-task-panel--mobile"
+        : Tabbed ? "tm-gantt-task-panel tm-gantt-task-panel--tabbed" : "tm-gantt-task-panel";
+
+    private readonly string _statusFieldId = $"tm-gantt-task-status-{Guid.NewGuid():N}";
+    private readonly string _percentFieldId = $"tm-gantt-task-percent-{Guid.NewGuid():N}";
+
+    /// <summary>The <c>@key</c> of the mobile percent field: bumped when a clamp must re-sync the input (a new key rebuilds the element with the clamped value).</summary>
+    private int _percentFieldSync;
+
+    private void OnMobileStatusChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<TmWorkItemStatus>(e.Value?.ToString(), out var status))
+        {
+            OnStatusSelected(status);
+        }
+    }
+
+    /// <summary>Clamps 0–100 and, when the clamp (or a clear) changed what the field must hold, bumps
+    /// <see cref="_percentFieldSync"/> so the input is rebuilt with the clamped value — the DOM keeps
+    /// the raw text the user typed ("150" stays on screen while the model holds 100 without this).</summary>
+    private void SetMobilePercent(string? value)
+    {
+        var parsed = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent);
+        _editPercent = parsed ? Math.Clamp(percent, 0, 100) : null;
+        if (!parsed || percent != _editPercent) _percentFieldSync++;
+    }
+
+    /// <summary>Audit entries; the History tab shows those whose <c>EntityRef.EntityId</c> is the edited task.</summary>
+    [Parameter] public IReadOnlyList<TmActivityEntry> History { get; set; } = [];
+
+    /// <summary>Zone the History tab shows its times in. Null: the machine zone.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
 
     /// <summary>All tasks for parent selection.</summary>
     [Parameter] public IReadOnlyList<TmWorkItem> AllTasks { get; set; } = [];
@@ -91,6 +187,29 @@ public partial class TmGanttTaskPanel
     /// <summary>Fires when the user closes the panel via the close button.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// Fires on Save when the Status field was changed (arg = task id + the new status). Like the priority, the status
+    /// is a draft until Save (Cancel reverts it); <see cref="TmGantt"/> applies it to the task and raises its own
+    /// <c>OnStatusChanged</c>.
+    /// </summary>
+    [Parameter] public EventCallback<(string TaskId, TmWorkItemStatus NewStatus)> OnStatusChanged { get; set; }
+
+    /// <summary>
+    /// Fires when the user picks a command of the Actions section (mark done, add above / below / child, duplicate,
+    /// delete). The section is rendered only when the host handles this callback; <see cref="TmGantt"/> wires it to the
+    /// handlers of the task context menu.
+    /// </summary>
+    [Parameter] public EventCallback<GanttTaskAction> OnAction { get; set; }
+
+    /// <summary>When true the Progress section states that one of the task's assignees is over capacity (read-only; <see cref="TmGantt"/> computes it).</summary>
+    [Parameter] public bool IsOverloaded { get; set; }
+
+    /// <summary>The task's entry in the active baseline. When set, the Progress section shows the start / end deviation from it (read-only).</summary>
+    [Parameter] public GanttBaselineTask? BaselineTask { get; set; }
+
+    /// <summary>Optional breadcrumb shown above the task title in the panel header (a host-drawn project / parent path).</summary>
+    [Parameter] public RenderFragment? Breadcrumb { get; set; }
+
     /// <summary>Id of the task whose timer is currently running. Null if none.</summary>
     [Parameter] public string? ActiveTimerTaskId { get; set; }
 
@@ -106,6 +225,7 @@ public partial class TmGanttTaskPanel
         if (Task is not null && Task.Id != _currentTaskId)
         {
             _currentTaskId = Task.Id;
+            _tab = "detail";
             _editTitle = Task.Title;
             _editStart = Task.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             _editEnd = Task.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -119,6 +239,10 @@ public partial class TmGanttTaskPanel
             _editDescription = Task.Description;
             _editBudgetHours = Task.BudgetHours;
             _editActualCost  = Task.ActualCost;
+            _editStatus      = Task.Status;
+            _editPriority    = Task.Priority;
+            _seenStatus      = Task.Status;
+            _seenPercent     = Task.PercentComplete;
             _timerStartedAt  = null;
             _validationError = null;
             _showAddDependency = false;
@@ -126,10 +250,98 @@ public partial class TmGanttTaskPanel
             _newDepType = 0;
         }
 
+        if (Task is not null && Task.Id == _currentTaskId)
+        {
+            if (Task.Status != _seenStatus)
+            {
+                _seenStatus = Task.Status;
+                _editStatus = Task.Status;
+            }
+
+            if (Task.PercentComplete != _seenPercent)
+            {
+                _seenPercent = Task.PercentComplete;
+                _editPercent = Task.PercentComplete;
+            }
+        }
+
+        BuildStatusAndPriorityOptions();
         BuildParentOptions();
         BuildDependencyOptions();
         _taskDependencies = Dependencies.Where(d => d.ToId == Task?.Id).ToList();
     }
+
+    private List<SelectOption<TmWorkItemStatus>> _statusOptions = [];
+    private List<SelectOption<TmWorkItemPriority>> _priorityOptions = [];
+
+    private void BuildStatusAndPriorityOptions()
+    {
+        _statusOptions = Enum.GetValues<TmWorkItemStatus>()
+            .Select(s => new SelectOption<TmWorkItemStatus>(s, Loc[$"GanttStatus_{s}"]))
+            .ToList();
+        _priorityOptions = Enum.GetValues<TmWorkItemPriority>()
+            .Select(p => new SelectOption<TmWorkItemPriority>(p, Loc[$"GanttPriority_{p}"]))
+            .ToList();
+    }
+
+    // The status is a draft like the priority: Save raises OnStatusChanged (when it differs from the task), Cancel reverts.
+    private void OnStatusSelected(TmWorkItemStatus status) => _editStatus = status;
+
+    private Task RaiseActionAsync(GanttTaskAction action) => OnAction.InvokeAsync(action);
+
+    // The decimal inputs bind decimal?; the model keeps hours as double? (and the cost as decimal?).
+    private static decimal? Dec(double? value) => value.HasValue ? (decimal)value.Value : null;
+
+    private static double? Dbl(decimal? value) => value.HasValue ? (double)value.Value : null;
+
+    /// <summary>The read-only duration: whole days between the edited start and end, with the localized unit.</summary>
+    private string DurationText
+    {
+        get
+        {
+            if (DateTime.TryParseExact(_editStart, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start) &&
+                DateTime.TryParseExact(_editEnd, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+            {
+                return $"{(int)(end - start).TotalDays} {Loc["TmGanttTaskPanel_Days"]}";
+            }
+
+            return string.Empty;
+        }
+    }
+
+    private static string Signed(int days) => days.ToString("+0;-0;0", CultureInfo.InvariantCulture);
+
+    private string BaselineStartText => Loc["TmGanttTaskPanel_BaselineStart", Signed((int)(Task!.Start.Date - BaselineTask!.Start.Date).TotalDays)];
+
+    private string BaselineEndText => Loc["TmGanttTaskPanel_BaselineEnd", Signed((int)(Task!.End.Date - BaselineTask!.End.Date).TotalDays)];
+
+    private static readonly AvatarColor[] AssigneeColors =
+        [AvatarColor.Blue, AvatarColor.Purple, AvatarColor.Green, AvatarColor.Orange, AvatarColor.Pink, AvatarColor.Red];
+
+    /// <summary>A stable colour per assignee (string.GetHashCode is randomised per process, so it is never used for a visible value).</summary>
+    private AvatarColor AssigneeColor(int index)
+    {
+        var key = Task!.Assignees[index].Id;
+        var sum = 0;
+        foreach (var ch in key) sum += ch;
+        return AssigneeColors[sum % AssigneeColors.Length];
+    }
+
+    /// <summary>The second line of an attachment card: size and upload date, each only when the attachment carries it.</summary>
+    private string AttachmentMeta(TmAttachment attachment)
+    {
+        var parts = new List<string>(2);
+        if (attachment.SizeBytes > 0) parts.Add(FormatSize(attachment.SizeBytes, Loc.Culture));
+        if (attachment.UploadedAt != default) parts.Add(attachment.UploadedAt.ToString("d", Loc.Culture));
+        return string.Join(" • ", parts);
+    }
+
+    private string FormatSize(long bytes, CultureInfo culture) => bytes switch
+    {
+        < 1024 => Loc["TmGanttTaskPanel_SizeBytes", bytes.ToString(culture)],
+        < 1024 * 1024 => Loc["TmGanttTaskPanel_SizeKB", (bytes / 1024.0).ToString("F1", culture)],
+        _ => Loc["TmGanttTaskPanel_SizeMB", (bytes / (1024.0 * 1024)).ToString("F1", culture)],
+    };
 
     private void BuildParentOptions()
     {
@@ -252,7 +464,9 @@ public partial class TmGanttTaskPanel
         _newDepType = 0;
     }
 
-    private async Task SaveAsync()
+    /// <summary>Commits the draft (the mobile sheet's sticky Save drives this too). Validates first; raises
+    /// <see cref="OnTaskUpdated"/> and — when the Status changed — <see cref="OnStatusChanged"/>.</summary>
+    internal async Task SaveAsync()
     {
         if (Task is null) return;
         if (!Validate()) return;
@@ -278,8 +492,8 @@ public partial class TmGanttTaskPanel
             Description     = _editDescription,
             BudgetHours     = _editBudgetHours,
             ActualCost      = _editActualCost,
-            Status          = Task.Status,
-            Priority        = Task.Priority,
+            Status          = _editStatus,
+            Priority        = _editPriority,
             Assignees       = Task.Assignees,
             Tags            = Task.Tags.ToList(),
             CustomFields    = Task.CustomFields,
@@ -289,10 +503,16 @@ public partial class TmGanttTaskPanel
             UseManualDates  = Task.UseManualDates,
         };
 
+        var statusChanged = _editStatus != Task.Status;
         await OnTaskUpdated.InvokeAsync(updated);
+        if (statusChanged)
+        {
+            await OnStatusChanged.InvokeAsync((updated.Id, updated.Status));
+        }
     }
 
-    private async Task CancelAsync()
+    /// <summary>Reverts the draft to the task (the mobile sheet's sticky Cancel drives this too).</summary>
+    internal async Task CancelAsync()
     {
         if (Task is null) return;
         // Reset local fields back to task values
@@ -302,6 +522,15 @@ public partial class TmGanttTaskPanel
         _editPercent = Task.PercentComplete;
         _editIsMilestone = Task.IsMilestone;
         _editParentId = Task.ParentId;
+        _editDeadline = Task.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        _editEstimation = Task.EstimationHours;
+        _editLoggedHours = Task.LoggedHours;
+        _editColor = Task.Color;
+        _editDescription = Task.Description;
+        _editBudgetHours = Task.BudgetHours;
+        _editActualCost = Task.ActualCost;
+        _editStatus = Task.Status;
+        _editPriority = Task.Priority;
         _validationError = null;
 
         // Re-render to show original values

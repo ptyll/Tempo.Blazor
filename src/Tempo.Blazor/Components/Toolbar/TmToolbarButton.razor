@@ -41,6 +41,10 @@ else
         {
             <span class="tm-toolbar-btn-text">@Text</span>
         }
+        @if (!string.IsNullOrEmpty(Badge))
+        {
+            <span class="tm-toolbar-btn-badge" aria-hidden="true">@Badge</span>
+        }
     </button>
 }
 
@@ -113,6 +117,13 @@ else
     /// Default <see langword="false"/>.
     /// </summary>
     [Parameter] public bool PreserveFocus { get; set; }
+
+    /// <summary>
+    /// A short count or marker shown as a small pill on the button (e.g. the number of active filters). It is
+    /// decorative (<c>aria-hidden</c>): put the meaning in <see cref="Tooltip"/>, which is the accessible name of an
+    /// icon button. <see langword="null"/> or empty (default) renders nothing.
+    /// </summary>
+    [Parameter] public string? Badge { get; set; }
 
     /// <summary>Additional CSS class for the button element.</summary>
     [Parameter] public string? Class { get; set; }

@@ -2,7 +2,7 @@
   "itemName": "TmGanttReportsPanel",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Panel that lists saved Gantt reports and lets the user create a new report or run an existing one. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
+  "description": "Panel that lists saved Gantt reports and lets the user run an existing one; a \"New report\" button is shown only when the host handles OnNewReportRequested. Each entry shows the report name and type, with a run action that raises the corresponding callback.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttReportsPanel.razor",
@@ -15,12 +15,38 @@
       "name": "Reports",
       "type": "IReadOnlyList<GanttReport>",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Report definitions to list."
     },
     {
       "name": "OnReportRun",
       "type": "EventCallback<GanttReport>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Fires when the user clicks \"Run\" on a report."
+    },
+    {
+      "name": "OnNewReportRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user asks for a new report. The panel has no report editor of its own, so the \"New report\" button is only rendered when the host handles this callback."
+    },
+    {
+      "name": "OnReportEdit",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Edit in a card's menu. The menu offers an entry only for a callback the host handles."
+    },
+    {
+      "name": "OnReportDelete",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Delete in a card's menu. The menu offers an entry only for a callback the host handles."
+    },
+    {
+      "name": "OnReportDuplicate",
+      "type": "EventCallback<GanttReport>",
+      "isRequired": false,
+      "description": "Fires when the user picks Duplicate in a card's menu. The menu offers an entry only for a callback the host handles."
     }
   ]
 }

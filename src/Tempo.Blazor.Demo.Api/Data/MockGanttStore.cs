@@ -26,7 +26,7 @@ public class MockGanttStore
     {
         var today = DateTime.Today;
 
-        // â”€â”€ Assignees â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Assignees ─────────────────────────────────────────────
         _assignees =
         [
             new() { Id = "a1", Name = "Alice Johnson",   AvatarUrl = "https://i.pravatar.cc/40?img=1",  HourlyRate = 120m },
@@ -39,7 +39,7 @@ public class MockGanttStore
 
         TmWorkItemAssignee A(string id) => _assignees.First(x => x.Id == id);
 
-        // â”€â”€ Custom Fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Custom Fields ─────────────────────────────────────────
         _customFields =
         [
             new() { Id = "cf1", Name = "Sprint",       Type = TmCustomFieldType.List,      Options = ["Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4"], AppliesToEntityTypes = ["work-item"] },
@@ -50,10 +50,10 @@ public class MockGanttStore
             new() { Id = "cf6", Name = "Review URL",   Type = TmCustomFieldType.Text,      AppliesToEntityTypes = ["work-item"] },
         ];
 
-        // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Tasks ─────────────────────────────────────────────────
         _tasks =
         [
-            // â”€â”€ Root project group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Root project group ─────────────────────────────
             new()
             {
                 Id = "1", Title = "Project Alpha", ParentId = null,
@@ -61,11 +61,11 @@ public class MockGanttStore
                 PercentComplete = 38, Status = TmWorkItemStatus.InProgress,
                 Priority = TmWorkItemPriority.Highest, Color = "#6366f1",
                 UseManualDates = false,
-                Description = "Full product delivery â€” Phase 1 through Go-Live.",
+                Description = "Full product delivery — Phase 1 through Go-Live.",
                 CustomFields = new() { ["cf3"] = "Alpha Platform", ["cf4"] = "true" },
             },
 
-            // â”€â”€ Planning Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Planning Phase ─────────────────────────────────
             new()
             {
                 Id = "2", Title = "Planning Phase", ParentId = "1",
@@ -131,7 +131,7 @@ public class MockGanttStore
                 CustomFields = new() { ["cf1"] = "Sprint 1" },
             },
 
-            // â”€â”€ Design Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Design Phase ───────────────────────────────────
             new()
             {
                 Id = "6", Title = "UI/UX Design", ParentId = "1",
@@ -164,7 +164,7 @@ public class MockGanttStore
                         Id = "cm2",
                         ThreadId = "7",
                         Author = new TmUserRef { Id = "a3", DisplayName = "Carol White", AvatarUrl = "https://i.pravatar.cc/40?img=5" },
-                        Body = "Mockups approved â€” ready for handoff.",
+                        Body = "Mockups approved — ready for handoff.",
                         BodyFormat = TmCommentBodyFormat.PlainText,
                         CreatedAt = today.AddDays(-1),
                         Metadata = new() { ["TaskId"] = "7" },
@@ -204,7 +204,7 @@ public class MockGanttStore
                 CustomFields = new() { ["cf1"] = "Sprint 2" },
             },
 
-            // â”€â”€ Development Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Development Phase ──────────────────────────────
             new()
             {
                 Id = "11", Title = "Development Phase", ParentId = "1",
@@ -249,7 +249,7 @@ public class MockGanttStore
             },
             new()
             {
-                Id = "15", Title = "Feature A â€“ Search & Filter", ParentId = "11",
+                Id = "15", Title = "Feature A – Search & Filter", ParentId = "11",
                 Start = today.AddDays(7), End = today.AddDays(20),
                 PercentComplete = 0, Status = TmWorkItemStatus.Open,
                 Priority = TmWorkItemPriority.Medium,
@@ -260,7 +260,7 @@ public class MockGanttStore
             },
             new()
             {
-                Id = "16", Title = "Feature B â€“ Notifications", ParentId = "11",
+                Id = "16", Title = "Feature B – Notifications", ParentId = "11",
                 Start = today.AddDays(12), End = today.AddDays(28),
                 PercentComplete = 0, Status = TmWorkItemStatus.Open,
                 Priority = TmWorkItemPriority.Low,
@@ -270,7 +270,7 @@ public class MockGanttStore
                 CustomFields = new() { ["cf1"] = "Sprint 4", ["cf2"] = "5", ["cf5"] = "Backend,DevOps" },
             },
 
-            // â”€â”€ Testing Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Testing Phase ──────────────────────────────────
             new()
             {
                 Id = "17", Title = "Testing Phase", ParentId = "1",
@@ -330,7 +330,7 @@ public class MockGanttStore
                 CustomFields = new() { ["cf1"] = "Sprint 4" },
             },
 
-            // â”€â”€ Deployment Phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Deployment Phase ───────────────────────────────
             new()
             {
                 Id = "23", Title = "Deployment Phase", ParentId = "1",
@@ -370,10 +370,10 @@ public class MockGanttStore
                 CustomFields = new() { ["cf1"] = "Sprint 4" },
             },
 
-            // â”€â”€ Extra scenarios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Extra scenarios ────────────────────────────────
             new()
             {
-                Id = "27", Title = "Overdue â€“ Security Audit", ParentId = "1",
+                Id = "27", Title = "Overdue – Security Audit", ParentId = "1",
                 Start = today.AddDays(-8), End = today.AddDays(-1),
                 PercentComplete = 45, Status = TmWorkItemStatus.InProgress,
                 Priority = TmWorkItemPriority.Highest, Color = "#dc2626",
@@ -430,14 +430,14 @@ public class MockGanttStore
             },
         ];
 
-        // â”€â”€ Dependencies (all 4 types) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Dependencies (all 4 types) ────────────────────────────
         _dependencies =
         [
             // Planning: FS
             new() { Id = "d1",  FromId = "3",  ToId = "4",  DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d2",  FromId = "4",  ToId = "5",  DepType = GanttDependencyType.FinishToStart },
 
-            // Planning â†’ Design: FS (from milestone)
+            // Planning → Design: FS (from milestone)
             new() { Id = "d3",  FromId = "5",  ToId = "7",  DepType = GanttDependencyType.FinishToStart },
 
             // Design internal: FS
@@ -446,7 +446,7 @@ public class MockGanttStore
             new() { Id = "d6",  FromId = "8",  ToId = "10", DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d7",  FromId = "9",  ToId = "10", DepType = GanttDependencyType.FinishToStart },
 
-            // Design â†’ Development: FS
+            // Design → Development: FS
             new() { Id = "d8",  FromId = "10", ToId = "12", DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d9",  FromId = "10", ToId = "13", DepType = GanttDependencyType.FinishToStart },
 
@@ -463,7 +463,7 @@ public class MockGanttStore
             // SF: Performance Testing must start before Integration Testing ends
             new() { Id = "d14", FromId = "19", ToId = "20", DepType = GanttDependencyType.StartToFinish },
 
-            // Development â†’ Testing: FS
+            // Development → Testing: FS
             new() { Id = "d15", FromId = "14", ToId = "18", DepType = GanttDependencyType.FinishToStart },
 
             // Testing chain: FS
@@ -471,13 +471,13 @@ public class MockGanttStore
             new() { Id = "d17", FromId = "19", ToId = "21", DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d18", FromId = "21", ToId = "22", DepType = GanttDependencyType.FinishToStart },
 
-            // Testing â†’ Deployment: FS
+            // Testing → Deployment: FS
             new() { Id = "d19", FromId = "22", ToId = "24", DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d20", FromId = "24", ToId = "25", DepType = GanttDependencyType.FinishToStart },
             new() { Id = "d21", FromId = "25", ToId = "26", DepType = GanttDependencyType.FinishToStart },
         ];
 
-        // â”€â”€ Baselines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Baselines ─────────────────────────────────────────────
         _baselines =
         [
             new()
@@ -498,7 +498,7 @@ public class MockGanttStore
             },
         ];
 
-        // â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── History ───────────────────────────────────────────────
         _history =
         [
             History("h1",  today.AddDays(-21).AddHours(8),    "Alice Johnson", "Created",       "1",  null,         "Project Alpha"),
@@ -517,7 +517,7 @@ public class MockGanttStore
             History("h14", today.AddHours(9),                  "David Lee",     "StatusChanged", "28", "Open",       "InProgress"),
         ];
 
-        // â”€â”€ Resource Calendars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Resource Calendars ─────────────────────────────────────
         _resourceCalendars =
         [
             new()
@@ -546,17 +546,17 @@ public class MockGanttStore
             },
         ];
 
-        // â”€â”€ Reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Reports ────────────────────────────────────────────────
         _reports =
         [
             new() { Id = "r1", Name = "Sprint Status Summary",    Type = GanttReportType.StatusSummary,       Config = new() { ["sprint"] = "Sprint 2",    ["includeSubtasks"] = "true" } },
-            new() { Id = "r2", Name = "Time Spent â€“ This Month",  Type = GanttReportType.TimeSpent,           Config = new() { ["period"] = "month",       ["groupBy"] = "assignee" } },
+            new() { Id = "r2", Name = "Time Spent – This Month",  Type = GanttReportType.TimeSpent,           Config = new() { ["period"] = "month",       ["groupBy"] = "assignee" } },
             new() { Id = "r3", Name = "Resource Utilization Q2",  Type = GanttReportType.ResourceUtilization, Config = new() { ["quarter"] = "Q2",         ["includeVirtual"] = "true" } },
-            new() { Id = "r4", Name = "Budget Overview â€“ Alpha",  Type = GanttReportType.BudgetOverview,      Config = new() { ["project"] = "1",         ["currency"] = "USD" } },
+            new() { Id = "r4", Name = "Budget Overview – Alpha",  Type = GanttReportType.BudgetOverview,      Config = new() { ["project"] = "1",         ["currency"] = "USD" } },
             new() { Id = "r5", Name = "Milestone Progress",       Type = GanttReportType.MilestoneProgress,   Config = new() { ["includeFuture"] = "true" } },
         ];
 
-        // â”€â”€ Working Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Working Schedule ───────────────────────────────────────
         _workingSchedule = new WorkingSchedule
         {
             NonWorkingDaysOfWeek = [DayOfWeek.Saturday, DayOfWeek.Sunday],
@@ -588,7 +588,7 @@ public class MockGanttStore
         };
     }
 
-    // â”€â”€ Read accessors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Read accessors ─────────────────────────────────────────────
 
     public IReadOnlyList<TmWorkItem>             GetTasks()              => _tasks;
     public IReadOnlyList<GanttDependency>        GetDependencies()       => _dependencies;
@@ -600,7 +600,7 @@ public class MockGanttStore
     public WorkingSchedule                       GetWorkingSchedule()    => _workingSchedule;
     public IReadOnlyList<TmWorkItemAssignee>          GetAssignees()          => _assignees;
 
-    // â”€â”€ Mutations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Mutations ──────────────────────────────────────────────────
 
     public bool UpdateTask(string id, TmWorkItem updated)
     {

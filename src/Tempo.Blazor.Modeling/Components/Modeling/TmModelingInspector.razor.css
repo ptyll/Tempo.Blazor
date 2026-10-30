@@ -5,6 +5,9 @@
     border-top: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
+    /* Size container so the summary list can flow into two columns in a wide inspector
+       column and stack in a narrow one — the width is the PANEL's, not the viewport's. */
+    container: tm-modeling-inspector / inline-size;
 }
 
 .tm-modeling-inspector__empty {
@@ -22,12 +25,31 @@
 }
 
 .tm-modeling-inspector__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__type-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 var(--tm-space-8);
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-inspector__heading {
     display: grid;
     gap: var(--tm-space-1);
     min-width: 0;
 }
 
-.tm-modeling-inspector__header h3 {
+.tm-modeling-inspector__name {
     margin: 0;
     overflow-wrap: anywhere;
     font-size: var(--tm-font-size-lg);
@@ -35,7 +57,7 @@
     line-height: var(--tm-line-height-tight);
 }
 
-.tm-modeling-inspector__header p {
+.tm-modeling-inspector__type {
     margin: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
@@ -54,7 +76,7 @@
 
 .tm-modeling-inspector__summary {
     display: grid;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-2) var(--tm-space-4);
     margin: 0;
 }
 
@@ -63,6 +85,15 @@
     grid-template-columns: minmax(6rem, 0.42fr) minmax(0, 1fr);
     gap: var(--tm-space-2);
     min-width: 0;
+}
+
+/* In a WIDE container the summary pairs flow into two columns; the narrow default
+   stacks them one per row. Half-open boundary at the shared 640px Sm step
+   (docs/responsive-conventions.md). */
+@container tm-modeling-inspector (width >= 640px) {
+    .tm-modeling-inspector__summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .tm-modeling-inspector__summary dt {
@@ -159,4 +190,63 @@
 .tm-modeling-inspector__empty-note {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
+}
+
+/* ── Fáze 14: the editable surface ─────────────────────────────────────────
+   The editing fields reuse the core input components (TmTextInput / TmTextArea /
+   TmNumberInput / TmToggle); the inspector only spaces them. The name edit field sits ABOVE
+   the summary <dl> (review fix, phase 14 — a full-width block OUTSIDE the dt/dd grid) with a
+   small bottom gap so the summary reads as its own block. No color literals — every value is
+   a token. */
+
+.tm-modeling-inspector__edit-field {
+    padding-block: var(--tm-space-1);
+    margin-block-end: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__edit-field ::deep .tm-input-wrapper {
+    width: 100%;
+}
+
+.tm-modeling-inspector__section ::deep .tm-input-wrapper {
+    width: 100%;
+}
+
+.tm-modeling-inspector__property-edit ::deep .tm-input-wrapper,
+.tm-modeling-inspector__property-edit ::deep .tm-number-input,
+.tm-modeling-inspector__property-edit ::deep .tm-toggle {
+    width: 100%;
+    min-width: 0;
+}
+
+/* The header gains an actions cluster when the editor hosts its undo/redo pair here. */
+.tm-modeling-inspector__header {
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__header-actions {
+    margin-inline-start: auto;
+}
+
+/* 44px touch targets: the editing inputs reach the shared touch target on a coarse pointer
+   (Fáze 14 — mobile G2 light edits). The knob is the CORE height variable — the wrappers
+   override the token instead of re-declaring min-height/height on the core .tm-input class
+   (the unconstrained-class-ownership guard forbids exactly that specificity fight). */
+@media (pointer: coarse) {
+    .tm-modeling-inspector__edit-field,
+    .tm-modeling-inspector__property-edit {
+        --tm-input-height-md: var(--tm-touch-target);
+    }
+
+    .tm-modeling-inspector__property-edit ::deep .tm-toggle {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-inspector__edit-field,
+    .tm-modeling-inspector__property-edit {
+        transition: none;
+    }
 }

@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "IconOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the toggle as an icon only (the localized label stays its accessible name and tooltip) - for a toolbar that shows no button text."
+    },
+    {
       "name": "Columns",
       "type": "IReadOnlyList<ColumnVisibilityItem>",
       "isRequired": false,

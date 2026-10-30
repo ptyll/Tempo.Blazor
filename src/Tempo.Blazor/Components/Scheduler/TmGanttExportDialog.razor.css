@@ -1,0 +1,149 @@
+/* ─── Export dialog ──────────────────────────────────────────────── *
+   The shell (overlay, card, header, footer) is the core TmModal; this file styles only the content, which the
+   Blazor scope reaches because it is rendered by this component. */
+
+.tm-gantt__export-section + .tm-gantt__export-section {
+    margin-top: var(--tm-space-5);
+}
+
+.tm-gantt__export-heading {
+    margin: 0 0 var(--tm-space-2);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+/* Format tiles: one radio per tile. The native input is visually hidden (NOT display:none) so the arrow keys and
+   the tab stop keep working; the ring glyph and the tile border carry the checked state. */
+.tm-gantt__export-formats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__export-format-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    min-width: 7.5rem;
+    min-height: 6rem;
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
+    transition: border-color var(--tm-transition-fast), background-color var(--tm-transition-fast);
+}
+
+.tm-gantt__export-format-option:hover {
+    border-color: var(--tm-border-color-strong);
+}
+
+.tm-gantt__export-format-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-gantt__export-format-ring {
+    position: absolute;
+    top: var(--tm-space-2);
+    left: var(--tm-space-2);
+    box-sizing: border-box;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-bg-surface);
+}
+
+.tm-gantt__export-format-name {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-gantt__export-format-option--selected {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-gantt__export-format-option--selected .tm-gantt__export-format-ring {
+    border-color: var(--tm-color-primary);
+    background: radial-gradient(circle, var(--tm-color-primary) 0 35%, var(--tm-bg-surface) 40%);
+}
+
+/* The hidden input owns the focus: the tile shows the ring. */
+.tm-gantt__export-format-option:has(.tm-gantt__export-format-input:focus-visible) {
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-gantt__export-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-gantt__export-paper-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--tm-space-4);
+}
+
+/* ::deep: Class="…" on TmSelect / TmCheckbox lands on the CHILD component's root, which carries no scope attribute
+   of this component. */
+.tm-gantt__export-paper-row ::deep .tm-gantt__export-select {
+    flex: 0 1 14rem;
+}
+
+.tm-gantt__export-checks,
+.tm-gantt__export-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-gantt__export-options ::deep .tm-gantt__export-select {
+    width: 100%;
+    max-width: 14rem;
+}
+
+.tm-gantt__export-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    min-height: 6.25rem;
+    padding: var(--tm-space-4);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-gantt__export-preview img,
+.tm-gantt__export-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-gantt__export-format-option {
+        transition: none;
+    }
+}

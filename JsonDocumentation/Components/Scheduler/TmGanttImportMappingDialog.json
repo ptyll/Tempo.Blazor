@@ -2,7 +2,7 @@
   "itemName": "TmGanttImportMappingDialog",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Dialog for mapping source spreadsheet columns to Gantt task properties.",
+  "description": "Dialog (a core TmModal) for mapping the columns of an imported file to Gantt task properties. Columns are pre-mapped by header name (case- and diacritics-insensitive; English, Czech and French names), optionally seeded by InitialMappings. Import stays disabled until Title, Start and End or Duration are mapped; two columns mapped to one field only raise a warning.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Scheduler",
   "sourcePath": "src/Tempo.Blazor/Components/Scheduler/TmGanttImportMappingDialog.razor",
@@ -17,6 +17,12 @@
       "isRequired": false,
       "default": "[]",
       "description": "Source column names from the imported file."
+    },
+    {
+      "name": "InitialMappings",
+      "type": "IReadOnlyList<GanttColumnMapping>?",
+      "isRequired": false,
+      "description": "Mappings the dialog starts from (a remembered choice, a host's own defaults). A source column is matched case-insensitively; the remaining columns are still mapped by header name, but never onto a field a host mapping already claimed."
     },
     {
       "name": "IsOpen",

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "Where the Gantt shows its workload: as the alternate Workload view (default) or as a panel docked under the timeline.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttWorkloadPlacement.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttWorkloadPlacement"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "How the Gantt offers its panels: the vertical icon Rail (default) or a horizontal Tabs strip with text labels.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttSidebarMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttSidebarMode"
+}

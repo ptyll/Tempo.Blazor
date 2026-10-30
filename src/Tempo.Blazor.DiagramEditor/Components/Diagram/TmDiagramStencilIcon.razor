@@ -1,0 +1,11 @@
+@namespace Tempo.Blazor.Components.Diagram
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+<svg class="@RootClass"
+     viewBox="0 0 32 32"
+     aria-hidden="true"
+     style="@SizeStyle"
+     data-stencil-id="@StencilId"
+     data-fallback="@FallbackAttribute">
+    @((MarkupString)Markup)
+</svg>

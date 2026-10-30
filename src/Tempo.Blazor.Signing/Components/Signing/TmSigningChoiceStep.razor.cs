@@ -6,6 +6,14 @@ namespace Tempo.Blazor.Components.Signing;
 /// <summary>Renders select, radio, multiple-choice, and checkbox signing steps.</summary>
 public partial class TmSigningChoiceStep
 {
+    // Per-instance accessible plumbing (Signing redesign phase 2): ids are owned by THIS component
+    // instance and handed to the shell, so two rendered steps never share an id even when they
+    // represent the same field uuid.
+    private readonly string _titleId = $"tm-signing-step-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"tm-signing-step-description-{Guid.NewGuid():N}";
+    private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
+    private readonly string _hintId = $"tm-signing-choice-hint-{Guid.NewGuid():N}";
+    private readonly string _radioName = $"tm-signing-choice-{Guid.NewGuid():N}";
     private string? _validationMessage;
 
     /// <summary>Primary signing field represented by this step.</summary>
@@ -42,6 +50,10 @@ public partial class TmSigningChoiceStep
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The runner's step validation, cascaded by <see cref="TmSigningFormRunner"/> (absent for standalone steps).</summary>
+    [CascadingParameter(Name = "TmSigningRunnerValidation")]
+    private string? RunnerValidationMessage { get; set; }
+
     private IReadOnlyList<SigningField> CheckboxFields => Fields.Count > 0 ? Fields : [Field];
 
     private bool IsCheckboxGroup => Field.Type == SigningFieldType.Checkbox && CheckboxFields.Count > 1;
@@ -58,6 +70,42 @@ public partial class TmSigningChoiceStep
     };
 
     private string ShellClass => string.Join(" ", new[] { "tm-signing-choice-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));
+
+    private bool HasDescription => !string.IsNullOrWhiteSpace(SigningTextResolver.FieldDescription(Field, Culture, FallbackCulture));
+
+    /// <summary>The message the shell renders as the step's single alert (own message first, then the runner's).</summary>
+    private string? EffectiveValidationMessage => !string.IsNullOrWhiteSpace(_validationMessage)
+        ? _validationMessage
+        : RunnerValidationMessage;
+
+    private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);
+
+    private string InvalidText => BoolText(HasValidationMessage);
+
+    /// <summary>
+    /// The ids a control of this step references — per-instance, and the SAME instances the shell
+    /// renders (they are passed to the shell as parameters), so every reference resolves inside
+    /// the rendered DOM (Signing redesign phase 2). The checkbox-group hint (id <see cref="_hintId"/>)
+    /// is part of the group's description.
+    /// </summary>
+    private string? DescribedBy => JoinIds(HasDescription ? _descriptionId : null, HasValidationMessage ? _validationId : null);
+
+    /// <summary>The describedby list for the checkbox-group fieldset: hint + description + validation.</summary>
+    private string? GroupDescribedBy => JoinIds(
+        IsCheckboxGroup ? _hintId : null,
+        HasDescription ? _descriptionId : null,
+        HasValidationMessage ? _validationId : null);
+
+    private static string? JoinIds(params string?[] ids)
+    {
+        var parts = ids.Where(id => !string.IsNullOrWhiteSpace(id)).ToArray();
+        return parts.Length == 0 ? null : string.Join(" ", parts);
+    }
+
+    private static string BoolText(bool value) => value ? "true" : "false";
+
+    /// <summary>The visually hidden legend naming the fieldset group.</summary>
+    private string GroupLegendText => GetFieldLabel(Field);
 
     private async Task HandleSingleValueChangedAsync(ChangeEventArgs args)
     {

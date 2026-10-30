@@ -1,0 +1,52 @@
+{
+  "itemName": "TmSigningRunnerFieldList",
+  "kind": "Component",
+  "category": "Signing",
+  "description": "Internal part of TmSigningFormRunner (Signing redesign phase 3): the permanent field list of the wizard panel — one row per step with the type icon, the localized label, the page and the Done / Required / Optional status chip. A host places TmSigningFormRunner, never this component: the runner owns the step plan, the selection state and the single-panel invariant.",
+  "packageId": "Tempo.Blazor.Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningRunnerFieldList.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Signing"
+  ],
+  "parameters": [
+    {
+      "name": "Culture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Culture used to resolve the localized field labels."
+    },
+    {
+      "name": "CurrentIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "Index of the step the runner currently presents; it renders aria-current=\"step\"."
+    },
+    {
+      "name": "FallbackCulture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Fallback culture used when a field's translation is missing."
+    },
+    {
+      "name": "IsStepFilled",
+      "type": "Func<SigningStepItem, bool>",
+      "isRequired": false,
+      "description": "The runner's completeness predicate for a step (every field of the step has a value) — the \"Done\" status and the check icon read from it."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised with the clicked step index; the runner selects and focuses that step."
+    },
+    {
+      "name": "Steps",
+      "type": "IReadOnlyList<SigningStepItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The runner's planned steps, in field order (already submitter-filtered)."
+    }
+  ]
+}

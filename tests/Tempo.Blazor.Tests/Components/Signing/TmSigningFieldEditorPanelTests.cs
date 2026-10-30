@@ -533,6 +533,61 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ColorInput_FallsBackToRoleHexColor()
+    {
+        var field = CreateField();
+        field.Preferences.Color = null;
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, field)
+                      .Add(p => p.SubmitterRoles, CreateRoles()));
+
+        cut.Find(".tm-signing-field-editor-panel__color")
+            .GetAttribute("value").Should().Be("#2563eb",
+                "the colour input needs a concrete colour — role-a has none, so the palette colour of its order wins");
+    }
+
+    [Fact]
+    public void ColorInput_RoleWithoutColorAtLaterOrder_FallsBackToThatOrdersPaletteColor()
+    {
+        var field = CreateField();
+        field.Preferences.Color = null;
+        field.SubmitterUuid = "role-b";
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, field)
+                      .Add(p => p.SubmitterRoles, CreateRoles()));
+
+        cut.Find(".tm-signing-field-editor-panel__color")
+            .GetAttribute("value").Should().Be("#16a34a");
+    }
+
+    [Fact]
+    public void ColorInput_FieldWithoutSubmitterRole_FallsBackToFirstPaletteColor()
+    {
+        var field = CreateField();
+        field.Preferences.Color = null;
+        field.SubmitterUuid = "role-unknown";
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, field)
+                      .Add(p => p.SubmitterRoles, CreateRoles()));
+
+        cut.Find(".tm-signing-field-editor-panel__color")
+            .GetAttribute("value").Should().Be("#2563eb");
+    }
+
+    [Fact]
+    public void ColorInput_SavedPreference_BeatsTheRoleColour()
+    {
+        var field = CreateField();
+        field.Preferences.Color = "#123456";
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, field)
+                      .Add(p => p.SubmitterRoles, CreateRoles()));
+
+        cut.Find(".tm-signing-field-editor-panel__color")
+            .GetAttribute("value").Should().Be("#123456");
+    }
+
+    [Fact]
     public void ConditionButton_OpensConditionBuilder()
     {
         var cut = Render<TmSigningFieldEditorPanel>(parameters =>

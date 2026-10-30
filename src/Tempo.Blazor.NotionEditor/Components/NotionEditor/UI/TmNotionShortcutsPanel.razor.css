@@ -119,7 +119,7 @@
     padding: var(--tm-space-2) var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-nsp__description {

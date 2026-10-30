@@ -90,6 +90,10 @@ public class SigningAccessibilityTests : LocalizationTestBase
         invoked.Should().BeTrue();
     }
 
+    /// <summary>
+    /// The progress live region describes COMPLETED FIELDS (phase 3: the signer may fill in any
+    /// order through the permanent field list), so the accessible name carries the done count.
+    /// </summary>
     [Fact]
     public void RunnerProgress_HasAriaLabel()
     {
@@ -99,7 +103,131 @@ public class SigningAccessibilityTests : LocalizationTestBase
         cut.Find(".tm-signing-form-runner__progress")
             .GetAttribute("aria-label")
             .Should()
-            .Contain("Step 1 of 1");
+            .Contain("0 of 1 done");
+    }
+
+    /// <summary>
+    /// The runner's progress BAR is decorative (phase 3 review): the polite status text next to it
+    /// already announces the count, so the bar carries <c>aria-hidden="true"</c> instead of a
+    /// redundant second progressbar role.
+    /// </summary>
+    [Fact]
+    public void RunnerProgress_BarIsAriaHidden()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters =>
+            parameters.Add(p => p.Fields, [CreateTextField()]));
+
+        cut.Find(".tm-signing-form-runner__progress .tm-progress-bar")
+            .GetAttribute("aria-hidden")
+            .Should()
+            .Be("true");
+    }
+
+    /// <summary>
+    /// The step shell title is the visible label of the step; every input of every step type must
+    /// carry an accessible name — an <c>aria-label</c>, an <c>aria-labelledby</c> pointing at an
+    /// EXISTING element (the title id), or a wrapping <c>label</c>. The runner is an end-user
+    /// surface: all of its inputs are reachable through <c>getByLabel</c>.
+    /// </summary>
+    [Theory]
+    [InlineData(SigningFieldType.Text)]
+    [InlineData(SigningFieldType.Number)]
+    [InlineData(SigningFieldType.Date)]
+    [InlineData(SigningFieldType.Select)]
+    [InlineData(SigningFieldType.Checkbox)]
+    [InlineData(SigningFieldType.Multiple)]
+    [InlineData(SigningFieldType.Image)]
+    [InlineData(SigningFieldType.Signature)]
+    [InlineData(SigningFieldType.Phone)]
+    [InlineData(SigningFieldType.Kba)]
+    public void Step_EveryInput_HasAccessibleName_AriaLabelledByExistingTitleId(SigningFieldType type)
+    {
+        var inputs = RenderStepInputsOfType(type);
+        inputs.Should().NotBeEmpty($"{type} steps render form controls");
+
+        foreach (var input in inputs)
+        {
+            HasAccessibleName(input).Should().BeTrue(
+                $"the {type} step's <{input.TagName.ToLowerInvariant()}> must have an accessible name; markup: {input.OuterHtml}");
+        }
+    }
+
+    /// <summary>The radio group is a real group: a <c>fieldset</c> with a legend, and radio names unique per instance.</summary>
+    [Fact]
+    public void ChoiceStep_UsesFieldsetLegend_AndUniqueRadioName()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceFieldOfType(SigningFieldType.Radio)));
+
+        var fieldset = cut.Find("fieldset.tm-signing-choice-step__group");
+        fieldset.QuerySelector("legend").Should().NotBeNull("the group's accessible name comes from the legend");
+        fieldset.QuerySelector("legend")!.TextContent.Should().NotBeEmpty();
+
+        var radios = cut.FindAll("input[type='radio']");
+        radios.Should().HaveCount(2);
+        radios.Should().OnlyContain(radio => !string.IsNullOrWhiteSpace(radio.GetAttribute("name")));
+        radios.Select(radio => radio.GetAttribute("name")).Distinct().Should().ContainSingle(
+            "radios of ONE step share a name so arrow keys move within the group");
+    }
+
+    /// <summary>
+    /// The checkbox-group hint is part of the GROUP's description: the hint carries an id and the
+    /// fieldset references it (plus description / validation ids) through aria-describedby.
+    /// </summary>
+    [Fact]
+    public void ChoiceStep_CheckboxGroupHint_IsPartOfTheGroupDescription()
+    {
+        var first = CreateTextField();
+        first.Type = SigningFieldType.Checkbox;
+        first.Name = "First consent";
+        var second = CreateTextField();
+        second.Type = SigningFieldType.Checkbox;
+        second.Name = "Second consent";
+        var group = CreateChoiceFieldOfType(SigningFieldType.Checkbox);
+        group.Name = "Consents";
+
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, group)
+            .Add(p => p.Fields, [first, second]));
+
+        var fieldset = cut.Find("fieldset.tm-signing-choice-step__group");
+        var hintId = cut.Find(".tm-signing-choice-step__hint").GetAttribute("id");
+        hintId.Should().NotBeNullOrWhiteSpace("the hint is referenced by the group, so it needs an id");
+        fieldset.GetAttribute("aria-describedby")!.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Should().Contain(hintId!);
+    }
+
+    /// <summary>Two choice steps with the SAME field must not share a radio name (B25 follow-up: ids/names per instance).</summary>
+    [Fact]
+    public void ChoiceStep_RadioName_IsUniquePerInstance()
+    {
+        var first = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceFieldOfType(SigningFieldType.Radio)));
+        var second = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceFieldOfType(SigningFieldType.Radio)));
+
+        var firstName = first.Find("input[type='radio']").GetAttribute("name");
+        var secondName = second.Find("input[type='radio']").GetAttribute("name");
+
+        firstName.Should().NotBe(secondName,
+            "two rendered radio groups must not merge into one browser-level group");
+    }
+
+    /// <summary>Phone inputs (country, number, OTP) are named — placeholders are not accessible names.</summary>
+    [Fact]
+    public void PhoneStep_InputsHaveLabels()
+    {
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Uuid = "phone", Name = "Phone", Type = SigningFieldType.Phone, Required = true })
+            .Add(p => p.CodeSent, true));
+
+        var country = cut.Find("select.tm-signing-phone-step__country");
+        var phone = cut.Find("input.tm-signing-phone-step__input");
+        var otp = cut.Find("input.tm-signing-phone-step__otp");
+
+        HasAccessibleName(country).Should().BeTrue($"country select needs a name; markup: {country.OuterHtml}");
+        HasAccessibleName(phone).Should().BeTrue($"phone input needs a name; markup: {phone.OuterHtml}");
+        HasAccessibleName(otp).Should().BeTrue($"OTP input needs a name; markup: {otp.OuterHtml}");
     }
 
     [Fact]
@@ -156,6 +284,114 @@ public class SigningAccessibilityTests : LocalizationTestBase
 
             accessibleName.Should().NotBeNullOrWhiteSpace(button.OuterHtml);
         }
+    }
+
+    /// <summary>
+    /// Whether a form control resolves an accessible name: <c>aria-label</c>, an
+    /// <c>aria-labelledby</c> whose every referenced id EXISTS in the fragment, or a wrapping
+    /// <c>&lt;label&gt;</c> with content.
+    /// </summary>
+    private static bool HasAccessibleName(AngleSharp.Dom.IElement input)
+    {
+        var ariaLabel = input.GetAttribute("aria-label");
+        if (!string.IsNullOrWhiteSpace(ariaLabel))
+        {
+            return true;
+        }
+
+        var labelledBy = input.GetAttribute("aria-labelledby");
+        if (!string.IsNullOrWhiteSpace(labelledBy))
+        {
+            return labelledBy
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .All(id => FindElementById(input, id)?.TextContent.Trim().Length > 0);
+        }
+
+        if (input.TagName.Equals("input", StringComparison.OrdinalIgnoreCase)
+            && input.GetAttribute("type")?.Equals("hidden", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        return input.Closest("label")?.TextContent.Trim().Length > 0;
+    }
+
+    /// <summary>
+    /// Resolves an HTML id from the fragment the input renders in: the document's id index first,
+    /// then a querySelector fallback (bUnit's parsed tree can miss ids on patched nodes).
+    /// </summary>
+    private static AngleSharp.Dom.IElement? FindElementById(AngleSharp.Dom.IElement input, string id)
+    {
+        var byId = input.Owner?.GetElementById(id);
+        if (byId is not null)
+        {
+            return byId;
+        }
+
+        var root = input;
+        while (root.ParentElement is not null)
+        {
+            root = root.ParentElement;
+        }
+
+        return root.QuerySelector($"[id='{id}']");
+    }
+
+    /// <summary>Renders one signing step of the requested type with a labeled field and returns its form controls.</summary>
+    private IReadOnlyList<AngleSharp.Dom.IElement> RenderStepInputsOfType(SigningFieldType type)
+    {
+        var field = new SigningField
+        {
+            Uuid = $"field-{type.ToString().ToLowerInvariant()}",
+            Name = $"{type} field",
+            Type = type,
+            Required = false
+        };
+
+        return type switch
+        {
+            SigningFieldType.Text => Render<TmSigningTextStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Number => Render<TmSigningNumberStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Date => Render<TmSigningDateStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Select => Render<TmSigningChoiceStep>(parameters =>
+            {
+                parameters.Add(p => p.Field, CreateChoiceFieldOfType(SigningFieldType.Select));
+            }).FindAll("input, select, textarea"),
+            SigningFieldType.Checkbox => Render<TmSigningChoiceStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Multiple => Render<TmSigningChoiceStep>(parameters =>
+            {
+                parameters.Add(p => p.Field, CreateChoiceFieldOfType(SigningFieldType.Multiple));
+            }).FindAll("input, select, textarea"),
+            SigningFieldType.Image => Render<TmSigningAttachmentStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Signature => Render<TmSigningSignatureStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Phone => Render<TmSigningPhoneStep>(parameters => parameters
+                .Add(p => p.Field, field)).FindAll("input, select, textarea"),
+            SigningFieldType.Kba => Render<TmSigningExternalStep>(parameters =>
+            {
+                parameters.Add(p => p.Field, field);
+                parameters.Add(p => p.Questions, new[] { "First pet?", "Mothers maiden name?" });
+            }).FindAll("input, select, textarea"),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
+    }
+
+    private static SigningField CreateChoiceFieldOfType(SigningFieldType type)
+    {
+        var field = CreateTextField();
+        field.Type = type;
+        field.Options =
+        [
+            new SigningFieldOption { Uuid = "option-a", Value = "Email" },
+            new SigningFieldOption { Uuid = "option-b", Value = "Paper" }
+        ];
+
+        return field;
     }
 
     private static SigningField CreateTextField()

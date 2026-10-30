@@ -203,6 +203,13 @@ else
             builder.AddAttribute(seq + 2, "class", "tm-mobile-action-bar__action tm-touch-target");
             builder.AddAttribute(seq + 3, "disabled", item.Disabled);
             builder.AddAttribute(seq + 4, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
+            // A stable DOM id for the tile (namespaced by the host's TestIdPrefix): the restore-focus
+            // target of the surfaces the tile opens (the TmGantt mobile sheets, for one). The
+            // TmActionItem.Id contract already reserves the id namespace for exactly this use.
+            if (!string.IsNullOrEmpty(item.Id))
+            {
+                builder.AddAttribute(seq + 15, "id", TestId(item.Id));
+            }
             builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
             builder.AddAttribute(seq + 5, "onclick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
             // C2: a checkable action's tile is a toggle button on the bar too. Attributes must come

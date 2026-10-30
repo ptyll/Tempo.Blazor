@@ -158,18 +158,6 @@ public sealed class MarkupClassCoverageTests
         "tm-filter-chip-label",
         "tm-filter-chip-value",
         "tm-form-group",
-        "tm-gantt-portfolio__project-name",
-        "tm-gantt-task-panel__attachment-item",
-        "tm-gantt-task-panel__attachment-link",
-        "tm-gantt-task-panel__attachment-list",
-        "tm-gantt-task-panel__color-swatches",
-        "tm-gantt-task-panel__dep-confirm-text",
-        "tm-gantt-task-panel__description",
-        "tm-gantt-task-panel__duration-display",
-        "tm-gantt-task-panel__section",
-        "tm-gantt-task-panel__section--budget",
-        "tm-gantt-task-panel__section--timelog",
-        "tm-gantt-task-panel__section-label",
         "tm-gantt__notification-settings",
         "tm-gantt__sidebar-drawer-title",
         "tm-import-wizard__upload-input",
@@ -224,7 +212,10 @@ public sealed class MarkupClassCoverageTests
         "tm-signature-capture__previous-preview",
         "tm-signature-capture__remember",
         "tm-spinner--sm",
-        "tm-split-button__text",
+        // TmGantt redesign phase 9 (126601f): the toolbar's no-wrap review gave the split button's
+        // label its first rule (.tm-gantt__toolbar ::deep .tm-split-button__text in
+        // TmGanttToolbar.razor.css, white-space: nowrap) — the entry left the unstyled population,
+        // struck off.
         "tm-splitter__pane--collapsible",
         "tm-stock-chart__ohlc",
         "tm-text-secondary",
@@ -311,10 +302,15 @@ public sealed class MarkupClassCoverageTests
         "tm-signing-field-editor-panel__required",
         "tm-signing-field-editor-panel__signature-id",
         "tm-signing-field-editor-panel__stamp-logo",
-        "tm-signing-form-runner--accessibility",
-        "tm-signing-form-runner__mobile-panel--collapsed",
+        // Signing redesign phase 3: the "Accessibility mode" toggle is gone, so
+        // "tm-signing-form-runner--accessibility" left the markup AND this inventory. The new
+        // rule-free hooks are the list item wrapper (styled through the .tm-signing-form-runner__field-items
+        // grid) and the progress count span (visually carried by .tm-signing-form-runner__progress).
+        "tm-signing-form-runner__progress-text",
+        "tm-signing-form-runner__field-item",
         "tm-signing-number-step",
         "tm-signing-phone-step",
+        "tm-signing-signature-step",
         "tm-signing-step-shell--invalid",
         "tm-signing-step-shell--required",
         "tm-signing-text-step",
@@ -413,10 +409,32 @@ public sealed class MarkupClassCoverageTests
             // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
             // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
             // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
-            ExpectedUnmeasurableStems: 50),
+            // TmGantt redesign phase 4: the sidebar tab/panel DOM ids ($"tm-gantt-{InstanceId}-tab-…") in
+            // the toolbar/sidebar parts add the "tm-gantt-" stem — 50 → 51.
+            // TmGantt redesign phase 6: the import dialog became a TmModal, which owns its title id, so its
+            // "tm-gantt-import-title-{Guid…}" stem is gone — 51 → 50.
+            // TmGantt redesign phase 8: the mobile task sheet's field ids ($"tm-gantt-task-status-{Guid…}",
+            // $"tm-gantt-task-percent-{Guid…}") add their two stems — 50 → 52.
+            // TmGantt redesign phase 11: the portfolio's shared-axis scroll group id
+            // ($"tm-gantt-portfolio-{Guid…}") adds its stem — 52 → 53.
+            // FZE-2 (TmChat slots): the composer textarea id is per component instance
+            // ("tm-chat-composer-{counter}" in TmChat.razor.cs), so its prefix joined the scanned
+            // population — 53 → 54.
+            // FZE-5 (composer review): the thread panel's reply input gained its own per-instance
+            // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 54 → 55.
+            // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
+            // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 55 → 56.
+            ExpectedUnmeasurableStems: 56),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
-            ExpectedUnmeasurableStems: 6),
+            // Signing redesign phase 2 (B25): the runner's single step panel id
+            // ("tm-signing-runner-panel-{Guid…}"), the choice step's per-instance radio name
+            // ("tm-signing-choice-{Guid…}") and hint id ("tm-signing-choice-hint-{Guid…}") and the
+            // per-instance accessible ids the step components own ("tm-signing-step-title-{Guid…}",
+            // "tm-signing-step-description-{…}", "tm-signing-step-validation-{Guid…}") joined the
+            // scanned population; the text step's old "tm-signing-text-validation-{Guid…}" stem
+            // merged into the shared step-validation stem — 6 → 11.
+            ExpectedUnmeasurableStems: 11),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 17),

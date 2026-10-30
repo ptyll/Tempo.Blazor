@@ -1,0 +1,78 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@if (History is null || !History.Any())
+{
+    <div class="tm-gantt__history-empty">
+        <TmIcon Name="clock" Size="IconSize.Lg" />
+        <span>@Loc["TmGantt_HistoryEmpty"]</span>
+    </div>
+}
+else
+{
+    <ul class="tm-gantt__history-list">
+        @foreach (var entry in Entries())
+        {
+            var visual = Visual(entry.Action);
+            var task = TaskOf(entry);
+            <li class="tm-gantt__history-entry" data-testid="@TestId($"history-entry-{entry.Id}")">
+                <span class="tm-gantt__history-entry-icon @visual.CssClass" aria-hidden="true">
+                    <TmIcon Name="@visual.Icon" Size="IconSize.Sm" />
+                </span>
+                <div class="tm-gantt__history-entry-body">
+                    <div class="tm-gantt__history-entry-header">
+                        <span class="tm-gantt__history-entry-type">@GanttLabels.ChangeType(Loc, entry.Action)</span>
+                        <time class="tm-gantt__history-entry-time" datetime="@entry.Timestamp.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture)"
+                              title="@TimeTitle(entry)">@TimeText(entry)</time>
+                    </div>
+                    @if (!string.IsNullOrEmpty(entry.EntityRef.EntityId))
+                    {
+                        @if (task is not null)
+                        {
+                            <button type="button" class="tm-gantt__history-entry-task" @onclick="() => OnTaskSelected.InvokeAsync(task.Id)">@task.Title</button>
+                        }
+                        else
+                        {
+                            <span class="tm-gantt__history-entry-task">@TaskTitle(entry)</span>
+                        }
+                    }
+                    @if (!string.IsNullOrEmpty(entry.Actor?.DisplayName ?? entry.Actor?.Id))
+                    {
+                        <span class="tm-gantt__history-entry-author">@(entry.Actor?.DisplayName ?? entry.Actor?.Id)</span>
+                    }
+                    @if (entry.Before is not null || entry.After is not null)
+                    {
+                        <div class="tm-gantt__history-entry-values">
+                            @if (entry.Before is not null)
+                            {
+                                <span class="tm-gantt__history-old">@entry.Before</span>
+                                <TmIcon Name="arrow-right" Size="IconSize.Xs" />
+                            }
+                            @if (entry.After is not null)
+                            {
+                                <span class="tm-gantt__history-new">@entry.After</span>
+                            }
+                        </div>
+                    }
+                    @if (ShowActions)
+                    {
+                        <div class="tm-gantt__history-entry-actions">
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Block="true"
+                                      OnClick="() => TimeTravelAsync(entry.Timestamp)"
+                                      data-testid="@($"history-timetravel-{entry.Id}")">
+                                <TmIcon Name="clock" Size="IconSize.Xs" />
+                                @Loc["TmGantt_TimeTravel"]
+                            </TmButton>
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Block="true"
+                                      OnClick="() => RollbackAsync(entry)"
+                                      data-testid="@($"history-rollback-{entry.Id}")">
+                                <TmIcon Name="rotate-ccw" Size="IconSize.Xs" />
+                                @Loc["TmGantt_Rollback"]
+                            </TmButton>
+                        </div>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}

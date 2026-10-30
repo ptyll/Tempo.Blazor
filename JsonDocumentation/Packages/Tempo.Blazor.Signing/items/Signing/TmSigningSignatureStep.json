@@ -1,0 +1,94 @@
+{
+  "itemName": "TmSigningSignatureStep",
+  "kind": "Component",
+  "category": "Signing",
+  "description": "Renders a signature or initials signing step inside the shared step shell. Signing redesign phase 2: the form runner renders this wrapper instead of a bare TmSignatureCapture, so a signature step carries the step title, the required / optional badge, the signing instruction and the \"appears on\" hint like every other step. The capture is wrapped in a role=group element named by the step title id. The shell owns the required / invalid presentation of the step (the badge, the single role=alert validation message and aria-invalid), so the embedded capture is deliberately driven with Required = false — a required signature step shows exactly one \"signature is required\" alert.",
+  "packageId": "Tempo.Blazor.Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningSignatureStep.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Signing"
+  ],
+  "parameters": [
+    {
+      "name": "Field",
+      "type": "SigningField",
+      "isRequired": false,
+      "description": "Signing field represented by this step."
+    },
+    {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current signature value (typed text, drawn SVG or uploaded data URL)."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback invoked when the signature value changes."
+    },
+    {
+      "name": "Initials",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Whether the capture draws initials instead of a full signature. Defaults to the field type."
+    },
+    {
+      "name": "Mode",
+      "type": "TmSignatureCaptureMode",
+      "isRequired": false,
+      "default": "TmSignatureCaptureMode.Typed",
+      "description": "Current capture mode."
+    },
+    {
+      "name": "ModeChanged",
+      "type": "EventCallback<TmSignatureCaptureMode>",
+      "isRequired": false,
+      "description": "Callback invoked when the capture mode changes."
+    },
+    {
+      "name": "Modes",
+      "type": "IReadOnlyList<TmSignatureCaptureMode>?",
+      "isRequired": false,
+      "description": "Offered capture modes. Defaults to draw, type and upload."
+    },
+    {
+      "name": "ValidationMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation message shown by the step shell below the capture."
+    },
+    {
+      "name": "AppearsOn",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Short text describing where the field appears in the document."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the controls are disabled."
+    },
+    {
+      "name": "Culture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Culture used to resolve localized field text."
+    },
+    {
+      "name": "FallbackCulture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Fallback culture used when localized field text is missing."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes for the shell element."
+    }
+  ]
+}

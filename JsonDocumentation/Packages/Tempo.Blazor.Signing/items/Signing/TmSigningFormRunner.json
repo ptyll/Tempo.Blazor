@@ -2,7 +2,7 @@
   "itemName": "TmSigningFormRunner",
   "kind": "Component",
   "category": "Signing",
-  "description": "Coordinates a linear signing ceremony over document pages and signing field steps.",
+  "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Known limitations / security note (reworked in Signing redesign phase 6): the external steps are placeholders — clicking \"Start verification\" / \"Checkout\" (OnStart/OnCheckout store true for the field) marks the step COMPLETE WITHOUT ANY VERIFICATION taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload stays in the browser. Treat the resulting field values as untrusted presentation state, never as proof that a verification, payment, or upload happened.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFormRunner.razor",
@@ -12,11 +12,30 @@
   ],
   "parameters": [
     {
+      "name": "DocumentHeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions rendered in the document header row next to DocumentTitle (Signing redesign phase 3, U4) — for example a language or metadata control the host owns."
+    },
+    {
+      "name": "DocumentTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional document title shown above the pages (Signing redesign phase 3, U4). Rendered only when set (or when DocumentHeaderActions has content), so the default look stays today's chrome-free document area."
+    },
+    {
       "name": "Pages",
       "type": "IReadOnlyList<SigningDocumentPage>",
       "isRequired": false,
       "default": "[]",
       "description": "Document pages shown during signing."
+    },
+    {
+      "name": "ShowDocumentToolbar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the document toolbar's ZOOM controls on every page viewer (Signing redesign phase 3, U4). The zoom level is SHARED across all pages through the runner's own scale state. Pagination controls stay off — the runner presents one page at a time, so per-page previous/next buttons would be dead chrome (they come with a later phase if a host needs them). Defaults to false — today's chrome-free look."
     },
     {
       "name": "AutoSaveDelay",
@@ -116,6 +135,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional signer role filter."
+    },
+    {
+      "name": "SubmitterRoles",
+      "type": "IReadOnlyList<SigningSubmitterRole>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Submitter roles whose colours are painted on the field overlays (RoleColor). The colour resolves from the field's own submitter, falling back to SubmitterUuid; roles without a colour keep the primary-tint overlay default."
     },
     {
       "name": "SupportedCultures",

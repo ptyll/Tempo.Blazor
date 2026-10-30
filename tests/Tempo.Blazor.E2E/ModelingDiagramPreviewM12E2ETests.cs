@@ -47,8 +47,11 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
                     .map(el => el.getAttribute('data-tm-group'))
                     .filter(name => !!name)
                 """);
-        CollectionAssert.AreEquivalent(new[] { "zoom", "view", "search", "export" }, groups,
-            "the preview must render exactly the viewer toolbar groups");
+        // Final UX review (M1): the preview keeps the ZOOM group only — the search + "⋯"
+        // header-bar row is gone with its groups (the DE renders no empty header bar) and the
+        // status bar keeps the zoom controls.
+        CollectionAssert.AreEquivalent(new[] { "zoom" }, groups,
+            "the preview must render exactly the zoom toolbar group");
 
         // A host-pinned read-only preview can no longer be unlocked from the UI (DI1).
         Assert.AreEqual(0, await preview.Locator("[data-tm-group='readonly']").CountAsync(),
@@ -159,6 +162,44 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("At 1024x768 the preview header actions wrap instead of clipping outside the preview panel")]
+    public async Task DiagramPreview_ActionsStayInsidePreviewAt1024()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
+            HasTouch = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = 60_000,
+        });
+        await WaitForAppReadyAsync(page);
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var previewBox = await page.Locator("[data-testid='modeling-diagram-preview']").BoundingBoxAsync();
+        Assert.IsNotNull(previewBox, "the preview panel must be measurable");
+        var previewRight = previewBox!.X + previewBox.Width;
+
+        foreach (var testId in new[] { "modeling-open-in-editor-button", "modeling-generate-diagram-button" })
+        {
+            var box = await page.Locator($"[data-testid='{testId}']").BoundingBoxAsync();
+            Assert.IsNotNull(box, $"{testId} must be rendered and measurable");
+            Assert.IsTrue(
+                box!.X + box.Width <= previewRight + 0.5,
+                $"{testId} right edge ({box.X + box.Width:0.#}) must not clip past the preview right edge ({previewRight:0.#})");
+        }
+    }
+
+    [TestMethod]
     [Description("Empty model generation renders an empty diagram canvas with a helpful hint")]
     public async Task DiagramPreview_EmptyModelShowsEmptyCanvasHint()
     {
@@ -252,6 +293,112 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         await TakeScreenshotAsync(empty, "diagram-preview-empty");
         await SaveStableScreenshotAsync(empty, "diagram-preview-empty.png");
     }
+
+    // ── Fáze 15: the preview legend ──────────────────────────────────────────
+
+    [TestMethod]
+    [Description("The desktop preview renders the legend card listing the notation types the document uses, and it collapses")]
+    public async Task PreviewLegend_ListsPresentTypesAndCollapses()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var legend = page.Locator("[data-testid='modeling-preview-legend']");
+        await Assertions.Expect(legend).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        // The legend lists ONLY the notation types present in the generated document: the demo
+        // BPMN model contributes three element types and the mapped sequence flow.
+        var items = legend.Locator(".tm-modeling-diagram-legend__list > li");
+        await Assertions.Expect(items).ToHaveCountAsync(4, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Assertions.Expect(legend).ToContainTextAsync("User task", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Start event", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Service task", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Sequence flow", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        // The types the document does not use (the demo's unmapped ArchiMate element) never appear.
+        Assert.AreEqual(0, await legend.Locator(".tm-modeling-diagram-legend__list > li")
+            .Filter(new LocatorFilterOptions { HasTextString = "Application component" }).CountAsync());
+
+        // Decorative icons next to visible text.
+        Assert.AreEqual("true", await items.First.Locator("svg").First.GetAttributeAsync("aria-hidden"));
+
+        // Collapsible with aria-expanded.
+        var toggle = legend.Locator(".tm-modeling-diagram-legend__toggle");
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"));
+        await toggle.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+        Assert.AreEqual(0, await legend.Locator(".tm-modeling-diagram-legend__list").CountAsync(),
+            "a collapsed legend renders no list body");
+
+        await TakeScreenshotAsync(page, "modeling-legend-1440");
+    }
+
+    [TestMethod]
+    [Description("The legend card never steals preview canvas height (overlay in the canvas corner)")]
+    public async Task PreviewLegend_KeepsCanvasHeight()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await Assertions.Expect(page.Locator("[data-testid='modeling-preview-legend']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        // The legend is an OVERLAY in the canvas corner — it never participates in the canvas
+        // column's flow, so the canvas keeps the exact height the docked bands give it
+        // (the issues dock present: the 240px floor) and the zoom pill/hint stay reachable.
+        var overlay = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const legend = document.querySelector('.tm-modeling-diagram-preview__legend');
+                if (!legend) return false;
+                return getComputedStyle(legend).position === 'absolute'
+                    && legend.getBoundingClientRect().bottom <=
+                       (document.querySelector('.tm-modeling-diagram-preview__canvas-shell')?.getBoundingClientRect().bottom ?? 0);
+            }
+            """);
+        Assert.IsTrue(overlay, "the legend is absolutely positioned inside the canvas shell (never in flow)");
+
+        var canvasHeight = await CanvasHeightAsync(page);
+        Assert.IsTrue(canvasHeight >= 240,
+            $"the preview canvas keeps its docked-band floor with the legend (measured {canvasHeight:0.#})");
+    }
+
+    [TestMethod]
+    [Description("Review fix: the top-right legend rect never intersects the preview's zoom group")]
+    public async Task PreviewLegend_DoesNotCoverZoomGroup()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        // Pin the desktop band so the STATUS BAR's zoom group deterministically renders — the
+        // compact mobile band replaces the row with the floating pill (a different surface).
+        await PinPreviewEditorToDesktopAsync(page);
+        await Assertions.Expect(page.Locator("[data-testid='modeling-preview-legend']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        Assert.AreEqual(1, await page.Locator("[data-testid='modeling-diagram-preview'] [data-tm-group='zoom']").CountAsync(),
+            "the desktop status bar renders the zoom group before the intersection check");
+        var intersects = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const legend = document.querySelector('[data-testid="modeling-preview-legend"]');
+                const zoom = document.querySelector("[data-testid='modeling-diagram-preview'] [data-tm-group='zoom']");
+                if (!legend || !zoom) return false;
+                const a = legend.getBoundingClientRect();
+                const b = zoom.getBoundingClientRect();
+                return !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+            }
+            """);
+        Assert.IsFalse(intersects,
+            "the top-right legend card must not cover the status bar's zoom group");
+    }
+
+    private static Task<double> CanvasHeightAsync(IPage page) => page.EvaluateAsync<double>(
+        """
+        () => document.querySelector('.tm-modeling-diagram-preview__editor .tm-diagram-canvas')
+            ?.getBoundingClientRect().height ?? 0
+        """);
 
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "What the Gantt history drawer is positioned against: the Gantt component (default) or the viewport.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttHistoryDrawerPlacement.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttHistoryDrawerPlacement"
+}

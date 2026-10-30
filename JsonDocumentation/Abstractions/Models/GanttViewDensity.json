@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Models",
   "namespace": "Tempo.Blazor.Abstractions.Models",
-  "description": "Controls row height density in the Gantt grid.",
+  "description": "Controls row height density in the Gantt grid: Comfortable (40 px), Compact (28 px) or Touch (44 px finger-sized rows).",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttViewDensity.cs",
   "documentationStatus": "generated",

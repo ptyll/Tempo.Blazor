@@ -78,6 +78,15 @@ public partial class TmSigningFieldEditorPanel
 
     private int MissingLocalizationCount => CountMissingLocalizations();
 
+    /// <summary>
+    /// The value shown by the colour input: the field's saved preference, else the concrete colour
+    /// of the field's submitter role (an <c>&lt;input type="color"&gt</c> needs a concrete colour —
+    /// it cannot render a <c>var()</c> reference).
+    /// </summary>
+    private string ColorInputValue => _field is null
+        ? SigningRolePalette.ColorForOrder(0)
+        : _field.Preferences.Color ?? SigningRolePalette.ResolveRoleHexColor(SubmitterRoles, _field.SubmitterUuid) ?? SigningRolePalette.ColorForOrder(0);
+
     private string RootClass
     {
         get

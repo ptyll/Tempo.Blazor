@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models",
+  "description": "The one place a TmWorkItem becomes a flat cell value for an Excel export (or a preview of one). Both GanttXlsxExporter and the export dialog's built-in preview share it, and the format is invariant, so a cell and its preview never drift.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttColumnValues.cs",
+  "documentationStatus": "generated",
+  "itemName": "GanttColumnValues"
+}

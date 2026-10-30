@@ -192,6 +192,105 @@ rails the non-expanded side while `LeftOpen`/`RightOpen` keep meaning *shown*. A
 always re-raises the inspector with the **Properties** tab active — even when the user had railed
 it after switching to Layers (the selection pins the tab; the palette returns to its rail).
 
+## Embedded viewers (Fáze 9)
+
+A host that embeds the editor as a **viewer** (the Modeling preview and its "Open in editor"
+dialog) drives it through these additive knobs — never through CSS on the editor's internal DOM
+(the `Preview_css_has_no_selectors_on_diagram_editor_internals` guard). Every default is today's
+behavior, so a host that sets nothing sees no change:
+
+| Knob | Type / default | Effect |
+|---|---|---|
+| `ShowPageTabs` | `bool`, `true` | `false` drops the `.tm-diagram-editor__page-tabs` row in EVERY layout (a single-page preview has nothing to switch). Page switching stays available by setting the document's own `ActivePageIndex` (the host owns the `Document` reference) — the row is removed, not hidden with CSS. |
+| `FitToViewAsync(mode)` | `DiagramFitMode mode = Page` | Public zoom-to-fit (final UX review M5): asks the JS engine for a zoom-to-fit and re-renders the zoom label. `DiagramFitMode.Page` (default) is today's both-axes fit; `DiagramFitMode.Width` scales by the CONTAINER WIDTH only — a taller-than-box diagram overflows (scrolls) instead of shrinking. `TmDiagramCanvas.FitToView(mode)` mirrors it: ONE canvas fit path applies the page-view margin and reports the FINAL scale (after the margin) to the zoom label. |
+| `FitOnDocumentLoad` | `DiagramFitMode?`, `null` | Fits ONCE after the first render of a NEW document identity. The same document never re-fits; a replaced document does; user zoom afterwards wins. `Width` is the embedded mobile preview's first-load fit. The fit stays OWED across a canvas remount (a mobile↔docked flip remounts `TmDiagramCanvas`): the editor re-arms it on the finally mounted canvas, which fits exactly once. |
+| `ShowMobileZoomOverlay` | `bool?`, `null` | The floating − \| % \| + \| fit pill rule: `null` keeps today's rule (`IsMobileLayout && ShowToolbar &&` the Zoom group); `true` shows the pill on a mobile layout even chrome-less (`ShowToolbar=false`); `false` never shows it. The docked bands keep the status-bar zoom. |
+| `MinimapInitiallyCollapsed` | `bool`, `false` | Seeds the minimap card (desktop) / floating overlay (tablet) collapsed ONCE at initialization. The user's own toggle wins afterwards; the mobile X1 rule (minimap hidden, "⋯" toggle) is unchanged. The Modeling tablet dialog seeds it from the editor's resolved mode. |
+| `PreferredStencilIds` | `IReadOnlyList<string>?`, `null` | Fáze 15 (the Modeling "Open in editor" notation palette): stencil ids pinned as the FIRST toolbox library — order preserved, unknown ids ignored — while every other library starts collapsed (a live search still expands matches across the WHOLE library). `null` keeps today's toolbox (a set→null transition restores exactly the palettes the pinned pass collapsed; the user's own collapses survive). The pinned section carries `data-library-id="notation-palette"` and `data-pinned="true"`; its label renders ONCE — on the single palette's own collapsible category header, never as a repeated library header. On a mobile layout the pinned library is the "first category" for `CollapseCategoriesExceptFirst`. A pinned stencil that also belongs to a native library is listed in BOTH places (the pinned row for the notation context, the native row for its category) — that duplication is intentional; inserting from either creates the same stencil. |
+| `PreferredStencilsLabel` | `string?`, `null` | Label of the pinned library (the Modeling dialog passes the notation profile's display name), rendered on the pinned palette's category header. Null falls back to the localized `TmDiagramToolbox_PreferredDefault`. Ignored while `PreferredStencilIds` is unset. |
+
+### `TmDiagramStencilIcon` (Fáze 15)
+
+The public small stencil preview (`StencilId`, `Size`, `Class`) — the same text-trimming pipeline
+the toolbox tiles use, for hosts that present stencils outside the toolbox (the Modeling palette
+and legend embed it instead of duplicating the SVG). Always `aria-hidden="true"`: the surrounding
+row owns the visible label. A stencil id the registry does not know renders the generic fallback
+shape (`data-fallback="true"`; the edge kind falls back to the edge glyph). `Size` is a CSS box
+size applied to width and height (default `32px`).
+
+```razor
+<TmDiagramStencilIcon StencilId="bpmn2.task.user" Size="1rem" />
+```
+
+`diagram-editor.js` `fitToView(container, padding, mode)` keeps its two-argument contract: the
+third `mode` argument is additive (`'width'`), so a host calling the old signature gets today's
+page fit. The width mode scales by `containerWidth / contentWidth` (padding included) capped by
+`FIT_MAX_SCALE`, TOP-aligns shorter-than-box content (`minY - padding` is the visible top edge —
+the content pins to the band's top instead of floating centered) and keeps `minX - padding` as
+the visible left edge. `addPageViewMargin` reports the zoom AFTER the margin (the final, smaller
+scale) through `OnZoomChanged`.
+
+```razor
+@* A chrome-less mobile viewer with zoom buttons and a fit-to-width first load *@
+<TmDiagramEditor Document="@doc"
+                 ReadOnly="true"
+                 ToolbarPreset="DiagramToolbarPreset.Viewer"
+                 ToolbarGroups="DiagramToolbarGroups.Zoom"
+                 ShowPageTabs="@(doc.Pages.Count > 1)"
+                 ShowToolbar="false"
+                 ShowMobileZoomOverlay="true"
+                 FitOnDocumentLoad="DiagramFitMode.Width" />
+
+@* A tablet-dialog editor whose floating minimap starts collapsed *@
+<TmDiagramEditor Document="@doc" MinimapInitiallyCollapsed="@isTablet" />
+```
+
+## Escape ordering (capture consumers)
+
+The editor is frequently layered inside a host overlay (a `TmModal` dialog). The core
+`tm-focus-trap.js` honors Escape on a document **bubble** keydown listener, so every editor Escape
+consumer registers in the **capture** phase on `document` and runs before any bubble listener —
+the ordering against the trap is deterministic, not registration-order dependent. A consumer that
+actually handles the Escape marks it (`preventDefault()` + `e.tmEscapeHandled = true`, both
+honored by the trap and by later consumers).
+
+**One press closes exactly ONE layer — the topmost one** (confirmed ordering, Fáze 10):
+
+1. **The custom context menu** — while open (`_menuOpen`) it owns the Escape through its own
+   capture-phase key handler, and the other consumers SKIP (`_onSearchEscape` returns early), so
+   a search panel or view menu never closes under it. The menu's handler marks the event the
+   same way.
+2. **The open "⋯" view menu** (stamped `data-open`): Escape closes the menu — through the
+   additive `TmDiagramCanvas` parameter `OnCloseViewMenu` — and outranks the search panel.
+3. **The open search panel**: Escape closes it through `OnCloseSearch` (the editor closes the
+   panel and refocuses the canvas container so the focus does not drop to `body`). A host overlay
+   behind the editor stays open. Both consumers only fire while the focus is inside the editor
+   root, so an Escape typed elsewhere is never stolen.
+4. **An inline edit** (the `.tm-diagram-edge-label-input` foreignObject input, a
+   `.tm-diagram-node__inline-input`/`-textarea` section editor, a swimlane header or a table
+   cell): the Escape is CONSUMED — the edit CANCELS (the value reverts, nothing is pushed to the
+   undo stack) and a host dialog stays open; the NEXT Escape continues with the order above. The
+   canvas' capture consumer resolves the owner — a node editor through its registered
+   `TmDiagramStencilShape` (`CancelActiveEditFromJs`), everything else through the canvas'
+   `[JSInvokable] OnInlineEditEscape` (`CancelEdgeLabelEdit`). The Blazor `@onkeydown` Escape
+   branches on the inputs themselves stay as idempotent fallbacks. After the cancel the focus
+   returns to the canvas container (the JS node branch focuses `container` with
+   `preventScroll`; the edge-label path goes through `FocusCanvasAsync`) — the edit input
+   unmounts and the focus must not drop to `body`. Because both capture listeners see the SAME
+   event, `_onKeyDown` skips a handled Escape entirely (a `defaultPrevented || tmEscapeHandled`
+   guard is the first line of its Escape branch) — the inline-edit cancel never ALSO clears a
+   non-empty selection on the same keypress.
+5. **A running gesture or a non-empty selection** (rotate, pending/drawing edge, waypoint or
+   whole-edge drag): the canvas key handler consumes the Escape and cancels the session.
+6. **Nothing to consume** (empty canvas, no session): the canvas handler does NOT call
+   `preventDefault()` — the Escape keeps bubbling, which is what lets the host dialog close.
+   (Before the fix the canvas consumed every Escape unconditionally, and whether the editor or a
+   host dialog won depended on listener registration order.)
+
+The custom context menu is flagged open SYNCHRONOUSLY (`inst._menuOpen = true` before the
+deferred placement `setTimeout`), so an Escape typed between the open call and the placement
+already sees `_menuOpen` and cannot close a surface under the still-opening menu.
+
 ## Motion
 
 Under `prefers-reduced-motion: reduce` the search-match pulse, template-card hover lift,
@@ -208,9 +307,22 @@ declared light-only (NOT re-declared in `tokens-dark.css`) so the paper stays wh
 stays dark grey in every theme. Hosts rebrand them by targeting `:root`, `[data-theme="dark"]`
 and `.tm-dark` together, or per-canvas through the aliases below.
 
-Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves two
+The one paper-adjacent surface that DOES follow the theme is the area OUTSIDE the page: the
+`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — a package alias of the
+generic core `--tm-canvas-backdrop` token (declared on `.tm-diagram-canvas`). Light keeps the
+historical paper-backdrop gray (`--tm-canvas-backdrop: var(--tm-paper-backdrop)` in
+`tokens.css`), and the dark theme roots re-map the generic token to the workspace tone
+(`tokens-dark.css`), so the white page floats on a dark canvas instead of inside a light frame
+(carry-forward F8 m5). Hosts restyle the backdrop by overriding `--tm-canvas-backdrop` (on
+`[data-theme="dark"]`/`.tm-dark` and `:root` together, or `:root` for both themes) or
+`--tm-diagram-backdrop` per canvas; **overriding `--tm-paper-backdrop` only applies in LIGHT
+themes now** — the dark theme roots re-map the canvas token and win over `:root` by source
+order (and it still restyles every surface aliased to the paper backdrop).
+
+Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves the
 canvas-scoped aliases declared on `.tm-diagram-canvas`:
 
+- `--tm-diagram-backdrop` — the page-backdrop fill (alias of the generic `--tm-canvas-backdrop`).
 - `--tm-diagram-paper` — the page fill (alias of the theme-invariant `--tm-paper`, white in
   every theme). Edge-label pills reuse it so the edge stroke never runs through the text.
 - `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-paper-ink-muted`).

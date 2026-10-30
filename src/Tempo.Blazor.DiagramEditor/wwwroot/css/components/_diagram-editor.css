@@ -3176,13 +3176,22 @@ line.tm-diagram-rotate-handle-stem {
        hit-testing and drop math both measure 30px, so the painted header must not drift
        (the old --tm-input-height-xs resolves to 28px and clipped the drop detection). */
     --tm-diagram-swimlane-header: 1.875rem;
+    /* Phase 15b review: the generic core token is --tm-canvas-backdrop (tokens.css light /
+       tokens-dark.css dark + light island); this package-scoped alias keeps the phase-15b
+       --tm-diagram-backdrop name working for hosts that targeted it on the canvas. */
+    --tm-diagram-backdrop: var(--tm-canvas-backdrop);
 }
 
 /* The page rects keep literal fill/stroke ATTRIBUTES as a fallback for viewers without
    the stylesheet; CSS beats presentation attributes on screen, so the tokens (and any host
    override) win in the editor. exportViewportAsSvg additionally copies the computed values
-   onto the serialized clone, so an export always carries the paints the user actually saw. */
-.tm-diagram-page-backdrop { fill: var(--tm-paper-backdrop); }
+   onto the serialized clone, so an export always carries the paints the user actually saw.
+   The backdrop is the area OUTSIDE the page and follows the THEME (carry-forward F8 m5):
+   --tm-diagram-backdrop (the alias above) resolves the generic --tm-canvas-backdrop, which
+   keeps the historical paper-backdrop gray in light themes and flips to the workspace tone
+   in dark ones (declared in tokens.css / tokens-dark.css — a dark override may not live in a
+   component stylesheet). The paper itself stays theme-invariant. */
+.tm-diagram-page-backdrop { fill: var(--tm-diagram-backdrop); }
 .tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-paper-border); }
 
 /* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */

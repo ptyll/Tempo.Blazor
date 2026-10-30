@@ -1,0 +1,7 @@
+/* ChatDemoQueuedCountdown — the countdown span rendered in the queued bubble's Meta slot.
+   Scoped to THIS component because the span is rendered here (the page's own stylesheet would
+   not reach it — see ScopedCssOwnershipTests). */
+.chat-demo-countdown {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}

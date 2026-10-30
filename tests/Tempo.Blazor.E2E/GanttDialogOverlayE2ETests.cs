@@ -4,20 +4,17 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// F3 review round 4, W2: TmGantt's dialog style block lives in TmGantt.razor.css but the
-/// export/import dialogs are separate components — their markup never carries TmGantt's scope
-/// attribute, so the plain rules were dead CSS. Rewritten as ::deep rules (the dialogs render
-/// inside TmGantt's scoped root), they must now reach the sub-component dialogs: the promoted
-/// import overlay paints the full-screen scrim (not the UA popover box), and the export dialog
-/// renders styled, not as an unstyled inline block. Both are asserted on COMPUTED styles at a
-/// 1440px viewport, the width the reviewer reproduced the defect at.
+/// The Gantt export / import / mapping dialogs are the core <c>TmModal</c> (TmGantt redesign, phase 6, G6) - no
+/// dialog paints its own backdrop. What matters in a browser, asserted on COMPUTED styles and the real focus: the
+/// promoted overlay is the full-screen scrim, the card is the themed surface, initial focus lands inside on EVERY
+/// open, Escape closes it and hands the focus back to the toolbar button that opened it.
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]
 public sealed class GanttDialogOverlayE2ETests : WasmTestBase
 {
     private static readonly string ShotDir =
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestResults", "f3-round4");
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestResults", "gantt-dialogs");
 
     private async Task<IPage> OpenGanttAsync(int width, int height = 900)
     {
@@ -42,57 +39,72 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// UX round 4 (MAJOR): the trap used to activate while the popover root was still
-    /// display:none (the tm-sheet import outlives the trap's rAF retry), so the initial-focus
-    /// move dropped and focus landed on body in most opens. The scope now activates only after
-    /// promotion — every open at both widths must land on the close button.
+    /// The trap used to activate while the popover root was still display:none, so the initial-focus move dropped and
+    /// focus landed on body in most opens. TmModal activates only after promotion - every open at both widths must
+    /// land inside the dialog (the first focusable of a TmModal is its header close button).
     /// </summary>
     [TestMethod]
-    [Description("Gantt import dialog: initial focus lands on the close button on every open at 1440 and 390")]
+    [Description("Gantt import dialog: initial focus lands inside the dialog on every open at 1440; at 390 the read-mostly container offers no import at all (phase 8, G2)")]
     public async Task Gantt_ImportDialog_InitialFocus_LandsInsideOnEveryOpen()
     {
         foreach (var (width, height) in new[] { (1440, 900), (390, 844) })
         {
             var page = await OpenGanttAsync(width, height);
+
+            // Mobile read-mostly (phase 8, G2): the import command is not offered anywhere on the mobile
+            // chrome — the legacy "opens at 390" leg became the absence assertion.
+            if (width == 390)
+            {
+                Assert.AreEqual(0, await page.Locator("button[data-testid='gantt-import-btn']").CountAsync(),
+                    "import is tablet+; the mobile chrome offers no import command");
+                continue;
+            }
+
             for (var open = 1; open <= 6; open++)
             {
                 await page.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
-                var dialog = page.Locator(".tm-gantt__import-dialog");
+                var dialog = page.Locator(".tm-modal-overlay.tm-gantt__import-dialog");
                 await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
                 // Poll briefly: the scope activates after the promote, one interop round later.
-                string? activeTestId = null;
-                for (var attempt = 0; attempt < 20; attempt++)
+                var inside = false;
+                for (var attempt = 0; attempt < 20 && !inside; attempt++)
                 {
-                    activeTestId = await page.EvaluateAsync<string>(
-                        "() => document.activeElement?.closest('.tm-gantt__import-dialog') !== null"
-                            + " ? (document.activeElement.getAttribute('data-testid') ?? document.activeElement.className)"
-                            + " : null");
-                    if (activeTestId is not null) break;
-                    await page.WaitForTimeoutAsync(50);
+                    inside = await page.EvaluateAsync<bool>(
+                        "() => document.activeElement?.closest('.tm-gantt__import-dialog') != null");
+                    if (!inside) await page.WaitForTimeoutAsync(50);
                 }
 
-                Assert.IsNotNull(activeTestId,
-                    $"open {open} at {width}: initial focus must be inside the import dialog, not on body");
-                StringAssert.Contains(activeTestId, "tm-gantt__dialog-close",
-                    $"open {open} at {width}: initial focus must land on the close button");
-
+                Assert.IsTrue(inside, $"open {open} at {width}: initial focus must be inside the import dialog, not on body");
                 await ShootAsync(page, $"gantt-dialog-import-initial-focus-{width}-open{open}");
 
                 // Escape closes through the scope; the overlay unmounts.
                 await page.Keyboard.PressAsync("Escape");
-                await page.Locator(".tm-gantt__dialog-overlay")
-                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+                await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
             }
         }
     }
 
-    /// <summary>
-    /// UX round 4 (MAJOR): unstyled, the promoted dialog painted a white UA popover box while the
-    /// page's dark text color inherited in — light-on-white Cancel was invisible. With the dialog
-    /// card styled (::deep), the surface is the themed --tm-surface and the Cancel label must
-    /// contrast against it.
-    /// </summary>
+    [TestMethod]
+    [Description("Gantt export/import dialogs: Escape closes and the focus returns to the toolbar button that opened it")]
+    [DataRow("gantt-export-btn", "tm-gantt__export-dialog")]
+    [DataRow("gantt-import-btn", "tm-gantt__import-dialog")]
+    public async Task Gantt_Dialogs_Escape_Closes_And_Returns_Focus_To_The_Trigger(string trigger, string dialogClass)
+    {
+        var page = await OpenGanttAsync(1440);
+        var button = page.Locator($"button[data-testid='{trigger}']");
+        await button.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        var dialog = page.Locator($".tm-modal-overlay.{dialogClass}");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        await page.Keyboard.PressAsync("Escape");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+
+        await Assertions.Expect(button).ToBeFocusedAsync();
+    }
+
     [TestMethod]
     [Description("Gantt import dialog in dark theme: the Cancel action is readable against the dialog surface")]
     public async Task Gantt_ImportDialog_DarkTheme_CancelIsReadable()
@@ -107,25 +119,19 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
             """);
 
         await page.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
-        var dialog = page.Locator(".tm-gantt__import-dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var card = page.Locator(".tm-gantt__import-dialog .tm-modal");
+        await card.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // The card is the themed dark surface, not the white UA popover box.
-        var surface = await dialog.EvaluateAsync<string>(
-            "el => getComputedStyle(el).backgroundColor");
-        Assert.AreNotEqual("rgb(255, 255, 255)", surface,
-            "the dark-theme dialog card must not be the white UA popover paint");
+        var surface = await card.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreNotEqual("rgb(255, 255, 255)", surface, "the dark-theme dialog card must not be the white UA popover paint");
 
         var contrast = await page.EvaluateAsync<double>(
             """
             () => {
                 const dialog = document.querySelector('.tm-gantt__import-dialog');
-                const buttons = [...dialog.querySelectorAll('button')];
-                const cancel = buttons.find(b => (b.textContent ?? '').trim() === 'Cancel');
+                const cancel = [...dialog.querySelectorAll('button')].find(b => (b.textContent ?? '').trim() === 'Cancel');
                 if (!cancel) return -1;
                 const label = cancel.querySelector('.tm-btn-label') ?? cancel;
-                const fg = getComputedStyle(label).color;
-                // Walk up to the first opaque background (the dialog card).
                 let bg = 'rgba(0, 0, 0, 0)';
                 let node = cancel;
                 while (node && node !== document.documentElement) {
@@ -137,7 +143,7 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
                     const m = css.match(/rgba?\(([^)]+)\)/);
                     if (!m) return null;
                     const p = m[1].split(',').map(s => parseFloat(s));
-                    return { r: p[0] / 255, g: p[1] / 255, b: p[2] / 255, a: p.length > 3 ? p[3] : 1 };
+                    return { r: p[0] / 255, g: p[1] / 255, b: p[2] / 255 };
                 };
                 const lum = c => {
                     const f = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
@@ -150,105 +156,65 @@ public sealed class GanttDialogOverlayE2ETests : WasmTestBase
                 return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
             }
             """);
-        Assert.IsTrue(contrast >= 4.5,
-            $"dark-theme Cancel label must contrast >= 4.5:1 against the dialog surface, got {contrast}");
+        Assert.IsTrue(contrast >= 4.5, $"dark-theme Cancel label must contrast >= 4.5:1 against the dialog surface, got {contrast}");
 
         await ShootAsync(page, "gantt-dialog-import-dark-1440");
     }
 
-    private static async Task<string> ShootAsync(IPage page, string name)
+    private static async Task ShootAsync(IPage page, string name)
     {
         Directory.CreateDirectory(ShotDir);
-        var path = Path.Combine(ShotDir, $"{name}.png");
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Timeout = 60_000 });
-        return path;
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(ShotDir, $"{name}.png"), FullPage = false, Timeout = 60_000 });
     }
 
     [TestMethod]
-    [Description("Gantt import dialog at 1440: the promoted overlay paints a full-screen scrim and the dialog is styled")]
+    [Description("Gantt import dialog at 1440: the promoted overlay paints a full-screen scrim and the dialog is the themed card")]
     public async Task Gantt_ImportDialog_At1440_PaintsScrimAndStyledDialog()
     {
         var page = await OpenGanttAsync(1440, 900);
         await page.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
 
-        var overlay = page.Locator(".tm-gantt__dialog-overlay");
+        var overlay = page.Locator(".tm-modal-overlay.tm-gantt__import-dialog");
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("manual", await overlay.GetAttributeAsync("popover"), "the import overlay root is the promoted popover root");
+        Assert.AreEqual(0, await page.Locator(".tm-gantt__dialog-overlay").CountAsync(), "no dialog paints its own overlay any more");
 
-        // The promoted root carries popover="manual" (round 3, V2) — the round-4 fix must style
-        // it despite the top-layer promotion and the sub-component scope.
-        Assert.AreEqual("manual", await overlay.GetAttributeAsync("popover"),
-            "the import overlay root is the promoted popover root");
+        var scrim = (await overlay.EvaluateAsync<string>("el => { const c = getComputedStyle(el); return [c.position, c.display].join('|'); }")).Split('|');
+        Assert.AreEqual("fixed", scrim[0], "the scrim is viewport-fixed");
+        Assert.AreEqual("flex", scrim[1], "the scrim centres the dialog with flexbox");
 
-        var scrim = await overlay.EvaluateAsync<string>(
-            "el => { const c = getComputedStyle(el); return [c.position, c.backgroundColor, c.display].join('|'); }");
-        var parts = scrim.Split('|');
-        Assert.AreEqual("fixed", parts[0], "the scrim is viewport-fixed");
-        Assert.AreEqual("rgba(0, 0, 0, 0.45)", parts[1], "the scrim paints the dimmed backdrop");
-        Assert.AreEqual("flex", parts[2], "the scrim centres the dialog with flexbox");
-
-        // The scrim covers the whole viewport — the UA [popover] fit-content shrink is reset.
         var box = await overlay.BoundingBoxAsync();
         Assert.IsNotNull(box);
         Assert.AreEqual(1440, (int)Math.Round(box!.Width), "the scrim spans the full viewport width");
         Assert.AreEqual(900, (int)Math.Round(box.Height), "the scrim spans the full viewport height");
 
-        // The dialog itself is the styled card, not a bare UA popover box.
-        var dialog = page.Locator(".tm-gantt__import-dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var dialogStyle = await dialog.EvaluateAsync<string>(
-            """
-            el => {
-                const c = getComputedStyle(el);
-                return [c.width, c.borderTopWidth, c.borderRadius, c.backgroundColor, c.boxShadow].join('|');
-            }
-            """);
-        var dialogParts = dialogStyle.Split('|');
-        Assert.AreEqual("560px", dialogParts[0], "the import dialog width is min(560px, 95vw) at 1440");
-        Assert.AreEqual("1px", dialogParts[1], "the dialog card has its border");
-        Assert.AreNotEqual("0px", dialogParts[2], "the dialog card has a radius");
-        Assert.AreNotEqual("rgba(0, 0, 0, 0)", dialogParts[3], "the dialog card has an opaque surface");
-        Assert.AreNotEqual("none", dialogParts[4], "the dialog card has its elevation shadow");
+        var card = overlay.Locator(".tm-modal");
+        var parts = (await card.EvaluateAsync<string>(
+            "el => { const c = getComputedStyle(el); return [c.borderRadius, c.backgroundColor, c.boxShadow].join('|'); }")).Split('|');
+        Assert.AreNotEqual("0px", parts[0], "the dialog card has a radius");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", parts[1], "the dialog card has an opaque surface");
+        Assert.AreNotEqual("none", parts[2], "the dialog card has its elevation shadow");
 
         await ShootAsync(page, "gantt-dialog-import-1440");
     }
 
     [TestMethod]
-    [Description("Gantt export dialog at 1440: overlay scrim and styled dialog card")]
+    [Description("Gantt export dialog at 1440: TmModal card with the format tiles as a styled radio group")]
     public async Task Gantt_ExportDialog_At1440_IsStyled()
     {
         var page = await OpenGanttAsync(1440, 900);
         await page.Locator("button[data-testid='gantt-export-btn']").ClickAsync();
 
-        var overlay = page.Locator(".tm-gantt__dialog-overlay");
+        var overlay = page.Locator(".tm-modal-overlay.tm-gantt__export-dialog");
         await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        var scrim = await overlay.EvaluateAsync<string>(
-            "el => { const c = getComputedStyle(el); return [c.position, c.backgroundColor].join('|'); }");
-        var parts = scrim.Split('|');
-        Assert.AreEqual("fixed", parts[0], "the export scrim is viewport-fixed");
-        Assert.AreEqual("rgba(0, 0, 0, 0.45)", parts[1], "the export scrim paints the dimmed backdrop");
-
-        var dialog = page.Locator(".tm-gantt__dialog");
-        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var dialogStyle = await dialog.EvaluateAsync<string>(
-            """
-            el => {
-                const c = getComputedStyle(el);
-                return [c.width, c.borderTopWidth, c.borderRadius, c.backgroundColor].join('|');
-            }
-            """);
-        var dialogParts = dialogStyle.Split('|');
-        Assert.AreEqual("520px", dialogParts[0], "the export dialog width is min(520px, 95vw) at 1440");
-        Assert.AreEqual("1px", dialogParts[1], "the export dialog card has its border");
-        Assert.AreNotEqual("0px", dialogParts[2], "the export dialog card has a radius");
-        Assert.AreNotEqual("rgba(0, 0, 0, 0)", dialogParts[3], "the export dialog card has an opaque surface");
-
-        // The export format options grid is styled too (selected option paints the primary tint).
-        var selectedOption = dialog.Locator(".tm-gantt__export-format-option--selected");
-        await Expect(selectedOption).ToBeVisibleAsync();
+        var selected = overlay.Locator(".tm-gantt__export-format-option--selected");
+        await Assertions.Expect(selected).ToBeVisibleAsync();
+        var tile = await selected.BoundingBoxAsync();
+        Assert.IsNotNull(tile);
+        Assert.IsTrue(tile!.Width >= 120 && tile.Height >= 96, $"a format tile is at least 120 x 96, got {tile.Width} x {tile.Height}");
+        Assert.AreEqual("radiogroup", await overlay.Locator(".tm-gantt__export-formats").GetAttributeAsync("role"));
 
         await ShootAsync(page, "gantt-dialog-export-1440");
     }
-
-    private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
 }
