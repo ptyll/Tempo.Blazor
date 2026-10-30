@@ -3742,7 +3742,7 @@
       "kind": "Component",
       "category": "Chat",
       "namespace": "Tempo.Blazor.Components.Chat",
-      "description": "A chat conversation component with message rendering, typing indicators, attachments, and send input.",
+      "description": "A chat conversation component with message rendering, typing indicators, attachments, and send input. Templates (MessageTemplate, ComposerTemplate, TypingTemplate, JumpToNewTemplate) and slots (BannerContent, HeaderContent, EmptyContent, ComposerAddon, ComposerFooter) let a host take over any part of the UI; a custom bubble inside MessageTemplate is best built from the TmChatBubble component. The root is a CSS size container (container-type: inline-size, container-name: tm-chat, contain-intrinsic-inline-size: auto 360px), so the responsive rules branch on the chat's own width — an UNNAMED @container rule in host markup therefore also resolves against the chat; opt out with the tm-chat--no-container modifier passed through Class. Layout knobs (never declared by the library, so an override on a wrapper or :root cascades): --tm-chat-min-height, --tm-chat-composer-offset, --tm-chat-safe-area-bottom and the --tm-chat-bubble-* family shared with TmChatBubble.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Chat/TmChat.razor",
       "documentationStatus": "merged",
@@ -3770,6 +3770,27 @@
           "description": "When true, the current user can edit and delete their own messages. Default true."
         },
         {
+          "name": "AnnouncementThrottle",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromSeconds(1)",
+          "description": "The trailing throttle window shared by the message pipeline and AnnounceAsync. Default 1 second. Within the window the latest announcement wins and is flushed when the window ends; a free window flushes immediately (the first message of a quiet conversation is never delayed). A non-positive value disables throttling — every announcement flushes immediately. The clock is the injected TimeProvider (fallback TimeProvider.System), so tests drive the window with a FakeTimeProvider; the pending timer is cancelled in DisposeAsync."
+        },
+        {
+          "name": "AnnounceOwnMessages",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the current user's own messages are announced. Default false — the user knows what they typed. 'Own' matches the built-in bubble logic: an Outgoing message or one authored by CurrentUser. System messages are not own and are announced like any other when MessageAnnouncement produces text for them.",
+          "default": "false"
+        },
+        {
+          "name": "AutoAttachComposerInput",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in AUTO-ATTACH of the ComposerTemplate input by id (FZE-12): when true and a ComposerTemplate renders, TmChat resolves the host input through chat.js attachComposerById(root, InputId, ...) — scoped to THIS chat instance's root element, so an element with the same id elsewhere on the page never wins — and gives it the built-in Enter/Shift+Enter + IME + auto-resize behavior without the host's OnAfterRenderAsync + AttachAsync dance. The input must carry id=\"@composer.InputId\" (ChatComposerContext.InputId). Precedence: an explicit AttachAsync ALWAYS wins (the auto handle is disposed while a host registration exists) and AttachAsync(default) hands the control back to the auto-attach; an EnterToSend change re-attaches; turning the parameter off, ShowComposer=false or removing the template disposes the handle. RefocusAfterSend / FocusComposerAsync / composer.FocusAsync target the auto-attached input. An input inside a nested host component that re-renders independently of TmChat is re-captured on the next TmChat render (the handle sync() re-queries per render); a host that swaps the element without TmChat re-rendering still uses AttachAsync. The auto-attach is a pure JS-module path and is inert before interactivity — the C# @onkeydown fallback cannot help a template input TmChat did not render. Cost: with the option on, EVERY render makes one interop round-trip — the first render issues the attachComposerById attach, every further render one synchronous sync() on the handle (a no-op in JS while the input node is unchanged); a host that re-renders TmChat at high frequency should weigh this against the explicit AttachAsync handshake. Default false keeps today's behavior; ignored without a ComposerTemplate (the built-in composer attaches by element as before).",
+          "default": "false"
+        },
+        {
           "name": "AutoReadReceipts",
           "type": "bool",
           "isRequired": false,
@@ -3777,10 +3798,59 @@
           "description": "When true, incoming messages fire OnMessageRead as they render. Default true."
         },
         {
+          "name": "AutoScroll",
+          "type": "ChatAutoScroll",
+          "isRequired": false,
+          "default": "ChatAutoScroll.WhenAtBottom",
+          "description": "When the component scrolls the message list to the bottom on its own. Default WhenAtBottom — the ONLY documented change of TmChat's default behavior (scrolling used to be a no-op): the first render lands at the bottom and further messages scroll only while the user is at the bottom; messages arriving above the reading position are counted behind the jump-to-new button, the user's own messages always scroll and a prepend of older history preserves the visual position. Never restores the pre-2.10 behavior — the component itself makes no scroll calls at all (the explicit ScrollToBottomAsync / ScrollToMessageAsync helpers still work, the jump-to-new button does not render); Always pins the list to the bottom on every message change regardless of the reading position."
+        },
+        {
+          "name": "BannerContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered ABOVE the message list — a connection banner (offline / reconnecting) or any conversation-level callout. Rendered raw: TmChat adds NO wrapper element and deliberately does NOT turn the banner into an aria-live region. TmChat may own exactly one live region; if the banner content should be announced, put the role=\"status\" (or an explicit aria-live) on an element INSIDE this slot with short, host-controlled text."
+        },
+        {
+          "name": "BatchAnnouncement",
+          "type": "Func<IReadOnlyList<ChatMessage>, string?>?",
+          "isRequired": false,
+          "description": "Optional summary for a burst announced TOGETHER: when at least TWO messages wait in one AnnouncementThrottle window (a host action mixed into the window is composed around the summary, never summarized away), the trailing flush announces this instead of the last individual text (e.g. batch => $\"{batch.Count} new messages\"). The delegate receives the messages held by the window. A null result falls back to the last individual text; a single held message is announced through its own text without consulting the summary."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS classes."
+        },
+        {
+          "name": "ComposerAddon",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered ABOVE the built-in composer input, inside the composer area — an owner note, a hint or a short status line. Only rendered with the built-in composer (a ComposerTemplate replaces the whole area and renders its own chrome)."
+        },
+        {
+          "name": "ComposerAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the built-in composer textarea. Default: the effective placeholder (the host's Placeholder or the localized TmChat_Placeholder) — until this parameter existed the textarea had only a placeholder, which is no accessible name. Ignored with a ComposerTemplate (the template owns its own input)."
+        },
+        {
+          "name": "ComposerDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Ids of host elements, e.g. inside ComposerAddon/ComposerFooter, describing the composer input. Rendered as aria-describedby on the built-in textarea; omitted from the DOM while null (the default). With a ComposerTemplate the built-in textarea does not render — describe the host-owned input there instead."
+        },
+        {
+          "name": "ComposerFooter",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered BELOW the built-in composer input row — a footnote, a remaining-character count or a secondary action. Only rendered with the built-in composer (a ComposerTemplate replaces the whole area and renders its own chrome)."
+        },
+        {
+          "name": "ComposerTemplate",
+          "type": "RenderFragment<ChatComposerContext>?",
+          "isRequired": false,
+          "description": "Replaces the built-in composer (the input textarea + send button) with host markup — a subscribe gate, a PPV field, an owner note + hint, anything the consumer domain needs. The template receives a live ChatComposerContext: bind the host input to Text (the source of truth), push each keystroke with SetTextAsync and send with SendAsync so the draft guard (HasUnsavedDraft, OnDraftChanged) and the send path (OnSendMessage / OnSend, submit state) keep working exactly as for the built-in composer; mirror CanSend on a custom send button. When set, the built-in composer does NOT render (.tm-chat__input and .tm-chat__send-btn disappear from the DOM) and neither ComposerAddon nor ComposerFooter render — the template owns the whole composer area, and markup passed into the template carries the HOST's CSS scope, not TmChat.razor.css. The .tm-chat__input-area wrapper itself STAYS (its padding and border-top), carrying tm-chat__input-area--custom so the template's markup stacks vertically instead of the textarea + send flex row. Ignored when ShowComposer is false."
         },
         {
           "name": "CurrentUser",
@@ -3793,6 +3863,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the input is disabled."
+        },
+        {
+          "name": "EmptyContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Replaces the built-in empty state (the icon + \"no messages\" texts) when the conversation has no messages. The built-in empty state is fully dropped, so the host owns the empty-scenario copy. The content renders RAW at the top of the message list (no wrapper element); the built-in look fills the list and centers its content, so the host's slot root should use flex:1 plus vertical/horizontal centering. Only applies while Messages is empty; with messages present the slot is not rendered."
         },
         {
           "name": "EnableReactions",
@@ -3809,11 +3885,69 @@
           "description": "When true, replies are grouped into a thread panel instead of shown inline. Default true."
         },
         {
+          "name": "EnterToSend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether pressing Enter in a composer input submits. Default true (today's behavior: the built-in composer, the thread panel's reply input and an open message edit all submit on Enter). false makes Enter a NATIVE new line in all three inputs — nothing is sent from Enter itself, only from the send button, SendAsync or Ctrl/⌘+Enter (no Shift/Alt, outside an IME composition; handled by chat.js). Shift+Enter always inserts a new line and Alt/Ctrl/Meta+Enter always stay native (browser and host shortcuts). The keydown handling lives in the chat.js module once it is attached (it also owns the IME guard, which a net8 KeyboardEventArgs cannot express); this parameter is passed to the module as its enterToSend option and re-attaches the module when it changes."
+        },
+        {
+          "name": "FillParent",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Lets the chat be a flex CHILD of the host layout. false (the default) keeps today's behavior: the chat fills its host box (height: 100%) and never shrinks below its --tm-chat-min-height floor (default 300px). true adds the tm-chat--fill modifier — flex: 1 1 auto; height: auto; min-height: var(--tm-chat-min-height, 0) — so the chat grows and shrinks with the parent's free space and the internal message scroller (itself min-height: 0) absorbs the difference. The modifier reads the knob with a ZERO fallback (rather than a bare 0) so a floor declared on a wrapper or :root keeps applying in fill mode too; a host that wants the parent to own the height entirely sets the knob to 0. Use it when the chat sits in a flex row/column of an app shell (a sidebar pane, a split view); inside a non-flex block keep the default.",
+          "default": "false"
+        },
+        {
+          "name": "HasMoreBefore",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether older history exists above the current page (the host's \"has more\" cursor). Together with a wired OnLoadOlder it renders the built-in \"load older\" affordance at the top of the message list and arms the top-edge trigger. Default false (no pagination — today's DOM).",
+          "default": "false"
+        },
+        {
+          "name": "HeaderContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the VERY TOP of the component, above BannerContent and the message list — a conversation title bar or header controls. Rendered raw (no wrapper), so the host markup owns its layout. Note that an OPEN THREAD PANEL OVERLAYS it: the thread panel is absolutely positioned over the component (top/right/bottom), so while a thread is open the panel covers the header area on the panel's side."
+        },
+        {
+          "name": "IsLoadingOlder",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the host is currently loading the older page (its own loading state, mirrored into the component). While true the \"load older\" affordance is disabled and neither it nor the top-edge trigger fires OnLoadOlder again. Default false.",
+          "default": "false"
+        },
+        {
+          "name": "JumpToNewTemplate",
+          "type": "RenderFragment<int>?",
+          "isRequired": false,
+          "description": "Replaces the CONTENT of the floating jump-to-new button (icon + localized count) with host markup. The template receives the current count of unseen messages; the <button> element itself stays built-in (its click — scroll to the bottom, count reset, composer refocus — and the TmChat_JumpToNew aria-label are the component's). Null (the default) renders the built-in content."
+        },
+        {
+          "name": "MessageAnnouncement",
+          "type": "Func<ChatMessage, string?>?",
+          "isRequired": false,
+          "description": "The text announced for ONE new message, supplied by the host (localized, with its domain context). The component never invents sentences. A null func or a null/whitespace result means 'do not announce this message' — the default state is a silent chat. Only messages APPENDED to the end of the rendered root list are candidates: the initial load, a fill from an empty list and a PREPEND of older history are not announced, thread replies render in the thread panel (announce them through AnnounceAsync) and the user's own messages are skipped unless AnnounceOwnMessages is true. Announcements share the AnnouncementThrottle trailing window with AnnounceAsync — a burst within the window is summarized by BatchAnnouncement or collapsed to the LATEST text."
+        },
+        {
           "name": "Messages",
           "type": "IReadOnlyList<ChatMessage>",
           "isRequired": false,
           "default": "[]",
           "description": "List of messages to display."
+        },
+        {
+          "name": "MessagesAriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the messages container (a scrollable role=region with tabindex=0). Default: the localized TmChat_MessagesLabel. The container is deliberately NOT a role=log — log implies aria-live and would make a second live region out of it; new messages are announced through the component's own region instead. A page with SEVERAL chats should pass a DISTINCT label per chat — the container is a named landmark and a Tab stop, so two chats labelled 'Messages' are indistinguishable in the landmark list."
+        },
+        {
+          "name": "MessageTemplate",
+          "type": "RenderFragment<ChatMessageContext>?",
+          "isRequired": false,
+          "description": "Replaces the built-in message row with host markup for the messages selected by UseTemplateFor. The template receives a ChatMessageContext per rendered message: Message, IsOwn, InThread, Index, IsFirstInGroup, a typed payload accessor (context.PayloadAs<T>()), a metadata accessor (context.GetMetadata<T>(key, fallback)) and DefaultContent — the built-in row, so ordinary messages can fall back to the default look. Precedence: when null, every message renders the built-in row (today's behavior). When set and UseTemplateFor is null, the template renders for EVERY message (including thread panel messages). When both are set, the template renders only for messages where UseTemplateFor returns true — the host thus overrides just its \"special\" kinds (e.g. m => m.Kind == \"ai-draft\"). Regardless of the template, TmChat still owns everything around the message: each message keeps a wrapper element with data-message-id (and data-kind when the message carries a Kind) used for scroll anchoring and read receipts; the thread filter, draft guard and read-receipt reporting are unaffected. Note that markup passed into the template carries the HOST's CSS scope — the TmChat.razor.css scoped classes do not apply to it."
         },
         {
           "name": "OnAttachmentClick",
@@ -3838,6 +3972,12 @@
           "type": "EventCallback<ChatMessageEdit>",
           "isRequired": false,
           "description": "Fired when the user commits an edit to one of their messages."
+        },
+        {
+          "name": "OnLoadOlder",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fired when the user reaches the top edge of the message list (through the built-in \"load older\" affordance or the scroller's near-top report) and older history should be PREPENDED to Messages. The host loads the page and updates the parameter — the component detects the prepend (the first message Id changed, the last stayed) and preserves the visual position instead of scrolling. Only consulted when HasMoreBefore is true and while IsLoadingOlder is false. Not wired → neither the built-in affordance nor the top-edge trigger render (additive — hosts without pagination keep today's DOM)."
         },
         {
           "name": "OnMessageRead",
@@ -3883,6 +4023,48 @@
           "description": "Emoji offered by the reaction picker."
         },
         {
+          "name": "RefocusAfterSend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the composer input is focused again after a SUCCESSFUL send. Default true — after the send handlers complete and the composer clears, focus returns to the input (the built-in textarea, the element a custom composer registered through AttachAsync, or the input auto-attached through AutoAttachComposerInput) so the user can type the next message without reaching for the mouse. Set false for hosts that move focus themselves (e.g. into a confirmation UI). A failed send (a handler that throws) does not refocus — the text is preserved and the user keeps their context."
+        },
+        {
+          "name": "RenderWindowSize",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Opt-in render window over very long conversations (FZE-14). Null (the default) renders EVERY root row - today's behavior, byte-identical markup. A positive value renders only the LAST N root rows (clamped to a minimum of 20) and grows upward by RenderWindowStep rows whenever the user reaches the top edge - the expansion is applied as a render PREPEND, so the chat.js anchor restore keeps the reading position and the whole scroll contract (pinned tail, jump-to-new count, announcements, read receipts, draft guard) keeps working, because all of those are driven by the DATA (Messages), never by the DOM. Rules: (a) the first render and a replaced list window the last N rows; (b) an append with the viewport pinned to the bottom slides the window with the tail (the top is trimmed to count - N); (c) an append while the user reads above the bottom trims NOTHING - the DOM above the viewport must not change - the trim happens when the scroller reports the return to the bottom (the jump-to-new click trims immediately, it does not wait for the report), reclaims only that AWAY-APPEND excess and refreshes the tracked keep-id onto the trimmed start (a deep-link or top-edge expansion mounts its rows deliberately and drops the claim, so it survives its own restore's at-bottom report and persists until the next pinned append); a row VANISHING from the list keeps the start (clamped) - only a pinned append falls back to the tail; the jump-to-new click trims the excess immediately (it IS a return to the bottom); (d) reaching the top edge expands the window one step - after the near-top report is verified against the live geometry twice, 300 ms apart (the chat.js isNearTop() handle getter), so a transient scroll clamp mid-churn cannot mount thousands of rows - WITHOUT calling OnLoadOlder - the host page load fires only once the window already covers the whole sequence (Start == 0) and HasMoreBefore is set; (e) a host prepend of older history keeps the previously-first rendered row and expands one step above it; (f) the row under edit and the opener of the active thread are never trimmed out of the window; (g) ChatMessageContext.Index and IsFirstInGroup are computed over the FULL sequence, so grouping does not change at the window edge; (h) the built-in \"load older\" affordance renders while Start > 0 or HasMoreBefore. The built-in ScrollToMessageAsync/FocusMessageAsync deep links expand the window (and wait for the render) when the anchor lies above it - CONCURRENT deep links share the one pending wait - so an anchor outside the window is still found. The thread panel is deliberately NOT windowed - threads are short and the panel renders the root message a second time.",
+          "default": "null"
+        },
+        {
+          "name": "RenderWindowStep",
+          "type": "int",
+          "isRequired": false,
+          "default": "50",
+          "description": "How many rows one upward expansion of the render window adds (clamped to a minimum of 10). Only meaningful together with RenderWindowSize; the expansion is a render prepend, so the scroller's anchor restore keeps the reading position across it."
+        },
+        {
+          "name": "ShowAvatars",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the built-in message rows show the author avatar. Default true (today's behavior); set false for consumers whose bubbles carry no avatars. The switch applies to the built-in rows only — a MessageTemplate renders its own markup and decides about avatars itself."
+        },
+        {
+          "name": "ShowComposer",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the composer renders at all. false drops the composer area from the DOM — the read-only / viewing variant of a chat. Default true (today's behavior). When false, ComposerTemplate is ignored too. Note this covers only the MAIN composer: the thread panel's reply input is separate — a truly read-only chat also needs EnableThreads=false and AllowEditDelete=false so no reply input, edit or delete affordance renders."
+        },
+        {
+          "name": "ShowJumpToNewButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the floating jump-to-new button renders when messages arrive while the user is reading above the bottom. Default true. The button shows the count of the unseen messages (TmChat_NewMessages plural family; replaced by JumpToNewTemplate) and scrolling back to the bottom — by the user or through the button — resets it. Never renders with AutoScroll=ChatAutoScroll.Never."
+        },
+        {
           "name": "ShowReadReceipts",
           "type": "bool",
           "isRequired": false,
@@ -3890,11 +4072,567 @@
           "description": "When true, own messages display per-user read receipts. Default true."
         },
         {
+          "name": "TrackVirtualKeyboard",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in tracking of the on-screen keyboard for the narrow sticky composer (FZE-13). false (the default) keeps today's behavior: no visualViewport listeners and no inline knob. true attaches the chat.js attachViewportTracker(root, { scroller }) to the chat root after the first render: it listens to visualViewport resize AND scroll (iOS moves the viewport on scroll rather than resizing it), coalesces both through requestAnimationFrame and - only on a change - writes the covered gap round(max(0, innerHeight - (viewport.height + viewport.offsetTop))) as the RUNTIME knob --tm-chat-keyboard-inset into the root's inline style plus a data-tm-keyboard-open marker. A shrink below 80 px (a collapsing toolbar) writes nothing; a zoom keeps the current state too (while viewport.scale sits off 1 nothing new is written), a degenerate (< 2 px) viewport measures nothing, and the inset is rounded so device-pixel fractions cannot churn the inline style. While the keyboard is CLOSED the narrow-chat sticky composer and thread reply row rest at bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px)); while the marker is set they rest at bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px)) - the keyboard covers the host's bottom navigation, so the LARGER of the two offsets wins instead of their sum - and the safe-area padding is dropped (the keyboard covers the home indicator); closing the keyboard REMOVES the inline knobs and marker (back to the cascade, not zeroed). The stuck composer covers MORE of the message list than the inset whenever the chat's box extends past the fold, so the tracker also measures the covered list space into the RUNTIME knob --tm-chat-composer-clearance (see the css variable): while the marker is set the messages list reserves it as scroll room and the scroller handle's scrollLastMessageAboveBottom(gap) lands the last row's bottom exactly on the stuck composer's top edge (an older handle degrades to the instant scrollToBottom(true)); the rescue reads the scroller's isPinned() belief first (falling back to the measured isAtBottom()) and a reader of older history keeps their position - pure JS, no .NET round trip. iOS ignores interactive-widget - the tracker is what handles the keyboard there. On Android WITH the recommended interactive-widget=resizes-content viewport meta the LAYOUT viewport shrinks instead, the measured inset comes out ~0 and the tracker never writes; on Android WITHOUT it (Chrome's default resizes-visual) the visual viewport shrinks like on iOS and the tracker lifts the composer there too. Before the first render the sync is a no-op - the CSS knob falls back to 0px.",
+          "default": "false"
+        },
+        {
+          "name": "TypingAriaHidden",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Hides the WHOLE built-in typing indicator from assistive technology by rendering aria-hidden=\"true\" on its wrapper — not just the decorative dots, which always carry their own aria-hidden. Default false (today's markup: the wrapper has no aria-hidden and its text stays reachable). For a host that conveys typing through its own live region, set this to true so the indicator is not double-read; typing itself is NEVER announced by the component.",
+          "default": "false"
+        },
+        {
+          "name": "TypingLabel",
+          "type": "Func<IReadOnlyList<ChatUser>, string>?",
+          "isRequired": false,
+          "description": "Replaces the localized typing text with a host-computed label. The built-in text comes from the TmChat_TypingSingle/TmChat_TypingTwo/TmChat_TypingMany resources (\"{0} is typing…\"); a set label receives the current TypingUsers list and its result is rendered instead — e.g. users => $\"{users[0].Name} píše…\". Null (the default) keeps the localized text. TypingTemplate takes precedence: the template replaces the WHOLE indicator, the label only its text span."
+        },
+        {
+          "name": "TypingTemplate",
+          "type": "RenderFragment<IReadOnlyList<ChatUser>>?",
+          "isRequired": false,
+          "description": "Replaces the WHOLE built-in typing indicator with host markup. The template receives the current TypingUsers list; the built-in .tm-chat__typing-indicator element (dots + text) is not rendered at all. Null (the default) renders the built-in indicator. Markup passed into the template carries the HOST's CSS scope, not TmChat.razor.css. The TypingTimeout expiry applies to the template TOO: an expired window renders NEITHER the built-in indicator NOR the template (the next TypingUsers change reopens the window). TypingAriaHidden by contrast applies ONLY to the built-in indicator — a template sets its own AT visibility. Do NOT put aria-live or role=\"status\" into the template: TmChat keeps one live region of its own and typing is never announced by the component, so an extra live region inside the template would only risk double announcements."
+        },
+        {
+          "name": "TypingTimeout",
+          "type": "TimeSpan?",
+          "isRequired": false,
+          "description": "Auto-hides the typing indicator when the host stops sending fresh TypingUsers. The expiry applies to BOTH the built-in indicator and a TypingTemplate — an expired window renders neither. The expiry window is measured from the LAST CHANGE of TypingUsers: a new list instance OR a different content (order-sensitive, per-ChatUser value equality) opens a fresh window, an identical list reference with unchanged content does not — pass a stable reference and re-assign the list only on real typing signals, or every parent re-render extends the window forever. When the window expires the indicator disappears but the host's TypingUsers list is never mutated; the next change reopens it. Null (the default) never expires. A non-positive timeout (TimeSpan.Zero or negative) expires IMMEDIATELY: the indicator is suppressed from the next render and no timer is armed. The clock is the injected TimeProvider (fallback TimeProvider.System), so tests drive expiry with a FakeTimeProvider. A set timeout arms a single-shot timer that is cancelled in DisposeAsync — no dangling timer after unmount.",
+          "default": "null"
+        },
+        {
           "name": "TypingUsers",
           "type": "IReadOnlyList<ChatUser>",
           "isRequired": false,
           "default": "[]",
           "description": "Users currently typing."
+        },
+        {
+          "name": "UseTemplateFor",
+          "type": "Func<ChatMessage, bool>?",
+          "isRequired": false,
+          "description": "Restricts MessageTemplate to the messages for which the predicate returns true. Null (the default) means the template renders for every message. Typical host usage: m => m.Kind == \"ai-draft\" to override only special kinds while ordinary messages keep the built-in row."
+        }
+      ],
+      "cssClasses": [
+        "tm-chat",
+        "tm-chat--fill",
+        "tm-chat--no-container",
+        "tm-chat__messages",
+        "tm-chat__item",
+        "tm-chat__body",
+        "tm-chat__message",
+        "tm-chat__message--incoming",
+        "tm-chat__message--outgoing",
+        "tm-chat__message--system",
+        "tm-chat__bubble",
+        "tm-chat__avatar",
+        "tm-chat__avatar--incoming",
+        "tm-chat__avatar--outgoing",
+        "tm-chat__author",
+        "tm-chat__meta",
+        "tm-chat__message-time",
+        "tm-chat__text",
+        "tm-chat__text--deleted",
+        "tm-chat__system-text",
+        "tm-chat__actions",
+        "tm-chat__action",
+        "tm-chat__action--danger",
+        "tm-chat__reactions",
+        "tm-chat__reaction",
+        "tm-chat__reaction--mine",
+        "tm-chat__reaction-emoji",
+        "tm-chat__reaction-count",
+        "tm-chat__emoji",
+        "tm-chat__emoji-picker",
+        "tm-chat__receipts",
+        "tm-chat__receipts-text",
+        "tm-chat__edited",
+        "tm-chat__edit",
+        "tm-chat__edit-input",
+        "tm-chat__edit-actions",
+        "tm-chat__edit-save",
+        "tm-chat__edit-cancel",
+        "tm-chat__thread-panel",
+        "tm-chat__thread-header",
+        "tm-chat__thread-title",
+        "tm-chat__thread-close",
+        "tm-chat__thread-divider",
+        "tm-chat__thread-badge",
+        "tm-chat__thread-messages",
+        "tm-chat__thread-input-area",
+        "tm-chat__thread-input",
+        "tm-chat__typing-indicator",
+        "tm-chat__typing-dots",
+        "tm-chat__typing-text",
+        "tm-chat__empty",
+        "tm-chat__input-area",
+        "tm-chat__input-area--custom",
+        "tm-chat__input-area--stacked",
+        "tm-chat__input-row",
+        "tm-chat__input",
+        "tm-chat__send-btn",
+        "tm-chat__sending-dots",
+        "tm-chat__attachments",
+        "tm-chat__attachment",
+        "tm-chat__attachment-name",
+        "tm-chat__attachment-size",
+        "tm-chat__jump-new",
+        "tm-chat__jump-new-count",
+        "tm-chat__load-older",
+        "tm-chat__error-text"
+      ],
+      "cssVariables": [
+        {
+          "name": "--tm-chat-min-height",
+          "description": "Minimum-height floor of the chat. .tm-chat reads it with a 300px fallback; the tm-chat--fill modifier (FillParent=true) reads it with a ZERO fallback, so a floor declared on a wrapper or :root keeps applying in fill mode too. The library never declares the knob — set --tm-chat-min-height: 0 (or a floor) on a wrapper or :root and it cascades."
+        },
+        {
+          "name": "--tm-chat-composer-offset",
+          "description": "Space reserved BELOW the composer for host chrome — set it to the height of a bottom navigation bar and the narrow (<640px) sticky composer and sticky thread reply row rest above it (bottom: var(--tm-chat-composer-offset, 0px)). Never declared by the library; default 0px."
+        },
+        {
+          "name": "--tm-chat-safe-area-bottom",
+          "description": "Extra padding under the sticky composer and thread reply row for the device safe area. The narrow-chat rules read it with an env(safe-area-inset-bottom, 0px) fallback — a host on an already safe-area-aware layout can override it to 0px."
+        },
+        {
+          "name": "--tm-chat-keyboard-inset",
+          "description": "The on-screen keyboard's covered height - a RUNTIME-ONLY knob written into the chat root's inline style by the chat.js tracker while TrackVirtualKeyboard=\"true\" is on and a keyboard is open (removed again when it closes; default 0px in the var() fallback). On a narrow chat (< 640px) the sticky composer and thread reply row add it to their --tm-chat-composer-offset bottom offset while the keyboard is closed (calc) and rest on the LARGER of the two offsets while the data-tm-keyboard-open marker is set (max). Never declared by the library - a host override on a wrapper or :root keeps cascading."
+        },
+        {
+          "name": "--tm-chat-composer-clearance",
+          "description": "The list space the open-keyboard composer covers - a RUNTIME-ONLY knob measured by the chat.js tracker (list bottom minus stuck composer top; it exceeds --tm-chat-keyboard-inset whenever the chat's box extends past the fold) and written into the chat root's inline style while TrackVirtualKeyboard=\"true\" is on and a keyboard is open (removed again when it closes; default 0px in the var() fallback). While the data-tm-keyboard-open marker is set, the narrow-chat messages list reserves it as scroll room (padding-bottom) and scroll-padding-bottom so the rescued last row can rest above the stuck composer even when the messages do not overflow the list. Never declared by the library - a host override on a wrapper or :root keeps cascading."
+        },
+        {
+          "name": "--tm-chat-bubble-in-bg",
+          "description": "Background of the built-in Incoming bubbles. Defaults to --tm-bg-muted."
+        },
+        {
+          "name": "--tm-chat-bubble-in-fg",
+          "description": "Text colour of the built-in Incoming bubbles. Defaults to --tm-color-text."
+        },
+        {
+          "name": "--tm-chat-bubble-in-border",
+          "description": "Border of the built-in Incoming bubbles (painted as a 1px inset ring). Defaults to transparent."
+        },
+        {
+          "name": "--tm-chat-bubble-out-bg",
+          "description": "Background of the built-in Outgoing bubbles. Defaults to --tm-color-primary."
+        },
+        {
+          "name": "--tm-chat-bubble-out-fg",
+          "description": "Text colour of the built-in Outgoing bubbles. Defaults to --tm-color-primary-contrast."
+        },
+        {
+          "name": "--tm-chat-bubble-out-border",
+          "description": "Border of the built-in Outgoing bubbles. Defaults to transparent."
+        },
+        {
+          "name": "--tm-chat-bubble-system-bg",
+          "description": "Background of built-in System message rows. Defaults to --tm-bg-muted."
+        },
+        {
+          "name": "--tm-chat-bubble-system-fg",
+          "description": "Text colour of built-in System message rows. Defaults to --tm-color-text-secondary."
+        },
+        {
+          "name": "--tm-chat-bubble-max-width",
+          "description": "Width cap of the built-in bubbles. Defaults to 80%; a value set on a wrapper or :root tightens the whole conversation. See the TmChatBubble page for the pending/queued/discarded/locked sets, the Pill cap and the radius/padding knobs."
+        },
+        {
+          "name": "--tm-chat-bubble-radius",
+          "description": "Corner radius of the built-in bubbles. Defaults to --tm-radius-xl."
+        },
+        {
+          "name": "--tm-chat-bubble-padding",
+          "description": "Padding of the built-in bubbles, compensated for the always-painted 1px border. Defaults to calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width))."
+        }
+      ],
+      "methods": [
+        {
+          "name": "AnnounceAsync",
+          "signature": "Task AnnounceAsync(string text)",
+          "description": "Announces a HOST action through the component's single polite live region and the shared trailing throttle — e.g. \"Draft approved\" after the host's own flow completes. A free window announces immediately and drops pending messages (they arrived in the now-spent window); a busy window keeps them and the trailing flush composes the action around the summary or last message text. Safe from any thread; whitespace is a no-op. The library announces nothing on its own — without MessageAnnouncement or this call the chat stays silent."
+        },
+        {
+          "name": "FocusMessageAsync",
+          "signature": "ValueTask<bool> FocusMessageAsync(string? id)",
+          "description": "Moves keyboard focus to the message wrapper with the given id (data-message-id) and scrolls it into view with block:'nearest', honouring reduced motion. Returns whether the message was found and focused — the query is scoped to the messages container (a thread panel renders the root message a second time), false for an unknown id, before interactivity, or with a dropped circuit."
+        },
+        {
+          "name": "FocusComposerAsync",
+          "signature": "ValueTask FocusComposerAsync()",
+          "description": "Moves focus to the composer input — the element a custom composer registered through ChatComposerContext.AttachAsync, otherwise the built-in textarea. An element already holding focus is left untouched (the on-screen keyboard is not closed). A no-op while no composer input is rendered or the circuit is gone."
+        },
+        {
+          "name": "ScrollToBottomAsync",
+          "signature": "ValueTask ScrollToBottomAsync()",
+          "description": "Scrolls the message list to the bottom — the public helper for hosts (after a \"new messages\" toast or an external navigation). Works with every AutoScroll value: an explicit host call is never suppressed. A no-op while the chat.js scroller is not attached (prerender, failed import). Arriving at the bottom clears the unseen count and hides the jump-to-new button."
+        },
+        {
+          "name": "ScrollToMessageAsync",
+          "signature": "ValueTask<bool> ScrollToMessageAsync(string? id)",
+          "description": "Scrolls the message list so the message with the given id (the data-message-id anchor) is in view — the helper for \"jump to message\" links and notification deep links. Returns whether the anchor was found: false for an unknown/empty id or while the scroller is not attached."
+        },
+        {
+          "name": "DiscardDraftAsync",
+          "signature": "Task DiscardDraftAsync()",
+          "description": "Clears every draft slot — the main composer, the open thread panel's reply input and any open message edit (the edit is cancelled). The thread panel itself stays open. Intended AFTER the user confirmed the discard in the consumer's OWN confirmation dialog; a no-op when no draft exists."
+        }
+      ],
+      "properties": [
+        {
+          "name": "HasUnsavedDraft",
+          "type": "bool",
+          "description": "Whether the component currently holds an unsaved draft in ANY slot — main composer, open thread panel's reply input, or a message edit whose text differs from the message as it was when the edit started. The same value OnDraftChanged's HasUnsavedContent carries. Read it on the component's dispatcher when called from a background thread."
+        },
+        {
+          "name": "IsAtBottom",
+          "type": "bool",
+          "description": "Whether the message list is currently scrolled to (or within the threshold of) the bottom — the last state the chat.js scroller reported. Read on the component's dispatcher when called off the render path."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Take over only special message kinds (MessageTemplate with Kind)",
+          "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <MessageTemplate Context=\"context\">\n        @if (context.Message.Kind == \"ai-draft\")\n        {\n            <TmChatBubble Variant=\"ChatBubbleVariant.Pending\"\n                          ActorLabel=\"@context.Message.Author?.Name\"\n                          Timestamp=\"context.Message.Timestamp\"\n                          StatusLabel=\"AI draft\">\n                <Badge>@(context.GetMetadata<string>(\"reason\", \"AI suggestion\"))</Badge>\n                <ChildContent>@context.Message.Text</ChildContent>\n                <Actions>\n                    <button class=\"tm-btn\" @onclick=\"@(() => Approve(context.Message))\">Approve</button>\n                    <button class=\"tm-btn\" @onclick=\"@(() => Discard(context.Message))\">Discard</button>\n                </Actions>\n            </TmChatBubble>\n        }\n        else\n        {\n            @context.DefaultContent\n        }\n    </MessageTemplate>\n</TmChat>"
+        },
+        {
+          "title": "Map the host DTO into ChatMessage (Kind, Metadata, Payload)",
+          "code": "// Host-side mapping — TmChat never interprets the three fields.\nprivate static ChatMessage ToChat(InboxMessageDto dto, ChatUser author) =>\n    new(dto.Id, dto.PreviewText, author, ToMessageType(dto.Direction), dto.CreatedAt)\n    {\n        Kind = dto.State switch\n        {\n            InboxState.AiDraft => \"ai-draft\",\n            InboxState.Queued => \"queued\",\n            _ => null,\n        },\n        Metadata = new Dictionary<string, object?>\n        {\n            [\"reason\"] = dto.DraftReason,\n            [\"scheduledFor\"] = dto.ScheduledFor,\n        },\n        Payload = dto, // typed read-back via context.PayloadAs<InboxMessageDto>()\n    };\n\n// In the template the original DTO comes back type-safely:\nvar draft = context.PayloadAs<InboxMessageDto>();"
+        },
+        {
+          "title": "Replace the whole composer (ComposerTemplate) and keep the send path",
+          "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\" Disabled=\"@_locked\">\n    <ComposerTemplate Context=\"composer\">\n        @if (_subscribed)\n        {\n            <textarea value=\"@composer.Text\" disabled=\"@composer.Disabled\"\n                      @oninput=\"@(e => composer.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button class=\"tm-btn tm-btn--primary\" disabled=\"@(!composer.CanSend)\"\n                    @onclick=\"@composer.SendAsync\">Send</button>\n        }\n        else\n        {\n            <p>Subscribe to join the conversation.</p>\n            <button class=\"tm-btn tm-btn--primary\" @onclick=\"@Subscribe\">Subscribe</button>\n        }\n    </ComposerTemplate>\n</TmChat>"
+        },
+        {
+          "title": "Conversation-level banner (BannerContent)",
+          "code": "<TmChat Messages=\"@_messages\" CurrentUser=\"@_user\">\n    <BannerContent>\n        @if (_offline)\n        {\n            @* TmChat adds no wrapper and no live region here — announce through\n               role=\"status\" on an element INSIDE the slot if it should be read. *@\n            <div class=\"tm-alert tm-alert--warning\" role=\"status\">\n                Offline — messages will send when you reconnect.\n            </div>\n        }\n    </BannerContent>\n</TmChat>"
+        },
+        {
+          "title": "Auto-attach the custom composer by id (no AttachAsync in the host)",
+          "code": "@* The whole registration is the id attribute — AutoAttachComposerInput resolves it *@\n<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"HandleSend\"\n        ComposerTemplate=\"AutoComposer\" AutoAttachComposerInput=\"true\" />\n\n@code {\n    private RenderFragment<ChatComposerContext> AutoComposer => context =>\n        @<div class=\"my-composer\">\n            <textarea id=\"@context.InputId\"\n                      value=\"@context.Text\"\n                      @oninput=\"@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n            <button disabled=\"@(!context.CanSend)\" @onclick=\"@(async () => await context.SendAsync())\">Send</button>\n        </div>;\n}"
+        },
+        {
+          "title": "Long conversations: the render window (FZE-14)",
+          "code": "@* Only the last 100 rows render; the top edge grows the window by 50 rows as a render\n    prepend, so the reading position survives every expansion. The host page load fires\n    only once the window already covers the whole sequence. *@\n<TmChat Messages=\"@_history\" CurrentUser=\"@_user\"\n        RenderWindowSize=\"100\" RenderWindowStep=\"50\"\n        OnLoadOlder=\"LoadOlderPageAsync\" HasMoreBefore=\"_hasMore\"\n        IsLoadingOlder=\"_loadingOlder\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmChatBubble",
+      "kind": "Component",
+      "category": "Chat",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Presentation chat bubble for hosts that build their own message rows (e.g. inside TmChat.MessageTemplate). Every visual property is driven by --tm-chat-bubble-* CSS custom properties so a host can restyle whole variant families from one knob; the library declares no knob defaults, so an override on a wrapper, on :root or on the bubble itself always wins. Dark mode needs no overrides because the defaults reference semantic tokens that flip in tokens-dark.css. Carries NO domain copy — all labels (draft, scheduled, price, discard reason) come from the host via slots. The root carries data-variant=\"{variant}\" for host hooks and tests.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/TmChatBubble.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Chat"
+      ],
+      "parameters": [
+        {
+          "name": "Actions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Action row rendered at the bottom of the bubble — Approve/Edit/Discard buttons, an unlock button, a Stop button. The host owns the buttons and their events; the component only lays the row out. Rendered for every variant, including Locked."
+        },
+        {
+          "name": "ActorLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Author name shown at the start of the meta row, before the time and separated from it by a middle dot (\" · \"). Null renders no actor label."
+        },
+        {
+          "name": "Badge",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Badge slot rendered above the body — a reason badge (\"AI draft\"), a price (\"19 Kč\"), a status chip. Rendered raw (the host owns the markup) and for every variant, including Locked."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The bubble body. NOT rendered for Locked — locked content must not leak into the DOM even when the host passes it (render the price through Badge, the hint through Note and the unlock button through Actions instead). For Discarded the body element is a semantic <del>."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes appended to the tm-chat-bubble root."
+        },
+        {
+          "name": "Meta",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Extra meta content rendered INSIDE the meta row, after the actor label and time — an \"edited\" tag, a countdown, a read receipt. The meta row renders whenever any of ActorLabel, Timestamp or Meta is set."
+        },
+        {
+          "name": "Note",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Note rendered BELOW the body — the reason a message was discarded, a scheduling hint, a delivery state. Rendered raw; inherits the variant foreground so it stays as readable as the bubble text. Rendered for every variant, including Locked."
+        },
+        {
+          "name": "ShowVariantIcon",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether Locked renders a decorative lock icon and Queued a decorative clock icon (TmIcon, aria-hidden) inside the badge area. A redundant visual cue only — pair it with a visible Badge or a StatusLabel. No effect on the other six variants."
+        },
+        {
+          "name": "StatusLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Machine-readable status rendered FIRST inside the bubble as a visually-hidden span (tm-sr-only). The host MUST provide a visible Badge or a StatusLabel for Pending, Queued, Discarded and Locked: the surface alone does not name the state and the variant icon is decorative. Null renders no status span."
+        },
+        {
+          "name": "Timestamp",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "Message time. When set, the meta row renders a <time> element whose datetime attribute carries the machine-readable UTC instant (ISO 8601) and whose text is the local HH:mm label — the same format the built-in TmChat rows use."
+        },
+        {
+          "name": "Variant",
+          "type": "ChatBubbleVariant",
+          "isRequired": false,
+          "default": "ChatBubbleVariant.Incoming",
+          "description": "Visual variant. Incoming/Outgoing/System/Pill/Pending/Queued/Discarded/Locked each emit the tm-chat-bubble--{variant} modifier class plus data-variant; Pill shares the system colour set (it is the compact inline form of a system notice). Discarded renders the body as a semantic <del> element; Locked never renders ChildContent."
+        }
+      ],
+      "cssClasses": [
+        "tm-chat-bubble",
+        "tm-chat-bubble--incoming",
+        "tm-chat-bubble--outgoing",
+        "tm-chat-bubble--system",
+        "tm-chat-bubble--pill",
+        "tm-chat-bubble--pending",
+        "tm-chat-bubble--queued",
+        "tm-chat-bubble--discarded",
+        "tm-chat-bubble--locked",
+        "tm-chat-bubble__meta",
+        "tm-chat-bubble__actor",
+        "tm-chat-bubble__meta-separator",
+        "tm-chat-bubble__time",
+        "tm-chat-bubble__badge",
+        "tm-chat-bubble__body",
+        "tm-chat-bubble__note",
+        "tm-chat-bubble__actions"
+      ],
+      "cssVariables": [
+        {
+          "name": "--tm-chat-bubble-in-bg",
+          "description": "Background of Incoming bubbles. Defaults to --tm-bg-muted."
+        },
+        {
+          "name": "--tm-chat-bubble-in-fg",
+          "description": "Text colour of Incoming bubbles. Defaults to --tm-color-text."
+        },
+        {
+          "name": "--tm-chat-bubble-in-border",
+          "description": "Border of Incoming bubbles (painted as a 1px inset ring on the built-in .tm-chat__bubble). Defaults to transparent."
+        },
+        {
+          "name": "--tm-chat-bubble-out-bg",
+          "description": "Background of Outgoing bubbles. Defaults to --tm-color-primary."
+        },
+        {
+          "name": "--tm-chat-bubble-out-fg",
+          "description": "Text colour of Outgoing bubbles. Defaults to --tm-color-primary-contrast."
+        },
+        {
+          "name": "--tm-chat-bubble-out-border",
+          "description": "Border of Outgoing bubbles. Defaults to transparent."
+        },
+        {
+          "name": "--tm-chat-bubble-system-bg",
+          "description": "Background of System rows and Pill bubbles. Defaults to --tm-bg-muted."
+        },
+        {
+          "name": "--tm-chat-bubble-system-fg",
+          "description": "Text colour of System rows and Pill bubbles. Defaults to --tm-color-text-secondary."
+        },
+        {
+          "name": "--tm-chat-bubble-system-border",
+          "description": "Border of System rows and Pill bubbles. Defaults to transparent."
+        },
+        {
+          "name": "--tm-chat-bubble-pending-bg",
+          "description": "Background of Pending bubbles (dashed border). Defaults to --tm-bg-surface-secondary."
+        },
+        {
+          "name": "--tm-chat-bubble-pending-fg",
+          "description": "Text colour of Pending bubbles. Defaults to --tm-color-text-secondary."
+        },
+        {
+          "name": "--tm-chat-bubble-pending-border",
+          "description": "Dashed border colour of Pending bubbles. Defaults to --tm-border-color-strong."
+        },
+        {
+          "name": "--tm-chat-bubble-queued-bg",
+          "description": "Background of Queued bubbles. Defaults to --tm-color-info-subtle."
+        },
+        {
+          "name": "--tm-chat-bubble-queued-fg",
+          "description": "Text colour of Queued bubbles. Defaults to --tm-color-info-text."
+        },
+        {
+          "name": "--tm-chat-bubble-queued-border",
+          "description": "Border colour of Queued bubbles. Defaults to --tm-color-info-soft-border."
+        },
+        {
+          "name": "--tm-chat-bubble-discarded-bg",
+          "description": "Background of Discarded bubbles. Defaults to --tm-bg-muted (flips to the visible dark muted surface in dark mode)."
+        },
+        {
+          "name": "--tm-chat-bubble-discarded-fg",
+          "description": "Text colour of Discarded bubbles. Defaults to --tm-color-text-secondary."
+        },
+        {
+          "name": "--tm-chat-bubble-discarded-border",
+          "description": "Border colour of Discarded bubbles. Defaults to --tm-border-color."
+        },
+        {
+          "name": "--tm-chat-bubble-locked-bg",
+          "description": "Background of Locked bubbles. Defaults to --tm-color-primary-subtle."
+        },
+        {
+          "name": "--tm-chat-bubble-locked-fg",
+          "description": "Text colour of Locked bubbles. Defaults to --tm-color-primary-text."
+        },
+        {
+          "name": "--tm-chat-bubble-locked-border",
+          "description": "Border colour of Locked bubbles. Defaults to --tm-color-primary-soft-border."
+        },
+        {
+          "name": "--tm-chat-bubble-radius",
+          "description": "Corner radius of a bubble. Defaults to --tm-radius-xl (the Pill is always --tm-radius-full)."
+        },
+        {
+          "name": "--tm-chat-bubble-padding",
+          "description": "Bubble padding. Defaults to calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width)) — compensated for the always-painted 1px border. The Pill overrides it to calc(var(--tm-space-1) - var(--tm-border-width)) calc(var(--tm-space-3) - var(--tm-border-width))."
+        },
+        {
+          "name": "--tm-chat-bubble-max-width",
+          "description": "Width cap of a bubble. A standalone TmChatBubble defaults to 80%; the built-in .tm-chat__message row caps at the same default, so a value set on a wrapper or :root tightens the whole conversation. The Pill is always capped at 100%."
+        }
+      ]
+    },
+    {
+      "itemName": "TmTypedChat",
+      "kind": "Component",
+      "category": "Chat",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "The generic variant of the chat: TmTypedChat<TItem> composes an inner TmChat (which stays non-generic) over the host's own domain sequence. Items are mapped to ChatMessage through MessageSelector once per new item reference — the cache saves mapping work only: the selector must depend on nothing but the item, and replacing an item or the selector forces the affected rows to be re-mapped (the item becomes the message Payload unless the selector sets its own). ItemTemplate receives a typed ChatItemContext<TItem> and every other TmChat parameter is forwarded by attribute splatting — OnSend, ComposerTemplate, AutoAttachComposerInput, RenderWindowSize and the rest pass straight through, with no IntelliSense for the forwarded parameters. Messages/MessageTemplate/UseTemplateFor are owned by the wrapper: passing any of them through the splat throws an ArgumentException naming the conflicting attribute, and a forwarded value whose type cannot reach the TmChat parameter it names (a bare method group compiled to the handler's NAME as a string) throws a descriptive ArgumentException that shows the EventCallback.Factory.Create form to write instead.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/TmTypedChat.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Chat"
+      ],
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "parameters": [
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TItem>",
+          "isRequired": true,
+          "default": "[]",
+          "description": "The host's domain sequence the conversation renders. The order of Items is the order of the mapped ChatMessage sequence handed to the inner TmChat.",
+          "editorRequired": true
+        },
+        {
+          "name": "ItemTemplate",
+          "type": "RenderFragment<ChatItemContext<TItem>>?",
+          "isRequired": false,
+          "description": "Replaces the built-in message row with host markup that receives a ChatItemContext<TItem> — the item plus the mapped message's context. Null renders the built-in rows for every item. A message whose mapped payload is not a TItem — the selector supplied its own payload — renders the built-in row too and never reaches the typed template. The wrapper element carrying the data-message-id anchor is rendered by TmChat around the template output either way."
+        },
+        {
+          "name": "MessageSelector",
+          "type": "Func<TItem, ChatMessage>",
+          "isRequired": true,
+          "description": "Maps one TItem to the ChatMessage the inner TmChat renders. Called from OnParametersSet — once per NEW item reference (unchanged references reuse the previously mapped ChatMessage instance, so Blazor's keyed row matching keeps the row's component instances alive); value-type items are re-mapped on every parameter pass. The cache saves MAPPING WORK only — the selector must depend on nothing but the item handed to it, and REPLACING an item (a different reference for the same row) or REPLACING the selector forces the affected rows to be re-mapped. The comparison is Equals: a fresh delegate of the same instance/static method (the Razor compiler builds one per render for a method group like MessageSelector=\"ToChatMessage\") keeps the cache; a re-created lambda simply pays the re-map. When the returned message has a null Payload, the item is stored as the payload — so even a plain (non-generic) TmChat template can read the item back with PayloadAs<TItem>(). A payload the selector sets itself wins and is left untouched.",
+          "editorRequired": true
+        },
+        {
+          "name": "UseTemplateFor",
+          "type": "Func<TItem, bool>?",
+          "isRequired": false,
+          "description": "Restricts ItemTemplate to the items the typed predicate accepts — the same precedence TmChat.UseTemplateFor documents: null means the template renders for EVERY item, otherwise only for the items where it returns true. The predicate receives the item recovered from the mapped message's payload (exact type). A message whose payload is not a TItem — the selector supplied its own — never renders the typed template: it renders the built-in row, with or without a predicate."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Forwarded verbatim (splatted) onto the inner TmChat together with every other unmatched attribute — this is how OnSend, ComposerTemplate, AutoAttachComposerInput, RenderWindowSize and the rest of the 60+ TmChat parameters reach the chat without this component duplicating them. Because they are splatted, there is no IntelliSense and no compile-time checking for them; and because Messages, MessageTemplate and UseTemplateFor are owned by TmTypedChat, passing any of them here throws an ArgumentException with a message naming the conflicting attribute. TmTypedChat also checks every forwarded value against the TmChat parameter it names and throws a descriptive ArgumentException from OnParametersSet when the type cannot reach it. EventCallback pitfall: for an attribute that matches no parameter the Razor compiler has no target type, so a bare method group (OnSend=\"HandleSend\") compiles to the handler NAME as a plain string — without the check the inner chat would die on an InvalidCastException while rendering. Forward event handlers with an explicitly-typed factory: OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\". Values whose type already matches (bools, strings, ints, enums, render fragments) pass through unchanged."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Chat",
+          "type": "TmChat?",
+          "description": "The inner TmChat instance this component renders. Null before the first render."
+        },
+        {
+          "name": "HasUnsavedDraft",
+          "type": "bool",
+          "description": "Whether the composer (built-in or custom, driven through the composer context) holds an unsaved draft. false before the first render."
+        }
+      ],
+      "methods": [
+        {
+          "name": "ScrollToBottomAsync",
+          "signature": "ValueTask ScrollToBottomAsync()",
+          "description": "Scrolls the conversation to its end. No-op before the first render."
+        },
+        {
+          "name": "ScrollToItemAsync",
+          "signature": "ValueTask<bool> ScrollToItemAsync(TItem item)",
+          "description": "Scrolls to the row of item — resolved to the mapped message id through the selector cache first (the id the rows were rendered with; the host's selector does not re-run) and through MessageSelector only for an item that is not currently mapped. Returns whether the row was found and scrolled to; false before the first render."
+        },
+        {
+          "name": "ScrollToMessageAsync",
+          "signature": "ValueTask<bool> ScrollToMessageAsync(string id)",
+          "description": "Scrolls to the row of the message with the given id. Returns whether the row was found and scrolled to; false before the first render."
+        },
+        {
+          "name": "FocusItemAsync",
+          "signature": "ValueTask<bool> FocusItemAsync(TItem item)",
+          "description": "Moves keyboard focus to the row of item — resolved to the mapped message id through the selector cache first (the id the rows were rendered with; the host's selector does not re-run) and through MessageSelector only for an item that is not currently mapped. Returns whether the row was found and focused; false before the first render."
+        },
+        {
+          "name": "AnnounceAsync",
+          "signature": "Task AnnounceAsync(string text)",
+          "description": "Announces host text through the chat's single polite live region (with TmChat's trailing throttle). No-op before the first render."
+        },
+        {
+          "name": "FocusComposerAsync",
+          "signature": "ValueTask FocusComposerAsync()",
+          "description": "Moves keyboard focus to the composer. No-op before the first render."
+        },
+        {
+          "name": "DiscardDraftAsync",
+          "signature": "Task DiscardDraftAsync()",
+          "description": "Discards the composer draft. No-op before the first render."
+        }
+      ],
+      "examples": [
+        {
+          "title": "A ticket thread built from the host's own domain record",
+          "code": "<TmTypedChat Items=\"_ticketEvents\" MessageSelector=\"MapTicketEvent\"\n             OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\">\n    <ItemTemplate Context=\"ctx\">\n        <TmChatBubble Variant=\"ChatBubbleVariant.Pending\" ActorLabel=\"@ctx.Item!.Actor\">\n            <ChildContent><span>@ctx.Item.Message</span></ChildContent>\n        </TmChatBubble>\n    </ItemTemplate>\n</TmTypedChat>\n\n@code {\n    private sealed record SupportTicketEvent(int Id, string Actor, string Message, string State, DateTimeOffset Timestamp);\n\n    private ChatMessage MapTicketEvent(SupportTicketEvent e) => new(\n        $\"ticket-{e.Id}\", e.Message, _agents[e.Actor], ChatMessageType.Incoming, e.Timestamp);\n}"
+        },
+        {
+          "title": "Forwarded TmChat parameters through the splat",
+          "code": "@* OnSend, FillParent and Placeholder are NOT parameters of TmTypedChat — the splat forwards\n   them onto the inner TmChat. Messages/MessageTemplate/UseTemplateFor would throw. *@\n<TmTypedChat Items=\"_inbox\" MessageSelector=\"ToChatMessage\"\n             OnSend=\"@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleSend))\" FillParent=\"true\" Placeholder=\"Reply…\"\n             AutoAttachComposerInput=\"true\" />"
         }
       ]
     },
@@ -4512,6 +5250,298 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ChatAutoScroll",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Controls when TmChat scrolls the message list to the bottom on its own (FZE-6). The default is WhenAtBottom — the only documented change of TmChat's default behavior (the pre-2.10 ScrollToBottomAsync was a no-op); hosts that need the old behavior opt out with Never.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatAutoScroll.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Never",
+          "description": "Never scrolls on its own — the pre-2.10 behavior. No scrollToBottom, no position preservation and no unread counting: the host owns every scroll (the public ScrollToBottomAsync / ScrollToMessageAsync helpers still work when called explicitly, and the jump-to-new button does not render)."
+        },
+        {
+          "name": "WhenAtBottom",
+          "description": "Scrolls to the bottom on the first render and afterwards only while the user is actually reading at the bottom (the chat.js scroller reports the at-bottom state). Messages arriving while the user reads above the bottom are counted behind the jump-to-new button instead of stealing the reading position; the user's OWN messages always scroll. A prepend of older history never scrolls — the visual position is preserved."
+        },
+        {
+          "name": "Always",
+          "description": "Scrolls to the bottom on every message change, regardless of the reading position (pinned-bottom chats, e.g. a moderated Q&A wall). Older history is not preserved — a prepend scrolls to the bottom too."
+        }
+      ]
+    },
+    {
+      "itemName": "ChatBubbleVariant",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Visual variant of a TmChatBubble. Each member maps to the tm-chat-bubble--{variant} modifier class and to one of the --tm-chat-bubble-* custom property sets: Incoming→in, Outgoing→out, System and Pill→system, Pending, Queued, Discarded and Locked. Discarded renders its body as a semantic <del> element; Locked never renders the body, so locked content cannot leak into the DOM.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatBubbleVariant.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Incoming",
+          "description": "A message received from somebody else."
+        },
+        {
+          "name": "Outgoing",
+          "description": "A message sent by the current user."
+        },
+        {
+          "name": "System",
+          "description": "A system event row (joins, leaves, status changes)."
+        },
+        {
+          "name": "Pill",
+          "description": "A compact inline pill (tips, short notices); shares the system colour set."
+        },
+        {
+          "name": "Pending",
+          "description": "Content still being processed (an AI draft awaiting review); dashed border."
+        },
+        {
+          "name": "Queued",
+          "description": "Content waiting to be delivered (a scheduled message); info tint."
+        },
+        {
+          "name": "Discarded",
+          "description": "Withdrawn content struck through with a semantic <del> and a host-provided note."
+        },
+        {
+          "name": "Locked",
+          "description": "Locked content — the body is never rendered, only badges/notes/actions (e.g. a PPV price)."
+        }
+      ]
+    },
+    {
+      "itemName": "ChatComposerContext",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Live view over the TmChat composer, handed to the TmChat.ComposerTemplate render fragment. A host that fully replaces the built-in composer (subscribe gate, PPV field, owner note + hint, …) keeps the component's send path, submit state and draft guard working by driving its own input through this context: bind the input to Text, push each keystroke with SetTextAsync and send with SendAsync. Text is the source of truth — the template is re-rendered from it, so a controlled input bound to composer.Text clears itself after a send. The context is a live view over the owning TmChat, not a snapshot — every member reads the component's current state, so a context instance captured from an earlier render stays usable after the component re-renders.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatComposerContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AttachAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Registers the host's own composer input element with the component, so a ComposerTemplate that renders its own <textarea> (or <input>) receives the SAME keyboard behavior as the built-in composer: Enter submits (with preventDefault), Shift+Enter and Alt/Ctrl/Meta+Enter stay native, an IME composition session never submits, and the input auto-resizes up to the component's row cap. The behavior is delivered by the same chat.js module the built-in composer uses, routed to the same submit path (OnSendMessage/OnSend via SendAsync's entry point). Call it once the host's input has mounted — typically from the host's OnAfterRenderAsync with the captured ElementReference — and again whenever the element is replaced; call it with default to detach. The registered element is also the refocus target of RefocusAfterSend: after a successful send the component focuses it back, so the user can type the next message immediately. (With TmChat.AutoAttachComposerInput the template input is attached by id automatically; an explicit AttachAsync always wins over that handle, and the refocus target is the explicit registration — or the input auto-attached through AutoAttachComposerInput once the registration is released with default.) Safe to call from any thread.",
+          "parameters": [
+            {
+              "name": "element",
+              "type": "ElementReference"
+            }
+          ]
+        },
+        {
+          "name": "FocusAsync",
+          "kind": "Method",
+          "type": "ValueTask",
+          "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, or the input auto-attached through TmChat.AutoAttachComposerInput, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
+        },
+        {
+          "name": "SendAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Sends the current Text through the SAME path as the built-in send button: the text is trimmed, TmChat's OnSendMessage and OnSend fire, the submit state flips (IsSubmitting) for the duration and — only after BOTH handlers completed without throwing — the composer clears (the re-render propagates the empty Text into the bound input, so a controlled input clears itself) and, with RefocusAfterSend, the registered composer input is focused again. A host handler that throws KEEPS the text in place (the draft is not lost) and the exception propagates to the caller. A no-op when CanSend is false. Safe to call from any thread — the send is dispatched onto the component's renderer synchronisation context."
+        },
+        {
+          "name": "SetTextAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Pushes the text typed in a CUSTOM composer into the component, so the draft guard (HasUnsavedDraft / OnDraftChanged's HasComposerDraft) keeps covering a replaced composer exactly as it covers the built-in one. Call it from the custom input's oninput; the component re-renders afterwards, which re-invokes the template with a fresh context. Does not trim — trimming happens on send, like for the built-in composer.",
+          "parameters": [
+            {
+              "name": "text",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "CanSend",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether sending is currently allowed — the composer is not disabled, not already submitting and holds text that is not whitespace-only. Mirror it on a custom send button's disabled state; SendAsync ignores the request when it is false."
+        },
+        {
+          "name": "Disabled",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the component's Disabled parameter is set (a gate such as a closed subscription typically drives it)."
+        },
+        {
+          "name": "InputId",
+          "kind": "Property",
+          "type": "string",
+          "description": "DOM id TmChat assigns to the built-in composer textarea, usable for a custom label (aria-describedby, label for) or aria-controls. The attribute is present in the DOM only while the built-in textarea actually renders — with a custom composer (or ShowComposer=false) there is no built-in textarea to point at. With TmChat.AutoAttachComposerInput, put this id on the ComposerTemplate input (id=\"@composer.InputId\"); TmChat then attaches that element by id within its own root."
+        },
+        {
+          "name": "IsSubmitting",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a send is currently in flight (the host handler has not completed yet). While it is true, CanSend is false and further SendAsync calls are ignored."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The current composer text as the component sees it — the source of truth the template is rendered from: what the built-in textarea holds, or whatever the custom composer last pushed through SetTextAsync. Bind a controlled input to it; empty again after SendAsync (the re-render propagates the cleared text into the bound input)."
+        }
+      ],
+      "methods": [
+        {
+          "name": "SetTextAsync",
+          "kind": "Method",
+          "description": "Pushes the text typed in a custom composer into the component, so the draft guard (HasUnsavedDraft / OnDraftChanged's HasComposerDraft) keeps covering a replaced composer exactly as it covers the built-in one. Call it from the custom input's oninput; does not trim — trimming happens on send."
+        },
+        {
+          "name": "SendAsync",
+          "kind": "Method",
+          "description": "Sends the current Text through the SAME path as the built-in send button: the text is trimmed and cleared, TmChat's OnSendMessage and OnSend fire, the submit state flips for the duration and the cleared composer is reported to the draft guard. A no-op when CanSend is false. The template re-renders with the cleared Text, so a controlled input clears itself after an awaited send. Safe to call from any thread — the send is dispatched onto the component's renderer synchronisation context."
+        },
+        {
+          "name": "FocusAsync",
+          "kind": "Method",
+          "description": "Moves focus to the composer input — the same logic as the post-send refocus: the element registered through AttachAsync if there is one, or the input auto-attached through TmChat.AutoAttachComposerInput, otherwise the built-in composer textarea. An element that already holds focus is left untouched (the module's focusIfNeeded), so a call from a host button does not close the on-screen keyboard. A best-effort no-op while nothing is focusable (no attached element with a custom composer, ShowComposer=false, or the circuit is gone)."
+        }
+      ],
+      "examples": [
+        "<TmChat Messages=\"_messages\" CurrentUser=\"_user\" OnSend=\"@HandleSend\">\n    <ComposerTemplate Context=\"composer\">\n        <!-- controlled input: Text is the source of truth -->\n        <textarea value=\"@composer.Text\" disabled=\"@composer.Disabled\"\n                  @oninput=\"@(e => composer.SetTextAsync(e.Value?.ToString() ?? string.Empty))\"></textarea>\n        <button disabled=\"@(!composer.CanSend)\" @onclick=\"composer.SendAsync\">Send</button>\n    </ComposerTemplate>\n</TmChat>"
+      ]
+    },
+    {
+      "itemName": "ChatItemContext<TItem>",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Typed context handed to TmTypedChat<TItem>.ItemTemplate for every item it renders. It composes the host's TItem with the ChatMessageContext TmChat already builds around the mapped message — the item itself plus everything \"around\" it (the ChatMessage, own/thread/group position and the built-in row via DefaultContent). The item is recovered from the mapped message's ChatMessage.Payload (exact type), so it is the same instance the host passed in Items. The typed template renders only for messages whose payload IS a TItem — a selector-owned payload renders the built-in row instead and never reaches this context, so Item is always a real item.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatItemContext.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "members": [
+        {
+          "name": "DefaultContent",
+          "kind": "Property",
+          "type": "RenderFragment",
+          "description": "Render fragment with the built-in message row exactly as it renders without a template — returning it from the template keeps the default look. A shortcut for Message.DefaultContent."
+        },
+        {
+          "name": "Index",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based position of the mapped message within the sequence it renders in — the root conversation list, or the thread sequence when InThread is true. A shortcut for Message.Index."
+        },
+        {
+          "name": "InThread",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the mapped message renders inside the thread panel. A shortcut for Message.InThread."
+        },
+        {
+          "name": "IsFirstInGroup",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the previous rendered message had a different author or a different ChatMessage.Kind. The first message of a group can show its full metadata. A shortcut for Message.IsFirstInGroup."
+        },
+        {
+          "name": "IsOwn",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the mapped message was authored by TmChat.CurrentUser. A shortcut for Message.IsOwn."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "TItem",
+          "description": "The host's domain item this row renders — recovered from the mapped message's ChatMessage.Payload (exact type), the same instance the host passed in Items. Never null: the typed template renders only for messages whose payload IS a TItem (a selector-owned payload renders the built-in row instead)."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "ChatMessageContext",
+          "description": "The message context of the mapped ChatMessage: the message itself (Message.Message), IsOwn, InThread, Index, IsFirstInGroup and DefaultContent."
+        }
+      ],
+      "examples": [
+        "<TmTypedChat Items=\"_events\" MessageSelector=\"@(e => Map(e))\">\n    <ItemTemplate Context=\"ctx\">\n        <TmChatBubble Variant=\"ChatBubbleVariant.Pending\" ActorLabel=\"@ctx.Item.Actor\">\n            <Badge><span class=\"ticket-badge\">#@ctx.Item.Id</span></Badge>\n            <ChildContent><span>@ctx.Message.Message.Text</span></ChildContent>\n        </TmChatBubble>\n    </ItemTemplate>\n</TmTypedChat>"
+      ]
+    },
+    {
+      "itemName": "ChatMessageContext",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Chat",
+      "description": "Context handed to the TmChat.MessageTemplate render fragment for every message it renders. The template receives everything TmChat knows \"around\" the message — the message itself, whether the current user sent it, whether it is rendered inside the thread panel, its position and group position — plus a DefaultContent fragment with the built-in message row, so a host can take over only special message kinds and fall back to the default look for ordinary messages. TmChat never interprets Kind, Metadata or Payload; they exist purely for the template.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatMessageContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultContent",
+          "kind": "Property",
+          "type": "RenderFragment",
+          "description": "Render fragment with the built-in message row exactly as it renders without a template — returning it from the template keeps the default look for messages the host does not take over. The fragment does not include the message wrapper (the element carrying the data-message-id anchor); TmChat renders that around template output either way."
+        },
+        {
+          "name": "Index",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based position of the message within the sequence it is rendered in — the root conversation list, or the thread sequence when InThread is true."
+        },
+        {
+          "name": "InThread",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message is rendered inside the thread panel (the thread root or one of its replies) rather than in the root conversation list."
+        },
+        {
+          "name": "IsFirstInGroup",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the previous rendered message had a different author or a different Kind. The first message of a group can show its full metadata; continuation messages typically hide repeated author names and timestamps."
+        },
+        {
+          "name": "IsOwn",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the message was authored by TmChat.CurrentUser (an \"own\" message)."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "ChatMessage",
+          "description": "The message being rendered, including its host-owned Kind/Metadata/Payload."
+        }
+      ],
+      "methods": [
+        {
+          "name": "PayloadAs",
+          "kind": "Method",
+          "description": "Returns the message's Payload typed as T, or default when the payload is null or of another type. No conversion is attempted — cast to the exact type the host stored on the message."
+        },
+        {
+          "name": "GetMetadata",
+          "kind": "Method",
+          "description": "Reads an entry from the message's Metadata cast to T, or fallback when the key is missing, the value is null or of another type. No conversion is attempted — store and read the same type."
+        }
+      ],
+      "examples": [
+        "<TmChat Messages=\"_messages\" CurrentUser=\"_user\">\n    <MessageTemplate Context=\"context\">\n        @if (context.Message.Kind == \"ai-draft\")\n        {\n            <MyDraftBubble Draft=\"@(context.PayloadAs<MyDraftDto>()!)\" />\n        }\n        else\n        {\n            @context.DefaultContent\n        }\n    </MessageTemplate>\n</TmChat>"
+      ]
     },
     {
       "itemName": "ChipSize",
@@ -8153,7 +9183,7 @@
       "kind": "Component",
       "category": "Data Display",
       "namespace": "Tempo.Blazor.Components.DataDisplay",
-      "description": "Small labelled element with Soft, Filled, and Outlined variants, optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
+      "description": "Small labelled element with Soft, Filled, and Outlined variants, an optional pressed toggle variant (a native <button aria-pressed> via Pressed/PressedChanged with trailing ChildContent for a count), optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmChip.razor",
       "documentationStatus": "merged",
@@ -8161,6 +9191,12 @@
         "@using Tempo.Blazor.Components.DataDisplay"
       ],
       "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional trailing content (e.g. a count badge) rendered after the label. It is part of the chip's visible content and therefore of its accessible name - do NOT aria-hide it."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -8211,6 +9247,19 @@
           "description": "Fires when remove is clicked."
         },
         {
+          "name": "Pressed",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Pressed state of the TOGGLE variant. null (the default) keeps the legacy <span> chip; any value renders a NATIVE <button type=\"button\" aria-pressed> with the same classes plus tm-chip--pressed. Per docs/keyboard-activation-convention.md the button activates natively - the component adds NO Enter/Space emulation, so a press raises the event exactly once. The value is host-owned: the toggle raises PressedChanged with the flipped value and never mutates the parameter (enable @bind-Pressed). Pressed and Clickable/OnClick are exclusive paths.",
+          "default": "null"
+        },
+        {
+          "name": "PressedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the user presses a pressed chip with the flipped value; enables @bind-Pressed."
+        },
+        {
           "name": "Removable",
           "type": "bool",
           "isRequired": false,
@@ -8248,7 +9297,9 @@
         "tm-chip--selected",
         "tm-chip__icon",
         "tm-chip__label",
-        "tm-chip__remove"
+        "tm-chip__remove",
+        "tm-chip--pressed",
+        "tm-chip__shell"
       ],
       "examples": [
         {
@@ -8258,6 +9309,10 @@
         {
           "title": "Clickable chip with icon and custom color",
           "code": "<TmChip Label=\"Priority: High\"\n        Icon=\"flag\"\n        Color=\"#ef4444\"\n        Variant=\"ChipVariant.Filled\"\n        Clickable=\"true\"\n        Selected=\"@isSelected\"\n        OnClick=\"ToggleSelection\" />"
+        },
+        {
+          "title": "Pressed toggle chip with a count",
+          "code": "<TmChip Label=\"Error\"\n        Pressed=\"@isErrorActive\"\n        PressedChanged=\"@v => isErrorActive = v\">\n    <span class=\"chip-count\">@errorCount</span>\n</TmChip>"
         }
       ]
     },
@@ -11549,6 +12604,12 @@
           "description": "Whether the trap is active. An inactive scope renders its content without trapping."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description. Null renders no attribute."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -11689,6 +12750,12 @@
           "isRequired": false
         },
         {
+          "name": "CloseButtonAdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Extra attributes splatted onto the built-in close button - a host-owned data-testid or a stable focus hook the host's restore path targets. Rendered only with ShowCloseButton; never overrides the button's type, class, click handler or accessible name."
+        },
+        {
           "name": "CloseOnEscape",
           "type": "bool",
           "isRequired": false,
@@ -11711,6 +12778,12 @@
           "isRequired": false,
           "default": "FooterLayout.Inline",
           "description": "How the footer buttons are arranged. Inline keeps them side by side at every width; Stacked stacks them full width."
+        },
+        {
+          "name": "HeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Extra content rendered in the header row, between the header content and the built-in close button, wrapped in .tm-modal-header-actions. The typical use is a host-styled close affordance - e.g. a text TmButton Close paired with ShowCloseButton=false - or additional header actions. Null (the default) keeps today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle covers it."
         },
         {
           "name": "Icon",
@@ -11788,6 +12861,13 @@
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
           "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
+        },
+        {
+          "name": "RestoreFocus",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the modal's focus scope restores focus on close. Default true (the opener is remembered at activation and focus returns there, or to an explicit restore target). Set false when the HOST owns the restore — e.g. an editor that closes the dialog through its own path and moves focus afterwards: the scope then renders data-restore-focus=\"false\" and the module skips the restore."
         },
         {
           "name": "RestoreFocusTarget",
@@ -11878,6 +12958,7 @@
         "tm-modal-header",
         "tm-modal-header-icon",
         "tm-modal-header-content",
+        "tm-modal-header-actions",
         "tm-modal-title",
         "tm-modal-subtitle",
         "tm-modal-close",
@@ -19818,7 +20899,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered layout changes. The initial value is not a change."
+          "description": "Raised when the rendered layout changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it."
         },
         {
           "name": "Right",
@@ -20065,7 +21146,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered mode changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
+          "description": "Raised when the rendered mode changes. The initial value is not a change, except that an Auto observer which inherits a non-Desktop resolution from a cascading parent reports it once so late-mounted consumers adopt it. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "Style",
@@ -30102,6 +31183,10 @@
       "kind": "Asset"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/chat.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/code-editor.js",
       "kind": "JavaScript"
     },
@@ -30218,6 +31303,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/chat.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
       "kind": "JavaScript"
     },
@@ -30327,11 +31416,11 @@
     }
   ],
   "summary": {
-    "itemCount": 403,
-    "manualItemCount": 403,
-    "generatedItemCount": 395,
+    "itemCount": 410,
+    "manualItemCount": 410,
+    "generatedItemCount": 402,
     "generatedOnlyItemCount": 0,
-    "componentCount": 218,
-    "publicApiTypeCount": 177
+    "componentCount": 220,
+    "publicApiTypeCount": 182
   }
 }
