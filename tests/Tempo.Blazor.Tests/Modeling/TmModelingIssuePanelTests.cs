@@ -366,6 +366,15 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
         errorChip.TextContent.Should().Contain("Error").And.Contain("2",
             "the chip shows its per-severity count");
 
+        // Review fix (Fáze 11): the count is part of the chip's ACCESSIBLE NAME — it must not
+        // be aria-hidden away from assistive tech.
+        errorChip.QuerySelector(".tm-modeling-issue-panel__chip-count")!.HasAttribute("aria-hidden")
+            .Should().BeFalse("the chip's accessible name includes its count");
+
+        // Review fix: the bar wrapper is plain layout — the labelled chip group and the
+        // labelled controls name the region; a group role on the wrapper announced twice.
+        cut.Find("[data-testid='modeling-issue-filterbar']").HasAttribute("role").Should().BeFalse();
+
         cut.Find("[data-testid='modeling-issue-severity-chip-warning']").TextContent
             .Should().Contain("Warning").And.Contain("1");
         cut.Find("[data-testid='modeling-issue-severity-chip-info']").TextContent
@@ -586,6 +595,156 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
 
         resetTask.Wait(TimeSpan.FromSeconds(5));
         cut.WaitForAssertion(() => VisibleMessages(cut).Should().HaveCount(4));
+    }
+
+    [Fact]
+    public void Duplicate_source_ids_render_and_source_sort_uses_first_name()
+    {
+        // Review BLOCKER (Fáze 11): the host may hand over element/relationship tables with
+        // DUPLICATE ids — the name maps must keep the first entry (loop + TryAdd) instead of
+        // throwing "An item with the same key has already been added" out of ToDictionary.
+        var elements = new[]
+        {
+            new ModelingElementDto { Id = "dup", Name = "Zeta Dup" },
+            new ModelingElementDto { Id = "dup", Name = "Alpha Dup" },
+            new ModelingElementDto { Id = "solo", Name = "Mid Element" }
+        };
+        var relationships = new[]
+        {
+            new ModelingRelationshipDto { Id = "rel-dup", Name = "Beta Rel" },
+            new ModelingRelationshipDto { Id = "rel-dup", Name = "aaa Rel" }
+        };
+        var issues = new[]
+        {
+            new ModelingIssueDto { Id = "d-0", Severity = ModelingIssueSeverity.Info, SourceElementId = "solo", Message = "Solo issue" },
+            new ModelingIssueDto { Id = "d-1", Severity = ModelingIssueSeverity.Error, SourceElementId = "dup", Message = "Dup element issue" },
+            new ModelingIssueDto { Id = "d-2", Severity = ModelingIssueSeverity.Warning, SourceRelationshipId = "rel-dup", Message = "Dup relationship issue" }
+        };
+
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, elements)
+            .Add(p => p.Relationships, relationships)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SortMode, ModelingIssueSortMode.Source));
+
+        // No throw, all rows render — and the Source sort resolved the names from the FIRST
+        // duplicate entry ("Beta Rel" < "Mid Element" < "Zeta Dup"; second-wins would order 1,2,0).
+        cut.FindAll("[data-testid='modeling-issue-list'] > li > *").Should().HaveCount(3);
+        RenderedRowTestIds(cut).Should().Equal("modeling-issue-2", "modeling-issue-0", "modeling-issue-1");
+    }
+
+    [Fact]
+    public void Live_region_reports_filter_result_and_stays_empty_when_unfiltered()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilter, new[] { ModelingIssueSeverity.Error }));
+
+        var status = () => cut.Find("[data-testid='modeling-issue-filter-status']");
+        status().GetAttribute("role").Should().Be("status");
+        status().GetAttribute("aria-live").Should().Be("polite");
+        status().TextContent.Should().Be("Issues: 2 of 4",
+            "the live region carries the localized visible-of-total pair while a filter narrows the list");
+
+        // Every row hidden → the no-match formulation (the distinct state wins over the pair).
+        using var noMatch = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.FilterText, "no-such-issue-anywhere"));
+        noMatch.Find("[data-testid='modeling-issue-filter-status']").TextContent
+            .Should().Be("No issues match the current filters.");
+
+        // Unfiltered → the region stays EMPTY (always rendered, never removed).
+        using var unfiltered = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true));
+        unfiltered.Find("[data-testid='modeling-issue-filter-status']").TextContent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Clear_filters_returns_focus_to_the_search_input()
+    {
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateIssues())
+            .Add(p => p.ShowFilterBar, true));
+
+        SetFilterText(cut, "no-such-thing");
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-issue-no-match']").Should().NotBeNull());
+
+        cut.Find("[data-testid='modeling-issue-clear-filters']").Click();
+
+        // ElementReference.FocusAsync surfaces in bUnit's Loose JSInterop as
+        // "Blazor._internal.domWrapper.focus" — the clear action must hand focus back to the
+        // search input instead of dropping it when the no-match body unmounts (review fix).
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus")
+                .Should().Be(1));
+    }
+
+    [Fact]
+    public void Equal_content_severity_echo_does_not_re_seed_the_filter()
+    {
+        // ONE Issues instance across all passes: a fresh array would itself force a render
+        // through the render gate's reference comparison and defeat the assertion.
+        var issues = CreateCountedIssues();
+        var filter = new[] { ModelingIssueSeverity.Error };
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilter, filter));
+        var rendersAfterSeed = cut.Instance.RenderCount;
+
+        // The host hands over a FRESH, equal-content collection (a rebuilt echo of the last
+        // value): it must be recorded BY CONTENT, not re-seeded — no state wipe and no extra
+        // render pass (M26).
+        var echoTask = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?>
+            {
+                [nameof(TmModelingIssuePanel.Issues)] = issues,
+                [nameof(TmModelingIssuePanel.ShowFilterBar)] = true,
+                [nameof(TmModelingIssuePanel.SeverityFilter)] = new[] { ModelingIssueSeverity.Error }
+            })));
+        echoTask.Wait(TimeSpan.FromSeconds(5));
+        cut.Instance.RenderCount.Should().Be(rendersAfterSeed,
+            "an equal-content echo is recorded, not re-seeded");
+
+        // A genuinely NEW host value still re-seeds (the host owns the state).
+        var resetTask = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?>
+            {
+                [nameof(TmModelingIssuePanel.Issues)] = issues,
+                [nameof(TmModelingIssuePanel.ShowFilterBar)] = true,
+                [nameof(TmModelingIssuePanel.SeverityFilter)] = new[] { ModelingIssueSeverity.Error, ModelingIssueSeverity.Warning }
+            })));
+        resetTask.Wait(TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='modeling-issue-severity-chip-warning']").GetAttribute("aria-pressed").Should().Be("true"));
+    }
+
+    [Fact]
+    public void Render_gate_re_renders_when_test_id_parameters_change()
+    {
+        var issues = CreateIssues();
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.TestIdPrefix, "host1"));
+
+        cut.Find("[data-testid='host1-modeling-issue-panel']").Should().NotBeNull("TestIdPrefix namespaces the root test id");
+
+        // TestIdPrefix is part of the render-gate snapshot: a parent pass that changes it (and
+        // nothing else) must re-render, not serve the stale DOM.
+        var task = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?>
+            {
+                [nameof(TmModelingIssuePanel.Issues)] = issues,
+                [nameof(TmModelingIssuePanel.TestIdPrefix)] = "host2"
+            })));
+        task.Wait(TimeSpan.FromSeconds(5));
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='host2-modeling-issue-panel']").Should().NotBeNull("the changed prefix re-rendered the root"));
     }
 
     [Fact]

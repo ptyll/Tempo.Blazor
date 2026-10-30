@@ -352,15 +352,16 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 }
 
 /* ── Fáze 11: the filter bar (severity chips, text search, sort select) ─────────────────
-   One wrapping row above the list: chips + input + select share the row when it fits and
-   wrap without horizontal overflow on the narrow bands (mobile tab). The bar lives INSIDE
-   the collapsible body, so a collapsed dock hides it with the list. */
+   Review fix (final UX pass): ONE compact row — the bar targets ~40px at a fine pointer
+   (44px on a coarse pointer), the controls ride the row and wrap only on the narrow bands.
+   The 32px control height (--tm-space-8) plus the 4px vertical padding lands the 40px row;
+   the 38px input token is intentionally compacted INSIDE the bar only. */
 .tm-modeling-issue-panel__filterbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--tm-space-2) var(--tm-space-3);
-    padding: var(--tm-space-2) var(--tm-space-4);
+    padding: var(--tm-space-1) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-color-surface);
 }
@@ -437,19 +438,55 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 }
 
 /* The search input and the sort select shrink to fit the row remainder and wrap below the
-   chips on narrow bands; the input height rides the shared input token. */
+   chips on narrow bands. Review fix: both controls are compacted to the 32px row so the bar
+   measures ~40px (the 38px input token would blow the single-row target). The wrappers are
+   PANEL-OWNED elements — the panel's scope attribute never lands on a child component root,
+   so every child-internal rule goes through ::deep. */
 .tm-modeling-issue-panel__filter-input {
+    display: flex;
     flex: 1 1 12rem;
+    align-items: center;
     min-width: 0;
 }
 
 .tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
-    min-height: var(--tm-input-height-md);
+    min-height: var(--tm-space-8);
 }
 
+.tm-modeling-issue-panel__filter-input ::deep .tm-input {
+    height: var(--tm-space-8);
+}
+
+/* Review fix: the sort control is a single-row wrapper — the visible label sits INLINE left
+   of the select (TmSelect's own column wrapper would push the bar to two rows), the label
+   never wraps and the select takes the remainder. */
 .tm-modeling-issue-panel__filter-sort {
-    flex: 0 1 12rem;
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
     min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-wrapper {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select-container {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-modeling-issue-panel__filter-sort ::deep .tm-select {
+    height: var(--tm-space-8);
 }
 
 /* The no-match state (every row filtered out) keeps the empty-state vocabulary and adds the
@@ -481,8 +518,14 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 }
 
 /* Fáze 11 (touch): every filter bar control reaches the shared 44px target on a coarse
-   pointer — chips, the search input, the sort select and the clear action alike. */
+   pointer — chips, the search input, the sort select and the clear action alike. The bar
+   itself lands on the 44px row: the padding collapses so the 44px controls ARE the height. */
 @media (pointer: coarse) {
+    .tm-modeling-issue-panel__filterbar {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
     .tm-modeling-issue-panel__chip {
         min-height: var(--tm-touch-target);
     }
@@ -495,12 +538,20 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
         min-height: var(--tm-touch-target);
     }
 
+    .tm-modeling-issue-panel__filter-input ::deep .tm-input {
+        height: var(--tm-touch-target);
+    }
+
     .tm-modeling-issue-panel__filter-sort {
         min-height: var(--tm-touch-target);
     }
 
     .tm-modeling-issue-panel__filter-sort ::deep .tm-select-container {
         min-height: var(--tm-touch-target);
+    }
+
+    .tm-modeling-issue-panel__filter-sort ::deep .tm-select {
+        height: var(--tm-touch-target);
     }
 
     .tm-modeling-issue-panel__clear {

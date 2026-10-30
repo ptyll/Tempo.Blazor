@@ -50,6 +50,16 @@
         }
     </header>
 
+    @* Review fix (Fáze 11): the filter result is announced through ONE always-rendered polite
+       live region (a region that only appears when it has content is missed by screen
+       readers). It carries the visible-of-total pair while a filter narrows the list, the
+       no-match message when every row is hidden and stays EMPTY when there is nothing to
+       announce. It lives OUTSIDE the collapsible body so announcements survive a collapse. *@
+    <span class="tm-sr-only"
+          role="status"
+          aria-live="polite"
+          data-testid="@TestId("modeling-issue-filter-status")">@FilterStatusText</span>
+
     @* The body ALWAYS renders (review fix, phase 5): a collapsed dock keeps the region in the
        DOM under [hidden], so the toggle's aria-controls never points at a missing id. The
        canvas-body grid row (auto when collapsed) plus [hidden] keep it out of sight and out of
@@ -60,10 +70,11 @@
          hidden="@Collapsed">
         @if (ShowsFilterBar)
         {
+            @* Review fix: no role/aria-label on the BAR itself — the labelled groups inside it
+               (severity chips) and the labelled controls already name the region, and a group
+               role on a layout wrapper announced twice. *@
             <div class="tm-modeling-issue-panel__filterbar"
-                 role="group"
-                 data-testid="@TestId("modeling-issue-filterbar")"
-                 aria-label="@Loc["TmModelingIssuePanel_SeverityFilterLabel"]">
+                 data-testid="@TestId("modeling-issue-filterbar")">
                 <div class="tm-modeling-issue-panel__chips" role="group" aria-label="@Loc["TmModelingIssuePanel_SeverityFilterLabel"]">
                     @* Severity chips are NATIVE toggle buttons (aria-pressed): one activation per
                        press and keyboard reachable by construction — the keyboard-activation
@@ -77,22 +88,33 @@
                                 aria-pressed="@IsSeverityActive(severity).ToString().ToLowerInvariant()"
                                 @onclick="() => ToggleSeverityAsync(severity)">
                             <span class="tm-modeling-issue-panel__chip-label">@GetSeverityChipLabel(severity)</span>
-                            <span class="tm-modeling-issue-panel__chip-count" aria-hidden="true">@CountBySeverity(severity)</span>
+                            @* Review fix (Fáze 11): the count is NOT aria-hidden — it belongs to
+                               the chip's accessible name ("Error 2"), so the number reaches
+                               assistive tech without a second announcement mechanism. *@
+                            <span class="tm-modeling-issue-panel__chip-count">@CountBySeverity(severity)</span>
                         </button>
                     }
                 </div>
-                <TmSearchInput Value="@_filterText"
-                               ValueChanged="HandleFilterTextChangedAsync"
-                               Placeholder="@Loc["TmModelingIssuePanel_FilterPlaceholder"]"
-                               Class="tm-modeling-issue-panel__filter-input"
-                               data-testid="@TestId("modeling-issue-filter-input")" />
-                <TmSelect TValue="ModelingIssueSortMode"
-                          Label="@Loc["TmModelingIssuePanel_SortLabel"]"
-                          Options="@SortOptions"
-                          Value="@_sortMode"
-                          ValueChanged="HandleSortModeChangedAsync"
-                          Class="tm-modeling-issue-panel__filter-sort"
-                          data-testid="@TestId("modeling-issue-sort")" />
+                @* The input and the select sit in PANEL-OWNED wrappers: the compact single-row
+                   styling is scoped CSS, and the panel's scope attribute never lands on a child
+                   component's root — so the flex sizing lives on these wrappers and the child
+                   internals are reached through ::deep (review fix). *@
+                <div class="tm-modeling-issue-panel__filter-input">
+                    <TmSearchInput @ref="_searchInput"
+                                   Value="@_filterText"
+                                   ValueChanged="HandleFilterTextChangedAsync"
+                                   Placeholder="@Loc["TmModelingIssuePanel_FilterPlaceholder"]"
+                                   DebounceMs="150"
+                                   data-testid="@TestId("modeling-issue-filter-input")" />
+                </div>
+                <div class="tm-modeling-issue-panel__filter-sort">
+                    <TmSelect TValue="ModelingIssueSortMode"
+                              Label="@Loc["TmModelingIssuePanel_SortLabel"]"
+                              Options="@SortOptions"
+                              Value="@_sortMode"
+                              ValueChanged="HandleSortModeChangedAsync"
+                              data-testid="@TestId("modeling-issue-sort")" />
+                </div>
             </div>
         }
         @if (Issues.Count == 0)

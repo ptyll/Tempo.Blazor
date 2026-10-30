@@ -78,6 +78,13 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
             """,
             null, new PageWaitForFunctionOptions { Timeout = 10_000 });
 
+        // The bar is ONE compact row (~40px at a fine pointer): measured and guarded here so
+        // the single-row UX contract cannot silently regress.
+        var barHeight = await filterbar.EvaluateAsync<float>(
+            "el => el.getBoundingClientRect().height");
+        Assert.IsTrue(barHeight >= 36 && barHeight <= 46,
+            $"the filter bar is a single compact row (~40px), measured {barHeight:0.#} px at 1440x900");
+
         // The no-match state with a one-press clear.
         await page.Locator("[data-testid='modeling-issue-filter-input']").FillAsync("no-such-issue-anywhere");
         await page.WaitForFunctionAsync(
@@ -185,7 +192,7 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
     // ── 500-issue latency (M26 budget for the filter) ────────────────────────
 
     [TestMethod]
-    [Description("500-issue scenario: a text filter narrows the list in under 200 ms and the chips report counts")]
+    [Description("500-issue scenario: a text filter narrows the list within the 150ms debounce + 200ms processing budget and the chips report counts")]
     public async Task FiveHundredIssues_FilterNarrowsWithinBudget()
     {
         var page = await OpenModelingPageAsync("?scenario=issues-500", 1440, 900, touch: false);
@@ -228,7 +235,10 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
                 );
 
         Assert.IsTrue(elapsedMs >= 0, "the filter input exists in the dock");
-        Assert.IsTrue(elapsedMs < 200, $"the 500-issue filter must answer under 200 ms, took {elapsedMs:F0} ms");
+        // Fáze 11 review: the input delivers through TmSearchInput's 150ms debounce, which is
+        // part of the wall clock — the budget is the debounce + the original 200ms processing
+        // budget (Blazor's event round-trip plus the memoized 500-row recompute and patch).
+        Assert.IsTrue(elapsedMs < 350, $"the 500-issue filter must answer within 150ms debounce + 200ms processing, took {elapsedMs:F0} ms");
     }
 
     // ── Screenshots per band (UX review against the mockups) ─────────────────

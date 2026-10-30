@@ -207,7 +207,7 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Fáze 11: filtering 500 issues updates the visible count under the 200 ms budget (the memoized projection)")]
+    [Description("Fáze 11: filtering 500 issues updates the visible count within the 150ms debounce + 200ms processing budget (the memoized projection)")]
     public async Task IssueFilterLatency_500Issues_AnswersUnderBudget()
     {
         // The same calibration viewport as the tree-filter budget (see above): the docked
@@ -238,7 +238,10 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
 
         // Always logged: the number is the evidence the Performance lane records.
         Console.WriteLine($"[perf] issue filter latency (500 issues)={latencyMs:0.0} ms");
-        Assert.IsTrue(latencyMs < 200, $"The 500-issue filter latency should stay under 200 ms. Actual: {latencyMs:0.0} ms.");
+        // Fáze 11 review: the input delivers through TmSearchInput's 150ms debounce, which is
+        // part of the wall clock — the budget is the debounce + the original 200ms processing
+        // budget (the memoized projection and its DOM patch).
+        Assert.IsTrue(latencyMs < 350, $"The 500-issue filter latency should stay under 150ms debounce + 200ms processing. Actual: {latencyMs:0.0} ms.");
     }
 
     /// <summary>Opens the issues-500 scenario on the docked desktop band (the phase's 500-issue

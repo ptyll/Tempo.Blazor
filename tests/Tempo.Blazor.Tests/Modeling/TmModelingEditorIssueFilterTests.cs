@@ -82,7 +82,13 @@ public sealed class TmModelingEditorIssueFilterTests : LocalizationTestBase
         {
             mobileFilteredCount = int.Parse(mobile.Find("[data-testid='modeling-issue-panel']")
                 .GetAttribute("data-visible-issue-count"), System.Globalization.CultureInfo.InvariantCulture);
-            mobileFilteredCount.Should().BeGreaterThan(0);
+            // Fáze 11 review (debounce): the input delivers through TmSearchInput's 150ms
+            // debounce — WAIT for the filtered state before switching tabs, otherwise the
+            // switch disposes the panel (and its pending debounce) before delivery.
+            mobileFilteredCount.Should().BeGreaterThan(0).And.BeLessThan(
+                int.Parse(mobile.Find("[data-testid='modeling-issue-panel']")
+                    .GetAttribute("data-total-issue-count"), System.Globalization.CultureInfo.InvariantCulture),
+                "the source-name search narrows the list");
         });
 
         mobile.Find("[data-testid='modeling-panel-tab-preview']").Click();

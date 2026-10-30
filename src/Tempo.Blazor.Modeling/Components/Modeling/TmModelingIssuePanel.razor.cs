@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Modeling;
 
@@ -26,6 +27,8 @@ public partial class TmModelingIssuePanel
              bool Collapsed,
              bool ShowToggle,
              string? Class,
+             string? DataTestId,
+             string? TestIdPrefix,
              IReadOnlyList<ModelingElementDto>? Elements,
              IReadOnlyList<ModelingRelationshipDto>? Relationships,
              string FilterText,
@@ -143,7 +146,36 @@ public partial class TmModelingIssuePanel
             _lastSortModeParameter = incomingSort;
         }
 
+        // Two-way severity filter echo (the same Fáze 6 contract as the text filter, keyed by
+        // CONTENT — the host may hand over a fresh, equal-content collection on every pass):
+        // when the incoming set equals the internal working copy it IS the last value the panel
+        // raised — record it so OnParametersSet does not mistake the echo for a host edit and
+        // re-seed (wiping user state / forcing a render). A genuine host edit (different
+        // content, e.g. a RESET to null) is never recorded and still re-seeds.
+        if (parameters.TryGetValue<IReadOnlyCollection<ModelingIssueSeverity>?>(nameof(SeverityFilter), out var incomingSeverities)
+            && SeveritySetsEqual(incomingSeverities, _activeSeverities))
+        {
+            _lastSeverityFilterParameter = incomingSeverities;
+        }
+
         return base.SetParametersAsync(parameters);
+    }
+
+    /// <summary>Order-insensitive content equality of two severity sets; <c>null</c> (every
+    /// severity) equals only <c>null</c> or an empty collection.</summary>
+    private static bool SeveritySetsEqual(IReadOnlyCollection<ModelingIssueSeverity>? left, IReadOnlyCollection<ModelingIssueSeverity>? right)
+    {
+        if (left is null || left.Count == 0)
+        {
+            return right is null || right.Count == 0;
+        }
+
+        if (right is null || right.Count != left.Count)
+        {
+            return false;
+        }
+
+        return left.OrderBy(severity => severity).SequenceEqual(right.OrderBy(severity => severity));
     }
 
     /// <inheritdoc />
@@ -195,12 +227,35 @@ public partial class TmModelingIssuePanel
         RenderCount++;
     }
 
+    /// <summary>Ref of the filter bar's search input — the clear-filters action returns focus here
+    /// (the input stays on screen while the no-match state is shown, so focus lands on a live
+    /// control instead of being dropped on the removed no-match body).</summary>
+    private TmSearchInput? _searchInput;
+
+    private bool _focusSearchAfterRender;
+
+    /// <inheritdoc />
+    /// <remarks>Review fix (Fáze 11): after <see cref="ClearFiltersAsync"/> the no-match state
+    /// unmounts and focus would drop to <c>body</c> — move it to the search input instead.</remarks>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (_focusSearchAfterRender)
+        {
+            _focusSearchAfterRender = false;
+            if (_searchInput is not null)
+            {
+                await _searchInput.FocusAsync();
+            }
+        }
+    }
+
     /// <summary>Compares the render-affecting parameter surface against the last snapshot; the
     /// culture rides along because every visible label resolves through it.</summary>
     private bool RenderSurfaceChanged()
     {
-        var snapshot = (Issues, ShowFilterBar, Collapsed, ShowToggle, Class, Elements, Relationships,
-            _filterText, SeverityFilterKey, _sortMode, CultureInfo.CurrentUICulture.Name);
+        var snapshot = (Issues, ShowFilterBar, Collapsed, ShowToggle, Class, DataTestId, TestIdPrefix,
+            Elements, Relationships, _filterText, SeverityFilterKey, _sortMode, CultureInfo.CurrentUICulture.Name);
         var changed = !snapshot.Equals(_renderSnapshot);
         _renderSnapshot = snapshot;
         return changed;
@@ -275,11 +330,14 @@ public partial class TmModelingIssuePanel
                 return _visibleIssues;
             }
 
+            // Loop + TryAdd (FIRST entry wins): the host may hand over element/relationship
+            // tables containing duplicate ids — ToDictionary would throw
+            // "An item with the same key has already been added" and take the whole panel down.
             var elementNames = Elements is { Count: > 0 }
-                ? Elements.ToDictionary(element => element.Id, element => element.Name, StringComparer.Ordinal)
+                ? BuildFirstWinsNameMap(Elements, element => element.Id, element => element.Name)
                 : null;
             var relationshipNames = Relationships is { Count: > 0 }
-                ? Relationships.ToDictionary(relationship => relationship.Id, relationship => relationship.Name, StringComparer.Ordinal)
+                ? BuildFirstWinsNameMap(Relationships, relationship => relationship.Id, relationship => relationship.Name)
                 : null;
             var filter = NormalizeSearchText(_filterText);
 
@@ -301,6 +359,23 @@ public partial class TmModelingIssuePanel
 
     private IReadOnlyList<(ModelingIssueDto, int)>? _visibleIssues;
     private (IReadOnlyList<ModelingIssueDto>, string, string?, ModelingIssueSortMode, string, IReadOnlyList<ModelingElementDto>?, IReadOnlyList<ModelingRelationshipDto>?) _visibleIssuesKey;
+
+    /// <summary>Builds an id → name map with a loop + <see cref="Dictionary{TKey, TValue}.TryAdd"/>:
+    /// duplicate ids keep the FIRST entry instead of throwing (review fix, Fáze 11 — the host may
+    /// legitimately hand over overlapping element/relationship tables).</summary>
+    private static Dictionary<string, string> BuildFirstWinsNameMap<TItem>(
+        IEnumerable<TItem> source,
+        Func<TItem, string> idSelector,
+        Func<TItem, string> nameSelector)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var item in source)
+        {
+            map.TryAdd(idSelector(item), nameSelector(item));
+        }
+
+        return map;
+    }
 
     /// <summary>Whether the issue survives the active severity set and text filter.</summary>
     private bool MatchesFilters(
@@ -470,14 +545,35 @@ public partial class TmModelingIssuePanel
         await SortModeChanged.InvokeAsync(value);
     }
 
-    /// <summary>Clears both filters and reports them through the two-way bindings.</summary>
+    /// <summary>Clears both filters and reports them through the two-way bindings. Review fix
+    /// (Fáze 11): flags the search input for focus on the next pass — the no-match body the
+    /// clear button lived in unmounts, so focus must move to a surviving control.</summary>
     private async Task ClearFiltersAsync()
     {
         _filterText = string.Empty;
         _activeSeverities = null;
         _renderPending = true;
+        _focusSearchAfterRender = true;
         await FilterTextChanged.InvokeAsync(string.Empty);
         await SeverityFilterChanged.InvokeAsync(null);
+    }
+
+    /// <summary>The visually-hidden live region's text: the localized visible-of-total pair while
+    /// a filter narrows the list, the no-match message when every row is hidden, empty when
+    /// there is nothing to announce (always rendered so the region exists for every change).</summary>
+    private string FilterStatusText
+    {
+        get
+        {
+            if (!IsFiltered || Issues.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            return VisibleIssues.Count == 0
+                ? Loc["TmModelingIssuePanel_NoMatch"]
+                : Loc["TmModelingIssuePanel_CountFiltered", VisibleIssues.Count, Issues.Count];
+        }
     }
 
     private bool IsSeverityActive(ModelingIssueSeverity severity)
