@@ -185,9 +185,11 @@ public partial class TmModelingEditor
 
     /// <summary>
     /// How many rows the Relations tab will show for the CURRENT selection: an element counts its
-    /// outgoing plus incoming relationships, a relationship always lists its source and target,
-    /// nothing selected counts zero. Memoized on the (_model, _selectedElement,
-    /// _selectedRelationship) references so a re-render never re-scans the relationship list (M26).
+    /// outgoing plus incoming relationships — each direction SEPARATELY, so a self-reference
+    /// (source == target == element) counts the TWO rows it renders, not one (phase 13 review) —
+    /// a relationship always lists its source and target, nothing selected counts zero.
+    /// Memoized on the (_model, _selectedElement, _selectedRelationship) references so a
+    /// re-render never re-scans the relationship list (M26); one pass feeds both counters.
     /// </summary>
     private int RelatedRowCount
     {
@@ -197,13 +199,29 @@ public partial class TmModelingEditor
             if (!key.Equals(_relatedCountKey))
             {
                 _relatedCountKey = key;
-                _relatedCountCache = key.Element is not null
-                    ? _model?.Relationships.Count(related =>
-                        string.Equals(related.SourceElementId, key.Element.Id, StringComparison.Ordinal)
-                        || string.Equals(related.TargetElementId, key.Element.Id, StringComparison.Ordinal)) ?? 0
-                    : key.Relationship is not null
-                        ? 2
-                        : 0;
+                if (key.Element is not null)
+                {
+                    var outgoing = 0;
+                    var incoming = 0;
+                    foreach (var relationship in _model?.Relationships ?? [])
+                    {
+                        if (string.Equals(relationship.SourceElementId, key.Element.Id, StringComparison.Ordinal))
+                        {
+                            outgoing++;
+                        }
+
+                        if (string.Equals(relationship.TargetElementId, key.Element.Id, StringComparison.Ordinal))
+                        {
+                            incoming++;
+                        }
+                    }
+
+                    _relatedCountCache = outgoing + incoming;
+                }
+                else
+                {
+                    _relatedCountCache = key.Relationship is not null ? 2 : 0;
+                }
             }
 
             return _relatedCountCache;
@@ -215,4 +233,48 @@ public partial class TmModelingEditor
     private string RelationsTabBadge => RelatedRowCount > 0
         ? RelatedRowCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
         : string.Empty;
+
+    /// <summary>
+    /// Fáze 13: the Relations tab's element navigation — the SAME path a tree or issue selection
+    /// takes (the selection state plus the tablet sheet rule), so a counterpart activation lands
+    /// in the tree, the preview contract and the inspector exactly like any other selection. The
+    /// docked inspector returns to the Properties tab (with focus on it, phase 13 review); the
+    /// mobile section updates in place and keeps focus on the related panel's own hook.
+    /// </summary>
+    private Task SelectRelatedElementAsync(ModelingElementDto element)
+    {
+        _inspectorTab = "properties";
+        if (IsMobileLayout)
+        {
+            _focusRelatedPanelAfterRender = true;
+        }
+        else
+        {
+            _focusInspectorPropertiesTabAfterRender = true;
+        }
+
+        return SelectElementAsync(element);
+    }
+
+    /// <summary>
+    /// Fáze 13: the Relations tab's relationship navigation — the resolved-DTO form of
+    /// <see cref="SelectRelationshipAsync"/> (an edge pick already resolves the id the same way)
+    /// with the inspector focus switch a relationship selection carries. The docked inspector
+    /// returns to the Properties tab (with focus on it, phase 13 review); the mobile section
+    /// updates in place and keeps focus on the related panel's own hook.
+    /// </summary>
+    private Task SelectRelatedRelationshipAsync(ModelingRelationshipDto relationship)
+    {
+        _inspectorTab = "properties";
+        _selectedElement = null;
+        _selectedRelationship = relationship;
+        if (IsMobileLayout)
+        {
+            _focusRelatedPanelAfterRender = true;
+            return OpenInspectorForSelectionAsync();
+        }
+
+        _focusInspectorPropertiesTabAfterRender = true;
+        return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
+    }
 }

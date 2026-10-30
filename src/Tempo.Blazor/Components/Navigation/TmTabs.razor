@@ -220,6 +220,18 @@
     /// </summary>
     private (string? Title, string? Icon, string? Badge, bool Disabled)[]? _renderedHeaderInputs;
 
+    /// <summary>
+    /// The ONE-extra-render bound of the header resync above. The extra render is allowed ONCE
+    /// per OUTSIDE render pass; while the flag is set, a still-diverging comparison records the
+    /// snapshot but renders no further. This is what keeps a NON-IDEMPOTENT header input (a
+    /// title or badge re-evaluated per fragment execution) from rendering forever: the strip is
+    /// rebuilt from the panel INSTANCES before their parameters of the same pass land, so such
+    /// an input diverges on EVERY render — bounded, it costs exactly one resync per outside
+    /// render; unbounded, the resync would feed itself (<c>TmTabsTests.Non_idempotent_title_does_not_render_loop</c>).
+    /// A render that compares EQUAL clears the flag, so the next outside render may resync again.
+    /// </summary>
+    private bool _headerResyncRendered;
+
     private (string? Title, string? Icon, string? Badge, bool Disabled)[] CaptureHeaderInputs()
         => _panels.Select(panel => (panel.Title, panel.Icon, panel.Badge, panel.Disabled)).ToArray();
 
@@ -344,13 +356,29 @@
     {
         // Dynamic header inputs (see _renderedHeaderInputs): the panels' parameters landed AFTER
         // the strip of this pass was built, so a changed badge/title would otherwise lag one
-        // interaction. One extra render shows it; the next pass sees equal snapshots and the
-        // compare never re-arms (a strip whose inputs are static stays a single render).
+        // interaction. One extra render shows it — ONCE per outside render pass (see
+        // _headerResyncRendered); the next pass sees equal snapshots and the compare never
+        // re-arms (a strip whose inputs are static stays a single render).
         var current = CaptureHeaderInputs();
         if (_renderedHeaderInputs is null || !current.SequenceEqual(_renderedHeaderInputs))
         {
-            _renderedHeaderInputs = current;
-            StateHasChanged();
+            if (!_headerResyncRendered)
+            {
+                _headerResyncRendered = true;
+                _renderedHeaderInputs = current;
+                StateHasChanged();
+            }
+            else
+            {
+                // Still diverging after the one allowed resync render: a non-idempotent header
+                // input. Record the snapshot without rendering again — the NEXT outside render
+                // gets its own resync budget (the flag clears on the first equal comparison).
+                _renderedHeaderInputs = current;
+            }
+        }
+        else
+        {
+            _headerResyncRendered = false;
         }
 
         if (!_focusSelectedTabAfterRender) return;

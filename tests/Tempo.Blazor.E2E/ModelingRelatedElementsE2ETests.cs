@@ -31,6 +31,15 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
 
             await OpenRelationsTabAsync(page);
 
+            // Phase 13 review: the THREE-tab strip fits the docked aside — the Source tab's
+            // right edge stays inside the inspector panel at 1440x900.
+            var panelBox = await page.Locator("[data-testid='modeling-inspector-panel']").BoundingBoxAsync();
+            var sourceBox = await page.Locator("[data-testid='modeling-tab-source']").BoundingBoxAsync();
+            Assert.IsNotNull(panelBox);
+            Assert.IsNotNull(sourceBox);
+            Assert.IsTrue(sourceBox.X + sourceBox.Width <= panelBox.X + panelBox.Width + 0.5,
+                $"the Source tab's right edge ({sourceBox.X + sourceBox.Width}) must stay inside the inspector panel ({panelBox.X + panelBox.Width})");
+
             Assert.AreEqual(1, await page.Locator("[data-testid='modeling-related-outgoing-rel-validate-to-ship']").CountAsync(),
                 "the outgoing group lists the validate→ship flow");
             Assert.AreEqual(1, await page.Locator("[data-testid='modeling-related-incoming-rel-start-to-validate']").CountAsync(),
@@ -39,7 +48,7 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
 
             // Navigate to the counterpart: the selection lands in the tree and the inspector
             // returns to the Properties tab presenting it.
-            await page.Locator("[data-testid='modeling-related-counterpart-rel-validate-to-ship']").ClickAsync();
+            await page.Locator("[data-testid='modeling-related-outgoing-counterpart-rel-validate-to-ship']").ClickAsync();
             await ExpectSelectedAsync(page, "bpmn-ship-order");
             Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']")
                 .GetAttributeAsync("aria-selected"), "the counterpart is selected in the model tree");
@@ -71,7 +80,7 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
             await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
 
             await sheet.Locator("[data-testid='modeling-tab-relations']").TapAsync();
-            var counterpart = sheet.Locator("[data-testid='modeling-related-counterpart-rel-validate-to-ship']");
+            var counterpart = sheet.Locator("[data-testid='modeling-related-outgoing-counterpart-rel-validate-to-ship']");
             await counterpart.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
             await counterpart.TapAsync();
 
@@ -134,11 +143,11 @@ public sealed class ModelingRelatedElementsE2ETests : WasmTestBase
             StringAssert.Contains(await tabs.Nth(1).TextContentAsync(), "Relations");
             StringAssert.Contains(await tabs.Nth(2).TextContentAsync(), "Source");
 
-            var counterpart = page.Locator("[data-testid='modeling-related-counterpart-rel-validate-to-ship']");
+            var counterpart = page.Locator("[data-testid='modeling-related-outgoing-counterpart-rel-validate-to-ship']");
             await counterpart.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
             StringAssert.Contains(await counterpart.GetAttributeAsync("aria-label") ?? string.Empty,
                 "Select element", "the counterpart action names its target");
-            var relationshipAction = page.Locator("[data-testid='modeling-related-relationship-rel-validate-to-ship']");
+            var relationshipAction = page.Locator("[data-testid='modeling-related-outgoing-relationship-rel-validate-to-ship']");
             StringAssert.Contains(await relationshipAction.GetAttributeAsync("aria-label") ?? string.Empty,
                 "Select relationship", "the relationship-type action names its target");
         }

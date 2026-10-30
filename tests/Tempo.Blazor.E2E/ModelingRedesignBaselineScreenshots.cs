@@ -782,10 +782,12 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     }
 
     /// <summary>Fáze 13: the inspector's Relations tab — the selected element's related groups on
-    /// the docked desktop tab (1440×900) and the Relations SECTION inside the mobile Inspector
-    /// tab (390×844) are the diff subject of the relations phase.</summary>
+    /// the docked desktop tab (1440×900 viewport), the inspector SHEET with the Relations tab
+    /// active (1024×768, phase 13 review) and the Relations SECTION inside the mobile Inspector
+    /// tab (390×844 — an ELEMENT shot of the panel scrolled into view) are the diff subject of
+    /// the relations phase.</summary>
     [TestMethod]
-    [Description("Captures related-tab-1440x900 (the docked Relations tab) and related-mobile-390x844 (the mobile Relations section)")]
+    [Description("Captures related-tab-1440x900 (the docked Relations tab), related-tablet-1024x768 (the inspector sheet on Relations) and related-mobile-390x844 (the mobile Relations section element shot)")]
     public async Task Capture_RelationsTab()
     {
         var desktop = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 1440, 900, touch: false);
@@ -806,6 +808,35 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             await desktop.Context.CloseAsync();
         }
 
+        var tablet = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 1024, 768, touch: true);
+        try
+        {
+            await WaitForLoadedStateAsync(tablet);
+            await tablet.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await tablet.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            // The tablet rule: a selection swaps the tree drawer for the inspector sheet.
+            await tablet.Locator("[data-testid='modeling-inspector-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await tablet.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-relations']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(tablet);
+            await tablet.Locator("[data-testid='modeling-inspector-sheet']").ScreenshotAsync(
+                new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(OutputDirectory, "related-tablet-1024x768.png"),
+                    Timeout = 30_000
+                });
+        }
+        finally
+        {
+            await tablet.Context.CloseAsync();
+        }
+
         var mobile = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 390, 844, touch: true);
         try
         {
@@ -818,7 +849,15 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
             await mobile.Locator("[data-testid='modeling-related-panel']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
             await SettleAsync(mobile);
-            await SaveViewportScreenshotAsync(mobile, "related-mobile-390x844");
+            // Phase 13 review: an ELEMENT shot of the panel itself (Playwright scrolls it into
+            // view) — the viewport shot included the status card and the action bar chrome that
+            // pushed the section below the fold at 390x844.
+            await mobile.Locator("[data-testid='modeling-related-panel']").ScreenshotAsync(
+                new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(OutputDirectory, "related-mobile-390x844.png"),
+                    Timeout = 30_000
+                });
         }
         finally
         {

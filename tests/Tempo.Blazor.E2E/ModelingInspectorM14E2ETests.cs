@@ -122,7 +122,7 @@ public sealed class ModelingInspectorM14E2ETests : WasmTestBase
         await ExpectVisibleAsync(page, "[data-testid='modeling-related-outgoing-rel-validate-to-ship']");
 
         // Navigate to the counterpart: the tree selection AND the inspector follow.
-        await page.Locator("[data-testid='modeling-related-counterpart-rel-validate-to-ship']").ClickAsync();
+        await page.Locator("[data-testid='modeling-related-outgoing-counterpart-rel-validate-to-ship']").ClickAsync();
         await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-ship-order']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']")

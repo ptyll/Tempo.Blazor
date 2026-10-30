@@ -219,23 +219,31 @@ collapse, a sheet toggle and a tab switch; the mobile tab badge still shows the 
 | `Relationship` | `ModelingRelationshipDto?` | `null` | The selected relationship; renders its source and target as navigable rows. |
 | `Elements` | `IReadOnlyList<ModelingElementDto>` | `[]` | Counterpart resolution (display names + semantic-type icons via `ModelingSemanticTypeIcons`). |
 | `Relationships` | `IReadOnlyList<ModelingRelationshipDto>` | `[]` | The model's relationships — the memoized by-element index source. |
-| `OnElementSelected` / `OnRelationshipSelected` | `EventCallback<…>` | — | Row activations (the editor routes them through the same `SelectElementAsync` / `SelectRelationshipAsync` paths an issue or edge pick uses, and returns the docked inspector to the Properties tab). |
+| `OnElementSelected` / `OnRelationshipSelected` | `EventCallback<…>` | — | Row activations (the editor routes them through the same `SelectElementAsync` / `SelectRelationshipAsync` paths an issue or edge pick uses, and returns the docked inspector to the Properties tab — with DOM focus on that tab button through its `data-modeling-focus="inspector-tab-properties"` hook; on mobile the section updates in place and the focus lands on the panel root's `related-panel` hook). |
 | `Class` | `string?` | `null` | Extra root class. |
 
 The root `<section data-testid="modeling-related-panel">` reports `data-kind`
-(`element` / `relationship` / `empty`). An element view groups rows under localized
-Outgoing/Incoming headings with a count badge (sr-only text through the
-`TmModelingRelated_RelationshipCount_*` plural family); every row is
+(`element` / `relationship` / `empty`), carries `tabindex="-1"` +
+`data-modeling-focus="related-panel"` (the mobile element-hop focus hook — not tab-reachable)
+and names itself through one sr-only `<h3>` (`TmModelingEditor_Relations`), so the group
+headings hang off a real heading — the groups are plain `<div>`s, no extra landmarks. An
+element view groups rows under localized Outgoing/Incoming headings with a count badge (sr-only
+text through the `TmModelingRelated_RelationshipCount_*` plural family); every row is
 `data-testid="modeling-related-{direction}-{relationshipId}"` with `direction` ∈
-`outgoing | incoming | source | target`. Each element-view row holds TWO native buttons — the
-counterpart (`modeling-related-counterpart-{id}`, named `TmModelingRelated_SelectElement` "{0}")
-and the relationship type (`modeling-related-relationship-{id}`, named
-`TmModelingRelated_SelectRelationship` "{0}") — never nested; a relationship-view row is one
-native button. A counterpart that does not resolve renders the localized `TmModelingEditor_Unknown`
+`outgoing | incoming | source | target`. Each element-view row holds TWO native buttons whose
+ids carry the row's direction too — the counterpart
+(`modeling-related-{direction}-counterpart-{id}`, named `TmModelingRelated_SelectElement` "{0}")
+and the relationship type (`modeling-related-{direction}-relationship-{id}`, named
+`TmModelingRelated_SelectRelationshipTo` "Select relationship {0} to {1}" outgoing /
+`TmModelingRelated_SelectRelationshipFrom` "Select relationship {0} from {1}" incoming, {1} =
+the counterpart display name) — never nested; a relationship-view row is one native button. A
+counterpart that does not resolve renders the localized `TmModelingEditor_Unknown`
 fallback as plain content (never a dead button), a self-reference renders safely in both
-directions, the empty state is `TmModelingRelated_Empty`, rows reach 44px on a coarse pointer and
-the by-element index is built ONCE per `Relationships` reference (guarded by
-`Relationships_index_memoized`).
+directions (and the tab badge counts both rows — one index pass, each direction separately),
+the empty state is `TmModelingRelated_Empty`, rows reach 44px on a coarse pointer, rows carry
+`@key` and BOTH indexes — the by-element relationship index AND the by-id element lookup — are
+built ONCE per `Relationships` / `Elements` reference (guarded by
+`Relationships_index_memoized` / `Element_index_memoized`).
 
 ### `TmModelingViewSelector`, `TmModelingSourcePanel`, `TmModelingInspector`
 
@@ -350,6 +358,7 @@ Panel test ids (`modeling-model-tree-panel`, `modeling-preview-panel`, `modeling
 `modeling-issues-panel`, `modeling-panel-tab-*`, `modeling-tab-properties`,
 `modeling-tab-relations`, `modeling-tab-source`, `modeling-related-panel`,
 `modeling-related-{outgoing|incoming|source|target}-{relationshipId}`,
+`modeling-related-{outgoing|incoming}-{counterpart|relationship}-{relationshipId}`,
 `modeling-tree-drawer`, `modeling-inspector-sheet`, `modeling-sheet-close`,
 `modeling-open-diagram-editor`, `modeling-open-diagram-close`) are the contract for hosts and
 E2E — never positional selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM. The

@@ -194,6 +194,49 @@ internal sealed class RelatedElementsModelingModelProvider : IModelingModelProvi
 }
 
 /// <summary>
+/// Phase 13 review provider: ONE element with a SELF-REFERENCE relationship (source == target ==
+/// the element), so the Relations tab renders the row in BOTH groups and the badge must count
+/// both directions — the two rows the tab really shows.
+/// </summary>
+internal sealed class SelfReferenceRelatedModelingModelProvider : IModelingModelProvider
+{
+    public const string Key = "tempo.tests.modeling.related.self";
+
+    public string ProviderKey => Key;
+
+    public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var model = new ModelingModelDto
+        {
+            Id = "modeling-editor-related-self",
+            Title = "Modeling editor related elements (self-reference)",
+            Metadata = new ModelingMetadataDto { SourceSystem = "Unit tests" }
+        };
+
+        model.Elements.Add(new ModelingElementDto { Id = "task-loop", Notation = "bpmn", SemanticType = "userTask", Name = "Loop task" });
+        model.Relationships.Add(new ModelingRelationshipDto
+        {
+            Id = "rel-loop",
+            SourceElementId = "task-loop",
+            TargetElementId = "task-loop",
+            RelationshipType = "sequenceFlow",
+            Name = "Self loop"
+        });
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "main-view",
+            Name = "Main view",
+            Notation = "bpmn",
+            Nodes = [new() { ElementId = "task-loop", X = 80, Y = 120, Width = 120, Height = 80 }],
+            Connections = [new() { RelationshipId = "rel-loop", SourceNodeId = "task-loop", TargetNodeId = "task-loop" }]
+        });
+
+        return Task.FromResult(model);
+    }
+}
+
+/// <summary>
 /// A TimeProvider that keeps the editor's SHORT loading delays off the real-timer path:
 /// every delay at or below <see cref="ImmediateThreshold"/> fires its callback on the spot
 /// (so <c>Task.Delay(minimum-loading, this)</c> completes synchronously and the load pipeline

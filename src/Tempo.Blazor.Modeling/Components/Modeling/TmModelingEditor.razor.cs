@@ -54,6 +54,16 @@ public partial class TmModelingEditor : IAsyncDisposable
     private bool _shouldRestoreOpenButtonFocus;
     private bool _focusInspectorAfterRender;
 
+    /// <summary>Armed by a Relations-tab row activation (phase 13 review): the next render moves
+    /// DOM focus onto the inspector's Properties tab button through its data-modeling-focus hook
+    /// (desktop and tablet — the tab exists in the docked panel and in the inspector sheet).</summary>
+    private bool _focusInspectorPropertiesTabAfterRender;
+
+    /// <summary>Armed by a Relations-tab row activation on the MOBILE band: the section updates
+    /// in place inside the Inspector tab and the activated row may unmount, so focus lands on
+    /// the related panel's own hook (the G2 element hop never leaves the tab).</summary>
+    private bool _focusRelatedPanelAfterRender;
+
     /// <summary>Armed by a desktop issues-dock collapse/expand (final UX review M5): the next
     /// render re-fits the embedded preview through <see cref="TmModelingDiagramPreview.RefreshViewportAsync"/>.</summary>
     private bool _refitPreviewAfterRender;
@@ -183,7 +193,12 @@ public partial class TmModelingEditor : IAsyncDisposable
             };
             _propertiesTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                ["data-testid"] = TestId("modeling-tab-properties")
+                ["data-testid"] = TestId("modeling-tab-properties"),
+
+                // Phase 13 review: the row-activation focus hook — a Relations-tab navigation
+                // returns the docked inspector to the Properties tab AND moves DOM focus onto
+                // that tab button (the stable data-modeling-focus hook, never a test id).
+                ["data-modeling-focus"] = "inspector-tab-properties"
             };
             _relationsTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
             {
@@ -512,6 +527,24 @@ public partial class TmModelingEditor : IAsyncDisposable
             await FocusWithinAsync(InspectorPanelFocusSelector);
         }
 
+        if (_focusInspectorPropertiesTabAfterRender)
+        {
+            // Phase 13 review: a Relations-tab navigation returned the docked inspector to the
+            // Properties tab — the focus follows it onto the tab button (which now owns the
+            // activated row's focus), so keyboard users resume from the tab they landed on.
+            _focusInspectorPropertiesTabAfterRender = false;
+            await FocusWithinAsync(InspectorPropertiesTabFocusSelector);
+        }
+
+        if (_focusRelatedPanelAfterRender)
+        {
+            // Phase 13 review (mobile element hop): the Relations SECTION re-rendered in place
+            // inside the mobile Inspector tab and the activated row may have unmounted — focus
+            // lands on the panel's own hook instead of falling back to the document body.
+            _focusRelatedPanelAfterRender = false;
+            await FocusWithinAsync(RelatedPanelFocusSelector);
+        }
+
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
@@ -815,32 +848,6 @@ public partial class TmModelingEditor : IAsyncDisposable
 
         var relationship = _model.Relationships.FirstOrDefault(item => string.Equals(item.Id, relationshipId, StringComparison.Ordinal));
         return relationship is not null ? SelectRelatedRelationshipAsync(relationship) : Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Fáze 13: the Relations tab's element navigation — the SAME path a tree or issue selection
-    /// takes (the selection state plus the tablet sheet rule), so a counterpart activation lands
-    /// in the tree, the preview contract and the inspector exactly like any other selection. The
-    /// docked inspector returns to the Properties tab, presenting the navigated-to element.
-    /// </summary>
-    private Task SelectRelatedElementAsync(ModelingElementDto element)
-    {
-        _inspectorTab = "properties";
-        return SelectElementAsync(element);
-    }
-
-    /// <summary>
-    /// Fáze 13: the Relations tab's relationship navigation — the resolved-DTO form of
-    /// <see cref="SelectRelationshipAsync"/> (an edge pick already resolves the id the same way)
-    /// with the inspector focus switch a relationship selection carries. The docked inspector
-    /// returns to the Properties tab, presenting the navigated-to relationship.
-    /// </summary>
-    private Task SelectRelatedRelationshipAsync(ModelingRelationshipDto relationship)
-    {
-        _inspectorTab = "properties";
-        _selectedElement = null;
-        _selectedRelationship = relationship;
-        return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
     }
 
     private Task SelectIssueAsync(ModelingIssueDto issue)

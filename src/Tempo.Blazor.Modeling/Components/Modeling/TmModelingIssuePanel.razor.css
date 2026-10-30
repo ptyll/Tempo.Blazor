@@ -440,21 +440,21 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 /* The search input and the sort select shrink to fit the row remainder and wrap below the
    chips on narrow bands. Review fix: both controls are compacted to the 32px row so the bar
    measures ~40px (the 38px input token would blow the single-row target). The wrappers are
-   PANEL-OWNED elements — the panel's scope attribute never lands on a child component root,
-   so every child-internal rule goes through ::deep. */
+   PANEL-OWNED elements — the panel's scope attribute never lands on a child component root.
+   Review fix (phase 13, UnconstrainedClassOwnershipTests): the child internals are NOT claimed
+   from here — the core `.tm-input`/`.tm-select` already consume `--tm-input-height-md`, so the
+   compaction is a token OVERRIDE on the wrapper (custom properties inherit into the child)
+   instead of a second `::deep` height claim on a core class. */
 .tm-modeling-issue-panel__filter-input {
     display: flex;
     flex: 1 1 12rem;
     align-items: center;
     min-width: 0;
+    --tm-input-height-md: var(--tm-space-8);
 }
 
 .tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
     min-height: var(--tm-space-8);
-}
-
-.tm-modeling-issue-panel__filter-input ::deep .tm-input {
-    height: var(--tm-space-8);
 }
 
 /* Review fix: the sort control is a single-row wrapper — the visible label sits INLINE left
@@ -532,14 +532,11 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 
     .tm-modeling-issue-panel__filter-input {
         min-height: var(--tm-touch-target);
+        --tm-input-height-md: var(--tm-touch-target);
     }
 
     .tm-modeling-issue-panel__filter-input ::deep .tm-input-container {
         min-height: var(--tm-touch-target);
-    }
-
-    .tm-modeling-issue-panel__filter-input ::deep .tm-input {
-        height: var(--tm-touch-target);
     }
 
     .tm-modeling-issue-panel__filter-sort {

@@ -581,10 +581,32 @@
 /* The docked inspector fills its aside like the tree panel does (one full-height column); the
    tab strip stays reachable while the tab body scrolls inside the shell's aside. No header
    slots are in use, so the strip is the direct .tm-tabs > .tm-tabs__header child. The strip's
-   hairline comes from the core .tm-tabs--line rule — no duplicate here. */
+   hairline comes from the core .tm-tabs--line rule — no duplicate here.
+   Review fix (phase 13): the THREE-tab strip (Properties | Relations | Source) must fit the
+   280px aside — the strip re-declares the core --tm-tab-padding-x row metric to --tm-space-3
+   (the value the core's own ≤640px band uses) instead of the default 1rem, the tabs may SHRINK
+   below their label (flex-shrink + min-width: 0) and the label span ellipsizes, so the Source
+   tab's right edge stays inside the panel at 1440 and in the longest localized labels alike.
+   The Relations tab body pads itself through its own .tm-modeling-related rule. */
 .tm-modeling-editor__inspector {
     min-height: 0;
     height: 100%;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tabs {
+    --tm-tab-padding-x: var(--tm-space-3);
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tab {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tab .tm-tab__label {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tm-modeling-editor__inspector ::deep .tm-tabs__header {

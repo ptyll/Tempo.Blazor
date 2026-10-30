@@ -96,6 +96,40 @@ public partial class TmModelingRelatedElementsPanel
         bucket.Add(relationship);
     }
 
+    // ── Memoized by-id element index (phase 13 review) ───────────────────────
+
+    private IReadOnlyList<ModelingElementDto>? _indexedElements;
+    private readonly Dictionary<string, ModelingElementDto> _elementsById = new(StringComparer.Ordinal);
+    private int _elementIndexBuildCount;
+
+    /// <summary>Test seam (InternalsVisibleTo): how many times the by-id element index was built.</summary>
+    internal int ElementIndexBuildCount => _elementIndexBuildCount;
+
+    /// <summary>
+    /// Builds the by-id element lookup ONCE per <see cref="Elements"/> reference, so resolving a
+    /// row's counterpart is a dictionary hit instead of a linear <c>FirstOrDefault</c> scan per
+    /// row per render (M26: a 500-row model keeps the tab body inside the render budget).
+    /// </summary>
+    private void EnsureElementIndex()
+    {
+        if (ReferenceEquals(Elements, _indexedElements))
+        {
+            return;
+        }
+
+        _elementsById.Clear();
+        foreach (var element in Elements)
+        {
+            if (!string.IsNullOrWhiteSpace(element.Id) && !_elementsById.ContainsKey(element.Id))
+            {
+                _elementsById.Add(element.Id, element);
+            }
+        }
+
+        _indexedElements = Elements;
+        _elementIndexBuildCount++;
+    }
+
     /// <summary>The outgoing and incoming groups of the selected element (in input order, no re-sort).</summary>
     private (IReadOnlyList<ModelingRelationshipDto> Outgoing, IReadOnlyList<ModelingRelationshipDto> Incoming) GroupsForElement
     {
@@ -113,8 +147,11 @@ public partial class TmModelingRelatedElementsPanel
     /// direction: the TARGET of an outgoing relationship, the SOURCE of an incoming one.</summary>
     private ModelingElementDto? ResolveCounterpart(ModelingRelationshipDto relationship, bool outgoing)
     {
+        EnsureElementIndex();
         var counterpartId = outgoing ? relationship.TargetElementId : relationship.SourceElementId;
-        return Elements.FirstOrDefault(element => string.Equals(element.Id, counterpartId, StringComparison.Ordinal));
+        return string.IsNullOrWhiteSpace(counterpartId) || !_elementsById.TryGetValue(counterpartId, out var element)
+            ? null
+            : element;
     }
 
     /// <summary>Display name of a counterpart: the name, the raw id, else the localized Unknown fallback.</summary>
@@ -133,10 +170,8 @@ public partial class TmModelingRelatedElementsPanel
                 ? relationship.Name
                 : Loc["TmModelingEditor_Unknown"];
 
-    /// <summary>Whether the counterpart resolves — an unresolved id renders the Unknown fallback NON-interactively.</summary>
-    private static bool CounterpartIsNavigable(ModelingElementDto? counterpart) => counterpart is not null;
-
     private string RootAriaLabel => Loc["TmModelingEditor_Relations"];
+    private string TitleId { get; } = $"tm-modeling-related-title-{Guid.NewGuid():N}";
     private string OutgoingGroupId { get; } = $"tm-modeling-related-outgoing-{Guid.NewGuid():N}";
     private string IncomingGroupId { get; } = $"tm-modeling-related-incoming-{Guid.NewGuid():N}";
     private string SourceGroupId { get; } = $"tm-modeling-related-source-{Guid.NewGuid():N}";

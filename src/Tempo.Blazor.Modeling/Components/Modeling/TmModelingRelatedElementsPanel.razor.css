@@ -4,7 +4,15 @@
 .tm-modeling-related {
     display: grid;
     gap: var(--tm-space-4);
+    align-content: start;
+    padding: var(--tm-space-4);
     color: var(--tm-color-text);
+
+    /* Component-local knobs (review fix, phase 13 — no bare literals in the rules below):
+       the trailing relationship-type chip truncates at 7x the base spacing unit and the group
+       heading keeps a subtle tracking for its small-caps look. */
+    --tm-modeling-related-type-max-width: calc(var(--tm-space-8) * 7);
+    --tm-modeling-related-group-tracking: 0.02em;
 }
 
 .tm-modeling-related__group {
@@ -22,7 +30,7 @@
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--tm-modeling-related-group-tracking);
 }
 
 .tm-modeling-related__count {
@@ -96,7 +104,7 @@
 }
 
 .tm-modeling-related__type .tm-modeling-related__text {
-    max-width: 14rem;
+    max-width: var(--tm-modeling-related-type-max-width);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

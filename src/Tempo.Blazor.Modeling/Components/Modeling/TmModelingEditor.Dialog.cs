@@ -22,6 +22,17 @@ public partial class TmModelingEditor
     /// an issue/edge tap moves focus onto after switching the tab, Fáze 7 re-review).</summary>
     internal const string InspectorPanelFocusSelector = "[data-modeling-focus='inspector-panel']";
 
+    /// <summary>Stable, test-id-independent focus hook of the docked inspector's Properties TAB
+    /// button (phase 13 review): a Relations-tab row activation returns the inspector to the
+    /// Properties tab and moves DOM focus onto that tab — the button carries the hook in the
+    /// docked panel and in the tablet inspector sheet alike.</summary>
+    internal const string InspectorPropertiesTabFocusSelector = "[data-modeling-focus='inspector-tab-properties']";
+
+    /// <summary>Stable, test-id-independent focus hook of the Relations panel root (phase 13
+    /// review): the mobile element hop re-renders the section in place and focuses it, because
+    /// the activated row may have unmounted with the previous selection.</summary>
+    internal const string RelatedPanelFocusSelector = "[data-modeling-focus='related-panel']";
+
     /// <summary>Focus-return trigger of the compact header "⋯" (the mobile open-editor entry).</summary>
     internal const string MobileHeaderTriggerSelector = ".tm-modeling-editor__more .tm-dropdown-trigger";
 

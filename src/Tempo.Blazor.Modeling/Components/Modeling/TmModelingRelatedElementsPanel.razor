@@ -10,7 +10,13 @@
 <section class="@RootClass"
          data-testid="@TestId("modeling-related-panel")"
          data-kind="@Kind"
-         aria-label="@RootAriaLabel">
+         tabindex="-1"
+         data-modeling-focus="related-panel"
+         aria-labelledby="@TitleId">
+    @* Review fix (phase 13): the groups are <div>s under one sr-only <h3> — the h4 group
+       headings hang off a real heading in the outline (the tab body renders no other heading)
+       and the root stays a focus hook for the mobile element hop, not a tab stop. *@
+    <h3 id="@TitleId" class="tm-sr-only">@RootAriaLabel</h3>
     @if (Element is not null)
     {
         var (outgoing, incoming) = GroupsForElement;
@@ -22,7 +28,7 @@
         {
             @if (outgoing.Count > 0)
             {
-                <section class="tm-modeling-related__group" aria-labelledby="@OutgoingGroupId">
+                <div class="tm-modeling-related__group" aria-labelledby="@OutgoingGroupId">
                     <h4 id="@OutgoingGroupId" class="tm-modeling-related__group-title" data-testid="@TestId("modeling-related-group-outgoing")">
                         <span>@Loc["TmModelingRelated_Outgoing"]</span>
                         <span class="tm-modeling-related__count">
@@ -33,13 +39,14 @@
                     <ul class="tm-modeling-related__rows">
                         @foreach (var relationship in outgoing)
                         {
-                            <li class="tm-modeling-related__row" data-testid="@($"modeling-related-outgoing-{relationship.Id}")">
+                            var counterpartDisplay = CounterpartDisplay(ResolveCounterpart(relationship, outgoing: true));
+                            <li class="tm-modeling-related__row" @key="@relationship.Id" data-testid="@($"modeling-related-outgoing-{relationship.Id}")">
                                 @CounterpartAction(relationship, outgoing: true)
                                 <button type="button"
                                         class="tm-modeling-related__type"
-                                        data-testid="@($"modeling-related-relationship-{relationship.Id}")"
-                                        aria-label="@Loc["TmModelingRelated_SelectRelationship", RelationshipTypeDisplay(relationship)]"
-                                        title="@Loc["TmModelingRelated_SelectRelationship", RelationshipTypeDisplay(relationship)]"
+                                        data-testid="@($"modeling-related-outgoing-relationship-{relationship.Id}")"
+                                        aria-label="@Loc["TmModelingRelated_SelectRelationshipTo", RelationshipTypeDisplay(relationship), counterpartDisplay]"
+                                        title="@Loc["TmModelingRelated_SelectRelationshipTo", RelationshipTypeDisplay(relationship), counterpartDisplay]"
                                         @onclick='() => OnRelationshipSelected.InvokeAsync(relationship)'>
                                     <span class="tm-modeling-related__icon" aria-hidden="true">
                                         <TmIcon Name="@IconNames.Link2" Size="IconSize.Sm" />
@@ -49,11 +56,11 @@
                             </li>
                         }
                     </ul>
-                </section>
+                </div>
             }
             @if (incoming.Count > 0)
             {
-                <section class="tm-modeling-related__group" aria-labelledby="@IncomingGroupId">
+                <div class="tm-modeling-related__group" aria-labelledby="@IncomingGroupId">
                     <h4 id="@IncomingGroupId" class="tm-modeling-related__group-title" data-testid="@TestId("modeling-related-group-incoming")">
                         <span>@Loc["TmModelingRelated_Incoming"]</span>
                         <span class="tm-modeling-related__count">
@@ -64,13 +71,14 @@
                     <ul class="tm-modeling-related__rows">
                         @foreach (var relationship in incoming)
                         {
-                            <li class="tm-modeling-related__row" data-testid="@($"modeling-related-incoming-{relationship.Id}")">
+                            var counterpartDisplay = CounterpartDisplay(ResolveCounterpart(relationship, outgoing: false));
+                            <li class="tm-modeling-related__row" @key="@relationship.Id" data-testid="@($"modeling-related-incoming-{relationship.Id}")">
                                 @CounterpartAction(relationship, outgoing: false)
                                 <button type="button"
                                         class="tm-modeling-related__type"
-                                        data-testid="@($"modeling-related-relationship-{relationship.Id}")"
-                                        aria-label="@Loc["TmModelingRelated_SelectRelationship", RelationshipTypeDisplay(relationship)]"
-                                        title="@Loc["TmModelingRelated_SelectRelationship", RelationshipTypeDisplay(relationship)]"
+                                        data-testid="@($"modeling-related-incoming-relationship-{relationship.Id}")"
+                                        aria-label="@Loc["TmModelingRelated_SelectRelationshipFrom", RelationshipTypeDisplay(relationship), counterpartDisplay]"
+                                        title="@Loc["TmModelingRelated_SelectRelationshipFrom", RelationshipTypeDisplay(relationship), counterpartDisplay]"
                                         @onclick='() => OnRelationshipSelected.InvokeAsync(relationship)'>
                                     <span class="tm-modeling-related__icon" aria-hidden="true">
                                         <TmIcon Name="@IconNames.Link2" Size="IconSize.Sm" />
@@ -80,24 +88,24 @@
                             </li>
                         }
                     </ul>
-                </section>
+                </div>
             }
         }
     }
     else if (Relationship is not null)
     {
-        <section class="tm-modeling-related__group" aria-labelledby="@SourceGroupId">
+        <div class="tm-modeling-related__group" aria-labelledby="@SourceGroupId">
             <h4 id="@SourceGroupId" class="tm-modeling-related__group-title" data-testid="@TestId("modeling-related-group-source")">
                 <span>@Loc["TmModelingRelated_Source"]</span>
             </h4>
             @EndpointAction(Relationship, outgoing: false, $"modeling-related-source-{Relationship.Id}")
-        </section>
-        <section class="tm-modeling-related__group" aria-labelledby="@TargetGroupId">
+        </div>
+        <div class="tm-modeling-related__group" aria-labelledby="@TargetGroupId">
             <h4 id="@TargetGroupId" class="tm-modeling-related__group-title" data-testid="@TestId("modeling-related-group-target")">
                 <span>@Loc["TmModelingRelated_Target"]</span>
             </h4>
             @EndpointAction(Relationship, outgoing: true, $"modeling-related-target-{Relationship.Id}")
-        </section>
+        </div>
     }
     else
     {
@@ -107,14 +115,15 @@
 
 @code {
     /// <summary>The counterpart action of an element-view row: a native button when the element
-    /// resolves, a non-interactive Unknown fallback when the id is dangling (never a dead button).</summary>
+    /// resolves, a non-interactive Unknown fallback when the id is dangling (never a dead button).
+    /// The test id carries the row's direction so the two row actions stay distinguishable.</summary>
     private RenderFragment CounterpartAction(ModelingRelationshipDto relationship, bool outgoing) => @<text>
         @if (ResolveCounterpart(relationship, outgoing) is { } counterpart)
         {
             var display = CounterpartDisplay(counterpart);
             <button type="button"
                     class="tm-modeling-related__nav"
-                    data-testid="@($"modeling-related-counterpart-{relationship.Id}")"
+                    data-testid="@($"modeling-related-{(outgoing ? "outgoing" : "incoming")}-counterpart-{relationship.Id}")"
                     aria-label="@Loc["TmModelingRelated_SelectElement", display]"
                     title="@Loc["TmModelingRelated_SelectElement", display]"
                     @onclick='() => OnElementSelected.InvokeAsync(counterpart)'>
@@ -126,7 +135,7 @@
         }
         else
         {
-            <span class="tm-modeling-related__nav tm-modeling-related__nav--static" data-testid="@($"modeling-related-counterpart-{relationship.Id}")">
+            <span class="tm-modeling-related__nav tm-modeling-related__nav--static" data-testid="@($"modeling-related-{(outgoing ? "outgoing" : "incoming")}-counterpart-{relationship.Id}")">
                 <span class="tm-modeling-related__icon" aria-hidden="true">
                     <TmIcon Name="@ModelingSemanticTypeIcons.Fallback" Size="IconSize.Sm" />
                 </span>
