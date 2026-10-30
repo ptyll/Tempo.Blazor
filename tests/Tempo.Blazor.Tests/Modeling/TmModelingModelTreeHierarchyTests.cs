@@ -158,6 +158,10 @@ public sealed class TmModelingModelTreeHierarchyTests : LocalizationTestBase
         var parent = cut.Find("[data-testid='modeling-tree-node-process-1']");
         parent.GetAttribute("aria-expanded").Should().Be("true");
         parent.GetAttribute("aria-controls").Should().NotBeNullOrEmpty();
+        parent.GetAttribute("aria-owns").Should().Be(parent.GetAttribute("aria-controls"),
+            "the treeitem owns its children group explicitly (the group is a sibling container, not a DOM descendant)");
+        cut.Find($"[id='{parent.GetAttribute("aria-owns")}']").GetAttribute("role").Should().Be("group",
+            "aria-owns targets the rendered children group");
         parent.QuerySelector(".tm-modeling-model-tree__type-chevron svg").Should().NotBeNull(
             "a parent node carries a chevron");
         parent.QuerySelector(".tm-modeling-model-tree__child-count")!.TextContent.Should().Be("2",
@@ -177,6 +181,130 @@ public sealed class TmModelingModelTreeHierarchyTests : LocalizationTestBase
         var css = File.ReadAllText(FindTreeCssPath()).Replace("\r\n", "\n", StringComparison.Ordinal);
         css.Should().Contain("var(--tm-modeling-tree-level",
             "the indentation is token-driven, not hard-coded pixels");
+    }
+
+    [Fact]
+    public async Task ArrowDown_from_a_collapsed_parent_moves_to_the_next_visible_sibling()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateHierarchyElements()));
+
+        cut.Find("[data-testid='modeling-tree-node-task-approve'] .tm-modeling-model-tree__type-chevron").Click();
+        cut.FindAll("[data-testid='modeling-tree-node-sub-1']").Should().BeEmpty("the branch is collapsed");
+
+        cut.Find("[data-testid='modeling-tree-node-task-approve']").KeyDown("ArrowDown");
+
+        cut.WaitForAssertion(() => module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().Contain("task-review",
+                "ArrowDown walks the VISIBLE list — never into a collapsed branch"));
+        await cut.Instance.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task End_stops_at_the_last_visible_node_of_a_collapsed_branch()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateTwoBranches()));
+
+        cut.Find("[data-testid='modeling-tree-node-root-2'] .tm-modeling-model-tree__type-chevron").Click();
+        cut.FindAll("[data-testid='modeling-tree-node-child-2']").Should().BeEmpty("root-2's branch is collapsed");
+
+        cut.Find("[data-testid='modeling-tree-node-root-1']").KeyDown("End");
+
+        cut.WaitForAssertion(() => module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().Contain("root-2",
+                "End lands on the last VISIBLE node — the collapsed root-2 itself, never its hidden child-2"));
+        module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().NotContain("child-2", "a node inside a collapsed branch is not on the visible list");
+        await cut.Instance.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Home_and_End_traverse_across_levels()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateHierarchyElements()));
+
+        // End from a LEVEL-4 node lands on the LAST treeitem (a level-1 root)…
+        cut.Find("[data-testid='modeling-tree-node-task-deep']").KeyDown("End");
+        cut.WaitForAssertion(() => module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().Contain("system-customer", "End jumps to the last visible node across levels"));
+
+        // …and Home from it returns to the FIRST treeitem (also level 1).
+        cut.Find("[data-testid='modeling-tree-node-system-customer']").KeyDown("Home");
+        cut.WaitForAssertion(() => module.Invocations
+            .Where(invocation => invocation.Identifier == "focusTreeElement")
+            .Select(invocation => invocation.Arguments[1])
+            .Should().Contain("process-1", "Home jumps to the first visible node across levels"));
+        await cut.Instance.DisposeAsync();
+    }
+
+    [Fact]
+    public void Clicking_a_level_three_node_gives_it_the_single_roving_tabindex()
+    {
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateHierarchyElements()));
+
+        cut.Find("[data-testid='modeling-tree-node-sub-1']").Click();
+
+        cut.Find("[data-testid='modeling-tree-node-sub-1']").GetAttribute("tabindex").Should().Be("0");
+        cut.FindAll("[role='tree'] [role='treeitem']")
+            .Count(item => item.GetAttribute("tabindex") == "0")
+            .Should().Be(1, "exactly ONE treeitem carries the roving tabindex after a click");
+    }
+
+    [Fact]
+    public async Task External_selection_moves_the_roving_tabindex_to_the_hierarchy_node()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusTreeElement", _ => true).SetVoidResult();
+        module.SetupVoid("scrollTreeElementIntoView", _ => true).SetVoidResult();
+
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateHierarchyElements()));
+
+        var selected = CreateHierarchyElements().First(element => element.Id == "task-deep");
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object?> { [nameof(TmModelingModelTree.SelectedElement)] = selected })));
+
+        cut.Find("[data-testid='modeling-tree-node-task-deep']").GetAttribute("tabindex")
+            .Should().Be("0", "the roving tabindex follows an external selection in hierarchy mode too");
+        cut.FindAll("[role='tree'] [role='treeitem']")
+            .Count(item => item.GetAttribute("tabindex") == "0")
+            .Should().Be(1, "the node:{id} key matches the hierarchy flat list");
+        await cut.Instance.DisposeAsync();
+    }
+
+    [Fact]
+    public void Branch_grid_rule_is_declared_after_and_specificity_above_the_base_rule()
+    {
+        var css = File.ReadAllText(FindTreeCssPath()).Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        var baseIndex = css.IndexOf(".tm-modeling-model-tree__node {\n", StringComparison.Ordinal);
+        var branchIndex = css.IndexOf(".tm-modeling-model-tree__node.tm-modeling-model-tree__node--branch", StringComparison.Ordinal);
+
+        baseIndex.Should().BePositive("the base node rule exists");
+        branchIndex.Should().BePositive("the branch modifier doubles the class for specificity");
+        branchIndex.Should().BeGreaterThan(baseIndex,
+            "the branch grid rule must win over the base 3-track rule (same-property cascade)");
+        css.Should().Contain(".tm-modeling-model-tree__node.tm-modeling-model-tree__node--branch {\n    grid-template-columns: auto auto auto minmax(0, 1fr) auto;");
     }
 
     [Fact]
@@ -416,6 +544,16 @@ public sealed class TmModelingModelTreeHierarchyTests : LocalizationTestBase
         new() { Id = "sub-1", SemanticType = "subProcess", Name = "Inner subprocess", ParentId = "task-approve" },
         new() { Id = "task-deep", SemanticType = "serviceTask", Name = "Deep task", ParentId = "sub-1" },
         new() { Id = "system-customer", SemanticType = "applicationComponent", Name = "Customer portal" }
+    ];
+
+    /// <summary>Two sibling branches: End must stop at child-1 when root-2's branch is collapsed —
+    /// the hidden child-2 is not on the visible list.</summary>
+    private static ModelingElementDto[] CreateTwoBranches() =>
+    [
+        new() { Id = "root-1", SemanticType = "subProcess", Name = "Root 1" },
+        new() { Id = "child-1", SemanticType = "userTask", Name = "Child 1", ParentId = "root-1" },
+        new() { Id = "root-2", SemanticType = "subProcess", Name = "Root 2" },
+        new() { Id = "child-2", SemanticType = "userTask", Name = "Child 2", ParentId = "root-2" }
     ];
 }
 

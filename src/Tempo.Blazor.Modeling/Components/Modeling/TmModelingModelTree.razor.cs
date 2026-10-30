@@ -140,8 +140,6 @@ public partial class TmModelingModelTree : IAsyncDisposable
     [Parameter] public EventCallback<IReadOnlyCollection<string>> CollapsedGroupsChanged { get; set; }
 
     /// <summary>
-
-    /// <summary>
     /// Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS
     /// the internal filter whenever the host hands over a new value and is never assigned inside
     /// the component — user edits update the working copy, clear the transient filter-collapse
@@ -244,7 +242,15 @@ public partial class TmModelingModelTree : IAsyncDisposable
         => activeTreeItemId == $"group:{groupKey}" ? "0" : "-1";
 
     private string GetNodeTabIndex(string elementId, string activeTreeItemId)
-        => activeTreeItemId == $"element:{elementId}" ? "0" : "-1";
+        => activeTreeItemId == ElementEntryId(elementId) ? "0" : "-1";
+
+    /// <summary>The roving-tabindex key of an ELEMENT row: the hierarchy view keys its flat
+    /// entries <c>node:{id}</c> while the SemanticType groups key <c>element:{id}</c>. One
+    /// helper so the click and external-selection paths can never drift from the flat list
+    /// (phase 12 review: the external selection keyed <c>element:</c> in hierarchy mode and no
+    /// node ever matched the roving state).</summary>
+    private string ElementEntryId(string elementId)
+        => IsHierarchyMode ? $"node:{elementId}" : $"element:{elementId}";
 
     /// <inheritdoc />
     /// <remarks>
@@ -341,7 +347,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
             if (!string.IsNullOrWhiteSpace(SelectedElement.Id))
             {
-                _activeTreeItemId = $"element:{SelectedElement.Id}";
+                _activeTreeItemId = ElementEntryId(SelectedElement.Id);
             }
 
             if (!string.IsNullOrWhiteSpace(SelectedElement.SemanticType))
@@ -458,7 +464,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private async Task SelectElementAsync(ModelingElementDto element)
     {
         SelectedElement = element;
-        _activeTreeItemId = $"element:{element.Id}";
+        _activeTreeItemId = ElementEntryId(element.Id);
         _renderPending = true;
         await SelectedElementChanged.InvokeAsync(element);
         await OnElementSelected.InvokeAsync(element);
@@ -491,7 +497,6 @@ public partial class TmModelingModelTree : IAsyncDisposable
             await CollapsedGroupsChanged.InvokeAsync(_collapsedGroups.ToArray());
         }
     }
-
 
     /// <summary>Keys on a GROUP treeitem over the ONE flat visible list
     /// [header, its nodes if expanded, next header…]: Up/Down/Home/End traverse, Right expands a
@@ -601,13 +606,17 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
     }
 
-    /// <summary>The flat visible list: every header followed by its rendered nodes.</summary>
+    /// <summary>The flat visible list: every header followed by its rendered nodes. Hierarchy
+    /// mode walks the <see cref="FilteredHierarchy"/> view with the collapse state applied — a
+    /// collapsed branch contributes only its OWN treeitem (phase 12 review blocker: the walk
+    /// always descended, so ArrowDown from a collapsed parent landed inside the closed branch
+    /// and End skipped past visible nodes to hidden ones).</summary>
     private List<TreeNavEntry> GetFlatVisibleEntries()
     {
         var entries = new List<TreeNavEntry>();
         if (IsHierarchyMode)
         {
-            AppendVisibleHierarchyEntries(_filteredHierarchy, entries);
+            AppendVisibleHierarchyEntries(FilteredHierarchy, entries);
             return entries;
         }
 
@@ -623,15 +632,17 @@ public partial class TmModelingModelTree : IAsyncDisposable
         return entries;
     }
 
-    private static void AppendVisibleHierarchyEntries(IReadOnlyList<HierarchyViewNode> nodes, List<TreeNavEntry> entries)
+    private void AppendVisibleHierarchyEntries(IReadOnlyList<HierarchyViewNode> nodes, List<TreeNavEntry> entries)
     {
         foreach (var node in nodes)
         {
             entries.Add(new TreeNavEntry("node", node.Element.Id));
-            AppendVisibleHierarchyEntries(node.Children, entries);
+            if (IsNodeExpanded(node))
+            {
+                AppendVisibleHierarchyEntries(node.Children, entries);
+            }
         }
     }
-
 
     private async Task FocusRelativeEntryAsync(string kind, string key, int offset)
     {
@@ -723,7 +734,6 @@ public partial class TmModelingModelTree : IAsyncDisposable
         => SelectedElement is not null
             && string.Equals(SelectedElement.Id, element.Id, StringComparison.Ordinal);
 
-
     private string GetNodeClass(ModelingElementDto element)
         => IsSelected(element)
             ? "tm-modeling-model-tree__node tm-modeling-model-tree__node--selected"
@@ -778,7 +788,6 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private string GetNodeAriaLabel(ModelingElementDto element)
         => $"{GetDisplayName(element)}, {GetNodeMetadata(element)}, {element.SemanticType}".Trim();
 
-
     /// <summary>The per-row "Insert into preview" name: the localized "{0}" pattern carries the
     /// element's display name (Fáze 6 review fix — the generic label could not tell two rows
     /// apart for a screen reader).</summary>
@@ -790,7 +799,6 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
     private string GetGroupHeaderTitle(bool expanded)
         => Loc[expanded ? "TmModelingModelTree_CollapseGroup" : "TmModelingModelTree_ExpandGroup"];
-
 
     /// <summary>Localized semantic-type label when the host provides one
     /// (<c>TmModelingSemanticType_{key}</c>), otherwise the humanized camel/Pascal key

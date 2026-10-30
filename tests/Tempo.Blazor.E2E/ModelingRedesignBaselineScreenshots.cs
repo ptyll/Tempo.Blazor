@@ -757,6 +757,30 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Phase 12: the hierarchy scenario at the three baseline viewports in light — the
+    /// nested APG tree (the BPMN subprocess parents its activities through
+    /// <c>ModelingElementDto.ParentId</c>) is the diff subject of the hierarchy phases.</summary>
+    [TestMethod]
+    [Description("Captures hierarchy-{w}x{h}: the ?scenario=hierarchy workspace at 1440x900, 1024x768 and 390x844 in light")]
+    public async Task Capture_Hierarchy()
+    {
+        foreach (var (width, height, touch) in new[] { (1440, 900, false), (1024, 768, true), (390, 844, true) })
+        {
+            var page = await OpenModelingPageAsync("?scenario=hierarchy&notation=bpmn", width, height, touch);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await WaitForStableZoomLabelAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"hierarchy-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
     /// <summary>
     /// Waits until the embedded diagram editor's zoom label stops changing (two identical
     /// samples ~250ms apart) — the JS fit pass is asynchronous, so a plain "nodes rendered"

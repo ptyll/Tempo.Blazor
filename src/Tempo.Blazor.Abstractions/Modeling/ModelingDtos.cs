@@ -112,7 +112,8 @@ public sealed class ModelingElementDto
     /// root. Additive in 2.10.0: drives the model tree's hierarchy view only — the diagram
     /// generator never maps it onto <see cref="ModelingViewNodeDto.ParentNodeId"/> (diagram
     /// nesting stays owned by the view). A value that does not resolve to another element of the
-    /// model is reported as a validation issue and the element renders at the tree root.
+    /// model is reported by the MCP validation (a <c>hierarchy</c> issue) and the element renders
+    /// at the tree root.
     /// </summary>
     public string ParentId
     {

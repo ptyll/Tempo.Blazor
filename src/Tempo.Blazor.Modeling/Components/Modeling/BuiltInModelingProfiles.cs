@@ -677,8 +677,21 @@ internal sealed class BpmnRelationshipRulesProvider : IModelingNotationRelations
         => values?.Any(candidate => string.Equals(candidate, value, StringComparison.OrdinalIgnoreCase)) == true;
 
     private static string ResolveBpmnContainerId(ModelingElementDto element, IReadOnlyDictionary<string, ModelingElementDto> elementsById)
-        => FirstNonEmptyProperty(element, "subProcessId", "subprocessId", "poolId", "pool")
-            ?? ResolveBpmnPoolId(element, elementsById);
+    {
+        var declared = FirstNonEmptyProperty(element, "subProcessId", "subprocessId", "poolId", "pool");
+        if (!string.IsNullOrWhiteSpace(declared))
+            return declared;
+
+        var pool = ResolveBpmnPoolId(element, elementsById);
+        if (!string.IsNullOrWhiteSpace(pool))
+            return pool;
+
+        // Phase 12: the semantic ParentId is the container when the model reports containment
+        // through the tree edge only (no poolId/subProcessId/parentId property) — the walk
+        // above already returned every Pool above the element, so its DIRECT parent is the
+        // remaining container (typically the owning SubProcess).
+        return element.ParentId;
+    }
 
     private static string ResolveBpmnPoolId(ModelingElementDto element, IReadOnlyDictionary<string, ModelingElementDto> elementsById)
     {
@@ -689,7 +702,10 @@ internal sealed class BpmnRelationshipRulesProvider : IModelingNotationRelations
         var visited = new HashSet<string>(StringComparer.Ordinal);
         while (true)
         {
-            var parentId = FirstNonEmptyProperty(current, "poolId", "pool", "parentId", "containerId");
+            // Declared containment properties first; the semantic ParentId (phase 12) is the
+            // fallback when the model reports the parent through the tree edge only.
+            var parentId = FirstNonEmptyProperty(current, "poolId", "pool", "parentId", "containerId")
+                ?? current.ParentId;
             if (string.IsNullOrWhiteSpace(parentId))
                 return string.Empty;
 

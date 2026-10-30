@@ -30,7 +30,7 @@ public sealed class ModelingTreeHierarchyPhase12E2ETests : WasmTestBase
         Assert.IsNotNull(await subprocess.GetAttributeAsync("style"), "the node carries the --tm-modeling-tree-level indent variable");
         Assert.IsTrue((await subprocess.GetAttributeAsync("style")!).Contains("--tm-modeling-tree-level: 1"),
             "the indent variable is token-driven per level");
-        Assert.IsNotNull(await subprocess.Locator(".tm-modeling-model-tree__type-chevron").CountAsync() > 0 ? "chevron" : null,
+        Assert.AreEqual(1, await subprocess.Locator(".tm-modeling-model-tree__type-chevron").CountAsync(),
             "a parent carries a disclosure chevron");
 
         var validate = page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']");

@@ -191,6 +191,9 @@
                 var expanded = HasChildren(node) && IsNodeExpanded(node);
                 var childrenId = HasChildren(node) && expanded ? GetHierarchyChildrenId(element.Id) : null;
             }
+            @* The children group is a SIBLING of the treeitem (a button cannot nest the rows),
+               so the ownership must be explicit for the accessibility tree: aria-owns (with
+               aria-controls) points at the group's DOM id while it is expanded. *@
             <button type="button"
                     class="@GetHierarchyNodeClass(node)"
                     style="@GetHierarchyLevelStyle(node)"
@@ -205,11 +208,12 @@
                     aria-posinset="@node.PositionInSet"
                     aria-expanded="@(HasChildren(node) ? expanded.ToString().ToLowerInvariant() : null)"
                     aria-controls="@childrenId"
+                    aria-owns="@childrenId"
                     aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
                     aria-label="@GetHierarchyNodeAriaLabel(node)"
                     aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert Control+Enter" : null)"
                     title="@GetDisplayName(element)"
-                    tabindex="@(activeTreeItemId == $"node:{element.Id}" ? "0" : "-1")"
+                    tabindex="@(activeTreeItemId == ElementEntryId(element.Id) ? "0" : "-1")"
                     @onclick="() => SelectElementAsync(element)"
                     @onkeydown="args => HandleHierarchyNodeKeyDownAsync(node, args)"
                     @onkeydown:stopPropagation="true"

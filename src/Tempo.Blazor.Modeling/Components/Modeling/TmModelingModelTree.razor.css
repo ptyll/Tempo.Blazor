@@ -199,15 +199,16 @@
 
 /* ── Phase 12: the ParentId hierarchy ────────────────────────────────────────
    Each hierarchy node button carries --tm-modeling-tree-level (its aria-level); the
-   token-driven indentation is computed HERE as (level − 1) × the --tm-space-4 step — no
-   hard-coded pixel in either language. Flat-mode nodes keep their own padding. */
+   token-driven indentation is computed HERE as the level-1 base indent plus (level − 1) × the
+   --tm-space-4 step — no hard-coded pixel in either language. Flat-mode nodes keep their own
+   padding. */
 .tm-modeling-model-tree__branch {
     display: grid;
     min-width: 0;
 }
 
 .tm-modeling-model-tree__branch .tm-modeling-model-tree__node {
-    padding-inline-start: calc((var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-4));
+    padding-inline-start: calc(var(--tm-space-2) + (var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-4));
 }
 
 .tm-modeling-model-tree__branch-children {
@@ -218,13 +219,24 @@
 }
 
 /* The disclosure affordance of a parent node (pointer path; the keyboard path is the APG
-   Right/Left arrows). Rotation mirrors the group chevron via the button's aria-expanded. */
+   Right/Left arrows). Rotation mirrors the group chevron via the button's aria-expanded. The
+   minimum size keeps the pointer affordance reachable (the coarse-pointer band grows it to the
+   full touch target). */
 .tm-modeling-model-tree__type-chevron {
     display: inline-grid;
     place-items: center;
+    min-width: var(--tm-space-6);
+    min-height: var(--tm-space-6);
     color: var(--tm-text-secondary);
     cursor: pointer;
     transition: transform var(--tm-transition-fast);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__type-chevron {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-modeling-model-tree__node[aria-expanded="false"] .tm-modeling-model-tree__type-chevron {
@@ -238,11 +250,8 @@
 }
 
 /* A parent node renders two extra leading tracks (chevron + direct child count pill) before
-   the icon/body/handle columns the flat nodes use. */
-.tm-modeling-model-tree__node--branch {
-    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
-}
-
+   the icon/body/handle columns the flat nodes use. The rule lives AFTER the base node rule
+   with raised specificity — a parent's 5-track grid must win over the base 3-track one. */
 .tm-modeling-model-tree__child-count {
     flex: 0 0 auto;
     min-width: var(--tm-space-5);
@@ -271,6 +280,14 @@
     font: inherit;
     text-align: left;
     cursor: grab;
+}
+
+/* A parent node renders two extra leading tracks (chevron + direct child count pill) before
+   the icon/body/handle columns the flat nodes use. Declared after the base rule AND with the
+   doubled class specificity — phase 12 review: the base 3-track grid used to override this
+   rule (same specificity, later in the file) and the branch columns never applied. */
+.tm-modeling-model-tree__node.tm-modeling-model-tree__node--branch {
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
 }
 
 .tm-modeling-model-tree__node:hover {

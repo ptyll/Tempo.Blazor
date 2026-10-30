@@ -127,6 +127,28 @@ public class ModelingHierarchyToolsTests
         backend.ModelOf(id).Elements.Should().HaveCount(2);
     }
 
+    [Fact]
+    public async Task DeleteElement_ChildrenFirstThenParentInOneBatch_Succeeds()
+    {
+        // The no-cascade refusal is satisfied WITHIN one batch: the child is deleted first, so
+        // by the time the parent's delete is applied it no longer has children — exactly the
+        // ordering the error message asks the agent for. One save, both elements gone.
+        var (backend, id) = Seeded();
+        var ops = """
+        [
+          { "op": "delete_element", "id": "task-1" },
+          { "op": "delete_element", "id": "subprocess-1" }
+        ]
+        """;
+
+        var result = Parse(await ModelingOperationTools.ApplyOperations(backend, backend, id, ops));
+
+        result.GetProperty("success").GetBoolean().Should().BeTrue();
+        result.GetProperty("applied").GetInt32().Should().Be(2);
+        backend.ModelOf(id).Elements.Should().BeEmpty();
+        backend.SaveCount.Should().Be(1);
+    }
+
     // ── validation ───────────────────────────────────────────────────────────────
 
     [Fact]
