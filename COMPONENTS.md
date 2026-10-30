@@ -7960,7 +7960,23 @@ interního DOM toolbaru:
 | `ShowPageView` | `bool` | `true` | Zobrazit okraje stránky |
 | `OnSelectedIdsChanged` | `EventCallback<string[]>` | — | Změna výběru |
 | `ExportHttpClientName` | `string` | `""` | Pojmenovaný HttpClient pro export SVG/PNG/PDF |
+| `ShowPageTabs` | `bool` | `true` | Fáze 9: `false` schová řadu záložek stránek ve všech layoutech (jednostránkový náhled nemá co přepínat). |
+| `FitToViewAsync(mode)` | metoda (`DiagramFitMode`) | — | Fáze 9: veřejný zoom-to-fit (`Page` = obě osy, `Width` = jen šířka kontejneru); zrcadlí `TmDiagramCanvas.FitToView(mode)`. |
+| `FitOnDocumentLoad` | `DiagramFitMode?` | `null` | Fáze 9: jeden fit po prvním renderu NOVÉ identity dokumentu; `Width` je fit mobilního náhledu na první načtení. |
+| `ShowMobileZoomOverlay` | `bool?` | `null` | Fáze 9: plovoucí pilulka − \| % \| + \| fit; `null` drží dosavadní pravidlo (mobilní layout + toolbar + Zoom skupina), `true` ji ukáže i bez chrome. |
+| `MinimapInitiallyCollapsed` | `bool` | `false` | Fáze 9: nasadí kartu/overlay minimapy jednou sbalenou (Modeling tablet dialog); mobilní pravidlo X1 se nemění. |
+| `PreferredStencilIds` | `IReadOnlyList<string>?` | `null` | Fáze 15: id šablon připíchnuté jako PRVNÍ knihovna toolboxu (`data-library-id="notation-palette"`, `data-pinned="true"`); ostatní knihovny startují sbalené, hledání je rozbalí všude. Neznámá id se ignorují. |
+| `PreferredStencilsLabel` | `string?` | `null` | Fáze 15: popis připíchnuté knihovny (Modeling předává zobrazované jméno notace); ignoruje se bez `PreferredStencilIds`. |
 | `Class` | `string?` | `null` | Volitelná CSS třída |
+
+**`TmDiagramStencilIcon` (Fáze 15):** veřejná miniatura šablony (`StencilId`, `Size`, `Class`) se
+stejnou text-trimming pipeline jako dlaždice toolboxu — pro hostitele, kteří prezentují šablony
+mimo toolbox (Modeling paleta a legenda). Vždy `aria-hidden="true"`; neznámé id renderuje
+generický fallback (`data-fallback="true"`).
+
+```razor
+<TmDiagramStencilIcon StencilId="bpmn2.task.user" Size="1rem" />
+```
 
 #### Responzivní rozsah (G2)
 
@@ -8324,7 +8340,7 @@ přehrává ho. Kompletní kontrakt — rozvržení dle MO1/G2, parametry, stabi
 ### TmModelingEditor
 
 Pracovní plocha editoru: hlavička (titulek + stavový badge, volitelný select Poskytovatel, Notace/Pohled),
-strom modelu, náhled diagramu se sbalitelným panelem Nálezů, inspektor se záložkami **Properties | Source**,
+strom modelu, náhled diagramu se sbalitelným panelem Nálezů, inspektor se záložkami **Properties | Relations | Source**,
 stavový řádek. Rozvržení řeší z **vlastního kontejneru** (768/1200): desktop ≥1200 renderuje přes jádrový
 `TmEditorShell`, tablet 768–1199 je Overlay (drawer/sheet, nejvýše jeden otevřený, oba zavřené po načtení),
 mobil <768 je G2 prohlížení + lehké úpravy (tab strip Preview | Tree | Inspector | Issues, status card,
@@ -8339,6 +8355,12 @@ akční lišta, bez dragu). Dialog „Otevřít v editoru" je jádrový `TmModal
 | `NotationKey` / `ViewpointKey` | `string?` | `null` | Předávají se poskytovateli/generátoru; změny hlásí `OnNotationChanged` / `OnViewpointChanged`. |
 | `OnDiagramGenerated` / `OnOpenInEditor` | `EventCallback<DiagramDocument>` | — | Po generování / otevření v plném editoru. |
 | `AllowNodeDrop` | `bool` | `true` | Znovupoužití prvku ze stromu do náhledu (drag i ne-drag alternativa); `false` odebere obojí. |
+| `TreeGrouping` | `ModelingTreeGrouping` | `Auto` | Fáze 12: `Auto` renderuje hierarchii `ParentId`, jakmile má alespoň jeden prvek rodiče; jinak ploché skupiny `SemanticType`. |
+| `AllowModelEditing` | `bool` | `false` | Fáze 14: zapne editaci inspektoru — aktivní jen s registered `IModelingModelWriter` nebo `OnModelChanged`. |
+| `SaveMode` | `ModelingSaveMode` | `Manual` | Fáze 14: `Manual` agreguje sadu změn do `SaveModelChangesAsync()`; `Immediate` volá writer po každém commitu pole. |
+| `OnModelChanged` | `EventCallback<ModelingModelChangedEventArgs>` | — | Po každém commitu pole (sada změn + aktuální model); samostatně udělá z hostitele vlastníka persistence. |
+| `OnSaveCompleted` | `EventCallback` | — | Po dokončeném uložení (úspěch, konflikt i selhání). |
+| `ShowPreviewLegend` | `bool` | `true` | Fáze 15: karta notanční legendy nad plátnem náhledu (desktop/tablet) a „Legenda“ v mobilním „⋯“; `false` vrací vzhled před Fází 15. |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Po dropu i po ne-drag insertu (stejný kontrakt). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | — | `Auto` / `Desktop` / `(768, 1200)` | Řízení rozvržení z vlastního kontejneru. |
 | `Height` | `string?` | `null` | Bloková výška editoru (CSS délka); `null` drží kontrakt `min(768px, 100vh - 32px)`. |
@@ -8358,11 +8380,13 @@ akční lišta, bez dragu). Dialog „Otevřít v editoru" je jádrový `TmModal
 
 | Komponenta | Účel | Klíčové parametry |
 |------------|------|-------------------|
-| `TmModelingDiagramPreview` | Náhled vygenerovaného diagramu (read-only `TmDiagramEditor`, preset Viewer) s Primárním „Otevřít v editoru". | `Document`/`DocumentChanged`, `ShowHeader`, `ShowEditActions`, `ShowEmbeddedEditorChrome`, `OpenInEditorTriggerId`, `AllowNodeDrop`, `OnNodeDropped`; metoda `InsertAtViewportCenterAsync(element)` (střed viewportu). |
-| `TmModelingModelTree` | APG strom prvků skupinovaných podle `SemanticType`. | `SelectedElement`, dvousměrné `FilterText`/`CollapsedGroups`, `AllowNodeDrop`, `OnInsertIntoPreview`, `ShowTitle`. |
-| `TmModelingInspector` | Inspektor vybraného prvku/vazby — read-only (MO2), s opt-inem (`AllowModelEditing` + writer/`OnModelChanged`, Fáze 14) editovatelný název, popis a skalární vlastnosti s undo/redo a kontraktem zápisu `IModelingModelWriter`. | `Element`, `Relationship`, `Elements`, `ReadOnly`, `OnElementEdited`, `OnRelationshipEdited`, `OnUndoRequested`, `OnRedoRequested`, `HeaderActions`. |
+| `TmModelingDiagramPreview` | Náhled vygenerovaného diagramu (read-only `TmDiagramEditor`, preset Viewer) s Primárním „Otevřít v editoru". | `Document`/`DocumentChanged`, `ShowHeader`, `ShowSummary`, `ShowEditActions`, `ShowEmbeddedEditorChrome`, `ShowZoomOverlay` (Fáze 9: pilulka zoomu + fit-to-width první načtení), `ShowLegend`/`LegendEntries`/`LegendDefaultExpanded` (Fáze 15), `OpenInEditorTriggerId`, `AllowNodeDrop`, `OnNodeDropped`; metody `InsertAtViewportCenterAsync(element)` (střed viewportu) a `RefreshViewportAsync()`. |
+| `TmModelingDiagramLegend` | Fáze 15: sbalitelná karta notanční legendy (`modeling-preview-legend`) — jen tvary, které dokument skutečně používá, seskupené na Elementy a Relace; data z `ModelingNotationCatalog` (kultura-nezávislá memo, popisky přes `ITmLocalizer`). | `Entries`, `DefaultExpanded`, `Collapsible`. |
+| `TmModelingModelTree` | APG strom prvků — ploché skupiny `SemanticType` nebo hierarchie `ParentId` (`Grouping`, Fáze 12). | `SelectedElement`, dvousměrné `FilterText`/`CollapsedGroups`, `Grouping`, `CollapsedElementIds` (Fáze 12), `AllowNodeDrop`, `OnInsertIntoPreview`, `ShowTitle`. |
+| `TmModelingInspector` | Inspektor vybraného prvku/vazby — read-only (MO2), s opt-inem (`AllowModelEditing` + writer/`OnModelChanged`, Fáze 14) editovatelný název, popis a skalární vlastnosti s undo/redo a kontraktem zápisu `IModelingModelWriter`. | `Element`, `Relationship`, `Elements`, `ReadOnly`, `Saving`, `OnElementEdited`, `OnRelationshipEdited`, `OnUndoRequested`, `OnRedoRequested`, `HeaderActions`. |
+| `TmModelingRelatedElementsPanel` | Fáze 13: záložka „Relations" — odchozí/příchozí vztahy prvku (typ + protějšek s ikonou) nebo zdroj/cíl vybrané vztahu jako navigovatelné řádky. | `Element`, `Relationship`, `Elements`, `Relationships`, `OnElementSelected`, `OnRelationshipSelected`. |
 | `TmModelingSourcePanel` | Záložka „Source": metadata, svěžest, „Load model". | `Metadata`, `IsLoading`, `OnLoadRequested`. |
-| `TmModelingIssuePanel` | Nálezy se závažností a doporučenou opravou; sbalitelný dock. | `Issues`, `OnIssueSelected`, dvousměrné `Collapsed`, `ShowToggle`. |
+| `TmModelingIssuePanel` | Nálezy se závažností a doporučenou opravou; sbalitelný dock; Fáze 11 přidává volitelný filtr (čipy závažností s počty, textové hledání po zprávě/kategorii/zdroji) a řazení (`Input`/`Severity`/`Source`). | `Issues`, `OnIssueSelected`, dvousměrné `Collapsed`, `ShowToggle`, `ShowFilterBar`, `SeverityFilter`, `FilterText`, `SortMode`, `Elements`, `Relationships`, `ContentVersion`. |
 | `TmModelingViewSelector` | Labelovaný výběr Notace/Pohledu v hlavičce. | `NotationKey`, `ViewpointKey`, `OnNotationChanged`, `OnViewpointChanged`. |
 
 Ne-drag alternativa (WCAG 2.5.7): každý řádek stromu má sourozenecké tlačítko „+"

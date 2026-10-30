@@ -31,8 +31,9 @@ builder.Services.AddTempoBlazorModeling();   // profiles, generator, demo provid
 ```
 
 The demo page is `/modeling-editor` (WASM + Server + InteractiveAuto demos), with deep links
-`?provider=`, `?notation=`, `?viewpoint=` and scenarios `?scenario=drag-readonly|error|preview|
-performance-large|bpmn2-*|uml25-*|invalid|scenario-invalid-relationship`.
+`?provider=`, `?notation=`, `?viewpoint=`, `?editing=1` and scenarios `?scenario=drag-readonly|error|
+preview|performance-large|hierarchy|hierarchy-large|save-conflict|bpmn2-*|uml25-*|invalid|
+scenario-invalid-relationship`.
 
 ## Component map
 

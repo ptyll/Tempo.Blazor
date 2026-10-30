@@ -9,6 +9,18 @@
 > summary is **B1–B17** in §3.11 of that document; a task-oriented before/after for every item is
 > `docs/email-templates/MIGRATION-2.9-to-2.10.md` and the hosting contract is
 > `docs/email-templates/HOSTING.md`.
+>
+> Editor-redesign follow-up (Modeling/DiagramEditor F9–F15b of the Modeling redesign plan). The
+> follow-up is almost entirely ADDITIVE: the DiagramEditor embedded-viewer API (`ShowPageTabs`,
+> `FitToViewAsync`/`FitOnDocumentLoad`, `ShowMobileZoomOverlay`, `MinimapInitiallyCollapsed` —
+> Fáze 9), the Escape topmost-layer contract (Fáze 10), the `TmModal.HeaderActions` slot (Fáze 10),
+> the issues filter/sort (Fáze 11), the `ParentId` tree hierarchy (Fáze 12) and the notation
+> palette + preview legend (Fáze 15) all default to the previous behavior. The genuinely breaking
+> items are listed in **Breaking / Migration** below with before/after: the `parentId` DTO move
+> (Fáze 12), the three-tab inspector (Fáze 13), the text close of the open-editor dialog (Fáze 10),
+> the legend-by-default preview (Fáze 15) and the theme-aware canvas backdrop + pressed `TmChip`
+> (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
+> [docs/diagram-editor.md](docs/diagram-editor.md).
 
 ### Breaking / Migration
 
@@ -25,9 +37,21 @@
   ```
   The literal `fill="#f3f4f6"` fallback attributes on the SVG rects are unchanged (viewers without the stylesheet), and `exportViewportAsSvg` still copies the computed values, so an export carries exactly the paints the user saw.
 
-- **TmChip pressed + removable: `aria-*` and `data-testid` additional attributes move to the toggle button (phase 15b review).** When `Pressed` and `Removable` combine, the shell wrapper used to receive ALL additional attributes, so a `data-testid` (host/E2E selectors) or an `aria-label` / `aria-describedby` (assistive tech) landed on a non-interactive `<span>` instead of the activatable `<button>`. The two kinds are routed to the pressed button now; every other attribute stays on the shell. A host that keyed a selector on the SHELL carrying those attribute kinds must key the button instead (`button.tm-chip`).
+- **TmChip pressed + removable: `aria-*` and `data-testid` additional attributes move to the toggle button (phase 15b review).** When `Pressed` and `Removable` combine, the shell wrapper used to receive ALL additional attributes, so a `data-testid` (host/E2E selectors) or an `aria-label` / `aria-describedby` (assistive tech) landed on a non-interactive `<span>` instead of the activatable `<button>`. The two kinds are routed to the pressed button now; every other attribute stays on the shell. A host that keyed a selector on the SHELL carrying those attribute kinds must key the button instead:
+  ```html
+  <!-- before: the shell <span class="tm-chip tm-chip__shell"> carried data-testid / aria-label -->
+  .tm-chip[data-testid='severity-error'] { … }
+  <!-- after: the activatable <button class="tm-chip"> carries them -->
+  button.tm-chip[data-testid='severity-error'] { … }
+  ```
 
 - **TmChip: the pressed toggle is visibly pressed, and `TmModelingIssuePanel` filter chips actually style across the scope boundary (phase 15b review).** The pressed toggle `<button>` used to render with the UA button chrome (system font, ButtonFace background, outset border) and NO visible pressed state outside forced-colors mode — the focus ring also erased the pressed paint (both were box-shadows). `_chip.css` now strips the UA chrome through a zero-specificity `:where(.tm-chip--pressed)` reset (variants still win), paints an `inset` ring on `[aria-pressed="true"]` and moves the focus ring to `outline`. The Modeling issue filter chips (severity) render through the core `TmChip`, so the panel's compact sizing and severity tints key off the panel-owned chips wrapper with `::deep` — hosts that copied the old un-prefixed `.tm-modeling-issue-panel__chip…` rules from the panel's scoped stylesheet should copy the `…__chips ::deep …` form. `Disabled` chips now paint the shared `--tm-opacity-disabled` (0.5) with `cursor: not-allowed` via `.tm-chip-disabled` (the class existed unstyled before).
+  ```css
+  /* before: copied from the panel's own scoped stylesheet — never matched across the scope boundary */
+  .tm-modeling-issue-panel__chip--error { … }
+  /* after: key off the panel-owned chips wrapper with ::deep */
+  .tm-modeling-issue-panel__chips ::deep .tm-chip--error { … }
+  ```
 
 - **TmModelingEditor previews now show a notation legend card by default (Fáze 15).** `ShowPreviewLegend` defaults to `true`: the desktop/tablet preview renders a collapsible "Legend" card in the canvas's top-right corner (listing only the notation shapes the document uses; collapsed above 12 nodes) and the mobile band gains a "Legend" entry in the compact header "⋯". A host that wants the pre-Fáze-15 look passes `ShowPreviewLegend="false"`:
   ```razor
@@ -223,7 +247,21 @@
   - *The mobile open-editor dialog is fullscreen.* On the editor's mobile band the dialog adds `tm-modal--fullscreen-presentation` (TmModal's own presentation) instead of the container-query-sized near-fullscreen box; the stylesheet no longer carries the `@container tm-modeling-editor (width < 768px)` dialog block. A host that styled `.tm-modeling-editor__open-editor-modal .tm-modal` for the small band must scope the override to `:not(.tm-modal--fullscreen-presentation)`.
   - New resource keys in all four tables + `MockTmLocalizer`: `TmModelingEditor_ChangeView`, `TmModelingEditor_Reload`, `TmModelingEditor_MoreOptions`.
 - **Modeling: `parentId` moved out of element `Properties` (Fáze 12).** A host whose provider already carried the tree parent as a `parentId` entry in `ModelingElementDto.Properties` should move it to the new first-class `ModelingElementDto.ParentId` property — the hierarchy view (and the MCP `parentId` contract) reads ONLY the property; a stale `Properties["parentId"]` entry is ignored (and still round-trips as an opaque custom property, so nothing is lost). Hosts that never sent `parentId` in `Properties` are unaffected: the DTO change is additive and a model without `ParentId` renders the same flat tree as before.
+  ```json
+  // before: the parent rode inside the opaque property bag
+  { "id": "e2", "name": "Subprocess", "properties": { "parentId": "e1" } }
+  // after: the first-class DTO member drives the hierarchy (and the MCP contract)
+  { "id": "e2", "name": "Subprocess", "parentId": "e1", "properties": {} }
+  ```
 - **Modeling: the inspector tablist has THREE tabs (Fáze 13).** The docked inspector's `role="tablist"` now renders **Properties | Relations | Source** (the new Relations tab owns the `modeling-tab-relations` test id and sits between the two existing ones), and the relations tab body is the new `TmModelingRelatedElementsPanel` (`data-testid` `modeling-related-panel`). E2E consumers and hosts must key off the tab test ids (`modeling-tab-properties`, `modeling-tab-relations`, `modeling-tab-source`) — never off the tab INDEX (index 1 was Source, now Relations). The mobile band has no extra tab level: the Relations SECTION renders inside the Inspector tab body (`modeling-related-panel` under the properties), so a selector that expected the Source panel directly under the mobile inspector must keep accounting for the panel above it.
+  ```csharp
+  // before (2.9.x): index 1 of the docked tablist was "Source"
+  var tabs = cut.FindAll(".tm-modeling-editor [role=tab]");
+  tabs[1].Click(); // Source
+
+  // after: key off the tab test ids — the index shifted (Properties | Relations | Source)
+  cut.Find("[data-testid='modeling-tab-source']").Click();
+  ```
   ```css
   /* before: positional tab selectors (E2E/host code) */
   [role="tab"]:nth-child(2) /* was Source */

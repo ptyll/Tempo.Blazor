@@ -76,7 +76,9 @@ public sealed class ModelingBpmnProfileM17E2ETests : WasmTestBase
 
         var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
         await Assertions.Expect(pinned).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
-        await Assertions.Expect(pinned.Locator(".tm-diagram-toolbox__library-header"))
+        // Phase 15 review: the pinned library does NOT repeat a library header — the label
+        // lives on the single palette's own collapsible category header.
+        await Assertions.Expect(pinned.Locator("[data-palette-id='notation-palette'] .tm-diagram-toolbox__category-header"))
             .ToContainTextAsync("BPMN 2.0", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
         await Assertions.Expect(pinned.Locator("[data-stencil-id='bpmn2.task.user']"))
             .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
