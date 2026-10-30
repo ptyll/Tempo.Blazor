@@ -55,6 +55,13 @@
       "description": "Offered capture modes. Defaults to draw, type and upload."
     },
     {
+      "name": "ClearButtonPlacement",
+      "type": "TmSignatureClearButtonPlacement",
+      "isRequired": false,
+      "default": "TmSignatureClearButtonPlacement.Overlay",
+      "description": "Where the capture's Clear button renders. Defaults to Overlay (Signing redesign phase 4): the button sits on the signing surface itself instead of a row below it. Hosts can restore the row with TmSignatureClearButtonPlacement.Actions."
+    },
+    {
       "name": "ValidationMessage",
       "type": "string?",
       "isRequired": false,

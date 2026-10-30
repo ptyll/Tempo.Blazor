@@ -107,7 +107,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await panel.Locator("input.tm-signing-text-step__input").First.FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        var deliverySelect = panel.Locator("select.tm-signing-choice-step__select").First;
+        var deliverySelect = panel.Locator(".tm-signing-choice-step__select select").First;
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Delivery method");
         await deliverySelect.SelectOptionAsync("paper");
         await Assertions.Expect(await GetByTestIdAsync(page, "signing-runner-status")).ToContainTextAsync("delivery: paper", new() { Timeout = 4_000 });

@@ -1,6 +1,11 @@
+/* TmSigningStepShell — the shared chrome of one signing step (title, icon, badges, description,
+   validation alert). Everything the individual step types render INSIDE the shell lives in
+   _signing-steps.css. */
+
 .tm-signing-step-shell {
     display: grid;
     gap: var(--tm-space-4);
+    align-content: start;
     padding: var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
@@ -11,6 +16,9 @@
        instead of shrink-to-fit. */
     min-inline-size: 0;
     inline-size: 100%;
+    /* The external step's hero anchor: the hero positions against the shell on wide containers
+       (see _signing-steps.css). */
+    position: relative;
 }
 
 .tm-signing-step-shell__header {
@@ -22,15 +30,35 @@
 
 .tm-signing-step-shell__heading {
     display: grid;
-    gap: var(--tm-space-1);
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--tm-space-2);
+    align-items: center;
     min-width: 0;
 }
 
+/* The field type's icon (SigningFieldTypeIcons, phase 4): the same glyph the palette, the
+   document overlays, the runner's field list and every step header render. */
+.tm-signing-step-shell__icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    display: inline-flex;
+    color: var(--tm-color-primary);
+}
+
 .tm-signing-step-shell__title {
+    grid-column: 2;
+    grid-row: 1;
     margin: 0;
     color: var(--tm-text-primary);
     font-size: var(--tm-font-size-base);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-signing-step-shell__required,
+.tm-signing-step-shell__optional {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
 }
 
 /* The title is the step's focus target (tabindex="-1", focused programmatically after every step
@@ -72,175 +100,4 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-}
-
-.tm-signing-text-step__input,
-.tm-signing-number-step__input,
-.tm-signing-date-step__input,
-.tm-signing-choice-step__select,
-.tm-signing-phone-step__country,
-.tm-signing-phone-step__input,
-.tm-signing-phone-step__otp,
-.tm-signing-external-step__answer {
-    width: 100%;
-    min-height: var(--tm-space-10);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font: inherit;
-}
-
-.tm-signing-text-step__textarea {
-    min-height: calc(var(--tm-space-16) * 2);
-    resize: vertical;
-}
-
-.tm-signing-date-step__row,
-.tm-signing-phone-step__row,
-.tm-signing-phone-step__otp-row,
-.tm-signing-external-step__summary,
-.tm-signing-external-step__start {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--tm-space-2);
-    align-items: center;
-}
-
-.tm-signing-date-step__input,
-.tm-signing-phone-step__input,
-.tm-signing-phone-step__otp {
-    flex: 1 1 calc(var(--tm-space-16) * 3);
-}
-
-.tm-signing-phone-step__country {
-    flex: 0 0 calc(var(--tm-space-16) * 1.75);
-}
-
-.tm-signing-date-step__today,
-.tm-signing-phone-step__send,
-.tm-signing-attachment-step__remove,
-.tm-signing-external-step__checkout,
-.tm-signing-external-step__start-button,
-.tm-signing-external-step__link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--tm-space-9);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font: inherit;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.tm-signing-choice-step__options,
-.tm-signing-attachment-step__items,
-.tm-signing-external-step__questions {
-    display: grid;
-    gap: var(--tm-space-2);
-}
-
-/* The choice groups are real fieldsets named by a visually hidden legend: reset the browser
-   chrome, keep the layout of the old div-based groups. */
-.tm-signing-choice-step__group {
-    display: grid;
-    gap: var(--tm-space-2);
-    margin: 0;
-    padding: 0;
-    border: 0;
-    min-inline-size: 0;
-}
-
-.tm-signing-choice-step__legend {
-    margin: 0;
-    padding: 0;
-}
-
-.tm-signing-choice-step__option {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    min-width: 0;
-    color: var(--tm-text-primary);
-}
-
-.tm-signing-choice-step__hint,
-.tm-signing-phone-step__resend {
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-sm);
-}
-
-.tm-signing-attachment-step__drop {
-    display: grid;
-    min-height: calc(var(--tm-space-16) * 1.5);
-    place-items: center;
-    gap: var(--tm-space-2);
-    padding: var(--tm-space-4);
-    border: 1px dashed var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-muted);
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-}
-
-.tm-signing-attachment-step__input {
-    width: 100%;
-}
-
-.tm-signing-attachment-step__item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-3);
-    min-width: 0;
-    padding: var(--tm-space-2);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-}
-
-.tm-signing-attachment-step__preview {
-    width: var(--tm-space-12);
-    height: var(--tm-space-12);
-    object-fit: cover;
-    border-radius: var(--tm-radius-sm);
-}
-
-.tm-signing-attachment-step__name {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-signing-attachment-step__stamp {
-    display: grid;
-    min-height: var(--tm-space-16);
-    place-items: center;
-    padding: var(--tm-space-4);
-    border: 1px dashed var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    color: var(--tm-text-secondary);
-    font-weight: var(--tm-font-weight-semibold);
-}
-
-.tm-signing-external-step__loading {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    color: var(--tm-text-secondary);
-}
-
-.tm-signing-external-step__question {
-    display: grid;
-    gap: var(--tm-space-2);
-}
-
-.tm-signing-external-step__amount {
-    color: var(--tm-text-primary);
-    font-weight: var(--tm-font-weight-semibold);
 }

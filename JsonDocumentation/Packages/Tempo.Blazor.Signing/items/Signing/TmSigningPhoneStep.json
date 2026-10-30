@@ -37,10 +37,9 @@
     },
     {
       "name": "CountryCode",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "\"+1\"",
-      "description": "Selected country calling code."
+      "description": "Selected country calling code. When omitted (null), the default comes from Culture: +420 for the Czech, +421 for the Slovak and +1 for every other culture — the old hardcoded \"+1\" default opened a Czech signer's step on the wrong prefix (Signing redesign phase 4)."
     },
     {
       "name": "CountryCodeChanged",
@@ -59,7 +58,7 @@
       "name": "Culture",
       "type": "string?",
       "isRequired": false,
-      "description": "Culture used to resolve localized field text."
+      "description": "Culture used to resolve localized field text and to derive the default country code (+420 cs, +421 sk, otherwise +1)."
     },
     {
       "name": "Disabled",

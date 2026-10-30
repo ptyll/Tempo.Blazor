@@ -248,6 +248,7 @@
                     case SigningFieldType.Kba:
                     case SigningFieldType.Payment:
                         <TmSigningExternalStep Field="CurrentStep.Field"
+                                               Value="@GetValue(CurrentStep.Field.Uuid)"
                                                AppearsOn="@CurrentStep.AppearsOn"
                                                Disabled="@IsLoading"
                                                Culture="@CurrentCulture"

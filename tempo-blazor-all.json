@@ -13056,6 +13056,12 @@
               "description": "Optional aria-label passed to the internal file input."
             },
             {
+              "name": "InputAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional attributes splatted onto the internal input type=\"file\" element. Use it for the accessibility plumbing a host step owns — aria-describedby, aria-invalid, aria-labelledby. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+            },
+            {
               "name": "InputTestId",
               "type": "string?",
               "isRequired": false,
@@ -13079,6 +13085,13 @@
               "type": "EventCallback<InputFileChangeEventArgs>",
               "isRequired": false,
               "description": "Fires when files are selected via click or drag-and-drop."
+            },
+            {
+              "name": "ShowFileList",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the zone renders its OWN list of the files picked through it (default true). A host that presents the picked files itself (e.g. the Signing attachment step renders its own attachment cards) passes false so the files do not show TWICE."
             }
           ],
           "cssClasses": [
@@ -15141,6 +15154,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Shows an indeterminate (dash) state when true and Value is false."
+            },
+            {
+              "name": "InputAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional attributes splatted onto the NATIVE input element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby. Entries win over the component's own attributes (the splat is applied last), except aria-describedby, which merges with the help text id. Additive: nothing existing changes."
             },
             {
               "name": "Label",
@@ -17858,6 +17877,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
+            },
+            {
+              "name": "SelectAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional attributes splatted onto the NATIVE select element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby — or any other select-level attribute. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
             },
             {
               "name": "Value",
@@ -67622,7 +67647,7 @@
               "name": "Culture",
               "type": "string?",
               "isRequired": false,
-              "description": "Culture used to resolve localized field text."
+              "description": "Culture used to resolve localized field text and to format file sizes (cs-CZ renders \"1,2 MB\")."
             },
             {
               "name": "Disabled",
@@ -67926,7 +67951,7 @@
               "name": "Culture",
               "type": "string?",
               "isRequired": false,
-              "description": "Culture used to resolve localized field text."
+              "description": "Culture used to resolve localized field text and to format the payment amount (cs-CZ renders \"1 500,00 Kč\")."
             },
             {
               "name": "Disabled",
@@ -67982,6 +68007,12 @@
               "isRequired": false,
               "default": "[]",
               "description": "KBA questions to answer inline."
+            },
+            {
+              "name": "Value",
+              "type": "object?",
+              "isRequired": false,
+              "description": "Current field value. When it carries true (a bool or the string \"true\" — the shape the runner stores), the step shows the verified / paid state instead of the call to action."
             }
           ]
         },
@@ -68418,7 +68449,7 @@
               "name": "Culture",
               "type": "string?",
               "isRequired": false,
-              "description": "Culture used to resolve localized field text."
+              "description": "Culture used to resolve localized field text and to parse and format the number — the decimal comma of a cs template is a first-class input (Signing redesign phase 4)."
             },
             {
               "name": "Disabled",
@@ -68485,10 +68516,9 @@
             },
             {
               "name": "CountryCode",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"+1\"",
-              "description": "Selected country calling code."
+              "description": "Selected country calling code. When omitted (null), the default comes from Culture: +420 for the Czech, +421 for the Slovak and +1 for every other culture — the old hardcoded \"+1\" default opened a Czech signer's step on the wrong prefix (Signing redesign phase 4)."
             },
             {
               "name": "CountryCodeChanged",
@@ -68507,7 +68537,7 @@
               "name": "Culture",
               "type": "string?",
               "isRequired": false,
-              "description": "Culture used to resolve localized field text."
+              "description": "Culture used to resolve localized field text and to derive the default country code (+420 cs, +421 sk, otherwise +1)."
             },
             {
               "name": "Disabled",
@@ -68655,6 +68685,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS classes for the shell element."
+            },
+            {
+              "name": "ClearButtonPlacement",
+              "type": "TmSignatureClearButtonPlacement",
+              "isRequired": false,
+              "default": "TmSignatureClearButtonPlacement.Overlay",
+              "description": "Where the capture's Clear button renders. Defaults to Overlay (Signing redesign phase 4): the button sits on the signing surface itself instead of a row below it. Hosts can restore the row with TmSignatureClearButtonPlacement.Actions."
             },
             {
               "name": "Culture",
@@ -68972,6 +69009,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Signing/wwwroot/css/components/_signing-step-shell.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/css/components/_signing-steps.css",
           "kind": "Css"
         },
         {

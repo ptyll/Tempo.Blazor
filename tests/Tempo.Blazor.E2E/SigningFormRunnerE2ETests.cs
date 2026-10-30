@@ -18,13 +18,13 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Delivery method");
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        await panel.Locator("input.tm-signing-choice-step__checkbox").CheckAsync();
+        await panel.Locator(".tm-signing-choice-step .tm-checkbox-label").First.ClickAsync();
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Internal note");
@@ -68,7 +68,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
         await panel.Locator("input.tm-signing-text-step__input").FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
@@ -237,7 +237,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-name']").ClickAsync();
         await panel.Locator("input.tm-signing-text-step__input").FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-delivery']").ClickAsync();
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-amount']").ClickAsync();
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         // The number input commits on change (blur) — Tab so the progress count below sees it.
@@ -247,7 +247,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
         // The toggle reveals the conditional note (the list grows to 7 rows).
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-extra-toggle']").ClickAsync();
-        await panel.Locator("input.tm-signing-choice-step__checkbox").CheckAsync();
+        await panel.Locator(".tm-signing-choice-step .tm-checkbox-label").First.ClickAsync();
         await Assertions.Expect(panel.Locator(".tm-signing-form-runner__field-button")).ToHaveCountAsync(7);
 
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-extra-note']").ClickAsync();

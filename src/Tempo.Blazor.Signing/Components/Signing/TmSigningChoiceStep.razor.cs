@@ -1,9 +1,17 @@
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.Signing;
 
-/// <summary>Renders select, radio, multiple-choice, and checkbox signing steps.</summary>
+/// <summary>
+/// Renders select, radio, multiple-choice, and checkbox signing steps on the core input components
+/// (Signing redesign phase 4, SI1): <see cref="TmSelect"/>, <see cref="TmRadioGroup"/> /
+/// <see cref="TmRadio"/> and <see cref="TmCheckbox"/> option rows. The phase-2 group contract is
+/// kept: the radio and checkbox variants are real <c>fieldset</c>s named by a visually hidden
+/// <c>legend</c>, with a per-instance radio <c>name</c>.
+/// </summary>
 public partial class TmSigningChoiceStep
 {
     // Per-instance accessible plumbing (Signing redesign phase 2): ids are owned by THIS component
@@ -69,6 +77,20 @@ public partial class TmSigningChoiceStep
         _ => []
     };
 
+    /// <summary>The field label the TmSelect carries as its accessible name (it has no splattable
+    /// name on the select element itself).</summary>
+    private string DisplayFieldLabel => GetFieldLabel(Field);
+
+    /// <summary>The TmSelect options: stable option uuids as values, localized labels as text.</summary>
+    private List<SelectOption<string>> SelectOptions => Field.Options
+        .Select(option => new SelectOption<string>(option.Uuid, GetOptionLabel(option)))
+        .ToList();
+
+    /// <summary>The TmRadioGroup options (same stable values, localized labels).</summary>
+    private List<RadioOption<string>> RadioOptions => Field.Options
+        .Select(option => new RadioOption<string>(GetOptionLabel(option), option.Uuid))
+        .ToList();
+
     private string ShellClass => string.Join(" ", new[] { "tm-signing-choice-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));
 
     private bool HasDescription => !string.IsNullOrWhiteSpace(SigningTextResolver.FieldDescription(Field, Culture, FallbackCulture));
@@ -85,8 +107,7 @@ public partial class TmSigningChoiceStep
     /// <summary>
     /// The ids a control of this step references — per-instance, and the SAME instances the shell
     /// renders (they are passed to the shell as parameters), so every reference resolves inside
-    /// the rendered DOM (Signing redesign phase 2). The checkbox-group hint (id <see cref="_hintId"/>)
-    /// is part of the group's description.
+    /// the rendered DOM (Signing redesign phase 2).
     /// </summary>
     private string? DescribedBy => JoinIds(HasDescription ? _descriptionId : null, HasValidationMessage ? _validationId : null);
 
@@ -104,22 +125,64 @@ public partial class TmSigningChoiceStep
 
     private static string BoolText(bool value) => value ? "true" : "false";
 
+    /// <summary>
+    /// The attributes the select variant splats onto the NATIVE <c>&lt;select&gt;</c> through the
+    /// core <c>TmSelect.SelectAttributes</c> (phase 4 review): the step title as the labelledby,
+    /// the description / validation ids as the description, and the invalid state while the step
+    /// shows a message.
+    /// </summary>
+    private Dictionary<string, object> BuildSelectAttributes()
+    {
+        var attributes = new Dictionary<string, object>
+        {
+            ["aria-labelledby"] = _titleId,
+            ["aria-invalid"] = InvalidText
+        };
+
+        if (DescribedBy is { } describedBy)
+        {
+            attributes["aria-describedby"] = describedBy;
+        }
+
+        return attributes;
+    }
+
+    /// <summary>The attributes the SINGLE checkbox splats onto its native input (invalid state + description).</summary>
+    private Dictionary<string, object> BuildSingleCheckboxAttributes()
+    {
+        var attributes = new Dictionary<string, object>
+        {
+            ["aria-invalid"] = InvalidText
+        };
+
+        if (DescribedBy is { } describedBy)
+        {
+            attributes["aria-describedby"] = describedBy;
+        }
+
+        return attributes;
+    }
+
     /// <summary>The visually hidden legend naming the fieldset group.</summary>
     private string GroupLegendText => GetFieldLabel(Field);
 
-    private async Task HandleSingleValueChangedAsync(ChangeEventArgs args)
+    /// <summary>The TmSelect change (nullable — the selectable placeholder maps to null).</summary>
+    private Task HandleSingleValueChangedAsync(string? value)
     {
-        var value = args.Value?.ToString();
-        _validationMessage = Field.Required && string.IsNullOrWhiteSpace(value)
+        var effective = value ?? string.Empty;
+        _validationMessage = Field.Required && string.IsNullOrWhiteSpace(effective)
             ? RequiredChoiceMessage
             : null;
-        await ValueChanged.InvokeAsync(value);
+        return ValueChanged.InvokeAsync(effective);
     }
 
-    private async Task HandleMultipleValueChangedAsync(string optionUuid, ChangeEventArgs args)
+    /// <summary>The TmRadioGroup change (the selected option's stable uuid; the group's options are never null).</summary>
+    private Task HandleRadioValueChangedAsync(string value) => HandleSingleValueChangedAsync(value);
+
+    private async Task HandleMultipleValueChangedAsync(string optionUuid, bool isChecked)
     {
         var values = SelectedValues;
-        if (ToBool(args.Value))
+        if (isChecked)
         {
             values.Add(optionUuid);
         }
@@ -132,17 +195,16 @@ public partial class TmSigningChoiceStep
         await ValueChanged.InvokeAsync(values.ToArray());
     }
 
-    private async Task HandleCheckboxChangedAsync(ChangeEventArgs args)
+    private async Task HandleCheckboxChangedAsync(bool value)
     {
-        var value = ToBool(args.Value);
         _validationMessage = Field.Required && !value ? RequiredChoiceMessage : null;
         await ValueChanged.InvokeAsync(value);
     }
 
-    private async Task HandleGroupCheckboxChangedAsync(SigningField checkboxField, ChangeEventArgs args)
+    private async Task HandleGroupCheckboxChangedAsync(SigningField checkboxField, bool isChecked)
     {
         var values = SelectedValues;
-        if (ToBool(args.Value))
+        if (isChecked)
         {
             values.Add(checkboxField.Uuid);
         }
@@ -157,12 +219,6 @@ public partial class TmSigningChoiceStep
 
     private bool IsGroupCheckboxChecked(SigningField field) => SelectedValues.Contains(field.Uuid);
 
-    private static bool ToBool(object? value)
-    {
-        return value is bool boolValue && boolValue
-            || bool.TryParse(value?.ToString(), out var parsed) && parsed;
-    }
-
     private string RequiredChoiceMessage => SigningLocalizationResolver.ResolveValidationMessage(Field.Validation, Culture, FallbackCulture, Loc["TmSigningStep_RequiredChoice"]);
 
     private string GetOptionLabel(SigningFieldOption option)
@@ -173,5 +229,11 @@ public partial class TmSigningChoiceStep
     private string GetFieldLabel(SigningField field)
     {
         return SigningTextResolver.FieldLabel(field, Culture, FallbackCulture, Loc);
+    }
+
+    /// <summary>The item field's description for a grouped checkbox row's help text (empty when the field carries none).</summary>
+    private string GetFieldDescription(SigningField field)
+    {
+        return SigningTextResolver.FieldDescription(field, Culture, FallbackCulture);
     }
 }

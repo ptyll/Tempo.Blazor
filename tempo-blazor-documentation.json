@@ -13054,6 +13054,12 @@
           "description": "Optional aria-label passed to the internal file input."
         },
         {
+          "name": "InputAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the internal input type=\"file\" element. Use it for the accessibility plumbing a host step owns — aria-describedby, aria-invalid, aria-labelledby. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+        },
+        {
           "name": "InputTestId",
           "type": "string?",
           "isRequired": false,
@@ -13077,6 +13083,13 @@
           "type": "EventCallback<InputFileChangeEventArgs>",
           "isRequired": false,
           "description": "Fires when files are selected via click or drag-and-drop."
+        },
+        {
+          "name": "ShowFileList",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the zone renders its OWN list of the files picked through it (default true). A host that presents the picked files itself (e.g. the Signing attachment step renders its own attachment cards) passes false so the files do not show TWICE."
         }
       ],
       "cssClasses": [
@@ -15139,6 +15152,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Shows an indeterminate (dash) state when true and Value is false."
+        },
+        {
+          "name": "InputAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the NATIVE input element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby. Entries win over the component's own attributes (the splat is applied last), except aria-describedby, which merges with the help text id. Additive: nothing existing changes."
         },
         {
           "name": "Label",
@@ -17856,6 +17875,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
+        },
+        {
+          "name": "SelectAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the NATIVE select element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby — or any other select-level attribute. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
         },
         {
           "name": "Value",

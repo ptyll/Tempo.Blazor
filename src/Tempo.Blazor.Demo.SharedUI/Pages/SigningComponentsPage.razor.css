@@ -1,0 +1,8 @@
+/* Demo-only (Signing redesign phase 4): the external payment step card is naturally shorter than
+   the form steps beside it, so in the two-column steps grid it keeps its own height instead of
+   stretching to the tallest cell. The rule is scoped to the direct children of the steps grid —
+   the runner demo's external step (inside its own panel) is untouched. ::deep: the shell class
+   rides on the child component's root, which does not carry this file's scope attribute. */
+[data-testid='signing-steps-demo'] > ::deep .tm-signing-external-step {
+    align-self: start;
+}

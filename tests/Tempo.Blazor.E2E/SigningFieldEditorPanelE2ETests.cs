@@ -21,7 +21,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
     [DataRow("Select", "list", false)]
     [DataRow("Checkbox", "check-square", false)]
     [DataRow("Multiple", "list", false)]
-    [DataRow("Radio", "circle", false)]
+    [DataRow("Radio", "circle-dot", false)]
     [DataRow("Cells", "grid", false)]
     [DataRow("Stamp", "shield", false)]
     [DataRow("Payment", "tag", false)]

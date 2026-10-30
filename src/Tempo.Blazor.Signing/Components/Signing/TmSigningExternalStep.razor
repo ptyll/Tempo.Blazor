@@ -1,9 +1,14 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
                     DescriptionId="@_descriptionId"
+                    Description="@ResolvedDescription"
                     ValidationMessage="@EffectiveValidationMessage"
                     ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
@@ -11,6 +16,12 @@
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
+    @* Hero icon in a primary-subtle circle (phase 4): the SAME field-type glyph the palette,
+        the overlays, the field list and every step header render. *@
+    <div class="tm-signing-external-step__hero">
+        <TmIcon Name="@SigningFieldTypeIcons.Get(Field.Type)" Size="IconSize.Lg" />
+    </div>
+
     @if (IsLoading)
     {
         <div class="tm-signing-external-step__loading">
@@ -18,35 +29,44 @@
             <span>@Loc["TmSigningStep_LoadingExternal"]</span>
         </div>
     }
+    else if (IsVerified)
+    {
+        @* The verified / paid state replaces the call to action — the runner stored the provider
+            result (value true), so the step announces the outcome instead of asking again. *@
+        <div class="tm-signing-external-step__verified" role="status">
+            <TmIcon Name="check-circle" Size="IconSize.Sm" />
+            <span>@(Field.Type == SigningFieldType.Payment ? Loc["TmSigningStep_Paid"] : Loc["TmSigningStep_Verified"])</span>
+        </div>
+    }
     else if (Field.Type == SigningFieldType.Kba && Questions.Count > 0)
     {
         @* Each answer keeps its per-question label (the question IS the name) and references the
-           step's description / validation ids while they render. *@
+            step's description / validation ids while they render. *@
         <div class="tm-signing-external-step__questions">
             @foreach (var question in Questions)
             {
-                <label class="tm-signing-external-step__question">
-                    <span>@question</span>
-                    <input class="tm-signing-external-step__answer"
-                           value="@GetAnswer(question)"
-                           disabled="@Disabled"
-                           aria-describedby="@DescribedBy"
-                           aria-invalid="@BoolText(HasValidationMessage)"
-                           @onchange="args => HandleAnswerChangedAsync(question, args)" />
-                </label>
+                <TmTextInput Value="@(GetAnswer(question) ?? string.Empty)"
+                             ValueChanged="value => HandleAnswerChangedAsync(question, value)"
+                             Label="@question"
+                             Disabled="@Disabled"
+                             IsValid="@ValidationState"
+                             Class="tm-signing-external-step__answer"
+                             AdditionalAttributes="@(BuildAnswerAttributes())" />
             }
         </div>
     }
     else if (Field.Type == SigningFieldType.Payment)
     {
+        @* The summary is only the model data (currency + price); the amount is formatted with the
+            FIELD culture — the old InvariantCulture "EUR 19.50" was the bug phase 4 fixes. *@
         <div class="tm-signing-external-step__summary">
             <span class="tm-signing-external-step__amount">@PaymentAmount</span>
-            <button type="button"
-                    class="tm-signing-external-step__checkout"
-                    disabled="@Disabled"
-                    @onclick="CheckoutAsync">
+            <TmButton Variant="ButtonVariant.Primary"
+                      Class="tm-signing-external-step__checkout"
+                      Disabled="@Disabled"
+                      OnClick="CheckoutAsync">
                 @Loc["TmSigningStep_Checkout"]
-            </button>
+            </TmButton>
         </div>
     }
     else
@@ -54,16 +74,18 @@
         <div class="tm-signing-external-step__start">
             @if (!string.IsNullOrWhiteSpace(ExternalUrl))
             {
-                <a class="tm-signing-external-step__link" href="@ExternalUrl" target="_blank" rel="noopener noreferrer">
+                @* The open action stays a real link (new tab) wearing the core outline button
+                    classes; a button could not navigate without JS interop. *@
+                <a class="tm-btn tm-btn-outline tm-signing-external-step__link" href="@ExternalUrl" target="_blank" rel="noopener noreferrer">
                     @Loc["TmSigningStep_OpenExternal"]
                 </a>
             }
-            <button type="button"
-                    class="tm-signing-external-step__start-button"
-                    disabled="@Disabled"
-                    @onclick="StartAsync">
+            <TmButton Variant="ButtonVariant.Primary"
+                      Class="tm-signing-external-step__start-button"
+                      Disabled="@Disabled"
+                      OnClick="StartAsync">
                 @(Field.Type == SigningFieldType.Kba ? Loc["TmSigningStep_StartKba"] : Loc["TmSigningStep_StartVerification"])
-            </button>
+            </TmButton>
         </div>
     }
 </TmSigningStepShell>

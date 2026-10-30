@@ -1,5 +1,7 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -11,49 +13,48 @@
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
+    @* SI1 (Signing redesign phase 4): the country select is the core TmSelect — its default comes
+        from the FIELD CULTURE (+420 for cs templates, no longer "+1" for everyone) — and the
+        number input the core TmTextInput with Type="tel". Every control carries a visible label
+        (placeholders are not accessible names); the phone input also references the shell's
+        description / validation ids and mirrors the invalid state while a message shows. *@
     <div class="tm-signing-phone-step__row">
-        @* Placeholders are not accessible names: every control carries an explicit label
-           (Signing redesign phase 2); the phone input also references the shell's description and
-           validation ids and carries the invalid state while a message shows. *@
-        <select class="tm-signing-phone-step__country"
-                value="@CountryCode"
-                disabled="@Disabled"
-                aria-label="@Loc["TmSigningStep_CountryCodeAria"]"
-                @onchange="HandleCountryChangedAsync">
-            @foreach (var option in CountryOptions)
-            {
-                <option value="@option.Code">@option.Label</option>
-            }
-        </select>
-        <input class="tm-signing-phone-step__input"
-               type="tel"
-               @bind:get="PhoneNumber"
-               @bind:set="HandlePhoneInputAsync"
-               @bind:event="oninput"
-               disabled="@Disabled"
-               placeholder="@PhonePlaceholderText"
-               aria-label="@Loc["TmSigningStep_PhoneInputAria"]"
-               aria-describedby="@DescribedBy"
-               aria-invalid="@BoolText(HasValidationMessage)" />
-        <button type="button"
-                class="tm-signing-phone-step__send"
-                disabled="@Disabled"
-                @onclick="SendCodeAsync">
+        <TmSelect TValue="string"
+                  Value="@EffectiveCountryCode"
+                  ValueChanged="HandleCountryChangedAsync"
+                  Label="@Loc["TmSigningStep_PhoneCountryLabel"]"
+                  Class="tm-signing-phone-step__country"
+                  Options="@CountrySelectOptions"
+                  Disabled="@Disabled" />
+        <TmTextInput Value="@(PhoneNumber ?? string.Empty)"
+                     ValueChanged="HandlePhoneInputAsync"
+                     Type="tel"
+                     Label="@Loc["TmSigningStep_PhoneNumberLabel"]"
+                     Placeholder="@PhonePlaceholderText"
+                     Disabled="@Disabled"
+                     IsValid="@ValidationState"
+                     Class="tm-signing-phone-step__input"
+                     AdditionalAttributes="@(BuildPhoneAttributes())" />
+        @* Functional countdown and verification land in phase 6; the button only raises
+            OnSendCode (see the class remarks). *@
+        <TmButton Variant="ButtonVariant.Primary"
+                  Class="tm-signing-phone-step__send"
+                  Disabled="@Disabled"
+                  OnClick="SendCodeAsync">
             @Loc["TmSigningStep_SendCode"]
-        </button>
+        </TmButton>
     </div>
 
     @if (_codeSent || CodeSent)
     {
         <div class="tm-signing-phone-step__otp-row">
-            <input class="tm-signing-phone-step__otp"
-                   @bind:get="OtpCode"
-                   @bind:set="HandleOtpInputAsync"
-                   @bind:event="oninput"
-                   inputmode="numeric"
-                   disabled="@Disabled"
-                   placeholder="@OtpPlaceholderText"
-                   aria-label="@Loc["TmSigningStep_OtpInputAria"]" />
+            <TmTextInput Value="@(OtpCode ?? string.Empty)"
+                         ValueChanged="HandleOtpInputAsync"
+                         Label="@Loc["TmSigningStep_OtpLabel"]"
+                         Placeholder="@OtpPlaceholderText"
+                         Disabled="@Disabled"
+                         Class="tm-signing-phone-step__otp"
+                         AdditionalAttributes="@(BuildOtpAttributes())" />
             <span class="tm-signing-phone-step__resend">@Loc["TmSigningStep_ResendIn", ResendSeconds]</span>
         </div>
     }

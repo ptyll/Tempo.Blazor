@@ -58,7 +58,7 @@
       "name": "Culture",
       "type": "string?",
       "isRequired": false,
-      "description": "Culture used to resolve localized field text."
+      "description": "Culture used to resolve localized field text and to format file sizes (cs-CZ renders \"1,2 MB\")."
     },
     {
       "name": "Disabled",

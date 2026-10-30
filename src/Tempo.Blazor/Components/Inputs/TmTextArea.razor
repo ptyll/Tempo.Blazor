@@ -92,7 +92,12 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     // ── Accessibility ────────────────────────────────────────────
-    private bool IsInvalid => !string.IsNullOrEmpty(Error);
+    /// <summary>
+    /// The invalid state mirrors any rendered message: the textarea's own <see cref="Error"/> and
+    /// a field-level error message (the <c>TmFormField</c> cascade) both set
+    /// <c>aria-invalid="true"</c> on the native element.
+    /// </summary>
+    private bool IsInvalid => !string.IsNullOrEmpty(Error) || !string.IsNullOrEmpty(FormFieldErrorId);
     private string ErrorId => $"{Id}-error";
 
     /// <summary>

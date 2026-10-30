@@ -1,0 +1,417 @@
+/* The step CONTENT the signing steps render inside TmSigningStepShell (Signing redesign phase 4,
+   S2-3/SI1): every step input is a core Tm component (TmTextInput / TmTextArea / TmSelect /
+   TmRadioGroup / TmCheckbox / TmFileDropZone), the date stays the native input styled with the
+   core tm-input classes, and every control meets the 44 px touch target (48 px in the narrow step
+   container). Selectors key off the step BEM classes and the wrappers the package owns; core
+   component classes are reached only through strictly-narrower package-ancestor chains. */
+
+/* ── Input sizing ────────────────────────────────────────────────
+   The core .tm-input height token resolves to 38px; the steps own a class on each input element,
+   so the touch target is raised locally through min-height (which beats the fixed height) and,
+   for the selects, through the token override on the package wrapper. */
+
+.tm-signing-text-step__input,
+.tm-signing-number-step__input,
+.tm-signing-date-step__input,
+.tm-signing-phone-step__input,
+.tm-signing-phone-step__otp,
+.tm-signing-external-step__answer {
+    min-height: var(--tm-touch-target);
+}
+
+.tm-signing-phone-step__country,
+.tm-signing-choice-step__select {
+    /* The core .tm-select reads this token for its height: 44px inside the package wrappers. */
+    --tm-input-height-md: var(--tm-input-height-lg);
+}
+
+@container tm-signing-step-shell (width < 640px) {
+    .tm-signing-text-step__input,
+    .tm-signing-number-step__input,
+    .tm-signing-date-step__input,
+    .tm-signing-phone-step__input,
+    .tm-signing-phone-step__otp,
+    .tm-signing-external-step__answer {
+        min-height: var(--tm-space-12);
+    }
+
+    .tm-signing-phone-step__country,
+    .tm-signing-choice-step__select {
+        --tm-input-height-md: var(--tm-space-12);
+    }
+}
+
+/* ── Text step ────────────────────────────────────────────────── */
+
+.tm-signing-text-step__textarea {
+    inline-size: 100%;
+}
+
+/* "n / max" counter: secondary text under the input; the polite live region engages only at the
+   limit (the markup toggles aria-live). */
+.tm-signing-text-step__count {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    justify-self: end;
+}
+
+/* ── Number step ──────────────────────────────────────────────── */
+
+.tm-signing-number-step__range {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Date step ────────────────────────────────────────────────── */
+
+.tm-signing-date-step__row,
+.tm-signing-phone-step__row,
+.tm-signing-phone-step__otp-row,
+.tm-signing-external-step__summary,
+.tm-signing-external-step__start {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    align-items: center;
+}
+
+.tm-signing-date-step__input,
+.tm-signing-phone-step__input,
+.tm-signing-phone-step__otp {
+    flex: 1 1 calc(var(--tm-space-16) * 3);
+}
+
+/* The country select keeps a fixed-ratio flex basis so the phone number keeps most of the row. */
+.tm-signing-phone-step__country {
+    flex: 0 0 calc(var(--tm-space-16) * 1.75);
+    min-inline-size: 0;
+}
+
+/* The value actions: the TmButtons / the outline link meet the touch target and drop under the
+   input on the narrow step container. */
+.tm-signing-date-step__today,
+.tm-signing-phone-step__send,
+.tm-signing-attachment-step__remove,
+.tm-signing-external-step__checkout,
+.tm-signing-external-step__start-button,
+.tm-signing-external-step__link {
+    min-height: var(--tm-touch-target);
+}
+
+/* "Today" reads as a tonal chip, not a competing secondary button (phase 4 review): the primary
+   wash with the primary ink and no border. The compound keeps the core .tm-btn.tm-btn-secondary
+   specificity, and this sheet loads after the core one — so the tie breaks here. */
+.tm-signing-date-step__today.tm-btn {
+    background: var(--tm-color-primary-subtle);
+    border-color: transparent;
+    color: var(--tm-color-primary-text);
+}
+
+@container tm-signing-step-shell (width < 640px) {
+    .tm-signing-date-step__row,
+    .tm-signing-phone-step__row,
+    .tm-signing-phone-step__otp-row,
+    .tm-signing-external-step__summary,
+    .tm-signing-external-step__start {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tm-signing-date-step__today,
+    .tm-signing-phone-step__send,
+    .tm-signing-external-step__checkout,
+    .tm-signing-external-step__start-button,
+    .tm-signing-external-step__link {
+        inline-size: 100%;
+    }
+
+    .tm-signing-phone-step__country {
+        flex: 0 0 auto;
+    }
+
+    /* The value rows stack below 640px; a stretching flex item turned the DATE input (and the
+       OTP input) into a ~190px tall field — in a COLUMN the base `flex: 1 1 192px` below sizes
+       the HEIGHT. This override must stay AFTER that base rule (a container query adds no
+       specificity) — the stacked column decides its own height again (phase 4 review). */
+    .tm-signing-date-step__input,
+    .tm-signing-phone-step__otp {
+        flex: 0 0 auto;
+    }
+}
+
+/* ── Choice step ──────────────────────────────────────────────── */
+
+.tm-signing-choice-step__select {
+    /* The TmSelect wrapper: the select fills the step column. */
+    inline-size: 100%;
+}
+
+.tm-signing-choice-step__options,
+.tm-signing-attachment-step__items,
+.tm-signing-external-step__questions {
+    display: grid;
+    gap: var(--tm-space-2);
+}
+
+/* The choice groups are real fieldsets named by a visually hidden legend: reset the browser
+   chrome, keep the layout of the option groups. */
+.tm-signing-choice-step__group {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+}
+
+.tm-signing-choice-step__legend {
+    margin: 0;
+    padding: 0;
+}
+
+/* Option rows: checkbox variants are TmCheckbox wrappers carrying the package row class; the
+   radio variant renders the core TmRadio rows (styled through the strictly-narrower step chain
+   below). */
+.tm-signing-choice-step__checkbox-row {
+    min-height: calc(var(--tm-space-12) + var(--tm-space-2));
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    align-items: center;
+}
+
+/* The radio rows get the same option row through the package chain — ONLY the properties the
+   core .tm-radio-option rule does not declare (display/align-items/gap/cursor stay core's), so
+   no ownership contest with _radio-group.css. No border-radius here: the radius belongs to the
+   SELECTED row's wash below — an unselected row with a radius read as a clickable chip (phase 4
+   review). */
+.tm-signing-choice-step .tm-radio-option {
+    min-height: var(--tm-space-12);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-signing-choice-step__option--single {
+    min-height: var(--tm-touch-target);
+    align-items: center;
+}
+
+.tm-signing-choice-step__option {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    color: var(--tm-text-primary);
+}
+
+/* The selected option lights with the primary-subtle wash (SI1 phase 4). The checkbox rows key
+   off the package row class with :has() (a condition on the package-owned row, not a claim on the
+   core input); the radio row needs the core checked class, reached only through the strictly
+   narrower package ancestor — inside the choice step the package wins, everywhere else the core
+   rule keeps painting. */
+.tm-signing-choice-step__checkbox-row:has(.tm-checkbox-input:checked),
+.tm-signing-choice-step .tm-radio-option.tm-radio-checked {
+    background: var(--tm-color-primary-subtle);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-signing-choice-step__hint,
+.tm-signing-phone-step__resend {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Attachment step ──────────────────────────────────────────── */
+
+.tm-signing-attachment-step__drop-icon {
+    display: inline-flex;
+    color: var(--tm-color-primary);
+}
+
+.tm-signing-attachment-step__drop-text {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-signing-attachment-step__files-title {
+    margin: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-signing-attachment-step__item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-signing-attachment-step__preview {
+    width: var(--tm-space-12);
+    height: var(--tm-space-12);
+    object-fit: cover;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-signing-attachment-step__file-icon {
+    display: inline-flex;
+    color: var(--tm-text-secondary);
+}
+
+.tm-signing-attachment-step__details {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-signing-attachment-step__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-signing-attachment-step__meta {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Danger-ghost remove: the ghost TmButton painted with the danger ink, 44 px target. The
+   visible text is what the narrow container hides (below) — the accessible name is the
+   localized "Remove {file name}" aria-label and stays at every width. */
+.tm-signing-attachment-step__remove {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-signing-attachment-step__remove:disabled {
+    color: var(--tm-text-tertiary);
+}
+
+@container tm-signing-step-shell (width < 640px) {
+    /* The attachment card on a narrow container (phase 4 review): the name / meta wrap under the
+       preview and the remove becomes an icon-only 44 px square in its own row, so a long file
+       name can no longer squeeze the action off the card. */
+    .tm-signing-attachment-step__item {
+        flex-wrap: wrap;
+    }
+
+    .tm-signing-attachment-step__details {
+        flex: 1 1 calc(var(--tm-space-16) * 2);
+    }
+
+    .tm-signing-attachment-step__remove {
+        min-width: var(--tm-touch-target);
+        padding-inline: 0;
+        /* On its own wrapped row the square button hugs the inline end (phase 4). */
+        margin-inline-start: auto;
+    }
+
+    /* Same clip pattern the signature capture's overlay clear uses: the accessible name is the
+       button's aria-label, the clipped text is a visual fallback only. */
+    .tm-signing-attachment-step__remove-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+}
+
+.tm-signing-attachment-step__stamp {
+    display: grid;
+    min-height: var(--tm-space-16);
+    place-items: center;
+    padding: var(--tm-space-4);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── External step ────────────────────────────────────────────── */
+
+/* Hero icon in a primary-subtle circle (phase 4): the SAME field-type glyph every other signing
+   surface renders. On a WIDE step container it lifts out of the content flow into the header row,
+   beside the title / description (phase 4 review); the narrow container keeps it in flow. The
+   shell is position:relative (see _signing-step-shell.css) and the header reserves the hero's
+   width so a long title never runs under the circle. 640px is the shared wide-container
+   breakpoint (TmBreakpoints) — the query measures the shell's CONTENT box. */
+.tm-signing-external-step__hero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-16);
+    block-size: var(--tm-space-16);
+    border-radius: 50%;
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+@container tm-signing-step-shell (width >= 640px) {
+    .tm-signing-external-step .tm-signing-step-shell__header {
+        padding-inline-end: calc(var(--tm-space-16) + var(--tm-space-4));
+    }
+
+    .tm-signing-external-step .tm-signing-external-step__hero {
+        position: absolute;
+        inset-block-start: var(--tm-space-4);
+        inset-inline-end: var(--tm-space-4);
+    }
+}
+
+.tm-signing-external-step__verified {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-success-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-signing-external-step__loading {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+}
+
+.tm-signing-external-step__amount {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── Signature step ───────────────────────────────────────────── */
+
+/* The capture's mode tabs meet the 44 px touch target inside the signing step. Sized through the
+   package chain with ONLY the properties the core tab rule does not declare (the core buttons
+   stretch into the taller row), so no ownership contest with _signature-capture.css. */
+.tm-signing-signature-step .tm-signature-capture__tabs {
+    min-height: var(--tm-touch-target);
+    align-items: stretch;
+}
+
+/* The signing baseline (phase 4): a dashed line where the signature is expected, like a paper
+   form. Painted by an ::after ON the core surface (scoped to the signing step, so a bare
+   TmSignatureCapture keeps its clean pad) — pointer-events:none keeps every stroke and the
+   overlay Clear button fully interactive through it. */
+.tm-signing-signature-step .tm-signature-capture__surface {
+    position: relative;
+}
+
+.tm-signing-signature-step .tm-signature-capture__surface::after {
+    content: "";
+    position: absolute;
+    inset-inline: var(--tm-space-6);
+    bottom: 25%;
+    border-bottom: var(--tm-border-width) dashed var(--tm-border-color);
+    pointer-events: none;
+}

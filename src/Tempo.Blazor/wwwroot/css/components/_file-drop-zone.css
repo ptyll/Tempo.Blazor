@@ -47,6 +47,14 @@
     z-index: 10;
 }
 
+/* Keyboard focus lands on the (opacity-0) input, not the area: paint the ring on the area
+   through the focused child so tabbing to the zone shows where focus is (WCAG 2.4.7). */
+.tm-file-drop-zone__area:has(.tm-file-drop-zone__input:focus-visible) {
+    outline: calc(var(--tm-border-width, 1px) * 2) solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    border-color: var(--tm-color-primary);
+}
+
 /* ── Content ── */
 
 .tm-file-drop-zone__content {

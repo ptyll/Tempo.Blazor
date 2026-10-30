@@ -23,7 +23,10 @@ internal static class SigningFieldTypeIcons
         SigningFieldType.File => "file",
         SigningFieldType.Select or SigningFieldType.Multiple => "list",
         SigningFieldType.Checkbox => "check-square",
-        SigningFieldType.Radio => "circle",
+        // The radio keeps a glyph of its own: a bare "circle" read exactly like any generic
+        // bullet, so the palette / list / header could not tell a radio field from filler.
+        // "circle-dot" is the core TmIcon glyph (phase 4 review).
+        SigningFieldType.Radio => "circle-dot",
         SigningFieldType.Cells => "grid",
         SigningFieldType.Stamp => "shield",
         SigningFieldType.Phone => "phone",

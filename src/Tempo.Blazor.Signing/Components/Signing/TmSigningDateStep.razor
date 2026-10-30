@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -11,10 +12,11 @@
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
-    @* Native <input type="date"> per SI1; the shell title (this instance's stable id) is its
-       accessible name, the validation alert (while one shows) its description. *@
+    @* Native <input type="date"> stays (the SI1 exception — the mobile pickers keep working); it
+        is styled with the core tm-input classes (phase 4). The shell title (this instance's stable
+        id) is its accessible name, the validation alert (while one shows) its description. *@
     <div class="tm-signing-date-step__row">
-        <input class="tm-signing-date-step__input"
+        <input class="tm-input tm-signing-date-step__input"
                type="@InputType"
                value="@Value"
                min="@NormalizeDateToken(Field.Validation?.Min)"
@@ -27,12 +29,14 @@
                @onchange="HandleValueChangedAsync" />
         @if (ShowTodayButton)
         {
-            <button type="button"
-                    class="tm-signing-date-step__today"
-                    disabled="@Disabled"
-                    @onclick="SetTodayAsync">
+            @* Tonal (secondary) TmButton (phase 4); on a narrow step container the row wraps and
+                the button drops under the input (CSS). *@
+            <TmButton Variant="ButtonVariant.Secondary"
+                      Class="tm-signing-date-step__today"
+                      Disabled="@Disabled"
+                      OnClick="SetTodayAsync">
                 @Loc["TmSigningStep_Today"]
-            </button>
+            </TmButton>
         }
     </div>
 </TmSigningStepShell>

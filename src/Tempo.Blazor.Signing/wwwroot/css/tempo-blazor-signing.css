@@ -13,6 +13,7 @@
 @import "components/_signing-field-editor-panel.css";
 @import "components/_pdf-template-designer.css";
 @import "components/_signing-step-shell.css";
+@import "components/_signing-steps.css";
 @import "components/_signing-form-runner.css";
 @import "components/_signing-completion-panel.css";
 @import "components/_submission-status-timeline.css";

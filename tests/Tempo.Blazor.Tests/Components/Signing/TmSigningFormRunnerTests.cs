@@ -599,7 +599,10 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         cut.Find(".tm-signing-form-runner__next").Click();
         cut.Find(".tm-signing-form-runner__next").Click();
 
-        var select = cut.Find("select.tm-signing-choice-step__select");
+        // The choice select is a core TmSelect: the core SelectAttributes splat (phase 4 review)
+        // carries aria-invalid + the validation id onto the NATIVE <select>, so the runner's
+        // forwarded validation marks the actual control, not the wrapper.
+        var select = cut.Find(".tm-signing-choice-step__select select");
         select.GetAttribute("aria-invalid").Should().Be("true");
         var selectValidationId = cut.Find(".tm-signing-step-shell__validation[role='alert']").GetAttribute("id");
         select.GetAttribute("aria-describedby")!.Split(' ', StringSplitOptions.RemoveEmptyEntries)

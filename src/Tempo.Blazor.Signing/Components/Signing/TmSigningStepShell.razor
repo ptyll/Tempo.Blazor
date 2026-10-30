@@ -5,6 +5,12 @@
          class="@RootClass">
     <header class="tm-signing-step-shell__header">
         <div class="tm-signing-step-shell__heading">
+            @* The field type's icon from the shared SigningFieldTypeIcons map (phase 4, SI4): the
+               palette, the document overlays, the runner's field list and this header all render
+               the SAME glyph, so a signer recognises the field type everywhere. *@
+            <span class="tm-signing-step-shell__icon" aria-hidden="true">
+                <TmIcon Name="@SigningFieldTypeIcons.Get(FieldType)" Size="IconSize.Sm" />
+            </span>
             @* The title is the step's focus target and the accessible name of the step's
                unlabelled inputs: stable id (also cascaded via TmSigningStepShellContext) and
                tabindex="-1" so FocusAsync can move to it after a step change. *@

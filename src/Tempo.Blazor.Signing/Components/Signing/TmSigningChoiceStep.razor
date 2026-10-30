@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -13,9 +14,10 @@
                     @attributes="AdditionalAttributes">
     @if (IsCheckboxGroup)
     {
-        @* The group is a real fieldset named by a visually hidden legend; each checkbox is named
-           by its own wrapping label. The fieldset carries the hint / description / validation ids
-           and the invalid state while the step shows a message. *@
+        @* The group is a real fieldset named by a visually hidden legend (phase 2 contract kept);
+            the rows are the core TmCheckbox, each named by its own label and carrying the item
+            field's description as help text (phase 4). The fieldset carries the hint /
+            description / validation ids and the invalid state while the step shows a message. *@
         <fieldset class="tm-signing-choice-step__group"
                   aria-invalid="@InvalidText"
                   aria-describedby="@GroupDescribedBy">
@@ -24,57 +26,50 @@
             <div class="tm-signing-choice-step__options">
                 @foreach (var checkboxField in CheckboxFields)
                 {
-                    <label class="tm-signing-choice-step__option">
-                        <input type="checkbox"
-                               class="tm-signing-choice-step__checkbox"
-                               checked="@IsGroupCheckboxChecked(checkboxField)"
-                               disabled="@Disabled"
-                               @onchange="args => HandleGroupCheckboxChangedAsync(checkboxField, args)" />
-                        <span>@GetFieldLabel(checkboxField)</span>
-                    </label>
+                    <TmCheckbox Value="@IsGroupCheckboxChecked(checkboxField)"
+                                ValueChanged="args => HandleGroupCheckboxChangedAsync(checkboxField, args)"
+                                Label="@GetFieldLabel(checkboxField)"
+                                HelpText="@GetFieldDescription(checkboxField)"
+                                Disabled="@Disabled"
+                                Class="tm-signing-choice-step__option tm-signing-choice-step__checkbox-row" />
                 }
             </div>
         </fieldset>
     }
     else if (Field.Type == SigningFieldType.Select)
     {
-        <select class="tm-signing-choice-step__select"
-                value="@SingleValue"
-                disabled="@Disabled"
-                aria-labelledby="@_titleId"
-                aria-describedby="@DescribedBy"
-                aria-invalid="@InvalidText"
-                @onchange="HandleSingleValueChangedAsync">
-            <option value="">@Loc["TmSigningStep_SelectPlaceholder"]</option>
-            @foreach (var option in Field.Options)
-            {
-                <option value="@option.Uuid">@GetOptionLabel(option)</option>
-            }
-        </select>
+        @* TmSelect (phase 4, SI1). The step's accessibility plumbing rides the core
+            SelectAttributes splat (phase 4 review): aria-invalid + the description / validation
+            ids reach the NATIVE <select>, and the shell title is its labelledby (the visible
+            field label stays the accessible name — see TmSelect.AriaLabel). *@
+        <TmSelect TValue="string"
+                  Value="@SingleValue"
+                  ValueChanged="HandleSingleValueChangedAsync"
+                  AriaLabel="@DisplayFieldLabel"
+                  Placeholder="@Loc["TmSigningStep_SelectPlaceholder"]"
+                  PlaceholderSelectable="true"
+                  Disabled="@Disabled"
+                  Options="@SelectOptions"
+                  Class="tm-signing-choice-step__select"
+                  SelectAttributes="@(BuildSelectAttributes())" />
     }
     else if (Field.Type == SigningFieldType.Radio)
     {
-        @* The radio group is a fieldset named by a visually hidden legend; the name is unique per
-            component instance so two rendered groups never merge into one browser-level group. *@
+        @* The radio group keeps the fieldset/legend group name (phase 2 contract) and renders the
+            core TmRadioGroup rows (phase 4); the name is unique per component instance so two
+            rendered groups never merge into one browser-level group. The selected row lights with
+            the primary-subtle state through _signing-steps.css (:has() on the package chain). *@
         <fieldset class="tm-signing-choice-step__group"
                   aria-invalid="@InvalidText"
                   aria-describedby="@DescribedBy">
             <legend class="tm-signing-choice-step__legend tm-sr-only">@GroupLegendText</legend>
-            <div class="tm-signing-choice-step__options">
-                @foreach (var option in Field.Options)
-                {
-                    <label class="tm-signing-choice-step__option">
-                        <input type="radio"
-                               name="@_radioName"
-                               class="tm-signing-choice-step__radio"
-                               value="@option.Uuid"
-                               checked="@string.Equals(SingleValue, option.Uuid, StringComparison.Ordinal)"
-                               disabled="@Disabled"
-                               @onchange="args => HandleSingleValueChangedAsync(args)" />
-                        <span>@GetOptionLabel(option)</span>
-                    </label>
-                }
-            </div>
+            <TmRadioGroup T="string"
+                          Name="@_radioName"
+                          Value="@SingleValue"
+                          ValueChanged="HandleRadioValueChangedAsync"
+                          Options="@RadioOptions"
+                          Disabled="@Disabled"
+                          Class="tm-signing-choice-step__options" />
         </fieldset>
     }
     else if (Field.Type == SigningFieldType.Multiple)
@@ -86,29 +81,25 @@
             <div class="tm-signing-choice-step__options">
                 @foreach (var option in Field.Options)
                 {
-                    <label class="tm-signing-choice-step__option">
-                        <input type="checkbox"
-                               class="tm-signing-choice-step__checkbox"
-                               value="@option.Uuid"
-                               checked="@SelectedValues.Contains(option.Uuid)"
-                               disabled="@Disabled"
-                               @onchange="args => HandleMultipleValueChangedAsync(option.Uuid, args)" />
-                        <span>@GetOptionLabel(option)</span>
-                    </label>
+                    <TmCheckbox Value="@SelectedValues.Contains(option.Uuid)"
+                                ValueChanged="args => HandleMultipleValueChangedAsync(option.Uuid, args)"
+                                Label="@GetOptionLabel(option)"
+                                Disabled="@Disabled"
+                                Class="tm-signing-choice-step__option tm-signing-choice-step__checkbox-row" />
                 }
             </div>
         </fieldset>
     }
     else
     {
-        <label class="tm-signing-choice-step__option tm-signing-choice-step__option--single">
-            <input type="checkbox"
-                   class="tm-signing-choice-step__checkbox"
-                   checked="@BoolValue"
-                   disabled="@Disabled"
-                   aria-invalid="@InvalidText"
-                   @onchange="HandleCheckboxChangedAsync" />
-            <span>@(AnonymousCheckbox ? Loc["TmSigningStep_CheckboxInstruction"] : GetFieldLabel(Field))</span>
-        </label>
+        @* The single checkbox (phase 4 review): aria-invalid reaches the NATIVE input through the
+            core InputAttributes splat — together with the description / validation ids, exactly
+            like the other single controls. *@
+        <TmCheckbox Value="@BoolValue"
+                    ValueChanged="HandleCheckboxChangedAsync"
+                    Label="@(AnonymousCheckbox ? Loc["TmSigningStep_CheckboxInstruction"] : GetFieldLabel(Field))"
+                    Disabled="@Disabled"
+                    InputAttributes="@(BuildSingleCheckboxAttributes())"
+                    Class="tm-signing-choice-step__option tm-signing-choice-step__option--single" />
     }
 </TmSigningStepShell>

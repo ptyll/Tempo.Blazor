@@ -1,5 +1,8 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Components.Icons
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -19,40 +22,68 @@
     }
     else
     {
-        @* The upload input keeps its wrapping label as the visible name and references the shell's
-           description / validation ids, carrying the invalid state while a message shows. *@
-        <label class="tm-signing-attachment-step__drop">
-            <TmIcon Name="upload" Size="IconSize.Sm" />
-            <span>@(Field.Type == SigningFieldType.Image ? Loc["TmSigningStep_ImageUpload"] : Loc["TmSigningStep_FileUpload"])</span>
-            <InputFile class="tm-signing-attachment-step__input"
-                       multiple="@AllowMultiple"
-                       accept="@Accept"
-                       disabled="@Disabled"
-                       aria-describedby="@DescribedBy"
-                       aria-invalid="@BoolText(HasValidationMessage)"
-                       OnChange="HandleFilesSelectedAsync" />
-        </label>
+        @* SI1 (Signing redesign phase 4): the upload is the core TmFileDropZone (Accept /
+            Multiple / InputAriaLabel / InputTestId / OnFilesSelected) with the signing icon
+            content instead of the default emoji. The file input is named by its aria-label and
+            references the shell's description / validation ids + invalid state through the core
+            InputAttributes splat (phase 4 review); the step renders its OWN attachment cards, so
+            the zone's built-in file list stays hidden (ShowFileList=false) — the picked file must
+            not show twice. *@
+        <TmFileDropZone Multiple="@AllowMultiple"
+                        Accept="@Accept"
+                        Disabled="@Disabled"
+                        ShowFileList="false"
+                        InputAriaLabel="@(Field.Type == SigningFieldType.Image ? Loc["TmSigningStep_ImageUpload"] : Loc["TmSigningStep_FileUpload"])"
+                        InputTestId="signing-attachment-input"
+                        OnFilesSelected="HandleFilesSelectedAsync"
+                        InputAttributes="@(BuildInputAttributes())">
+            <span class="tm-signing-attachment-step__drop-icon">
+                <TmIcon Name="@(Field.Type == SigningFieldType.Image ? "image" : "upload")" Size="IconSize.Lg" />
+            </span>
+            <span class="tm-signing-attachment-step__drop-text">
+                @(Field.Type == SigningFieldType.Image ? Loc["TmSigningStep_ImageUpload"] : Loc["TmSigningStep_FileUpload"])
+            </span>
+        </TmFileDropZone>
 
         @if (Attachments.Count > 0)
         {
-            <div class="tm-signing-attachment-step__items">
+            <h4 id="@FilesTitleId" class="tm-signing-attachment-step__files-title">
+                @Loc["TmSigningStep_AttachedFiles", Attachments.Count]
+            </h4>
+            <ul class="tm-signing-attachment-step__items">
                 @foreach (var attachment in Attachments)
                 {
-                    <div class="tm-signing-attachment-step__item">
+                    <li class="tm-signing-attachment-step__item">
                         @if (Field.Type == SigningFieldType.Image && !string.IsNullOrWhiteSpace(attachment.Url))
                         {
-                            <img class="tm-signing-attachment-step__preview" src="@attachment.Url" alt="@attachment.Name" />
+                            @* The file name is the card's text content; the preview is decorative. *@
+                            <img class="tm-signing-attachment-step__preview" src="@attachment.Url" alt="" />
                         }
-                        <span class="tm-signing-attachment-step__name">@attachment.Name</span>
-                        <button type="button"
-                                class="tm-signing-attachment-step__remove"
-                                disabled="@Disabled"
-                                @onclick="() => RemoveAttachmentAsync(attachment.Uuid)">
-                            @Loc["TmSigningStep_RemoveAttachment"]
-                        </button>
-                    </div>
+                        else
+                        {
+                            <span class="tm-signing-attachment-step__file-icon">
+                                <TmIcon Name="@(Field.Type == SigningFieldType.Image ? "image" : "file")" Size="IconSize.Md" />
+                            </span>
+                        }
+                        <span class="tm-signing-attachment-step__details">
+                            <span class="tm-signing-attachment-step__name">@attachment.Name</span>
+                            <span class="tm-signing-attachment-step__meta">@FormatCardMeta(attachment)</span>
+                        </span>
+                        @* Danger-ghost remove (phase 4): the accessible name carries the FILE NAME
+                            ("Remove contract.pdf"), the visible text keeps the short localized
+                            label; on the narrow step container the CSS hides the text and leaves
+                            a 44 px icon-only target. *@
+                        <TmButton Variant="ButtonVariant.Ghost"
+                                  Class="tm-signing-attachment-step__remove"
+                                  Icon="trash"
+                                  Disabled="@Disabled"
+                                  AriaLabel="@Loc["TmSigningStep_RemoveFile", attachment.Name]"
+                                  OnClick="() => RemoveAttachmentAsync(attachment.Uuid)">
+                            <span class="tm-signing-attachment-step__remove-text">@Loc["TmSigningStep_RemoveAttachment"]</span>
+                        </TmButton>
+                    </li>
                 }
-            </div>
+            </ul>
         }
     }
 </TmSigningStepShell>

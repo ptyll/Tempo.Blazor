@@ -143,6 +143,20 @@ public class TmSigningStepShellTests : LocalizationTestBase
         cut.Find(".tm-signing-step-shell__optional").TextContent.Should().Contain("Optional");
     }
 
+    /// <summary>
+    /// Signing redesign phase 4 (SI4): the shell header shows the field type's icon from the shared
+    /// <see cref="SigningFieldTypeIcons"/> map — the same glyph the palette, the overlays and the
+    /// runner's field list render, so a signer recognises the field type everywhere.
+    /// </summary>
+    [Fact]
+    public void Shell_RendersFieldTypeIcon_InHeader()
+    {
+        var cut = Render<TmSigningStepShell>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Full name", Type = SigningFieldType.Text }));
+
+        cut.Find(".tm-signing-step-shell__icon .tm-icon").Should().NotBeNull();
+    }
+
     [Fact]
     public void Render_Description_RendersSimpleMarkdown()
     {

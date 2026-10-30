@@ -559,17 +559,154 @@
     </section>
     ```
 
+- **Signing steps render on the core Tm components (Signing redesign phase 4, S2-3/SI1).** Every
+  step input moved from a raw element to the core input components — the date input stays NATIVE
+  (`<input type="date|month|datetime-local">`, the SI1 exception, styled with the core `tm-input`
+  classes) so the mobile pickers keep working. What changes in the DOM and for hosts:
+  - *Text.* The input is a `TmTextInput` / `TmTextArea` (`div.tm-input-wrapper > input.tm-input`,
+    `textarea.tm-textarea`); the accessible name is still the step title id via the splatted
+    `aria-labelledby`, and `maxlength` / `pattern` splat onto the native element. A "n / max"
+    counter (`.tm-signing-text-step__count`) renders while the field carries a max length — the
+    visible count is `aria-hidden` and a permanent visually-hidden polite live region announces
+    only AT the limit (phase 4 review).
+    ```css
+    /* before */ input.tm-signing-text-step__input { … }
+    /* after  */ .tm-signing-text-step input.tm-signing-text-step__input { … }
+    /* the same class stays on the <input>; the textarea variant moved to the wrapper */
+    .tm-signing-text-step__textarea { … }  /* now the TmTextArea wrapper div, not the textarea */
+    ```
+  - *Number (behavior change).* The input is `type="text"` + `inputmode="decimal"` and parses with
+    the FIELD culture, so a Czech signer can finally type the decimal comma ("125,5") — the old
+    native `type="number"` + InvariantCulture parse rejected it. The parse contract (phase 4
+    review) is strict about group separators: `NumberStyles.Float` WITHOUT `AllowThousands`, so an
+    en-US "1,5" is an invalid half and NOT one thousand five; only a whitespace-like group
+    separator (the NBSP of cs-CZ "1 000,5") is stripped before the parse. The native `step`
+    attribute is no longer applied either (it was inert on the old markup and is meaningless on a
+    text input — `SigningFieldValidation.Step` stays in the model for hosts). The `min` / `max`
+    attributes are gone (inert on a text input); the allowed range renders as a localized hint
+    (`.tm-signing-number-step__range`, `TmSigningStep_NumberRange`, "Allowed range: 1 – 1 000 000"
+    for cs-CZ) referenced from the input's `aria-describedby`. The min/max validation messages are
+    unchanged.
+  - *Validation commits, keystrokes flow (behavior change).* The text and number steps raise
+    `ValueChanged` — and the runner's `ValuesChanged` — PER KEYSTROKE again (the runner's auto-save
+    is debounced by `AutoSaveDelay`,
+    so this is only a traffic change), while the validation message is computed on COMMIT (blur /
+    change) — typing never fires the step's alert, and typing after a failed commit clears it.
+    Same for the KBA answers. A host that showed its own "invalid" marker per keystroke now sees
+    the marker only after the field commits.
+  - *Choice.* The select variant renders the core `TmSelect` — the `tm-signing-choice-step__select`
+    class moved from the `<select>` to the component wrapper, and the select's accessible name is
+    the field label (`aria-label`). The step's plumbing reaches the NATIVE `<select>` through the
+    core `TmSelect.SelectAttributes` splat (phase 4 review): the title id as `aria-labelledby`,
+    the description / validation ids as `aria-describedby`, and `aria-invalid` on the select
+    itself. The
+    radio variant keeps the `fieldset` / visually hidden `legend` and renders the core
+    `TmRadioGroup` (`.tm-radio-group`, `TmRadio` rows — the inputs no longer carry a `value`
+    attribute; select radios by role/label, `getByRole('radio', { name: 'Email' })`), with the
+    field type's own `circle-dot` glyph in the palette / list / header (a bare circle read like
+    any bullet). The
+    checkbox variants render `TmCheckbox` rows (`.tm-checkbox-wrapper` with the package
+    `tm-signing-choice-step__option` / `__checkbox-row` classes; grouped checkbox fields carry
+    their description as the row's help text, whose id the input references through the core
+    `aria-describedby`).
+    ```css
+    /* before */ input.tm-signing-choice-step__radio { … }   /* the raw radio input */
+    /* after  */ .tm-signing-choice-step .tm-radio-option { … }  /* the core TmRadio row */
+    ```
+  - *Phone.* The country select is a `TmSelect` (the `tm-signing-phone-step__country` class moved
+    from the `<select>` to the wrapper) and the number input a `TmTextInput Type="tel"`; all three
+    controls (country / number / OTP) now carry VISIBLE localized labels
+    (`TmSigningStep_PhoneCountryLabel`, `_PhoneNumberLabel`, `_OtpLabel`) — the old aria-label
+    keys (`TmSigningStep_CountryCodeAria` / `_PhoneInputAria` / `_OtpInputAria`) were removed in
+    the phase-4 review, and the number's placeholder is an EXAMPLE FORMAT for the selected
+    calling code ("777 123 456" for +420) instead of a repeated label. The OTP input keeps
+    `inputmode="numeric"` + `autocomplete="one-time-code"`. **The default
+    country code comes from the field culture** (+420 for cs, +421 for sk, otherwise +1) — the old
+    hardcoded `"+1"` default opened a Czech signer's step on the wrong prefix. `CountryCode` is
+    now `string?`; an explicitly passed code keeps winning over the culture default, a culture
+    default the host's `CountryOptions` do not offer falls back to the FIRST option, and the
+    PICKED code is component-local state (phase 4 review) — a host that does not bind
+    `CountryCodeChanged` no longer sees the select snap back on the next render.
+  - *Attachment.* The upload is the core `TmFileDropZone` (the custom signing icon content replaced
+    the default emoji; the file input carries `aria-label` + a stable `data-testid`, and the
+    description / invalid state ride the core `InputAttributes` splat — phase 4 review). The
+    zone's own picked-files list is SUPPRESSED (`ShowFileList="false"`, the core addition) because
+    the step renders its own cards — the same file never shows twice. Cards show a preview
+    (decorative, `alt=""`) or type icon, a culturally formatted "size · type" line
+    (`.tm-signing-attachment-step__meta`, "1,2 MB" under cs-CZ — the old size was culture-invariant)
+    under a localized "Attached files (N)" heading; the remove action is a ghost `TmButton`
+    whose accessible name carries the FILE NAME (`TmSigningStep_RemoveFile`, "Remove
+    contract.pdf") and whose visible text collapses to a 44 px icon-only target on the narrow
+    step container, where the card itself wraps (phase 4 review).
+  - *External.* The step gains a hero icon in a primary-subtle circle — on a WIDE step container
+    it sits beside the title / description in the header row (phase 4 review) — a per-type default
+    description (`TmSigningStep_VerificationDescription` / `_KbaDescription` / `_PaymentDescription`,
+    overridable by the field description), a culture-formatted payment amount (cs-CZ renders
+    "1 500,00 Kč" — the old rendering was culture-invariant "EUR 19.50"), Start as the primary
+    `TmButton` with the open link as an outline sibling (the `tm-btn` / `tm-btn-outline` classes
+    are the core `_button.css` contract — keep that stylesheet shipped whenever this step renders),
+    and the **verified / paid state**: the new
+    `Value` parameter (the runner passes the stored field value) replaces the call to action with a
+    localized "Verified" / "Paid" status once the value is `true`. The `.tm-signing-external-step__question`
+    wrapper is gone (each KBA answer is a labelled `TmTextInput`).
+  - *Signature.* The capture's Clear button moved INSIDE the signing surface — the step passes
+    `ClearButtonPlacement="Overlay"` (the F8 core addition) by default; the new
+    `TmSigningSignatureStep.ClearButtonPlacement` parameter restores the row
+    (`TmSignatureClearButtonPlacement.Actions`). The step shell header now renders the field type's
+    icon (`.tm-signing-step-shell__icon`, the shared `SigningFieldTypeIcons` glyph).
+  - *Touch sizing.* Step inputs and actions meet the 44 px touch target (`--tm-touch-target`), 48 px
+    (`--tm-space-12`) in the narrow step container; the value rows (date + Today, phone + Send code,
+    external actions) stack under each other on the narrow container — with the input's height
+    decided by its own content again, not the stretched row (the date / OTP input rendered ~190 px
+    tall; phase 4 review). The "Today" action reads as a tonal chip (primary-subtle background,
+    primary ink, no border). The step-specific styles moved
+    from `_signing-step-shell.css` into the new `_signing-steps.css` (both ship via
+    `tempo-blazor-signing.css`).
+
 ### Known issues
 
 - **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
   "Start verification" / "Checkout" marks the step complete WITHOUT any verification or payment
   taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload
-  stays in the browser. The resulting field values are untrusted presentation state. The XML docs
+  stays in the browser. The resulting field values are untrusted presentation state — the
+  "Verified" / "Paid" status (like every other step value) reflects the STORED value until the
+  provider-backed contract replaces this placeholder, so a tampered stored value shows as verified.
+  The XML docs
   and the JSON component documentation carry a "Known limitations / security note"; a
   provider-backed contract is planned for Signing redesign phase 6.
 
 ### Added
 
+- **Core splat hooks for host a11y plumbing (Signing redesign phase 4 review), all additive.**
+  `TmSelect` gains `SelectAttributes` (splatted on the native `<select>`; entries win over the
+  component's own attributes), `TmCheckbox` gains `InputAttributes` (on the native `<input>`; its
+  `HelpText` block now also carries an id the input references via `aria-describedby`), and
+  `TmFileDropZone` gains `InputAttributes` (on the internal file input) and `ShowFileList`
+  (default `true`; `false` hides the zone's own picked-files list when the host renders the files
+  itself). `TmTextArea` sets `aria-invalid="true"` while any message shows — its own `Error` or a
+  field-level `TmFormField` error. The file drop area paints a visible focus ring when the
+  (opacity-0) input takes keyboard focus (`:has(:focus-visible)` in `_file-drop-zone.css`).
+- **Signing step fixes (Signing redesign phase 4 review).** The phone country pick survives a host
+  without a bound `CountryCodeChanged` (local state + a parameter-change sync), the number parse
+  is strict about group separators (see the Breaking / Migration entry), validation commits on
+  blur instead of firing per keystroke, and the narrow-container date / OTP input no longer
+  stretches ~190 px tall. New localized keys `TmSigningStep_MinLength` ("Use at least {0}
+  characters.", the text step's commit-side minimum length) and `TmSigningStep_RemoveFile`
+  ("Remove {0}", the attachment remove button's accessible name) in en / cs / sk / fr; the unused
+  `TmSigningStep_CountryCodeAria` / `_PhoneInputAria` / `_OtpInputAria` keys were removed from the
+  resources and the test mock together with their last callers.
+- **Signing step inputs and states (Signing redesign phase 4), additive.** `TmSigningExternalStep`
+  gains `Value` (the stored field value; `true` — bool or string — shows the localized
+  "Verified" / "Paid" state instead of the call to action, the runner passes it), and
+  `TmSigningSignatureStep` gains `ClearButtonPlacement` (default
+  `TmSignatureClearButtonPlacement.Overlay`, hosts restore the row with `Actions`). The number
+  step shows the localized allowed-range hint (`TmSigningStep_NumberRange`, culture-formatted), the
+  text step the "n / max" counter (`TmSigningStep_CharCount`, live only at the limit), the
+  attachment step the "Attached files ({0})" heading (`TmSigningStep_AttachedFiles`), the phone
+  step visible labels (`TmSigningStep_PhoneCountryLabel`, `_PhoneNumberLabel`, `_OtpLabel`) and the
+  external step the per-type default descriptions (`TmSigningStep_VerificationDescription`,
+  `_KbaDescription`, `_PaymentDescription`) and the state strings (`_Verified`, `_Paid`) — all in
+  en / cs / sk / fr.
 - **Signing runner document chrome (Signing redesign phase 3, U4), all opt-in.** `TmSigningFormRunner`
   gains `DocumentTitle` (a header above the pages), `ShowDocumentToolbar` (default `false` — today's
   chrome-free look; `true` passes `ShowToolbar` / `ShowZoomControls` to
@@ -1331,6 +1468,7 @@
 
 ### Changed
 
+- **`TmTextArea` sets `aria-invalid="true"` when a wrapping `TmFormField` shows an error.** The textarea used to mark itself invalid only from its own `Error` parameter, so a field-level message (the `TmFormField` cascade) rendered the alert without the invalid state on the control — screen readers announced the error while the field still read as valid. The textarea also references the field-level message through its `aria-describedby`. A textarea with only its own `Error` is unchanged.
 - **TmGantt phase 10: the Excel import respects the dialog's mapping for the first time, and the workbook cell values are culture-invariant.** `TmGanttImportDialog` used to call the GanttXlsx importer with `Import(stream, null)` behind its reflection, so the mapping the user confirmed never reached the import; it now reads the headers, confirms the mapping and imports the mapped result (details under Added). `GanttXlsxExporter` (and the built-in preview) format cell values through the shared `GanttColumnValues.Format` with `CultureInfo.InvariantCulture` — on a server under a decimal-comma culture a `12,5` estimation becomes `12.5` in the workbook, which is the value Excel expects. The phase-10 review fixes fold in here: a host-seeded mapping list with the same source column twice no longer throws (`ArgumentException`) — the first mapping wins; the warnings alert no longer repeats the plural title as its expander (a "Show details" key) and its footer offers one primary Close; the mobile preview `<details>` keeps the `role="img"` name; and the wording fixed in en/sk ("would close a cycle", "čiara Dnes" — the Slovak was written with the Czech vowel).
 - **Closing of the editor-redesign follow-up plan (phase 9): committed visual baselines and lane documentation.** The Wireframe phase 5-7 sets
   (`__screenshots__/wireframe/phase5|6|7`), the `TmDocumentOpenDialog` mobile set (`__screenshots__/document-library/mobile`) and the dark 390 / 1024 e-mail

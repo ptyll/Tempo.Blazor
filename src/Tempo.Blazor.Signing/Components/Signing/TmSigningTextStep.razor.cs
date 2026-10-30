@@ -1,11 +1,14 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Signing;
 
-/// <summary>Renders a text-like signing step with optional multiline, cells, and regex validation.</summary>
+/// <summary>
+/// Renders a text-like signing step with optional multiline, cells, and regex validation on the
+/// core <c>TmTextInput</c> / <c>TmTextArea</c> components (Signing redesign phase 4, SI1).
+/// </summary>
 public partial class TmSigningTextStep
 {
     // Per-instance accessible plumbing (Signing redesign phase 2): ids are owned by THIS component
@@ -15,6 +18,7 @@ public partial class TmSigningTextStep
     private readonly string _descriptionId = $"tm-signing-step-description-{Guid.NewGuid():N}";
     private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
     private string? _validationMessage;
+    private string? _value;
 
     /// <summary>Signing field represented by this step.</summary>
     [Parameter] public SigningField Field { get; set; } = new();
@@ -51,6 +55,14 @@ public partial class TmSigningTextStep
     [CascadingParameter(Name = "TmSigningRunnerValidation")]
     private string? RunnerValidationMessage { get; set; }
 
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // The counter and the input mirror the host's value so typing stays reflected even when a
+        // test host (or a runner render race) has not fed the parameter back yet.
+        _value = Value;
+    }
+
     private bool IsMultiline => string.Equals(Field.Preferences.Format, "multiline", StringComparison.OrdinalIgnoreCase)
         || TryGetBoolSetting("multiline");
 
@@ -66,6 +78,51 @@ public partial class TmSigningTextStep
     private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);
 
     private string? ValidationDescriptionId => HasValidationMessage ? _validationId : null;
+
+    /// <summary>
+    /// The invalid state the TmTextInput renders (<c>aria-invalid</c> + the error class): the shell
+    /// owns the alert, the input only mirrors the invalid state.
+    /// </summary>
+    private bool? ValidationState => HasValidationMessage ? false : null;
+
+    /// <summary>
+    /// The attributes the Tm input splats onto the native element: this instance's title id as the
+    /// accessible name (phase 2 contract) and the description / validation ids (while they render)
+    /// as the description. The native <c>maxlength</c> / <c>pattern</c> attributes ride along so
+    /// the browser enforces what the field template declares. While a validation message shows,
+    /// <c>aria-invalid="true"</c> rides along too: both core inputs render their own attributes
+    /// BEFORE the splat, and the multiline <c>TmTextArea</c> has no <c>IsValid</c> parameter, so
+    /// the splat is the only channel that marks it invalid.
+    /// </summary>
+    private Dictionary<string, object> BuildInputAttributes()
+    {
+        var attributes = new Dictionary<string, object>
+        {
+            ["aria-labelledby"] = _titleId
+        };
+
+        if (HasValidationMessage)
+        {
+            attributes["aria-invalid"] = "true";
+        }
+
+        if (DescribedBy is { } describedBy)
+        {
+            attributes["aria-describedby"] = describedBy;
+        }
+
+        if (MaxLength is { } maxLength)
+        {
+            attributes["maxlength"] = maxLength;
+        }
+
+        if (!IsMultiline && !string.IsNullOrWhiteSpace(Field.Validation?.Pattern))
+        {
+            attributes["pattern"] = Field.Validation!.Pattern!;
+        }
+
+        return attributes;
+    }
 
     /// <summary>
     /// The ids this step's inputs reference — per-instance, and the SAME instances the shell
@@ -97,11 +154,35 @@ public partial class TmSigningTextStep
 
     private string ShellClass => string.Join(" ", new[] { "tm-signing-text-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));
 
-    private async Task HandleValueChangedAsync(ChangeEventArgs args)
+    private bool IsAtLimit(int maxLength) => (_value?.Length ?? 0) >= maxLength;
+
+    /// <summary>
+    /// The per-keystroke input path (single line): update the value, raise it and CLEAR an
+    /// existing message. Validation runs on COMMIT — <see cref="HandleCommitAsync"/> on blur for
+    /// the single-line input; the multiline <c>TmTextArea</c> has no input events to speak of
+    /// (<c>Immediate=false</c> raises <see cref="TmTextArea.ValueChanged"/> on the change event),
+    /// so its value path IS the commit and validates right away.
+    /// </summary>
+    private async Task HandleValueChangedAsync(string? value)
     {
-        var value = args.Value?.ToString();
-        _validationMessage = Validate(value);
+        _value = value;
+        if (IsMultiline)
+        {
+            _validationMessage = Validate(value);
+        }
+        else
+        {
+            _validationMessage = null;
+        }
+
         await ValueChanged.InvokeAsync(value);
+    }
+
+    /// <summary>The COMMIT path (blur) of the single-line input: compute the validation message.</summary>
+    private Task HandleCommitAsync()
+    {
+        _validationMessage = Validate(_value);
+        return Task.CompletedTask;
     }
 
     private string? Validate(string? value)
@@ -111,14 +192,31 @@ public partial class TmSigningTextStep
             return SigningLocalizationResolver.ResolveValidationMessage(Field.Validation, Culture, FallbackCulture, Loc["TmSigningStep_Required"]);
         }
 
-        if (!string.IsNullOrWhiteSpace(value)
-            && !string.IsNullOrWhiteSpace(Field.Validation?.Pattern)
-            && !Regex.IsMatch(value, Field.Validation.Pattern))
+        if (!string.IsNullOrWhiteSpace(value))
         {
-            return SigningLocalizationResolver.ResolveValidationMessage(Field.Validation, Culture, FallbackCulture, Loc["TmSigningStep_InvalidPattern"]);
+            if (!string.IsNullOrWhiteSpace(Field.Validation?.Pattern)
+                && !Regex.IsMatch(value, Field.Validation.Pattern))
+            {
+                return SigningLocalizationResolver.ResolveValidationMessage(Field.Validation, Culture, FallbackCulture, Loc["TmSigningStep_InvalidPattern"]);
+            }
+
+            // Validation.Min doubles as the minimum LENGTH for text-like fields (see
+            // SigningFieldValidation.Min). Only a whole, positive number is a length — a date or
+            // numeric min ("2024-01-01", "5.5") is meaningless here.
+            if (TryParseLength(Field.Validation?.Min, out var minLength) && value.Length < minLength)
+            {
+                return Loc["TmSigningStep_MinLength", minLength];
+            }
         }
 
         return null;
+    }
+
+    private static bool TryParseLength(string? value, out int length)
+    {
+        length = 0;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out length)
+            && length > 0;
     }
 
     private int? GetCellCount()
@@ -138,8 +236,6 @@ public partial class TmSigningTextStep
             && value is bool boolValue
             && boolValue;
     }
-
-    private static string BoolText(bool value) => value ? "true" : "false";
 
     private int? TryGetIntSetting(string key)
     {

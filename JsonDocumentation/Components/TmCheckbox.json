@@ -54,6 +54,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Shows an indeterminate (dash) state when true and Value is false."
+    },
+    {
+      "name": "InputAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes splatted onto the NATIVE input element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby. Entries win over the component's own attributes (the splat is applied last), except aria-describedby, which merges with the help text id. Additive: nothing existing changes."
     }
   ],
   "cssClasses": [

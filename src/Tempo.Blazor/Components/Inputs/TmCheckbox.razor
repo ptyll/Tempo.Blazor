@@ -10,7 +10,9 @@
                aria-required="@(Required ? "true" : null)"
                aria-checked="@(IsIndeterminate ? "mixed" : null)"
                class="tm-checkbox-input"
-               @onchange="HandleChangeAsync" />
+               @onchange="HandleChangeAsync"
+               @attributes="InputAttributes"
+               aria-describedby="@DescribedBy" />
         <span class="tm-checkbox-custom @(IsIndeterminate ? "tm-checkbox-custom-indeterminate" : "")">
             @if (Value)
             {
@@ -34,7 +36,7 @@
     </label>
     @if (!string.IsNullOrEmpty(HelpText))
     {
-        <div data-testid="@TestId("checkbox-help")" class="tm-checkbox-help">@HelpText</div>
+        <div id="@HelpId" data-testid="@TestId("checkbox-help")" class="tm-checkbox-help">@HelpText</div>
     }
 </div>
 
@@ -65,6 +67,49 @@
 
     /// <summary>Shows an indeterminate (dash) state when true and Value is false.</summary>
     [Parameter] public bool Indeterminate { get; set; }
+
+    /// <summary>
+    /// Additional attributes splatted onto the NATIVE <c>&lt;input type="checkbox"&gt;</c> element
+    /// (the wrapper splat <see cref="AdditionalAttributes"/> cannot reach it). Use it for the
+    /// accessibility plumbing a host step owns — <c>aria-invalid</c>, <c>aria-describedby</c>,
+    /// <c>aria-labelledby</c>. Entries win over the component's own attributes (the splat is
+    /// applied last), except <c>aria-describedby</c>, which merges with the help text id. Additive:
+    /// nothing existing changes.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private readonly string _helpId = $"tm-checkbox-help-{Guid.NewGuid():N}";
+
+    /// <summary>DOM id of the rendered <see cref="HelpText"/> block (referenced from the input's aria-describedby).</summary>
+    private string HelpId => _helpId;
+
+    /// <summary>
+    /// The input's description: the <see cref="HelpText"/> id (when help text renders) plus any
+    /// <c>aria-describedby</c> carried by <see cref="InputAttributes"/> — both stay reachable.
+    /// </summary>
+    private string? DescribedBy
+    {
+        get
+        {
+            var splatted = InputAttributes is not null
+                && InputAttributes.TryGetValue("aria-describedby", out var value)
+                && value is string text
+                ? text
+                : null;
+            var parts = new List<string>(2);
+            if (!string.IsNullOrEmpty(HelpText))
+            {
+                parts.Add(HelpId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(splatted))
+            {
+                parts.Add(splatted);
+            }
+
+            return parts.Count == 0 ? null : string.Join(" ", parts);
+        }
+    }
 
     /// <summary>
     /// The mixed state as it is actually rendered: <see cref="Indeterminate"/> loses to a real

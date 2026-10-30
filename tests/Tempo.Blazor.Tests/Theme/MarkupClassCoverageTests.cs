@@ -287,12 +287,18 @@ public sealed class MarkupClassCoverageTests
         "tm-pdf-template-designer__zoom-out",
         "tm-recipient-role-editor--invalid",
         "tm-signing-attachment-step",
-        "tm-signing-choice-step",
-        "tm-signing-choice-step__checkbox",
-        "tm-signing-choice-step__option--single",
-        "tm-signing-choice-step__radio",
+        // Signing redesign phase 4 (SI1): "tm-signing-choice-step" and "tm-signing-signature-step"
+        // left this inventory because _signing-steps.css now styles through them (the strictly
+        // narrower ancestor chains on the radio-checked row and the capture's mode tabs) — the
+        // sweep reads an ancestor compound as coverage. The raw choice inputs became core Tm
+        // components, so "tm-signing-choice-step__checkbox" and "tm-signing-choice-step__radio"
+        // left the markup AND this inventory; "tm-signing-choice-step__option--single" gained its
+        // own rule in the same sheet and left the same way.
         "tm-signing-date-step",
-        "tm-signing-external-step",
+        // Signing redesign phase 4 review: "tm-signing-external-step" left this inventory the same
+        // way "tm-signing-choice-step" above did — the wide-container hero rule styles through the
+        // ancestor compound ".tm-signing-external-step .tm-signing-step-shell__header", and the
+        // sweep reads an ancestor compound as coverage.
         "tm-signing-field",
         "tm-signing-field-editor-panel--empty",
         "tm-signing-field-editor-panel__localization",
@@ -310,7 +316,6 @@ public sealed class MarkupClassCoverageTests
         "tm-signing-form-runner__field-item",
         "tm-signing-number-step",
         "tm-signing-phone-step",
-        "tm-signing-signature-step",
         "tm-signing-step-shell--invalid",
         "tm-signing-step-shell--required",
         "tm-signing-text-step",

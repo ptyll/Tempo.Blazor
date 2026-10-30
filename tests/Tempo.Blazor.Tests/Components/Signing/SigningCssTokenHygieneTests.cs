@@ -27,7 +27,8 @@ namespace Tempo.Blazor.Tests.Components.Signing;
 /// </summary>
 public class SigningCssTokenHygieneTests
 {
-    private const int ComponentStylesheetCount = 15;
+    // Signing redesign phase 4: _signing-steps.css split out of _signing-step-shell.css — 15 → 16.
+    private const int ComponentStylesheetCount = 16;
 
     /// <summary>Custom properties injected at runtime (inline style / JS), never declared in CSS.</summary>
     private static readonly string[] RuntimeLocalCustomProperties =
