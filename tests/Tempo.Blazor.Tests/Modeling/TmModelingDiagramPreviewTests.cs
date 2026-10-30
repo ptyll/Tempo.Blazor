@@ -1,11 +1,16 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using FluentAssertions;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Buttons;
+using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Tests.Localization;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Modeling;
 
@@ -25,6 +30,69 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         cut.Find("[data-testid='modeling-diagram-preview']").GetAttribute("data-state").Should().Be("populated");
         cut.Find("[data-testid='diagram-editor']").Should().NotBeNull();
         cut.FindAll(".tm-diagram-node").Should().HaveCount(2);
+    }
+
+    // ── Fáze 9: the embedded-viewer knobs (public DE API, never CSS on its internals) ──
+
+    [Fact]
+    public void Single_page_preview_hides_page_tabs_via_public_api()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindAll(".tm-diagram-editor__page-tabs").Should().BeEmpty(
+            "the 1-page preview hides the page-tabs row through ShowPageTabs (public API)");
+        cut.FindComponent<TmDiagramEditor>().Instance.ShowPageTabs.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Multi_page_preview_keeps_page_tabs()
+    {
+        var document = CreateDocument(nodeCount: 2);
+        document.Pages.Add(new DiagramPage { Name = "Page 2" });
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document));
+
+        cut.Find(".tm-diagram-editor__page-tabs").Should().NotBeNull(
+            "a multi-page document keeps the tab row (pages stay switchable)");
+    }
+
+    [Fact]
+    public void Mobile_preview_shows_zoom_overlay_without_toolbar()
+    {
+        // The mobile band drops the embedded chrome (ShowToolbar=false) and opts into the DE's
+        // floating zoom pill — the mobile preview is no longer pinch-only.
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowEmbeddedEditorChrome, false)
+            .Add(p => p.ShowZoomOverlay, true));
+
+        var editor = cut.FindComponent<TmDiagramEditor>().Instance;
+        editor.ShowMobileZoomOverlay.Should().BeTrue("the preview requests the mobile zoom pill");
+        editor.ShowToolbar.Should().BeFalse("the mobile band hides the embedded chrome");
+    }
+
+    [Fact]
+    public void Preview_without_zoom_overlay_keeps_default_de_rule()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindComponent<TmDiagramEditor>().Instance.ShowMobileZoomOverlay.Should().BeNull(
+            "the default leaves the DE's own rule in place (docked bands keep the status-bar zoom)");
+    }
+
+    [Fact]
+    public void Preview_requests_fit_width_on_first_load_on_mobile()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowEmbeddedEditorChrome, false)
+            .Add(p => p.ShowZoomOverlay, true));
+
+        cut.FindComponent<TmDiagramEditor>().Instance.FitOnDocumentLoad.Should().Be(DiagramFitMode.Width,
+            "the mobile preview fits the diagram to the width on its first load");
     }
 
     [Fact]
@@ -159,6 +227,34 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Drop_hint_and_drop_zone_render_only_while_dragging()
+    {
+        // Review fix (phase 5): the hint row and the dashed drop-zone border are a WHILE-DRAGGING
+        // affordance — a permanent hint ate a slice of the canvas column at every viewport.
+        var document = CreateDocument(nodeCount: 1);
+        var element = CreateElement("task-drop", "source/task-drop");
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document));
+
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty("no hint without a live drag");
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("false");
+
+        cut.Render(parameters => parameters.Add(p => p.ActiveDraggedElement, element));
+
+        cut.Find("[data-testid='modeling-diagram-preview-drop-hint']").Should().NotBeNull();
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("true");
+
+        var css = File.ReadAllText(FindPreviewCssPath());
+        css.Should().Contain(".tm-modeling-diagram-preview__canvas-shell[data-drop-enabled=\"true\"][data-dragging=\"true\"]",
+            "the dashed drop-zone border only paints while dragging");
+
+        cut.Render(parameters => parameters.Add(p => p.ActiveDraggedElement, (ModelingElementDto?)null));
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty("the hint leaves with the drag");
+        cut.Find("[data-testid='modeling-diagram-preview-canvas-shell']").GetAttribute("data-dragging").Should().Be("false");
+    }
+
+    [Fact]
     public void Preview_uses_viewer_toolbar_preset()
     {
         using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
@@ -170,14 +266,39 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             .Select(g => g.GetAttribute("data-tm-group")!)
             .ToList();
 
-        // The preview is a read-only viewer surface: only the viewer groups may render.
-        groupNames.Should().BeEquivalentTo(["zoom", "view", "search", "export"]);
+        // The preview is a read-only viewer surface keeping the ZOOM group only (final UX
+        // review M1): the search + "⋯" header-bar row of the wider viewer set is gone with its
+        // groups — the DE renders no empty header bar — and the status bar keeps the zoom
+        // controls. The export fold-in had already cost a second row (phase 5).
+        groupNames.Should().BeEquivalentTo(["zoom"]);
+        groupNames.Should().NotContain("search", "the search toggle's header-bar row is dropped with the group");
+        groupNames.Should().NotContain("view", "the view settings live in the header bar the preview drops");
+        groupNames.Should().NotContain("export", "the preview drops the export group through ToolbarGroups");
         groupNames.Should().NotContain("import", "the preview must not offer imports");
         groupNames.Should().NotContain("templates", "the preview must not offer templates");
         groupNames.Should().NotContain("readonly", "a host-pinned read-only preview cannot be unlocked");
 
         // The viewer zoom readout stays reachable by the Modeling E2E selector.
         cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Preview_header_summary_is_opt_out_through_ShowSummary()
+    {
+        // Final UX review (M1): the docked editor passes ShowSummary=false — the status bar
+        // already carries the counts, and the subtitle row cost the canvas height.
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.ShowSummary, false));
+
+        cut.Find(".tm-modeling-diagram-preview__title-group h3").Should().NotBeNull("the title stays");
+        cut.FindAll(".tm-modeling-diagram-preview__title-group span").Should().BeEmpty(
+            "the nodes/edges summary is opt-out");
+
+        // Default true keeps the subtitle for other hosts.
+        using var defaultCut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+        defaultCut.Find(".tm-modeling-diagram-preview__title-group span").Should().NotBeNull();
     }
 
     [Fact]
@@ -192,6 +313,40 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             "the Modeling preview renders no document-title input");
         cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull(
             "the viewer chrome (zoom readout) still renders");
+    }
+
+    [Fact]
+    public void Open_in_editor_is_primary_and_generate_is_secondary()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2))
+            .Add(p => p.OnGenerateRequested, EventCallback.Factory.Create(this, () => { })));
+
+        var generate = cut.FindComponents<TmButton>()
+            .Single(button => button.Markup.Contains("modeling-generate-diagram-button"));
+        var open = cut.FindComponents<TmButton>()
+            .Single(button => button.Markup.Contains("modeling-open-in-editor-button"));
+
+        open.Instance.Variant.Should().Be(ButtonVariant.Primary,
+            "'Open in editor' is the preview header's primary action (MO3)");
+        generate.Instance.Variant.Should().Be(ButtonVariant.Secondary,
+            "'Generate diagram' is the secondary action (MO3)");
+    }
+
+    [Fact]
+    public void Preview_header_wraps_instead_of_clipping()
+    {
+        var css = File.ReadAllText(FindPreviewCssPath());
+
+        var headerRule = ExtractRule(css, ".tm-modeling-diagram-preview__header");
+        headerRule.Should().Contain("flex-wrap: wrap",
+            "the preview header wraps at narrow columns instead of clipping the actions (carry-forward from phase 2 review)");
+        headerRule.Should().NotContain("nowrap");
+
+        var titleRule = ExtractRule(css, ".tm-modeling-diagram-preview__title-group h3");
+        titleRule.Should().NotContain("white-space: nowrap",
+            "the preview title wraps instead of truncating to 'Dia…' at 1024");
+        titleRule.Should().NotContain("text-overflow: ellipsis");
     }
 
     [Fact]
@@ -211,6 +366,83 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
             "spacer visibility must come from the editor API, not from Modeling CSS");
         css.Should().NotContain("tm-toolbar-btn--active",
             "Modeling must not restyle internal editor toolbar button states");
+        css.Should().NotContain("tm-diagram-editor__",
+            "Modeling must not style ANY diagram editor internal (extended from DiagramEditor Fáze 1 — the toolbar contract is data-tm-group + presets, never CSS)");
+        css.Should().NotContain("data-tm-group",
+            "the frozen group attribute is a host/E2E hook, never a Modeling CSS selector");
+    }
+
+    // ── Viewport-center insert (Fáze 6 review fix) ───────────────────────────
+
+    [Fact]
+    public async Task Insert_at_viewport_center_uses_the_embedded_editor_viewport()
+    {
+        var document = CreateDocument(nodeCount: 1);
+        ModelingNodeDroppedEventArgs? dropped = null;
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.OnNodeDropped, EventCallback.Factory.Create<ModelingNodeDroppedEventArgs>(this, value => dropped = value)));
+
+        // The embedded canvas reports its viewport (the JS engine's contract, driven here):
+        // visible window x=100..500, y=200..500 in document space → center (300, 350).
+        var canvas = cut.FindComponents<Tempo.Blazor.Components.Diagram.TmDiagramCanvas>().Single();
+        await cut.InvokeAsync(() => canvas.Instance.OnViewportChanged(100, 200, 400, 300));
+
+        await cut.InvokeAsync(() => cut.Instance.InsertAtViewportCenterAsync(CreateElement("task-vp", "source/task-vp")));
+
+        dropped.Should().NotBeNull("the insert routes through the OnNodeDropped contract");
+        // The center (300, 350) minus the default template's half-size (80, 44) — no clamp on
+        // the 3000x2000 page and no collision with the node at 120..260/140..212.
+        dropped!.Point.X.Should().Be(300 - 80);
+        dropped.Point.Y.Should().Be(350 - 44);
+    }
+
+    [Fact]
+    public async Task Insert_at_viewport_center_falls_back_to_the_page_center_without_a_viewport()
+    {
+        var document = CreateDocument(nodeCount: 0);
+        ModelingNodeDroppedEventArgs? dropped = null;
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.OnNodeDropped, EventCallback.Factory.Create<ModelingNodeDroppedEventArgs>(this, value => dropped = value)));
+
+        // No OnViewportChanged: the JS engine has not reported anything (bUnit/SSR) — the
+        // insert lands at the page center (the pre-review fallback).
+        await cut.InvokeAsync(() => cut.Instance.InsertAtViewportCenterAsync(CreateElement("task-vp", "source/task-vp")));
+
+        dropped.Should().NotBeNull();
+        dropped!.Point.X.Should().Be(1500 - 80, "the 3000px page's center minus the template half-width");
+        dropped.Point.Y.Should().Be(1000 - 44, "the 2000px page's center minus the template half-height");
+    }
+
+    [Fact]
+    public void Preview_is_its_own_container_and_floors_the_canvas_on_the_tablet_band()
+    {
+        var css = File.ReadAllText(FindPreviewCssPath()).Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        // Fáze 6 review: a STANDALONE preview (a host embedding just the preview) resolves its
+        // own header stacking from its own container; the editor-container query stays for the
+        // embedded case.
+        css.Should().Contain("container: tm-modeling-diagram-preview / inline-size");
+        css.Should().Contain("@container tm-modeling-diagram-preview (width < 640px)");
+        css.Should().MatchRegex(
+            @"@container tm-modeling-diagram-preview \(width < 640px\) \{[^}]*flex-direction: column;",
+            "the standalone fallback stacks the header like the editor container does");
+
+        // The tablet canvas floor lives on the embedded editor's block size (the real class is
+        // the editor root the preview renders — never an editor-internal selector).
+        css.Should().Contain("[data-layout='tablet'] ::deep .tm-modeling-diagram-preview__editor");
+        css.Should().Contain("min-block-size: calc(var(--tm-space-16) * 5)");
+    }
+
+    /// <summary>Returns the body of the first CSS rule whose selector line starts with <paramref name="selector"/>.</summary>
+    private static string ExtractRule(string css, string selector)
+    {
+        var index = css.IndexOf(selector, StringComparison.Ordinal);
+        index.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must style {selector}");
+        var open = css.IndexOf('{', index);
+        var close = css.IndexOf('}', open);
+        return css[(open + 1)..close];
     }
 
     private static string FindPreviewCssPath()
@@ -295,4 +527,31 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         Notation = "bpmn",
         Name = $"Element {id}"
     };
+
+    [Fact]
+    public void Mobile_preview_has_no_edit_actions_only_viewer_controls()
+    {
+        // Fáze 7 (G2): on a mobile layout the preview header carries NO edit actions — the
+        // generate / open-in-editor entries live in the editor's action bar and header overflow,
+        // and the drop affordances follow AllowNodeDrop=false.
+        var document = CreateDocument(nodeCount: 1);
+        var element = CreateElement("task-mobile", "source/task-mobile");
+
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.ActiveDraggedElement, element)
+            .Add(p => p.AllowNodeDrop, false)
+            .Add(p => p.ShowEditActions, false));
+
+        cut.FindAll("[data-testid='modeling-generate-diagram-button']").Should().BeEmpty(
+            "generate is an editor-level action on mobile, not a preview header button");
+        cut.FindAll("[data-testid='modeling-open-in-editor-button']").Should().BeEmpty(
+            "open-in-editor is an editor-level action on mobile, not a preview header button");
+        cut.FindAll("[data-testid='modeling-diagram-preview-drop-hint']").Should().BeEmpty(
+            "no drop hint without the drag affordance");
+        cut.Find("[data-testid='modeling-diagram-preview']").GetAttribute("data-drop-enabled")
+            .Should().Be("false");
+        // The viewer controls stay: the embedded editor keeps its toolbar.
+        cut.Find("[data-testid='diagram-editor']").Should().NotBeNull();
+    }
 }

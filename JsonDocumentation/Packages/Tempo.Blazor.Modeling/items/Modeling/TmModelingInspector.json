@@ -2,7 +2,7 @@
   "itemName": "TmModelingInspector",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Displays details for a selected modeling element or relationship.",
+  "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING).",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingInspector.razor",
@@ -35,6 +35,80 @@
       "type": "ModelingRelationshipDto?",
       "isRequired": false,
       "description": "Selected modeling relationship."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the inspector is read-only (the MO2 default). The editor passes false when model editing is enabled for the current provider — then the name, the description and the scalar properties become inputs that commit on blur/Enter (Escape reverts); semantic type, notation, source metadata, governance and complex JSON values stay read-only."
+    },
+    {
+      "name": "OnElementEdited",
+      "type": "EventCallback<ModelingElementChange>",
+      "isRequired": false,
+      "description": "Raised when an element field commit lands. The change carries only the edited fields (a null member means unchanged)."
+    },
+    {
+      "name": "OnRelationshipEdited",
+      "type": "EventCallback<ModelingRelationshipChange>",
+      "isRequired": false,
+      "description": "Raised when a relationship field commit lands."
+    },
+    {
+      "name": "OnUndoRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised for the inspector-scope Ctrl+Z — the editor's own undo stack, never the diagram canvas keyboard scope."
+    },
+    {
+      "name": "OnRedoRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised for the inspector-scope Ctrl+Shift+Z / Ctrl+Y."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Editor-owned actions rendered inside the header (the undo/redo pair and the docked Save/Discard while a Manual save is pending)."
+    },
+    {
+      "name": "Saving",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether a model save is currently in flight. Every editing input disables and the drafts are not re-seeded from the re-renders the saving state causes, so a keystroke mid-save cannot be silently wiped."
+    }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-inspector__type-icon",
+      "description": "Header icon tile resolved from the semantic type (Link2 for relationships)."
+    },
+    {
+      "name": "tm-modeling-inspector__heading",
+      "description": "Header text column: kind chip, name, type."
+    },
+    {
+      "name": "tm-modeling-inspector__name",
+      "description": "The h3 name of the inspected element/relationship."
+    },
+    {
+      "name": "tm-modeling-inspector__type",
+      "description": "The semantic/relationship type line."
+    },
+    {
+      "name": "tm-modeling-inspector__edit-field",
+      "description": "Wrapper of the name/description fields in the editing surface."
+    },
+    {
+      "name": "tm-modeling-inspector__header-actions",
+      "description": "Cluster of the editor-hosted header actions (undo/redo pair, docked Save/Discard)."
+    },
+    {
+      "name": "tm-modeling-inspector__property-edit",
+      "description": "Editable scalar property cell (the key cell stays the label)."
     }
   ]
 }

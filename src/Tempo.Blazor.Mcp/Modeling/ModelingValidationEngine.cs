@@ -34,6 +34,8 @@ internal static class ModelingValidationEngine
         var seenRelationshipIds = new HashSet<string>(StringComparer.Ordinal);
         var notationKey = model.Notation;
 
+        ValidateHierarchy(model, elementsById, issues);
+
         foreach (var relationship in model.Relationships)
         {
             if (!string.IsNullOrEmpty(relationship.Id) && !seenRelationshipIds.Add(relationship.Id))
@@ -80,6 +82,66 @@ internal static class ModelingValidationEngine
         }
 
         return issues;
+    }
+
+    /// <summary>Phase 12 hierarchy validation (category <c>hierarchy</c>): a ParentId that does
+    /// not resolve to another element, and parent cycles — every cycle member is reported
+    /// (deterministically), an element merely HANGING OFF a cycle is not.</summary>
+    private static void ValidateHierarchy(
+        ModelingModelDto model,
+        Dictionary<string, ModelingElementDto> elementsById,
+        List<ModelingIssueDto> issues)
+    {
+        var parentOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var element in model.Elements)
+        {
+            if (string.IsNullOrWhiteSpace(element.Id) || string.IsNullOrWhiteSpace(element.ParentId))
+            {
+                continue;
+            }
+
+            if (element.ParentId == element.Id)
+            {
+                issues.Add(Issue(ModelingIssueSeverity.Error, "hierarchy",
+                    $"Element '{element.Id}' is its own parent (cycle).",
+                    "Break the ParentId cycle so every element resolves to a root.",
+                    sourceElementId: element.Id));
+                continue;
+            }
+
+            if (!elementsById.ContainsKey(element.ParentId))
+            {
+                issues.Add(Issue(ModelingIssueSeverity.Error, "hierarchy",
+                    $"Element '{element.Id}' references a missing parent '{element.ParentId}'.",
+                    "Point ParentId at an existing element, or clear it to render the element at the root.",
+                    sourceElementId: element.Id));
+                continue;
+            }
+
+            parentOf[element.Id] = element.ParentId;
+        }
+
+        var inCycle = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var id in parentOf.Keys)
+        {
+            var current = parentOf[id];
+            while (parentOf.TryGetValue(current, out var parent) && inCycle.Add(current))
+            {
+                if (current == id)
+                {
+                    // Walking up returned to the START element: it sits inside the cycle.
+                    issues.Add(Issue(ModelingIssueSeverity.Error, "hierarchy",
+                        $"Element '{id}' participates in a parent cycle.",
+                        "Break the ParentId cycle so every element resolves to a root.",
+                        sourceElementId: id));
+                    break;
+                }
+
+                current = parent;
+            }
+
+            inCycle.Clear();
+        }
     }
 
     private static ModelingIssueDto Issue(

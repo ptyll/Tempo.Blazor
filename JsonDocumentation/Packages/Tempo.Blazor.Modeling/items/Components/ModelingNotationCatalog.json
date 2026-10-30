@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "Fáze 15: the ONE notation catalog behind both the \"Open in editor\" palette (the pinned stencil library) and the preview legend — the notation profile's semantic types mapped to diagram stencils through the shared IModelingStencilMapper. Resolution is memoized per notation; legend entries are filtered to the types the generated document actually uses (nodes through their semanticType data, edges through the connector type of their mapped edge stencil). Registered as a singleton by AddTempoBlazorModeling.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingNotationCatalog"
+}

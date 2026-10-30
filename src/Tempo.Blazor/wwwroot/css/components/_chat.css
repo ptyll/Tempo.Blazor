@@ -2,25 +2,170 @@
    TmChat — Global Fallback Styles
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Bubble appearance knobs (FZE-3) ──────────────────────────
+   The --tm-chat-bubble-* knobs are deliberately NOT DECLARED here (nor on :root): every var()
+   in TmChatBubble.razor.css and below carries its default as the fallback, so a host overrides
+   a knob on a wrapper, on :root or directly on a bubble and it reaches every bubble — including
+   the built-in rows. Mirror of TmChat.razor.css. The FZE-8 layout knobs
+   (--tm-chat-min-height, --tm-chat-composer-offset, --tm-chat-safe-area-bottom) and the FZE-13
+   runtime knobs --tm-chat-keyboard-inset and --tm-chat-composer-clearance follow the same
+   rule. */
 .tm-chat {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  min-height: 300px;
+  /* FZE-8: the old hardcoded min-height: 300px is a knob now — the fallback keeps today's look,
+     a host sets --tm-chat-min-height: 0 (or any floor) on a wrapper or :root and it cascades. */
+  min-height: var(--tm-chat-min-height, 300px);
   background: var(--tm-bg-surface);
   border-radius: var(--tm-radius-lg);
   border: 1px solid var(--tm-border-color);
+  /* FZE-8: clip, not hidden — hidden would trap the sticky composer in the chat's own
+     never-scrolling scrollport; the hidden line stays for engines without clip. Mirror of
+     TmChat.razor.css. */
   overflow: hidden;
+  overflow: clip;
+  /* FZE-8: the narrow-chat behaviors branch on the CHAT's own width, not the viewport. */
+  container-type: inline-size;
+  container-name: tm-chat;
+  /* A size container forces a definite inline size, which would collapse a chat inside a
+     shrink-to-fit host (float, table cell, grid auto column) to 0. `auto 360px` remembers the
+     last rendered width and falls back to 360px when none was laid out yet — the narrow-chat
+     breakpoint's own order of magnitude. Opt out with `tm-chat--no-container` (via Class). */
+  contain-intrinsic-inline-size: auto 360px;
+}
+
+/* FZE-8: FillParent — the chat as a flex child of the host layout; the parent owns the sizing,
+   so the floor drops to the knob's ZERO fallback (the knob stays overridable on a wrapper or
+   :root) and the internal scroller (min-height: 0) absorbs it. */
+.tm-chat--fill {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: var(--tm-chat-min-height, 0);
+}
+
+/* Opt-out for hosts that size the chat themselves (a shrink-to-fit cell whose width must stay
+   content-driven, or a host that provides its own container): the chat stops being a size
+   container, so NO @container tm-chat rule matches — the narrow-chat behaviors never trigger.
+   Pass it through the Class parameter: <TmChat Class="tm-chat--no-container" … />. Mirror of
+   TmChat.razor.css. */
+.tm-chat--no-container {
+  container-type: normal;
+  container-name: none;
+}
+
+/* ── K6 positioning anchors ─────────────────────────────────── */
+/* Mirror of the scoped sheet: the thread panel and emoji picker are position:absolute inside
+   the chat root and the emoji picker anchors on the bubble — without `relative` they would
+   resolve against the host's scrollport. */
+.tm-chat { position: relative; }
+.tm-chat__bubble { position: relative; }
+
+/* ── Messages ───────────────────────────────────────────────── */
+/* The body wrapper owns the flex:1 and carries the floating jump-to-new button; the scroller
+   (its only scrolling child) fills it. Mirror of TmChat.razor.css. */
+.tm-chat__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .tm-chat__messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* overflow-anchor is disabled DELIBERATELY: the browser's native scroll anchoring fights the
+     scroller's own snapshot + afterUpdate anchor restore (chat.js) — native anchoring would
+     shift the viewport a second time. TmChat owns the math. */
+  overflow-anchor: none;
   padding: var(--tm-space-4);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-3);
+}
+
+/* The container is a Tab stop (tabindex=0): a visible keyboard focus indicator — INSET so the
+   outline is not clipped by the scroller's own overflow (offset 0 would paint outside the box
+   and disappear under the parent's clipping). */
+.tm-chat__messages:focus-visible {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: -2px;
+}
+
+/* ── Load older ─────────────────────────────────────────────── */
+/* aria-disabled (not the native disabled) + the component's own in-flight guard; busy reads
+   as the secondary text color with a progress cursor. */
+.tm-chat__load-older {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast),
+    border-color var(--tm-transition-fast);
+}
+
+.tm-chat__load-older:hover:not([aria-disabled="true"]) {
+  background: var(--tm-bg-muted);
+  border-color: var(--tm-border-color-strong);
+  color: var(--tm-text-primary);
+}
+
+.tm-chat__load-older[aria-disabled="true"] {
+  cursor: progress;
+  color: var(--tm-text-secondary);
+  border-color: var(--tm-border-color);
+  background: var(--tm-bg-surface);
+}
+
+/* A coarse pointer needs the 44px touch target and a wider hit area on the small pill. */
+@media (pointer: coarse) {
+  .tm-chat__load-older {
+    min-height: var(--tm-touch-target);
+    padding-inline: var(--tm-space-4);
+  }
+}
+
+/* ── Jump to new messages ───────────────────────────────────── */
+/* Centered horizontally with a 44px touch target; the transform is not transitioned. */
+.tm-chat__jump-new {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: var(--tm-space-4);
+  transform: translateX(-50%);
+  min-height: var(--tm-touch-target);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-color-primary);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
+  color: var(--tm-color-primary-contrast);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+  box-shadow: var(--tm-shadow-md);
+  z-index: 3;
+  transition: box-shadow var(--tm-transition-fast);
+}
+
+.tm-chat__jump-new:hover {
+  box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-chat__jump-new-count {
+  white-space: nowrap;
 }
 
 .tm-chat__empty {
@@ -34,11 +179,21 @@
   padding: var(--tm-space-8);
 }
 
+/* Neutral wrapper around every message (carries the data-message-id anchor and
+   data-kind). Column flex keeps the built-in .tm-chat__message row and its own
+   align-self / max-width resolution identical to the pre-wrapper markup; host
+   template content receives the full row width and positions itself. */
+.tm-chat__item {
+  display: flex;
+  flex-direction: column;
+}
+
 .tm-chat__message {
   display: flex;
   align-items: flex-end;
   gap: var(--tm-space-2);
-  max-width: 80%;
+  /* The row owns the width cap; the knob (unset in the library) only ever TIGHTENS the 80%. */
+  max-width: var(--tm-chat-bubble-max-width, 80%);
 }
 
 .tm-chat__message--incoming { align-self: flex-start; }
@@ -47,10 +202,10 @@
   align-self: center;
   max-width: 100%;
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-bg-muted);
+  background: var(--tm-chat-bubble-system-bg, var(--tm-bg-muted));
   border-radius: var(--tm-radius-full);
   font-size: var(--tm-font-size-xs);
-  color: var(--tm-text-secondary);
+  color: var(--tm-chat-bubble-system-fg, var(--tm-color-text-secondary));
 }
 
 .tm-chat__avatar {
@@ -72,22 +227,152 @@
   color: var(--tm-color-secondary);
 }
 
+/* The built-in bubble reads the same --tm-chat-bubble-* knobs the TmChatBubble component does;
+   every fallback equals the pre-FZE-3 value, so a host that touches nothing sees no change.
+   The variant border is an inset ring (box-shadow), so the padding default is compensated by
+   --tm-border-width exactly like TmChatBubble's real 1px border. */
 .tm-chat__bubble {
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-1);
-  padding: var(--tm-space-2-5) var(--tm-space-3-5);
-  border-radius: var(--tm-radius-xl);
-  background: var(--tm-bg-muted);
-  color: var(--tm-color-text);
+  padding: var(--tm-chat-bubble-padding, calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width)));
+  border-radius: var(--tm-chat-bubble-radius, var(--tm-radius-xl));
+  background: var(--tm-chat-bubble-in-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-in-fg, var(--tm-color-text));
   font-size: var(--tm-font-size-sm);
   line-height: 1.5;
+  box-shadow: inset 0 0 0 1px var(--tm-chat-bubble-in-border, transparent);
 }
 
 .tm-chat__message--outgoing .tm-chat__bubble {
-  background: var(--tm-color-primary);
-  color: var(--tm-text-inverse);
+  background: var(--tm-chat-bubble-out-bg, var(--tm-color-primary));
+  color: var(--tm-chat-bubble-out-fg, var(--tm-color-primary-contrast));
   border-bottom-right-radius: var(--tm-radius-sm);
+  box-shadow: inset 0 0 0 1px var(--tm-chat-bubble-out-border, transparent);
+}
+
+/* ── TmChatBubble (FZE-3) ─────────────────────────────────────
+   Presentation bubble for host-built message templates. Markup passed into a template carries
+   the HOST's CSS scope, so the bubbles bring their own classes; every visual property reads a
+   --tm-chat-bubble-* knob with a fallback to the same semantic token the default uses, which
+   is why dark mode resolves without a [data-theme="dark"] block. Mirror of
+   TmChatBubble.razor.css. */
+.tm-chat-bubble {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  width: fit-content;
+  min-width: 0;
+  gap: var(--tm-space-1);
+  padding: var(--tm-chat-bubble-padding, calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width)));
+  border: 1px solid transparent;
+  border-radius: var(--tm-chat-bubble-radius, var(--tm-radius-xl));
+  max-width: var(--tm-chat-bubble-max-width, 80%);
+  font-size: var(--tm-font-size-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.tm-chat-bubble--incoming {
+  background: var(--tm-chat-bubble-in-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-in-fg, var(--tm-color-text));
+  border-color: var(--tm-chat-bubble-in-border, transparent);
+  border-bottom-left-radius: var(--tm-radius-sm);
+}
+
+.tm-chat-bubble--outgoing {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-out-bg, var(--tm-color-primary));
+  color: var(--tm-chat-bubble-out-fg, var(--tm-color-primary-contrast));
+  border-color: var(--tm-chat-bubble-out-border, transparent);
+  border-bottom-right-radius: var(--tm-radius-sm);
+}
+
+.tm-chat-bubble--system {
+  align-self: center;
+  text-align: center;
+  background: var(--tm-chat-bubble-system-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-system-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-system-border, transparent);
+  font-size: var(--tm-font-size-xs);
+}
+
+/* The pill shares the system colours — it is the compact inline form of a system notice. */
+.tm-chat-bubble--pill {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  align-self: center;
+  max-width: 100%;
+  padding: calc(var(--tm-space-1) - var(--tm-border-width)) calc(var(--tm-space-3) - var(--tm-border-width));
+  background: var(--tm-chat-bubble-system-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-system-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-system-border, transparent);
+  border-radius: var(--tm-radius-full);
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-chat-bubble--pending {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-pending-bg, var(--tm-bg-surface-secondary));
+  color: var(--tm-chat-bubble-pending-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-pending-border, var(--tm-border-color-strong));
+  border-style: dashed;
+}
+
+.tm-chat-bubble--queued {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-queued-bg, var(--tm-color-info-subtle));
+  color: var(--tm-chat-bubble-queued-fg, var(--tm-color-info-text));
+  border-color: var(--tm-chat-bubble-queued-border, var(--tm-color-info-soft-border));
+}
+
+.tm-chat-bubble--discarded {
+  align-self: flex-end;
+  background: var(--tm-chat-bubble-discarded-bg, var(--tm-bg-muted));
+  color: var(--tm-chat-bubble-discarded-fg, var(--tm-color-text-secondary));
+  border-color: var(--tm-chat-bubble-discarded-border, var(--tm-border-color));
+}
+
+.tm-chat-bubble--locked {
+  background: var(--tm-chat-bubble-locked-bg, var(--tm-color-primary-subtle));
+  color: var(--tm-chat-bubble-locked-fg, var(--tm-color-primary-text));
+  border-color: var(--tm-chat-bubble-locked-border, var(--tm-color-primary-soft-border));
+}
+
+.tm-chat-bubble__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  margin-bottom: var(--tm-space-0-5);
+}
+
+.tm-chat-bubble__actor { font-weight: 600; }
+.tm-chat-bubble__meta-separator { flex-shrink: 0; }
+.tm-chat-bubble__time { color: inherit; font-size: var(--tm-font-size-xs); }
+
+.tm-chat-bubble__badge {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  margin-bottom: var(--tm-space-0-5);
+}
+
+.tm-chat-bubble__body { min-width: 0; }
+
+/* Inherits the variant foreground: notes stay as readable as the bubble text itself
+   (no opacity, no secondary grey that could fail contrast on a dark or tinted surface). */
+.tm-chat-bubble__note { font-size: var(--tm-font-size-xs); color: inherit; }
+
+.tm-chat-bubble__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-1-5);
+  margin-top: var(--tm-space-1);
 }
 
 .tm-chat__message--incoming .tm-chat__bubble {
@@ -108,7 +393,7 @@
 .tm-chat__message-time { color: var(--tm-color-text-muted); font-size: 11px; }
 .tm-chat__message--outgoing .tm-chat__message-time { color: rgba(255, 255, 255, 0.7); }
 
-.tm-chat__text { word-break: break-word; white-space: pre-wrap; }
+.tm-chat__text { overflow-wrap: anywhere; white-space: pre-wrap; }
 .tm-chat__error-text { color: var(--tm-color-danger); }
 
 .tm-chat__attachments {
@@ -163,13 +448,55 @@
 
 .tm-chat__typing-text { font-size: var(--tm-font-size-xs); color: var(--tm-text-secondary); }
 
+/* ── Sending dots ───────────────────────────────────────────── */
+/* Was missing from this global fallback (the scoped TmChat.razor.css had it); restored so the
+   fallback styles the same markup and the reduced-motion block below has its subject. */
+.tm-chat__sending-dots::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-left: var(--tm-space-0-5);
+  animation: tm-chat-blink 1.4s infinite;
+}
+
+@keyframes tm-chat-blink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
 .tm-chat__input-area {
   display: flex;
   align-items: flex-end;
   gap: var(--tm-space-2);
+  /* The base composer padding stays plain — the bottom safe-area padding (the
+     --tm-chat-safe-area-bottom knob over env(safe-area-inset-bottom)) is the narrow-chat
+     behavior and lives in the @container block below. Mirror of TmChat.razor.css. */
   padding: var(--tm-space-3) var(--tm-space-4);
   border-top: 1px solid var(--tm-border-color);
   background: var(--tm-bg-surface);
+}
+
+/* FZE-2: composer slots — ComposerAddon (above the input row) and ComposerFooter (below it)
+   stack the area vertically; the input row itself keeps the horizontal textarea + send layout. */
+.tm-chat__input-area--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* FZE-2: a ComposerTemplate replaces the whole composer — the wrapper (padding, border) stays,
+   but the host's markup stacks vertically instead of the textarea + send flex row. */
+.tm-chat__input-area--custom {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tm-chat__input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--tm-space-2);
 }
 
 .tm-chat__input {
@@ -219,7 +546,299 @@
 .tm-chat__send-btn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.05); }
 .tm-chat__send-btn:disabled { background: var(--tm-bg-muted); color: var(--tm-color-text-muted); cursor: not-allowed; }
 
+/* ── Thread panel ───────────────────────────────────────────── */
+/* Was missing from this global fallback (only the scoped TmChat.razor.css had it); restored with
+   the FZE-8 mobile overlay so the fallback styles the same markup. */
+.tm-chat__thread-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 85%);
+  display: flex;
+  flex-direction: column;
+  background: var(--tm-bg-surface);
+  border-left: 1px solid var(--tm-border-color);
+  box-shadow: var(--tm-shadow-lg);
+  z-index: 5;
+}
+
+.tm-chat__thread-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--tm-space-3) var(--tm-space-4);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-chat__thread-title {
+  font-weight: 700;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-text);
+}
+
+.tm-chat__thread-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--tm-radius-sm);
+  background: transparent;
+  color: var(--tm-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast);
+}
+
+.tm-chat__thread-close:hover {
+  background: var(--tm-bg-muted);
+  color: var(--tm-color-text);
+}
+
+.tm-chat__thread-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--tm-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+}
+
+.tm-chat__thread-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-muted);
+}
+
+.tm-chat__thread-divider::before,
+.tm-chat__thread-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--tm-border-color);
+}
+
+.tm-chat__thread-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-3);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+/* ── Narrow chat (FZE-8) ──────────────────────────────────────
+   Branches on the CHAT's own width (container tm-chat on the root), not the viewport; 640px is
+   the shared TmBreakpoints.Sm literal. The composer sticks above the host's bottom navigation
+   (the host sets --tm-chat-composer-offset to its height) and the thread panel covers the whole
+   chat instead of squeezing the composer. The iOS virtual keyboard (visualViewport) is tracked
+   by the OPT-IN TrackVirtualKeyboard parameter (FZE-13): the runtime knob
+   --tm-chat-keyboard-inset is written by chat.js into the root's inline style (never declared
+   here) and the sticky rows below add it to their offset. Mirror of TmChat.razor.css. */
+@container tm-chat (width < 640px) {
+  /* The composer sticks above the host's bottom navigation (the host sets
+     --tm-chat-composer-offset to its height) and clears the home indicator;
+     --tm-chat-safe-area-bottom is the host's opt-out when its own chrome already pads the safe
+     area. --tm-chat-keyboard-inset is the RUNTIME keyboard gap (FZE-13): 0px while the tracker
+     is off or the keyboard is closed, the covered height while an on-screen keyboard is open on
+     iOS. Mirror of TmChat.razor.css. */
+  .tm-chat__input-area {
+    position: sticky;
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* While the tracker reports an open keyboard the keyboard covers the home indicator — the
+     safe-area part of the padding is dropped, and the offset stops ADDING: the keyboard covers
+     the host's bottom navigation, so the composer rests on the LARGER of the two offsets (max)
+     instead of keyboard + navigation. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
+  }
+
+  .tm-chat__thread-panel {
+    left: 0;
+    width: 100%;
+    border-left: none;
+  }
+
+  /* The overlay's header and reply row stick like the composer (same knob); the panel is
+     absolutely positioned at the chat's box, which on a phone extends past the fold. */
+  .tm-chat__thread-header {
+    position: sticky;
+    top: 0;
+    background: var(--tm-bg-surface);
+    z-index: 1;
+  }
+
+  .tm-chat__thread-input-area {
+    position: sticky;
+    bottom: calc(var(--tm-chat-composer-offset, 0px) + var(--tm-chat-keyboard-inset, 0px));
+    background: var(--tm-bg-surface);
+    padding-bottom: calc(var(--tm-space-3) + var(--tm-chat-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Same keyboard-open rule as the composer: the padding is dropped and the row rests on the
+     keyboard (max) instead of keyboard + navigation. The message list reserves the keyboard
+     gap as scroll room so the rescued last row can rest above the composer, and native
+     scrollIntoView paths keep rows clear of it. Mirror of TmChat.razor.css. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__thread-input-area {
+    bottom: max(var(--tm-chat-composer-offset, 0px), var(--tm-chat-keyboard-inset, 0px));
+    padding-bottom: var(--tm-space-3);
+  }
+
+  /* While the keyboard is open the stuck composer covers the list's bottom: the tracker
+     MEASURES the covered gap into --tm-chat-composer-clearance and the list reserves it as
+     scroll room (the rescued last row rests above the composer); scroll-padding keeps native
+     scrollIntoView paths clear of the composer. Mirror of TmChat.razor.css. */
+  .tm-chat[data-tm-keyboard-open] .tm-chat__messages {
+    padding-bottom: calc(var(--tm-space-4) + var(--tm-chat-composer-clearance, 0px));
+    scroll-padding-bottom: var(--tm-chat-composer-clearance, 0px);
+  }
+
+  /* With the full-width overlay open the covered body and composer are dead weight — and a
+     screen reader would read the same messages twice. The direct children match the real DOM
+     (.tm-chat__body, .tm-chat__input-area). */
+  .tm-chat:has(> .tm-chat__thread-panel) > .tm-chat__body,
+  .tm-chat:has(> .tm-chat__thread-panel) > .tm-chat__input-area {
+    visibility: hidden;
+  }
+}
+
+/* ── Per-message actions ────────────────────────────────────── */
+/* Mirror of TmChat.razor.css: a floating action bar above the bubble, hidden until the row is
+   hovered OR holds keyboard focus (the actions must not be hover-only, FZE-7). */
+.tm-chat__actions {
+  position: absolute;
+  top: calc(-1 * var(--tm-space-3));
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  box-shadow: var(--tm-shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--tm-transition-fast);
+  z-index: 2;
+}
+
+.tm-chat__message--incoming .tm-chat__actions { right: var(--tm-space-2); }
+.tm-chat__message--outgoing .tm-chat__actions { left: var(--tm-space-2); }
+
+.tm-chat__message:hover .tm-chat__actions,
+.tm-chat__item:focus-within .tm-chat__actions,
+.tm-chat__bubble:focus-within .tm-chat__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Touch has no hover: the per-message actions must not hide behind a gesture touch devices
+   cannot perform — always reveal them on coarse pointers / hover-less media. FZE-8 adds the
+   44px targets here (pointer modality, not width): the send button (40px on fine pointers) and
+   the 26px action icons grow to the shared --tm-touch-target token; min-* beats the base
+   width/height without restating them. */
+@media (hover: none), (pointer: coarse) {
+  .tm-chat__actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* The send button (40px on fine pointers) and the small icon/pill controls (26px per-message
+     actions, 28px thread close and emoji, the save/cancel pair) grow to the shared
+     --tm-touch-target token. Mirror of TmChat.razor.css. */
+  .tm-chat__send-btn,
+  .tm-chat__action,
+  .tm-chat__thread-close,
+  .tm-chat__emoji,
+  .tm-chat__edit-save,
+  .tm-chat__edit-cancel {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+  }
+
+  .tm-chat__thread-badge {
+    min-height: var(--tm-touch-target);
+  }
+
+  /* A floating bar cannot work on touch: it is revealed at all times here, so it moves INTO THE
+     FLOW (a wrapped row under the message) instead of covering the bubble it belongs to.
+     left/right are reset to auto — the incoming/outgoing offsets are meaningless once static. */
+  .tm-chat__actions {
+    position: static;
+    align-self: flex-start;
+    flex-wrap: wrap;
+    max-width: 100%;
+    margin-top: var(--tm-space-1);
+    box-shadow: none;
+  }
+
+  .tm-chat__message--incoming .tm-chat__actions,
+  .tm-chat__message--outgoing .tm-chat__actions {
+    left: auto;
+    right: auto;
+  }
+
+  /* 0.875rem body text is small under a finger: the composer input goes one step up. */
+  .tm-chat__input {
+    font-size: var(--tm-font-size-md);
+  }
+}
+
+.tm-chat__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-radius-sm);
+  background: transparent;
+  color: var(--tm-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-chat__action:hover {
+  background: var(--tm-bg-muted);
+  color: var(--tm-color-text);
+}
+
+.tm-chat__action--danger:hover {
+  color: var(--tm-color-error);
+}
+
 [data-theme="dark"] .tm-chat__attachment,
 .tm-dark .tm-chat__attachment { background: rgba(255, 255, 255, 0.05); }
 [data-theme="dark"] .tm-chat__attachment:hover,
 .tm-dark .tm-chat__attachment:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+/* The looping typing/blink animations stop entirely (the transitions of the same file are
+   covered by the shared enumeration in animations.css). Mirror of TmChat.razor.css: the
+   scale/zoom transforms stop too. */
+@media (prefers-reduced-motion: reduce) {
+  .tm-chat__actions,
+  .tm-chat__action,
+  .tm-chat__reaction,
+  .tm-chat__emoji,
+  .tm-chat__send-btn,
+  .tm-chat__load-older,
+  .tm-chat__jump-new,
+  .tm-chat__thread-close {
+    transition: none;
+  }
+  .tm-chat__emoji:hover {
+    transform: none;
+  }
+  .tm-chat__typing-dots span,
+  .tm-chat__sending-dots,
+  .tm-chat__sending-dots::after {
+    animation: none;
+  }
+}

@@ -1,0 +1,1079 @@
+using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Tempo.Blazor.E2E;
+
+/// <summary>
+/// Baseline ("before") screenshot GENERATOR for the Modeling redesign plan — phase 1. It freezes the
+/// CURRENT appearance of the modeling editor screens BEFORE any visual phase touches them, so the
+/// later phases can diff against it: the layout must not change in this phase (G3 fixes only).
+/// <para>
+/// Scenarios: default workspace, mixed issues, stale source, the open "Open in editor" dialog,
+/// the empty state and the error state. Viewports: 1440×900 (desktop), 1024×768 (tablet,
+/// <c>HasTouch</c>), 390×844 and 320×640 (mobile). Output:
+/// <c>tests/Tempo.Blazor.E2E/__screenshots__/modeling/</c> — committed as the "before" baseline.
+/// </para>
+/// <para>
+/// Every capture is deterministic: fonts ready, a double <c>requestAnimationFrame</c>, the
+/// diagram's <c>.tm-diagram-node</c> set present, and a style tag disabling ALL animations,
+/// transitions and the caret. Below 640 px the mixed-issue and stale-source shots switch to the
+/// mobile "Inspector" panel tab (the issue and source panels are only reachable through it
+/// there) and the mixed-issue runs additionally save an element screenshot of the issue panel
+/// at every viewport. The mixed-issue PNGs are the diff subject of the issue-panel phases.
+/// </para>
+/// <para>
+/// Off unless <c>TM_WRITE_BASELINES=1</c>. Not part of the Smoke lane.
+/// </para>
+/// </summary>
+[TestClass]
+public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestBase
+{
+    private const string ModelingEditorUrl = "/modeling-editor";
+    private const string DisableMotionStyle = "*{animation:none!important;transition:none!important;caret-color:transparent!important}";
+
+    private static string OutputDirectory
+    {
+        get
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+            {
+                directory = directory.Parent!;
+            }
+
+            var dir = Path.Combine(directory!.FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "modeling");
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
+
+    [TestMethod]
+    [Description("Captures the modeling editor default workspace at all four baseline viewports")]
+    public async Task Capture_DefaultWorkspace()
+        => await CaptureAsync("default", string.Empty, requiresLoadedState: true);
+
+    [TestMethod]
+    [Description("Captures the mixed-issue workspace (including a sourceless issue) at all four baseline viewports plus the issue-panel element shots")]
+    public async Task Capture_IssuesMixed()
+        => await CaptureAsync("issues-mixed", "?scenario=issues-mixed", requiresLoadedState: true, withIssuePanelShots: true);
+
+    [TestMethod]
+    [Description("Captures the stale-source workspace at all four baseline viewports (mobile opens the Inspector tab)")]
+    public async Task Capture_StaleSource()
+        => await CaptureAsync("stale-source", "?fresh=false", requiresLoadedState: true, inspectorTabOnMobile: true);
+
+    [TestMethod]
+    [Description("Captures the open 'Open in editor' dialog at desktop, tablet and phone viewports")]
+    public async Task Capture_OpenInEditorDialog()
+    {
+        foreach (var (width, height, touch) in BaselineViewports)
+        {
+            var page = await OpenModelingPageAsync(string.Empty, width, height, touch);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                // Fáze 6 review fix: the tablet sheets start CLOSED — the dialog trigger is
+                // reachable without a close-first workaround. Fáze 7: on the mobile band the
+                // preview has no edit actions — the entry lives in the action bar's More menu.
+                if (await IsCompactLayoutAsync(page))
+                {
+                    await page.Locator(".tm-mobile-action-bar__more").TapAsync(new LocatorTapOptions { Timeout = 10000 });
+                    await page.Locator("[data-testid='modeling-action-open-editor']")
+                        .TapAsync(new LocatorTapOptions { Timeout = 10000 });
+                }
+                else
+                {
+                    await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
+                }
+
+                await page.Locator("[data-testid='modeling-open-diagram-editor']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"open-editor-dialog-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Phase 4: the open-editor dialog is a TmModal now — capture it at the two desktop
+    /// widths in light and dark so the scrim, the 90vw × 90vh panel and the dark tokens are
+    /// pinned as the "after" baseline of the dialog rework.</summary>
+    [TestMethod]
+    [DataRow("light", 1440, 900)]
+    [DataRow("light", 1280, 800)]
+    [DataRow("dark", 1440, 900)]
+    [DataRow("dark", 1280, 800)]
+    [Description("Captures the open 'Open in editor' dialog at 1440/1280 in light and dark")]
+    public async Task Capture_OpenInEditorDialog_Themed(string theme, int width, int height)
+    {
+        var page = await OpenThemedModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"open-editor-dialog-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 7: the mobile band captures — the compact editor at 390/320 in light and
+    /// dark, the "Change view" bottom sheet open, and the open-editor dialog in its fullscreen
+    /// mobile presentation. The zoom label is polled to a STABLE value before every capture
+    /// (the JS fit pass is asynchronous). The [E] mockup elements (status bar 9:41, back
+    /// arrow, "Nastavení", duplicate navigation) are out of scope.</summary>
+    [TestMethod]
+    [DataRow("light", 390, 844)]
+    [DataRow("dark", 390, 844)]
+    [DataRow("light", 320, 640)]
+    [DataRow("dark", 320, 640)]
+    [Description("Captures modeling-editor-mobile-{theme}-{w}x{h}: the compact band in light and dark")]
+    public async Task Capture_MobileEditor_Themed(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"modeling-editor-mobile-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 7 re-review: the cs 320 baseline — the compact band under the Czech demo
+    /// culture, where the localized labels are the longest (the tile labels are sr-only now, but
+    /// the header/tab strip/ellipsis behaviour is what this shot pins). Light only; the themed
+    /// pairs above cover the palettes.</summary>
+    [TestMethod]
+    [Description("Captures modeling-editor-mobile-cs-320x640: the compact band with the Czech demo culture")]
+    public async Task Capture_MobileEditor_Cs()
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, "light", 320, 640, culture: "cs");
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "modeling-editor-mobile-cs-320x640");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [DataRow(390, 844)]
+    [DataRow(320, 640)]
+    [Description("Captures modeling-change-view-sheet-mobile-{w}x{h}: the mobile Change view bottom sheet open")]
+    public async Task Capture_MobileChangeViewSheet(int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, "light", width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-action-id='change-view']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-change-view-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"modeling-change-view-sheet-mobile-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [DataRow("light", 390, 844)]
+    [DataRow("dark", 390, 844)]
+    [DataRow("light", 320, 640)]
+    [DataRow("dark", 320, 640)]
+    [Description("Captures modeling-editor-open-in-editor-mobile-{theme}-{w}x{h}: the fullscreen mobile dialog with the DE mobile mode")]
+    public async Task Capture_OpenInEditorDialog_Mobile(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // The open-editor entry lives in the bar's More menu (MaxVisible=3).
+            await page.Locator(".tm-mobile-action-bar__more").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-action-open-editor']")
+                .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            var overlay = page.Locator("[data-testid='modeling-open-diagram-editor']");
+            await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            Assert.IsTrue(await overlay.EvaluateAsync<bool>(
+                "el => el.classList.contains('tm-modal--fullscreen-presentation')"),
+                "the mobile dialog presents fullscreen");
+            // The embedded DE must resolve its own mobile mode inside the dialog body.
+            await page.WaitForFunctionAsync(
+                """
+                () => document.querySelector("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout]")?.getAttribute('data-editor-layout') === 'mobile'
+                """,
+                null,
+                new PageWaitForFunctionOptions { Timeout = 20_000 });
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"modeling-editor-open-in-editor-mobile-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [Description("Captures the empty state at all four baseline viewports")]
+    public async Task Capture_EmptyState()
+        => await CaptureAsync("empty", "?provider=unknown-provider", requiresLoadedState: false, expectedState: "empty");
+
+    [TestMethod]
+    [Description("Captures the error state at all four baseline viewports")]
+    public async Task Capture_ErrorState()
+        => await CaptureAsync("error", "?scenario=error", requiresLoadedState: false, expectedState: "error");
+
+    /// <summary>Phase 2 review baselines: the three loaded screens under each accent/theme
+    /// combination at the desktop viewport (dark tokens, indigo accent, indigo + dark), plus a
+    /// selected-element shot freezing the tree's selected node and the inspector detail.</summary>
+    [TestMethod]
+    [DataRow("dark")]
+    [DataRow("indigo")]
+    [DataRow("indigo-dark")]
+    [Description("Captures default / issues-mixed / stale-source at 1440x900 for dark, indigo and indigo-dark")]
+    public async Task Capture_Themed1440x900(string theme)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, 1440, 900);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-1440x900");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Phase 5: the same themed set at 1280x800 — the second desktop width of the
+    /// shell workspace (light/dark x default/indigo), so the docked MO1 layout is pinned on both
+    /// desktop baselines.</summary>
+    [TestMethod]
+    [DataRow("light", 1280, 800)]
+    [DataRow("dark", 1280, 800)]
+    [DataRow("indigo", 1280, 800)]
+    [DataRow("indigo-dark", 1280, 800)]
+    [Description("Captures default / issues-mixed / stale-source at 1280x800 for light, dark, indigo and indigo-dark")]
+    public async Task Capture_Themed1280x800(string theme, int width, int height)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Phase 5 review: the Source tab as the docked inspector presents it — light at
+    /// 1440x900 (fresh + stale) and dark 1280x800 variants (fresh + stale) — plus the expanded
+    /// issues dock with its list at scrollTop=0 (the dock shows the first two full rows).</summary>
+    [TestMethod]
+    [Description("Captures source-tab-1440x900, stale-source-tab-1440x900, the dark 1280x800 source-tab variants and issues-expanded-1440x900")]
+    public async Task Capture_SourceTab_And_IssuesExpanded()
+    {
+        foreach (var (name, query, theme, width, height) in new[]
+                 {
+                     (Name: "source-tab", Query: string.Empty, Theme: "light", Width: 1440, Height: 900),
+                     (Name: "stale-source-tab", Query: "?fresh=false", Theme: "light", Width: 1440, Height: 900),
+                     (Name: "source-tab", Query: string.Empty, Theme: "dark", Width: 1280, Height: 800),
+                     (Name: "stale-source-tab", Query: "?fresh=false", Theme: "dark", Width: 1280, Height: 800)
+                 })
+        {
+            var page = await OpenThemedModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await page.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+                await page.Locator("[data-testid='modeling-source-panel']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+
+        var dock = await OpenThemedModelingPageAsync("?scenario=issues-mixed", "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(dock);
+            // scrollTop=0: the expanded dock shows the first two FULL issue rows (no residual
+            // scroll from an earlier interaction).
+            await dock.EvaluateAsync(
+                "() => { const list = document.querySelector(\"[data-testid='modeling-issue-list']\"); if (list) list.scrollTop = 0; }");
+            await SettleAsync(dock);
+            await SaveViewportScreenshotAsync(dock, "issues-expanded-1440x900");
+        }
+        finally
+        {
+            await dock.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Phase 5 review fix: the collapsed issues dock — the issues-500 scenario with the
+    /// dock collapsed to its header — so the collapsed state (the canvas body's auto row plus the
+    /// `[hidden]` dock body) is pinned as a baseline at the primary desktop viewport.</summary>
+    [TestMethod]
+    [Description("Captures issues-collapsed-1440x900: the issues-500 scenario with the dock collapsed to its header")]
+    public async Task Capture_IssuesCollapsed()
+    {
+        var page = await OpenThemedModelingPageAsync("?scenario=issues-500", "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-issues-toggle']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-issue-panel'] .tm-modeling-issue-panel__content")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "issues-collapsed-1440x900");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [Description("Captures the selected-element state (tree selection + inspector detail) at 1440x900")]
+    public async Task Capture_ElementSelected()
+    {
+        var page = await OpenThemedModelingPageAsync(string.Empty, "light", 1440, 900);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']")
+                .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, "element-selected-1440x900");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 6: the tablet band of the shell workspace — 1024x768 and 1180x820 with
+    /// touch emulation, light and dark, the loaded workspace and the open-editor dialog (whose
+    /// body resolves the diagram editor's tablet layout). The demo page hides its sidebar from
+    /// 1024px of viewport up, so both windows land the editor in the 768–1199 container band.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures default / issues-mixed / stale-source at 1024x768 and 1180x820 (touch) for light and dark")]
+    public async Task Capture_ThemedTablet(string theme, int width, int height)
+    {
+        foreach (var (name, query) in new[]
+                 {
+                     (Name: "default", Query: string.Empty),
+                     (Name: "issues-mixed", Query: "?scenario=issues-mixed"),
+                     (Name: "stale-source", Query: "?fresh=false")
+                 })
+        {
+            var page = await OpenThemedTouchModelingPageAsync(query, theme, width, height);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-tablet-{theme}-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Fáze 6: the open-editor dialog on the tablet band — the ~90% TmModal with the
+    /// diagram editor's tablet layout (one docked panel expanded + the floating minimap) in the
+    /// body, light and dark at both tablet viewports.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures the open 'Open in editor' dialog at the tablet band viewports (touch) in light and dark")]
+    public async Task Capture_OpenInEditorDialog_ThemedTablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // Fáze 6 review fix: the tablet sheets start CLOSED — no close-first workaround.
+            await page.Locator("[data-testid='modeling-open-in-editor-button']").TapAsync();
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-modal")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            await page.Locator("[data-testid='modeling-open-diagram-editor'] .tm-diagram-editor[data-editor-layout='tablet']")
+                .First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"open-editor-dialog-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 6: the Source tab as the tablet SHEET presents it (the wide-panel container
+    /// layout: three metadata columns, the load button in the header) — light and dark at 1024.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [Description("Captures source-sheet-tablet-{theme}-1024x768: the inspector sheet open on the Source tab")]
+    public async Task Capture_SourceSheet_Tablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?fresh=false", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // Fáze 6 review fix: the sheets start closed — open the inspector sheet, then the
+            // Source tab inside it.
+            await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync();
+            await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
+                .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+            await page.Locator("[data-testid='modeling-source-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"source-sheet-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Theme setup shared with <c>ModelingAccessibilityM25E2ETests</c>: the dark theme is
+    /// applied by CLICKING the demo's ThemeToggle — the demo's ThemeService owns the
+    /// <c>.demo-shell</c> <c>data-theme</c> attribute and the Tailwind <c>dark</c> class, so
+    /// stamping <c>&lt;html&gt;</c> was never enough: <c>querySelector('[data-theme]')</code>
+    /// returned the <c>&lt;html&gt;</c> element we had just stamped and <c>.demo-shell</c> stayed
+    /// LIGHT (the dark baselines were mislabeled light shots). The indigo accent is the demo's
+    /// colour theme (localStorage `tm-demo-color-theme=indigo`, consumed by the demo's
+    /// color-theme.js before Blazor boots), seeded through the context init script.</summary>
+    /// <summary>Fáze 14: the EDITABLE inspector — a selected element with a pending rename (the
+    /// save affordance visible) at the two review viewports, light and dark. The demo page is
+    /// opened with the editing opt-in (<c>?editing=1</c>).</summary>
+    [TestMethod]
+    [DataRow("light", 1440, 900)]
+    [DataRow("dark", 1440, 900)]
+    [Description("Captures inspector-edit-{theme}-{w}x{h}: the editing inspector with a pending rename")]
+    public async Task Capture_InspectorEditing_Desktop(string theme, int width, int height)
+    {
+        var page = await OpenThemedModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+            var name = page.Locator("#modeling-inspector-name").First;
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 14 review: the TABLET band editing surface — the inspector SHEET with a
+    /// pending rename at 1024x768 (touch), light and dark. The sheets start closed, so the
+    /// capture opens the sheet through the panel tab first (the Capture_SourceSheet_Tablet
+    /// pattern); the save affordance lives in the sheet's own header.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [Description("Captures inspector-edit-tablet-{theme}-1024x768: the tablet inspector sheet with a pending rename")]
+    public async Task Capture_InspectorEditing_Tablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // The tablet sheets start closed: the selection (a tree node tap in the drawer)
+            // swaps the drawer for the inspector sheet — the sheet then carries the edit field.
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-inspector-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            var name = page.Locator("[data-testid='modeling-inspector-sheet'] #modeling-inspector-name");
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 14: the mobile G2 editing surface — the Inspector tab with a pending rename
+    /// and the sticky Save entry leading the action bar.</summary>
+    [TestMethod]
+    [DataRow("light", 390, 844)]
+    [DataRow("dark", 390, 844)]
+    [Description("Captures inspector-edit-mobile-{theme}-390x844: the mobile Inspector tab with a pending rename")]
+    public async Task Capture_InspectorEditing_Mobile(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            var name = page.Locator("#modeling-inspector-name");
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-action-id='save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-mobile-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    private async Task<IPage> OpenThemedModelingPageAsync(string query, string theme, int width, int height)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = false,
+            IsMobile = false,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var init = "localStorage.setItem('tm-demo-culture', 'en');";
+        if (theme.Contains("indigo", StringComparison.Ordinal))
+        {
+            init += "localStorage.setItem('tm-demo-color-theme', 'indigo');";
+        }
+
+        await context.AddInitScriptAsync(init);
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
+
+        if (theme.Contains("dark", StringComparison.Ordinal))
+        {
+            // The desktop toggle lives in the fixed sidebar — which the /modeling-editor demo page
+            // HIDES from 1264px of viewport up (the editor needs the full width for the 1200px
+            // desktop dock). Dispatch the click on the hidden toggle (the wireframe phase-2
+            // pattern); a visible toggle is clicked the normal way.
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                await toggle.First.DispatchEventAsync("click");
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                // Fallback for a lagging circuit: force every data-theme scope dark, including the
+                // document element the tm-* dark token sheets key off.
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
+            await page.WaitForTimeoutAsync(300);
+        }
+
+        return page;
+    }
+
+    /// <summary>The themed setup for the TABLET band (Fáze 6): the same theme flow as
+    /// <see cref="OpenThemedModelingPageAsync"/> but with touch emulation on, so the coarse
+    /// pointer styles and the sheet toggles render exactly as a tablet user sees them. The
+    /// optional <paramref name="culture"/> swaps the demo culture (the cs baseline).</summary>
+    private async Task<IPage> OpenThemedTouchModelingPageAsync(string query, string theme, int width, int height, string culture = "en")
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = true,
+            IsMobile = false,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var init = $"localStorage.setItem('tm-demo-culture', '{culture}');";
+        if (theme.Contains("indigo", StringComparison.Ordinal))
+        {
+            init += "localStorage.setItem('tm-demo-color-theme', 'indigo');";
+        }
+
+        await context.AddInitScriptAsync(init);
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
+
+        if (theme.Contains("dark", StringComparison.Ordinal))
+        {
+            // The tablet band hides the demo sidebar (from 1024px of viewport up), so the theme
+            // toggle inside it is display:none — dispatch the click (the wireframe phase-2
+            // pattern) instead of pointing a cursor at it.
+            var toggle = page.Locator("aside [data-testid='theme-toggle']");
+            if (await toggle.CountAsync() > 0)
+            {
+                await toggle.First.DispatchEventAsync("click");
+            }
+
+            try
+            {
+                await page.Locator(".demo-shell[data-theme='dark']")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 5000 });
+            }
+            catch (TimeoutException)
+            {
+                // Fallback for a lagging circuit: force every data-theme scope dark, including the
+                // document element the tm-* dark token sheets key off.
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        document.querySelectorAll('[data-theme]').forEach((el) => el.setAttribute('data-theme', 'dark'));
+                        document.querySelector('.demo-shell')?.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.classList.add('tm-dark', 'dark');
+                        document.body.classList.add('tm-dark', 'dark');
+                    }
+                    """);
+            }
+
+            await page.WaitForTimeoutAsync(300);
+        }
+
+        return page;
+    }
+
+    private static readonly (int Width, int Height, bool Touch)[] BaselineViewports =
+    [
+        (1440, 900, false),
+        (1024, 768, true),
+        (390, 844, true),
+        (320, 640, true),
+    ];
+
+    private async Task CaptureAsync(string name, string query, bool requiresLoadedState, string? expectedState = null, bool withIssuePanelShots = false, bool inspectorTabOnMobile = false)
+    {
+        foreach (var (width, height, touch) in BaselineViewports)
+        {
+            var page = await OpenModelingPageAsync(query, width, height, touch);
+            try
+            {
+                if (expectedState is not null)
+                {
+                    await page.Locator($"[data-testid='modeling-editor'][data-state='{expectedState}']")
+                        .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+                }
+                else if (requiresLoadedState)
+                {
+                    await WaitForLoadedStateAsync(page);
+                }
+
+                // Phase 5 (MO1): the compact layout (the editor container below its own mobile
+                // threshold — the phones here) keeps the issue and source panels behind the
+                // "Inspector" panel tab. Fáze 6: on the tablet band the stale SOURCE panel is
+                // reached through the inspector sheet's Source tab; the issue panel is the
+                // always-visible dock row under the preview.
+                if (inspectorTabOnMobile)
+                {
+                    if (await IsCompactLayoutAsync(page))
+                    {
+                        await OpenMobileInspectorTabAsync(page, waitForIssuePanel: false);
+                    }
+                    else if (await IsTabletLayoutAsync(page))
+                    {
+                        await OpenTabletSourceTabAsync(page);
+                    }
+                }
+
+                if (withIssuePanelShots)
+                {
+                    if (await IsCompactLayoutAsync(page))
+                    {
+                        // Fáze 7: on the mobile band the issues are their OWN tab — the whole
+                        // panel is the tab body.
+                        await OpenMobileIssuesTabAsync(page);
+                    }
+                    else if (await IsTabletLayoutAsync(page))
+                    {
+                        // Final UX review (M2): the tablet band has NO dock — the issues are the
+                        // fourth panel side sheet; open it so the rows are in the DOM.
+                        await page.Locator("[data-testid='modeling-panel-tab-issues']")
+                            .TapAsync(new LocatorTapOptions { Timeout = 10000 });
+                        await page.WaitForFunctionAsync(
+                            "() => !!document.querySelector(\"[data-testid='modeling-issues-sheet']\")",
+                            null,
+                            new PageWaitForFunctionOptions { Timeout = 10_000 });
+                    }
+
+                    // Scroll the sourceless orphan row into view so the panel element shot and the
+                    // viewport shot both contain the non-interactive issue row (index 3).
+                    await page.Locator("[data-testid='modeling-issue-3']")
+                        .ScrollIntoViewIfNeededAsync(new LocatorScrollIntoViewIfNeededOptions { Timeout = 10000 });
+                }
+
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"{name}-{width}x{height}");
+
+                if (withIssuePanelShots)
+                {
+                    await SettleAsync(page);
+                    await page.Locator("[data-testid='modeling-issue-panel']").ScreenshotAsync(
+                        new LocatorScreenshotOptions
+                        {
+                            Path = Path.Combine(OutputDirectory, $"issues-mixed-panel-{width}x{height}.png"),
+                            Timeout = 30_000
+                        });
+                }
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Whether the COMPACT panel-tab workspace rendered. Fáze 6: the tab row also
+    /// renders on the tablet band (as the visibility switch), so the compact check reads the
+    /// resolved layout instead of the tab's existence.</summary>
+    private static async Task<bool> IsCompactLayoutAsync(IPage page)
+        => await page.EvaluateAsync<bool>(
+            "() => document.querySelector('.tm-modeling-editor .tm-layout')?.getAttribute('data-layout') === 'mobile'");
+
+    /// <summary>Whether the editor resolved the tablet band (the shell's overlay presentation).</summary>
+    private static Task<bool> IsTabletLayoutAsync(IPage page) => page.EvaluateAsync<bool>(
+        "() => document.querySelector('.tm-modeling-editor .tm-layout')?.getAttribute('data-layout') === 'tablet'");
+
+    /// <summary>
+    /// Fáze 6 review: the tablet tree drawer baseline — the drawer OPEN (tap the Tree tab; the
+    /// sheets start closed, so this is the tablet band's only tree state) in light and dark at
+    /// both tablet viewports. The zoom label is polled to a STABLE value first: the canvas' fit
+    /// settles asynchronously, and a light/dark capture pair taken on different fit states
+    /// differs in the diagram's rendered size.
+    /// </summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [DataRow("light", 1180, 820)]
+    [DataRow("dark", 1180, 820)]
+    [Description("Captures tree-drawer-tablet-{theme}-{w}x{h}: the tree drawer open on the tablet band (touch)")]
+    public async Task Capture_TreeDrawer_Tablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync(string.Empty, theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await page.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await WaitForStableZoomLabelAsync(page);
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"tree-drawer-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Phase 12: the hierarchy scenario at the three baseline viewports in light — the
+    /// nested APG tree (the BPMN subprocess parents its activities through
+    /// <c>ModelingElementDto.ParentId</c>) is the diff subject of the hierarchy phases.</summary>
+    [TestMethod]
+    [Description("Captures hierarchy-{w}x{h}: the ?scenario=hierarchy workspace at 1440x900, 1024x768 and 390x844 in light")]
+    public async Task Capture_Hierarchy()
+    {
+        foreach (var (width, height, touch) in new[] { (1440, 900, false), (1024, 768, true), (390, 844, true) })
+        {
+            var page = await OpenModelingPageAsync("?scenario=hierarchy&notation=bpmn", width, height, touch);
+            try
+            {
+                await WaitForLoadedStateAsync(page);
+                await WaitForStableZoomLabelAsync(page);
+                await SettleAsync(page);
+                await SaveViewportScreenshotAsync(page, $"hierarchy-{width}x{height}");
+            }
+            finally
+            {
+                await page.Context.CloseAsync();
+            }
+        }
+    }
+
+    /// <summary>Fáze 13: the inspector's Relations tab — the selected element's related groups on
+    /// the docked desktop tab (1440×900 viewport), the inspector SHEET with the Relations tab
+    /// active (1024×768, phase 13 review) and the Relations SECTION inside the mobile Inspector
+    /// tab (390×844 — an ELEMENT shot of the panel scrolled into view) are the diff subject of
+    /// the relations phase.</summary>
+    [TestMethod]
+    [Description("Captures related-tab-1440x900 (the docked Relations tab), related-tablet-1024x768 (the inspector sheet on Relations) and related-mobile-390x844 (the mobile Relations section element shot)")]
+    public async Task Capture_RelationsTab()
+    {
+        var desktop = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 1440, 900, touch: false);
+        try
+        {
+            await WaitForLoadedStateAsync(desktop);
+            await desktop.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+            await desktop.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            await desktop.Locator("[data-testid='modeling-tab-relations']").ClickAsync();
+            await desktop.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(desktop);
+            await SaveViewportScreenshotAsync(desktop, "related-tab-1440x900");
+        }
+        finally
+        {
+            await desktop.Context.CloseAsync();
+        }
+
+        var tablet = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 1024, 768, touch: true);
+        try
+        {
+            await WaitForLoadedStateAsync(tablet);
+            await tablet.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await tablet.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            // The tablet rule: a selection swaps the tree drawer for the inspector sheet.
+            await tablet.Locator("[data-testid='modeling-inspector-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await tablet.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-relations']").TapAsync();
+            await tablet.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(tablet);
+            await tablet.Locator("[data-testid='modeling-inspector-sheet']").ScreenshotAsync(
+                new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(OutputDirectory, "related-tablet-1024x768.png"),
+                    Timeout = 30_000
+                });
+        }
+        finally
+        {
+            await tablet.Context.CloseAsync();
+        }
+
+        var mobile = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 390, 844, touch: true);
+        try
+        {
+            await WaitForLoadedStateAsync(mobile);
+            await mobile.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            await mobile.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(mobile);
+            // Phase 13 review: an ELEMENT shot of the panel itself (Playwright scrolls it into
+            // view) — the viewport shot included the status card and the action bar chrome that
+            // pushed the section below the fold at 390x844.
+            await mobile.Locator("[data-testid='modeling-related-panel']").ScreenshotAsync(
+                new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(OutputDirectory, "related-mobile-390x844.png"),
+                    Timeout = 30_000
+                });
+        }
+        finally
+        {
+            await mobile.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>
+    /// Waits until the embedded diagram editor's zoom label stops changing (two identical
+    /// samples ~250ms apart) — the JS fit pass is asynchronous, so a plain "nodes rendered"
+    /// wait still races it. Gives up after ~8s and lets the capture proceed (the zoom label
+    /// may legitimately be absent in a future chrome) — the give-up is logged, so a baseline
+    /// captured on an unsettled fit shows up in the run log instead of flaking silently.
+    /// </summary>
+    private static async Task WaitForStableZoomLabelAsync(IPage page)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(8);
+        var last = await ReadZoomLabelAsync(page);
+        while (DateTime.UtcNow < deadline)
+        {
+            await page.WaitForTimeoutAsync(250);
+            var current = await ReadZoomLabelAsync(page);
+            if (!string.IsNullOrEmpty(current) && current == last)
+            {
+                return;
+            }
+
+            last = current;
+        }
+
+        Console.WriteLine($"[baseline-sweep] WARNING: zoom label did not stabilize before capture (last sample: '{last}').");
+    }
+
+    private static Task<string?> ReadZoomLabelAsync(IPage page) => page.EvaluateAsync<string?>(
+        "() => document.querySelector('.tm-modeling-diagram-preview .tm-diagram-editor__zoom-label')?.textContent?.trim() ?? null");
+
+    /// <summary>
+    /// Opens the compact layout's "Inspector" panel tab. When <paramref name="waitForIssuePanel"/>
+    /// is set the issue panel must be visible afterwards, otherwise the source panel (stale badge).
+    /// On the tablet band the stale SOURCE panel is reached through the inspector sheet's own
+    /// Source tab instead — handled by <see cref="OpenTabletSourceTabAsync"/>.
+    /// </summary>
+    private static async Task OpenMobileInspectorTabAsync(IPage page, bool waitForIssuePanel)
+    {
+        await page.Locator("[data-testid='modeling-panel-tab-inspector']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await page.Locator(waitForIssuePanel ? "[data-testid='modeling-issue-panel']" : "[data-testid='modeling-source-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    /// <summary>Fáze 7: on the mobile band the issues are their own tab — tap it and wait for
+    /// the whole panel to be the tab body.</summary>
+    private static async Task OpenMobileIssuesTabAsync(IPage page)
+    {
+        await page.Locator("[data-testid='modeling-panel-tab-issues']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    /// <summary>Fáze 6 (review fix): the source panel lives in the inspector SHEET — the sheets
+    /// start closed, so open the sheet first, then select its Source tab.</summary>
+    private static async Task OpenTabletSourceTabAsync(IPage page)
+    {
+        await page.Locator("[data-testid='modeling-panel-tab-inspector']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-tab-source']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-source-panel']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    /// <summary>Loaded editor AND at least one rendered diagram node — no fixed sleep.</summary>
+    private static async Task WaitForLoadedStateAsync(IPage page)
+    {
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('.tm-diagram-node').length > 0",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
+
+    /// <summary>
+    /// Deterministic settle: fonts loaded, then TWO animation frames (layout + paint commit) —
+    /// replaces the former fixed WaitForTimeout sleeps that flaked on slow CI machines.
+    /// </summary>
+    private static Task SettleAsync(IPage page) => page.EvaluateAsync(
+        "async () => { await document.fonts.ready; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }");
+
+    private async Task<IPage> OpenModelingPageAsync(string query, int width, int height, bool touch)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = touch,
+            IsMobile = touch && width < 640,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+
+        var page = await context.NewPageAsync();
+        await GotoAppReadyAsync(page, $"{BaseUrl}{ModelingEditorUrl}{query}");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = DisableMotionStyle });
+        return page;
+    }
+
+    private static async Task SaveViewportScreenshotAsync(IPage page, string fileName)
+    {
+        // A viewport capture keeps the touch emulation honest; FullPage would reset it.
+        var path = Path.Combine(OutputDirectory, fileName + ".png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = path,
+            FullPage = false,
+            Timeout = 30_000
+        });
+        Assert.IsTrue(new FileInfo(path).Length > 10_000, $"{fileName} should contain the rendered modeling screen.");
+    }
+}

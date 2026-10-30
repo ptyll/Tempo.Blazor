@@ -35,5 +35,39 @@
       "isRequired": false,
       "description": "Callback raised when the user requests loading the model again."
     }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-source-panel__title",
+      "description": "Panel title heading (the only header text node; the freshness badge sits beside it)."
+    },
+    {
+      "name": "tm-modeling-source-panel__metadata-row",
+      "description": "One two-column term/value row of the metadata dl, separated by a hairline from the next row."
+    },
+    {
+      "name": "tm-modeling-source-panel__term",
+      "description": "The dt: localized term label led by the row icon."
+    },
+    {
+      "name": "tm-modeling-source-panel__metadata-icon",
+      "description": "Row icon wrapper (database / tag / calendar), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-source-panel__warning",
+      "description": "Stale-data warning box (warning tokens, role=status)."
+    },
+    {
+      "name": "tm-modeling-source-panel__warning-icon",
+      "description": "Warning icon wrapper (TmIcon AlertTriangle), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-source-panel__warning-text",
+      "description": "Stale warning text."
+    },
+    {
+      "name": "tm-modeling-source-panel__load",
+      "description": "Layout hook on the load TmButton (full width); colors come from the core .tm-btn-primary."
+    }
   ]
 }

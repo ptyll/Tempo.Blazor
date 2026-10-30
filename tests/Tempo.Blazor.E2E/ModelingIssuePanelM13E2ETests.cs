@@ -26,7 +26,9 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
 
-        await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--info");
+        // The issues-mixed scenario carries TWO info issues (a linked one and a sourceless
+        // orphan) — the icon selectors must not assume a single match.
+        await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--info", selectorMustBeUnique: false);
         await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--warning");
         await ExpectVisibleAsync(page, ".tm-modeling-issue-panel__icon--error");
 
@@ -107,6 +109,80 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(many, "issue-panel-many.png");
     }
 
+    [TestMethod]
+    [Description("A sourceless issue renders as a non-interactive list item without a pointer cursor")]
+    public async Task IssuePanel_SourcelessIssueIsNotInteractive()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+
+        // Index 3 is the demo's orphan issue (no SourceElementId / SourceRelationshipId).
+        var staticItem = page.Locator("[data-testid='modeling-issue-list'] > li[role='listitem'] > div[data-testid='modeling-issue-3']");
+        await staticItem.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        var state = await staticItem.EvaluateAsync<string>(
+            """
+            element => {
+                const style = getComputedStyle(element);
+                return [
+                    element.tagName,
+                    style.cursor,
+                    (element.textContent || '').replace(/\s+/g, ' ').trim()
+                ].join('|');
+            }
+            """);
+        var parts = state.Split('|');
+        Assert.AreNotEqual("BUTTON", parts[0], "A sourceless issue must not be a button.");
+        Assert.AreNotEqual("pointer", parts[1], "A sourceless issue must not promise navigation with a pointer cursor.");
+        StringAssert.Contains(parts[2], "does not map to any element", "The accessible text is preserved.");
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-issue-3'][blazor\\:onclick]").CountAsync(),
+            "The static item carries no click handler.");
+    }
+
+    [TestMethod]
+    [Description("Fáze 11: chip + text + sort work together and navigation from a FILTERED issue still selects its element")]
+    public async Task IssuePanel_FilterChipTextSortAndFilteredNavigation()
+    {
+        var page = await OpenLoadedModelingPageAsync("?scenario=issues-mixed");
+
+        var panel = page.Locator("[data-testid='modeling-issue-panel']");
+
+        // Chip filter: the Error chip narrows the four-issue scenario to its single error row.
+        await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '1'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        Assert.AreEqual("true", await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .GetAttributeAsync("aria-pressed"));
+
+        // Navigation from the FILTERED issue selects the element (the filter never blocks it).
+        await panel.Locator("[data-source-element-id='bpmn-ship-order']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-ship-order']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        // Text filter over the source NAME, then the Source sort — the row order must follow
+        // the resolved names with the sourceless orphan last (original input indexes kept).
+        await panel.Locator("[data-testid='modeling-issue-severity-chip-error']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await panel.Locator("[data-testid='modeling-issue-filter-input']").FillAsync("validate order");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='modeling-issue-panel']\")?.getAttribute('data-visible-issue-count') === '2'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        await panel.Locator("[data-testid='modeling-issue-filter-input']").FillAsync(string.Empty);
+        await panel.Locator("[data-testid='modeling-issue-sort'] select")
+            .SelectOptionAsync(new SelectOptionValue { Label = "Source" });
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const rows = [...document.querySelectorAll("[data-testid='modeling-issue-list'] > li > *")]
+                    .map(row => row.getAttribute('data-testid'));
+                return rows.join(',') === 'modeling-issue-2,modeling-issue-0,modeling-issue-1,modeling-issue-3';
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();
@@ -121,9 +197,15 @@ public sealed class ModelingIssuePanelM13E2ETests : WasmTestBase
         return page;
     }
 
-    private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000)
+    private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000, bool selectorMustBeUnique = true)
     {
-        await page.Locator(selector).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeout });
+        var locator = page.Locator(selector);
+        if (!selectorMustBeUnique)
+        {
+            locator = locator.First;
+        }
+
+        await locator.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeout });
     }
 
     private static Task WaitForIssueCountAtLeastAsync(IPage page, int minimumCount) =>

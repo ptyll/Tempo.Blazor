@@ -17,12 +17,10 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
     private static readonly string[] ModelingResourceKeys =
     [
         "TmModelingEditor_Title",
-        "TmModelingEditor_Context",
         "TmModelingEditor_Provider",
-        "TmModelingEditor_Notation",
-        "TmModelingEditor_Viewpoint",
+        "TmModelingEditor_SelectProvider",
+        "TmModelingEditor_LastLoaded",
         "TmModelingEditor_NotSelected",
-        "TmModelingEditor_Default",
         "TmModelingEditor_StateEmpty",
         "TmModelingEditor_EmptyTitle",
         "TmModelingEditor_EmptyText",
@@ -190,7 +188,10 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new CzechTestProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
-            .Add(p => p.ProviderKey, CzechTestProvider.Key));
+            .Add(p => p.ProviderKey, CzechTestProvider.Key)
+            // MO3: the notation/viewpoint chips are gone — "Pohled" comes from the labeled
+            // viewpoint select, which renders once a notation is selected.
+            .Add(p => p.NotationKey, "bpmn"));
 
         cut.WaitForAssertion(() =>
         {

@@ -22,6 +22,12 @@ public partial class TmModelingDiagramPreview
     /// <summary>Raised when the user requests opening the generated document in the full diagram editor.</summary>
     [Parameter] public EventCallback<DiagramDocument> OnOpenInEditor { get; set; }
 
+    /// <summary>
+    /// DOM id for the "Open in editor" trigger, owned by the hosting editor so its dialog can
+    /// name the trigger as the focus-scope restore target. Null renders no id (the default).
+    /// </summary>
+    [Parameter] public string? OpenInEditorTriggerId { get; set; }
+
     /// <summary>Raised when the user requests a fresh diagram generation from the currently loaded model.</summary>
     [Parameter] public EventCallback OnGenerateRequested { get; set; }
 
@@ -40,10 +46,111 @@ public partial class TmModelingDiagramPreview
     /// <summary>Raised when a relationship edge is selected in the generated preview.</summary>
     [Parameter] public EventCallback<string> OnRelationshipSelected { get; set; }
 
+    /// <summary>
+    /// Whether the preview header renders its edit actions (the "Generate diagram" and
+    /// "Open in editor" buttons). Default <c>true</c>. The mobile layout (Fáze 7, G2) passes
+    /// <c>false</c>: those entries live in the editor's action bar and header overflow there,
+    /// so the preview shows only viewer controls (the embedded editor's own toolbar).
+    /// </summary>
+    [Parameter] public bool ShowEditActions { get; set; } = true;
+
+    /// <summary>
+    /// Whether the embedded diagram editor renders its own chrome. Default <c>true</c>. The
+    /// mobile band (Fáze 7 review) passes <c>false</c>: there the DE header bar would hold ONLY
+    /// the "⋯" trigger (the title is hidden and the mobile chrome moves history/search/panels
+    /// into it) and the floating zoom pill duplicates the canvas pinch, so the preview shows
+    /// just the page tabs and the canvas. The reduction goes through the DE's public
+    /// <c>ShowToolbar</c> parameter only — never CSS on its internals.
+    /// </summary>
+    [Parameter] public bool ShowEmbeddedEditorChrome { get; set; } = true;
+
+    /// <summary>
+    /// Opt in to the embedded editor's floating mobile zoom pill (Fáze 9): with <c>true</c> the
+    /// preview passes the DE's additive <c>ShowMobileZoomOverlay="true"</c> (the pill shows on the
+    /// DE's own mobile band even with the toolbar hidden) and arms
+    /// <c>FitOnDocumentLoad="DiagramFitMode.Width"</c> so a first load fits the diagram to the
+    /// width. Default <c>false</c> — the docked bands keep the DE's own status-bar zoom rule. The
+    /// hosting editor turns this on for its mobile band; the pinch keeps working either way.
+    /// </summary>
+    [Parameter] public bool ShowZoomOverlay { get; set; }
+
+    /// <summary>
+    /// Whether the preview renders its own heading block (the title + the nodes/edges summary).
+    /// Default <c>true</c>. The mobile band (Fáze 7 re-review) passes <c>false</c>: the summary
+    /// line duplicates the counts the editor's compact status card already shows in the same tab,
+    /// and at 320px the heading row cost the canvas its remaining height. The edit actions ride
+    /// <see cref="ShowEditActions"/> independently (they render inside this header when both are
+    /// enabled). Mobile preview zoom is pinch-only — the zoom buttons live in "Open in editor".
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
+
+    /// <summary>
+    /// Whether the header renders the nodes/edges summary subtitle. Default <c>true</c>. The
+    /// hosting editor passes <c>false</c> (final UX review M1): on the docked bands the status
+    /// bar already carries the counts, and the subtitle row cost the diagram canvas height.
+    /// The title and the edit actions are unaffected.
+    /// </summary>
+    [Parameter] public bool ShowSummary { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 
-    private string RootClass => string.Join(" ", new[] { "tm-modeling-diagram-preview", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    /// <summary>
+    /// Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the
+    /// embedded editor — never inside it). Default <c>false</c> — purely additive. The hosting
+    /// editor passes its <c>ShowPreviewLegend</c> and owns the mobile band's "⋯" sheet instead;
+    /// the card only renders while a document AND legend entries exist.
+    /// </summary>
+    [Parameter] public bool ShowLegend { get; set; }
+
+    /// <summary>
+    /// The legend entries (the shared <see cref="ModelingNotationCatalog"/> filtered to the
+    /// document's types). Null (no notation catalog data) renders no card even when
+    /// <see cref="ShowLegend"/> is true; an EMPTY list renders the card with the localized
+    /// empty text.
+    /// </summary>
+    [Parameter] public IReadOnlyList<ModelingNotationCatalogEntry>? LegendEntries { get; set; }
+
+    /// <summary>
+    /// Whether the legend card starts expanded (the hosting editor seeds it from the resolved
+    /// layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins.
+    /// </summary>
+    [Parameter] public bool LegendDefaultExpanded { get; set; } = true;
+
+    private string RootClass => string.Join(" ", new[]
+    {
+        "tm-modeling-diagram-preview",
+        ShowHeader ? null : "tm-modeling-diagram-preview--no-header",
+        ShowLegend && Document is not null && LegendEntries is not null
+            ? "tm-modeling-diagram-preview--legend"
+            : null,
+        Class
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    /// <summary>
+    /// Final UX review (M5): after the hosting editor re-grids the canvas column (an issues-dock
+    /// collapse/expand), the embedded viewer re-fits its content to the new box (the DE's public
+    /// <c>FitToViewAsync</c> — the same zoom-to-fit the document load and the Fit-to-view command
+    /// use) so the diagram fills the grown/shrunk canvas and the zoom report stays truthful. A
+    /// no-op before the editor mounted.
+    /// </summary>
+    public Task RefreshViewportAsync()
+        => _editor?.FitToViewAsync() ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Final UX review (M5 re-review): the docked preview's canvas column sits NEAR the diagram
+    /// editor's own 768px mobile threshold (760px at the 1440x900 baseline), so a width nudge —
+    /// a scrollbar appearing or a pane nudge during a dock collapse/expand — would flip the
+    /// embedded editor between its mobile and tablet presentations and repaint its chrome row.
+    /// The preview therefore drops the mobile threshold to 600px: a docked column (≥ ~620px at
+    /// the editor's 1200px desktop floor) always presents the stable tablet layout (page tabs +
+    /// canvas + status-bar zoom) and can only flip once, to desktop from 1200px, while a real
+    /// G2 mobile column (≤ 600px, e.g. the 320/390 baselines) keeps the DE's compact mobile
+    /// presentation. The G2 band drops the chrome through <see cref="ShowEmbeddedEditorChrome"/>
+    /// instead — it never relied on the tablet chrome.
+    /// </summary>
+    private static readonly Tempo.Blazor.Abstractions.Layout.TmLayoutBreakpoints PreviewEditorBreakpoints
+        = new(600, 1200);
 
     private int NodeCount => Document?.Nodes.Count ?? 0;
 
@@ -103,19 +210,60 @@ public partial class TmModelingDiagramPreview
             return;
         }
 
+        await InsertElementAsync(ActiveDraggedElement, args.OffsetX, args.OffsetY);
+    }
+
+    /// <summary>The embedded viewer — the <see cref="GetViewport"/> source for the viewport-center insert.</summary>
+    private Tempo.Blazor.Components.Diagram.TmDiagramEditor? _editor;
+
+    /// <summary>
+    /// The non-drag alternative (Fáze 6, WCAG 2.5.7): reuses <paramref name="element"/> as a new
+    /// preview node at the CENTER OF THE VIEWPORT through the same path the drop uses (Fáze 6
+    /// review fix: the embedded editor's <c>GetViewport()</c> reports the visible window in
+    /// document space, so the insert lands where the user is looking — a fit view may have
+    /// shrunk the visible rect away from the page center, and a node dropped at the page center
+    /// could sit outside it). Falls back to the page center while no viewport is known (SSR,
+    /// prerender, bUnit). The preview owns the node creation, the document mutation and the
+    /// <see cref="OnNodeDropped"/> contract; the same clamp/collision logic places the node
+    /// exactly as a real drop.
+    /// </summary>
+    public async Task InsertAtViewportCenterAsync(ModelingElementDto element)
+    {
+        if (!AllowNodeDrop || Document is null || element is null)
+        {
+            return;
+        }
+
+        Document.EnsurePages();
+        var page = Document.ActivePage;
+        var offsetX = page.Width / 2d;
+        var offsetY = page.Height / 2d;
+        var viewport = _editor?.GetViewport() ?? default;
+        if (viewport.W > 0)
+        {
+            offsetX = viewport.X + viewport.W / 2;
+            offsetY = viewport.Y + viewport.H / 2;
+        }
+
+        await InsertElementAsync(element, offsetX, offsetY);
+    }
+
+    /// <summary>The shared drop/insert core: create the node at the given point, mutate the document and raise the contract.</summary>
+    private async Task InsertElementAsync(ModelingElementDto element, double offsetX, double offsetY)
+    {
         Document.EnsurePages();
         var page = Document.ActivePage;
         EnsureDefaultLayer(page);
 
-        var position = ResolveDropPosition(page, ActiveDraggedElement, args.OffsetX, args.OffsetY);
-        var node = CreateDroppedNode(page, ActiveDraggedElement, position);
+        var position = ResolveDropPosition(page, element, offsetX, offsetY);
+        var node = CreateDroppedNode(page, element, position);
         page.Nodes.Add(node);
         Document.ModifiedAt = DateTime.UtcNow;
 
         await DocumentChanged.InvokeAsync(Document);
         await OnNodeDropped.InvokeAsync(new ModelingNodeDroppedEventArgs
         {
-            Element = ActiveDraggedElement,
+            Element = element,
             Point = new DiagramPoint(position.X, position.Y),
             NodeId = node.Id
         });

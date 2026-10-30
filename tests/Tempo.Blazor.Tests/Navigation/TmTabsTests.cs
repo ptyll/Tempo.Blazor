@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Tests.Localization;
@@ -442,6 +443,89 @@ public class TmTabsTests : LocalizationTestBase
         // A null splat must not add, remove or rewrite an attribute. bUnit's handler id differs
         // per render, so the comparison is the attribute map with that id removed.
         AttributesOf(withNull.Find("[role='tab']")).Should().Equal(AttributesOf(without.FindAll("[role='tab']")[0]));
+    }
+
+    // ── Dynamic header inputs (phase 13 review: bounded resync) ────────────
+
+    [Fact]
+    public void Badge_change_after_parent_rerender_reaches_header()
+    {
+        var cut = Render<TmTabs>(p => p
+            .Add(x => x.ActiveTabId, "tab1")
+            .AddChildContent<TmTabPanel>(tp => tp
+                .Add(x => x.Id, "tab1")
+                .Add(x => x.Title, "First")
+                .Add(x => x.Badge, "1")
+                .AddChildContent("Content One")));
+
+        cut.FindAll("[role='tab'] .tm-tab__badge").Single().TextContent.Should().Be("1");
+
+        // One outside render with a changed badge — the strip is built from the panel instances
+        // BEFORE their parameters of the same pass land, so the resync render has to show it.
+        cut.Render(p => p.AddChildContent<TmTabPanel>(tp => tp
+            .Add(x => x.Id, "tab1")
+            .Add(x => x.Title, "First")
+            .Add(x => x.Badge, "2")
+            .AddChildContent("Content One")));
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[role='tab'] .tm-tab__badge").Single().TextContent.Should().Be("2",
+                "a badge that changes after the strip was built reaches the header"));
+    }
+
+    [Fact]
+    public void Non_idempotent_title_does_not_render_loop()
+    {
+        var cut = Render<NonIdempotentTitleHost>();
+        var tabs = cut.FindComponent<RenderCountingTabs>().Instance;
+
+        cut.WaitForState(() => tabs.RenderCount >= 2);
+        var settled = tabs.RenderCount;
+
+        // ONE outside render: a non-idempotent title diverges on EVERY pass (the strip is built
+        // from the panel instances before the pass's own parameters land) — the resync must not
+        // feed itself.
+        cut.Render();
+        cut.WaitForState(() => tabs.RenderCount > settled);
+
+        // The bound: the outside render plus AT MOST one resync render (≤2 per parent render).
+        tabs.RenderCount.Should().BeLessThanOrEqualTo(settled + 2,
+            "the header resync is bounded to one extra render per outside render");
+    }
+
+    /// <summary>A <see cref="TmTabs"/> that counts its own render passes (the test seam for the
+    /// resync bound — bUnit's RenderCount is per component instance).</summary>
+    private sealed class RenderCountingTabs : TmTabs
+    {
+        internal int RenderCount;
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            RenderCount++;
+            await base.OnAfterRenderAsync(firstRender);
+        }
+    }
+
+    /// <summary>A host whose tab title is re-evaluated on EVERY fragment execution — the
+    /// non-idempotent header input that used to drive the resync into an unbounded loop.</summary>
+    private sealed class NonIdempotentTitleHost : ComponentBase
+    {
+        private int _titleEvaluations;
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<RenderCountingTabs>(0);
+            builder.AddAttribute(1, nameof(TmTabs.ActiveTabId), "tab1");
+            builder.AddAttribute(2, nameof(TmTabs.ChildContent), (RenderFragment)(fragment =>
+            {
+                fragment.OpenComponent<TmTabPanel>(0);
+                fragment.AddAttribute(1, nameof(TmTabPanel.Id), "tab1");
+                fragment.AddAttribute(2, nameof(TmTabPanel.Title), $"Non-idempotent {++_titleEvaluations}");
+                fragment.AddAttribute(3, nameof(TmTabPanel.ChildContent), (RenderFragment)(content => content.AddContent(0, "Content")));
+                fragment.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
     }
 
     // ── Helper ─────────────────────────────────────────────

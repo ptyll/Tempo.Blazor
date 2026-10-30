@@ -37,7 +37,8 @@
     ],
     "namespaces": [
       "Tempo.Blazor.Components.Modeling",
-      "Tempo.Blazor.Configuration"
+      "Tempo.Blazor.Configuration",
+      "Tempo.Blazor.Modeling"
     ]
   },
   "gettingStarted": {
@@ -76,10 +77,28 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "ModelIdValue",
+          "kind": "Field",
+          "type": "string",
+          "description": "Identifier of the default demo model (shared with DemoModelingModelWriter so the in-memory demo writer can resolve the persisted copy)."
+        },
+        {
           "name": "ProviderKeyValue",
           "kind": "Field",
           "type": "string",
           "description": "Provider key used for the built-in demo modeling data."
+        },
+        {
+          "name": "CreateHierarchyModel",
+          "kind": "Method",
+          "type": "ModelingModelDto",
+          "description": "The ?scenario=hierarchy demo model (Fáze 12): the default mixed model enriched with a BPMN subprocess that parents the order activities through ParentId — the model tree flips to the nested hierarchy view while the default model above stays flat (a model without parents must look and behave exactly as before)."
+        },
+        {
+          "name": "CreateModel",
+          "kind": "Method",
+          "type": "ModelingModelDto",
+          "description": "The default demo model. Public so the demo writer can build its in-memory persisted copy from the same deterministic source."
         },
         {
           "name": "GetModelAsync",
@@ -100,6 +119,56 @@
           "name": "ProviderKey",
           "kind": "Property",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "itemName": "DemoModelingModelWriter",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "In-memory demo writer for the demo modeling provider (Fáze 14): persists inspector edits against an in-memory copy of the demo model, simulates the source version for the save-conflict scenario and is registered by AddTempoBlazorModeling.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingModelWriter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "SaveChangesAsync",
+          "kind": "Method",
+          "type": "Task<ModelingModelSaveResult>",
+          "parameters": [
+            {
+              "name": "changes",
+              "type": "ModelingModelChangeSet"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken"
+            }
+          ]
+        },
+        {
+          "name": "ConflictArmed",
+          "kind": "Property",
+          "type": "static bool",
+          "description": "Armed by the demo ?scenario=save-conflict route: the NEXT save reports the conflict path (the source moved on from the version the editor based its edit on) and the flag disarms itself, so a later save succeeds. DEMO-ONLY: a STATIC mutable flag shared by the whole process — two browser sessions (or two editors on one page) would arm each other's conflict. A real writer scopes conflict state per session/request; the demo accepts the coupling because the writer is demo infrastructure, not a contract example."
+        },
+        {
+          "name": "ProviderKey",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "SaveCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many change sets were persisted (demo diagnostics)."
+        },
+        {
+          "name": "SourceVersion",
+          "kind": "Property",
+          "type": "string",
+          "description": "The source version the writer pretends the backend is on. The demo save-conflict scenario raises it so the next save reports IsConflict."
         }
       ]
     },
@@ -134,6 +203,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelChangedEventArgs",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "Event payload of TmModelingEditor.OnModelChanged: the change set of the commit plus the current model (Fáze 14).",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.Editing.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingNodeDroppedEventArgs",
       "kind": "Class",
       "category": "Components",
@@ -160,6 +239,102 @@
           "kind": "Property",
           "type": "required DiagramPoint",
           "description": "Drop point in diagram document coordinates."
+        }
+      ]
+    },
+    {
+      "itemName": "ModelingNotationCatalog",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "Fáze 15: the ONE notation catalog behind both the \"Open in editor\" palette (the pinned stencil library) and the preview legend — the notation profile's semantic types mapped to diagram stencils through the shared IModelingStencilMapper. Resolution is memoized per notation; legend entries are filtered to the types the generated document actually uses (nodes through their semanticType data, edges through the connector type of their mapped edge stencil). Registered as a singleton by AddTempoBlazorModeling.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingNotationCatalogEntry",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "One notation entry of the shared ModelingNotationCatalog: a semantic type mapped to the diagram stencil that draws it.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingSaveMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "How committed edits reach the IModelingModelWriter: Manual (default) aggregates until SaveModelChangesAsync; Immediate saves after every field commit.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.Editing.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "UpdateModelingElementCommand",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "One inspector field commit applied to the model DTO and synchronized into the diagram documents (Data name/label of the modelElementId nodes). Wrapped in a one-command DiagramCommandTransaction so one undo/redo step reverts model AND preview.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/Commands/UpdateModelingElementCommand.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Execute",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "Undo",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "ElementId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Identifier of the mutated element (test/inspection seam)."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "itemName": "UpdateModelingRelationshipCommand",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "One inspector field commit for a relationship: updates the DTO in place and mirrors the name onto the matching edge Label. Pairs with UpdateModelingElementCommand.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/Commands/UpdateModelingRelationshipCommand.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Execute",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "Undo",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "RelationshipId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Identifier of the mutated relationship (test/inspection seam)."
         }
       ]
     },
@@ -194,11 +369,72 @@
       ]
     },
     {
+      "itemName": "ModelingIssueSortMode",
+      "kind": "Enum",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Sort mode of the modeling issues list (Fáze 11). Input (the default) keeps the provider's input order untouched — the panel never re-sorts. Severity orders Error > Warning > Info, stable within each group (rows of the same severity keep their input relative order). Source orders by the source element/relationship display name — an unmatched source id falls back to the id itself — with sourceless issues last.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/ModelingIssueSortMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingTreeGrouping",
+      "kind": "Enum",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "How TmModelingModelTree structures its elements (Fáze 12). The default Auto renders the ParentId hierarchy when at least one element resolves to a valid parent and keeps today's SemanticType groups for flat models, so a model without ParentId looks and behaves exactly as before. SemanticType is the pre-phase-12 flat grouping; Hierarchy always renders the nested APG tree built from ModelingElementDto.ParentId.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/ModelingTreeGrouping.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmModelingDiagramLegend",
+      "kind": "Component",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "Fáze 15: the preview legend — a collapsible card explaining the notation shapes (stencil icons + localized type labels) the generated document actually uses, grouped into Elements and Relationships. The host supplies the entries (the shared ModelingNotationCatalog, filtered to the document); the card is presentational. Accessible: list semantics, decorative icons (aria-hidden) next to visible text, an aria-expanded/aria-controls collapse toggle (Collapsible, off in the mobile sheet). Positioned by the preview's stylesheet as an overlay card in the canvas's top-right corner — it never participates in the canvas column's flow (the canvas keeps its height) and never covers the status bar's zoom group.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramLegend.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Modeling"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "Collapsible",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the card renders its collapse toggle. Default true. The mobile legend sheet passes false: a bottom sheet cannot collapse its own content, and a toggle that does nothing would be an unusable control."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the card starts expanded. The hosting editor passes the layout rule (desktop expanded, tablet collapsed — and collapsed above the editor's 12-node rule). Seeded ONCE — the user's own toggle owns the state afterwards."
+        },
+        {
+          "name": "Entries",
+          "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+          "isRequired": false,
+          "description": "The legend entries (already filtered to the types present in the document). Null renders nothing — the host decided the legend has no data."
+        }
+      ]
+    },
+    {
       "itemName": "TmModelingDiagramPreview",
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Shows a generated modeling diagram through the diagram editor canvas.",
+      "description": "Shows a generated modeling diagram through the diagram editor canvas. The public InsertAtViewportCenterAsync(element) is the non-drag path (Fáze 6, WCAG 2.5.7): it creates the node at the CENTER OF THE VIEWPORT through the embedded editor's GetViewport() (the page center while no viewport is known — SSR, prerender, bUnit) via the same clamp/collision logic and the same OnNodeDropped contract the drop uses; AllowNodeDrop switches both paths.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramPreview.razor",
       "documentationStatus": "merged",
@@ -238,6 +474,19 @@
           "description": "Raised when the embedded diagram editor reports a document mutation."
         },
         {
+          "name": "LegendDefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the legend card starts expanded (the hosting editor seeds it from the resolved layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins."
+        },
+        {
+          "name": "LegendEntries",
+          "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+          "isRequired": false,
+          "description": "The legend entries (the shared ModelingNotationCatalog filtered to the document's types). Null (no notation catalog data) renders no card even when ShowLegend is true; an EMPTY list renders the card with the localized empty text."
+        },
+        {
           "name": "OnDrop",
           "type": "EventCallback<DragEventArgs>",
           "isRequired": false,
@@ -266,6 +515,53 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Raised when a relationship edge is selected in the generated preview."
+        },
+        {
+          "name": "OpenInEditorTriggerId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "DOM id for the \"Open in editor\" trigger, owned by the hosting editor so its dialog can name the trigger as the focus-scope restore target. Null renders no id (the default)."
+        },
+        {
+          "name": "ShowEditActions",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the preview header renders its edit actions (the \"Generate diagram\" and \"Open in editor\" buttons). Default true. The mobile layout (Fáze 7, G2) passes false: those entries live in the editor action bar and header overflow there, so the preview shows only viewer controls (the embedded editor toolbar)."
+        },
+        {
+          "name": "ShowEmbeddedEditorChrome",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the embedded diagram editor renders its own chrome. Default true. The mobile band passes false: there the DE header bar would hold only the overflow trigger and the floating zoom pill duplicates the canvas pinch, so the preview shows the page tabs and the canvas. Reduction happens through the DE's public ShowToolbar parameter only."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
+        },
+        {
+          "name": "ShowLegend",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the embedded editor — never inside it). Default false — purely additive. The hosting editor passes its ShowPreviewLegend and owns the mobile band's \"⋯\" sheet instead; the card only renders while a document AND legend entries exist.",
+          "default": "false"
+        },
+        {
+          "name": "ShowSummary",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the header renders the nodes/edges summary subtitle. Default true. The hosting editor passes false (final UX review M1): on the docked bands the status bar already carries the counts, and the subtitle row cost the diagram canvas height. The title and the edit actions are unaffected."
+        },
+        {
+          "name": "ShowZoomOverlay",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt in to the embedded editor's floating mobile zoom pill (ShowMobileZoomOverlay) plus a fit-to-width first load (FitOnDocumentLoad=Width). Default false; the hosting editor turns it on for its mobile band. The pinch keeps working either way."
         }
       ]
     },
@@ -274,7 +570,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Loads a semantic modeling source and presents an initial modeling editor shell.",
+      "description": "Loads a semantic modeling source and presents a modeling editor workspace. TreeGrouping (Fáze 12) passes the model tree's structure through: Auto (the default) renders the ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups otherwise; the editor owns the hierarchy's CollapsedElementIds state across tree remounts. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell. On the TABLET band (768-1199 of container) the shell presents its TabletPanelPresentation.Overlay: the model tree is an overlay drawer, the inspector a non-modal side sheet, at most ONE open at a time, and the \"Panels\" tab row (the same test ids as the compact row) acts as the visibility switch (aria-expanded toggles; Preview closes both). A tree selection opens the inspector sheet, and the tree's \"Insert into preview\" action (WCAG 2.5.7 non-drag alternative to dragging) reuses the element through the preview's existing drop path at the viewport center — TmModelingDiagramPreview.InsertAtViewportCenterAsync — honoring AllowNodeDrop. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop AND the tablet band (the near-fullscreen footprint keys off the editor container, not the viewport); the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
       "documentationStatus": "merged",
@@ -282,6 +578,13 @@
         "@using Tempo.Blazor.Components.Modeling"
       ],
       "parameters": [
+        {
+          "name": "AllowModelEditing",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Turns the inspector editing mode on (Fáze 14). Editing is active only when an IModelingModelWriter is registered for the effective provider key OR an OnModelChanged delegate is bound — otherwise the inspector stays read-only (MO2).",
+          "default": "false"
+        },
         {
           "name": "AllowNodeDrop",
           "type": "bool",
@@ -294,6 +597,34 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class applied to the editor root."
+        },
+        {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The editor's block size (a CSS length only - e.g. 600px, 100%, 100dvh). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) - the host owns the sizing. The shell inside fills the box.",
+          "default": "null"
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The mode rendered before the first measurement of an Auto editor (SSR, prerender and the first frame). Desktop markup degrades acceptably through the data-layout CSS."
+        },
+        {
+          "name": "LayoutBreakpoints",
+          "type": "TmLayoutBreakpoints?",
+          "isRequired": false,
+          "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor). Only the markup branch moves; stylesheets keep the shared literals.",
+          "default": "null"
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor, so hosts embedding both flip them together); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell - an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers; the compact layout keeps the panel-tab workspace."
         },
         {
           "name": "ModelLoaderOverride",
@@ -314,6 +645,12 @@
           "description": "Callback raised after a model is loaded and converted into a diagram document."
         },
         {
+          "name": "OnModelChanged",
+          "type": "EventCallback<ModelingModelChangedEventArgs>",
+          "isRequired": false,
+          "description": "Raised after every committed field edit with the change set of that commit and the current model. Binding it alone (without a writer) makes the host own the persistence."
+        },
+        {
           "name": "OnNodeDropped",
           "type": "EventCallback<ModelingNodeDroppedEventArgs>",
           "isRequired": false,
@@ -332,10 +669,34 @@
           "description": "Callback raised when the user opens the generated diagram in the full diagram editor."
         },
         {
+          "name": "OnProviderChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the editor provider selection changes (semantics of OnNotationChanged for the provider)."
+        },
+        {
+          "name": "OnSaveCompleted",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after a completed save (success, conflict or failure)."
+        },
+        {
           "name": "OnViewpointChanged",
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback raised when the editor viewpoint selection changes."
+        },
+        {
+          "name": "PersistKey",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the localStorage key the docked shell persists user-resized panel widths under. Null (default) derives the key from TestIdPrefix - {TestIdPrefix}-modeling-editor, or plain modeling-editor without a prefix - so two editors on one page share persisted widths only when they share the prefix. Set it explicitly to namespace (or intentionally share) the saved layout per instance."
+        },
+        {
+          "name": "ProviderDisplayName",
+          "type": "Func<string, string>?",
+          "isRequired": false,
+          "description": "Optional display-name resolver for the provider options and the provider chip (review fix, phase 3). Receives the raw provider key and returns the text to show; when the callback is null (or returns nothing) the raw key itself is shown. The demo maps the keys to localized names; a host may resolve them from its own registry."
         },
         {
           "name": "ProviderKey",
@@ -344,10 +705,114 @@
           "description": "Provider key used to select the semantic model provider. Null or empty values render the empty state."
         },
         {
+          "name": "ProviderKeyChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the user picks a provider in the header selector; enables @bind-ProviderKey. The editor reloads the model with the selected provider."
+        },
+        {
+          "name": "SaveMode",
+          "type": "ModelingSaveMode",
+          "isRequired": false,
+          "default": "ModelingSaveMode.Manual",
+          "description": "How committed edits reach the writer: Manual (default) aggregates the pending change set until SaveModelChangesAsync; Immediate calls the writer after every field commit."
+        },
+        {
+          "name": "ShowPreviewLegend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the preview renders the notation legend card. Default true — the legend is part of the editor's contract from Fáze 15 on (a host that wants the pre-Fáze-15 look passes false). The mobile band shows the legend as a \"⋯\" sheet instead of the card."
+        },
+        {
+          "name": "ShowProviderSelector",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders a labeled \"Provider\" select in the editor header that lists every registered IModelingModelProvider (MO3). Default false keeps the pre-selector behavior: the provider stays a labeled value chip and remains host-owned through ProviderKey.",
+          "default": "false"
+        },
+        {
+          "name": "TreeGrouping",
+          "type": "ModelingTreeGrouping",
+          "isRequired": false,
+          "default": "ModelingTreeGrouping.Auto",
+          "description": "How the model tree structures its elements (Fáze 12 pass-through). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without ParentId looks and behaves exactly as before."
+        },
+        {
           "name": "ViewpointKey",
           "type": "string?",
           "isRequired": false,
           "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-editor__state",
+          "description": "Wrapper around the state TmBadge next to the editor title (variant by state)."
+        },
+        {
+          "name": "tm-modeling-editor__status-item",
+          "description": "One separated status item; the first carries the state icon (and the last-loaded time when the model carries metadata, MO3)."
+        },
+        {
+          "name": "tm-modeling-editor__status-icon",
+          "description": "Leading status icon (check/alert/clock by state), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-editor__context",
+          "description": "Right-aligned header group wrapping the provider field/chip and the TmModelingViewSelector; wraps as a whole under the title and becomes a single-column grid below 48rem (review fix, phase 3)."
+        },
+        {
+          "name": "tm-modeling-editor__field",
+          "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; may shrink to its token minimum inside the wrapping context group (review fix, phase 3)."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-modal",
+          "description": "Class on the open-editor TmModal overlay root; sizes the modal panel to ~90vw x 90vh on the desktop and to a near-fullscreen panel below 48rem."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-body",
+          "description": "Dialog body wrapper filling the TmModal body; hosts the embedded diagram editor."
+        },
+        {
+          "name": "tm-modeling-editor__open-editor-diagram",
+          "description": "The embedded TmDiagramEditor inside the dialog body; fills the body height."
+        },
+        {
+          "name": "tm-modeling-editor__shell",
+          "description": "Class applied to the core TmEditorShell root on the docked layouts; fills the editor box and neutralizes the shell's generic header/status/canvas padding so the modeling chrome owns its own rhythm."
+        },
+        {
+          "name": "tm-modeling-editor__canvas-body",
+          "description": "The docked canvas surface: a grid with the preview row (minmax(0,1fr)) and the issues dock row (auto). Also the focusWithin surface containing the open-editor trigger and dialog."
+        },
+        {
+          "name": "tm-modeling-editor__canvas-body--issues-open",
+          "description": "Modifier rendered while the Issues dock is expanded; the dock row becomes a token clamp (min 12rem, preferred 38%, cap 20rem of the canvas region) so the list scrolls inside the dock and the preview keeps its row."
+        },
+        {
+          "name": "tm-modeling-editor__inspector",
+          "description": "The inspector wrapper inside the shell's right dock; carries the frozen modeling-inspector-panel test id and the Properties | Source TmTabs (sticky tab strip)."
+        },
+        {
+          "name": "tm-modeling-editor__history-btn",
+          "description": "Inspector header undo/redo button (with the keyboard hint in its title)."
+        },
+        {
+          "name": "tm-modeling-editor__editing-alert",
+          "description": "Wrapper of the save/conflict feedback alerts above the inspector."
+        },
+        {
+          "name": "tm-modeling-editor__conflict-reload",
+          "description": "The conflict alert's localized \"Reload\" action (asks for confirmation before discarding pending changes)."
+        },
+        {
+          "name": "tm-modeling-editor__discard-body",
+          "description": "Body of the discard-confirmation modal."
+        },
+        {
+          "name": "tm-modeling-editor__discard-actions",
+          "description": "Confirm/Cancel row of the discard-confirmation modal."
         }
       ]
     },
@@ -356,7 +821,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays details for a selected modeling element or relationship.",
+      "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING).",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingInspector.razor",
       "documentationStatus": "merged",
@@ -384,10 +849,84 @@
           "description": "Elements used to resolve relationship source and target display names."
         },
         {
+          "name": "HeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Editor-owned actions rendered inside the header (the undo/redo pair and the docked Save/Discard while a Manual save is pending)."
+        },
+        {
+          "name": "OnElementEdited",
+          "type": "EventCallback<ModelingElementChange>",
+          "isRequired": false,
+          "description": "Raised when an element field commit lands. The change carries only the edited fields (a null member means unchanged)."
+        },
+        {
+          "name": "OnRedoRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised for the inspector-scope Ctrl+Shift+Z / Ctrl+Y."
+        },
+        {
+          "name": "OnRelationshipEdited",
+          "type": "EventCallback<ModelingRelationshipChange>",
+          "isRequired": false,
+          "description": "Raised when a relationship field commit lands."
+        },
+        {
+          "name": "OnUndoRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised for the inspector-scope Ctrl+Z — the editor's own undo stack, never the diagram canvas keyboard scope."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the inspector is read-only (the MO2 default). The editor passes false when model editing is enabled for the current provider — then the name, the description and the scalar properties become inputs that commit on blur/Enter (Escape reverts); semantic type, notation, source metadata, governance and complex JSON values stay read-only."
+        },
+        {
           "name": "Relationship",
           "type": "ModelingRelationshipDto?",
           "isRequired": false,
           "description": "Selected modeling relationship."
+        },
+        {
+          "name": "Saving",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a model save is currently in flight. Every editing input disables and the drafts are not re-seeded from the re-renders the saving state causes, so a keystroke mid-save cannot be silently wiped.",
+          "default": "false"
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-inspector__type-icon",
+          "description": "Header icon tile resolved from the semantic type (Link2 for relationships)."
+        },
+        {
+          "name": "tm-modeling-inspector__heading",
+          "description": "Header text column: kind chip, name, type."
+        },
+        {
+          "name": "tm-modeling-inspector__name",
+          "description": "The h3 name of the inspected element/relationship."
+        },
+        {
+          "name": "tm-modeling-inspector__type",
+          "description": "The semantic/relationship type line."
+        },
+        {
+          "name": "tm-modeling-inspector__edit-field",
+          "description": "Wrapper of the name/description fields in the editing surface."
+        },
+        {
+          "name": "tm-modeling-inspector__header-actions",
+          "description": "Cluster of the editor-hosted header actions (undo/redo pair, docked Save/Discard)."
+        },
+        {
+          "name": "tm-modeling-inspector__property-edit",
+          "description": "Editable scalar property cell (the key cell stays the label)."
         }
       ]
     },
@@ -396,7 +935,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays validation and generation issues for a modeling document.",
+      "description": "Displays validation and generation issues for a modeling document. MO1 places it as the collapsible dock under the preview: the header carries the neutral count-only badge and the collapse toggle (aria-expanded + aria-controls); a collapsed panel renders the header only. The dock height belongs to the host's grid row (the panel's own min/max-height pair is gone), and the two-way Collapsed state is the session's. Fáze 11 adds an opt-in filter bar (ShowFilterBar): severity chips with counts (native aria-pressed toggle buttons), an accent-insensitive text search over message/category/source and a sort select (ModelingIssueSortMode Input | Severity | Source) — the rendered rows are a memoized projection; the Issues collection is never mutated. Root attributes carry data-visible-issue-count and data-total-issue-count (data-issue-count keeps reporting the total).",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingIssuePanel.razor",
       "documentationStatus": "merged",
@@ -411,17 +950,171 @@
           "description": "Additional CSS class applied to the panel root."
         },
         {
+          "name": "Collapsed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the panel body (the issue list or the empty state) is collapsed to the header. Two-way bindable - the host owns the dock height around the collapsed/expanded row. Default false (expanded); the state is the session's and survives re-renders. A collapsed dock hides the filter bar too (the bar lives inside the body).",
+          "default": "false"
+        },
+        {
+          "name": "CollapsedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the user toggles the panel through the header button; enables @bind-Collapsed."
+        },
+        {
+          "name": "ContentVersion",
+          "type": "int",
+          "isRequired": false,
+          "description": "Host-owned content version of the element/relationship tables. The editor mutates the DTOs in place (an inspector rename), so the render gate and the visible-issues memo key on this counter too - bump it whenever the names behind Elements/Relationships change without replacing the collections.",
+          "default": "0"
+        },
+        {
+          "name": "Elements",
+          "type": "IReadOnlyList<ModelingElementDto>?",
+          "isRequired": false,
+          "description": "Optional element list of the loaded model - the source of display NAMES for the text search and the Source sort. Without it those features fall back to the raw source ids."
+        },
+        {
+          "name": "FilterText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the text filter. The parameter SEEDS the internal filter whenever the host hands over a new value and is never assigned inside the component - the same seed/echo pattern as TmModelingModelTree.FilterText (including echo recording, so a host RESET to the current value re-seeds). Matches message, category and source element/relationship name case- and accent-insensitively."
+        },
+        {
+          "name": "FilterTextChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling @bind-FilterText."
+        },
+        {
           "name": "Issues",
           "type": "IReadOnlyList<ModelingIssueDto>",
           "isRequired": false,
           "default": "[]",
-          "description": "Issues to render in severity-coded order."
+          "description": "The issues to present. The panel renders a filtered/sorted PROJECTION of this list and never mutates it; severity only colors the rows. With SortMode = Input (the default) the rows follow the input order. Issues without a SourceElementId/SourceRelationshipId render as non-interactive list items; navigable issues render as buttons. Row test ids carry the ORIGINAL input index, so filtering/sorting never renumbers rows."
         },
         {
           "name": "OnIssueSelected",
           "type": "EventCallback<ModelingIssueDto>",
           "isRequired": false,
           "description": "Raised when the user selects an issue that points to a model element or relationship."
+        },
+        {
+          "name": "Relationships",
+          "type": "IReadOnlyList<ModelingRelationshipDto>?",
+          "isRequired": false,
+          "description": "Optional relationship list - the source of relationship names (as Elements)."
+        },
+        {
+          "name": "SeverityFilter",
+          "type": "IReadOnlyCollection<ModelingIssueSeverity>?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the active severity filter; null (or empty) means every severity. The parameter SEEDS the internal filter whenever the host hands over a new collection and is never assigned inside the component - the hosting editor owns the state so it survives dock collapse and panel remounts.",
+          "default": "null"
+        },
+        {
+          "name": "SeverityFilterChanged",
+          "type": "EventCallback<IReadOnlyCollection<ModelingIssueSeverity>?>",
+          "isRequired": false,
+          "description": "Raised when the user toggles a severity chip (or clears the filters); enables @bind-SeverityFilter. An empty active set is reported as null."
+        },
+        {
+          "name": "ShowFilterBar",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the filter bar (severity chips with counts, text search, sort select) renders above the list. Default false - the pre-Fáze 11 presentation; the hosting editor passes true on every band (desktop dock, tablet sheet, mobile tab). The bar renders only when Issues is not empty and hides with the collapsed body.",
+          "default": "false"
+        },
+        {
+          "name": "ShowToggle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the header renders the collapse toggle. Default true (the docked dock). The mobile Issues tab passes false: the tab body is the whole scroll surface, so the header stays a plain heading."
+        },
+        {
+          "name": "SortMode",
+          "type": "ModelingIssueSortMode",
+          "isRequired": false,
+          "default": "ModelingIssueSortMode.Input",
+          "description": "Sort mode of the rendered rows; Input (the default) never re-sorts. Severity orders Error > Warning > Info, stable within a group; Source orders by the resolved source display name with sourceless issues last. The host owns the state through SortModeChanged."
+        },
+        {
+          "name": "SortModeChanged",
+          "type": "EventCallback<ModelingIssueSortMode>",
+          "isRequired": false,
+          "description": "Raised when the user picks a sort mode; enables @bind-SortMode."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-issue-panel__toggle",
+          "description": "The header collapse toggle - an icon-only native button at the coarse-pointer target with aria-expanded/aria-controls and a state-aware sr-only label."
+        },
+        {
+          "name": "tm-modeling-issue-panel__content",
+          "description": "The collapsible body wrapper (the list or the empty state); min-height 0 keeps the parent-owned row contract."
+        },
+        {
+          "name": "tm-modeling-issue-panel__title",
+          "description": "Panel title heading."
+        },
+        {
+          "name": "tm-modeling-issue-panel__count",
+          "description": "Count-only badge in the header: visible text is the bare count, the localized formulation is the aria-label."
+        },
+        {
+          "name": "tm-modeling-issue-panel__severity",
+          "description": "Severity label in the row meta, tinted with the severity text token (`--severity--{info|warning|error}`)."
+        },
+        {
+          "name": "tm-modeling-issue-panel__category",
+          "description": "Category label after the severity."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix",
+          "description": "Suggested-fix toned box (primary subtle tokens) holding the icon, the localized prefix label and the fix text."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-icon",
+          "description": "Suggested-fix icon wrapper (TmIcon WandSparkles), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-label",
+          "description": "Localized \"Recommendation:\" prefix."
+        },
+        {
+          "name": "tm-modeling-issue-panel__fix-text",
+          "description": "The suggested fix text."
+        },
+        {
+          "name": "tm-modeling-issue-panel__chevron",
+          "description": "Navigation chevron rendered only inside navigable issue buttons (TmIcon ChevronRight), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-issue-panel__filterbar",
+          "description": "The wrapping filter row above the list (severity chips, search input, sort select); hides with the collapsed body."
+        },
+        {
+          "name": "tm-modeling-issue-panel__chip",
+          "description": "Panel hook on the severity filter chips - the chips are CORE TmChips in the pressed variant (native toggle buttons carrying aria-pressed and the per-severity count); the panel class adds the compact row sizing and the severity palette."
+        },
+        {
+          "name": "tm-modeling-issue-panel__filter-input",
+          "description": "The TmSearchInput wrapper for the accent-insensitive text filter."
+        },
+        {
+          "name": "tm-modeling-issue-panel__filter-sort",
+          "description": "The TmSelect wrapper for the sort mode (visible localized label)."
+        },
+        {
+          "name": "tm-modeling-issue-panel__empty--no-match",
+          "description": "The no-match state shown when the active filters hide every row, with the clear-filters action."
+        },
+        {
+          "name": "tm-modeling-issue-panel__clear",
+          "description": "The clear-filters button inside the no-match state."
         }
       ]
     },
@@ -430,7 +1123,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays semantic modeling elements grouped by type with live filtering and selection.",
+      "description": "Displays semantic modeling elements with live filtering and selection (Fáze 12). The default Grouping=Auto renders the ParentId hierarchy as a nested APG tree — every element is a treeitem at its own aria-level with aria-setsize/posinset among the visible siblings, parents are disclosures (chevron + direct child count, aria-expanded) and keyboard navigation walks ONE flat visible list over the unchanged modeling-editor.js focusTreeElement/focusTreeGroupHeader API; indentation is token-driven via the --tm-modeling-tree-level variable. Grouping=SemanticType keeps the flat type groups; a model without resolvable ParentId falls back to it under Auto, and a parent cycle is broken deterministically to the root (never a stack overflow). The filter keeps every ancestor of a match visible and expanded, and the matching-element count on data-visible-count never drops when only the subtree is collapsed. CollapsedElementIds/CollapsedElementIdsChanged two-way bind the hierarchy's collapsed nodes (element ids — a separate key space from CollapsedGroups, which stays the flat mode's group keys); the state is seeded from the host on a new collection and raised with a fresh snapshot on every user toggle. External selection reveals the whole collapsed ancestor chain before scrolling it into view. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the CENTER of the diagram viewport. The action names its row (\"Insert {0} into preview\"), stays out of the tab order (tabindex=-1) — the keyboard path is the node treeitem's Insert / Ctrl+Enter (aria-keyshortcuts) — and renders only when AllowNodeDrop is set AND a listener is bound to OnInsertIntoPreview. FilterText/FilterTextChanged optionally two-way bind the live filter so the hosting editor can own the value across tree remounts.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
       "documentationStatus": "merged",
@@ -439,10 +1132,41 @@
       ],
       "parameters": [
         {
+          "name": "AllowNodeDrop",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the tree offers the non-drag \"Insert into preview\" action (Fáze 6, WCAG 2.5.7). Default true mirrors the hosting editor's AllowNodeDrop: when the host opts out of tree reuse the action disappears with the drop zone, so no alternative path offers what the drop zone refuses."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class applied to the tree root."
+        },
+        {
+          "name": "CollapsedElementIds",
+          "type": "IReadOnlyCollection<string>?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the collapsed ELEMENT ids of the hierarchy view (Fáze 12) — a separate key space from CollapsedGroups (group keys are semantic types, these are element ids; no migration between them). Seeded whenever the host hands over a new collection; every user toggle raises CollapsedElementIdsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+        },
+        {
+          "name": "CollapsedElementIdsChanged",
+          "type": "EventCallback<IReadOnlyCollection<string>>",
+          "isRequired": false,
+          "description": "Raised when the user collapses or expands a hierarchy node (not while a filter drives the transient state)."
+        },
+        {
+          "name": "CollapsedGroups",
+          "type": "IReadOnlyCollection<string>?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the collapsed group keys. Seeded from when the instance is given a new collection; every user toggle raises CollapsedGroupsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+        },
+        {
+          "name": "CollapsedGroupsChanged",
+          "type": "EventCallback<IReadOnlyCollection<string>>",
+          "isRequired": false,
+          "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
         },
         {
           "name": "Elements",
@@ -450,6 +1174,25 @@
           "isRequired": false,
           "default": "[]",
           "description": "Elements rendered by the tree. They are grouped by SemanticType."
+        },
+        {
+          "name": "FilterText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS the internal filter whenever the host hands over a new value and is never assigned inside the component — user edits update the working copy, clear the transient filter-collapse set and raise FilterTextChanged. The hosting editor owns the field, so the filter survives a tree remount (a layout flip)."
+        },
+        {
+          "name": "FilterTextChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling @bind-FilterText."
+        },
+        {
+          "name": "Grouping",
+          "type": "ModelingTreeGrouping",
+          "isRequired": false,
+          "default": "ModelingTreeGrouping.Auto",
+          "description": "How the tree structures its elements (Fáze 12). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without parents looks and behaves exactly as before."
         },
         {
           "name": "OnElementDragEnded",
@@ -470,6 +1213,12 @@
           "description": "Raised when the user selects an element node."
         },
         {
+          "name": "OnInsertIntoPreview",
+          "type": "EventCallback<ModelingElementDto>",
+          "isRequired": false,
+          "description": "Raised when the user activates the row-level \"Insert into preview\" action. The HOST computes the drop geometry (the tree knows nothing about the document or its viewport): the hosting editor routes the request through the preview's existing drop path at the viewport center. Keyboard- and touch-reachable by construction (a native button beside the node treeitem, revealed on (hover: none) and :focus-within)."
+        },
+        {
           "name": "SelectedElement",
           "type": "ModelingElementDto?",
           "isRequired": false,
@@ -480,6 +1229,148 @@
           "type": "EventCallback<ModelingElementDto?>",
           "isRequired": false,
           "description": "Raised when <see cref=\"SelectedElement\"/> changes."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the tree renders its own heading block (title + element count). Fáze 6 review: the hosting editor hides it inside the tablet drawer, where the shell's sheet title already says \"Model tree\" — the search field always renders (it is the live filter). When the block is absent the role=\"tree\" element is named by aria-label instead of the (dangling) aria-labelledby. Default true."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-model-tree__group-header",
+          "description": "MO4 disclosure header: a real button with aria-expanded/aria-controls; Enter/Space native, ArrowLeft/ArrowRight collapse/expand."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-chevron",
+          "description": "Chevron icon that rotates -90deg when the group is collapsed (aria-expanded=false)."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-icon",
+          "description": "Semantic-type icon of the group."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-label",
+          "description": "Group label text (the semantic type)."
+        },
+        {
+          "name": "tm-modeling-model-tree__group-count",
+          "description": "Element count pill of the group."
+        },
+        {
+          "name": "tm-modeling-model-tree__type-icon",
+          "description": "Per-node semantic type icon (aria-hidden), resolved through the shared semantic type mapping."
+        },
+        {
+          "name": "tm-modeling-model-tree__node-body",
+          "description": "Name + meta stack inside the node button."
+        },
+        {
+          "name": "tm-modeling-model-tree__drag-handle",
+          "description": "Drag affordance icon (TmIcon GripVertical) — replaced the \"::\" text glyph, aria-hidden."
+        }
+      ]
+    },
+    {
+      "itemName": "TmModelingRelatedElementsPanel",
+      "kind": "Component",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "The Relations body of the modeling inspector: the selected element's outgoing and incoming relationships (relationship type plus the counterpart with its semantic-type icon) and, for a selected relationship, its source and target as navigable rows. Activations route through the editor's existing selection paths; the by-element relationship index is built once per Relationships reference.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingRelatedElementsPanel.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Modeling"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class applied to the panel root."
+        },
+        {
+          "name": "Element",
+          "type": "ModelingElementDto?",
+          "isRequired": false,
+          "description": "The selected modeling element; renders its outgoing/incoming relationship groups. Takes precedence when a relationship is supplied too."
+        },
+        {
+          "name": "Elements",
+          "type": "IReadOnlyList<ModelingElementDto>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Elements used to resolve counterpart display names and semantic-type icons."
+        },
+        {
+          "name": "OnElementSelected",
+          "type": "EventCallback<ModelingElementDto>",
+          "isRequired": false,
+          "description": "Raised when the user activates a counterpart (or a source/target row) to select that element."
+        },
+        {
+          "name": "OnRelationshipSelected",
+          "type": "EventCallback<ModelingRelationshipDto>",
+          "isRequired": false,
+          "description": "Raised when the user activates a relationship type to select that relationship."
+        },
+        {
+          "name": "Relationship",
+          "type": "ModelingRelationshipDto?",
+          "isRequired": false,
+          "description": "The selected modeling relationship; renders its source and target as navigable rows."
+        },
+        {
+          "name": "Relationships",
+          "type": "IReadOnlyList<ModelingRelationshipDto>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The loaded model's relationships — the source of the memoized outgoing/incoming index (built once per collection reference)."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-related",
+          "description": "Root section of the panel (data-kind=element|relationship|empty)."
+        },
+        {
+          "name": "tm-modeling-related__group",
+          "description": "One relationship group (Outgoing / Incoming / Source / Target) with its heading and rows."
+        },
+        {
+          "name": "tm-modeling-related__group-title",
+          "description": "The group heading with the localized label and the count badge."
+        },
+        {
+          "name": "tm-modeling-related__count",
+          "description": "Count badge inside a group heading (visible digits + sr-only plural)."
+        },
+        {
+          "name": "tm-modeling-related__row",
+          "description": "One relationship row (a li carrying the modeling-related-{direction}-{relationshipId} test id)."
+        },
+        {
+          "name": "tm-modeling-related__nav",
+          "description": "The counterpart / endpoint navigation button (static variant renders the Unknown fallback)."
+        },
+        {
+          "name": "tm-modeling-related__type",
+          "description": "The relationship-type action on an element row (trailing chip with the Link2 icon)."
+        },
+        {
+          "name": "tm-modeling-related__icon",
+          "description": "Semantic-type icon tile of a row action."
+        },
+        {
+          "name": "tm-modeling-related__text",
+          "description": "Truncated display text of a row action."
+        },
+        {
+          "name": "tm-modeling-related__empty",
+          "description": "The localized empty state shown without a selection or with no related relationships."
         }
       ]
     },
@@ -519,6 +1410,40 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Callback raised when the user requests loading the model again."
+        }
+      ],
+      "cssClasses": [
+        {
+          "name": "tm-modeling-source-panel__title",
+          "description": "Panel title heading (the only header text node; the freshness badge sits beside it)."
+        },
+        {
+          "name": "tm-modeling-source-panel__metadata-row",
+          "description": "One two-column term/value row of the metadata dl, separated by a hairline from the next row."
+        },
+        {
+          "name": "tm-modeling-source-panel__term",
+          "description": "The dt: localized term label led by the row icon."
+        },
+        {
+          "name": "tm-modeling-source-panel__metadata-icon",
+          "description": "Row icon wrapper (database / tag / calendar), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning",
+          "description": "Stale-data warning box (warning tokens, role=status)."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning-icon",
+          "description": "Warning icon wrapper (TmIcon AlertTriangle), aria-hidden."
+        },
+        {
+          "name": "tm-modeling-source-panel__warning-text",
+          "description": "Stale warning text."
+        },
+        {
+          "name": "tm-modeling-source-panel__load",
+          "description": "Layout hook on the load TmButton (full width); colors come from the core .tm-btn-primary."
         }
       ]
     },
@@ -569,12 +1494,18 @@
     }
   ],
   "libraryExamples": [],
+  "assets": [
+    {
+      "path": "src/Tempo.Blazor.Modeling/wwwroot/js/modeling-editor.js",
+      "kind": "JavaScript"
+    }
+  ],
   "summary": {
-    "itemCount": 13,
-    "manualItemCount": 13,
-    "generatedItemCount": 13,
+    "itemCount": 24,
+    "manualItemCount": 24,
+    "generatedItemCount": 24,
     "generatedOnlyItemCount": 0,
-    "componentCount": 7,
-    "publicApiTypeCount": 6
+    "componentCount": 9,
+    "publicApiTypeCount": 15
   }
 }

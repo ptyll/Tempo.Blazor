@@ -591,6 +591,24 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Invoked from the canvas' capture-phase Escape consumer (Fáze 10) when an Escape was typed
+    /// into one of this shape's inline editors (a section input/textarea, a swimlane header or a
+    /// table cell). The edit CANCELS — the value reverts and nothing is pushed to the undo stack —
+    /// and the Escape is marked handled in JS before this call, so a host overlay (the open-editor
+    /// dialog) stays open. The Blazor <c>@onkeydown</c> Escape branches on the inputs themselves
+    /// remain in place and are idempotent with this path.
+    /// </summary>
+    [JSInvokable]
+    public void CancelActiveEditFromJs()
+    {
+        if (_editingDataKey is null && _editingSwimlaneCell is null && _editingTableCell is null) return;
+        CancelEdit();
+        CancelSwimlaneEdit();
+        CancelTableCellEdit();
+        StateHasChanged();
+    }
+
     private async ValueTask UnregisterWithJsAsync()
     {
         if (_registeredNodeId is null) return;

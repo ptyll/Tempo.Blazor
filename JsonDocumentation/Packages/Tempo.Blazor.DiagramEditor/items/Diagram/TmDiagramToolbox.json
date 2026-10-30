@@ -18,6 +18,24 @@
       "description": "Additional CSS class."
     },
     {
+      "name": "CollapseCategoriesExceptFirst",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
+    },
+    {
+      "name": "PreferredStencilIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Fáze 15 (the Modeling \"Open in editor\" notation palette): stencil ids to pin as the FIRST library — the palette of the active notation — while every other library starts collapsed (search still spans the whole stencil library). Order is preserved; unknown ids are ignored. Null (the default) keeps today's toolbox: no pinned library, all palettes expanded."
+    },
+    {
+      "name": "PreferredStencilsLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Header label of the pinned library (the Modeling dialog passes the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Ignored while PreferredStencilIds is unset."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
@@ -29,12 +47,6 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
-    },
-    {
-      "name": "CollapseCategoriesExceptFirst",
-      "type": "bool",
-      "isRequired": false,
-      "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
     },
     {
       "name": "StencilDragStart",

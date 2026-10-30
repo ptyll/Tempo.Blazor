@@ -1,120 +1,126 @@
 {
-  "itemName": "TmFocusScope",
-  "kind": "Component",
-  "category": "Feedback",
-  "description": "Public focus-trap primitive. Wraps arbitrary content, cycles Tab and Shift+Tab inside it, moves initial focus in on activation, restores focus on deactivation, and marks the background inert while modal. Only the innermost active scope handles Tab and only the topmost handles Escape. A canvas editor passes RestoreFocusTarget so focus returns to the canvas instead of the trigger.",
-  "requiredImports": [
-    "@using Tempo.Blazor.Components.Feedback"
-  ],
-  "parameters": [
-    {
-      "name": "Active",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether the trap is active. An inactive scope renders its content without trapping."
-    },
-    {
-      "name": "Modal",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "Whether the scope is modal. A non-modal scope reports aria-modal false and leaves the background usable."
-    },
-    {
-      "name": "ChildContent",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Content trapped while Active is true."
-    },
-    {
-      "name": "RestoreFocusTarget",
-      "type": "ElementReference?",
-      "isRequired": false,
-      "description": "The element focus returns to on deactivation. Null restores whatever was focused when the scope opened. A disconnected or inside-the-scope target is skipped and the restore falls back to the opener; a focus the app placed on a live element outside is never stolen."
-    },
-    {
-      "name": "RestoreFocusTargetId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Set it when the target is rendered outside this scope. Same skip rules as RestoreFocusTarget."
-    },
-    {
-      "name": "AriaLabelledBy",
-      "type": "string?",
-      "isRequired": false,
-      "description": "The id of the element that names the scope, wired to aria-labelledby."
-    },
-    {
-      "name": "AriaLabel",
-      "type": "string?",
-      "isRequired": false,
-      "description": "An accessible name for the scope, wired to aria-label."
-    },
-    {
-      "name": "DialogRole",
-      "type": "string",
-      "isRequired": false,
-      "default": "dialog",
-      "description": "The dialog role. A dangerous confirm passes alertdialog."
-    },
-    {
-      "name": "InitialFocusTarget",
-      "type": "ElementReference?",
-      "isRequired": false,
-      "description": "The element that receives focus on activation. Null focuses the first focusable."
-    },
-    {
-      "name": "InitialFocusTargetId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "The id of the element that receives focus on activation."
-    },
-    {
-      "name": "InitialFocusSelector",
-      "type": "string?",
-      "isRequired": false,
-      "description": "A CSS selector resolved inside the scope for the element that receives focus on activation — e.g. the first [role='menuitem'] of a menu sheet. An explicit InitialFocusTarget or InitialFocusTargetId wins; without any of the three, focus falls back to the first focusable (since 2.9.1)."
-    },
-    {
-      "name": "RestoreFocus",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "Whether deactivation restores focus. False leaves focus where the close action put it."
-    },
-    {
-      "name": "NoteOpenerOnMount",
-      "type": "bool",
-      "isRequired": false,
-      "default": "false",
-      "description": "Advanced: set when the scope's Active flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is noted before content autofocus. The note is sent once per open — the module keeps the first note of an open."
-    },
-    {
-      "name": "OnDeactivated",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised after the trap deactivates and focus has been restored."
-    },
-    {
-      "name": "CloseOnEscape",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits. Only the topmost active scope handles it."
-    },
-    {
-      "name": "OnEscape",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when Escape is pressed and CloseOnEscape is true."
-    },
-    {
-      "name": "Class",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Extra CSS classes appended to the root."
-    }
-  ],
-  "cssClasses": [
-    "tm-focus-scope"
-  ]
+ "itemName": "TmFocusScope",
+ "kind": "Component",
+ "category": "Feedback",
+ "description": "Public focus-trap primitive. Wraps arbitrary content, cycles Tab and Shift+Tab inside it, moves initial focus in on activation, restores focus on deactivation, and marks the background inert while modal. Only the innermost active scope handles Tab and only the topmost handles Escape. A canvas editor passes RestoreFocusTarget so focus returns to the canvas instead of the trigger.",
+ "requiredImports": [
+  "@using Tempo.Blazor.Components.Feedback"
+ ],
+ "parameters": [
+  {
+   "name": "Active",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether the trap is active. An inactive scope renders its content without trapping."
+  },
+  {
+   "name": "Modal",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the scope is modal. A non-modal scope reports aria-modal false and leaves the background usable."
+  },
+  {
+   "name": "ChildContent",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content trapped while Active is true."
+  },
+  {
+   "name": "RestoreFocusTarget",
+   "type": "ElementReference?",
+   "isRequired": false,
+   "description": "The element focus returns to on deactivation. Null restores whatever was focused when the scope opened. A disconnected or inside-the-scope target is skipped and the restore falls back to the opener; a focus the app placed on a live element outside is never stolen."
+  },
+  {
+   "name": "RestoreFocusTargetId",
+   "type": "string?",
+   "isRequired": false,
+   "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Set it when the target is rendered outside this scope. Same skip rules as RestoreFocusTarget."
+  },
+  {
+   "name": "AriaLabelledBy",
+   "type": "string?",
+   "isRequired": false,
+   "description": "The id of the element that names the scope, wired to aria-labelledby."
+  },
+  {
+   "name": "AriaDescribedBy",
+   "type": "string?",
+   "isRequired": false,
+   "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description. Null renders no attribute."
+  },
+  {
+   "name": "AriaLabel",
+   "type": "string?",
+   "isRequired": false,
+   "description": "An accessible name for the scope, wired to aria-label."
+  },
+  {
+   "name": "DialogRole",
+   "type": "string",
+   "isRequired": false,
+   "default": "dialog",
+   "description": "The dialog role. A dangerous confirm passes alertdialog."
+  },
+  {
+   "name": "InitialFocusTarget",
+   "type": "ElementReference?",
+   "isRequired": false,
+   "description": "The element that receives focus on activation. Null focuses the first focusable."
+  },
+  {
+   "name": "InitialFocusTargetId",
+   "type": "string?",
+   "isRequired": false,
+   "description": "The id of the element that receives focus on activation."
+  },
+  {
+   "name": "InitialFocusSelector",
+   "type": "string?",
+   "isRequired": false,
+   "description": "A CSS selector resolved inside the scope for the element that receives focus on activation — e.g. the first [role='menuitem'] of a menu sheet. An explicit InitialFocusTarget or InitialFocusTargetId wins; without any of the three, focus falls back to the first focusable (since 2.9.1)."
+  },
+  {
+   "name": "RestoreFocus",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether deactivation restores focus. False leaves focus where the close action put it."
+  },
+  {
+   "name": "NoteOpenerOnMount",
+   "type": "bool",
+   "isRequired": false,
+   "default": "false",
+   "description": "Advanced: set when the scope's Active flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is noted before content autofocus. The note is sent once per open — the module keeps the first note of an open."
+  },
+  {
+   "name": "OnDeactivated",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Raised after the trap deactivates and focus has been restored."
+  },
+  {
+   "name": "CloseOnEscape",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits. Only the topmost active scope handles it."
+  },
+  {
+   "name": "OnEscape",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Raised when Escape is pressed and CloseOnEscape is true."
+  },
+  {
+   "name": "Class",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Extra CSS classes appended to the root."
+  }
+ ],
+ "cssClasses": [
+  "tm-focus-scope"
+ ]
 }

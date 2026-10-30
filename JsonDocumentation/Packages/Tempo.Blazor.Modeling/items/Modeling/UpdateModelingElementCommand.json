@@ -1,0 +1,10 @@
+{
+  "itemName": "UpdateModelingElementCommand",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "One inspector field commit applied to the model DTO and synchronized into the diagram documents (Data name/label of the modelElementId nodes). Wrapped in a one-command DiagramCommandTransaction so one undo/redo step reverts model AND preview.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/UpdateModelingElementCommand.cs",
+  "documentationStatus": "generated"
+}

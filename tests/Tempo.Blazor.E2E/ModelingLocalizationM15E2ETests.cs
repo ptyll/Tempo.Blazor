@@ -24,9 +24,12 @@ public sealed class ModelingLocalizationM15E2ETests : WasmTestBase
         await Assertions.Expect(editor.Locator("[data-testid='modeling-diagram-preview']")).ToContainTextAsync("Náhled diagramu");
         await Assertions.Expect(editor.Locator("[data-testid='modeling-diagram-preview']")).ToContainTextAsync("Generovat diagram");
         await Assertions.Expect(editor.Locator("[data-testid='modeling-diagram-preview']")).ToContainTextAsync("Otevřít v editoru");
-        await Assertions.Expect(editor.Locator("[data-testid='modeling-source-panel']")).ToContainTextAsync("Datový zdroj");
         await Assertions.Expect(editor.Locator("[data-testid='modeling-inspector']")).ToContainTextAsync("Vyberte prvek");
         await Assertions.Expect(editor.Locator("[data-testid='modeling-issue-panel']")).ToContainTextAsync("Nálezy");
+        // Phase 5 (MO1): the source panel is the inspector's Source tab on the docked layout —
+        // only the ACTIVE tab renders its body, so the source assertions run after the switch.
+        await editor.Locator("[data-testid='modeling-tab-source']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(editor.Locator("[data-testid='modeling-source-panel']")).ToContainTextAsync("Datový zdroj");
     }
 
     [TestMethod]
@@ -85,7 +88,9 @@ public sealed class ModelingLocalizationM15E2ETests : WasmTestBase
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'cs-CZ');");
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        // MO3: the "Pohled" toolbar text lives on the labeled viewpoint select, which renders
+        // once a notation is selected — open the page with the BPMN notation.
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });

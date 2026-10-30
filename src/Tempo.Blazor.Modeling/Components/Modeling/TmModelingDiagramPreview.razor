@@ -9,33 +9,52 @@
          data-node-count="@NodeCount"
          data-edge-count="@EdgeCount"
          data-drop-enabled="@AllowNodeDrop.ToString().ToLowerInvariant()">
-    <header class="tm-modeling-diagram-preview__header">
-        <div class="tm-modeling-diagram-preview__title-group">
-            <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
-            <span>@SummaryText</span>
-        </div>
-        <div class="tm-modeling-diagram-preview__actions">
-            @if (OnGenerateRequested.HasDelegate)
+    @* Fáze 7 re-review: the heading block is opt-out (ShowHeader=false on the mobile band) — its
+       summary line duplicates the status card's node/edge counts in the same tab and the row
+       starved the canvas at 320px. *@
+    @if (ShowHeader)
+    {
+        <header class="tm-modeling-diagram-preview__header">
+            <div class="tm-modeling-diagram-preview__title-group">
+                <h3>@Loc["TmModelingDiagramPreview_Title"]</h3>
+                @* Final UX review (M1): the nodes/edges summary is opt-out (ShowSummary) — the
+                   docked status bar already carries the counts and the row starved the canvas. *@
+                @if (ShowSummary)
+                {
+                    <span>@SummaryText</span>
+                }
+            </div>
+            @* Fáze 7 (G2): on a mobile layout the preview shows viewer controls only — the edit
+               entries (generate / open in editor) live in the editor's action bar and header
+               overflow, so no header actions render here. *@
+            @if (ShowEditActions)
             {
-                <TmButton Variant="ButtonVariant.Secondary"
-                          Size="ButtonSize.Sm"
-                          Icon="@IconNames.Refresh"
-                          OnClick="HandleGenerateRequestedAsync"
-                          data-testid="@TestId("modeling-generate-diagram-button")">
-                    @Loc["TmModelingDiagramPreview_Generate"]
-                </TmButton>
+                <div class="tm-modeling-diagram-preview__actions">
+                    @if (OnGenerateRequested.HasDelegate)
+                    {
+                        <TmButton Variant="ButtonVariant.Secondary"
+                                  Size="ButtonSize.Sm"
+                                  Icon="@IconNames.Refresh"
+                                  OnClick="HandleGenerateRequestedAsync"
+                                  data-testid="@TestId("modeling-generate-diagram-button")">
+                            @Loc["TmModelingDiagramPreview_Generate"]
+                        </TmButton>
+                    }
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Size="ButtonSize.Sm"
+                              Icon="@IconNames.ExternalLink"
+                              Disabled="@(Document is null)"
+                              OnClick="HandleOpenInEditorAsync"
+                              AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
+                              data-modeling-focus="open-in-editor"
+                              id="@OpenInEditorTriggerId"
+                              data-testid="@TestId("modeling-open-in-editor-button")">
+                        @Loc["TmModelingDiagramPreview_OpenInEditor"]
+                    </TmButton>
+                </div>
             }
-            <TmButton Variant="ButtonVariant.Primary"
-                      Size="ButtonSize.Sm"
-                      Icon="@IconNames.ExternalLink"
-                      Disabled="@(Document is null)"
-                      OnClick="HandleOpenInEditorAsync"
-                      AriaLabel="@Loc["TmModelingDiagramPreview_OpenInEditor"]"
-                      data-testid="@TestId("modeling-open-in-editor-button")">
-                @Loc["TmModelingDiagramPreview_OpenInEditor"]
-            </TmButton>
-        </div>
-    </header>
+        </header>
+    }
 
     @if (Document is null)
     {
@@ -49,6 +68,7 @@
         <div class="tm-modeling-diagram-preview__canvas-shell"
              data-testid="@TestId("modeling-diagram-preview-canvas-shell")"
              data-drop-enabled="@AllowNodeDrop.ToString().ToLowerInvariant()"
+             data-dragging="@((ActiveDraggedElement is not null).ToString().ToLowerInvariant())"
              @ondragover="HandleDragOver"
              @ondragover:preventDefault
              @ondrop="HandleDropAsync"
@@ -59,22 +79,58 @@
                     @Loc["TmModelingDiagramPreview_EmptyDiagramHint"]
                 </div>
             }
-            <TmDiagramEditor Document="@Document"
+            @* The viewer keeps ONE toolbar row through the editor's own API: the ZOOM group only
+               (final UX review M1) — the search + "⋯" header-bar row of the wider viewer set is
+               gone with its groups (the DE renders no empty header bar), and the status bar keeps
+               the zoom controls. Never CSS on the editor's internals.
+               Fáze 7 review: on the mobile band the host drops the chrome entirely through
+               ShowToolbar=false — the DE header bar would hold ONLY the "⋯" trigger there. The
+               1-page document hides the page-tabs row through the DE's public ShowPageTabs knob
+               (Fáze 9); a multi-page document keeps the tabs switchable. Fáze 9: ShowZoomOverlay
+               opts the mobile band into the DE's floating zoom pill (ShowMobileZoomOverlay) plus
+               a fit-to-width on the first load (FitOnDocumentLoad) — the mobile preview is no
+               longer pinch-only. The @ref backs GetViewport: the non-drag
+               "Insert into preview" path targets the center of what the user SEES, not the page
+               center, and RefreshViewportAsync re-fits the canvas after a dock collapse. *@
+            <TmDiagramEditor @ref="_editor"
+                             Document="@Document"
                              DocumentChanged="HandleDocumentChangedAsync"
                              ReadOnly="true"
                              ToolbarPreset="DiagramToolbarPreset.Viewer"
+                             ToolbarGroups="DiagramToolbarGroups.Zoom"
+                             LayoutBreakpoints="@PreviewEditorBreakpoints"
+                             ShowPageTabs="@(Document?.Pages.Count > 1)"
+                             ShowMobileZoomOverlay="@(ShowZoomOverlay ? (bool?)true : null)"
+                             FitOnDocumentLoad="@(ShowZoomOverlay ? DiagramFitMode.Width : null)"
                              ShowTitle="false"
                              ShowToolbox="false"
                              ShowPropertiesPanel="false"
                              ShowLayersPanel="false"
                              ShowMinimap="false"
                              ShowPageView="false"
-                             ShowToolbar="true"
+                             ShowToolbar="@ShowEmbeddedEditorChrome"
                              OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
                              Class="tm-modeling-diagram-preview__editor" />
+            @if (ShowLegend && LegendEntries is not null)
+            {
+                @* Fáze 15: the legend card is a SIBLING of the editor (positioned by this
+                   component's stylesheet over the canvas corner — never inside the editor's
+                   DOM, never styled through its internals). Absent while no legend data exists. *@
+                <div class="tm-modeling-diagram-preview__legend">
+                    <TmModelingDiagramLegend Entries="@LegendEntries"
+                                             DefaultExpanded="@LegendDefaultExpanded" />
+                </div>
+            }
         </div>
-        <div class="tm-modeling-diagram-preview__drop-hint" data-testid="@TestId("modeling-diagram-preview-drop-hint")">
-            @Loc["TmModelingDiagramPreview_DropHint"]
-        </div>
+        @if (ActiveDraggedElement is not null && AllowNodeDrop)
+        {
+            @* Only while a model-tree drag is live (review fix, phase 5): a permanent hint row
+               ate a slice of the canvas column at every viewport, and the dashed drop-zone
+               border read as a permanent affordance. Gated on AllowNodeDrop too — a layout that
+               ignores drops (mobile, Fáze 7) never paints the affordance. *@
+            <div class="tm-modeling-diagram-preview__drop-hint" data-testid="@TestId("modeling-diagram-preview-drop-hint")">
+                @Loc["TmModelingDiagramPreview_DropHint"]
+            </div>
+        }
     }
 </section>

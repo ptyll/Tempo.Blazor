@@ -67,6 +67,29 @@ public sealed class ModelingUmlProfileM18E2ETests : WasmTestBase
         Assert.AreEqual(0, await node.Locator(".tm-diagram-node__divider").CountAsync());
     }
 
+    [TestMethod]
+    [Description("Fáze 15: the dialog palette pins the UML profile stencils first (per-notation palette)")]
+    public async Task DialogPalette_PinsUmlStencils()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=uml25&viewpoint=ClassDiagram&scenario=uml25-class");
+
+        await page.Locator("[data-testid='modeling-open-in-editor-button']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+
+        var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
+        await Assertions.Expect(pinned).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+        // Phase 15 review: the pinned library does NOT repeat a library header — the label
+        // lives on the single palette's own collapsible category header.
+        await Assertions.Expect(pinned.Locator("[data-palette-id='notation-palette'] .tm-diagram-toolbox__category-header"))
+            .ToContainTextAsync("UML 2.5", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
+        await Assertions.Expect(pinned.Locator("[data-stencil-id='uml25.class']"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        // The BPMN stencils are gone from the pinned palette (per-notation palette).
+        Assert.AreEqual(0, await pinned.Locator("[data-stencil-id^='bpmn2.']").CountAsync());
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

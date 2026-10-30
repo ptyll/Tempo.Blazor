@@ -7,70 +7,124 @@
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: var(--tm-font-sans);
+    /* CSS size container (docs/responsive-conventions.md): the metadata rows collapse into a
+       single column from the PANEL's width, not the viewport's. */
+    container: tm-modeling-source-panel / inline-size;
 }
 
 .tm-modeling-source-panel__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
     min-width: 0;
 }
 
-.tm-modeling-source-panel__header h3 {
+.tm-modeling-source-panel__title {
     margin: 0;
+    overflow: hidden;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.tm-modeling-source-panel__header span {
-    display: block;
-    margin-top: var(--tm-space-1);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-modeling-source-panel__badge {
-    display: inline-flex !important;
-    align-items: center;
-    flex: 0 0 auto;
-    margin-top: 0 !important;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-full);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    line-height: var(--tm-line-height-tight);
-}
-
-.tm-modeling-source-panel__badge--fresh {
-    border-color: var(--tm-color-success-soft-border);
-    background: var(--tm-color-success-subtle);
-    color: var(--tm-color-success-text) !important;
-}
-
-.tm-modeling-source-panel__badge--stale {
-    border-color: var(--tm-color-warning-soft-border);
-    background: var(--tm-color-warning-subtle);
-    color: var(--tm-color-warning-text) !important;
-}
-
+/* Two-column metadata list: term | value rows separated by hairlines, each term led by its
+   row icon (database / tag / calendar). The dt owns the icon so the alignment is stable; the
+   term column is max-content (nowrap) so values start aligned. */
 .tm-modeling-source-panel__metadata {
     display: grid;
-    gap: var(--tm-space-2);
     margin: 0;
 }
 
-.tm-modeling-source-panel__metadata div {
+.tm-modeling-source-panel__metadata-row {
     display: grid;
-    gap: var(--tm-space-1);
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--tm-space-3);
+    align-items: baseline;
     min-width: 0;
+    padding-block: var(--tm-space-2);
 }
 
-.tm-modeling-source-panel__metadata dt {
+.tm-modeling-source-panel__metadata-row + .tm-modeling-source-panel__metadata-row {
+    border-top: 1px solid var(--tm-color-border-subtle);
+}
+
+/* Narrow panel: single column — the term above the value, wrapping again. */
+@container tm-modeling-source-panel (width < 640px) {
+    .tm-modeling-source-panel__metadata-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-source-panel__term {
+        white-space: normal;
+    }
+}
+
+/* Fáze 6 (modeling-source-panel--tablet.png): a WIDE panel — the docked Source tab on the
+   tablet/desktop layouts — lays the three metadata cells out side by side and moves the
+   "Load model" button up into the header row (grid areas, so the DOM order and the test ids
+   never move). The stale warning keeps its own full-width row under the metadata. */
+@container tm-modeling-source-panel (width >= 640px) {
+    .tm-modeling-source-panel {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "header load"
+            "metadata metadata"
+            "warning warning";
+        align-items: center;
+    }
+
+    .tm-modeling-source-panel__header {
+        grid-area: header;
+    }
+
+    .tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
+        grid-area: load;
+        width: auto;
+    }
+
+    /* The empty state spans the row when there is no metadata to lay out. */
+    .tm-modeling-source-panel__empty {
+        grid-column: 1 / -1;
+    }
+
+    .tm-modeling-source-panel__metadata {
+        grid-area: metadata;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--tm-space-4);
+        column-gap: var(--tm-space-5);
+    }
+
+    .tm-modeling-source-panel__metadata-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-source-panel__term {
+        white-space: normal;
+    }
+
+    .tm-modeling-source-panel__warning {
+        grid-area: warning;
+    }
+}
+
+.tm-modeling-source-panel__term {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-modeling-source-panel__metadata-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-primary-text);
 }
 
 .tm-modeling-source-panel__metadata dd {
@@ -100,14 +154,8 @@
 .tm-modeling-source-panel__warning-icon {
     display: inline-grid;
     place-items: center;
-    flex: 0 0 var(--tm-space-5);
-    width: var(--tm-space-5);
-    height: var(--tm-space-5);
-    border-radius: var(--tm-radius-full);
-    background: var(--tm-color-warning);
-    color: var(--tm-color-white);
-    font-weight: var(--tm-font-weight-bold);
-    line-height: var(--tm-line-height-tight);
+    flex: 0 0 auto;
+    color: var(--tm-color-warning-text);
 }
 
 .tm-modeling-source-panel__empty {
@@ -122,29 +170,30 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
-.tm-modeling-source-panel__load {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--tm-space-2);
+/* Layout hook only — colors/contrast come from the core .tm-btn-primary tokens
+   (--tm-color-on-primary text on the primary fill), so no local primary override here. */
+.tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
     width: 100%;
-    min-height: var(--tm-input-height-md);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid var(--tm-color-primary-700, var(--tm-color-primary));
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-primary-700, var(--tm-color-primary));
-    color: var(--tm-color-white);
-    cursor: pointer;
-    font: inherit;
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
 }
 
-.tm-modeling-source-panel__load:hover:not(:disabled) {
-    background: var(--tm-color-primary-800, var(--tm-color-primary-hover));
+/* Fáze 6 (touch): the "Load model" button is --tm-input-height-md (~38px) by default — on a
+   coarse pointer it reaches the shared 44px target like the rest of the editor's controls. */
+@media (pointer: coarse) {
+    .tm-modeling-source-panel ::deep .tm-modeling-source-panel__load {
+        min-height: var(--tm-touch-target);
+    }
 }
 
-.tm-modeling-source-panel__load:disabled {
-    cursor: not-allowed;
-    opacity: .7;
+@media (forced-colors: active) {
+    .tm-modeling-source-panel,
+    .tm-modeling-source-panel__metadata-row {
+        border-color: CanvasText;
+        background: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-modeling-source-panel__metadata-icon,
+    .tm-modeling-source-panel__warning-icon {
+        color: CanvasText;
+    }
 }

@@ -59,6 +59,43 @@ public sealed record ChatMessage
     /// <summary>Whether the message has been deleted (rendered as a tombstone).</summary>
     public bool IsDeleted { get; init; }
 
+    // ── Custom templates: host-owned message contract (all additive) ──
+
+    /// <summary>
+    /// Free-form kind of the message, e.g. <c>"ai-draft"</c>, <c>"queued"</c>, <c>"tip"</c>.
+    /// <para>
+    /// TmChat itself does NOT interpret this value — it only carries it into the message template
+    /// (via <c>ChatMessageContext.Message</c>) and mirrors it on the message wrapper's
+    /// <c>data-kind</c> attribute. Hosts use it to route a
+    /// <c>RenderFragment&lt;ChatMessageContext&gt; MessageTemplate</c> (typically paired with
+    /// <c>UseTemplateFor</c>) or their own grouping logic. Null for plain messages.
+    /// </para>
+    /// </summary>
+    public string? Kind { get; init; }
+
+    private readonly IReadOnlyDictionary<string, object?> _metadata = EmptyMetadata;
+
+    /// <summary>
+    /// Host-defined metadata entries for the message. TmChat does NOT interpret them — they are
+    /// handed to the message template untouched (read them via
+    /// <c>ChatMessageContext.GetMetadata&lt;T&gt;(key, fallback)</c>). Defaults to an empty
+    /// read-only dictionary, never null. TmChat never serializes it.
+    /// <para>
+    /// Values must be in-process CLR objects. After a host-side JSON
+    /// round-trip, the values become
+    /// <see cref="System.Text.Json.JsonElement"/> instances instead of the original CLR types.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<string, object?> Metadata { get => _metadata; init => _metadata = value ?? EmptyMetadata; }
+
+    /// <summary>
+    /// The host's original DTO this message was mapped from. TmChat does NOT interpret it — the
+    /// message template reads it back type-safely via <c>ChatMessageContext.PayloadAs&lt;T&gt;()</c>.
+    /// The payload is never serialized into any component event or log output.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public object? Payload { get; init; }
+
     /// <summary>True when the message carries an edit timestamp.</summary>
     public bool IsEdited => EditedAt.HasValue;
 
@@ -68,6 +105,10 @@ public sealed record ChatMessage
     /// <summary>Returns true when <paramref name="userId"/> has read this message.</summary>
     public bool IsReadByUser(string userId)
         => IsRead || ReadBy.Any(r => string.Equals(r.User?.Id, userId, StringComparison.Ordinal));
+
+    /// <summary>Shared empty metadata instance (read-only, zero entries) used as the default.</summary>
+    private static IReadOnlyDictionary<string, object?> EmptyMetadata { get; } =
+        new System.Collections.ObjectModel.ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>());
 
     public ChatMessage() { }
 

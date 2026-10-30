@@ -2,7 +2,7 @@
   "itemName": "TmModelingIssuePanel",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Displays validation and generation issues for a modeling document.",
+  "description": "Displays validation and generation issues for a modeling document. MO1 places it as the collapsible dock under the preview: the header carries the neutral count-only badge and the collapse toggle (aria-expanded + aria-controls); a collapsed panel renders the header only. The dock height belongs to the host's grid row (the panel's own min/max-height pair is gone), and the two-way Collapsed state is the session's. Fáze 11 adds an opt-in filter bar (ShowFilterBar): severity chips with counts (native aria-pressed toggle buttons), an accent-insensitive text search over message/category/source and a sort select (ModelingIssueSortMode Input | Severity | Source) — the rendered rows are a memoized projection; the Issues collection is never mutated. Root attributes carry data-visible-issue-count and data-total-issue-count (data-issue-count keeps reporting the total).",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingIssuePanel.razor",
@@ -16,7 +16,7 @@
       "type": "IReadOnlyList<ModelingIssueDto>",
       "isRequired": false,
       "default": "[]",
-      "description": "Issues to render in severity-coded order."
+      "description": "The issues to present. The panel renders a filtered/sorted PROJECTION of this list and never mutates it; severity only colors the rows. With SortMode = Input (the default) the rows follow the input order. Issues without a SourceElementId/SourceRelationshipId render as non-interactive list items; navigable issues render as buttons. Row test ids carry the ORIGINAL input index, so filtering/sorting never renumbers rows."
     },
     {
       "name": "Class",
@@ -29,6 +29,160 @@
       "type": "EventCallback<ModelingIssueDto>",
       "isRequired": false,
       "description": "Raised when the user selects an issue that points to a model element or relationship."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the panel body (the issue list or the empty state) is collapsed to the header. Two-way bindable - the host owns the dock height around the collapsed/expanded row. Default false (expanded); the state is the session's and survives re-renders. A collapsed dock hides the filter bar too (the bar lives inside the body)."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user toggles the panel through the header button; enables @bind-Collapsed."
+    },
+    {
+      "name": "ShowToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the header renders the collapse toggle. Default true (the docked dock). The mobile Issues tab passes false: the tab body is the whole scroll surface, so the header stays a plain heading."
+    },
+    {
+      "name": "ShowFilterBar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the filter bar (severity chips with counts, text search, sort select) renders above the list. Default false - the pre-Fáze 11 presentation; the hosting editor passes true on every band (desktop dock, tablet sheet, mobile tab). The bar renders only when Issues is not empty and hides with the collapsed body."
+    },
+    {
+      "name": "SeverityFilter",
+      "type": "IReadOnlyCollection<ModelingIssueSeverity>?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Optional two-way binding of the active severity filter; null (or empty) means every severity. The parameter SEEDS the internal filter whenever the host hands over a new collection and is never assigned inside the component - the hosting editor owns the state so it survives dock collapse and panel remounts."
+    },
+    {
+      "name": "SeverityFilterChanged",
+      "type": "EventCallback<IReadOnlyCollection<ModelingIssueSeverity>?>",
+      "isRequired": false,
+      "description": "Raised when the user toggles a severity chip (or clears the filters); enables @bind-SeverityFilter. An empty active set is reported as null."
+    },
+    {
+      "name": "FilterText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional two-way binding of the text filter. The parameter SEEDS the internal filter whenever the host hands over a new value and is never assigned inside the component - the same seed/echo pattern as TmModelingModelTree.FilterText (including echo recording, so a host RESET to the current value re-seeds). Matches message, category and source element/relationship name case- and accent-insensitively."
+    },
+    {
+      "name": "FilterTextChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised when the user edits the filter input (not when the host re-seeds the parameter), enabling @bind-FilterText."
+    },
+    {
+      "name": "SortMode",
+      "type": "ModelingIssueSortMode",
+      "isRequired": false,
+      "default": "ModelingIssueSortMode.Input",
+      "description": "Sort mode of the rendered rows; Input (the default) never re-sorts. Severity orders Error > Warning > Info, stable within a group; Source orders by the resolved source display name with sourceless issues last. The host owns the state through SortModeChanged."
+    },
+    {
+      "name": "SortModeChanged",
+      "type": "EventCallback<ModelingIssueSortMode>",
+      "isRequired": false,
+      "description": "Raised when the user picks a sort mode; enables @bind-SortMode."
+    },
+    {
+      "name": "Elements",
+      "type": "IReadOnlyList<ModelingElementDto>?",
+      "isRequired": false,
+      "description": "Optional element list of the loaded model - the source of display NAMES for the text search and the Source sort. Without it those features fall back to the raw source ids."
+    },
+    {
+      "name": "Relationships",
+      "type": "IReadOnlyList<ModelingRelationshipDto>?",
+      "isRequired": false,
+      "description": "Optional relationship list - the source of relationship names (as Elements)."
+    },
+    {
+      "name": "ContentVersion",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Host-owned content version of the element/relationship tables. The editor mutates the DTOs in place (an inspector rename), so the render gate and the visible-issues memo key on this counter too - bump it whenever the names behind Elements/Relationships change without replacing the collections."
+    }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-issue-panel__toggle",
+      "description": "The header collapse toggle - an icon-only native button at the coarse-pointer target with aria-expanded/aria-controls and a state-aware sr-only label."
+    },
+    {
+      "name": "tm-modeling-issue-panel__content",
+      "description": "The collapsible body wrapper (the list or the empty state); min-height 0 keeps the parent-owned row contract."
+    },
+    {
+      "name": "tm-modeling-issue-panel__title",
+      "description": "Panel title heading."
+    },
+    {
+      "name": "tm-modeling-issue-panel__count",
+      "description": "Count-only badge in the header: visible text is the bare count, the localized formulation is the aria-label."
+    },
+    {
+      "name": "tm-modeling-issue-panel__severity",
+      "description": "Severity label in the row meta, tinted with the severity text token (`--severity--{info|warning|error}`)."
+    },
+    {
+      "name": "tm-modeling-issue-panel__category",
+      "description": "Category label after the severity."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix",
+      "description": "Suggested-fix toned box (primary subtle tokens) holding the icon, the localized prefix label and the fix text."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-icon",
+      "description": "Suggested-fix icon wrapper (TmIcon WandSparkles), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-label",
+      "description": "Localized \"Recommendation:\" prefix."
+    },
+    {
+      "name": "tm-modeling-issue-panel__fix-text",
+      "description": "The suggested fix text."
+    },
+    {
+      "name": "tm-modeling-issue-panel__chevron",
+      "description": "Navigation chevron rendered only inside navigable issue buttons (TmIcon ChevronRight), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-issue-panel__filterbar",
+      "description": "The wrapping filter row above the list (severity chips, search input, sort select); hides with the collapsed body."
+    },
+    {
+      "name": "tm-modeling-issue-panel__chip",
+      "description": "Panel hook on the severity filter chips - the chips are CORE TmChips in the pressed variant (native toggle buttons carrying aria-pressed and the per-severity count); the panel class adds the compact row sizing and the severity palette."
+    },
+    {
+      "name": "tm-modeling-issue-panel__filter-input",
+      "description": "The TmSearchInput wrapper for the accent-insensitive text filter."
+    },
+    {
+      "name": "tm-modeling-issue-panel__filter-sort",
+      "description": "The TmSelect wrapper for the sort mode (visible localized label)."
+    },
+    {
+      "name": "tm-modeling-issue-panel__empty--no-match",
+      "description": "The no-match state shown when the active filters hide every row, with the clear-filters action."
+    },
+    {
+      "name": "tm-modeling-issue-panel__clear",
+      "description": "The clear-filters button inside the no-match state."
     }
   ]
 }

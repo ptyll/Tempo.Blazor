@@ -34,6 +34,7 @@ public sealed class ModelingDtoSerializationTests
                 SemanticType = "task",
                 Name = "Approve order",
                 Description = "Human approval step",
+                ParentId = "element-0",
                 Properties =
                 {
                     ["priority"] = JsonSerializer.SerializeToElement("high"),
@@ -308,6 +309,51 @@ public sealed class ModelingDtoSerializationTests
         var element = JsonSerializer.Deserialize<ModelingElementDto>(json, Options)!;
 
         element.Name.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ParentId_roundtrips_and_defaults_to_empty()
+    {
+        // Default: no parent (the additive phase-12 field starts empty for every existing model).
+        new ModelingElementDto().ParentId.Should().BeEmpty();
+
+        var element = new ModelingElementDto { Id = "child", ParentId = "parent-1" };
+        element.ParentId.Should().Be("parent-1");
+
+        var json = JsonSerializer.Serialize(element, Options);
+        var restored = JsonSerializer.Deserialize<ModelingElementDto>(json, Options)!;
+        restored.ParentId.Should().Be("parent-1");
+
+        // The wire contract is camelCase (the shape the modeling providers emit).
+        const string camelJson = """{"id":"child","parentId":"parent-1"}""";
+        JsonSerializer.Deserialize<ModelingElementDto>(camelJson, Options)!
+            .ParentId.Should().Be("parent-1");
+    }
+
+    [Fact]
+    public void ParentId_null_normalizes_to_empty_string()
+    {
+        var element = new ModelingElementDto { Id = "child", ParentId = null };
+
+        element.ParentId.Should().BeEmpty("the setter normalizes null to the empty string");
+    }
+
+    [Fact]
+    public void Legacy_payload_without_parentId_deserializes()
+    {
+        const string json = """
+            {
+              "id": "legacy-1",
+              "name": "Legacy element",
+              "semanticType": "userTask"
+            }
+            """;
+
+        var element = JsonSerializer.Deserialize<ModelingElementDto>(json, Options)!;
+
+        element.Id.Should().Be("legacy-1");
+        element.Name.Should().Be("Legacy element");
+        element.ParentId.Should().BeEmpty("older payloads without the field deserialize unchanged");
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+@using System.Text.Json
+@using System.Globalization
 @using Tempo.Blazor.Modeling
 @inherits Tempo.Blazor.Components.TmComponentBase
 
@@ -6,7 +8,8 @@
          data-kind="@Kind"
          data-selected-element-id="@(Element?.Id ?? string.Empty)"
          data-selected-relationship-id="@(Relationship?.Id ?? string.Empty)"
-         aria-label="@Loc["TmModelingInspector_Title"]">
+         aria-label="@Loc["TmModelingInspector_Title"]"
+         @onkeydown="HandleInspectorKeyDownAsync">
     @if (Element is null && Relationship is null)
     {
         <div class="tm-modeling-inspector__empty" data-testid="@TestId("modeling-inspector-empty")">
@@ -17,18 +20,172 @@
     else
     {
         <header class="tm-modeling-inspector__header">
-            <span class="tm-modeling-inspector__kind">@KindLabel</span>
-            <h3>@DisplayName</h3>
-            <p>@DisplayType</p>
+            <span class="tm-modeling-inspector__type-icon" aria-hidden="true">
+                <TmIcon Name="@HeaderIcon" Size="IconSize.Sm" />
+            </span>
+            <div class="tm-modeling-inspector__heading">
+                <span class="tm-modeling-inspector__kind">@KindLabel</span>
+                <h3 class="tm-modeling-inspector__name">@DisplayName</h3>
+                <p class="tm-modeling-inspector__type">@DisplayType</p>
+            </div>
+            @if (HeaderActions is not null)
+            {
+                @* Fáze 14: the editor's undo/redo pair (and the docked Save/Discard while pending)
+                   lives in the inspector header — the stack is editor-owned, the DOM is here. *@
+                <div class="tm-modeling-inspector__header-actions">
+                    @HeaderActions
+                </div>
+            }
         </header>
 
         @if (Element is not null)
         {
             <div data-testid="@TestId("modeling-inspector-selected-element")">
-                @RenderSummary()
-                @RenderDescription(Element.Description)
-                @RenderGovernance(Element.Governance)
-                @RenderProperties(Element.Properties)
+                @if (IsEditing)
+                {
+                    @* Fáze 14 review: the name field sits ABOVE the summary list (full width,
+                       outside the <dl>) — the summary stays a pure dt/dd grid and the primary
+                       edit field reads first. *@
+                    <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
+                        <TmTextInput Id="modeling-inspector-name"
+                                     Label="@Loc["TmModelingInspector_Name"]"
+                                     Value="@_nameDraft"
+                                     ValueChanged="HandleNameInput"
+                                     OnKeyDown="HandleNameKeyDownAsync"
+                                     OnBlur="@(() => CommitNameAsync())"
+                                     Error="@NameError"
+                                     Disabled="@Saving"
+                                     Required="true" />
+                    </div>
+                }
+                <dl class="tm-modeling-inspector__summary">
+                    @if (IsEditing)
+                    {
+                        @* The rest of the summary (semantic type, notation, source triple) stays
+                           read-only FOREVER. *@
+                        <div data-testid="@TestId("modeling-inspector-type")">
+                            <dt>@Loc["TmModelingInspector_SemanticType"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplayType</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-notation")">
+                            <dt>@Loc["TmModelingInspector_Notation"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplayNotation</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-id")">
+                            <dt>@Loc["TmModelingInspector_SourceId"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourceId</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-type")">
+                            <dt>@Loc["TmModelingInspector_SourceType"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourceType</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-path")">
+                            <dt>@Loc["TmModelingInspector_SourcePath"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourcePath</dd>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var definition in SummaryDefinitions)
+                        {
+                            <div data-testid="@definition.TestId">
+                                <dt>@definition.Label</dt>
+                                <dd class="@definition.ValueClass">@definition.Value</dd>
+                            </div>
+                        }
+                    }
+                </dl>
+                @if (IsEditing)
+                {
+                    <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-description")">
+                        <TmTextArea Id="modeling-inspector-description"
+                                    Label="@Loc["TmModelingInspector_Description"]"
+                                    Value="@_descriptionDraft"
+                                    ValueChanged="HandleDescriptionInput"
+                                    Rows="3"
+                                    Disabled="@Saving"
+                                    AdditionalAttributes="@DescriptionAttributes" />
+                    </section>
+                }
+                else
+                {
+                    <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-description")">
+                        <h4>@Loc["TmModelingInspector_Description"]</h4>
+                        <p>@(string.IsNullOrWhiteSpace(Element.Description) ? Loc["TmModelingInspector_NoDescription"] : Element.Description)</p>
+                    </section>
+                }
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-governance")">
+                    <h4>@Loc["TmModelingInspector_Governance"]</h4>
+                    <dl class="tm-modeling-inspector__summary">
+                        @foreach (var definition in GovernanceDefinitions)
+                        {
+                            <div data-testid="@definition.TestId">
+                                <dt>@definition.Label</dt>
+                                <dd class="@definition.ValueClass">@definition.Value</dd>
+                            </div>
+                        }
+                    </dl>
+                </section>
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
+                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
+                    @if (Element.Properties.Count == 0)
+                    {
+                        <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
+                    }
+                    else
+                    {
+                        <table class="tm-modeling-inspector__properties-table">
+                            <tbody>
+                                @foreach (var property in Element.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
+                                        @if (IsEditing && IsScalarEditable(property.Value))
+                                        {
+                                            @* Fáze 14: scalar properties edit in place — the JSON kind
+                                               picks the input; the key cell stays the label. *@
+                                            <th>@property.Key</th>
+                                            <td class="tm-modeling-inspector__property-edit">
+                                                @if (property.Value.ValueKind == JsonValueKind.True || property.Value.ValueKind == JsonValueKind.False)
+                                                {
+                                                    <TmToggle Id="@($"modeling-inspector-property-{property.Key}")"
+                                                              Value="@(property.Value.GetBoolean())"
+                                                              ValueChanged="@(value => HandleToggleChangeAsync(property.Key, value))"
+                                                              Disabled="@Saving"
+                                                              AriaLabel="@property.Key" />
+                                                }
+                                                else if (IsIntegerProperty(property.Value))
+                                                {
+                                                    <TmNumberInput Id="@($"modeling-inspector-property-{property.Key}")"
+                                                                   Label="@property.Key"
+                                                                   Value="@(property.Value.GetInt32())"
+                                                                   ValueChanged="@(value => HandleScalarInputAsync(property.Key, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty))"
+                                                                   Disabled="@Saving"
+                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)"
+                                                                   @key="@ScalarRenderKey(property.Key)" />
+                                                }
+                                                else
+                                                {
+                                                    <TmTextInput Id="@($"modeling-inspector-property-{property.Key}")"
+                                                                 Label="@property.Key"
+                                                                 Value="@ScalarDraft(property.Key)"
+                                                                 ValueChanged="@(value => HandleScalarInputAsync(property.Key, value))"
+                                                                 OnKeyDown="@(args => HandleScalarKeyDownAsync(property.Key, args))"
+                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))"
+                                                                 Disabled="@Saving" />
+                                                }
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <th>@property.Key</th>
+                                            <td>@FormatPropertyValue(property.Value)</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </section>
             </div>
         }
         else if (Relationship is not null)
@@ -39,105 +196,153 @@
                     <strong aria-hidden="true">→</strong>
                     <span>@DisplayTargetName</span>
                 </div>
-                @RenderSummary()
-                @RenderProperties(Relationship.Properties)
+                @if (IsEditing)
+                {
+                    @* Fáze 14 review: the name field above the summary list (full width, outside
+                       the <dl>) — the empty-name commit shows the NameRequired error here too. *@
+                    <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
+                        <TmTextInput Id="modeling-inspector-name"
+                                     Label="@Loc["TmModelingInspector_Name"]"
+                                     Value="@_nameDraft"
+                                     ValueChanged="HandleNameInput"
+                                     OnKeyDown="HandleNameKeyDownAsync"
+                                     OnBlur="@(() => CommitNameAsync())"
+                                     Error="@NameError"
+                                     Disabled="@Saving" />
+                    </div>
+                }
+                <dl class="tm-modeling-inspector__summary">
+                    @if (IsEditing)
+                    {
+                        <div data-testid="@TestId("modeling-inspector-type")">
+                            <dt>@Loc["TmModelingInspector_SemanticType"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplayType</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-notation")">
+                            <dt>@Loc["TmModelingInspector_Notation"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplayNotation</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-id")">
+                            <dt>@Loc["TmModelingInspector_SourceId"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourceId</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-type")">
+                            <dt>@Loc["TmModelingInspector_SourceType"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourceType</dd>
+                        </div>
+                        <div data-testid="@TestId("modeling-inspector-source-path")">
+                            <dt>@Loc["TmModelingInspector_SourcePath"]</dt>
+                            <dd class="tm-modeling-inspector__value">@DisplaySourcePath</dd>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var definition in SummaryDefinitions)
+                        {
+                            <div data-testid="@definition.TestId">
+                                <dt>@definition.Label</dt>
+                                <dd class="@definition.ValueClass">@definition.Value</dd>
+                            </div>
+                        }
+                    }
+                </dl>
+                <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
+                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
+                    @if (Relationship.Properties.Count == 0)
+                    {
+                        <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
+                    }
+                    else
+                    {
+                        <table class="tm-modeling-inspector__properties-table">
+                            <tbody>
+                                @foreach (var property in Relationship.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
+                                        @if (IsEditing && IsScalarEditable(property.Value))
+                                        {
+                                            <th>@property.Key</th>
+                                            <td class="tm-modeling-inspector__property-edit">
+                                                @if (property.Value.ValueKind == JsonValueKind.True || property.Value.ValueKind == JsonValueKind.False)
+                                                {
+                                                    <TmToggle Id="@($"modeling-inspector-property-{property.Key}")"
+                                                              Value="@(property.Value.GetBoolean())"
+                                                              ValueChanged="@(value => HandleToggleChangeAsync(property.Key, value))"
+                                                              Disabled="@Saving"
+                                                              AriaLabel="@property.Key" />
+                                                }
+                                                else if (IsIntegerProperty(property.Value))
+                                                {
+                                                    <TmNumberInput Id="@($"modeling-inspector-property-{property.Key}")"
+                                                                   Label="@property.Key"
+                                                                   Value="@(property.Value.GetInt32())"
+                                                                   ValueChanged="@(value => HandleScalarInputAsync(property.Key, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty))"
+                                                                   Disabled="@Saving"
+                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)"
+                                                                   @key="@ScalarRenderKey(property.Key)" />
+                                                }
+                                                else
+                                                {
+                                                    <TmTextInput Id="@($"modeling-inspector-property-{property.Key}")"
+                                                                 Label="@property.Key"
+                                                                 Value="@ScalarDraft(property.Key)"
+                                                                 ValueChanged="@(value => HandleScalarInputAsync(property.Key, value))"
+                                                                 OnKeyDown="@(args => HandleScalarKeyDownAsync(property.Key, args))"
+                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))"
+                                                                 Disabled="@Saving" />
+                                                }
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <th>@property.Key</th>
+                                            <td>@FormatPropertyValue(property.Value)</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </section>
             </div>
         }
     }
 </section>
 
 @code {
-    private RenderFragment RenderSummary() => builder =>
+    /// <summary>One dt/dd pair of a summary definition list: the localized label, the display
+    /// value and the raw data-testid (matching the E2E selectors), plus an optional dd class.
+    /// The lists are materialized here and rendered through plain RAZOR markup above so every
+    /// dt/dd/th/td element carries this component's CSS-isolation scope attribute — the
+    /// TmModelingInspector.razor.css rules key off exactly that.</summary>
+    private sealed record DefinitionRow(string Label, string Value, string TestId, string? ValueClass = null);
+
+    /// <summary>The six summary rows shared by the element and the relationship panels.</summary>
+    private IReadOnlyList<DefinitionRow> SummaryDefinitions => new[]
     {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "dl");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__summary");
-
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Name"], DisplayName, "modeling-inspector-name");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SemanticType"], DisplayType, "modeling-inspector-type");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Notation"], DisplayNotation, "modeling-inspector-notation");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourceId"], DisplaySourceId, "modeling-inspector-source-id");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourceType"], DisplaySourceType, "modeling-inspector-source-type");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SourcePath"], DisplaySourcePath, "modeling-inspector-source-path");
-
-        builder.CloseElement();
+        new DefinitionRow(Loc["TmModelingInspector_Name"], DisplayName, "modeling-inspector-name"),
+        new DefinitionRow(Loc["TmModelingInspector_SemanticType"], DisplayType, "modeling-inspector-type"),
+        new DefinitionRow(Loc["TmModelingInspector_Notation"], DisplayNotation, "modeling-inspector-notation"),
+        new DefinitionRow(Loc["TmModelingInspector_SourceId"], DisplaySourceId, "modeling-inspector-source-id"),
+        new DefinitionRow(Loc["TmModelingInspector_SourceType"], DisplaySourceType, "modeling-inspector-source-type"),
+        new DefinitionRow(Loc["TmModelingInspector_SourcePath"], DisplaySourcePath, "modeling-inspector-source-path"),
     };
 
-    private RenderFragment RenderDescription(string description) => builder =>
+    /// <summary>The governance rows of the element panel (trust level carries the low-trust pill class).</summary>
+    private IReadOnlyList<DefinitionRow> GovernanceDefinitions => new[]
     {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-description");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Description"]);
-        builder.CloseElement();
-        builder.OpenElement(sequence++, "p");
-        builder.AddContent(sequence++, string.IsNullOrWhiteSpace(description) ? Loc["TmModelingInspector_NoDescription"] : description);
-        builder.CloseElement();
-        builder.CloseElement();
+        new DefinitionRow(Loc["TmModelingInspector_Trust"], Element!.Governance.TrustLevel, "modeling-inspector-trust", GetTrustClass(Element.Governance.TrustLevel)),
+        new DefinitionRow(Loc["TmModelingInspector_ReviewState"], Element.Governance.ReviewState, "modeling-inspector-review"),
+        new DefinitionRow(Loc["TmModelingInspector_SyncState"], Element.Governance.SyncState, "modeling-inspector-sync"),
+        new DefinitionRow(Loc["TmModelingInspector_DataSource"], Element.Governance.DataSource, "modeling-inspector-data-source"),
     };
 
-    private RenderFragment RenderGovernance(ModelingGovernanceDto governance) => builder =>
+    /// <summary>The integer property's change commit: TmNumberInput raises on its native change
+    /// event (blur/Enter in the browser); the splat keeps the escape-revert + parse contract off
+    /// the core component.</summary>
+    private Dictionary<string, object> ScalarNumberAttributes(string key) => new()
     {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-governance");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Governance"]);
-        builder.CloseElement();
-
-        builder.OpenElement(sequence++, "dl");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__summary");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_Trust"], governance.TrustLevel, "modeling-inspector-trust", GetTrustClass(governance.TrustLevel));
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_ReviewState"], governance.ReviewState, "modeling-inspector-review");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_SyncState"], governance.SyncState, "modeling-inspector-sync");
-        AddDefinition(builder, ref sequence, Loc["TmModelingInspector_DataSource"], governance.DataSource, "modeling-inspector-data-source");
-        builder.CloseElement();
-
-        builder.CloseElement();
-    };
-
-    private RenderFragment RenderProperties(IReadOnlyDictionary<string, System.Text.Json.JsonElement> properties) => builder =>
-    {
-        var sequence = 0;
-        builder.OpenElement(sequence++, "section");
-        builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__section");
-        builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-properties");
-        builder.OpenElement(sequence++, "h4");
-        builder.AddContent(sequence++, Loc["TmModelingInspector_Properties"]);
-        builder.CloseElement();
-
-        if (properties.Count == 0)
-        {
-            builder.OpenElement(sequence++, "p");
-            builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__empty-note");
-            builder.AddAttribute(sequence++, "data-testid", "modeling-inspector-no-properties");
-            builder.AddContent(sequence++, Loc["TmModelingInspector_NoProperties"]);
-            builder.CloseElement();
-        }
-        else
-        {
-            builder.OpenElement(sequence++, "table");
-            builder.AddAttribute(sequence++, "class", "tm-modeling-inspector__properties-table");
-            builder.OpenElement(sequence++, "tbody");
-            foreach (var property in properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
-            {
-                builder.OpenElement(sequence++, "tr");
-                builder.AddAttribute(sequence++, "data-testid", $"modeling-inspector-property-{property.Key}");
-                builder.OpenElement(sequence++, "th");
-                builder.AddContent(sequence++, property.Key);
-                builder.CloseElement();
-                builder.OpenElement(sequence++, "td");
-                builder.AddContent(sequence++, FormatPropertyValue(property.Value));
-                builder.CloseElement();
-                builder.CloseElement();
-            }
-            builder.CloseElement();
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
+        ["onkeydown"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, args => HandleScalarKeyDownAsync(key, args)),
+        ["onblur"] = EventCallback.Factory.Create<FocusEventArgs>(this, () => CommitScalarAsync(key))
     };
 }

@@ -63,6 +63,18 @@
       "default": "true"
     },
     {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Extra content rendered in the header row, between the header content and the built-in close button, wrapped in .tm-modal-header-actions. The typical use is a host-styled close affordance - e.g. a text TmButton Close paired with ShowCloseButton=false - or additional header actions. Null (the default) keeps today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle covers it."
+    },
+    {
+      "name": "CloseButtonAdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Extra attributes splatted onto the built-in close button - a host-owned data-testid or a stable focus hook the host's restore path targets. Rendered only with ShowCloseButton; never overrides the button's type, class, click handler or accessible name."
+    },
+    {
       "name": "ShowFooter",
       "type": "bool",
       "isRequired": false,
@@ -184,6 +196,13 @@
       "description": "The id of the restore target, for a target rendered outside the modal. Same skip rules as RestoreFocusTarget: a disconnected or inside-the-modal target falls back to the opener."
     },
     {
+      "name": "RestoreFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the modal's focus scope restores focus on close. Default true (the opener is remembered at activation and focus returns there, or to an explicit restore target). Set false when the HOST owns the restore — e.g. an editor that closes the dialog through its own path and moves focus afterwards: the scope then renders data-restore-focus=\"false\" and the module skips the restore."
+    },
+    {
       "name": "InitialFocusTargetId",
       "type": "string?",
       "isRequired": false,
@@ -219,6 +238,7 @@
     "tm-modal-header",
     "tm-modal-header-icon",
     "tm-modal-header-content",
+    "tm-modal-header-actions",
     "tm-modal-title",
     "tm-modal-subtitle",
     "tm-modal-close",

@@ -1,6 +1,9 @@
 @page "/chat"
 @using Tempo.Blazor.Components.Chat
 @using Tempo.Blazor.Models
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject IJSRuntime JS
 <PageTitle>Chat – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -84,6 +87,35 @@
                 Messages="_typingMessages"
                 TypingUsers="_typingUsers" />
     </div>
+
+    <div class="showcase-card mt-6">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Custom TypingLabel (left; also hides the indicator from screen readers via TypingAriaHidden, for hosts that announce typing in their own live region), and a host TypingTemplate with a 6-second TypingTimeout (right). The expiring list starts EMPTY, so the right indicator stays hidden until you press <em>Send typing refresh</em>, which opens a fresh 6-second window — the window restarts whenever the host re-assigns the list.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <TmChat CurrentUser="_currentUser"
+                        Messages="_typingMessages"
+                        TypingUsers="_customTypingUsers"
+                        TypingLabel="@(users => $"{users[0].Name} is composing…")"
+                        TypingAriaHidden="true" />
+            </div>
+            <div class="flex flex-col">
+                <TmChat CurrentUser="_currentUser"
+                        Messages="_typingMessages"
+                        TypingUsers="_expiringTypingUsers"
+                        TypingTimeout="TimeSpan.FromSeconds(6)">
+                    <TypingTemplate Context="users">
+                        <div class="flex items-center gap-2 self-start px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-sm text-slate-600 dark:text-slate-300">
+                            <TmIcon Name="edit" Size="IconSize.Sm" />
+                            <span>@(users.Count == 1 ? $"{users[0].Name} is typing (host template)" : $"{users.Count} people are typing (host template)")</span>
+                        </div>
+                    </TypingTemplate>
+                </TmChat>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RefreshExpiringTyping" Class="mt-2 self-start">Send typing refresh</TmButton>
+            </div>
+        </div>
+    </div>
 </section>
 
 <!-- With Attachments -->
@@ -126,6 +158,69 @@
     </div>
 </section>
 
+<!-- Composer Behavior (FZE-5) -->
+<section class="demo-section" data-testid="chat-composer-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Composer Behavior</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">UX</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Enter submits (with the IME composition guard in chat.js), Shift+Enter inserts a new line
+        and the textarea grows with its content up to the row cap; the composer is focused again
+        after each successful send (RefocusAfterSend).
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <strong>EnterToSend="false"</strong>: Enter is a native new line in the composer,
+                the thread reply and an open edit — Ctrl/⌘+Enter and the Send button send. This
+                demo chat keeps its own message list.
+            </p>
+            <TmChat CurrentUser="_currentUser"
+                    Messages="_enterToSendMessages"
+                    OnSendMessage="HandleEnterToSendDemo"
+                    EnterToSend="false" />
+        </div>
+
+        <div class="showcase-card" style="height: 440px;">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                <strong>A custom composer</strong> (subscribe gate, owner note, …) keeps the same
+                behavior: the host registers its own input with
+                <code>composer.AttachAsync(input)</code> once mounted, and Enter/IME + refocus
+                work on it exactly as on the built-in composer. The demo's host handler throws for
+                texts ending with an exclamation mark. On the Enter path the exception surfaces
+                through the renderer and is caught by the <code>ErrorBoundary</code> around this
+                chat — press Recover to restore the composer. On the Send-button path the handler
+                is awaited by the card, the draft is kept and the error notice below shows up.
+                This demo chat keeps its own message list.
+            </p>
+            <ErrorBoundary @ref="_customBoundary">
+                <ChildContent>
+                    <TmChat CurrentUser="_currentUser"
+                            Messages="_customComposerMessages"
+                            OnSendMessage="HandleCustomSend"
+                            ComposerTemplate="CustomComposer" />
+                </ChildContent>
+                <ErrorContent>
+                    <div role="alert" class="mt-2 p-2 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2">
+                        <span>The composer handler threw on the Enter path — the exception surfaced through the renderer and this ErrorBoundary caught it.</span>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                                  OnClick="@(() => _customBoundary?.Recover())">Recover</TmButton>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
+            @if (_customSendFailed)
+            {
+                <div role="alert" class="mt-2 p-2 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-200 dark:border-rose-800">
+                    The handler threw — the text was kept so the draft is not lost. Press Send again.
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
 <!-- Interactive Demo -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -144,6 +239,474 @@
     </div>
 </section>
 
+<!-- Scroll behavior -->
+<section class="demo-section" data-testid="chat-scroll-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Scroll Behavior</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Live</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The default <code>AutoScroll="ChatAutoScroll.WhenAtBottom"</code>: the conversation opens at the
+        bottom and new messages scroll it only while you keep up. Scroll up, then press
+        <em>Inject incoming message</em> — the reading position stays and a floating button counts what
+        you missed (your own messages always scroll). Press <em>Load older</em> (or scroll to the top) to
+        prepend a page of history without losing your place.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmChat @ref="_scrollChat"
+                        CurrentUser="_currentUser"
+                        Messages="_scrollMessages"
+                        OnSend="@(r => HandleScrollOwnSend(r))"
+                        OnLoadOlder="HandleScrollLoadOlderAsync"
+                        HasMoreBefore="_scrollHasMore"
+                        IsLoadingOlder="_scrollLoadingOlder" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollInjectAsync">
+                Inject incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollOwnAsync">
+                Send a message as Alice
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleScrollLoadOlderAsync"
+                      Disabled="@( _scrollLoadingOlder || !_scrollHasMore )">
+                @(_scrollLoadingOlder ? "Loading older…" : "Load older")
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                IsAtBottom: <strong>@(_scrollChat?.IsAtBottom)</strong> — the jump button hides itself
+                once you are back at the bottom, and the count resets with it.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="chat-a11y-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Accessibility</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">Live region</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Exactly ONE polite live region per chat: new incoming messages are announced with the host's
+        text (<code>MessageAnnouncement</code>), a burst inside the 1-second window is summarized
+        (<code>BatchAnnouncement</code>) and host actions go through <code>AnnounceAsync</code>.
+        The messages container is a labelled keyboard-scrollable <code>role="region"</code>; the
+        typing indicator is never announced.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 420px;">
+                <TmChat @ref="_a11yChat"
+                        CurrentUser="_currentUser"
+                        Messages="_a11yMessages"
+                        MessagesAriaLabel="Accessibility demo messages"
+                        MessageAnnouncement="DescribeAnnouncement"
+                        BatchAnnouncement="@(batch => $"{batch.Count} new messages arrived")" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yInjectAsync">
+                Deliver incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yBurstAsync">
+                Deliver a burst of 3
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleA11yHostActionAsync">
+                Approve a draft (host action)
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                A screen reader announces the injected messages through the chat's single polite
+                region; the burst collapses into one summary and the host action is announced on
+                its own. Turn on your screen reader (or the NVDA speech viewer) and try it.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Layout & mobile (FZE-8) -->
+<section class="demo-section" data-testid="chat-mobile-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Layout &amp; Mobile</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">FZE-8</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The chat as a flex child (<code>FillParent</code>), the host-owned minimum height
+        (<code>--tm-chat-min-height</code>), the sticky composer above a bottom navigation
+        (<code>--tm-chat-composer-offset</code> + safe area) and the full-width thread overlay on a
+        narrow chat. All three panes branch on the CHAT's own width, so the narrow behaviors are
+        visible on a desktop window too.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div data-testid="chat-fill-pane" class="lg:col-span-3">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">FillParent</h3>
+            <div class="chat-demo-split">
+                <TmChat Class="chat-demo-fill"
+                        FillParent="true"
+                        CurrentUser="_currentUser"
+                        Messages="_mobileMessages"
+                        OnSendMessage="HandleMobileSend" />
+                <aside class="chat-demo-side">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        The chat is a flex child here: it grows and shrinks with the pane while the
+                        side panel keeps its width. FillParent releases the floor — the modifier
+                        reads <code>min-height: var(--tm-chat-min-height, 0)</code>, so the parent
+                        owns the height unless the host declares a floor of its own.
+                    </p>
+                </aside>
+            </div>
+        </div>
+
+        <div data-testid="chat-thread-overlay-pane">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">Narrow chat — full-width thread overlay</h3>
+            <div class="chat-demo-narrow">
+                <TmChat CurrentUser="_alice"
+                        Messages="_mobileMessages"
+                        OnSendMessage="HandleMobileSend" />
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                This chat is ~340px wide, i.e. below the 640px container breakpoint: open the
+                thread of the first message and the panel overlays the whole chat instead of
+                squeezing the composer.
+            </p>
+        </div>
+
+        <div data-testid="chat-mobile-phone">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">Sticky composer above a bottom navigation</h3>
+            <div class="chat-demo-phone">
+                <div class="chat-demo-phone__page">
+                    <div class="chat-demo-phone__content">
+                        <p class="chat-demo-phone__filler">
+                            Scroll the phone — the composer stays above the fake bottom navigation
+                            while the chat's box extends past the fold, and rests in its natural
+                            place once the end is reached.
+                        </p>
+                        <TmChat TrackVirtualKeyboard="true"
+                                CurrentUser="_alice"
+                                Messages="_mobileMessages"
+                                OnSendMessage="HandleMobileSend" />
+                        <p class="chat-demo-phone__filler">
+                            The host sets <code>--tm-chat-composer-offset</code> to the height of
+                            its bottom navigation; the composer also clears the home indicator via
+                            <code>env(safe-area-inset-bottom)</code> — set
+                            <code>--tm-chat-safe-area-bottom: 0</code> when your bottom navigation
+                            already pads the safe area. This chat opts into
+                            <code>TrackVirtualKeyboard</code> (FZE-13): while an on-screen keyboard
+                            is open, the runtime <code>--tm-chat-keyboard-inset</code> knob lifts
+                            the sticky composer above the iOS visual viewport.
+                        </p>
+                    </div>
+                </div>
+                <nav class="chat-demo-phone__nav" aria-label="Fake bottom navigation (demo)">
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="home" Size="IconSize.Sm" /> Home</span>
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="message-circle" Size="IconSize.Sm" /> Chats</span>
+                    <span class="chat-demo-phone__nav-item"><TmIcon Name="settings" Size="IconSize.Sm" /> Settings</span>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Custom Templates (FZE-9): the host owns the special message rows -->
+<section class="demo-section" data-testid="chat-custom-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Custom Templates</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-9</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        An inbox-style conversation in which the HOST renders the special messages through
+        <code>MessageTemplate</code> + <code>TmChatBubble</code>: an AI draft with a reason badge and
+        Approve/Edit/Discard, a queued reply with a countdown and Stop, a withdrawn message struck
+        through, a locked price-only bubble and a tip pill. Ordinary messages fall back to
+        <code>context.DefaultContent</code>. Every built-in feature is switched off; the typing
+        label, live-region texts, banner, owner note and the older pages are host-supplied.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 640px;">
+                <TmChat @ref="_customChat"
+                        CurrentUser="_customOwner"
+                        Messages="_customMessages"
+                        MessageTemplate="RenderCustomMessage"
+                        UseTemplateFor="@(m => m.Kind is not null)"
+                        EnableReactions="false"
+                        EnableThreads="false"
+                        AllowEditDelete="false"
+                        ShowReadReceipts="false"
+                        AutoReadReceipts="false"
+                        ShowAvatars="false"
+                        TypingUsers="_customTyping"
+                        TypingLabel="@(users => $"{users[0].Name} is typing…")"
+                        TypingTimeout="TimeSpan.FromSeconds(6)"
+                        TypingAriaHidden="true"
+                        MessageAnnouncement="DescribeCustomAnnouncement"
+                        OnSendMessage="HandleCustomInboxSend"
+                        OnLoadOlder="HandleCustomLoadOlderAsync"
+                        HasMoreBefore="_customHasMore"
+                        IsLoadingOlder="_customLoadingOlder"
+                        MessagesAriaLabel="Owner inbox messages">
+                    <BannerContent>
+                        <div class="chat-demo-conn @(_customOffline ? "chat-demo-conn--offline" : "chat-demo-conn--online")"
+                             data-testid="chat-custom-banner">
+                            <span class="chat-demo-conn__dot" aria-hidden="true"></span>
+                            <span class="chat-demo-conn__text">
+                                @(_customOffline
+                                    ? "Offline — replies are queued until the inbox reconnects."
+                                    : "Connected — replies send immediately.")
+                            </span>
+                            <TmToggle Value="_customOffline" ValueChanged="HandleOfflineChanged"
+                                      Label="Offline" AriaLabel="Offline mode"
+                                      Class="chat-demo-conn__toggle" />
+                        </div>
+                    </BannerContent>
+                    <ComposerAddon>
+                        <p class="chat-demo-owner-note" data-testid="chat-custom-owner-note">
+                            <TmIcon Name="info" Size="IconSize.Sm" />
+                            Owner note: every reply is visible to all agents in the shared inbox.
+                        </p>
+                    </ComposerAddon>
+                </TmChat>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomDeliverAsync">
+                Deliver incoming message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomTypingRefreshAsync">
+                Simulate fan typing
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleCustomLoadOlderAsync"
+                      Disabled="@(_customLoadingOlder || !_customHasMore)">
+                @(_customLoadingOlder ? "Loading older…" : "Simulate older page")
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Approve the AI draft to post it as a normal reply and stop the queued message
+                before its countdown runs out — the host owns every action. Switching
+                <em>Offline</em> queues your sends too; the paid voice note stays locked until Mia
+                unlocks it from her own view (the Subscribe Gate below).
+            </p>
+        </div>
+    </div>
+
+    <div class="showcase-card mt-6">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <code>TmChatBubble</code> is the presentation half a host uses inside its template — and
+            it works standalone. The alignment contract: <strong>incoming left, outgoing right,
+            system and pill centered</strong> (pending, queued and discarded align right; locked
+            follows its author).
+        </p>
+        <div class="chat-demo-bubbles" data-testid="chat-custom-bubble-showcase">
+            <TmChatBubble Variant="ChatBubbleVariant.Incoming"
+                          data-testid="chat-bubble-incoming"
+                          ActorLabel="Mia" Timestamp="new DateTimeOffset(2026, 7, 12, 9, 40, 0, TimeSpan.Zero)">
+                <span>Is the studio free on Friday evening?</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.Outgoing"
+                          data-testid="chat-bubble-outgoing"
+                          ActorLabel="Dana (owner)" Timestamp="new DateTimeOffset(2026, 7, 12, 9, 41, 0, TimeSpan.Zero)">
+                <span>Friday is free after 6 pm.</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.System"
+                          data-testid="chat-bubble-system"
+                          Timestamp="new DateTimeOffset(2026, 7, 12, 9, 42, 0, TimeSpan.Zero)">
+                <span>Mia joined the conversation</span>
+            </TmChatBubble>
+            <TmChatBubble Variant="ChatBubbleVariant.Pill"
+                          data-testid="chat-bubble-pill">
+                <span>Tip: replies queued outside business hours send when the inbox reopens.</span>
+            </TmChatBubble>
+        </div>
+    </div>
+</section>
+
+<!-- Subscribe Gate (FZE-9): a host composer replaces the built-in one -->
+<section class="demo-section" data-testid="chat-subscribe-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Subscribe Gate</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-9</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        <code>ComposerTemplate</code> replaces the built-in composer with host markup — here a fan
+        view that gates replies behind a subscription. The host registers its textarea with
+        <code>context.AttachAsync(input)</code> once mounted, so Enter/IME and the refocus behave
+        exactly like the built-in composer; <code>context.SetTextAsync</code> keeps the draft and
+        <code>context.SendAsync</code> goes through the same guarded pipeline.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <TmChat @ref="_gateChat"
+                    CurrentUser="_gateFan"
+                    Messages="_gateMessages"
+                    MessageTemplate="RenderGateMessage"
+                    UseTemplateFor="@(m => m.Kind is not null)"
+                    OnSendMessage="HandleGateSend"
+                    ComposerTemplate="SubscribeGateComposer"
+                    MessagesAriaLabel="Subscriber chat messages" />
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                The gate is plain host markup: until you subscribe, the chat renders a subscribe
+                card instead of an input (and the draft guard still applies to the host composer).
+                Press <em>Subscribe</em> — the composer mounts, the Enter/IME pipeline attaches and
+                Dana answers a moment after your first reply. Dana's paid voice note is locked:
+                press <em>Unlock</em> to pay $9.99 and reveal it as a normal row.
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleGateReset">
+                Reset subscription
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Auto-Attach (FZE-12): the template input carries id=InputId and TmChat attaches it itself -->
+<section class="demo-section" data-testid="chat-autoattach-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Auto-Attached Composer</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-12</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The same <code>ComposerTemplate</code> contract WITHOUT the host-side
+        <code>OnAfterRenderAsync</code> + <code>AttachAsync</code> plumbing: the template's
+        textarea carries <code>id="@("@composer.InputId")"</code> and
+        <code>AutoAttachComposerInput="true"</code> makes TmChat resolve and attach it by id
+        (scoped to the chat root). Enter sends, Shift+Enter inserts a new line, an IME
+        composition never submits, the textarea auto-resizes and the focus returns to it after
+        every send — the JS module owns it all. An explicit <code>context.AttachAsync(element)</code>
+        would always win; calling it with <code>default</code> hands the control back.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="showcase-card" style="height: 440px;">
+            <TmChat CurrentUser="_autoAttachFan"
+                    Messages="_autoAttachMessages"
+                    OnSendMessage="HandleAutoAttachSend"
+                    ComposerTemplate="AutoAttachComposer"
+                    AutoAttachComposerInput="true"
+                    MessagesAriaLabel="Auto-attach chat messages" />
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                This composer is plain host markup — the demo calls no AttachAsync anywhere: the
+                <code>id="@("@composer.InputId")"</code> attribute is the whole registration.
+                The counter is plain host state proving the sends flow through the shared
+                pipeline (the draft guard covers the host input too).
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-200">
+                Sends through the auto-attached composer: <strong data-testid="chat-autoattach-count">@_autoAttachCount</strong>
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleAutoAttachDeliverAsync">
+                Deliver incoming message
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Render window (FZE-14): the opt-in virtualization of very long conversations -->
+<section class="demo-section" data-testid="chat-render-window-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Render Window (Long Conversations)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">FZE-14</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        5 000 messages, <code>RenderWindowSize="100"</code>: only the last 100 rows render (the
+        window is the TAIL of the sequence). Reaching the top edge grows the window by 50 rows as
+        a render PREPEND — the reading position survives — and the built-in <em>Load older</em>
+        affordance reveals window rows until the start sits at zero. The jump buttons mount the
+        anchor row first (a deep link outside the window expands the window, waits for the render
+        and only then navigates). The thread panel is deliberately not windowed.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmChat @ref="_renderWindowChat"
+                        CurrentUser="_currentUser"
+                        Messages="_renderWindowMessages"
+                        OnSend="HandleRenderWindowOwnSend"
+                        RenderWindowSize="100"
+                        MessagesAriaLabel="Render window demo messages" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowJumpAsync">
+                Jump to message #10
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowFocusAsync">
+                Focus message #10
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowInjectAsync">
+                Inject window message
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleRenderWindowCountAsync">
+                Count rendered rows
+            </TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Rendered rows: <strong data-testid="chat-render-window-count">@_renderWindowRowCount</strong>
+                of @_renderWindowMessages.Count — a deep link outside the window mounts the anchor
+                first, so the count grows by the expansion it needed.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Typed chat (FZE-15): the generic TmTypedChat<TItem> composed over the non-generic TmChat -->
+<section class="demo-section" data-testid="chat-typed-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Typed Chat (Domain Items)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">FZE-15</span>
+    </div>
+
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The same chat contract over a HOST DOMAIN SEQUENCE: <code>TmTypedChat&lt;SupportTicketEvent&gt;</code>
+        maps every item through <code>MessageSelector</code> (the item becomes the message
+        <code>Payload</code> unless the selector sets its own) and hands an
+        <code>ItemTemplate</code> a typed <code>ChatItemContext&lt;TItem&gt;</code> — the item plus
+        everything TmChat knows around the message. Every other TmChat parameter is forwarded by
+        attribute splatting: the composer below sends through the forwarded <code>OnSend</code>,
+        which appends a new ticket event, and the chat scrolls to the bottom on its own.
+        <code>TmChat</code> itself stays non-generic.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+            <div class="showcase-card" style="height: 520px;">
+                <TmTypedChat Items="_typedEvents"
+                             MessageSelector="MapTicketEvent"
+                             ItemTemplate="RenderTicketEvent"
+                             OnSend="@(EventCallback.Factory.Create<ChatSendRequest>(this, HandleTypedSendAsync))"
+                             Placeholder="Reply to the ticket thread…"
+                             MessagesAriaLabel="Ticket thread events" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-2 self-start">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                The bubbles come from <code>ItemTemplate</code> + <code>TmChatBubble</code>; the
+                variant is derived from the item's <code>State</code>. The items count is host
+                state — the wrapper owns nothing but the mapping.
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-200">
+                Ticket events: <strong data-testid="chat-typed-count">@_typedEvents.Count</strong>
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="HandleTypedEscalateAsync">
+                Append agent escalation event
+            </TmButton>
+        </div>
+    </div>
+</section>
+
 @code {
     private ChatUser _currentUser = default!;
     private ChatUser _alice = default!;
@@ -159,9 +722,17 @@
     private List<ChatMessage> _basicMessages = default!;
     private List<ChatUser> _basicTyping = default!;
 
+    // ── Composer behavior demo (FZE-5) — own lists, not _basicMessages ────
+    private List<ChatMessage> _enterToSendMessages = default!;
+    private List<ChatMessage> _customComposerMessages = default!;
+
     // ── Typing demo ───────────────────────────────────────────────────────
     private List<ChatMessage> _typingMessages = default!;
     private List<ChatUser> _typingUsers = default!;
+
+    // ── Typing label / template / expiry demo (FZE-4) ─────────────────────
+    private List<ChatUser> _customTypingUsers = default!;
+    private List<ChatUser> _expiringTypingUsers = default!;
 
     // ── Attachment demo ───────────────────────────────────────────────────
     private List<ChatMessage> _attachmentMessages = default!;
@@ -171,7 +742,13 @@
 
     // ── Live interactive demo ─────────────────────────────────────────────
     private List<ChatMessage> _liveMessages = default!;
+
+    // ── Layout & mobile demo (FZE-8) ──
+    private List<ChatMessage> _mobileMessages = default!;
     private List<ChatUser> _liveTyping = default!;
+
+    // ── Accessibility demo (FZE-7) ────────────────────────────────────────
+    private TmChat _a11yChat = default!;
 
     protected override void OnInitialized()
     {
@@ -180,10 +757,56 @@
         _bob = new("u2", "Bob", avatar: "B", isOnline: true);
         _carol = new("u3", "Carol", avatar: "C", isOnline: true);
 
+        // Layout & mobile (FZE-8): a thread on the first message so the narrow-chat overlay pane
+        // has a badge to open.
+        _mobileMessages = new()
+        {
+            new ChatMessage { Id = "mob1", Text = "The mobile layout phase is up — sticky composer, 44px targets and the full-width thread overlay.", Author = _bob, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 10, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob2", Text = "Does the thread panel still squeeze the composer on a phone?", Author = _carol, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 11, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob3", Text = "No — below the 640px container breakpoint it overlays the whole chat instead.", Author = _alice, Timestamp = new DateTimeOffset(2026, 7, 12, 9, 12, 0, TimeSpan.Zero) },
+            new ChatMessage { Id = "mob4", Text = "It overlays full width; its own reply input stays at the bottom.", Author = _bob, ThreadRootId = "mob1", Timestamp = new DateTimeOffset(2026, 7, 12, 9, 13, 0, TimeSpan.Zero) },
+        };
+
+        // Enough history that the card overflows: the scroll behavior is only observable when
+        // the list can actually scroll (and clear the 40px at-bottom threshold).
+        _scrollMessages = new()
+        {
+            new("s1", "Morning! The scroll phase of the chat plan is ready.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 50, 0, TimeSpan.Zero)),
+            new("s2", "Nice — does it keep my place when older history loads?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 51, 0, TimeSpan.Zero)),
+            new("s3", "Yes: a prepend shifts scrollTop by the grown height.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 52, 0, TimeSpan.Zero)),
+            new("s4", "And messages arriving while I read up top?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 53, 0, TimeSpan.Zero)),
+            new("s5", "Counted behind the jump button — nothing moves until you ask for it.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 54, 0, TimeSpan.Zero)),
+            new("s6", "And your own messages?", _carol, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 55, 0, TimeSpan.Zero)),
+            new("s7", "Always scroll to the bottom, even from the middle of the history.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 56, 0, TimeSpan.Zero)),
+            new("s8", "What about the browser's own scroll anchoring?", _alice, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 8, 57, 0, TimeSpan.Zero)),
+            new("s9", "Disabled on the list — it would fight the component's own compensation.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 58, 0, TimeSpan.Zero)),
+            new("s10", "Try it: scroll up, inject a message, then load older.", _carol, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 8, 59, 0, TimeSpan.Zero)),
+        };
+
         _sharedMessages = new()
         {
             new ChatMessage { Id = "c1", Text = "Can we ship the K6 chat update today?", Author = _bob, Timestamp = new DateTimeOffset(2026, 7, 12, 8, 10, 0, TimeSpan.Zero) },
             new ChatMessage { Id = "c2", Text = "Yes — threads, reactions and receipts are all in.", Author = _alice, Timestamp = new DateTimeOffset(2026, 7, 12, 8, 11, 0, TimeSpan.Zero) },
+        };
+
+        // Render window (FZE-14): 5 000 generated rows — only the last RenderWindowSize render.
+        _renderWindowMessages = new List<ChatMessage>(5000);
+        for (var i = 1; i <= 5000; i++)
+        {
+            _renderWindowMessages.Add(new(
+                $"rw-{i}",
+                $"Message #{i} of 5000 — the render window keeps the DOM to the tail of the conversation.",
+                i % 2 == 0 ? _alice : _bob,
+                i % 2 == 0 ? ChatMessageType.Outgoing : ChatMessageType.Incoming,
+                new DateTimeOffset(2026, 7, 12, 6, 0, 0, TimeSpan.Zero).AddSeconds(i)));
+        }
+
+        // Typed chat (FZE-15): the domain record drives the conversation through the selector.
+        _typedEvents = new()
+        {
+            new SupportTicketEvent(1, "Bob", "Printer offline again — can you check the spooler?", "open"),
+            new SupportTicketEvent(2, "Carol", "Spooler restarted; the queue is draining now.", "waiting"),
+            new SupportTicketEvent(3, "Alice", "Queue drained and the test page printed fine.", "resolved"),
         };
 
         _basicMessages = new()
@@ -195,12 +818,27 @@
         };
         _basicTyping = new() { new ChatUser("u2", "Bob", "B") };
 
+        // ── Composer behavior demo (FZE-5): each demo chat owns its list ─────
+        _enterToSendMessages = new()
+        {
+            new("e1", "Enter is a new line here — press Ctrl+Enter or use the button.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 5, 2, 9, 20, 0, TimeSpan.Zero)),
+        };
+        _customComposerMessages = new()
+        {
+            new("k1", "The custom composer behaves like the built-in one.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 5, 2, 9, 21, 0, TimeSpan.Zero)),
+        };
+
         _typingMessages = new()
         {
             new("t1", "Can you review my PR?", _bob, ChatMessageType.Incoming),
             new("t2", "Sure, give me 5 minutes.", _currentUser, ChatMessageType.Outgoing),
         };
         _typingUsers = new() { _bob, _carol };
+
+        _customTypingUsers = new() { _bob };
+        // Starts EMPTY: the 6-second window opens only when the button below assigns a list —
+        // the same signal a real host sends when a "still typing" event arrives over the wire.
+        _expiringTypingUsers = new();
 
         _attachmentMessages = new()
         {
@@ -224,16 +862,126 @@
             new("s5", "Hello!", _carol, ChatMessageType.Incoming),
         };
 
+        // ── Accessibility demo: a quiet conversation the buttons animate ────
+        _a11yMessages = new()
+        {
+            new("a11y-1", "The accessibility phase is in review.", _bob, ChatMessageType.Incoming, new DateTimeOffset(2026, 7, 12, 9, 5, 0, TimeSpan.Zero)),
+            new("a11y-2", "Great — how are announcements handled?", _currentUser, ChatMessageType.Outgoing, new DateTimeOffset(2026, 7, 12, 9, 6, 0, TimeSpan.Zero)),
+        };
+
         _liveMessages = new()
         {
             new("l1", "Welcome! Type a message and I will echo it back with a delay.", _bob, ChatMessageType.Incoming),
         };
         _liveTyping = new();
+
+        // ── Custom Templates + Subscribe Gate demos (FZE-9) ───────────────────
+        InitializeCustomDemo(owner: new ChatUser("owner", "Dana (owner)", "D", isOnline: true),
+                             fan: new ChatUser("fan-mia", "Mia", "M", isOnline: true));
+        InitializeGateDemo(fan: new ChatUser("gate-fan", "Mia", "M", isOnline: true));
+        InitializeAutoAttachDemo(fan: new ChatUser("auto-fan", "Noah", "N", isOnline: true));
     }
 
     private void HandleBasicSend(string text)
     {
         _basicMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    // ── Layout & mobile demo (FZE-8) ──────────────────────────────────────
+    private void HandleMobileSend(string text)
+    {
+        _mobileMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    // ── Composer behavior demo (FZE-5) ────────────────────────────────────
+    private ElementReference _customComposerInput;
+    private ChatComposerContext? _customComposerContext;
+    private string? _customComposerAttachedId;
+    private bool _customSendFailed;
+    private ErrorBoundary? _customBoundary;
+
+    private RenderFragment<ChatComposerContext> CustomComposer => context =>
+    {
+        _customComposerContext = context;
+        return @<div class="flex items-end gap-2">
+            <textarea class="w-full min-h-10 max-h-32 resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm px-3 py-2"
+                      rows="1"
+                      aria-label="Message"
+                      placeholder="Type a message…"
+                      value="@context.Text"
+                      @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"
+                      @ref="_customComposerInput"></textarea>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                      Disabled="@(!context.CanSend)"
+                      OnClick="@(async () => {
+                          _customSendFailed = false;
+                          try
+                          {
+                              await context.SendAsync();
+                          }
+                          catch (InvalidOperationException)
+                          {
+                              _customSendFailed = true; // the demo's failing host — the text stays
+                          }
+                      })">Send</TmButton>
+        </div>;
+    };
+
+    private async Task HandleCustomSend(string text)
+    {
+        if (text.EndsWith("!"))
+        {
+            // The demo's "failing host": a throw keeps the composer text (FZE-5). The render
+            // first so the card's own role="alert" error notice is visible, then the exception
+            // propagates — through the renderer (and the ErrorBoundary) on the Enter path, or
+            // back to the button handler's catch on the Send-button path.
+            _customSendFailed = true;
+            StateHasChanged();
+            throw new InvalidOperationException("demo host failure");
+        }
+
+        _customSendFailed = false;
+        _customComposerMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    private void HandleEnterToSendDemo(string text)
+    {
+        _enterToSendMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), text, _currentUser, ChatMessageType.Outgoing));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_customComposerContext is not null && !string.IsNullOrEmpty(_customComposerInput.Id)
+            && _customComposerInput.Id != _customComposerAttachedId)
+        {
+            _customComposerAttachedId = _customComposerInput.Id;
+            await _customComposerContext.AttachAsync(_customComposerInput);
+        }
+
+        // The subscribe-gate composer re-mounts when the host template switches from the gate
+        // card to the textarea — attach the Enter/IME pipeline to the CURRENT element, then put
+        // the caret in it so the subscriber can type immediately.
+        if (_gateComposerContext is not null && _gateSubscribed && !string.IsNullOrEmpty(_gateInput.Id)
+            && _gateInput.Id != _gateAttachedInputId)
+        {
+            _gateAttachedInputId = _gateInput.Id;
+            await _gateComposerContext.AttachAsync(_gateInput);
+            await _gateComposerContext.FocusAsync();
+        }
+
+        // The draft editor just mounted — move the focus into it (Edit opened it for typing).
+        if (_shouldFocusDraftEditor && !string.IsNullOrEmpty(_draftEditorInput.Id))
+        {
+            _shouldFocusDraftEditor = false;
+            await _draftEditorInput.FocusAsync();
+        }
+    }
+
+    // A fresh list instance opens a fresh TypingTimeout window — the same signal a real host
+    // sends when a "still typing" event arrives over the wire.
+    private void RefreshExpiringTyping()
+    {
+        _expiringTypingUsers = new List<ChatUser> { _bob, _carol };
     }
 
     // ── Collaboration handlers (shared store, mutated by either user) ─────
@@ -307,5 +1055,783 @@
         _liveTyping = new List<ChatUser>();
         _liveMessages.Add(new ChatMessage(Guid.NewGuid().ToString(), $"Echo: {text}", _bob, ChatMessageType.Incoming));
         StateHasChanged();
+    }
+
+    // ── Scroll behavior demo (FZE-6) — AutoScroll=WhenAtBottom is the default ──
+    private TmChat? _scrollChat;
+    private List<ChatMessage> _scrollMessages = default!;
+    private bool _scrollHasMore = true;
+    private bool _scrollLoadingOlder;
+    private int _scrollSeq;
+
+    private async Task HandleScrollInjectAsync()
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-in-{_scrollSeq}", $"Incoming message #{_scrollSeq}",
+            _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleScrollOwnAsync()
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-own-{_scrollSeq}", $"Alice's message #{_scrollSeq}",
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleScrollOwnSend(ChatSendRequest request)
+    {
+        _scrollSeq++;
+        _scrollMessages.Add(new($"scroll-sent-{_scrollSeq}", request.Text,
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleScrollLoadOlderAsync()
+    {
+        if (_scrollLoadingOlder || !_scrollHasMore) return;
+        _scrollLoadingOlder = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(600);
+        var page = new List<ChatMessage>();
+        for (var i = 0; i < 8; i++)
+        {
+            _scrollSeq++;
+            page.Add(new($"scroll-old-{_scrollSeq}", $"Older message #{_scrollSeq}",
+                _carol, ChatMessageType.Incoming, DateTimeOffset.Now.AddMinutes(-_scrollSeq)));
+        }
+        page.Reverse();
+        _scrollMessages.InsertRange(0, page);
+        if (_scrollMessages.Count > 60) _scrollHasMore = false; // a finite demo history
+        _scrollLoadingOlder = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Accessibility demo (FZE-7) — one polite live region, host-supplied texts ──
+    private List<ChatMessage> _a11yMessages = default!;
+    private int _a11ySeq;
+
+    /// <summary>The host owns the announced sentence (localized, with its domain context).</summary>
+    private string? DescribeAnnouncement(ChatMessage message)
+        => message.Type == ChatMessageType.System
+            ? message.Text
+            : $"New message from {message.Author?.Name}: {message.Text}";
+
+    private async Task HandleA11yInjectAsync()
+    {
+        _a11ySeq++;
+        _a11yMessages.Add(new($"a11y-in-{_a11ySeq}", $"Incoming message #{_a11ySeq}",
+            _bob, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleA11yBurstAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            _a11ySeq++;
+            _a11yMessages.Add(new($"a11y-in-{_a11ySeq}", $"Burst message #{_a11ySeq}",
+                _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleA11yHostActionAsync()
+    {
+        _a11ySeq++;
+        _a11yMessages.Add(new($"a11y-own-{_a11ySeq}", "Alice's draft was approved",
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        await _a11yChat!.AnnounceAsync("Your draft was approved");
+    }
+
+    // ── Custom Templates demo (FZE-9) — the host owns the special rows ────
+    // Demo-local DTO the template reads back type-safely via context.PayloadAs<T>().
+    private sealed record CustomInboxDraft(string Request, string Reason);
+
+    private TmChat? _customChat;
+    private ChatUser _customOwner = default!;
+    private ChatUser _customFan = default!;
+    private List<ChatMessage> _customMessages = default!;
+    private List<ChatUser> _customTyping = new();
+    private bool _customOffline;
+    private bool _customHasMore = true;
+    private bool _customLoadingOlder;
+    private int _customSeq;
+
+    // Inline draft editing: the template renders the editor while this id is set. The ref + flag
+    // move the focus into the textarea right after the editor mounts.
+    private string? _customEditingDraftId;
+    private string _customDraftEditText = string.Empty;
+    private ElementReference _draftEditorInput;
+    private bool _shouldFocusDraftEditor;
+
+    // ── Subscribe Gate demo (FZE-9) — host composer with a gate ───────────
+    private TmChat? _gateChat;
+    private ChatUser _gateFan = default!;
+    private List<ChatMessage> _gateMessages = default!;
+    private bool _gateSubscribed;
+    private ElementReference _gateInput;
+    private ChatComposerContext? _gateComposerContext;
+    private string? _gateAttachedInputId;
+    private int _gateSeq;
+
+    // ── Auto-attach demo (FZE-12) — id=InputId registration, NO AttachAsync ──
+    private ChatUser _autoAttachFan = default!;
+    private List<ChatMessage> _autoAttachMessages = default!;
+    private int _autoAttachCount;
+    private int _autoAttachSeq;
+
+    // Seeded timestamps are relative to NOW so the demo conversation always looks fresh: the
+    // seeds sit a quarter of an hour in the past, delivered messages get DateTimeOffset.Now.
+    private DateTimeOffset _customBase;
+
+    // Cancellation for the demo's own simulated delays — cancelled in Dispose (IDisposable).
+    private readonly CancellationTokenSource _cts = new();
+
+    private ChatMessage CustomMessage(string id, string text, ChatUser author, ChatMessageType type, int minute) =>
+        new(id, text, author, type, _customBase.AddMinutes(minute));
+
+    private void InitializeCustomDemo(ChatUser owner, ChatUser fan)
+    {
+        _customOwner = owner;
+        _customFan = fan;
+        _customBase = DateTimeOffset.Now.AddMinutes(-15);
+
+        _customMessages = new()
+        {
+            new ChatMessage("ct1", "Tip: replies queued outside business hours send when the inbox reopens.", type: ChatMessageType.System, timestamp: _customBase)
+            {
+                Kind = "tip",
+            },
+            CustomMessage("ct2", "Hi! Is the studio free on Friday evening?", fan, ChatMessageType.Incoming, 1),
+            CustomMessage("ct3", "Hey Mia — let me check the calendar.", owner, ChatMessageType.Outgoing, 2),
+            CustomMessage("ct4", "No rush, thanks!", fan, ChatMessageType.Incoming, 3),
+            CustomMessage("ct5", "Friday is free after 6 pm.", owner, ChatMessageType.Outgoing, 4),
+            CustomMessage("ct6", "Perfect. Can I pay on site?", fan, ChatMessageType.Incoming, 5),
+            CustomMessage("ct7", "Card or cash, both work.", owner, ChatMessageType.Outgoing, 6),
+            CustomMessage("ct8", "Great, see you then!", fan, ChatMessageType.Incoming, 7),
+            CustomMessage("ct9", "See you 👋", owner, ChatMessageType.Outgoing, 8),
+            new ChatMessage("ct10", "Movie night is $50 per hour.", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(9))
+            {
+                Kind = "discarded",
+                Metadata = new Dictionary<string, object?> { ["discardNote"] = "Withdrawn before sending · wrong price" },
+            },
+            new ChatMessage("ct11", "Voice note: see you at 6 and bring the contract.", fan, ChatMessageType.Incoming, _customBase.AddMinutes(10))
+            {
+                Kind = "locked",
+            },
+            new ChatMessage("ct12", "The studio is booked — see you Friday at 6!", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(11))
+            {
+                Kind = "queued",
+                Metadata = new Dictionary<string, object?> { ["queuedUntil"] = DateTimeOffset.Now.AddMinutes(3) },
+            },
+            new ChatMessage("ct13", "Sure — the studio is $30/h including the projector.", owner, ChatMessageType.Outgoing, _customBase.AddMinutes(12))
+            {
+                Kind = "ai-draft",
+                Payload = new CustomInboxDraft("Can you send the price list?", "pricing question"),
+            },
+        };
+    }
+
+    private void InitializeGateDemo(ChatUser fan)
+    {
+        _gateFan = fan;
+        _gateSubscribed = false;
+        _gateSeq = 0;
+        _gateMessages = new()
+        {
+            new ChatMessage("gt1", "Welcome to my studio channel! 💜", _customOwner, ChatMessageType.Incoming, _customBase.AddMinutes(-4)),
+            new ChatMessage("gt2", "Subscribers get weekly voice notes with booking tips.", _customOwner, ChatMessageType.Incoming, _customBase.AddMinutes(-3)),
+            new ChatMessage("gt3", "Voice note: see you at 6 and bring the contract.", _customOwner, ChatMessageType.Outgoing, _customBase.AddMinutes(-2))
+            {
+                Kind = "locked",
+            },
+        };
+    }
+
+    private void InitializeAutoAttachDemo(ChatUser fan)
+    {
+        _autoAttachFan = fan;
+        _autoAttachSeq = 0;
+        _autoAttachCount = 0;
+        _autoAttachMessages = new()
+        {
+            new ChatMessage("aa1", "This composer is attached by id — no AttachAsync in the host.", _autoAttachFan, ChatMessageType.Incoming, _customBase.AddMinutes(-2)),
+            new ChatMessage("aa2", "Type and press Enter: the JS module owns submit, IME and resize.", _autoAttachFan, ChatMessageType.Incoming, _customBase.AddMinutes(-1)),
+        };
+    }
+
+    // ── Render window demo (FZE-14) — 5 000 rows, only the tail renders ──
+    private TmChat? _renderWindowChat;
+    private List<ChatMessage> _renderWindowMessages = new();
+    private int _renderWindowRowCount;
+
+    private async Task HandleRenderWindowJumpAsync()
+    {
+        if (_renderWindowChat is null) return;
+        await _renderWindowChat.ScrollToMessageAsync("rw-10");
+        await CountRenderWindowRowsAsync();
+    }
+
+    private async Task HandleRenderWindowFocusAsync()
+    {
+        if (_renderWindowChat is null) return;
+        await _renderWindowChat.FocusMessageAsync("rw-10");
+        await CountRenderWindowRowsAsync();
+    }
+
+    private async Task HandleRenderWindowInjectAsync()
+    {
+        _renderWindowSeq++;
+        _renderWindowMessages.Add(new($"rw-live-{_renderWindowSeq}", $"Live message #{_renderWindowSeq} — the tail is always rendered.",
+            _carol, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        await CountRenderWindowRowsAsync();
+    }
+
+    private Task HandleRenderWindowOwnSend(ChatSendRequest request)
+    {
+        _renderWindowSeq++;
+        _renderWindowMessages.Add(new($"rw-sent-{_renderWindowSeq}", request.Text,
+            _currentUser, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRenderWindowCountAsync() => CountRenderWindowRowsAsync();
+
+    // The demo-only ES module that counts the mounted rows — an exported countRows function
+    // instead of window.eval (strict-CSP safe, the selector stays testable). Lazily imported
+    // once per circuit and disposed with the page.
+    private Task<IJSObjectReference>? _renderWindowModuleTask;
+
+    private Task<IJSObjectReference> GetRenderWindowModuleTask() =>
+        _renderWindowModuleTask ??= JS.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/Tempo.Blazor.Demo.SharedUI/js/chat-render-window.js").AsTask();
+
+    private async Task CountRenderWindowRowsAsync()
+    {
+        try
+        {
+            var module = await GetRenderWindowModuleTask();
+            _renderWindowRowCount = await module.InvokeAsync<int>(
+                "countRows", "[data-testid='chat-render-window-section']");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException
+            or InvalidOperationException or TaskCanceledException)
+        {
+            // Prerender, a static host or a dropped circuit — the counter stays at its last value.
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private int _renderWindowSeq;
+
+    // ── Typed chat demo (FZE-15) — TmTypedChat over a domain record ────
+    // Demo-local domain record: the HOST sequence the conversation is built from. The selector
+    // maps each event to a ChatMessage (the item becomes the Payload) and the ItemTemplate
+    // receives a ChatItemContext<SupportTicketEvent>.
+    private sealed record SupportTicketEvent(int Id, string Actor, string Message, string State);
+
+    private List<SupportTicketEvent> _typedEvents = new();
+    private int _typedSeq;
+
+    private ChatMessage MapTicketEvent(SupportTicketEvent e) => new(
+        $"typed-{e.Id}",
+        e.Message,
+        e.Actor switch
+        {
+            "Alice" => _currentUser,
+            "Bob" => _bob,
+            _ => _carol,
+        },
+        e.State == "resolved" ? ChatMessageType.Outgoing : ChatMessageType.Incoming,
+        _customBase.AddMinutes(e.Id));
+
+    private RenderFragment RenderTicketEvent(ChatItemContext<SupportTicketEvent> ctx) => @<TmChatBubble
+        Variant="@(ctx.Item!.State switch
+        {
+            "open" => ChatBubbleVariant.Pending,
+            "waiting" => ChatBubbleVariant.Queued,
+            _ => ChatBubbleVariant.Pill,
+        })"
+        data-testid="chat-typed-event"
+        ActorLabel="@ctx.Item.Actor"
+        Timestamp="ctx.Message.Message.Timestamp">
+        <Badge><span class="chat-demo-badge">Ticket #@ctx.Item.Id · @ctx.Item.State</span></Badge>
+        <ChildContent><span>@ctx.Item.Message</span></ChildContent>
+    </TmChatBubble>;
+
+    private Task HandleTypedSendAsync(ChatSendRequest request)
+    {
+        _typedSeq++;
+        _typedEvents.Add(new(1000 + _typedSeq, "Alice", request.Text, "resolved"));
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleTypedEscalateAsync()
+    {
+        _typedSeq++;
+        _typedEvents.Add(new(1000 + _typedSeq, "Carol", $"Escalation #{_typedSeq}: paging the on-call agent.", "open"));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── MessageTemplate: route every host-owned Kind to its bubble ────────
+    private RenderFragment RenderCustomMessage(ChatMessageContext context) => context.Message.Kind switch
+    {
+        "ai-draft" => RenderCustomDraft(context),
+        "queued" => RenderCustomQueued(context),
+        "discarded" => RenderCustomDiscarded(context),
+        "tip" => RenderCustomTip(context),
+        "locked" => RenderCustomLocked(context),
+        _ => context.DefaultContent,
+    };
+
+    private RenderFragment RenderCustomDraft(ChatMessageContext context)
+    {
+        if (context.Message.Id == _customEditingDraftId)
+        {
+            return RenderDraftEditor();
+        }
+
+        var reason = context.PayloadAs<CustomInboxDraft>()?.Reason ?? "review";
+        return @<TmChatBubble Variant="ChatBubbleVariant.Pending"
+                              data-testid="chat-custom-draft"
+                              ActorLabel="AI assistant"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="AI draft — pending review">
+            <Badge><span class="chat-demo-badge chat-demo-badge--pending">AI draft · @reason</span></Badge>
+            <ChildContent><span>@context.Message.Text</span></ChildContent>
+            <Actions>
+                <div class="chat-demo-bubble-actions">
+                    <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--primary" data-testid="chat-custom-approve"
+                            aria-label="Approve AI draft"
+                            @onclick="@(() => ApproveDraftAsync(context.Message))">Approve</button>
+                    <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-edit"
+                            aria-label="Edit AI draft"
+                            @onclick="@(() => EditDraft(context.Message))">Edit</button>
+                    <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--danger" data-testid="chat-custom-discard"
+                            aria-label="Discard AI draft"
+                            @onclick="@(() => DiscardDraftAsync(context.Message))">Discard</button>
+                </div>
+            </Actions>
+        </TmChatBubble>;
+    }
+
+    private RenderFragment RenderDraftEditor() => @<div class="chat-demo-draft-editor" data-testid="chat-custom-draft-editor">
+        <textarea class="chat-demo-draft-editor__input" rows="2" aria-label="Edit draft reply"
+                  @ref="_draftEditorInput" @bind="_customDraftEditText"></textarea>
+        <div class="chat-demo-bubble-actions">
+            <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-draft-save"
+                    @onclick="SaveDraftEditAsync">Save</button>
+            <button type="button" class="chat-demo-bubble-action" data-testid="chat-custom-draft-cancel"
+                    @onclick="CancelDraftEditAsync">Cancel</button>
+        </div>
+    </div>;
+
+    // The queued countdown is the ChatDemoQueuedCountdown child: it owns the per-second timer,
+    // and on expiry the HOST sends the message (a plain outgoing row).
+    private RenderFragment QueuedCountdownFragment(ChatMessageContext context) => @<ChatDemoQueuedCountdown
+                              Until="@(context.GetMetadata<DateTimeOffset>("queuedUntil"))"
+                              OnExpired="@(() => SendExpiredQueuedAsync(context.Message))" />;
+
+    private RenderFragment RenderCustomQueued(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Queued"
+                              data-testid="chat-custom-queued"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Queued — not sent yet"
+                              Meta="@QueuedCountdownFragment(context)">
+        <Badge><span class="chat-demo-badge chat-demo-badge--queued">Queued</span></Badge>
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Actions>
+            <div class="chat-demo-bubble-actions">
+                <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--danger" data-testid="chat-custom-stop"
+                        aria-label="Stop sending queued reply"
+                        @onclick="@(() => StopQueuedAsync(context.Message))">Stop sending</button>
+            </div>
+        </Actions>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomDiscarded(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Discarded"
+                              data-testid="chat-custom-discarded"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Discarded — not sent">
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Note><span class="chat-demo-note">@(context.GetMetadata<string>("discardNote", "Withdrawn"))</span></Note>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomTip(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Pill"
+                              data-testid="chat-custom-tip">
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+    </TmChatBubble>;
+
+    private RenderFragment RenderCustomLocked(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Locked"
+                              data-testid="chat-custom-locked"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Paid voice note · Mia hasn't unlocked yet">
+        @* The body is passed to demonstrate the guard: the Locked variant never renders it, so
+           the paid content cannot leak into the DOM. The owner has no Unlock button here — Mia
+           unlocks from her own view (the Subscribe Gate below). The price shows once. *@
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Badge><span class="chat-demo-badge chat-demo-badge--price">$9.99</span></Badge>
+    </TmChatBubble>;
+
+    // ── Host actions over the template kinds ──────────────────────────────
+    private async Task ApproveDraftAsync(ChatMessage draft)
+    {
+        _customMessages.Remove(draft);
+        _customMessages.Add(new ChatMessage($"ct-own-{Guid.NewGuid():N}", draft.Text, _customOwner,
+            ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusComposerAsync();
+            await _customChat.AnnounceAsync("Draft approved — reply posted.");
+        }
+    }
+
+    private void EditDraft(ChatMessage draft)
+    {
+        _customDraftEditText = draft.Text;
+        _customEditingDraftId = draft.Id;
+        _draftEditorInput = default;
+        _shouldFocusDraftEditor = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveDraftEditAsync()
+    {
+        // Blank edits keep the editor open — the draft is not lost to a mistyped Save.
+        if (string.IsNullOrWhiteSpace(_customDraftEditText)) return;
+
+        var draft = _customMessages.FirstOrDefault(m => m.Id == _customEditingDraftId);
+        _customEditingDraftId = null;
+        _draftEditorInput = default;
+        if (draft is null) return;
+
+        _customMessages.Remove(draft);
+        _customMessages.Add(new ChatMessage($"ct-own-{Guid.NewGuid():N}", _customDraftEditText, _customOwner,
+            ChatMessageType.Outgoing, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusComposerAsync();
+        }
+    }
+
+    private async Task CancelDraftEditAsync()
+    {
+        var draftId = _customEditingDraftId;
+        _customEditingDraftId = null;
+        _shouldFocusDraftEditor = false;
+        _draftEditorInput = default;
+        await InvokeAsync(StateHasChanged);
+        if (draftId is not null && _customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(draftId);
+        }
+    }
+
+    private async Task DiscardDraftAsync(ChatMessage draft)
+    {
+        ReplaceCustom(draft.Id, m => m with
+        {
+            Kind = "discarded",
+            Metadata = new Dictionary<string, object?> { ["discardNote"] = "Discarded by the owner before sending" },
+        });
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(draft.Id);
+            await _customChat.AnnounceAsync("Draft discarded.");
+        }
+    }
+
+    private async Task StopQueuedAsync(ChatMessage queued)
+    {
+        ReplaceCustom(queued.Id, m => m with
+        {
+            Kind = "discarded",
+            Metadata = new Dictionary<string, object?> { ["discardNote"] = "Stopped before it was sent" },
+        });
+        await InvokeAsync(StateHasChanged);
+        if (_customChat is not null)
+        {
+            await _customChat.FocusMessageAsync(queued.Id);
+            await _customChat.AnnounceAsync("Queued reply stopped.");
+        }
+    }
+
+    // The queued countdown expired: the host sends the message — the same row falls back to the
+    // built-in rendering once the kind is cleared.
+    private async Task SendExpiredQueuedAsync(ChatMessage queued)
+    {
+        ReplaceCustom(queued.Id, m => m with { Kind = null, Metadata = new Dictionary<string, object?>() });
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ReplaceCustom(string id, Func<ChatMessage, ChatMessage> update)
+    {
+        var index = _customMessages.FindIndex(m => m.Id == id);
+        if (index >= 0) _customMessages[index] = update(_customMessages[index]);
+    }
+
+    // ── Demo-side inputs of the custom chat ───────────────────────────────
+    private void HandleOfflineChanged(bool offline)
+    {
+        _customOffline = offline;
+        StateHasChanged();
+    }
+
+    private void HandleCustomInboxSend(string text)
+    {
+        // Offline sends queue like any host would: a queued row whose own ChatDemoQueuedCountdown
+        // counts down and sends it (the composer itself stays usable while offline).
+        var message = new ChatMessage($"ct-own-{Guid.NewGuid():N}", text, _customOwner, ChatMessageType.Outgoing, DateTimeOffset.Now);
+        if (_customOffline)
+        {
+            message = message with
+            {
+                Kind = "queued",
+                Metadata = new Dictionary<string, object?> { ["queuedUntil"] = DateTimeOffset.Now.AddSeconds(30) },
+            };
+        }
+        _customMessages.Add(message);
+    }
+
+    private async Task HandleCustomDeliverAsync()
+    {
+        _customSeq++;
+        _customMessages.Add(new ChatMessage($"ct-in-{_customSeq}", $"Incoming message #{_customSeq}",
+            _customFan, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleCustomTypingRefreshAsync()
+    {
+        // A fresh list instance opens a fresh TypingTimeout window.
+        _customTyping = new List<ChatUser> { _customFan };
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCustomLoadOlderAsync()
+    {
+        if (_customLoadingOlder || !_customHasMore) return;
+        _customLoadingOlder = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await Task.Delay(500, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // the demo page is gone — nothing to load into
+        }
+
+        var page = new List<ChatMessage>();
+        for (var i = 0; i < 8; i++)
+        {
+            _customSeq++;
+            page.Add(CustomMessage($"ct-old-{_customSeq}", $"Archived message #{_customSeq}",
+                _customFan, ChatMessageType.Incoming, -_customSeq));
+        }
+        page.Reverse();
+        _customMessages.InsertRange(0, page);
+        if (_customMessages.Count > 80) _customHasMore = false; // a finite demo archive
+        _customLoadingOlder = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>The host owns the announced sentence — the library never invents one.</summary>
+    private string? DescribeCustomAnnouncement(ChatMessage message)
+        => message.Type == ChatMessageType.System
+            ? message.Text
+            : $"New message from {message.Author?.Name}: {message.Text}";
+
+    // ── Subscribe Gate: ComposerTemplate with a gate ──────────────────────
+    private RenderFragment<ChatComposerContext> SubscribeGateComposer => context =>
+    {
+        _gateComposerContext = context;
+        return _gateSubscribed
+            ? @<div class="chat-demo-gate-composer">
+                <textarea class="chat-demo-gate-composer__input" rows="1" aria-label="Reply to Dana"
+                          placeholder="Reply to Dana…"
+                          value="@context.Text"
+                          @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"
+                          @ref="_gateInput"></textarea>
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                          Disabled="@(!context.CanSend)"
+                          OnClick="@(async () => await context.SendAsync())">Send</TmButton>
+            </div>
+            : @<div class="chat-demo-gate" data-testid="chat-gate-composer">
+                <p class="chat-demo-gate__title">Only subscribers can reply to Dana</p>
+                <p class="chat-demo-gate__text">Subscribe to unlock replies, voice notes and the weekly booking tips.</p>
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                          data-testid="chat-gate-subscribe"
+                          OnClick="HandleGateSubscribe">Subscribe for $4.99/mo</TmButton>
+            </div>;
+    };
+
+    private void HandleGateSubscribe()
+    {
+        _gateSubscribed = true;
+        StateHasChanged();
+    }
+
+    private void HandleGateReset()
+    {
+        InitializeGateDemo(_gateFan);
+        StateHasChanged();
+    }
+
+    // ── Auto-Attach demo (FZE-12): id=InputId is the whole registration ───
+    private RenderFragment<ChatComposerContext> AutoAttachComposer => context =>
+        @<div class="chat-demo-gate-composer">
+            <textarea class="chat-demo-gate-composer__input" rows="1" aria-label="Reply to Noah"
+                      placeholder="Reply to Noah…"
+                      id="@context.InputId"
+                      value="@context.Text"
+                      @oninput="@(e => context.SetTextAsync(e.Value?.ToString() ?? string.Empty))"></textarea>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                      Disabled="@(!context.CanSend)"
+                      OnClick="@(async () => await context.SendAsync())">Send</TmButton>
+        </div>;
+
+    private void HandleAutoAttachSend(string text)
+    {
+        _autoAttachSeq++;
+        _autoAttachCount++;
+        _autoAttachMessages.Add(new ChatMessage(
+            $"aa-own-{_autoAttachSeq}", text, _autoAttachFan, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        StateHasChanged();
+        _ = AutoAttachAutoReplyAsync(text);
+    }
+
+    private async Task AutoAttachAutoReplyAsync(string text)
+    {
+        try
+        {
+            await Task.Delay(800, _cts.Token);
+            _autoAttachSeq++;
+            _autoAttachMessages.Add(new ChatMessage(
+                $"aa-in-{_autoAttachSeq}", $"Auto-attached composer heard: “{text}”", _autoAttachFan,
+                ChatMessageType.Incoming, DateTimeOffset.Now));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // The demo page went away during the simulated delay — nothing to answer anymore.
+        }
+    }
+
+    private async Task HandleAutoAttachDeliverAsync()
+    {
+        _autoAttachSeq++;
+        _autoAttachMessages.Add(new ChatMessage(
+            $"aa-in-{_autoAttachSeq}", "Delivered while you were reading — scroll contract intact.",
+            _autoAttachFan, ChatMessageType.Incoming, DateTimeOffset.Now));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleGateSend(string text)
+    {
+        _gateSeq++;
+        _gateMessages.Add(new ChatMessage($"gt-own-{_gateSeq}", text, _gateFan, ChatMessageType.Outgoing, DateTimeOffset.Now));
+        StateHasChanged();
+        _ = GateAutoReplyAsync(text);
+    }
+
+    private async Task GateAutoReplyAsync(string text)
+    {
+        try
+        {
+            await Task.Delay(800, _cts.Token);
+            _gateSeq++;
+            _gateMessages.Add(new ChatMessage($"gt-in-{_gateSeq}", $"Thanks for subscribing! Re: “{text}”", _customOwner,
+                ChatMessageType.Incoming, DateTimeOffset.Now));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // The demo page went away during the simulated delay — nothing to answer anymore.
+        }
+    }
+
+    // ── Subscribe Gate: MessageTemplate for the locked voice note ─────────
+    private RenderFragment RenderGateMessage(ChatMessageContext context) => context.Message.Kind switch
+    {
+        "locked" => RenderGateLocked(context),
+        _ => context.DefaultContent,
+    };
+
+    private RenderFragment RenderGateLocked(ChatMessageContext context) => @<TmChatBubble Variant="ChatBubbleVariant.Locked"
+                              data-testid="chat-gate-locked"
+                              ActorLabel="@(context.Message.Author?.Name)"
+                              Timestamp="context.Message.Timestamp"
+                              StatusLabel="Locked — subscribe to read">
+        @* The guard in action: the body is passed but the Locked variant never renders it, so
+           the paid content cannot leak into the DOM before the fan pays. The price shows once
+           (badge only — the Unlock button does not repeat it). *@
+        <ChildContent><span>@context.Message.Text</span></ChildContent>
+        <Badge><span class="chat-demo-badge chat-demo-badge--price">$9.99</span></Badge>
+        <Actions>
+            <div class="chat-demo-bubble-actions">
+                <button type="button" class="chat-demo-bubble-action chat-demo-bubble-action--primary" data-testid="chat-gate-unlock"
+                        aria-label="Unlock voice note"
+                        @onclick="@(() => UnlockGateNoteAsync(context.Message))">Unlock</button>
+            </div>
+        </Actions>
+    </TmChatBubble>;
+
+    private async Task UnlockGateNoteAsync(ChatMessage locked)
+    {
+        // Reveal: the same message falls back to the built-in row once the host clears the kind.
+        ReplaceGate(locked.Id, m => m with { Kind = null, Metadata = new Dictionary<string, object?>() });
+        await InvokeAsync(StateHasChanged);
+        if (_gateChat is not null)
+        {
+            await _gateChat.FocusMessageAsync(locked.Id);
+            await _gateChat.AnnounceAsync("Voice note unlocked.");
+        }
+    }
+
+    private void ReplaceGate(string id, Func<ChatMessage, ChatMessage> update)
+    {
+        var index = _gateMessages.FindIndex(m => m.Id == id);
+        if (index >= 0) _gateMessages[index] = update(_gateMessages[index]);
+    }
+
+    public void Dispose()
+    {
+        // Cancel the demo's own simulated delays (gate auto-reply, load-older) — without this a
+        // pending Task.Delay would keep the circuit alive after the page is gone.
+        _cts.Cancel();
+        _cts.Dispose();
+
+        // Release the demo-only render-window module handle (fire-and-forget: Dispose is
+        // synchronous, a dropped circuit has already disposed the module server-side).
+        var moduleTask = _renderWindowModuleTask;
+        _renderWindowModuleTask = null;
+        if (moduleTask is not null)
+        {
+            _ = ReleaseRenderWindowModuleAsync(moduleTask);
+        }
+    }
+
+    private static async Task ReleaseRenderWindowModuleAsync(Task<IJSObjectReference> moduleTask)
+    {
+        try
+        {
+            var module = await moduleTask;
+            await module.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+        {
+            // Best-effort teardown of a demo helper.
+        }
     }
 }

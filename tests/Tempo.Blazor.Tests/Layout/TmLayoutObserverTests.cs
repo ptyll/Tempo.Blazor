@@ -1,9 +1,15 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using NSubstitute;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Diagram;
+using Tempo.Blazor.Components.Diagram.Models;
+using Tempo.Blazor.Components.Diagram.Stencils;
+using Tempo.Blazor.Components.Diagram.Templates;
 using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Tests.Localization;
 
@@ -361,5 +367,108 @@ public class TmLayoutObserverTests : LocalizationTestBase
 
         cut.Render(parameters => parameters.Add(p => p.Breakpoints, new TmLayoutBreakpoints(752, 768)));
         observe.Invocations.Should().HaveCount(2, "an equal pair (records compare by value) is not a change");
+    }
+
+    [Fact]
+    public async Task AutoUnderAutoParent_InheritedMobileFirstResolution_RaisesOnce_AndALaterJsReportRaisesNothing()
+    {
+        var module = JSInterop.SetupModule(ModulePath);
+        module.SetupVoid("observe", invocation => true);
+
+        var cut = Render<InheritedRaiseHost>();
+        cut.Instance.InnerRaised.Should().BeEmpty("the first frame resolves the parent's desktop default");
+
+        // The parent observer's browser report cascades mobile down to the not-yet-measuring child.
+        var outer = cut.FindComponents<TmLayoutObserver>().First();
+        await cut.InvokeAsync(() => outer.Instance.OnLayoutModeChanged("mobile"));
+
+        cut.Instance.InnerRaised.Should().ContainSingle(
+            "an Auto child with no own measurement adopts the parent's non-Desktop resolution once, so a late-mounted consumer is not stuck on Desktop").Which.Should().Be(TmLayoutMode.Mobile);
+
+        // The child's own measurement then agrees with what it already adopted — not a change.
+        var inner = cut.FindComponents<TmLayoutObserver>().Last();
+        await cut.InvokeAsync(() => inner.Instance.OnLayoutModeChanged("mobile"));
+
+        cut.Instance.InnerRaised.Should().HaveCount(1, "a measurement agreeing with the inherited resolution is not a change");
+    }
+
+    [Fact]
+    public void ForcedLayoutMode_DoesNotRaiseTheFirstResolution()
+    {
+        var raised = new List<TmLayoutMode>();
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => raised.Add(mode)))
+            .AddChildContent("<span>x</span>"));
+
+        raised.Should().BeEmpty("a forced LayoutMode is the host's own value, not a change");
+        cut.Find(".tm-layout").GetAttribute("data-layout").Should().Be("mobile");
+    }
+
+    [Fact]
+    public async Task InitialMode_DoesNotRaiseTheFirstResolution_ButALaterChangeStillDoes()
+    {
+        var module = JSInterop.SetupModule(ModulePath);
+        module.SetupVoid("observe", invocation => true);
+
+        var raised = new List<TmLayoutMode>();
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Auto)
+            .Add(p => p.InitialMode, TmLayoutMode.Mobile)
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => raised.Add(mode)))
+            .AddChildContent("<span>x</span>"));
+
+        raised.Should().BeEmpty("an InitialMode fallback is rendered but is not a change");
+
+        await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("tablet"));
+
+        raised.Should().ContainSingle("only the initial value is exempted; real changes still raise").Which.Should().Be(TmLayoutMode.Tablet);
+    }
+
+    [Fact]
+    public void EditorShellConsumer_UnderMobileViewportScope_AdoptsTheInheritedLayout()
+    {
+        // The TmDiagramEditor renders through TmEditorShell; a callback-only consumer must end up
+        // mobile when it is mounted after the app-level viewport scope already resolved mobile.
+        JSInterop.Mode = JSRuntimeMode.Loose; // the diagram canvas imports its own modules
+        var stencilRegistry = new DiagramStencilRegistry();
+        stencilRegistry.RegisterProvider(new BuiltInDiagramStencilProvider());
+        Services.AddSingleton(stencilRegistry);
+        Services.AddSingleton(new DiagramTemplateRegistry());
+
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.IsViewportScope, true)
+            .AddChildContent<TmDiagramEditor>(child => child.Add(p => p.Document, doc)));
+
+        cut.Find(".tm-diagram-editor").GetAttribute("data-editor-layout").Should().Be("mobile",
+            "the shell's Auto observer inherits the viewport scope's mobile resolution and reports it once, so the callback-only editor adopts it");
+        JSInterop.Invocations.Should().NotContain(invocation =>
+            invocation.Identifier == "import" && invocation.Arguments.OfType<string>().Any(a => a!.Contains("layout-observer")),
+            "a forced ancestor means nothing measures the layout");
+    }
+
+    /// <summary>An Auto observer nested under an Auto observer; the inner one raises into a list.</summary>
+    private sealed class InheritedRaiseHost : ComponentBase
+    {
+        public List<TmLayoutMode> InnerRaised { get; } = [];
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmLayoutObserver>(0);
+            builder.AddComponentParameter(1, nameof(TmLayoutObserver.LayoutMode), TmLayoutMode.Auto);
+            builder.AddComponentParameter(2, nameof(TmLayoutObserver.ChildContent), (RenderFragment)(inner =>
+            {
+                inner.OpenComponent<TmLayoutObserver>(0);
+                inner.AddComponentParameter(1, nameof(TmLayoutObserver.LayoutMode), TmLayoutMode.Auto);
+                inner.AddComponentParameter(2, nameof(TmLayoutObserver.ResolvedLayoutChanged),
+                    EventCallback.Factory.Create<TmLayoutMode>(this, mode => InnerRaised.Add(mode)));
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
     }
 }

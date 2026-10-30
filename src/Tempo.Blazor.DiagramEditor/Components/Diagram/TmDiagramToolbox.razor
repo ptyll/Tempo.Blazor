@@ -39,7 +39,9 @@
         {
             @foreach (var library in _filteredLibraries)
             {
-                <section class="tm-diagram-toolbox__library" data-library-id="@library.Id">
+                <section class="tm-diagram-toolbox__library"
+                         data-library-id="@library.Id"
+                         data-pinned="@(string.Equals(library.Id, PreferredLibraryId, StringComparison.Ordinal) ? "true" : null)">
                     @if (library.ShowHeader)
                     {
                         <div class="tm-diagram-toolbox__library-header">

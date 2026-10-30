@@ -1,0 +1,90 @@
+/* Fáze 15: the preview legend card. The PREVIEW stylesheet positions the card in the canvas
+   corner; these rules only paint it. Tokens only — no editor-internal selectors. */
+.tm-modeling-diagram-legend {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    box-shadow: var(--tm-shadow-sm, none);
+}
+
+.tm-modeling-diagram-legend__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-1);
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+
+.tm-modeling-diagram-legend__toggle:hover {
+    background: var(--tm-color-surface-hover, transparent);
+}
+
+/* Review fix (phase 15): a visible keyboard focus ring — the toggle is otherwise a borderless
+   flat button and keyboard users could not see where focus rests. */
+.tm-modeling-diagram-legend__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-modeling-diagram-legend__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-modeling-diagram-legend__body {
+    display: grid;
+    gap: var(--tm-space-1);
+    max-height: calc(var(--tm-space-16) * 6);
+    padding: 0 var(--tm-space-1) var(--tm-space-1);
+    overflow-y: auto;
+}
+
+.tm-modeling-diagram-legend__group-title {
+    margin: var(--tm-space-1) 0 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-diagram-legend__list {
+    display: grid;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-modeling-diagram-legend__item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-diagram-legend__label {
+    overflow: hidden;
+    font-size: var(--tm-font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-modeling-diagram-legend__empty {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}

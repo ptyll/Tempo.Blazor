@@ -34,8 +34,10 @@
                           NoteOpenerOnMount="true"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
+                          AriaDescribedBy="@(string.IsNullOrEmpty(Subtitle) ? null : _subtitleId)"
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
+                          RestoreFocus="@RestoreFocus"
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId"
                           InitialFocusTargetId="@InitialFocusTargetId">
@@ -62,12 +64,27 @@
                         }
                         @if (!string.IsNullOrEmpty(Subtitle))
                         {
-                            <p class="tm-modal-subtitle">@Subtitle</p>
+                            <p id="@_subtitleId" class="tm-modal-subtitle">@Subtitle</p>
                         }
                     </div>
+                    @if (HeaderActions is not null)
+                    {
+                        @* Fáze 10: a slot for host actions in the header row — e.g. a text "Close"
+                           button replacing the icon-only close on a dialog presentation. Rendered
+                           BETWEEN the header content and the built-in close button, inside the
+                           focus scope, so the trap covers it. Null (default) keeps today's DOM. *@
+                        <div class="tm-modal-header-actions">
+                            @HeaderActions
+                        </div>
+                    }
                     @if (ShowCloseButton)
                     {
-                        <button type="button"
+                        @* The splat goes FIRST so the built-in type/class/@onclick/aria-label win
+                           over a host-supplied attribute of the same name (last write wins in
+                           Blazor); a host splat may only ADD attributes (a test id, a focus hook).
+                        *@
+                        <button @attributes="CloseButtonAdditionalAttributes"
+                                type="button"
                                 class="tm-modal-close"
                                 @onclick="OnClose"
                                 aria-label="@Loc["TmModal_Close"]">
@@ -158,6 +175,25 @@
     [Parameter] public bool Animated { get; set; } = true;
     
     [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>
+    /// Extra content rendered in the header row, between the header content and the built-in close
+    /// button, wrapped in <c>.tm-modal-header-actions</c>. The typical use is a host-styled close
+    /// affordance — e.g. a text <c>TmButton</c> "Close" paired with <see cref="ShowCloseButton"/>
+    /// set to <c>false</c> — or additional header actions. <c>null</c> (the default) keeps
+    /// today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle
+    /// covers it.
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>
+    /// Extra attributes splatted onto the built-in close button — a host-owned
+    /// <c>data-testid</c> or a stable focus hook the host's restore path targets. Rendered only
+    /// with <see cref="ShowCloseButton"/>; never overrides the button's type, class, click
+    /// handler or accessible name.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? CloseButtonAdditionalAttributes { get; set; }
+
     [Parameter] public bool ShowFooter { get; set; } = true;
     [Parameter] public bool ShowDefaultFooterButtons { get; set; } = false;
     [Parameter] public bool ShowOkButton { get; set; } = true;
@@ -194,6 +230,15 @@
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
+    /// <summary>
+    /// Whether the modal's focus scope restores focus on close. Default <c>true</c> (the opener
+    /// is remembered at activation and focus returns there, or to an explicit restore target).
+    /// Set <c>false</c> when the HOST owns the restore — e.g. an editor that closes the dialog
+    /// through its own path and moves focus afterwards (single restore owner — final review):
+    /// the scope then renders <c>data-restore-focus="false"</c> and the module skips the restore.
+    /// </summary>
+    [Parameter] public bool RestoreFocus { get; set; } = true;
+
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
 
@@ -220,6 +265,9 @@
     private ElementReference _panel;
     private TmSheetHandle? _handle;
     private string _titleId = Guid.NewGuid().ToString("N");
+
+    /// <summary>Id of the subtitle paragraph, the scope's aria-describedby target.</summary>
+    private string _subtitleId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _disposed;

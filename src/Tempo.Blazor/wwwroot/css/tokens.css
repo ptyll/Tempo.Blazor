@@ -435,6 +435,14 @@
   --tm-paper-ink-muted:        #4b5563;  /* gray-600, 7.6:1 on white (today's diagram ink) */
   --tm-paper-border:           #d1d5db;  /* gray-300, page edge */
   --tm-paper-backdrop:         #f3f4f6;  /* gray-100, area outside the page */
+  /* Canvas backdrop — the area OUTSIDE a drawing canvas's page (the DiagramEditor first;
+     Modeling/Spreadsheet may follow). Light keeps the paper backdrop gray (today's look); a
+     dark theme re-maps the token to the workspace tone (tokens-dark.css) so the white paper
+     floats on a dark canvas. Hosts restyle the backdrop by overriding THIS token, not
+     --tm-paper-backdrop — a paper-backdrop override only reaches the canvas in LIGHT themes
+     (the dark theme roots re-map this token and win over :root). The DiagramEditor keeps a
+     --tm-diagram-backdrop alias on .tm-diagram-canvas for hosts that targeted that name. */
+  --tm-canvas-backdrop:        var(--tm-paper-backdrop);
   /* Danger INK on the paper (Fáze 9A review). A paper surface is white in every theme, so the chrome's
      --tm-color-danger-text — which flips to #fca5a5 in dark mode, 2.3:1 on white — cannot be used on it.
      Literal light value, deliberately NOT re-declared in tokens-dark.css (same rule as --tm-paper*). */

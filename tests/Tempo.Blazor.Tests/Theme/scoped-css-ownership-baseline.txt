@@ -1,7 +1,7 @@
 # Baseline of scoped .razor.css rules whose key class is rendered by a DIFFERENT component.
 # May only shrink. Format: <relative path> :: <class>
-# Frozen by F0 (P21). Moving the Gantt rules is the Gantt plan's work; the Notion and Modeling rows belong to those plans.
-src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor.css :: tm-btn
+# Frozen by F0 (P21). Moving the Gantt rules is the Gantt plan's work; the Notion rows belong to
+# that plan. The Modeling row was fixed by the Modeling redesign plan phase 1 (::deep).
 src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Layout/TmNotionColumnBlock.razor.css :: tm-notion-block-list
 src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Layout/TmNotionColumnBlock.razor.css :: tm-notion-block-list__after
 src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__cell

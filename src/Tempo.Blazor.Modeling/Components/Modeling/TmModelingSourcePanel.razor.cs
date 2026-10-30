@@ -1,5 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Modeling;
 
 namespace Tempo.Blazor.Components.Modeling;
@@ -33,9 +35,18 @@ public partial class TmModelingSourcePanel
         ? Loc["TmModelingSourcePanel_Unknown"]
         : Metadata.IsFresh ? Loc["TmModelingSourcePanel_Fresh"] : Loc["TmModelingSourcePanel_Stale"];
 
-    private string FreshnessBadgeClass => Metadata?.IsFresh == true
-        ? "tm-modeling-source-panel__badge tm-modeling-source-panel__badge--fresh"
-        : "tm-modeling-source-panel__badge tm-modeling-source-panel__badge--stale";
+    /// <summary>Badge color variant for the freshness indicator (success when fresh, warning when stale).</summary>
+    private BadgeVariant FreshnessBadgeVariant => Metadata?.IsFresh == true
+        ? BadgeVariant.Success
+        : BadgeVariant.Warning;
+
+    /// <summary>Badge icon: a check for fresh metadata, a warning triangle for stale metadata.</summary>
+    private string? FreshnessIcon => Metadata?.IsFresh == true
+        ? IconNames.CheckCircle
+        : IconNames.AlertTriangle;
+
+    /// <summary>Refresh icon on the load button; suppressed while the loading spinner replaces it.</summary>
+    private string? LoadButtonIcon => EffectiveIsLoading ? null : IconNames.Refresh;
 
     private string DisplaySourceSystem => string.IsNullOrWhiteSpace(Metadata?.SourceSystem)
         ? Loc["TmModelingSourcePanel_Unknown"]

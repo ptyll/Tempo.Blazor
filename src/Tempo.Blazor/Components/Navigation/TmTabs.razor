@@ -84,6 +84,7 @@
     </div>;
 
     private RenderFragment HeaderStrip => @<div class="tm-tabs__header" role="tablist" aria-label="@AriaLabel" @onkeydown="HandleKeyDown">
+        @{ _renderedHeaderInputs = CaptureHeaderInputs(); }
         @foreach (var panel in _panels)
         {
             var isActive = panel.Id == ActiveTabId;
@@ -208,6 +209,32 @@
         }
     }
 
+    /// <summary>
+    /// The header inputs (title, icon, badge, disabled) AS the strip last rendered them, plus the
+    /// current values of the registered panels. The strip is built from the panel INSTANCES, so a
+    /// dynamic header input (a badge count that follows a selection) can lag one render pass
+    /// behind the panels' parameters (the panel SetParametersAsync runs after the strip of the
+    /// same pass built) — <see cref="OnAfterRenderAsync"/> compares the two snapshots and
+    /// re-renders ONCE when they disagree. A static strip settles after the single
+    /// registered-panels render it always did, so the frozen no-slot markup hash is untouched.
+    /// </summary>
+    private (string? Title, string? Icon, string? Badge, bool Disabled)[]? _renderedHeaderInputs;
+
+    /// <summary>
+    /// The ONE-extra-render bound of the header resync above. The extra render is allowed ONCE
+    /// per OUTSIDE render pass; while the flag is set, a still-diverging comparison records the
+    /// snapshot but renders no further. This is what keeps a NON-IDEMPOTENT header input (a
+    /// title or badge re-evaluated per fragment execution) from rendering forever: the strip is
+    /// rebuilt from the panel INSTANCES before their parameters of the same pass land, so such
+    /// an input diverges on EVERY render — bounded, it costs exactly one resync per outside
+    /// render; unbounded, the resync would feed itself (<c>TmTabsTests.Non_idempotent_title_does_not_render_loop</c>).
+    /// A render that compares EQUAL clears the flag, so the next outside render may resync again.
+    /// </summary>
+    private bool _headerResyncRendered;
+
+    private (string? Title, string? Icon, string? Badge, bool Disabled)[] CaptureHeaderInputs()
+        => _panels.Select(panel => (panel.Title, panel.Icon, panel.Badge, panel.Disabled)).ToArray();
+
     internal void UnregisterPanel(TmTabPanel panel)
     {
         _panels.RemoveAll(p => p.Id == panel.Id);
@@ -327,6 +354,33 @@
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Dynamic header inputs (see _renderedHeaderInputs): the panels' parameters landed AFTER
+        // the strip of this pass was built, so a changed badge/title would otherwise lag one
+        // interaction. One extra render shows it — ONCE per outside render pass (see
+        // _headerResyncRendered); the next pass sees equal snapshots and the compare never
+        // re-arms (a strip whose inputs are static stays a single render).
+        var current = CaptureHeaderInputs();
+        if (_renderedHeaderInputs is null || !current.SequenceEqual(_renderedHeaderInputs))
+        {
+            if (!_headerResyncRendered)
+            {
+                _headerResyncRendered = true;
+                _renderedHeaderInputs = current;
+                StateHasChanged();
+            }
+            else
+            {
+                // Still diverging after the one allowed resync render: a non-idempotent header
+                // input. Record the snapshot without rendering again — the NEXT outside render
+                // gets its own resync budget (the flag clears on the first equal comparison).
+                _renderedHeaderInputs = current;
+            }
+        }
+        else
+        {
+            _headerResyncRendered = false;
+        }
+
         if (!_focusSelectedTabAfterRender) return;
 
         _focusSelectedTabAfterRender = false;

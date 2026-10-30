@@ -332,18 +332,19 @@ public class PluralLocalizerTests
         Real().Plural("TmDocumentEditor_ReviewSummaryRevisions", count).Should().Be(expected);
     }
 
+    // The Modeling issue count was rewritten (Modeling redesign plan, phase 1) from a plural
+    // family to the NEUTRAL B16 formulation ("Nálezy: {0}" / "Issues: {0}") — no language has to
+    // pick a grammatical form for a simple panel header. Plural() falls through to the plain key.
     [Theory]
-    [InlineData("cs", 1, "1 nález")]
-    [InlineData("cs", 3, "3 nálezy")]
-    [InlineData("cs", 7, "7 nálezů")]
-    [InlineData("en", 1, "1 issue")]
-    [InlineData("en", 2, "2 issues")]
-    [InlineData("fr", 1, "1 problème")]
-    [InlineData("fr", 2, "2 problèmes")]
-    [InlineData("sk", 1, "1 nález")]
-    [InlineData("sk", 3, "3 nálezy")]
-    [InlineData("sk", 7, "7 nálezov")]
-    public void The_modeling_issue_count_is_natural_in_every_language(string culture, int count, string expected)
+    [InlineData("cs", 1, "Nálezy: 1")]
+    [InlineData("cs", 7, "Nálezy: 7")]
+    [InlineData("en", 1, "Issues: 1")]
+    [InlineData("en", 2, "Issues: 2")]
+    [InlineData("fr", 1, "Problèmes : 1")]
+    [InlineData("fr", 2, "Problèmes : 2")]
+    [InlineData("sk", 1, "Problémy: 1")]
+    [InlineData("sk", 7, "Problémy: 7")]
+    public void The_modeling_issue_count_is_neutral_in_every_language(string culture, int count, string expected)
     {
         using var _ = CultureScope.Use(culture);
         Real().Plural("TmModelingIssuePanel_Count", count).Should().Be(expected);

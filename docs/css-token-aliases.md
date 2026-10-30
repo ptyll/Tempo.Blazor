@@ -53,7 +53,8 @@ again in the dark file.
 | `--tm-paper-ink` | `#1f2937` (literal, gray-800) | Theme-invariant ink on paper. 14.7:1 on white. Same light-only declaration rule as `--tm-paper`. |
 | `--tm-paper-ink-muted` | `#4b5563` (literal, gray-600) | Muted ink on paper (today's diagram node ink). 7.6:1 on white. Same light-only declaration rule. |
 | `--tm-paper-border` | `#d1d5db` (literal, gray-300) | Page edge drawn around the paper. Same light-only declaration rule. |
-| `--tm-paper-backdrop` | `#f3f4f6` (literal, gray-100) | Area outside the page. Same light-only declaration rule. |
+| `--tm-paper-backdrop` | `#f3f4f6` (literal, gray-100) | Area outside the page. Same light-only declaration rule. A host override reaches the diagram canvas in LIGHT themes only (see `--tm-canvas-backdrop`). |
+| `--tm-canvas-backdrop` | `var(--tm-paper-backdrop)` (dark: `var(--tm-bg-workspace)`) | The area OUTSIDE a drawing canvas's page — THEME-AWARE (light keeps the paper-backdrop gray, dark rides the workspace tone). The DiagramEditor resolves it through the `--tm-diagram-backdrop` alias on `.tm-diagram-canvas`. |
 | `--tm-bg-workspace` | alias of `--tm-bg-page` | Canvas behind cards. Only the indigo theme overrides it; `--tm-bg-page` never moves. |
 | `--tm-radius-card` | `--tm-radius-lg` | Cards. Equal to today's card radius, so consuming it changes nothing. |
 | `--tm-radius-control` | `--tm-radius-md` | Buttons, inputs, chips. Equal to today's control radius. |

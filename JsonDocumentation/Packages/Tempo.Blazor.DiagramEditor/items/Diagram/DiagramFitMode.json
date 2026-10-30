@@ -1,0 +1,28 @@
+{
+  "kind": "Enum",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "How TmDiagramEditor.FitToViewAsync (and the canvas fit) computes the fitted scale (Fáze 9, embedded viewers).",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramFitMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramFitMode",
+  "values": [
+    {
+      "name": "Page",
+      "value": "0",
+      "description": "Fit the whole content (both axes) into the editor's box — the default, today's behavior."
+    },
+    {
+      "name": "Width",
+      "value": "1",
+      "description": "Scale so the content width matches the container width; the height may overflow and scroll (the embedded mobile preview's fit-on-load)."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Fit a tall diagram to the editor width",
+      "code": "await editor.FitToViewAsync(DiagramFitMode.Width);"
+    }
+  ]
+}

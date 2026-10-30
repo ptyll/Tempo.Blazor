@@ -55,7 +55,10 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync();
 
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Switch to dark mode" }).Last.ClickAsync();
+        // Review fix (phase 5): the /modeling-editor demo page hides the demo sidebar from 1264px
+        // of viewport up (the editor needs the full width for the 1200px desktop dock), so the
+        // sidebar's toggle is display:none — dispatch the click instead of pointing a cursor at it.
+        await page.Locator("[data-testid='theme-toggle']").Last.DispatchEventAsync("click");
         await page.Locator("div[data-theme='dark']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await page.WaitForTimeoutAsync(300);
 
@@ -65,14 +68,21 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Mobile viewport uses switchable panels and keeps only one panel active at a time")]
-    public async Task DemoRoute_MobilePanelsAreSwitchableWithoutOverlap()
+    [DataRow(390, 844)]
+    [DataRow(320, 640)]
+    [Description("Mobile viewport (Fáze 7 band): the tablist panels switch and keep only one panel active at a time, without horizontal overflow")]
+    public async Task DemoRoute_MobilePanelsAreSwitchableWithoutOverlap(int width, int height)
     {
-        var page = await OpenLoadedModelingPageAsync(width: 375, height: 812);
+        var page = await OpenLoadedTouchModelingPageAsync(width, height);
 
         await AssertPanelTabsVisibleAsync(page);
         await WaitForEditorAttributeAsync(page, "data-active-panel", "preview");
         Assert.AreEqual(1, await CountVisiblePanelsAsync(page));
+
+        // The tab strip is a real tablist ordered Preview | Tree | Inspector | Issues.
+        var tablist = page.Locator("[data-testid='modeling-panel-tabs'] [role='tablist']");
+        Assert.AreEqual(1, await tablist.CountAsync(), "the mobile panel strip is a tablist");
+        Assert.AreEqual(4, await tablist.Locator("[role='tab']").CountAsync());
 
         await page.Locator("[data-testid='modeling-panel-tab-tree']").ClickAsync();
         await WaitForEditorAttributeAsync(page, "data-active-panel", "tree");
@@ -81,9 +91,14 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
         await page.Locator("[data-testid='modeling-panel-tab-inspector']").ClickAsync();
         await WaitForEditorAttributeAsync(page, "data-active-panel", "inspector");
         Assert.AreEqual(1, await CountVisiblePanelsAsync(page));
+
+        await page.Locator("[data-testid='modeling-panel-tab-issues']").ClickAsync();
+        await WaitForEditorAttributeAsync(page, "data-active-panel", "issues");
+        Assert.AreEqual(1, await CountVisiblePanelsAsync(page));
+
         Assert.IsTrue(await HasNoHorizontalOverflowAsync(page), "Mobile layout should not create horizontal overflow.");
 
-        await SaveStableScreenshotAsync(page, "demo-mobile-375.png");
+        await SaveStableScreenshotAsync(page, $"demo-mobile-{width}x{height}.png");
     }
 
     [TestMethod]
@@ -117,6 +132,31 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
     private async Task<IPage> OpenLoadedModelingPageAsync(int width = 1280, int height = 720)
     {
         var context = await CreateEnglishContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(width, height);
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        await WaitForLoadedEditorAsync(page);
+        return page;
+    }
+
+    /// <summary>Loads the demo editor inside a touch-capable context (the mobile band needs
+    /// real touch targets, Fáze 7).</summary>
+    private async Task<IPage> OpenLoadedTouchModelingPageAsync(int width, int height)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'en');
+            localStorage.removeItem('tm-demo-theme');
+            """);
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
         await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?notation=bpmn&viewpoint=overview", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
@@ -195,7 +235,8 @@ public sealed class ModelingDemoPageM23E2ETests : WasmTestBase
                 const selectors = [
                     "[data-testid='modeling-model-tree-panel']",
                     "[data-testid='modeling-preview-panel']",
-                    "[data-testid='modeling-inspector-panel']"
+                    "[data-testid='modeling-inspector-panel']",
+                    "[data-testid='modeling-issues-panel']"
                 ];
 
                 return selectors

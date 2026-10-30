@@ -1,0 +1,81 @@
+@namespace Tempo.Blazor.Demo.SharedUI.Components
+@using System.Threading
+@implements IDisposable
+
+@* Per-second countdown for the custom-chat demo's queued rows (FZE-9). The child owns the ONLY
+   PeriodicTimer on the page, so each tick re-renders just this span — the ChatPage itself (and
+   the rest of the chat) stays still. When the moment passes, OnExpired lets the HOST send the
+   message; the row then unmounts and the timer is cancelled in Dispose. *@
+<span class="chat-demo-countdown" data-testid="chat-custom-countdown">@_text</span>
+
+@code {
+    /// <summary>The moment the queued reply sends.</summary>
+    [Parameter] public DateTimeOffset Until { get; set; }
+
+    /// <summary>Raised once when the countdown reaches zero (the host sends the message).</summary>
+    [Parameter] public EventCallback OnExpired { get; set; }
+
+    private string _text = string.Empty;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+        => _text = FormatRemaining();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (Remaining() <= TimeSpan.Zero)
+        {
+            await OnExpired.InvokeAsync();
+            return;
+        }
+
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            {
+                _text = FormatRemaining();
+                if (Remaining() <= TimeSpan.Zero)
+                {
+                    // The host sends the message; the row (and this countdown) unmounts — do not
+                    // touch StateHasChanged afterwards, the component is about to be disposed.
+                    await OnExpired.InvokeAsync();
+                    return;
+                }
+
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Dispose cancelled the loop — the expected shutdown path.
+        }
+        catch (ObjectDisposedException)
+        {
+            // The timer was disposed between ticks — the expected shutdown path.
+        }
+    }
+
+    private TimeSpan Remaining()
+        => Until - DateTimeOffset.Now;
+
+    private string FormatRemaining()
+    {
+        var left = Remaining();
+        if (left <= TimeSpan.Zero) return "· Sending…";
+
+        var total = (int)Math.Ceiling(left.TotalSeconds);
+        return $"· Sends in {total / 60}:{total % 60:D2}";
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _timer?.Dispose();
+    }
+}

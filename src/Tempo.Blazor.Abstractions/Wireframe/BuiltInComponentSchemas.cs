@@ -1056,6 +1056,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("removable", "Removable", PropType.Bool,   true,      cat: "Behavior"),
                 P("variant",   "Variant",   PropType.Enum,   "default", cat: "Appearance",
                     opts: ["default","primary","success","danger","warning"]),
+                // Phase 15b: the toggle variant (native <button aria-pressed>) — the wireframe
+                // draws the pressed look, the same contract as the toolbar button.
+                P("pressed",   "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 
@@ -2692,6 +2695,16 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("title", "Title", PropType.String, "Model", cat: "Content"),
+                P("showProviderSelector", "Show Provider Selector", PropType.Bool, true, cat: "Content"),
+                // Fáze 15: the preview legend card is part of the editor's look from this phase
+                // on (desktop/tablet card in the canvas corner, mobile "⋯" sheet).
+                P("showPreviewLegend", "Show Preview Legend", PropType.Bool, true, cat: "Content"),
+                // The editor's responsive band is a stated wireframe decision (the tablet band
+                // docks through the shell, the mobile band is the G2 viewing + light-edit
+                // presentation with the tablist panels and the in-flow action bar) — mirrors
+                // TmDiagramEditor.layoutMode.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

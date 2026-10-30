@@ -321,6 +321,7 @@ window.tmDiagramEditor = {
         inst._onContextMenu = (e) => this._onContextMenu(e, inst);
         inst._onDblClick = (e) => this._onDblClick(e, inst);
 
+        inst._onSearchEscape = (e) => this._onSearchEscape(e, inst);
         inst.container.addEventListener('mousedown', inst._onMouseDown);
         inst.container.addEventListener('wheel', inst._onWheel, { passive: false });
         inst.container.addEventListener('drop', inst._onDrop);
@@ -329,7 +330,13 @@ window.tmDiagramEditor = {
         inst.container.addEventListener('dblclick', inst._onDblClick);
         document.addEventListener('mousemove', inst._onMouseMove, true);
         document.addEventListener('mouseup', inst._onMouseUp, true);
-        document.addEventListener('keydown', inst._onKeyDown);
+        // Both keydown listeners run in the CAPTURE phase: the core tm-focus-trap module honors
+        // Escape on a document BUBBLE keydown listener, so a bubble-phase consumer would race it
+        // (registration order would decide the winner). Capture always runs before any bubble
+        // listener; a consumed Escape is marked with preventDefault + tmEscapeHandled so the trap
+        // (and any later consumer) skips it. See _onSearchEscape / _onKeyDown.
+        document.addEventListener('keydown', inst._onSearchEscape, true);
+        document.addEventListener('keydown', inst._onKeyDown, true);
         document.addEventListener('keyup', inst._onKeyUp);
     },
 
@@ -342,8 +349,83 @@ window.tmDiagramEditor = {
         if (inst._onDblClick) inst.container.removeEventListener('dblclick', inst._onDblClick);
         document.removeEventListener('mousemove', inst._onMouseMove, true);
         document.removeEventListener('mouseup', inst._onMouseUp, true);
-        document.removeEventListener('keydown', inst._onKeyDown);
+        if (inst._onSearchEscape) {
+            document.removeEventListener('keydown', inst._onSearchEscape, true);
+            inst._onSearchEscape = null;
+        }
+        document.removeEventListener('keydown', inst._onKeyDown, true);
         document.removeEventListener('keyup', inst._onKeyUp);
+    },
+
+    // ── Order-independent Escape consumers (capture phase) ───────────────────
+    // The host page may layer this editor inside an overlay (a TmModal dialog) whose focus trap
+    // honors Escape on a document BUBBLE keydown listener. Any consumer registered in the bubble
+    // phase would be order-dependent against it, so the editor's Escape consumers run in the
+    // CAPTURE phase and mark an Escape they actually handle (preventDefault + tmEscapeHandled) —
+    // the trap and any later consumer skip a handled one. An Escape NOBODY here consumes must stay
+    // unmarked so it keeps bubbling and closes the host overlay (draw.io ordering: an empty canvas
+    // Escape belongs to the dialog).
+
+    // Escape closes the TOPMOST layer only — one press closes ONE layer (Fáze 10, confirmed
+    // ordering: context menu > "⋯" view menu > search panel > inline edit > gesture/selection >
+    // the host dialog). While the custom context menu is open it owns the Escape through its own
+    // capture handler (this consumer must not close a surface under it); with the menu gone the
+    // view menu outranks the search panel, and an Escape typed into an inline edit cancels the
+    // edit without closing a host overlay. All consumers only fire while the focus is inside the
+    // editor root, so an Escape typed elsewhere (another surface of the host page) is not stolen.
+    _onSearchEscape: function (e, inst) {
+        if (!inst.container || !inst.container.closest || !inst.dotNetRef) return;
+        if (!e || e.key !== 'Escape' || e.defaultPrevented || e.tmEscapeHandled) return;
+        // The open context menu is the topmost layer: its _menuKeyHandler (capture, registered on
+        // open) consumes the Escape — skipping here is what makes the MENU close before the
+        // search panel even though this listener was registered first.
+        if (inst._menuOpen) return;
+        const root = inst.container.closest('.tm-diagram-editor');
+        if (!root) return;
+        if (!root.contains(document.activeElement)) return;
+
+        const viewMenu = root.querySelector('.tm-diagram-editor__view-menu[data-open]');
+        if (viewMenu) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            inst.dotNetRef.invokeMethodAsync('OnViewMenuEscape');
+            return;
+        }
+
+        const panel = root.querySelector('.tm-diagram-search-panel');
+        if (panel) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            inst.dotNetRef.invokeMethodAsync('OnSearchEscape');
+            return;
+        }
+
+        // Fáze 10: an Escape typed into an INLINE EDIT of the canvas (the edge-label foreignObject
+        // input or a node inline editor input/textarea) belongs to the editor: the edit CANCELS
+        // (value reverted, nothing pushed to the undo stack) and the Escape is consumed so a host
+        // overlay (the open-editor dialog) does not close under the caret. The owning component is
+        // notified — a node inline editor through its registered TmDiagramStencilShape, the canvas
+        // through OnInlineEditEscape (which also covers the edge-label input). Reaching this
+        // branch means no menu, no view menu and no panel consumed the key.
+        const active = document.activeElement;
+        if (active && typeof active.closest === 'function'
+            && inst.container.contains(active)
+            && active.closest('.tm-diagram-node__inline-input, .tm-diagram-node__inline-textarea, .tm-diagram-edge-label-input')) {
+            e.preventDefault();
+            e.tmEscapeHandled = true;
+            const nodeGroup = active.closest('g.tm-diagram-node[data-node-id]');
+            const shapeRef = nodeGroup && window.tmDiagramStencilShape
+                ? window.tmDiagramStencilShape.getRef(nodeGroup.getAttribute('data-node-id'))
+                : null;
+            if (shapeRef && typeof shapeRef.invokeMethodAsync === 'function') {
+                shapeRef.invokeMethodAsync('CancelActiveEditFromJs');
+                // The node inline editor unmounts with the cancel, so the focus would drop to
+                // body: return it to the canvas container (the canvas side mirrors this for the
+                // edge-label path through FocusCanvasAsync).
+                inst.container.focus({ preventScroll: true });
+            }
+            inst.dotNetRef.invokeMethodAsync('OnInlineEditEscape');
+        }
     },
 
     _onDrop: function (e, inst) {
@@ -3006,7 +3088,11 @@ window.tmDiagramEditor = {
     // ── Keyboard shortcuts ───────────────────────────────────────────────────
 
     _onKeyDown: function (e, inst) {
-        if (!inst.container.contains(document.activeElement) && document.activeElement !== document.body) return;
+        // The document.body fallback does not apply when this editor sits inside an INERT
+        // subtree (the host overlay's background — e.g. the Modeling preview behind the open
+        // open-editor dialog): the dialog's editor owns the keys, this canvas is inert.
+        if (!inst.container.contains(document.activeElement)
+            && (document.activeElement !== document.body || inst.container.closest('[inert]'))) return;
 
         const ids = [...inst.selectedIds];
 
@@ -3035,10 +3121,24 @@ window.tmDiagramEditor = {
             return;
         }
 
+        // Escape consumes ONLY what this editor actually handles (a running gesture/session or a
+        // non-empty selection). The preventDefault lives inside each consuming branch: an Escape
+        // with nothing to consume stays unmarked, keeps bubbling and closes a host overlay (a
+        // TmModal dialog) through its own document-level listener — the capture registration plus
+        // _onSearchEscape above make the ordering against that listener deterministic.
         if (e.key === 'Escape') {
-            e.preventDefault();
-            if (inst.isRotating) { this._cancelRotateSession(inst); return; }
+            // A capture-phase consumer that ran BEFORE this handler (e.g. _onSearchEscape —
+            // inline edit / search panel / view menu / context menu) already owns this Escape:
+            // skip entirely so e.g. a non-empty selection is not ALSO cleared on the same
+            // keypress while an inline editor cancels.
+            if (e.defaultPrevented || e.tmEscapeHandled) return;
+            if (inst.isRotating) {
+                e.preventDefault();
+                this._cancelRotateSession(inst);
+                return;
+            }
             if (inst.isPendingEdgeDraw) {
+                e.preventDefault();
                 inst.isPendingEdgeDraw = false;
                 inst.pendingEdgeStart = null;
                 if (inst.toolMode === 'edge') {
@@ -3048,10 +3148,12 @@ window.tmDiagramEditor = {
                 return;
             }
             if (inst.isDrawingEdge) {
+                e.preventDefault();
                 this._cancelEdgeDraw(inst);
                 return;
             }
             if (inst.isDraggingWaypoint && inst.dotNetRef) {
+                e.preventDefault();
                 inst.isDraggingWaypoint = false;
                 inst.dragWaypointEdgeId = null;
                 inst.dragWaypointIndex = null;
@@ -3061,6 +3163,7 @@ window.tmDiagramEditor = {
                 return;
             }
             if (inst.isDraggingWholeEdge) {
+                e.preventDefault();
                 const edgeId = inst.dragWholeEdgeId;
                 const group = inst.svg.querySelector('g.tm-diagram-edge-group[data-edge-id="' + edgeId + '"]');
                 if (group) {
@@ -3073,9 +3176,15 @@ window.tmDiagramEditor = {
                 inst.container.style.cursor = inst.toolMode === 'pan' ? 'grab' : '';
                 return;
             }
-            inst.selectedIds.clear();
-            this._updateSelection(inst);
-            inst.dotNetRef.invokeMethodAsync('OnClearSelection');
+            if (ids.length > 0) {
+                e.preventDefault();
+                // A consumed Escape: the selection clear is this editor's action, so a host
+                // overlay must not also close on the same keypress (final review).
+                e.tmEscapeHandled = true;
+                inst.selectedIds.clear();
+                this._updateSelection(inst);
+                inst.dotNetRef.invokeMethodAsync('OnClearSelection');
+            }
             return;
         }
 
@@ -3886,7 +3995,10 @@ window.tmDiagramEditor = {
         }
     },
 
-    fitToView: function (container, padding) {
+    // Fáze 9: `mode` is additive — 'width' scales by the container width ONLY (a taller-than-box
+    // diagram stays scrollable instead of shrinking to the height); the default (undefined/null)
+    // keeps today's page fit (both axes). The two-argument signature stays valid.
+    fitToView: function (container, padding, mode) {
         const inst = this.instances.get(container.id);
         if (!inst) return 1.0;
         padding = (padding != null) ? padding : 40;
@@ -3926,11 +4038,21 @@ window.tmDiagramEditor = {
         const contentW = maxX - minX + padding * 2;
         const contentH = maxY - minY + padding * 2;
         const svgRect = inst.svg.getBoundingClientRect();
-        const fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
-        const newW = svgRect.width / fitScale;
-        const newH = svgRect.height / fitScale;
-        const nx = minX - padding;
-        const ny = minY - padding;
+        let fitScale;
+        let newW, newH, nx, ny;
+        if (mode === 'width') {
+            // Width mode: the CONTAINER WIDTH over the CONTENT WIDTH decides the scale — the
+            // height is ignored, so a tall diagram overflows (scrolls) instead of shrinking.
+            // Short content is TOP-ALIGNED in the visible band (the band's top edge pins the
+            // content; a centered placement would let it drift when the band resizes).
+            fitScale = this._clampScale(Math.min(svgRect.width / contentW, this.FIT_MAX_SCALE));
+        } else {
+            fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
+        }
+        newW = svgRect.width / fitScale;
+        newH = svgRect.height / fitScale;
+        nx = minX - padding;
+        ny = minY - padding;
         this._setViewBox(inst, nx, ny, newW, newH);
         if (inst.dotNetRef) {
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', nx, ny, newW, newH);
@@ -3977,8 +4099,13 @@ window.tmDiagramEditor = {
         const self = this;
         // Clean up any existing dismiss handlers first
         self._teardownMenu(inst);
+        // Flag the menu as open SYNCHRONOUSLY: an Escape typed between this call and the deferred
+        // placement (setTimeout 0) must already see `_menuOpen` in _onSearchEscape, otherwise the
+        // capture consumer would close a surface UNDER the still-opening menu.
+        inst._menuOpen = true;
         setTimeout(function () {
             if (!menuEl) return;
+            if (!inst._menuOpen) return; // closed again before the deferred placement ran
             const margin = 8;
             // VIEWPORT coordinates from C# (data-screen-x/y); the style is OUR output and may
             // already be translated by an earlier call — never read it back.
@@ -4011,7 +4138,7 @@ window.tmDiagramEditor = {
             menuEl.style.left = pos.left + 'px';
             menuEl.style.top = pos.top + 'px';
 
-            inst._menuOpen = true;
+            // (_menuOpen was already set synchronously before this deferred placement.)
 
             // A11y: roving focus over the native menuitem buttons — focus the first ENABLED item
             // after placement, ArrowUp/Down/Home/End move (no Enter/Space emulation: the items are
@@ -4035,6 +4162,13 @@ window.tmDiagramEditor = {
             };
             inst._menuKeyHandler = function (e) {
                 if (e.key === 'Escape') {
+                    // One gesture closes ONE layer: an Escape an earlier capture consumer already
+                    // handled (the search panel, the view menu) is not re-consumed here.
+                    if (e.defaultPrevented || e.tmEscapeHandled) return;
+                    // Capture-phase consumers (see _onSearchEscape): the open menu owns this
+                    // Escape — mark it so the focus trap (and the canvas handler) never see it.
+                    e.preventDefault();
+                    e.tmEscapeHandled = true;
                     if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
                     self._teardownMenu(inst);
                     return;
@@ -4064,7 +4198,9 @@ window.tmDiagramEditor = {
             // pointerdown in the CAPTURE phase, not mousedown: a touch tap on the canvas must
             // dismiss the menu too, before the pan / edge-draw sessions claim the press.
             document.addEventListener('pointerdown', inst._menuDismissHandler, true);
-            document.addEventListener('keydown', inst._menuKeyHandler);
+            // Escape must beat the bubble-phase focus trap (order-independent consumers):
+            // the key handler runs in the CAPTURE phase too.
+            document.addEventListener('keydown', inst._menuKeyHandler, true);
         }, 0);
     },
 
@@ -4076,7 +4212,7 @@ window.tmDiagramEditor = {
             inst._menuDismissHandler = null;
         }
         if (inst._menuKeyHandler) {
-            document.removeEventListener('keydown', inst._menuKeyHandler);
+            document.removeEventListener('keydown', inst._menuKeyHandler, true);
             inst._menuKeyHandler = null;
         }
         inst._menuOpen = false;
@@ -4126,11 +4262,16 @@ window.tmDiagramEditor = {
 
     addPageViewMargin: function (container, margin) {
         const inst = this.instances.get(container ? container.id : null);
-        if (!inst || !inst.svg) return;
+        if (!inst || !inst.svg) return 1.0;
         const vb = this._getViewBox(inst);
         this._setViewBox(inst, vb.x - margin, vb.y - margin, vb.w + margin * 2, vb.h + margin * 2);
-        if (inst.dotNetRef)
+        if (inst.dotNetRef) {
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x - margin, vb.y - margin, vb.w + margin * 2, vb.h + margin * 2);
+            // The margin GROWS the viewBox, so the scale shrank — report the FINAL zoom (Fáze 9
+            // review: a fit followed by the margin must not leave a pre-margin zoom label).
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+        }
+        return inst.scale;
     },
 
     // ── Toolbox drag init ─────────────────────────────────────────────────────
