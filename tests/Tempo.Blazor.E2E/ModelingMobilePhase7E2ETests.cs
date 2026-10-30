@@ -172,6 +172,38 @@ public sealed class ModelingMobilePhase7E2ETests : WasmTestBase
             $"the preview canvas keeps ≥240px at 390x844 (measured {canvasHeight:0}px)");
     }
 
+    // ── Fáze 15: the mobile legend sheet ─────────────────────────────────────
+
+    [TestMethod]
+    [Description("390 touch: the compact header ⋯ carries a Legenda entry opening the legend bottom sheet")]
+    public async Task Mobile_390_LegendSheetOpensFromHeaderOverflow()
+    {
+        var page = await OpenTouchAsync(390, 844);
+
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-legend-sheet']").CountAsync(),
+            "the legend sheet starts closed");
+
+        await page.Locator("[data-testid='modeling-editor-toolbar'] .tm-modeling-editor__more .tm-dropdown-trigger")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        var menu = page.Locator(".tm-modeling-editor__more");
+        await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        Assert.AreEqual(1, await menu.Locator(".tm-dropdown-item")
+            .Filter(new LocatorFilterOptions { HasTextString = "Legend" }).CountAsync(),
+            "the ⋯ menu carries the Legenda entry");
+
+        await menu.Locator(".tm-dropdown-item").Filter(new LocatorFilterOptions { HasTextString = "Legend" })
+            .First.TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+
+        var sheet = page.Locator("[data-testid='modeling-legend-sheet']");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        var legend = sheet.Locator("[data-testid='modeling-preview-legend']");
+        await Assertions.Expect(legend).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10_000 });
+        var items = legend.Locator(".tm-modeling-diagram-legend__list > li");
+        Assert.IsTrue(await items.CountAsync() >= 1, "the sheet legend lists the document's notation types");
+
+        await ShotSettledAsync(page, "legend-390x844");
+    }
+
     // ── Edge cases ───────────────────────────────────────────────────────────
 
     [TestMethod]

@@ -297,14 +297,62 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
             "data-editor-layout", "desktop", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
     }
 
+    // ── Fáze 15: the dialog's notation palette ───────────────────────────────
+
+    [TestMethod]
+    [Description("The dialog toolbox pins the active notation's palette first and inserting from it creates a diagram node")]
+    public async Task Dialog_toolbox_pins_notation_palette_and_inserts_from_it()
+    {
+        // The demo deep link pins the notation — the palette follows the ACTIVE notation.
+        var page = await OpenPageWithDialogAsync(query: "?notation=bpmn");
+
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
+        await Assertions.Expect(pinned).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        // The pinned library is the FIRST one and carries the profile display name.
+        var firstLibraryId = await dialog.Locator(".tm-diagram-toolbox__library").First
+            .GetAttributeAsync("data-library-id");
+        Assert.AreEqual("notation-palette", firstLibraryId, "the notation palette is the first toolbox library");
+        await Assertions.Expect(pinned.Locator(".tm-diagram-toolbox__library-header"))
+            .ToContainTextAsync("BPMN Legacy", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
+        await Assertions.Expect(pinned.Locator("[data-stencil-id='bpmn2.task.user']"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+        // The rest of the stencil library stays reachable below (collapsed, searchable).
+        await Assertions.Expect(dialog.Locator(".tm-diagram-toolbox__search input"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        // Inserting from the palette creates ONLY a diagram node (never a semantic element):
+        // the dialog canvas gains a node with the palette's stencil id.
+        var canvasNodes = dialog.Locator(".tm-diagram-canvas g.tm-diagram-node[data-stencil-id='bpmn2.task']");
+        var before = await canvasNodes.CountAsync();
+        await pinned.Locator("[data-stencil-id='bpmn2.task']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(canvasNodes).ToHaveCountAsync(before + 1,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+    }
+
+    [TestMethod]
+    [Description("Without an active notation the dialog toolbox keeps today's library set (no pinned palette)")]
+    public async Task Dialog_toolbox_without_notation_keeps_todays_library_set()
+    {
+        // The UML demo provider without a ?notation= deep link: the editor's notation stays
+        // empty, so the toolbox must not pin anything (the pre-Fáze-15 default).
+        var page = await OpenPageWithDialogAsync(query: "?provider=tempo.demo.modeling.uml");
+
+        Assert.AreEqual(0, await page.Locator(
+                "[data-testid='modeling-open-diagram-editor'] [data-library-id='notation-palette']").CountAsync(),
+            "no active notation — no pinned palette (today's toolbox)");
+    }
+
     /// <summary>Opens the loaded modeling page and the open-editor dialog.</summary>
-    private async Task<IPage> OpenPageWithDialogAsync(int width = 1440, int height = 900)
+    private async Task<IPage> OpenPageWithDialogAsync(int width = 1440, int height = 900, string query = "")
     {
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(width, height);
-        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}{query}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });

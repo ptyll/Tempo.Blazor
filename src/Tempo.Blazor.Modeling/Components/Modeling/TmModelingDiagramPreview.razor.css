@@ -89,6 +89,17 @@
     overflow: hidden;
 }
 
+/* Fáze 15: the legend card is an overlay in the canvas corner — it never participates in the
+   canvas column's flow (the embedded editor keeps its height) and it leaves the mobile zoom
+   pill (Fáze 9, bottom-right) and the empty-diagram hint (top-center) alone. */
+.tm-modeling-diagram-preview__legend {
+    position: absolute;
+    z-index: 3;
+    bottom: var(--tm-space-4);
+    left: var(--tm-space-4);
+    width: min(calc(var(--tm-space-16) * 5), calc(100% - var(--tm-space-8)));
+}
+
 /* The heading block is removable (ShowHeader=false, the mobile band): the grid drops its auto
    row so the canvas shell takes the 1fr track and the drop hint keeps its auto row. */
 .tm-modeling-diagram-preview--no-header {

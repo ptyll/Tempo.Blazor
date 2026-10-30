@@ -38156,6 +38156,18 @@
               "description": "Raised when selected diagram item identifiers change."
             },
             {
+              "name": "PreferredStencilIds",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Fáze 15 (embedded hosts, e.g. the Modeling \"Open in editor\" dialog): stencil ids to pin as the FIRST toolbox library (order preserved, unknown ids ignored) while the other libraries start collapsed — search still spans the whole stencil library. Null (the default) keeps today's toolbox. Pass-through to TmDiagramToolbox."
+            },
+            {
+              "name": "PreferredStencilsLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Header label of the pinned library (e.g. the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Pass-through to TmDiagramToolbox; ignored while PreferredStencilIds is unset."
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
@@ -38806,6 +38818,39 @@
           ]
         },
         {
+          "itemName": "TmDiagramStencilIcon",
+          "kind": "Component",
+          "category": "Diagram",
+          "namespace": "Tempo.Blazor.Components.Diagram",
+          "description": "Public small stencil preview: renders the registered stencil's compact SVG (the same text-trimming pipeline the toolbox tiles use) for hosts that present stencils outside the toolbox — the Modeling \"Open in editor\" notation palette and the preview legend embed it instead of duplicating the icon markup. Always aria-hidden: the visible text label of the surrounding row/tile owns the accessible name. A stencil id the registry does not know renders the generic fallback shape.",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramStencilIcon.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Diagram"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class."
+            },
+            {
+              "name": "Size",
+              "type": "string?",
+              "isRequired": false,
+              "description": "CSS size of the icon box (applied to width and height). Default \"32px\" — the toolbox tile size."
+            },
+            {
+              "name": "StencilId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Stencil id to preview. Null or unknown ids render the fallback shape."
+            }
+          ]
+        },
+        {
           "itemName": "TmDiagramStencilShape",
           "kind": "Component",
           "category": "Diagram",
@@ -39010,6 +39055,18 @@
               "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
             },
             {
+              "name": "PreferredStencilIds",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Fáze 15 (the Modeling \"Open in editor\" notation palette): stencil ids to pin as the FIRST library — the palette of the active notation — while every other library starts collapsed (search still spans the whole stencil library). Order is preserved; unknown ids are ignored. Null (the default) keeps today's toolbox: no pinned library, all palettes expanded."
+            },
+            {
+              "name": "PreferredStencilsLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Header label of the pinned library (the Modeling dialog passes the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Ignored while PreferredStencilIds is unset."
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
@@ -39125,11 +39182,11 @@
         }
       ],
       "summary": {
-        "itemCount": 144,
-        "manualItemCount": 144,
-        "generatedItemCount": 135,
+        "itemCount": 145,
+        "manualItemCount": 145,
+        "generatedItemCount": 136,
         "generatedOnlyItemCount": 0,
-        "componentCount": 17,
+        "componentCount": 18,
         "publicApiTypeCount": 118
       }
     },
@@ -43942,6 +43999,26 @@
           ]
         },
         {
+          "itemName": "ModelingNotationCatalog",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "Fáze 15: the ONE notation catalog behind both the \"Open in editor\" palette (the pinned stencil library) and the preview legend — the notation profile's semantic types mapped to diagram stencils through the shared IModelingStencilMapper. Resolution is memoized per notation; legend entries are filtered to the types the generated document actually uses (nodes through their semanticType data, edges through the connector type of their mapped edge stencil). Registered as a singleton by AddTempoBlazorModeling.",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ModelingNotationCatalogEntry",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "One notation entry of the shared ModelingNotationCatalog: a semantic type mapped to the diagram stencil that draws it.",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingNotationCatalog.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "ModelingSaveMode",
           "kind": "Enum",
           "category": "Components",
@@ -44068,6 +44145,40 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmModelingDiagramLegend",
+          "kind": "Component",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "Fáze 15: the preview legend — a collapsible card explaining the notation shapes (stencil icons + localized type labels) the generated document actually uses, grouped into Elements and Relationships. The host supplies the entries (the shared ModelingNotationCatalog, filtered to the document); the card is presentational. Accessible: list semantics, decorative icons (aria-hidden) next to visible text, an aria-expanded/aria-controls collapse toggle. Positioned by the preview's stylesheet as an overlay card in the canvas corner — it never participates in the canvas column's flow (the canvas keeps its height).",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramLegend.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Modeling"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class."
+            },
+            {
+              "name": "DefaultExpanded",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the card starts expanded. The hosting editor passes the layout rule (desktop expanded, tablet collapsed). Seeded ONCE — the user's own toggle owns the state afterwards."
+            },
+            {
+              "name": "Entries",
+              "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+              "isRequired": false,
+              "description": "The legend entries (already filtered to the types present in the document). Null renders nothing — the host decided the legend has no data."
+            }
+          ]
+        },
+        {
           "itemName": "TmModelingDiagramPreview",
           "kind": "Component",
           "category": "Modeling",
@@ -44110,6 +44221,19 @@
               "type": "EventCallback<DiagramDocument>",
               "isRequired": false,
               "description": "Raised when the embedded diagram editor reports a document mutation."
+            },
+            {
+              "name": "LegendDefaultExpanded",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the legend card starts expanded (the hosting editor seeds it from the resolved layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins."
+            },
+            {
+              "name": "LegendEntries",
+              "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+              "isRequired": false,
+              "description": "The legend entries (the shared ModelingNotationCatalog filtered to the document's types). Null (no notation catalog data) renders no card even when ShowLegend is true; an EMPTY list renders the card with the localized empty text."
             },
             {
               "name": "OnDrop",
@@ -44167,6 +44291,13 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
+            },
+            {
+              "name": "ShowLegend",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the embedded editor — never inside it). Default false — purely additive. The hosting editor passes its ShowPreviewLegend and owns the mobile band's \"⋯\" sheet instead; the card only renders while a document AND legend entries exist.",
+              "default": "false"
             },
             {
               "name": "ShowSummary",
@@ -44334,6 +44465,13 @@
               "isRequired": false,
               "default": "ModelingSaveMode.Manual",
               "description": "How committed edits reach the writer: Manual (default) aggregates the pending change set until SaveModelChangesAsync; Immediate calls the writer after every field commit."
+            },
+            {
+              "name": "ShowPreviewLegend",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the preview renders the notation legend card. Default true — the legend is part of the editor's contract from Fáze 15 on (a host that wants the pre-Fáze-15 look passes false). The mobile band shows the legend as a \"⋯\" sheet instead of the card."
             },
             {
               "name": "ShowProviderSelector",
@@ -45112,12 +45250,12 @@
         }
       ],
       "summary": {
-        "itemCount": 21,
-        "manualItemCount": 21,
-        "generatedItemCount": 21,
+        "itemCount": 24,
+        "manualItemCount": 24,
+        "generatedItemCount": 24,
         "generatedOnlyItemCount": 0,
-        "componentCount": 8,
-        "publicApiTypeCount": 13
+        "componentCount": 9,
+        "publicApiTypeCount": 15
       }
     },
     {
@@ -124643,10 +124781,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3339,
-    "manualItemCount": 3339,
+    "itemCount": 3343,
+    "manualItemCount": 3343,
     "generatedOnlyItemCount": 0,
-    "componentCount": 498,
-    "publicApiTypeCount": 2788
+    "componentCount": 500,
+    "publicApiTypeCount": 2790
   }
 }

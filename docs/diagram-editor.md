@@ -206,6 +206,21 @@ behavior, so a host that sets nothing sees no change:
 | `FitOnDocumentLoad` | `DiagramFitMode?`, `null` | Fits ONCE after the first render of a NEW document identity. The same document never re-fits; a replaced document does; user zoom afterwards wins. `Width` is the embedded mobile preview's first-load fit. The fit stays OWED across a canvas remount (a mobile↔docked flip remounts `TmDiagramCanvas`): the editor re-arms it on the finally mounted canvas, which fits exactly once. |
 | `ShowMobileZoomOverlay` | `bool?`, `null` | The floating − \| % \| + \| fit pill rule: `null` keeps today's rule (`IsMobileLayout && ShowToolbar &&` the Zoom group); `true` shows the pill on a mobile layout even chrome-less (`ShowToolbar=false`); `false` never shows it. The docked bands keep the status-bar zoom. |
 | `MinimapInitiallyCollapsed` | `bool`, `false` | Seeds the minimap card (desktop) / floating overlay (tablet) collapsed ONCE at initialization. The user's own toggle wins afterwards; the mobile X1 rule (minimap hidden, "⋯" toggle) is unchanged. The Modeling tablet dialog seeds it from the editor's resolved mode. |
+| `PreferredStencilIds` | `IReadOnlyList<string>?`, `null` | Fáze 15 (the Modeling "Open in editor" notation palette): stencil ids pinned as the FIRST toolbox library — order preserved, unknown ids ignored — while every other library starts collapsed (a live search still expands matches across the WHOLE library). `null` keeps today's toolbox. The pinned section carries `data-library-id="notation-palette"` and `data-pinned="true"`. On a mobile layout the pinned library is the "first category" for `CollapseCategoriesExceptFirst`. |
+| `PreferredStencilsLabel` | `string?`, `null` | Header label of the pinned library (the Modeling dialog passes the notation profile's display name). Null falls back to the localized `TmDiagramToolbox_PreferredDefault`. Ignored while `PreferredStencilIds` is unset. |
+
+### `TmDiagramStencilIcon` (Fáze 15)
+
+The public small stencil preview (`StencilId`, `Size`, `Class`) — the same text-trimming pipeline
+the toolbox tiles use, for hosts that present stencils outside the toolbox (the Modeling palette
+and legend embed it instead of duplicating the SVG). Always `aria-hidden="true"`: the surrounding
+row owns the visible label. A stencil id the registry does not know renders the generic fallback
+shape (`data-fallback="true"`; the edge kind falls back to the edge glyph). `Size` is a CSS box
+size applied to width and height (default `32px`).
+
+```razor
+<TmDiagramStencilIcon StencilId="bpmn2.task.user" Size="1rem" />
+```
 
 `diagram-editor.js` `fitToView(container, padding, mode)` keeps its two-argument contract: the
 third `mode` argument is additive (`'width'`), so a host calling the old signature gets today's

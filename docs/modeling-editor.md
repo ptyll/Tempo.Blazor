@@ -87,6 +87,7 @@ window still resolves the DE tablet layout).
 | `OnModelChanged` | `EventCallback<ModelingModelChangedEventArgs>` | — | After every committed field edit: the commit's change set + the current model. Binding it alone (without a writer) makes the HOST own the persistence — the editor clears its pending state after the callback. |
 | `OnSaveCompleted` | `EventCallback` | — | After a completed save (success, conflict or failure). |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Raised by a real drop AND by the insert alternative (same contract). |
+| `ShowPreviewLegend` | `bool` | `true` | Fáze 15: render the notation legend card over the preview canvas (desktop/tablet) and the "⋯" → Legenda bottom sheet on the mobile band. `false` restores the pre-Fáze-15 look (see Breaking / Migration). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | see above | `Auto` / `Desktop` / `new(768, 1200)` | Presentation resolution from the editor's own container. |
 | `Height` | `string?` | `null` | The editor's block size (CSS length only). `null` keeps the stylesheet contract `min(768px, 100vh - 32px)`; a set value renders exactly that height (the token floor is dropped) and the shell fills the box. A value that is not a simple CSS length or a single `calc()` expression — anything carrying `;`/`{`/`}` — is REJECTED and falls back to the stylesheet default (final review: the inline style is never an injection vector). |
 | `PersistKey` | `string?` | `null` | Overrides the localStorage key the docked shell persists panel widths under. Default derives `{TestIdPrefix}-modeling-editor` (or `modeling-editor`) so two editors on one page share widths only when they share the prefix. |
@@ -103,6 +104,9 @@ window still resolves the DE tablet layout).
 | `ShowEditActions` | `bool` | `true` | Render the Primary "Open in editor" / Secondary "Generate diagram" buttons and the drop hint (only while drops are accepted). `false` when a hosting action bar owns those entries (mobile). |
 | `ShowEmbeddedEditorChrome` | `bool` | `true` | Pass `false` to hide the embedded editor's toolbar (`ShowToolbar=false` through the public API — never CSS). The mobile band does this: the header bar there would hold only the "⋯" trigger while the floating zoom pill duplicates the pinch. On the docked bands the preview keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar). |
 | `ShowZoomOverlay` | `bool` | `false` | Opt in to the embedded editor's floating mobile zoom pill (Fáze 9): passes the DE's additive `ShowMobileZoomOverlay="true"` — the pill shows on the DE's own mobile band even with the toolbar hidden — and arms `FitOnDocumentLoad="DiagramFitMode.Width"` so a first load fits the diagram to the width. The hosting editor turns this on for its mobile band; the pinch keeps working either way. The docked bands keep the DE's own status-bar zoom. |
+| `ShowLegend` | `bool` | `false` | Fáze 15: show the notation legend card over the preview canvas — a SIBLING of the embedded editor (positioned by this stylesheet, never inside the editor's DOM). The hosting editor passes its `ShowPreviewLegend` (off on the mobile band — the sheet replaces the card). |
+| `LegendEntries` | `IReadOnlyList<ModelingNotationCatalogEntry>?` | `null` | The legend entries — the shared `ModelingNotationCatalog` filtered to the types the document uses. `null` renders no card even when `ShowLegend` is true (no notation catalog data); an EMPTY list renders the localized empty text. |
+| `LegendDefaultExpanded` | `bool` | `true` | Whether the legend card starts expanded. The editor seeds it from the resolved layout: desktop expanded, tablet collapsed. Seeded ONCE — the user's own toggle wins. |
 | `OpenInEditorTriggerId` | `string?` | `null` | Stable DOM id stamped on the open-editor trigger so the dialog's `TmFocusScope` can name the restore target. |
 | `AllowNodeDrop` / `OnDrop` / `ActiveDraggedElement` / `OnNodeDropped` | — | — | The drop target contract. |
 | `OnGenerateRequested` / `OnOpenInEditor` / `OnRelationshipSelected` | — | — | Host callbacks. |
@@ -125,6 +129,36 @@ Embedded-viewer knobs (Fáze 9, all through the DE's public API — never CSS on
 the preview passes `ShowPageTabs="@(Document?.Pages.Count > 1)"`, so a single-page generated
 document renders NO page-tabs row (a multi-page one keeps the tabs switchable), and the mobile
 band's `ShowZoomOverlay` adds the DE's floating zoom pill plus the fit-to-width first load.
+
+### `TmModelingDiagramLegend` and `ModelingNotationCatalog` (Fáze 15)
+
+The legend (`TmModelingDiagramLegend`) is a collapsible card — `data-testid="modeling-preview-legend"` —
+explaining ONLY the notation shapes the generated document actually uses, grouped into **Elements**
+and **Relationships**. Entries come from the shared `ModelingNotationCatalog` (a singleton
+registered by `AddTempoBlazorModeling`): it maps the active notation profile's semantic types to
+diagram stencils through the SAME `IModelingStencilMapper` the generator uses (memoized per
+notation), labels them through the `TmModelingSemanticType_{type}` keys (humanized-key fallback)
+and — for the legend — filters to the types present in the document (nodes through their
+`semanticType` data, relationships through the connector type of their mapped edge stencil). A
+type mapped to a stencil the registry does not know still lists, flagged `HasMapping=false` (the
+icon renders the generic fallback through the public `TmDiagramStencilIcon`).
+
+- **Accessibility**: list semantics (`role="list"`), decorative icons (`aria-hidden`) next to
+  visible text, and an `aria-expanded`/`aria-controls` collapse toggle (`TmModelingDiagramLegend_Show`/`_Hide`).
+- **Layout**: the card is an overlay in the canvas corner (`.tm-modeling-diagram-preview__legend`,
+  `position: absolute`) — it never participates in the canvas column's flow, so the embedded
+  editor keeps its height (the E2E canvas floors 300px/180px/240px still hold), and it leaves the
+  mobile zoom pill (bottom-right) and the empty-diagram hint (top-center) alone. Body max-height
+  scrolls.
+- **Mobile**: the editor's mobile band does NOT render the card — the compact header "⋯" carries a
+  **Legenda** entry (`TmModelingEditor_Legend`) opening a `modeling-legend-sheet` bottom sheet
+  hosting the same component.
+- **Palette**: the same catalog feeds the "Open in editor" dialog — its toolbox pins the notation
+  palette as the FIRST library (`data-library-id="notation-palette"`, header = the profile's
+  `DisplayName`), the rest of the stencil library starts collapsed and the search spans everything.
+  Inserting from the palette creates ONLY a diagram node (with the node's own
+  `semanticType`/`notation` data) — never a semantic model element; element creation through the
+  Fáze 14 writer is backlog.
 
 ### `TmModelingModelTree`
 

@@ -63,6 +63,21 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
     /// <summary>
+    /// Fáze 15 (embedded hosts, e.g. the Modeling "Open in editor" dialog): stencil ids to pin
+    /// as the FIRST toolbox library (order preserved, unknown ids ignored) while the other
+    /// libraries start collapsed — search still spans the whole stencil library. <c>null</c>
+    /// (the default) keeps today's toolbox. Pass-through to <see cref="TmDiagramToolbox"/>.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string>? PreferredStencilIds { get; set; }
+
+    /// <summary>
+    /// Header label of the pinned library (e.g. the notation profile's display name). Null
+    /// falls back to the localized <c>TmDiagramToolbox_PreferredDefault</c>. Pass-through to
+    /// <see cref="TmDiagramToolbox"/>; ignored while <see cref="PreferredStencilIds"/> is unset.
+    /// </summary>
+    [Parameter] public string? PreferredStencilsLabel { get; set; }
+
+    /// <summary>
     /// Show the page-tab row above the canvas (Fáze 9, embedded viewers). Default <c>true</c> —
     /// today's behavior in every layout. <c>false</c> drops the row entirely (a single-page
     /// preview has nothing to switch); page switching stays available by setting the document's

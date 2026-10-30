@@ -63,6 +63,31 @@ public sealed class ModelingBpmnProfileM17E2ETests : WasmTestBase
         await Assertions.Expect(page.Locator("[data-testid='modeling-issue-list']")).ToContainTextAsync("AiTask");
     }
 
+    [TestMethod]
+    [Description("Fáze 15: the dialog palette pins the BPMN profile stencils first and inserting from it creates a diagram node")]
+    public async Task DialogPalette_PinsBpmnStencilsAndInsertsFromThem()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn2&viewpoint=Process&scenario=bpmn2-generated");
+
+        await page.Locator("[data-testid='modeling-open-in-editor-button']")
+            .ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        var dialog = page.Locator("[data-testid='modeling-open-diagram-editor']");
+        await dialog.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+
+        var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
+        await Assertions.Expect(pinned).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+        await Assertions.Expect(pinned.Locator(".tm-diagram-toolbox__library-header"))
+            .ToContainTextAsync("BPMN 2.0", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
+        await Assertions.Expect(pinned.Locator("[data-stencil-id='bpmn2.task.user']"))
+            .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+        var canvasNodes = dialog.Locator(".tm-diagram-canvas g.tm-diagram-node[data-stencil-id='bpmn2.task.manual']");
+        var before = await canvasNodes.CountAsync();
+        await pinned.Locator("[data-stencil-id='bpmn2.task.manual']").ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(canvasNodes).ToHaveCountAsync(before + 1,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

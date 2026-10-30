@@ -1,0 +1,61 @@
+@namespace Tempo.Blazor.Components.Modeling
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Diagram
+
+@* Fáze 15: the legend card. The host stylesheet positions it as an overlay in the canvas
+   corner (never in the canvas column's flow — the canvas keeps its height). List semantics,
+   decorative icons next to visible text, aria-expanded/aria-controls collapse. *@
+<aside class="@RootClass"
+       data-testid="@TestId("modeling-preview-legend")"
+       data-state="@(IsEmpty ? "empty" : "populated")"
+       aria-label="@Loc["TmModelingDiagramLegend_Title"]">
+    <button type="button"
+            class="tm-modeling-diagram-legend__toggle"
+            aria-expanded="@(_expanded.ToString().ToLowerInvariant())"
+            aria-controls="@BodyId"
+            aria-label="@ToggleAriaLabel"
+            title="@ToggleAriaLabel"
+            @onclick="ToggleExpanded">
+        <span class="tm-modeling-diagram-legend__title">@Loc["TmModelingDiagramLegend_Title"]</span>
+        <TmIcon Name="@(_expanded ? IconNames.ChevronDown : IconNames.ChevronRight)" Size="IconSize.Sm" />
+    </button>
+
+    @if (_expanded)
+    {
+        <div id="@BodyId" class="tm-modeling-diagram-legend__body">
+            @if (IsEmpty)
+            {
+                <p class="tm-modeling-diagram-legend__empty">@Loc["TmModelingDiagramLegend_Empty"]</p>
+            }
+            else
+            {
+                @if (ElementEntries.Count > 0)
+                {
+                    <h4 class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Elements"]</h4>
+                    <ul role="list" class="tm-modeling-diagram-legend__list">
+                        @foreach (var entry in ElementEntries)
+                        {
+                            <li class="tm-modeling-diagram-legend__item">
+                                <TmDiagramStencilIcon StencilId="@entry.StencilId" Size="@StencilIconSize" Class="tm-modeling-diagram-legend__icon" />
+                                <span class="tm-modeling-diagram-legend__label">@entry.Label</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (RelationshipEntries.Count > 0)
+                {
+                    <h4 class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Relationships"]</h4>
+                    <ul role="list" class="tm-modeling-diagram-legend__list">
+                        @foreach (var entry in RelationshipEntries)
+                        {
+                            <li class="tm-modeling-diagram-legend__item">
+                                <TmDiagramStencilIcon StencilId="@entry.StencilId" Size="@StencilIconSize" Class="tm-modeling-diagram-legend__icon" />
+                                <span class="tm-modeling-diagram-legend__label">@entry.Label</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+    }
+</aside>

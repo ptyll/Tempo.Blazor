@@ -111,6 +111,16 @@
                              ShowToolbar="@ShowEmbeddedEditorChrome"
                              OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
                              Class="tm-modeling-diagram-preview__editor" />
+            @if (ShowLegend && LegendEntries is not null)
+            {
+                @* Fáze 15: the legend card is a SIBLING of the editor (positioned by this
+                   component's stylesheet over the canvas corner — never inside the editor's
+                   DOM, never styled through its internals). Absent while no legend data exists. *@
+                <div class="tm-modeling-diagram-preview__legend">
+                    <TmModelingDiagramLegend Entries="@LegendEntries"
+                                             DefaultExpanded="@LegendDefaultExpanded" />
+                </div>
+            }
         </div>
         @if (ActiveDraggedElement is not null && AllowNodeDrop)
         {

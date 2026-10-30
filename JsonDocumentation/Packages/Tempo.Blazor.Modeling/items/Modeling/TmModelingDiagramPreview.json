@@ -43,6 +43,19 @@
       "description": "Raised when the embedded diagram editor reports a document mutation."
     },
     {
+      "name": "LegendDefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the legend card starts expanded (the hosting editor seeds it from the resolved layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins."
+    },
+    {
+      "name": "LegendEntries",
+      "type": "IReadOnlyList<ModelingNotationCatalogEntry>?",
+      "isRequired": false,
+      "description": "The legend entries (the shared ModelingNotationCatalog filtered to the document's types). Null (no notation catalog data) renders no card even when ShowLegend is true; an EMPTY list renders the card with the localized empty text."
+    },
+    {
       "name": "OnDrop",
       "type": "EventCallback<DragEventArgs>",
       "isRequired": false,
@@ -96,6 +109,13 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether the preview renders its own heading block (the title plus the nodes/edges summary). Default true. The mobile band passes false: the summary duplicates the counts the editor's compact status card already shows in the same tab, and the row starved the canvas at 320px. Mobile preview zoom is pinch-only; the zoom buttons live in Open in editor."
+    },
+    {
+      "name": "ShowLegend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the embedded editor — never inside it). Default false — purely additive. The hosting editor passes its ShowPreviewLegend and owns the mobile band's \"⋯\" sheet instead; the card only renders while a document AND legend entries exist."
     },
     {
       "name": "ShowSummary",

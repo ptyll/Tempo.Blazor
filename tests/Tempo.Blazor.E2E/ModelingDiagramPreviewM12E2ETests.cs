@@ -294,6 +294,82 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(empty, "diagram-preview-empty.png");
     }
 
+    // ── Fáze 15: the preview legend ──────────────────────────────────────────
+
+    [TestMethod]
+    [Description("The desktop preview renders the legend card listing the notation types the document uses, and it collapses")]
+    public async Task PreviewLegend_ListsPresentTypesAndCollapses()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var legend = page.Locator("[data-testid='modeling-preview-legend']");
+        await Assertions.Expect(legend).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        // The legend lists ONLY the notation types present in the generated document: the demo
+        // BPMN model contributes three element types and the mapped sequence flow.
+        var items = legend.Locator(".tm-modeling-diagram-legend__list > li");
+        await Assertions.Expect(items).ToHaveCountAsync(4, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await Assertions.Expect(legend).ToContainTextAsync("User task", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Start event", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Service task", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        await Assertions.Expect(legend).ToContainTextAsync("Sequence flow", new LocatorAssertionsToContainTextOptions { Timeout = 5000 });
+        // The types the document does not use (the demo's unmapped ArchiMate element) never appear.
+        Assert.AreEqual(0, await legend.Locator(".tm-modeling-diagram-legend__list > li")
+            .Filter(new LocatorFilterOptions { HasTextString = "Application component" }).CountAsync());
+
+        // Decorative icons next to visible text.
+        Assert.AreEqual("true", await items.First.Locator("svg").First.GetAttributeAsync("aria-hidden"));
+
+        // Collapsible with aria-expanded.
+        var toggle = legend.Locator(".tm-modeling-diagram-legend__toggle");
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"));
+        await toggle.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+        Assert.AreEqual(0, await legend.Locator(".tm-modeling-diagram-legend__list").CountAsync(),
+            "a collapsed legend renders no list body");
+
+        await TakeScreenshotAsync(page, "modeling-legend-1440");
+    }
+
+    [TestMethod]
+    [Description("The legend card never steals preview canvas height (overlay in the canvas corner)")]
+    public async Task PreviewLegend_KeepsCanvasHeight()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await Assertions.Expect(page.Locator("[data-testid='modeling-preview-legend']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        // The legend is an OVERLAY in the canvas corner — it never participates in the canvas
+        // column's flow, so the canvas keeps the exact height the docked bands give it
+        // (the issues dock present: the 240px floor) and the zoom pill/hint stay reachable.
+        var overlay = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const legend = document.querySelector('.tm-modeling-diagram-preview__legend');
+                if (!legend) return false;
+                return getComputedStyle(legend).position === 'absolute'
+                    && legend.getBoundingClientRect().bottom <=
+                       (document.querySelector('.tm-modeling-diagram-preview__canvas-shell')?.getBoundingClientRect().bottom ?? 0);
+            }
+            """);
+        Assert.IsTrue(overlay, "the legend is absolutely positioned inside the canvas shell (never in flow)");
+
+        var canvasHeight = await CanvasHeightAsync(page);
+        Assert.IsTrue(canvasHeight >= 240,
+            $"the preview canvas keeps its docked-band floor with the legend (measured {canvasHeight:0.#})");
+    }
+
+    private static Task<double> CanvasHeightAsync(IPage page) => page.EvaluateAsync<double>(
+        """
+        () => document.querySelector('.tm-modeling-diagram-preview__editor .tm-diagram-canvas')
+            ?.getBoundingClientRect().height ?? 0
+        """);
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

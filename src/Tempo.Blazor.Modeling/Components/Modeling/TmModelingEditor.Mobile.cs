@@ -165,6 +165,7 @@ public partial class TmModelingEditor
     private Task HandleMobileHeaderMenuAsync(string key) => key switch
     {
         "change-view" => OpenChangeViewAsync(),
+        "legend" => OpenLegendSheetAsync(),
         "generate" => GenerateDiagramFromLoadedModelAsync(),
         "open-editor" => OpenEditorFromMobileAsync(MobileHeaderTriggerSelector),
         _ => Task.CompletedTask

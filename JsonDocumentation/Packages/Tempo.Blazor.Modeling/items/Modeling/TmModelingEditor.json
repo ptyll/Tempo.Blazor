@@ -1,244 +1,251 @@
 {
- "itemName": "TmModelingEditor",
- "kind": "Component",
- "category": "Modeling",
- "description": "Loads a semantic modeling source and presents a modeling editor workspace. TreeGrouping (Fáze 12) passes the model tree's structure through: Auto (the default) renders the ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups otherwise; the editor owns the hierarchy's CollapsedElementIds state across tree remounts. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell. On the TABLET band (768-1199 of container) the shell presents its TabletPanelPresentation.Overlay: the model tree is an overlay drawer, the inspector a non-modal side sheet, at most ONE open at a time, and the \"Panels\" tab row (the same test ids as the compact row) acts as the visibility switch (aria-expanded toggles; Preview closes both). A tree selection opens the inspector sheet, and the tree's \"Insert into preview\" action (WCAG 2.5.7 non-drag alternative to dragging) reuses the element through the preview's existing drop path at the viewport center — TmModelingDiagramPreview.InsertAtViewportCenterAsync — honoring AllowNodeDrop. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop AND the tablet band (the near-fullscreen footprint keys off the editor container, not the viewport); the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
- "packageId": "Tempo.Blazor.Modeling",
- "namespace": "Tempo.Blazor.Components.Modeling",
- "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
- "documentationStatus": "generated",
- "requiredImports": [
-  "@using Tempo.Blazor.Components.Modeling"
- ],
- "parameters": [
-  {
-   "name": "ProviderKey",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Provider key used to select the semantic model provider. Null or empty values render the empty state."
-  },
-  {
-   "name": "ProviderKeyChanged",
-   "type": "EventCallback<string?>",
-   "isRequired": false,
-   "description": "Raised when the user picks a provider in the header selector; enables @bind-ProviderKey. The editor reloads the model with the selected provider."
-  },
-  {
-   "name": "ShowProviderSelector",
-   "type": "bool",
-   "isRequired": false,
-   "default": "false",
-   "description": "Renders a labeled \"Provider\" select in the editor header that lists every registered IModelingModelProvider (MO3). Default false keeps the pre-selector behavior: the provider stays a labeled value chip and remains host-owned through ProviderKey."
-  },
-  {
-   "name": "AllowNodeDrop",
-   "type": "bool",
-   "isRequired": false,
-   "default": "true",
-   "description": "Whether model tree elements can be reused by dropping them onto the preview canvas."
-  },
-  {
-   "name": "TreeGrouping",
-   "type": "ModelingTreeGrouping",
-   "isRequired": false,
-   "default": "ModelingTreeGrouping.Auto",
-   "description": "How the model tree structures its elements (Fáze 12 pass-through). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without ParentId looks and behaves exactly as before."
-  },
-  {
-   "name": "Class",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Additional CSS class applied to the editor root."
-  },
-  {
-   "name": "ModelLoaderOverride",
-   "type": "Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>?",
-   "isRequired": false,
-   "description": "Optional loader used by host pages or tests to supply a model without registering a provider."
-  },
-  {
-   "name": "ProviderDisplayName",
-   "type": "Func<string, string>?",
-   "isRequired": false,
-   "description": "Optional display-name resolver for the provider options and the provider chip (review fix, phase 3). Receives the raw provider key and returns the text to show; when the callback is null (or returns nothing) the raw key itself is shown. The demo maps the keys to localized names; a host may resolve them from its own registry."
-  },
-  {
-   "name": "NotationKey",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Optional notation key passed to the selected provider and generator."
-  },
-  {
-   "name": "OnDiagramGenerated",
-   "type": "EventCallback<DiagramDocument>",
-   "isRequired": false,
-   "description": "Callback raised after a model is loaded and converted into a diagram document."
-  },
-  {
-   "name": "OnNodeDropped",
-   "type": "EventCallback<ModelingNodeDroppedEventArgs>",
-   "isRequired": false,
-   "description": "Callback raised after a model tree element is reused as a new preview node."
-  },
-  {
-   "name": "OnNotationChanged",
-   "type": "EventCallback<string?>",
-   "isRequired": false,
-   "description": "Callback raised when the editor notation selection changes."
-  },
-  {
-   "name": "OnOpenInEditor",
-   "type": "EventCallback<DiagramDocument>",
-   "isRequired": false,
-   "description": "Callback raised when the user opens the generated diagram in the full diagram editor."
-  },
-  {
-   "name": "OnProviderChanged",
-   "type": "EventCallback<string?>",
-   "isRequired": false,
-   "description": "Raised when the editor provider selection changes (semantics of OnNotationChanged for the provider)."
-  },
-  {
-   "name": "OnViewpointChanged",
-   "type": "EventCallback<string?>",
-   "isRequired": false,
-   "description": "Callback raised when the editor viewpoint selection changes."
-  },
-  {
-   "name": "ViewpointKey",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
-  },
-  {
-   "name": "LayoutMode",
-   "type": "TmLayoutMode",
-   "isRequired": false,
-   "default": "Auto",
-   "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor, so hosts embedding both flip them together); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell - an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers; the compact layout keeps the panel-tab workspace."
-  },
-  {
-   "name": "InitialMode",
-   "type": "TmLayoutMode",
-   "isRequired": false,
-   "default": "Desktop",
-   "description": "The mode rendered before the first measurement of an Auto editor (SSR, prerender and the first frame). Desktop markup degrades acceptably through the data-layout CSS."
-  },
-  {
-   "name": "LayoutBreakpoints",
-   "type": "TmLayoutBreakpoints?",
-   "isRequired": false,
-   "default": "null",
-   "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor). Only the markup branch moves; stylesheets keep the shared literals."
-  },
-  {
-   "name": "PersistKey",
-   "type": "string?",
-   "isRequired": false,
-   "description": "Overrides the localStorage key the docked shell persists user-resized panel widths under. Null (default) derives the key from TestIdPrefix - {TestIdPrefix}-modeling-editor, or plain modeling-editor without a prefix - so two editors on one page share persisted widths only when they share the prefix. Set it explicitly to namespace (or intentionally share) the saved layout per instance."
-  },
-  {
-   "name": "Height",
-   "type": "string?",
-   "isRequired": false,
-   "default": "null",
-   "description": "The editor's block size (a CSS length only - e.g. 600px, 100%, 100dvh). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) - the host owns the sizing. The shell inside fills the box."
-  },
-  {
-   "name": "AllowModelEditing",
-   "type": "bool",
-   "isRequired": false,
-   "default": "false",
-   "description": "Turns the inspector editing mode on (Fáze 14). Editing is active only when an IModelingModelWriter is registered for the effective provider key OR an OnModelChanged delegate is bound — otherwise the inspector stays read-only (MO2)."
-  },
-  {
-   "name": "SaveMode",
-   "type": "ModelingSaveMode",
-   "isRequired": false,
-   "default": "ModelingSaveMode.Manual",
-   "description": "How committed edits reach the writer: Manual (default) aggregates the pending change set until SaveModelChangesAsync; Immediate calls the writer after every field commit."
-  },
-  {
-   "name": "OnModelChanged",
-   "type": "EventCallback<ModelingModelChangedEventArgs>",
-   "isRequired": false,
-   "description": "Raised after every committed field edit with the change set of that commit and the current model. Binding it alone (without a writer) makes the host own the persistence."
-  },
-  {
-   "name": "OnSaveCompleted",
-   "type": "EventCallback",
-   "isRequired": false,
-   "description": "Raised after a completed save (success, conflict or failure)."
-  }
- ],
- "cssClasses": [
-  {
-   "name": "tm-modeling-editor__state",
-   "description": "Wrapper around the state TmBadge next to the editor title (variant by state)."
-  },
-  {
-   "name": "tm-modeling-editor__status-item",
-   "description": "One separated status item; the first carries the state icon (and the last-loaded time when the model carries metadata, MO3)."
-  },
-  {
-   "name": "tm-modeling-editor__status-icon",
-   "description": "Leading status icon (check/alert/clock by state), aria-hidden."
-  },
-  {
-   "name": "tm-modeling-editor__context",
-   "description": "Right-aligned header group wrapping the provider field/chip and the TmModelingViewSelector; wraps as a whole under the title and becomes a single-column grid below 48rem (review fix, phase 3)."
-  },
-  {
-   "name": "tm-modeling-editor__field",
-   "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; may shrink to its token minimum inside the wrapping context group (review fix, phase 3)."
-  },
-  {
-   "name": "tm-modeling-editor__open-editor-modal",
-   "description": "Class on the open-editor TmModal overlay root; sizes the modal panel to ~90vw x 90vh on the desktop and to a near-fullscreen panel below 48rem."
-  },
-  {
-   "name": "tm-modeling-editor__open-editor-body",
-   "description": "Dialog body wrapper filling the TmModal body; hosts the embedded diagram editor."
-  },
-  {
-   "name": "tm-modeling-editor__open-editor-diagram",
-   "description": "The embedded TmDiagramEditor inside the dialog body; fills the body height."
-  },
-  {
-   "name": "tm-modeling-editor__shell",
-   "description": "Class applied to the core TmEditorShell root on the docked layouts; fills the editor box and neutralizes the shell's generic header/status/canvas padding so the modeling chrome owns its own rhythm."
-  },
-  {
-   "name": "tm-modeling-editor__canvas-body",
-   "description": "The docked canvas surface: a grid with the preview row (minmax(0,1fr)) and the issues dock row (auto). Also the focusWithin surface containing the open-editor trigger and dialog."
-  },
-  {
-   "name": "tm-modeling-editor__canvas-body--issues-open",
-   "description": "Modifier rendered while the Issues dock is expanded; the dock row becomes a token clamp (min 12rem, preferred 38%, cap 20rem of the canvas region) so the list scrolls inside the dock and the preview keeps its row."
-  },
-  {
-   "name": "tm-modeling-editor__inspector",
-   "description": "The inspector wrapper inside the shell's right dock; carries the frozen modeling-inspector-panel test id and the Properties | Source TmTabs (sticky tab strip)."
-  },
-  {
-   "name": "tm-modeling-editor__history-btn",
-   "description": "Inspector header undo/redo button (with the keyboard hint in its title)."
-  },
-  {
-   "name": "tm-modeling-editor__editing-alert",
-   "description": "Wrapper of the save/conflict feedback alerts above the inspector."
-  },
-  {
-   "name": "tm-modeling-editor__conflict-reload",
-   "description": "The conflict alert's localized \"Reload\" action (asks for confirmation before discarding pending changes)."
-  },
-  {
-   "name": "tm-modeling-editor__discard-body",
-   "description": "Body of the discard-confirmation modal."
-  },
-  {
-   "name": "tm-modeling-editor__discard-actions",
-   "description": "Confirm/Cancel row of the discard-confirmation modal."
-  }
- ]
+  "itemName": "TmModelingEditor",
+  "kind": "Component",
+  "category": "Modeling",
+  "description": "Loads a semantic modeling source and presents a modeling editor workspace. TreeGrouping (Fáze 12) passes the model tree's structure through: Auto (the default) renders the ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups otherwise; the editor owns the hierarchy's CollapsedElementIds state across tree remounts. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell. On the TABLET band (768-1199 of container) the shell presents its TabletPanelPresentation.Overlay: the model tree is an overlay drawer, the inspector a non-modal side sheet, at most ONE open at a time, and the \"Panels\" tab row (the same test ids as the compact row) acts as the visibility switch (aria-expanded toggles; Preview closes both). A tree selection opens the inspector sheet, and the tree's \"Insert into preview\" action (WCAG 2.5.7 non-drag alternative to dragging) reuses the element through the preview's existing drop path at the viewport center — TmModelingDiagramPreview.InsertAtViewportCenterAsync — honoring AllowNodeDrop. On the docked layouts (tablet/desktop, resolved from the editor's own container) the workspace renders through the core TmEditorShell: Header (title, state badge, the provider/notation/viewpoint group), Left (model tree), Canvas (diagram preview with the collapsible Issues dock under it — header with a neutral count, aria-expanded toggle, the collapsed state is session-owned), Right (inspector with Properties | Source tabs — only the active tab renders its body, a stale source marks the Source tab with a neutral indicator and the tab drives the editor's reload) and StatusBar. The layout thresholds are the DiagramEditor pair (mobile below 768px of container, tablet 768-1199, desktop from 1200); below the editor's own mobile threshold the pre-redesign compact workspace (panel tabs, one visible panel) renders until the mobile phase. The docked shell is not pinned to the editor's resolved mode: an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers. The preview's \"Open in editor\" action opens the generated document in a core TmModal viewport dialog (scrim, TmFocusScope focus trap, Escape) sized ~90vw x 90vh on the desktop AND the tablet band (the near-fullscreen footprint keys off the editor container, not the viewport); the dialog header owns the document title (falling back to the \"Open in editor\" label) and the close button, and the embedded TmDiagramEditor keeps every panel with ToolbarPreset=Full and ShowTitle=false (one header). Changes keep propagating live to the preview (G8), so the scrim is not a close affordance.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingEditor.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Modeling"
+  ],
+  "parameters": [
+    {
+      "name": "AllowModelEditing",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Turns the inspector editing mode on (Fáze 14). Editing is active only when an IModelingModelWriter is registered for the effective provider key OR an OnModelChanged delegate is bound — otherwise the inspector stays read-only (MO2)."
+    },
+    {
+      "name": "AllowNodeDrop",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether model tree elements can be reused by dropping them onto the preview canvas."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class applied to the editor root."
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "The editor's block size (a CSS length only - e.g. 600px, 100%, 100dvh). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) - the host owns the sizing. The shell inside fills the box."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The mode rendered before the first measurement of an Auto editor (SSR, prerender and the first frame). Desktop markup degrades acceptably through the data-layout CSS."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Per-instance thresholds for the editor's own container. Null keeps the Modeling pair (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor). Only the markup branch moves; stylesheets keep the shared literals."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the editor resolves its presentation. Auto (default) measures the editor's own container with the shared observer (mobile below 768px of container, tablet 768-1199, desktop from 1200 - the same pair as TmDiagramEditor, so hosts embedding both flip them together); a forced mode renders that layout without any measurement so tests and hosts can pin it. The docked layouts render through the core TmEditorShell - an Auto shell measures its own container, so the nested TmDiagramEditors (preview + open-editor dialog) resolve from their own containers; the compact layout keeps the panel-tab workspace."
+    },
+    {
+      "name": "ModelLoaderOverride",
+      "type": "Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>?",
+      "isRequired": false,
+      "description": "Optional loader used by host pages or tests to supply a model without registering a provider."
+    },
+    {
+      "name": "NotationKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional notation key passed to the selected provider and generator."
+    },
+    {
+      "name": "OnDiagramGenerated",
+      "type": "EventCallback<DiagramDocument>",
+      "isRequired": false,
+      "description": "Callback raised after a model is loaded and converted into a diagram document."
+    },
+    {
+      "name": "OnModelChanged",
+      "type": "EventCallback<ModelingModelChangedEventArgs>",
+      "isRequired": false,
+      "description": "Raised after every committed field edit with the change set of that commit and the current model. Binding it alone (without a writer) makes the host own the persistence."
+    },
+    {
+      "name": "OnNodeDropped",
+      "type": "EventCallback<ModelingNodeDroppedEventArgs>",
+      "isRequired": false,
+      "description": "Callback raised after a model tree element is reused as a new preview node."
+    },
+    {
+      "name": "OnNotationChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback raised when the editor notation selection changes."
+    },
+    {
+      "name": "OnOpenInEditor",
+      "type": "EventCallback<DiagramDocument>",
+      "isRequired": false,
+      "description": "Callback raised when the user opens the generated diagram in the full diagram editor."
+    },
+    {
+      "name": "OnProviderChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised when the editor provider selection changes (semantics of OnNotationChanged for the provider)."
+    },
+    {
+      "name": "OnSaveCompleted",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after a completed save (success, conflict or failure)."
+    },
+    {
+      "name": "OnViewpointChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback raised when the editor viewpoint selection changes."
+    },
+    {
+      "name": "PersistKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the localStorage key the docked shell persists user-resized panel widths under. Null (default) derives the key from TestIdPrefix - {TestIdPrefix}-modeling-editor, or plain modeling-editor without a prefix - so two editors on one page share persisted widths only when they share the prefix. Set it explicitly to namespace (or intentionally share) the saved layout per instance."
+    },
+    {
+      "name": "ProviderDisplayName",
+      "type": "Func<string, string>?",
+      "isRequired": false,
+      "description": "Optional display-name resolver for the provider options and the provider chip (review fix, phase 3). Receives the raw provider key and returns the text to show; when the callback is null (or returns nothing) the raw key itself is shown. The demo maps the keys to localized names; a host may resolve them from its own registry."
+    },
+    {
+      "name": "ProviderKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Provider key used to select the semantic model provider. Null or empty values render the empty state."
+    },
+    {
+      "name": "ProviderKeyChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised when the user picks a provider in the header selector; enables @bind-ProviderKey. The editor reloads the model with the selected provider."
+    },
+    {
+      "name": "SaveMode",
+      "type": "ModelingSaveMode",
+      "isRequired": false,
+      "default": "ModelingSaveMode.Manual",
+      "description": "How committed edits reach the writer: Manual (default) aggregates the pending change set until SaveModelChangesAsync; Immediate calls the writer after every field commit."
+    },
+    {
+      "name": "ShowPreviewLegend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the preview renders the notation legend card. Default true — the legend is part of the editor's contract from Fáze 15 on (a host that wants the pre-Fáze-15 look passes false). The mobile band shows the legend as a \"⋯\" sheet instead of the card."
+    },
+    {
+      "name": "ShowProviderSelector",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders a labeled \"Provider\" select in the editor header that lists every registered IModelingModelProvider (MO3). Default false keeps the pre-selector behavior: the provider stays a labeled value chip and remains host-owned through ProviderKey."
+    },
+    {
+      "name": "TreeGrouping",
+      "type": "ModelingTreeGrouping",
+      "isRequired": false,
+      "default": "ModelingTreeGrouping.Auto",
+      "description": "How the model tree structures its elements (Fáze 12 pass-through). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without ParentId looks and behaves exactly as before."
+    },
+    {
+      "name": "ViewpointKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
+    }
+  ],
+  "cssClasses": [
+    {
+      "name": "tm-modeling-editor__state",
+      "description": "Wrapper around the state TmBadge next to the editor title (variant by state)."
+    },
+    {
+      "name": "tm-modeling-editor__status-item",
+      "description": "One separated status item; the first carries the state icon (and the last-loaded time when the model carries metadata, MO3)."
+    },
+    {
+      "name": "tm-modeling-editor__status-icon",
+      "description": "Leading status icon (check/alert/clock by state), aria-hidden."
+    },
+    {
+      "name": "tm-modeling-editor__context",
+      "description": "Right-aligned header group wrapping the provider field/chip and the TmModelingViewSelector; wraps as a whole under the title and becomes a single-column grid below 48rem (review fix, phase 3)."
+    },
+    {
+      "name": "tm-modeling-editor__field",
+      "description": "Labeled header field (label above the select) hosting the provider selector when ShowProviderSelector is on; may shrink to its token minimum inside the wrapping context group (review fix, phase 3)."
+    },
+    {
+      "name": "tm-modeling-editor__open-editor-modal",
+      "description": "Class on the open-editor TmModal overlay root; sizes the modal panel to ~90vw x 90vh on the desktop and to a near-fullscreen panel below 48rem."
+    },
+    {
+      "name": "tm-modeling-editor__open-editor-body",
+      "description": "Dialog body wrapper filling the TmModal body; hosts the embedded diagram editor."
+    },
+    {
+      "name": "tm-modeling-editor__open-editor-diagram",
+      "description": "The embedded TmDiagramEditor inside the dialog body; fills the body height."
+    },
+    {
+      "name": "tm-modeling-editor__shell",
+      "description": "Class applied to the core TmEditorShell root on the docked layouts; fills the editor box and neutralizes the shell's generic header/status/canvas padding so the modeling chrome owns its own rhythm."
+    },
+    {
+      "name": "tm-modeling-editor__canvas-body",
+      "description": "The docked canvas surface: a grid with the preview row (minmax(0,1fr)) and the issues dock row (auto). Also the focusWithin surface containing the open-editor trigger and dialog."
+    },
+    {
+      "name": "tm-modeling-editor__canvas-body--issues-open",
+      "description": "Modifier rendered while the Issues dock is expanded; the dock row becomes a token clamp (min 12rem, preferred 38%, cap 20rem of the canvas region) so the list scrolls inside the dock and the preview keeps its row."
+    },
+    {
+      "name": "tm-modeling-editor__inspector",
+      "description": "The inspector wrapper inside the shell's right dock; carries the frozen modeling-inspector-panel test id and the Properties | Source TmTabs (sticky tab strip)."
+    },
+    {
+      "name": "tm-modeling-editor__history-btn",
+      "description": "Inspector header undo/redo button (with the keyboard hint in its title)."
+    },
+    {
+      "name": "tm-modeling-editor__editing-alert",
+      "description": "Wrapper of the save/conflict feedback alerts above the inspector."
+    },
+    {
+      "name": "tm-modeling-editor__conflict-reload",
+      "description": "The conflict alert's localized \"Reload\" action (asks for confirmation before discarding pending changes)."
+    },
+    {
+      "name": "tm-modeling-editor__discard-body",
+      "description": "Body of the discard-confirmation modal."
+    },
+    {
+      "name": "tm-modeling-editor__discard-actions",
+      "description": "Confirm/Cancel row of the discard-confirmation modal."
+    }
+  ]
 }

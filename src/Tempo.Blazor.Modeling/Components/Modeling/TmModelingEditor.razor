@@ -259,6 +259,7 @@
        resolved layout. The editor ROOT section is the focusWithin scope (it contains the close
        button and every focus-return host in every layout). *@
     @ChangeViewSheetContent
+    @LegendSheetContent
     @OpenEditorModalContent
     @EditingOverlaysContent
 </section>
@@ -346,6 +347,9 @@
                         LayoutMode="TmLayoutMode.Mobile"
                         OnSelect="HandleMobileHeaderMenuAsync">
                 <TmDropdownItem Value="change-view" Icon="@IconNames.Sliders">@Loc["TmModelingEditor_ChangeView"]</TmDropdownItem>
+                @* Fáze 15: the mobile band explains the preview legend through this sheet — the
+                   legend CARD would cover the small preview canvas. *@
+                <TmDropdownItem Value="legend" Icon="@IconNames.List" Disabled="@(_document is null)">@Loc["TmModelingEditor_Legend"]</TmDropdownItem>
                 @* Fáze 7 review: Generate carries the wand icon — the bar's Reload keeps Refresh,
                    so the two adjacent mobile entries are never the same glyph. *@
                 <TmDropdownItem Value="generate" Icon="@IconNames.WandSparkles" Disabled="@(_model is null || _state != ModelingEditorState.Loaded)">@Loc["TmModelingDiagramPreview_Generate"]</TmDropdownItem>
@@ -478,6 +482,9 @@
                                                                         ShowZoomOverlay="@IsMobileLayout"
                                                                         ShowHeader="@(!IsMobileLayout)"
                                                                         ShowSummary="false"
+                                                                        ShowLegend="@(!IsMobileLayout && ShowPreviewLegend)"
+                                                                        LegendEntries="@LegendEntries"
+                                                                        LegendDefaultExpanded="@(!IsTablet)"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
                                                                         OnNodeDropped="HandleNodeDroppedAsync"
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
@@ -764,6 +771,30 @@
     </TmModal>;
 
     /// <summary>
+    /// Fáze 15: the mobile legend sheet — the same TmModal bottom-sheet presentation the
+    /// "Change view" sheet uses, hosting the SAME legend component the preview card uses (the
+    /// sheet replaces the card, which would cover the small mobile preview canvas). A
+    /// mobile-only surface (the compact header "⋯" is the only entry) — the presentation is
+    /// forced through the mobile LayoutMode, deterministic without DOM measurement.
+    /// </summary>
+    private RenderFragment LegendSheetContent => @<TmModal Show="@_legendSheetOpen"
+                                                           Title="@Loc["TmModelingEditor_Legend"]"
+                                                           MobilePresentation="MobilePresentation.Auto"
+                                                           LayoutMode="TmLayoutMode.Mobile"
+                                                           ShowFooter="false"
+                                                           ShowDefaultFooterButtons="false"
+                                                           CloseOnOverlayClick="true"
+                                                           CloseOnEscape="true"
+                                                           OnClose="CloseLegendSheetAsync"
+                                                           AdditionalAttributes="@LegendSheetAttributes">
+        <ChildContent>
+            <div class="tm-modeling-editor__legend-sheet-body">
+                <TmModelingDiagramLegend Entries="@LegendEntries" DefaultExpanded="true" />
+            </div>
+        </ChildContent>
+    </TmModal>;
+
+    /// <summary>
     /// Fáze 14: the editing overlays rendered ONCE — the save/conflict feedback alerts (placed
     /// in the inspector surfaces by the fragments below) and the discard-confirmation modal.
     /// The modal is a core TmModal with the localized title/text and Confirm/Cancel.
@@ -919,6 +950,8 @@
                                          LayoutBreakpoints="@OpenEditorBreakpoints"
                                          MinimapInitiallyCollapsed="@IsTablet"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
+                                         PreferredStencilIds="@NotationPaletteStencilIds"
+                                         PreferredStencilsLabel="@NotationPaletteLabel"
                                          ShowTitle="false"
                                          ShowToolbox="true"
                                          ShowPropertiesPanel="true"

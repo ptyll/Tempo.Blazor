@@ -35,6 +35,25 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// </summary>
     [Parameter] public bool CollapseCategoriesExceptFirst { get; set; }
 
+    /// <summary>
+    /// Fáze 15 (the Modeling "Open in editor" notation palette): stencil ids to pin as the FIRST
+    /// library — the palette of the active notation — while every other library starts collapsed
+    /// (search still spans the whole stencil library). Order is preserved; unknown ids are
+    /// ignored. <c>null</c> (the default) keeps today's toolbox: no pinned library, all palettes
+    /// expanded.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string>? PreferredStencilIds { get; set; }
+
+    /// <summary>
+    /// Header label of the pinned library (the Modeling dialog passes the notation profile's
+    /// display name). Null falls back to the localized <c>TmDiagramToolbox_PreferredDefault</c>.
+    /// Ignored while <see cref="PreferredStencilIds"/> is unset.
+    /// </summary>
+    [Parameter] public string? PreferredStencilsLabel { get; set; }
+
+    /// <summary>Synthetic set/palette id of the pinned (preferred-stencils) library.</summary>
+    internal const string PreferredLibraryId = "notation-palette";
+
     private bool _collapsed;
     private readonly HashSet<string> _collapsedPalettes = new(StringComparer.Ordinal);
     private ElementReference _containerRef;
@@ -47,6 +66,10 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// rebuilds the library groups (the flag drives the General-first ordering inside
     /// <see cref="RefreshFilter"/>).</summary>
     private bool _collapseCategoriesExceptFirstApplied;
+
+    /// <summary>Signature of the last-applied preferred set — a change (a notation switch)
+    /// rebuilds the groups and re-collapses the non-pinned palettes.</summary>
+    private string? _preferredApplied;
 
     /// <summary>Per-instance id of the visually-hidden read-only hint: two toolboxes on one page
     /// must never share an id (a duplicate id breaks every aria-describedby reference).</summary>
@@ -69,6 +92,35 @@ public partial class TmDiagramToolbox : TmComponentBase
         {
             _collapseCategoriesExceptFirstApplied = CollapseCategoriesExceptFirst;
             RefreshFilter();
+        }
+
+        // Fáze 15: the preferred (pinned) set decides the library groups too — a change (the
+        // Modeling dialog switching notation) must rebuild them.
+        var preferredSignature = GetPreferredSignature(PreferredStencilIds);
+        if (!string.Equals(preferredSignature, _preferredApplied, StringComparison.Ordinal))
+        {
+            _preferredApplied = preferredSignature;
+            RefreshFilter();
+
+            // UX review (Fáze 15): with a pinned palette set, every NON-pinned palette starts
+            // collapsed — the palette opens on the notation and the rest of the library stays
+            // one expand away. Re-applied when the set changes; the user's own choices win
+            // afterwards (a live search always expands matches).
+            if (preferredSignature is not null)
+            {
+                foreach (var library in _filteredLibraries)
+                {
+                    if (string.Equals(library.Id, PreferredLibraryId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    foreach (var palette in library.Palettes)
+                    {
+                        _collapsedPalettes.Add(palette.Id);
+                    }
+                }
+            }
         }
 
         // UX review: the mobile Shapes sheet starts with only the FIRST LIBRARY (the General/basic
@@ -164,9 +216,10 @@ public partial class TmDiagramToolbox : TmComponentBase
     private void RefreshFilter()
     {
         var query = _searchQuery.Trim();
+        var allStencils = StencilRegistry.GetAll();
         if (string.IsNullOrWhiteSpace(query))
         {
-            _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll());
+            _filteredLibraries = BuildLibraryGroups(allStencils);
             return;
         }
 
@@ -175,10 +228,49 @@ public partial class TmDiagramToolbox : TmComponentBase
         var registryHits = new HashSet<string>(
             StencilRegistry.Search(query).Select(s => s.Id),
             StringComparer.Ordinal);
-        _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll().Where(s =>
+        _filteredLibraries = BuildLibraryGroups(allStencils.Where(s =>
             registryHits.Contains(s.Id)
             || DiagramSearchText.MatchesAny(query, GetStencilDisplayName(s), s.Name)));
     }
+
+    /// <summary>The pinned (preferred) library: the preferred stencil ids resolved against the
+    /// registry in the given order (unknown ids ignored). Null when no preferred set is active.</summary>
+    private ToolboxLibraryGroup? BuildPreferredLibrary(IEnumerable<DiagramStencil> stencils)
+    {
+        if (PreferredStencilIds is null || PreferredStencilIds.Count == 0)
+        {
+            return null;
+        }
+
+        var byId = stencils.ToDictionary(stencil => stencil.Id, StringComparer.Ordinal);
+        var preferred = PreferredStencilIds
+            .Where(id => !string.IsNullOrWhiteSpace(id) && byId.ContainsKey(id))
+            .Distinct(StringComparer.Ordinal)
+            .Select(id => byId[id])
+            .ToList();
+
+        if (preferred.Count == 0)
+        {
+            return null;
+        }
+
+        return new ToolboxLibraryGroup(
+            PreferredLibraryId,
+            NameResourceKey: null,
+            FallbackName: string.IsNullOrWhiteSpace(PreferredStencilsLabel)
+                ? Loc["TmDiagramToolbox_PreferredDefault"]
+                : PreferredStencilsLabel,
+            ShowHeader: true,
+            Palettes:
+            [
+                new ToolboxPaletteGroup(PreferredLibraryId, null, PreferredStencilsLabel ?? Loc["TmDiagramToolbox_PreferredDefault"], 0, preferred)
+            ]);
+    }
+
+    private static string? GetPreferredSignature(IReadOnlyList<string>? preferred)
+        => preferred is null || preferred.Count == 0
+            ? null
+            : string.Join("|", preferred);
 
     private List<ToolboxLibraryGroup> BuildLibraryGroups(IEnumerable<DiagramStencil> stencils)
     {
@@ -222,6 +314,14 @@ public partial class TmDiagramToolbox : TmComponentBase
             libraries = libraries
                 .OrderByDescending(l => IsGeneralLibrary(l))
                 .ToList();
+        }
+
+        // Fáze 15: the pinned (notation palette) library always renders FIRST — the palette is
+        // the sheet/dock's opening set — followed by the rest of the stencil library.
+        var preferredLibrary = BuildPreferredLibrary(stencils);
+        if (preferredLibrary is not null)
+        {
+            libraries.Insert(0, preferredLibrary);
         }
 
         return libraries;

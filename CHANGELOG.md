@@ -12,6 +12,15 @@
 
 ### Breaking / Migration
 
+- **TmModelingEditor previews now show a notation legend card by default (Fáze 15).** `ShowPreviewLegend` defaults to `true`: the desktop/tablet preview renders a collapsible "Legend" card in the canvas corner (listing only the notation shapes the document uses) and the mobile band gains a "Legenda" entry in the compact header "⋯". A host that wants the pre-Fáze-15 look passes `ShowPreviewLegend="false"`:
+  ```razor
+  <!-- before (2.9.x): no legend -->
+  <TmModelingEditor ProviderKey="erp.modeling" />
+
+  <!-- after: the legend is part of the contract; opt out with one parameter -->
+  <TmModelingEditor ProviderKey="erp.modeling" ShowPreviewLegend="false" />
+  ```
+  The legend never steals canvas height (it is an overlay in the canvas corner) and never covers the Fáze 9 mobile zoom pill or the empty-diagram hint. `TmModelingDiagramPreview.ShowLegend` itself defaults to `false` — only the editor opts in by default.
 - **TmGantt phase 1: previously unstyled Gantt surfaces now render styled, and "New report" needs a callback.**
   - *Appearance.* The export, import and column-mapping dialogs, the history drawer, the filter panel, the workload grid and the portfolio used to render without any styling (a scoped-CSS isolation defect). They are styled now, with the values the stylesheet always declared. A host that overrode them with a selector written against the scoped attribute (`.tm-gantt__history-drawer[b-xxxx]`, or `::deep` from a parent) now matches the new owner's scope; write the override against the class and give it the same specificity as the component rule:
     ```css
@@ -206,6 +215,21 @@
   ```
 
 ### Added
+
+- **Modeling: notation palette in the "Open in editor" dialog and a preview legend (Fáze 15 of the Modeling redesign plan).** The dialog's toolbox now pins the ACTIVE notation's stencils as the FIRST library (labelled with the notation profile's display name, order preserved) while the rest of the stencil library starts collapsed — and stays searchable across the whole library. The preview carries a collapsible legend card explaining only the notation shapes the generated document actually uses. Both run on one shared catalog and additive DiagramEditor API.
+  - **DiagramEditor (all additive — defaults are today's behavior)**: `TmDiagramEditor.PreferredStencilIds` (`IReadOnlyList<string>?`, default `null` = today's toolbox) and `PreferredStencilsLabel` (`string?`) pass through to `TmDiagramToolbox`, which renders the pinned library FIRST (`data-library-id="notation-palette"`, `data-pinned="true"`), collapses every other palette while the set is active (a live search still expands matches everywhere) and treats the pinned library as the "first category" for `CollapseCategoriesExceptFirst` on the mobile Shapes sheet. Unknown preferred ids are ignored. New public `TmDiagramStencilIcon` (`StencilId`, `Size`, `Class`) — the toolbox tile preview pipeline (including the text-trimming) for hosts presenting stencils outside the toolbox; always `aria-hidden`, unknown ids render the generic fallback shape.
+  - **Modeling**: new `ModelingNotationCatalog` (singleton) maps the active notation profile's semantic types to diagram stencils through the SAME `IModelingStencilMapper` the generator uses (memoized per notation, labels through the `TmModelingSemanticType_{type}` keys) and filters legend entries to the types the document uses. The dialog passes `PreferredStencilIds`/`PreferredStencilsLabel = profile.DisplayName`. Inserting from the palette creates ONLY a diagram node (with the node's own `semanticType`/`notation` data) — never a semantic model element (element creation through the Fáze 14 writer is backlog).
+  - **`TmModelingDiagramLegend`** (new component, `data-testid="modeling-preview-legend"`): a collapsible card — `role="list"` entries with `aria-hidden` icons next to visible text and an `aria-expanded`/`aria-controls` toggle — grouped into Elements and Relationships, positioned as an overlay in the canvas corner (the embedded editor keeps its height; the Fáze 9 mobile zoom pill and the empty-diagram hint stay visible).
+  - **`TmModelingDiagramPreview`** gains `ShowLegend` (default `false`), `LegendEntries` (`IReadOnlyList<ModelingNotationCatalogEntry>?`) and `LegendDefaultExpanded` (desktop expanded, tablet collapsed through the hosting editor).
+  - **Mobile**: the compact header "⋯" gains a **Legenda** entry opening a `modeling-legend-sheet` bottom sheet hosting the same legend (the card would cover the small preview canvas).
+  - New keys in en / cs / sk / fr + `MockTmLocalizer`: `TmModelingDiagramLegend_Title`, `_Show`, `_Hide`, `_Elements`, `_Relationships`, `_Empty`, `TmModelingEditor_Legend`, `TmDiagramToolbox_PreferredDefault`.
+  ```razor
+  @* The editor wires both surfaces by default; a host that wants the pre-Fáze-15 look sets: *@
+  <TmModelingEditor ProviderKey="erp.modeling" ShowPreviewLegend="false" />
+
+  @* DiagramEditor-only hosts opt in to a pinned stencil library themselves *@
+  <TmDiagramEditor Document="@doc" PreferredStencilIds="@myPinned" PreferredStencilsLabel="BPMN 2.0" />
+  ```
 
 - **Modeling: an editable inspector behind a write contract (Fáze 14 of the Modeling redesign plan, decision `MODELING-INSPECTOR-EDITING`).** The modeling inspector can now edit the selected element or relationship — the name, the description and the SCALAR properties (string, number, boolean; complex object/array values stay read-only, as do semantic type, notation, source metadata and governance) — with an editor-owned undo/redo stack and an explicit save contract. Everything is OPT-IN; with no opt-in the behavior is byte-identical to the read-only MO2 inspector.
   - **New Abstractions contract** (namespace `Tempo.Blazor.Modeling`): `IModelingModelWriter` (`ProviderKey` + `SaveChangesAsync(ModelingModelChangeSet, CancellationToken)` returning `ModelingModelSaveResult`) with `ModelingModelChangeSet` (`ModelId`, `ProviderKey`, `BaseVersion` = `Metadata.SourceVersion`, `Elements`, `Relationships`), `ModelingElementChange` / `ModelingRelationshipChange` (a `null` member means "unchanged") and `ModelingModelSaveResult` (`Succeeded`, `IsConflict`, `Message`, `Model?`, `Issues`). `IModelingModelProvider` is UNCHANGED — reads stay read-only.

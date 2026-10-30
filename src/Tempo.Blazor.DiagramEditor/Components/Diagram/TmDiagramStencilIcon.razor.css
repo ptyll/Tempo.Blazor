@@ -1,0 +1,7 @@
+/* Fáze 15: the public stencil preview icon (toolbox pipeline shared with the Modeling palette
+   and legend). Tokens only; the host sizes it through the Size parameter. */
+.tm-diagram-stencil-icon {
+    display: block;
+    flex: none;
+    color: var(--tm-color-text);
+}

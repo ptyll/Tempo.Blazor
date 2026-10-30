@@ -95,10 +95,35 @@ public partial class TmModelingDiagramPreview
     /// <summary>Additional CSS class applied to the preview root.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Fáze 15: show the notation legend as a card over the preview canvas (a SIBLING of the
+    /// embedded editor — never inside it). Default <c>false</c> — purely additive. The hosting
+    /// editor passes its <c>ShowPreviewLegend</c> and owns the mobile band's "⋯" sheet instead;
+    /// the card only renders while a document AND legend entries exist.
+    /// </summary>
+    [Parameter] public bool ShowLegend { get; set; }
+
+    /// <summary>
+    /// The legend entries (the shared <see cref="ModelingNotationCatalog"/> filtered to the
+    /// document's types). Null (no notation catalog data) renders no card even when
+    /// <see cref="ShowLegend"/> is true; an EMPTY list renders the card with the localized
+    /// empty text.
+    /// </summary>
+    [Parameter] public IReadOnlyList<ModelingNotationCatalogEntry>? LegendEntries { get; set; }
+
+    /// <summary>
+    /// Whether the legend card starts expanded (the hosting editor seeds it from the resolved
+    /// layout: desktop expanded, tablet collapsed). Seeded once — the user's own toggle wins.
+    /// </summary>
+    [Parameter] public bool LegendDefaultExpanded { get; set; } = true;
+
     private string RootClass => string.Join(" ", new[]
     {
         "tm-modeling-diagram-preview",
         ShowHeader ? null : "tm-modeling-diagram-preview--no-header",
+        ShowLegend && Document is not null && LegendEntries is not null
+            ? "tm-modeling-diagram-preview--legend"
+            : null,
         Class
     }.Where(value => !string.IsNullOrWhiteSpace(value)));
 

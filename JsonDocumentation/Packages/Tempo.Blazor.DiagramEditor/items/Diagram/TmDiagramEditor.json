@@ -12,16 +12,16 @@
   ],
   "parameters": [
     {
-      "name": "Document",
-      "type": "DiagramDocument?",
-      "isRequired": false,
-      "description": "Document being edited. Bind with @bind-Document."
-    },
-    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class on the editor root."
+    },
+    {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Document being edited. Bind with @bind-Document."
     },
     {
       "name": "DocumentChanged",
@@ -37,6 +37,12 @@
       "description": "Optional named HttpClient to use for SVG/PNG/PDF export calls."
     },
     {
+      "name": "FitOnDocumentLoad",
+      "type": "DiagramFitMode?",
+      "isRequired": false,
+      "description": "Fit the diagram once after the first render of a NEW document identity. Default null (no auto-fit). Width is the embedded mobile preview's fit-to-width; the same document never re-fits, a replaced document does, and user zoom afterwards wins."
+    },
+    {
       "name": "GridSize",
       "type": "int",
       "isRequired": false,
@@ -44,41 +50,16 @@
       "description": "Snap-to-grid cell size in pixels. 0 = disabled."
     },
     {
-      "name": "OnSelectedIdsChanged",
-      "type": "EventCallback<string[]>",
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Raised when selected diagram item identifiers change."
+      "description": "Host content rendered at the very end of the header bar, after the built-in controls (G9 host slot)."
     },
     {
-      "name": "RecentStencilIds",
-      "type": "IReadOnlyList<string>?",
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Stencil ids the connect dialog offers first (newest first, at most 8). Optional: when null the editor keeps its own per-instance list. Bind it together with RecentStencilIdsChanged to persist recents per user. The list is never shared between editor instances."
-    },
-    {
-      "name": "RecentStencilIdsChanged",
-      "type": "EventCallback<IReadOnlyList<string>>",
-      "isRequired": false,
-      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog. In controlled usage the host feeds the value back through RecentStencilIds (a @bind does this automatically); the editor adopts it only when the reference changes, so a stale render can never clobber a just-added recent."
-    },
-    {
-      "name": "ReadOnly",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Host-pinned read-only mode: prevents all editing interactions and hides the built-in Read-only/Edit toggle. The component never assigns this parameter — the toggle flips the internal user state exposed by IsReadOnly, so a hosted read-only preview cannot be unlocked from the UI."
-    },
-    {
-      "name": "ToolbarPreset",
-      "type": "DiagramToolbarPreset",
-      "isRequired": false,
-      "default": "DiagramToolbarPreset.Full",
-      "description": "Toolbar layout preset. Full renders every toolbar group (the set of groups, not a historical order — since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar); Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
-    },
-    {
-      "name": "ToolbarGroups",
-      "type": "DiagramToolbarGroups?",
-      "isRequired": false,
-      "description": "Explicit toolbar group selection (flags). When set it overrides ToolbarPreset; null (the default) resolves the visible groups from the preset. The built-in Read-only toggle additionally requires the host not to pin ReadOnly and the ReadOnly flag to be set. Stable public API."
+      "description": "Host content rendered at the very start of the header bar, before the document title (G9 host slot)."
     },
     {
       "name": "InspectorLayout",
@@ -88,6 +69,12 @@
       "description": "How the inspector column presents the properties and layers panels. Tabs (the default) renders \"Properties | Layers\" tabs; Stacked is the opt-in legacy column with both panels stacked above each other."
     },
     {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds for the editor container. Null uses the editor default (tablet from 768px, desktop from 1200px). Pass new TmLayoutBreakpoints(640, 1024) to follow the shared TmBreakpoints instead."
+    },
+    {
       "name": "LayoutMode",
       "type": "TmLayoutMode",
       "isRequired": false,
@@ -95,10 +82,10 @@
       "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
     },
     {
-      "name": "LayoutBreakpoints",
-      "type": "TmLayoutBreakpoints?",
+      "name": "MinimapInitiallyCollapsed",
+      "type": "bool",
       "isRequired": false,
-      "description": "Per-instance layout thresholds for the editor container. Null uses the editor default (tablet from 768px, desktop from 1200px). Pass new TmLayoutBreakpoints(640, 1024) to follow the shared TmBreakpoints instead."
+      "description": "Start the minimap card (desktop) / floating overlay (tablet) collapsed. Default false (today's expanded start); seeded once at initialization, the user's own toggle wins afterwards and the mobile X1 rule is unchanged. The Modeling tablet dialog seeds it from its resolved mode."
     },
     {
       "name": "MinimapPlacement",
@@ -115,30 +102,40 @@
       "description": "Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet (X1). Pass true to restore the pre-2.9.1 open-on-load behaviour."
     },
     {
-      "name": "ShowStatusBar",
+      "name": "OnSelectedIdsChanged",
+      "type": "EventCallback<string[]>",
+      "isRequired": false,
+      "description": "Raised when selected diagram item identifiers change."
+    },
+    {
+      "name": "PreferredStencilIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Fáze 15 (embedded hosts, e.g. the Modeling \"Open in editor\" dialog): stencil ids to pin as the FIRST toolbox library (order preserved, unknown ids ignored) while the other libraries start collapsed — search still spans the whole stencil library. Null (the default) keeps today's toolbox. Pass-through to TmDiagramToolbox."
+    },
+    {
+      "name": "PreferredStencilsLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Header label of the pinned library (e.g. the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Pass-through to TmDiagramToolbox; ignored while PreferredStencilIds is unset."
+    },
+    {
+      "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "default": "true",
-      "description": "Show the status bar below the canvas (zoom controls, read-only toggle). Default true."
+      "description": "Host-pinned read-only mode: prevents all editing interactions and hides the built-in Read-only/Edit toggle. The component never assigns this parameter — the toggle flips the internal user state exposed by IsReadOnly, so a hosted read-only preview cannot be unlocked from the UI."
     },
     {
-      "name": "ShowTitle",
-      "type": "bool",
+      "name": "RecentStencilIds",
+      "type": "IReadOnlyList<string>?",
       "isRequired": false,
-      "default": "true",
-      "description": "Show the editable document title in the header. Default true. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
+      "description": "Stencil ids the connect dialog offers first (newest first, at most 8). Optional: when null the editor keeps its own per-instance list. Bind it together with RecentStencilIdsChanged to persist recents per user. The list is never shared between editor instances."
     },
     {
-      "name": "HeaderStart",
-      "type": "RenderFragment?",
+      "name": "RecentStencilIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
       "isRequired": false,
-      "description": "Host content rendered at the very start of the header bar, before the document title (G9 host slot)."
-    },
-    {
-      "name": "HeaderActions",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Host content rendered at the very end of the header bar, after the built-in controls (G9 host slot)."
+      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog. In controlled usage the host feeds the value back through RecentStencilIds (a @bind does this automatically); the editor adopts it only when the reference changes, so a stale render can never clobber a just-added recent."
     },
     {
       "name": "ShowGrid",
@@ -162,6 +159,18 @@
       "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
     },
     {
+      "name": "ShowMobileZoomOverlay",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "The mobile floating zoom pill rule. Default null keeps today's rule (mobile layout + ShowToolbar + the Zoom group); true shows the pill on a mobile layout even chrome-less; false never shows it. The docked bands keep the status-bar zoom."
+    },
+    {
+      "name": "ShowPageTabs",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available by setting the document's ActivePageIndex) — the embedded single-page viewer's knob, never CSS."
+    },
+    {
       "name": "ShowPageView",
       "type": "bool",
       "isRequired": false,
@@ -174,6 +183,20 @@
       "isRequired": false,
       "default": "true",
       "description": "Show the properties panel on the right."
+    },
+    {
+      "name": "ShowStatusBar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the status bar below the canvas (zoom controls, read-only toggle). Default true."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the editable document title in the header. Default true. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
     },
     {
       "name": "ShowToolbar",
@@ -190,28 +213,17 @@
       "description": "Show the component toolbox panel on the left."
     },
     {
-      "name": "ShowPageTabs",
-      "type": "bool",
+      "name": "ToolbarGroups",
+      "type": "DiagramToolbarGroups?",
       "isRequired": false,
-      "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available by setting the document's ActivePageIndex) — the embedded single-page viewer's knob, never CSS."
+      "description": "Explicit toolbar group selection (flags). When set it overrides ToolbarPreset; null (the default) resolves the visible groups from the preset. The built-in Read-only toggle additionally requires the host not to pin ReadOnly and the ReadOnly flag to be set. Stable public API."
     },
     {
-      "name": "FitOnDocumentLoad",
-      "type": "DiagramFitMode?",
+      "name": "ToolbarPreset",
+      "type": "DiagramToolbarPreset",
       "isRequired": false,
-      "description": "Fit the diagram once after the first render of a NEW document identity. Default null (no auto-fit). Width is the embedded mobile preview's fit-to-width; the same document never re-fits, a replaced document does, and user zoom afterwards wins."
-    },
-    {
-      "name": "ShowMobileZoomOverlay",
-      "type": "bool?",
-      "isRequired": false,
-      "description": "The mobile floating zoom pill rule. Default null keeps today's rule (mobile layout + ShowToolbar + the Zoom group); true shows the pill on a mobile layout even chrome-less; false never shows it. The docked bands keep the status-bar zoom."
-    },
-    {
-      "name": "MinimapInitiallyCollapsed",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Start the minimap card (desktop) / floating overlay (tablet) collapsed. Default false (today's expanded start); seeded once at initialization, the user's own toggle wins afterwards and the mobile X1 rule is unchanged. The Modeling tablet dialog seeds it from its resolved mode."
+      "default": "DiagramToolbarPreset.Full",
+      "description": "Toolbar layout preset. Full renders every toolbar group (the set of groups, not a historical order — since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar); Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
     }
   ],
   "cssClasses": [

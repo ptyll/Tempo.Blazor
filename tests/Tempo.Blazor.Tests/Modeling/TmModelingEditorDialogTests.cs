@@ -653,4 +653,105 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
             mobileClose.GetAttribute("data-modeling-focus").Should().Be("open-editor-close");
         });
     }
+
+    // ── Fáze 15: the dialog's notation palette (pinned stencil library) ─────
+
+    /// <summary>The shared LocalizationTestBase registers an EMPTY stencil registry (most tests
+    /// register their own). The palette tests need the mapped stencils to resolve — replace the
+    /// registration with a minimal library carrying the two palette stencils (last-wins).</summary>
+    private void UsePaletteStencilLibrary()
+    {
+        var registry = new Tempo.Blazor.Components.Diagram.Stencils.DiagramStencilRegistry();
+        registry.RegisterStencil(new Tempo.Blazor.Components.Diagram.Models.DiagramStencil
+        {
+            Id = "bpmn2.task.user",
+            Name = "User task",
+            Category = "bpmn2",
+            SetId = "bpmn2",
+            PaletteId = "bpmn2.activities",
+            Kind = Tempo.Blazor.Components.Diagram.Models.DiagramStencilKind.Node,
+            Origin = Tempo.Blazor.Components.Diagram.Models.DiagramStencilOrigin.TempoOriginal
+        });
+        registry.RegisterStencil(new Tempo.Blazor.Components.Diagram.Models.DiagramStencil
+        {
+            Id = "uml25.class",
+            Name = "Class",
+            Category = "uml25",
+            SetId = "uml25",
+            PaletteId = "uml25.classifiers",
+            Kind = Tempo.Blazor.Components.Diagram.Models.DiagramStencilKind.Node,
+            Origin = Tempo.Blazor.Components.Diagram.Models.DiagramStencilOrigin.TempoOriginal
+        });
+        Services.AddSingleton(registry);
+    }
+
+    [Fact]
+    public async Task Dialog_toolbox_pins_notation_palette_for_active_notation()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        UsePaletteStencilLibrary();
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.NotationKey, "bpmn"));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
+
+        var dialogToolbox = cut.Find("[data-testid='modeling-open-diagram-editor'] .tm-diagram-toolbox");
+        var firstLibrary = dialogToolbox.QuerySelector(".tm-diagram-toolbox__library")!;
+        firstLibrary.GetAttribute("data-library-id").Should().Be("notation-palette",
+            "the active notation's stencils are pinned as the FIRST palette library");
+        firstLibrary.QuerySelector(".tm-diagram-toolbox__library-header")!.TextContent.Trim()
+            .Should().Be("BPMN Legacy", "the pinned library is labelled with the profile display name");
+        firstLibrary.QuerySelector("[data-stencil-id='bpmn2.task.user']").Should().NotBeNull(
+            "the palette stencils come from the notation profile mapped through the stencil mapper");
+
+        // The rest of the stencil library stays reachable below (collapsed, searchable).
+        dialogToolbox.QuerySelector(".tm-diagram-toolbox__search input").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Notation_change_updates_pinned_palette()
+    {
+        var module = JSInterop.SetupModule(ModelingModulePath);
+        module.SetupVoid("focusWithin", _ => true).SetVoidResult();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        UsePaletteStencilLibrary();
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
+            .Add(p => p.NotationKey, "bpmn"));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var pinned = cut.Find("[data-testid='modeling-open-diagram-editor'] [data-library-id='notation-palette']");
+            pinned.QuerySelector("[data-stencil-id='bpmn2.task.user']").Should().NotBeNull();
+        });
+
+        // Switch the notation: the stale dialog snapshot closes (the diagram regenerates) and a
+        // NEWLY opened dialog re-pins the palette to the new profile's stencils.
+        cut.Find("[data-testid='modeling-open-diagram-close']").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid='modeling-open-diagram-editor']").Should().BeEmpty());
+
+        cut.Render(parameters => parameters.Add(p => p.NotationKey, "uml25"));
+        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+
+        cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var pinned = cut.Find("[data-testid='modeling-open-diagram-editor'] [data-library-id='notation-palette']");
+            pinned.QuerySelector(".tm-diagram-toolbox__library-header")!.TextContent.Trim().Should().Be("UML 2.5");
+            pinned.QuerySelector("[data-stencil-id='uml25.class']").Should().NotBeNull();
+            pinned.QuerySelector("[data-stencil-id='bpmn2.task.user']").Should().BeNull(
+                "the previous notation's stencils are gone from the pinned palette");
+        });
+    }
 }

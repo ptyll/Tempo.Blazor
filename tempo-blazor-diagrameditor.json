@@ -4815,6 +4815,18 @@
           "description": "Raised when selected diagram item identifiers change."
         },
         {
+          "name": "PreferredStencilIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Fáze 15 (embedded hosts, e.g. the Modeling \"Open in editor\" dialog): stencil ids to pin as the FIRST toolbox library (order preserved, unknown ids ignored) while the other libraries start collapsed — search still spans the whole stencil library. Null (the default) keeps today's toolbox. Pass-through to TmDiagramToolbox."
+        },
+        {
+          "name": "PreferredStencilsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Header label of the pinned library (e.g. the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Pass-through to TmDiagramToolbox; ignored while PreferredStencilIds is unset."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
@@ -5465,6 +5477,39 @@
       ]
     },
     {
+      "itemName": "TmDiagramStencilIcon",
+      "kind": "Component",
+      "category": "Diagram",
+      "namespace": "Tempo.Blazor.Components.Diagram",
+      "description": "Public small stencil preview: renders the registered stencil's compact SVG (the same text-trimming pipeline the toolbox tiles use) for hosts that present stencils outside the toolbox — the Modeling \"Open in editor\" notation palette and the preview legend embed it instead of duplicating the icon markup. Always aria-hidden: the visible text label of the surrounding row/tile owns the accessible name. A stencil id the registry does not know renders the generic fallback shape.",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramStencilIcon.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Diagram"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "Size",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS size of the icon box (applied to width and height). Default \"32px\" — the toolbox tile size."
+        },
+        {
+          "name": "StencilId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stencil id to preview. Null or unknown ids render the fallback shape."
+        }
+      ]
+    },
+    {
       "itemName": "TmDiagramStencilShape",
       "kind": "Component",
       "category": "Diagram",
@@ -5669,6 +5714,18 @@
           "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
         },
         {
+          "name": "PreferredStencilIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Fáze 15 (the Modeling \"Open in editor\" notation palette): stencil ids to pin as the FIRST library — the palette of the active notation — while every other library starts collapsed (search still spans the whole stencil library). Order is preserved; unknown ids are ignored. Null (the default) keeps today's toolbox: no pinned library, all palettes expanded."
+        },
+        {
+          "name": "PreferredStencilsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Header label of the pinned library (the Modeling dialog passes the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Ignored while PreferredStencilIds is unset."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
@@ -5784,11 +5841,11 @@
     }
   ],
   "summary": {
-    "itemCount": 144,
-    "manualItemCount": 144,
-    "generatedItemCount": 135,
+    "itemCount": 145,
+    "manualItemCount": 145,
+    "generatedItemCount": 136,
     "generatedOnlyItemCount": 0,
-    "componentCount": 17,
+    "componentCount": 18,
     "publicApiTypeCount": 118
   }
 }
