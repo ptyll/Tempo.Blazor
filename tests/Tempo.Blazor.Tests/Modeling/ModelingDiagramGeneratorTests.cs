@@ -371,6 +371,27 @@ public sealed class ModelingDiagramGeneratorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Generator_orders_parent_elements_below_their_descendants_by_z_index()
+    {
+        // Final review fix: a container must never paint over its children — an element id that
+        // is some other element's ParentId receives a LOWER ZIndex than its descendants, even
+        // when it is declared after them.
+        var childA = Element("child-a", "source-child-a", "bpmn", "userTask", "Child A");
+        childA.ParentId = "container";
+        var childB = Element("child-b", "source-child-b", "bpmn", "serviceTask", "Child B");
+        childB.ParentId = "container";
+        var container = Element("container", "source-container", "bpmn", "subProcess", "Container");
+
+        var generator = CreateGenerator();
+        var result = generator.Generate(CreateModel(childA, childB, container));
+
+        var nodes = result.Document!.Nodes;
+        var containerZIndex = nodes.Single(node => node.Id == "source-container").ZIndex;
+        containerZIndex.Should().BeLessThan(nodes.Single(node => node.Id == "source-child-a").ZIndex);
+        containerZIndex.Should().BeLessThan(nodes.Single(node => node.Id == "source-child-b").ZIndex);
+    }
+
+    [Fact]
     public void Generated_document_renders_in_diagram_editor_without_exception()
     {
         var generator = CreateGenerator();

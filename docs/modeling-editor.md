@@ -166,7 +166,9 @@ stencil (UML Dependency/Include/Extend) collapse into ONE row per stencil with t
   **Legenda** entry (`TmModelingEditor_Legend`) opening a `modeling-legend-sheet` bottom sheet
   hosting the same component with `Collapsible="false"`.
 - **Palette**: the same catalog feeds the "Open in editor" dialog — its toolbox pins the notation
-  palette as the FIRST library (`data-library-id="notation-palette"`, label = the profile's
+  palette as the FIRST library via the editor's `PreferredStencilIds` /
+  `PreferredStencilsLabel` knobs (see [docs/diagram-editor.md](diagram-editor.md))
+  (`data-library-id="notation-palette"`, label = the profile's
   `DisplayName` on the pinned palette's category header — never repeated as a library header),
   the rest of the stencil library starts collapsed and the search spans everything. A pinned
   stencil duplicated in a native library lists in both places (see

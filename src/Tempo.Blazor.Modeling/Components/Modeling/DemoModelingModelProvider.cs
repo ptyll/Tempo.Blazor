@@ -35,7 +35,9 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
     public static ModelingModelDto CreateHierarchyModel()
     {
         var model = CreateModel();
-        model.Elements.Add(Element(
+        // Inserted FIRST so the container paints below its children (the generator orders
+        // nodes parents-first, but the declaration order is the tie-break-free baseline).
+        model.Elements.Insert(0, Element(
             id: "bpmn-subprocess-fulfillment",
             sourceId: "demo/bpmn/subprocess-fulfillment",
             sourceType: "bpmn-subprocess",

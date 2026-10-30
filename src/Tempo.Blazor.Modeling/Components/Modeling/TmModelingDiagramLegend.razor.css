@@ -7,7 +7,7 @@
     padding: var(--tm-space-2);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
-    background: color-mix(in srgb, var(--tm-color-surface) 94%, transparent);
+    background: var(--tm-color-surface);
     color: var(--tm-color-text);
     box-shadow: var(--tm-shadow-sm, none);
 }

@@ -63,11 +63,7 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
         var elementToNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
         var elementById = new Dictionary<string, ModelingElementDto>(StringComparer.Ordinal);
         var usedNodeIds = new HashSet<string>(StringComparer.Ordinal);
-        var elementOrder = model.Elements
-            .Select((element, index) => (element.Id, index))
-            .Where(entry => !string.IsNullOrWhiteSpace(entry.Id))
-            .GroupBy(entry => entry.Id, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().index, StringComparer.Ordinal);
+        var elementOrder = BuildElementOrder(model);
 
         for (var index = 0; index < model.Elements.Count; index++)
         {
@@ -580,6 +576,56 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
 
     private static string GetStableNodeId(ModelingElementDto element)
         => string.IsNullOrWhiteSpace(element.SourceId) ? element.Id : element.SourceId;
+
+    /// <summary>
+    /// Orders element ids parents-first (stable by declaration order otherwise) so a container
+    /// element — an id referenced by some other element's <see cref="ModelingElementDto.ParentId"/>
+    /// — always receives a LOWER diagram <c>ZIndex</c> than its descendants and can never paint
+    /// over them. Hierarchy-free models keep the plain declaration order.
+    /// </summary>
+    private static Dictionary<string, int> BuildElementOrder(ModelingModelDto model)
+    {
+        var elementsById = new Dictionary<string, ModelingElementDto>(StringComparer.Ordinal);
+        foreach (var element in model.Elements)
+        {
+            if (!string.IsNullOrWhiteSpace(element.Id) && !elementsById.ContainsKey(element.Id))
+                elementsById.Add(element.Id, element);
+        }
+
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        var ordered = new List<string>(elementsById.Count);
+        foreach (var element in model.Elements)
+        {
+            if (string.IsNullOrWhiteSpace(element.Id))
+                continue;
+
+            EmitWithAncestors(element.Id, elementsById, emitted, ordered);
+        }
+
+        return ordered
+            .Select((id, index) => (id, index))
+            .GroupBy(entry => entry.id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().index, StringComparer.Ordinal);
+    }
+
+    private static void EmitWithAncestors(
+        string id,
+        Dictionary<string, ModelingElementDto> elementsById,
+        HashSet<string> emitted,
+        List<string> ordered)
+    {
+        if (!emitted.Add(id))
+            return;
+
+        if (elementsById.TryGetValue(id, out var element)
+            && !string.IsNullOrWhiteSpace(element.ParentId)
+            && !string.Equals(element.ParentId.Trim(), id, StringComparison.Ordinal))
+        {
+            EmitWithAncestors(element.ParentId.Trim(), elementsById, emitted, ordered);
+        }
+
+        ordered.Add(id);
+    }
 
     private static (double X, double Y) GetGridPosition(int index)
         => (GridOriginX + (index % GridColumns) * GridStepX, GridOriginY + (index / GridColumns) * GridStepY);

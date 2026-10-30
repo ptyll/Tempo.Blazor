@@ -188,6 +188,8 @@ public sealed class DemoModelingModelProviderTests
         var subprocess = model.Elements.Should().ContainSingle(element => element.Id == "bpmn-subprocess-fulfillment")
             .Subject;
         subprocess.SemanticType.Should().Be("subprocess");
+        // Declared FIRST so the container paints below its children in the generated diagram.
+        model.Elements[0].Id.Should().Be("bpmn-subprocess-fulfillment");
         model.Elements
             .Where(element => element.Id is "bpmn-start-order" or "bpmn-validate-order" or "bpmn-ship-order")
             .Select(element => element.ParentId)
