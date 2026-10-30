@@ -176,4 +176,43 @@ public partial class TmModelingEditor
     }
 
     private int IssueCount => DisplayIssues.Count;
+
+    // ── Fáze 13: the Relations tab ───────────────────────────────────────────
+
+    /// <summary>The inputs the related-count cache was built from (model reference + selection).</summary>
+    private (ModelingModelDto? Model, ModelingElementDto? Element, ModelingRelationshipDto? Relationship) _relatedCountKey;
+    private int _relatedCountCache;
+
+    /// <summary>
+    /// How many rows the Relations tab will show for the CURRENT selection: an element counts its
+    /// outgoing plus incoming relationships, a relationship always lists its source and target,
+    /// nothing selected counts zero. Memoized on the (_model, _selectedElement,
+    /// _selectedRelationship) references so a re-render never re-scans the relationship list (M26).
+    /// </summary>
+    private int RelatedRowCount
+    {
+        get
+        {
+            var key = (Model: _model, Element: _selectedElement, Relationship: _selectedRelationship);
+            if (!key.Equals(_relatedCountKey))
+            {
+                _relatedCountKey = key;
+                _relatedCountCache = key.Element is not null
+                    ? _model?.Relationships.Count(related =>
+                        string.Equals(related.SourceElementId, key.Element.Id, StringComparison.Ordinal)
+                        || string.Equals(related.TargetElementId, key.Element.Id, StringComparison.Ordinal)) ?? 0
+                    : key.Relationship is not null
+                        ? 2
+                        : 0;
+            }
+
+            return _relatedCountCache;
+        }
+    }
+
+    /// <summary>The Relations tab badge: the related-row count of the current selection (a bare
+    /// count like the Issues tab); empty — no badge — while nothing is selected.</summary>
+    private string RelationsTabBadge => RelatedRowCount > 0
+        ? RelatedRowCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : string.Empty;
 }

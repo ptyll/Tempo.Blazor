@@ -87,7 +87,7 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <summary>The diagram preview (the non-drag "Insert into preview" action routes through its drop path).</summary>
     private TmModelingDiagramPreview? _preview;
 
-    /// <summary>The selected inspector tab of the docked layout: "properties" (default) or "source".</summary>
+    /// <summary>The selected inspector tab of the docked layout: "properties" (default), "relations" (Fáze 13) or "source".</summary>
     private string _inspectorTab = "properties";
 
     private readonly string _openEditorTriggerId = $"tm-modeling-open-editor-trigger-{Guid.NewGuid():N}";
@@ -122,6 +122,9 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>Cached attributes of the docked inspector's Properties tab button (the frozen tab test id).</summary>
     private Dictionary<string, object>? _propertiesTabAttributes;
+
+    /// <summary>Cached attributes of the docked inspector's Relations tab button (Fáze 13, the frozen tab test id).</summary>
+    private Dictionary<string, object>? _relationsTabAttributes;
 
     /// <summary>
     /// Overrides the localStorage key the docked shell persists user-resized panel widths under.
@@ -159,6 +162,10 @@ public partial class TmModelingEditor : IAsyncDisposable
     private IReadOnlyDictionary<string, object> PropertiesTabAttributes
         => BuildCachedAttributes(ref _propertiesTabAttributes);
 
+    /// <summary>Attributes of the Relations tab button (Fáze 13) — cached like the Properties one.</summary>
+    private IReadOnlyDictionary<string, object> RelationsTabAttributes
+        => BuildCachedAttributes(ref _relationsTabAttributes);
+
     /// <summary>Returns the cached dictionary, rebuilding all of them when the TestIdPrefix changed.</summary>
     private Dictionary<string, object> BuildCachedAttributes(ref Dictionary<string, object>? cached)
     {
@@ -177,6 +184,10 @@ public partial class TmModelingEditor : IAsyncDisposable
             _propertiesTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["data-testid"] = TestId("modeling-tab-properties")
+            };
+            _relationsTabAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["data-testid"] = TestId("modeling-tab-relations")
             };
         }
 
@@ -803,14 +814,33 @@ public partial class TmModelingEditor : IAsyncDisposable
         }
 
         var relationship = _model.Relationships.FirstOrDefault(item => string.Equals(item.Id, relationshipId, StringComparison.Ordinal));
-        if (relationship is not null)
-        {
-            _selectedElement = null;
-            _selectedRelationship = relationship;
-            return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
-        }
+        return relationship is not null ? SelectRelatedRelationshipAsync(relationship) : Task.CompletedTask;
+    }
 
-        return Task.CompletedTask;
+    /// <summary>
+    /// Fáze 13: the Relations tab's element navigation — the SAME path a tree or issue selection
+    /// takes (the selection state plus the tablet sheet rule), so a counterpart activation lands
+    /// in the tree, the preview contract and the inspector exactly like any other selection. The
+    /// docked inspector returns to the Properties tab, presenting the navigated-to element.
+    /// </summary>
+    private Task SelectRelatedElementAsync(ModelingElementDto element)
+    {
+        _inspectorTab = "properties";
+        return SelectElementAsync(element);
+    }
+
+    /// <summary>
+    /// Fáze 13: the Relations tab's relationship navigation — the resolved-DTO form of
+    /// <see cref="SelectRelationshipAsync"/> (an edge pick already resolves the id the same way)
+    /// with the inspector focus switch a relationship selection carries. The docked inspector
+    /// returns to the Properties tab, presenting the navigated-to relationship.
+    /// </summary>
+    private Task SelectRelatedRelationshipAsync(ModelingRelationshipDto relationship)
+    {
+        _inspectorTab = "properties";
+        _selectedElement = null;
+        _selectedRelationship = relationship;
+        return OpenInspectorForSelectionAsync(focusInspectorAfterSwitch: true);
     }
 
     private Task SelectIssueAsync(ModelingIssueDto issue)
@@ -958,7 +988,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Selects the docked inspector tab ("properties" | "source").</summary>
+    /// <summary>Selects the docked inspector tab ("properties" | "relations" | "source").</summary>
     private Task SelectInspectorTab(string tabId)
     {
         _inspectorTab = tabId;

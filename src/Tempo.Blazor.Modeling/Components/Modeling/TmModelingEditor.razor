@@ -566,13 +566,29 @@
                                                                      Elements="@LoadedElements" />;
 
     /// <summary>
+    /// Fáze 13: the "Relations" tab body — the selected element's outgoing/incoming relationships
+    /// (or the selected relationship's source/target). Activations route through the SAME
+    /// selection paths an issue or an edge pick uses, so a navigation lands in the tree, the
+    /// preview contract and the inspector on every band.
+    /// </summary>
+    private RenderFragment RelatedElementsContent => @<TmModelingRelatedElementsPanel Element="@_selectedElement"
+                                                                                      Relationship="@_selectedRelationship"
+                                                                                      Elements="@LoadedElements"
+                                                                                      Relationships="@(_model?.Relationships ?? [])"
+                                                                                      OnElementSelected="SelectRelatedElementAsync"
+                                                                                      OnRelationshipSelected="SelectRelatedRelationshipAsync" />;
+
+    /// <summary>
     /// The compact inspector keeps today's stacked column (source above properties above issues);
     /// the tabbed inspector is the docked-layout presentation. The mobile phase owns the compact
     /// restyle — until then the compact DOM stays byte-compatible with the pre-shell editor.
+    /// Fáze 13: the Relations SECTION renders under the properties — the mobile band has no extra
+    /// tab level, so the relations live in the Inspector tab body (G2: viewing only).
     /// </summary>
     private RenderFragment CompactInspectorContent => @<text>
         @SourcePanelContent
         @InspectorContent
+        @RelatedElementsContent
     </text>;
 
     /// <summary>
@@ -815,10 +831,12 @@
         }
     }
 
-    /// <summary>The inspector panel for the shell's right dock: "Properties | Source" tabs (MO1).
-    /// Only the active tab renders its body (TmTabs contract, M26 budget); a stale source marks
-    /// the Source tab with a localized badge and an sr-only hint OUTSIDE the tablist (the tab's
-    /// accessible name stays its visible label — the hint is referenced via aria-describedby).</summary>
+    /// <summary>The inspector panel for the shell's right dock: "Properties | Relations | Source"
+    /// tabs (MO1, Fáze 13 adds Relations between the two). Only the active tab renders its body
+    /// (TmTabs contract, M26 budget); a stale source marks the Source tab with a localized badge
+    /// and an sr-only hint OUTSIDE the tablist (the tab's accessible name stays its visible
+    /// label — the hint is referenced via aria-describedby); the Relations tab carries the
+    /// related-row count badge of the current selection.</summary>
     private RenderFragment? RightSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__inspector" data-testid="@TestId("modeling-inspector-panel")">
         @if (SourceIsStale)
         {
@@ -831,6 +849,12 @@
                         Title="@Loc["TmModelingEditor_Properties"]"
                         TabAttributes="@PropertiesTabAttributes">
                 @InspectorContent
+            </TmTabPanel>
+            <TmTabPanel Id="relations"
+                        Title="@Loc["TmModelingEditor_Relations"]"
+                        Badge="@RelationsTabBadge"
+                        TabAttributes="@RelationsTabAttributes">
+                @RelatedElementsContent
             </TmTabPanel>
             <TmTabPanel Id="source"
                         Title="@Loc["TmModelingEditor_Source"]"

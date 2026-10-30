@@ -101,6 +101,35 @@ public sealed class ModelingInspectorM14E2ETests : WasmTestBase
         await SaveStableScreenshotAsync(empty, "inspector-empty.png");
     }
 
+    [TestMethod]
+    [Description("Fáze 13: the Relations tab lists the selected element's relationships and navigating to a counterpart switches the tree and the inspector")]
+    public async Task Inspector_RelationsTab_NavigatesToCounterpart()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+
+        await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+        await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+
+        // The Relations tab sits between Properties and Source and carries the related count.
+        var tabs = page.Locator("[data-testid='modeling-inspector-panel'] [role='tab']");
+        Assert.AreEqual(3, await tabs.CountAsync(), "the inspector has Properties | Relations | Source");
+        StringAssert.Contains(await tabs.Nth(1).TextContentAsync(), "Relations");
+        StringAssert.Contains(await tabs.Nth(1).TextContentAsync(), "3", "the badge counts the related rows");
+
+        await tabs.Nth(1).ClickAsync();
+        await ExpectVisibleAsync(page, "[data-testid='modeling-related-panel']");
+        await ExpectVisibleAsync(page, "[data-testid='modeling-related-outgoing-rel-validate-to-ship']");
+
+        // Navigate to the counterpart: the tree selection AND the inspector follow.
+        await page.Locator("[data-testid='modeling-related-counterpart-rel-validate-to-ship']").ClickAsync();
+        await page.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-ship-order']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        Assert.AreEqual("true", await page.Locator("[data-testid='modeling-tree-node-bpmn-ship-order']")
+            .GetAttributeAsync("aria-selected"), "the counterpart is selected in the tree");
+        await ExpectTextContainsAsync(page, "[data-testid='modeling-inspector-name']", "Ship order");
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

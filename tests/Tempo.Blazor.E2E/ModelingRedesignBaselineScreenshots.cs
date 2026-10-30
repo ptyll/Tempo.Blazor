@@ -781,6 +781,51 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Fáze 13: the inspector's Relations tab — the selected element's related groups on
+    /// the docked desktop tab (1440×900) and the Relations SECTION inside the mobile Inspector
+    /// tab (390×844) are the diff subject of the relations phase.</summary>
+    [TestMethod]
+    [Description("Captures related-tab-1440x900 (the docked Relations tab) and related-mobile-390x844 (the mobile Relations section)")]
+    public async Task Capture_RelationsTab()
+    {
+        var desktop = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 1440, 900, touch: false);
+        try
+        {
+            await WaitForLoadedStateAsync(desktop);
+            await desktop.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+            await desktop.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            await desktop.Locator("[data-testid='modeling-tab-relations']").ClickAsync();
+            await desktop.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(desktop);
+            await SaveViewportScreenshotAsync(desktop, "related-tab-1440x900");
+        }
+        finally
+        {
+            await desktop.Context.CloseAsync();
+        }
+
+        var mobile = await OpenModelingPageAsync("?notation=bpmn&viewpoint=overview", 390, 844, touch: true);
+        try
+        {
+            await WaitForLoadedStateAsync(mobile);
+            await mobile.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-editor'][data-selected-element-id='bpmn-validate-order']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+            await mobile.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync();
+            await mobile.Locator("[data-testid='modeling-related-panel']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(mobile);
+            await SaveViewportScreenshotAsync(mobile, "related-mobile-390x844");
+        }
+        finally
+        {
+            await mobile.Context.CloseAsync();
+        }
+    }
+
     /// <summary>
     /// Waits until the embedded diagram editor's zoom label stops changing (two identical
     /// samples ~250ms apart) — the JS fit pass is asynchronous, so a plain "nodes rendered"

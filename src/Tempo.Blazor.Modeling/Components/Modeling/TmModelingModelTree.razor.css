@@ -200,15 +200,18 @@
 /* ── Phase 12: the ParentId hierarchy ────────────────────────────────────────
    Each hierarchy node button carries --tm-modeling-tree-level (its aria-level); the
    token-driven indentation is computed HERE as the level-1 base indent plus (level − 1) × the
-   --tm-space-4 step — no hard-coded pixel in either language. Flat-mode nodes keep their own
-   padding. */
+   --tm-space-6 step — no hard-coded pixel in either language. (Phase-13 carry-forward: the
+   original --tm-space-4 step read as ~9px on screen once the chevron column ate into it — a
+   full --tm-space-6 keeps a clearly visible child offset at every level.) The chevron column
+   itself is untouched, so the disclosure glyphs stay aligned across levels. Flat-mode nodes
+   keep their own padding. */
 .tm-modeling-model-tree__branch {
     display: grid;
     min-width: 0;
 }
 
 .tm-modeling-model-tree__branch .tm-modeling-model-tree__node {
-    padding-inline-start: calc(var(--tm-space-2) + (var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-4));
+    padding-inline-start: calc(var(--tm-space-2) + (var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-6));
 }
 
 .tm-modeling-model-tree__branch-children {

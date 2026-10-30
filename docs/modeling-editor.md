@@ -42,6 +42,7 @@ performance-large|bpmn2-*|uml25-*|invalid|scenario-invalid-relationship`.
 | `TmModelingDiagramPreview` | The generated diagram: a read-only `TmDiagramEditor` (`ToolbarPreset.Viewer`, `ReadOnly=true`, `ShowTitle=false`) in a labelled section with the Primary "Open in editor" + Secondary "Generate diagram" actions and a drop target. |
 | `TmModelingModelTree` | The APG `role="tree"` of model elements — flat `SemanticType` groups or the nested `ParentId` hierarchy (`Grouping`, Fáze 12) — with filter, collapse state and the drag/insert bridge. |
 | `TmModelingInspector` | Read-only inspector for the selected element/relationship (MO2 — the inspector never edits). |
+| `TmModelingRelatedElementsPanel` | The Relations tab body (Fáze 13): the selected element's outgoing/incoming relationships (type + counterpart with the type icon) and the selected relationship's source/target as navigable rows; activations reuse the editor's selection paths. |
 | `TmModelingSourcePanel` | The "Source" inspector tab: provider/system/version/trust metadata, freshness and the "Load model" reload. |
 | `TmModelingIssuePanel` | The issues list (severity, message, recommended fix, source navigation) with a collapsible dock header. |
 | `TmModelingViewSelector` | The labeled Notation / Viewpoint selects of the header. |
@@ -54,7 +55,7 @@ from its **own container** (`TmLayoutObserver`, `data-layout` on the root — ne
 
 | Layout | Container width | What the user gets |
 |---|---|---|
-| **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it (an **issues-empty** body drops the dock row to `auto` when the model has zero issues), Right = inspector with **Properties \| Source** tabs (only the active tab body renders), StatusBar = the status strip. The preview's embedded editor keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar), and the status bar keeps the zoom controls. |
+| **Desktop** | ≥ 1200 | The core `TmEditorShell`: Header (title + state badge, provider field/chip, `TmModelingViewSelector`, Inspector toggle), Left = model tree, Canvas = the preview with the **collapsible issues dock** under it (an **issues-empty** body drops the dock row to `auto` when the model has zero issues), Right = inspector with **Properties \| Relations \| Source** tabs (Fáze 13; only the active tab body renders), StatusBar = the status strip. The preview's embedded editor keeps the **Zoom** toolbar group only — the search + "⋯" header-bar row is gone with its groups (the DE renders no empty header bar), and the status bar keeps the zoom controls. |
 | **Tablet** | 768–1199 | The shell's `TabletPanelPresentation.Overlay`: the tree is an overlay **drawer** (`modeling-tree-drawer`), the inspector a non-modal **side sheet** (`modeling-inspector-sheet`) — at most ONE open at a time, both **start closed**. The `modeling-panel-tabs` row under the header is the visibility switch (Tree/Inspector/Issues are `aria-expanded` disclosure toggles; Preview closes all) — **Issues is the fourth panel**, a non-modal side sheet (`modeling-issues-sheet`) under the same one-open rule, never a dock row under the canvas; its tab carries the count badge. The sheet is positioned by the editor-owned `tm-modeling-editor__issues-sheet-host` wrapper (absolute, the canvas column's end edge, `min(20rem, 100%)`, `--tm-z-inline-sheet`; the `TmFocusScope` root is a child component and carries no scope attribute of its own) and its issue list scrolls inside. 44px coarse-pointer targets; the preview canvas row keeps a `minmax(20rem, 1fr)` floor. |
 | **Mobile** | < 768 | **Viewing + light edits (G2).** A `TmTabs` tablist **Preview \| Tree \| Inspector \| Issues** (the issue-count badge hides at zero) where exactly ONE panel body mounts at a time (M26 budget); a compact header (title, state badge, one "⋯" `TmDropdown` sheet: Change view / Generate diagram / Open in editor); a **status card** (`modeling-status-card`, four count tiles with short visible labels + aria-hidden type icons + last-loaded); and the F5 `TmMobileActionBar` (Reload \| Change view \| Issues, with Generate diagram + Open in editor behind More). **No drag and no tree→preview insert**: reuse is a desktop/tablet editing intent — on mobile the tree renders neither the "+" button nor the drag grip, and edits go through "Open in editor" (G2 viewing). Preview zoom is the DE's floating pill + pinch (Fáze 9 — `ShowZoomOverlay`, fit-to-width first load); the full editor lives in "Open in editor". The open-editor dialog is a **fullscreen** `TmModal` presentation handing the embedded editor a full-height body (the DE's own mobile mode drives inside). |
 
@@ -146,6 +147,12 @@ emulated group treeitem — the node buttons stay native and fence their keys wi
 (`TmModelingModelTree_InsertIntoPreviewNamed`). Root counters: `data-visible-count` (matching
 elements across ALL groups) and `data-rendered-count` (nodes actually in the DOM).
 
+**Hierarchy indent step (phase-13 carry-forward).** The per-level step is a full
+`--tm-space-6` (the original `--tm-space-4` read as ~9px on screen once the chevron column
+ate into it); the token-driven calc lives only in `TmModelingModelTree.razor.css` and the
+chevron column is untouched, so the disclosure glyphs stay aligned across levels. The
+`hierarchy-*` baselines pin the geometry.
+
 **Hierarchy view (Fáze 12).** With `Grouping=Auto` and at least one resolvable
 `ModelingElementDto.ParentId`, the tree renders the model's containment instead of the flat
 type groups: every element is a treeitem at its own `aria-level` with
@@ -203,6 +210,32 @@ Issues without a source element/relationship render as a plain non-interactive `
 `_issueSeverityFilter` / `_issueFilterText` / `_issueSortMode`) and hands the same fields to
 the desktop dock, the tablet sheet and the mobile Issues tab, so a filter survives a dock
 collapse, a sheet toggle and a tab switch; the mobile tab badge still shows the TOTAL count.
+
+### `TmModelingRelatedElementsPanel` (the Relations tab, Fáze 13)
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `Element` | `ModelingElementDto?` | `null` | The selected element; renders its outgoing/incoming groups. Takes precedence when a relationship is supplied too. |
+| `Relationship` | `ModelingRelationshipDto?` | `null` | The selected relationship; renders its source and target as navigable rows. |
+| `Elements` | `IReadOnlyList<ModelingElementDto>` | `[]` | Counterpart resolution (display names + semantic-type icons via `ModelingSemanticTypeIcons`). |
+| `Relationships` | `IReadOnlyList<ModelingRelationshipDto>` | `[]` | The model's relationships — the memoized by-element index source. |
+| `OnElementSelected` / `OnRelationshipSelected` | `EventCallback<…>` | — | Row activations (the editor routes them through the same `SelectElementAsync` / `SelectRelationshipAsync` paths an issue or edge pick uses, and returns the docked inspector to the Properties tab). |
+| `Class` | `string?` | `null` | Extra root class. |
+
+The root `<section data-testid="modeling-related-panel">` reports `data-kind`
+(`element` / `relationship` / `empty`). An element view groups rows under localized
+Outgoing/Incoming headings with a count badge (sr-only text through the
+`TmModelingRelated_RelationshipCount_*` plural family); every row is
+`data-testid="modeling-related-{direction}-{relationshipId}"` with `direction` ∈
+`outgoing | incoming | source | target`. Each element-view row holds TWO native buttons — the
+counterpart (`modeling-related-counterpart-{id}`, named `TmModelingRelated_SelectElement` "{0}")
+and the relationship type (`modeling-related-relationship-{id}`, named
+`TmModelingRelated_SelectRelationship` "{0}") — never nested; a relationship-view row is one
+native button. A counterpart that does not resolve renders the localized `TmModelingEditor_Unknown`
+fallback as plain content (never a dead button), a self-reference renders safely in both
+directions, the empty state is `TmModelingRelated_Empty`, rows reach 44px on a coarse pointer and
+the by-element index is built ONCE per `Relationships` reference (guarded by
+`Relationships_index_memoized`).
 
 ### `TmModelingViewSelector`, `TmModelingSourcePanel`, `TmModelingInspector`
 
@@ -314,10 +347,14 @@ The editor root `<section data-testid="modeling-editor">` carries the frozen sta
 `data-element-count`, `data-relationship-count`, `data-diagram-node-count`,
 `data-diagram-edge-count`, `data-active-panel` and `data-open-editor` (`"true"`/`"false"`).
 Panel test ids (`modeling-model-tree-panel`, `modeling-preview-panel`, `modeling-inspector-panel`,
-`modeling-issues-panel`, `modeling-panel-tab-*`, `modeling-tab-properties`, `modeling-tab-source`,
+`modeling-issues-panel`, `modeling-panel-tab-*`, `modeling-tab-properties`,
+`modeling-tab-relations`, `modeling-tab-source`, `modeling-related-panel`,
+`modeling-related-{outgoing|incoming|source|target}-{relationshipId}`,
 `modeling-tree-drawer`, `modeling-inspector-sheet`, `modeling-sheet-close`,
 `modeling-open-diagram-editor`, `modeling-open-diagram-close`) are the contract for hosts and
-E2E — never positional selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM.
+E2E — never positional selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM. The
+docked inspector tablist has THREE tabs (Properties | Relations | Source) — key off the tab test
+ids, never the index (Breaking / Migration).
 Modeling CSS never touches `.tm-diagram-editor__*` internals; the nested editor is driven only
 through its public contract (`ToolbarPreset`, `ShowToolbar`, `ShowTitle`).
 
@@ -343,6 +380,11 @@ filter/sort keys `TmModelingIssuePanel_FilterPlaceholder`, `_SortLabel`, `_SortI
 Fáze 12 adds the hierarchy disclosure keys: `TmModelingModelTree_ExpandNode` / `_CollapseNode`
 ("{0}" = the node display name, used as the chevron `title`) and the plural family
 `TmModelingModelTree_ChildCount_*` ("{0} child(ren)", spoken on a parent node's aria-label).
+Fáze 13 adds the relations keys: `TmModelingEditor_Relations` (the tab title),
+`TmModelingRelated_Outgoing` / `_Incoming` / `_Source` / `_Target` (group headings),
+`TmModelingRelated_Empty`, `TmModelingRelated_SelectElement` / `_SelectRelationship` ({0} = the
+row target) and the `TmModelingRelated_RelationshipCount_*` plural family (the sr-only count of a
+group heading).
 
 ## Demo
 
@@ -358,12 +400,16 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
 
 - bUnit: `TmModelingEditorTests`, `TmModelingEditorDialogTests`, `TmModelingEditorTabletTests`,
   `TmModelingEditorMobileTests`, `TmModelingEditorSingleStateTests` (the retry/empty screens and
-  the Height CSS-length guard), `TmModelingModelTreeTests`, `TmModelingDiagramPreviewTests`,
+  the Height CSS-length guard), `TmModelingModelTreeTests`, `TmModelingModelTreeHierarchyTests`,
+  `TmModelingRelatedElementsPanelTests` (Fáze 13 — the panel, the tab, the badge, the navigation
+  and the mobile section), `TmModelingDiagramPreviewTests`,
   `TmModelingViewSelectorTests`, `TmModelingIssuePanelTests`, `TmModelingInspectorTests`,
   `TmModelingSourcePanelTests`, `TmModelingLocalizationM15Tests` (+ the package-wide
   `ModelingNoEvalInteropTests` guard and `ModelingSemanticTypeIconsTests`).
 - E2E: the `Modeling*` specs (M8–M26) cover the desktop dock, the tablet drawer/sheet rules, the
   mobile G2 band, the provider selector, tree collapse/filter, the CSP lane (`?csp=1`), the
   open-editor dialog Escape/focus contracts and the M26 performance budgets (inactive tab bodies
-  never mount; the tree filter re-render budget).
+  never mount; the tree filter re-render budget). `ModelingRelatedElementsE2ETests` (Fáze 13)
+  covers the desktop Relations tab (badge + counterpart navigation), the tablet sheet tap, the
+  mobile section at 320×640 without horizontal overflow and the a11y names.
 - Node lane: `npm run test:diagram-editor` covers the shared engine the preview embeds.

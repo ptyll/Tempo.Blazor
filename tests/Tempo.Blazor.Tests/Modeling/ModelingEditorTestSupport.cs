@@ -131,6 +131,69 @@ internal sealed class IssueModelingModelProvider : IModelingModelProvider
 }
 
 /// <summary>
+/// Fáze 13 provider: two chained tasks plus a start event so the inspector's Relations tab has
+/// outgoing AND incoming relationships to render — "Approve request" carries one of each.
+/// </summary>
+internal sealed class RelatedElementsModelingModelProvider : IModelingModelProvider
+{
+    public const string Key = "tempo.tests.modeling.related";
+
+    public string ProviderKey => Key;
+
+    public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var model = new ModelingModelDto
+        {
+            Id = "modeling-editor-related",
+            Title = "Modeling editor related elements",
+            Metadata = new ModelingMetadataDto { SourceSystem = "Unit tests" }
+        };
+
+        model.Elements.Add(new ModelingElementDto { Id = "task-start", Notation = "bpmn", SemanticType = "startEvent", Name = "Order received" });
+        model.Elements.Add(new ModelingElementDto { Id = "task-approve", Notation = "bpmn", SemanticType = "userTask", Name = "Approve request" });
+        model.Elements.Add(new ModelingElementDto { Id = "task-ship", Notation = "bpmn", SemanticType = "serviceTask", Name = "Ship order" });
+
+        model.Relationships.Add(new ModelingRelationshipDto
+        {
+            Id = "rel-approve-ship",
+            SourceElementId = "task-approve",
+            TargetElementId = "task-ship",
+            RelationshipType = "sequenceFlow",
+            Name = "Validated order"
+        });
+        model.Relationships.Add(new ModelingRelationshipDto
+        {
+            Id = "rel-start-approve",
+            SourceElementId = "task-start",
+            TargetElementId = "task-approve",
+            RelationshipType = "sequenceFlow",
+            Name = "Start validation"
+        });
+
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "main-view",
+            Name = "Main view",
+            Notation = "bpmn",
+            Nodes =
+            [
+                new() { ElementId = "task-start", X = 80, Y = 120, Width = 120, Height = 80 },
+                new() { ElementId = "task-approve", X = 260, Y = 120, Width = 160, Height = 90 },
+                new() { ElementId = "task-ship", X = 480, Y = 120, Width = 160, Height = 90 }
+            ],
+            Connections =
+            [
+                new() { RelationshipId = "rel-start-approve", SourceNodeId = "task-start", TargetNodeId = "task-approve" },
+                new() { RelationshipId = "rel-approve-ship", SourceNodeId = "task-approve", TargetNodeId = "task-ship" }
+            ]
+        });
+
+        return Task.FromResult(model);
+    }
+}
+
+/// <summary>
 /// A TimeProvider that keeps the editor's SHORT loading delays off the real-timer path:
 /// every delay at or below <see cref="ImmediateThreshold"/> fires its callback on the spot
 /// (so <c>Task.Delay(minimum-loading, this)</c> completes synchronously and the load pipeline

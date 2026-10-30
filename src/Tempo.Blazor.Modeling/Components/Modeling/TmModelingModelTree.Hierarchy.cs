@@ -506,7 +506,7 @@ public partial class TmModelingModelTree
             : GetNodeClass(node.Element);
 
     /// <summary>Inline custom property that carries the node's depth to the token-driven
-    /// indentation rule — the CSS computes (level − 1) × the --tm-space-4 step, so no pixel is
+    /// indentation rule — the CSS computes (level − 1) × the --tm-space-6 step, so no pixel is
     /// hard-coded in either language.</summary>
     private static string GetHierarchyLevelStyle(HierarchyViewNode node)
         => $"--tm-modeling-tree-level: {node.Level}";

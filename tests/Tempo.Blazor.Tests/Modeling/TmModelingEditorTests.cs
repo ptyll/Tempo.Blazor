@@ -959,32 +959,47 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task Inspector_has_tabs_properties_and_source()
+    public async Task Inspector_has_properties_relations_source_tabs_and_only_active_renders()
     {
+        // Fáze 13 (M26): the docked inspector is a THREE-tab tablist — Properties | Relations |
+        // Source — and, as before, only the ACTIVE tab body mounts.
         using var cut = RenderDesktopEditor();
         cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-inspector-panel']").Should().NotBeNull());
 
         cut.Find("[data-testid='modeling-inspector-panel'] [role='tablist']").Should().NotBeNull();
 
         var tabs = cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']").ToList();
-        tabs.Should().HaveCount(2);
+        tabs.Should().HaveCount(3);
         tabs[0].TextContent.Should().Contain("Properties");
-        tabs[1].TextContent.Should().Contain("Source");
+        tabs[0].GetAttribute("data-testid").Should().Be("modeling-tab-properties");
+        tabs[1].TextContent.Should().Contain("Relations");
+        tabs[1].GetAttribute("data-testid").Should().Be("modeling-tab-relations");
+        tabs[2].TextContent.Should().Contain("Source");
+        tabs[2].GetAttribute("data-testid").Should().Be("modeling-tab-source");
         tabs[0].GetAttribute("aria-selected").Should().Be("true");
         tabs[1].GetAttribute("aria-selected").Should().Be("false");
+        tabs[2].GetAttribute("aria-selected").Should().Be("false");
 
         // Only the ACTIVE tab renders content (M26 budget: one inspector body at a time).
         cut.FindAll("[data-testid='modeling-inspector']").Should().NotBeEmpty();
+        cut.FindAll("[data-testid='modeling-related-panel']").Should().BeEmpty();
         cut.FindAll("[data-testid='modeling-source-panel']").Should().BeEmpty();
 
         // The tab selection lands through the editor's callback — an async render.
         await cut.InvokeAsync(() => cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")[1].Click());
         cut.WaitForAssertion(() =>
         {
-            cut.FindAll("[data-testid='modeling-source-panel']").Should().NotBeEmpty();
+            cut.FindAll("[data-testid='modeling-related-panel']").Should().NotBeEmpty();
             cut.FindAll("[data-testid='modeling-inspector']").Should().BeEmpty();
             cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']").ToList()[1]
                 .GetAttribute("aria-selected").Should().Be("true");
+        });
+
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='modeling-inspector-panel'] [role='tab']")[2].Click());
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='modeling-source-panel']").Should().NotBeEmpty();
+            cut.FindAll("[data-testid='modeling-related-panel']").Should().BeEmpty();
         });
     }
 

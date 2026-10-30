@@ -84,6 +84,7 @@
     </div>;
 
     private RenderFragment HeaderStrip => @<div class="tm-tabs__header" role="tablist" aria-label="@AriaLabel" @onkeydown="HandleKeyDown">
+        @{ _renderedHeaderInputs = CaptureHeaderInputs(); }
         @foreach (var panel in _panels)
         {
             var isActive = panel.Id == ActiveTabId;
@@ -208,6 +209,20 @@
         }
     }
 
+    /// <summary>
+    /// The header inputs (title, icon, badge, disabled) AS the strip last rendered them, plus the
+    /// current values of the registered panels. The strip is built from the panel INSTANCES, so a
+    /// dynamic header input (a badge count that follows a selection) can lag one render pass
+    /// behind the panels' parameters (the panel SetParametersAsync runs after the strip of the
+    /// same pass built) — <see cref="OnAfterRenderAsync"/> compares the two snapshots and
+    /// re-renders ONCE when they disagree. A static strip settles after the single
+    /// registered-panels render it always did, so the frozen no-slot markup hash is untouched.
+    /// </summary>
+    private (string? Title, string? Icon, string? Badge, bool Disabled)[]? _renderedHeaderInputs;
+
+    private (string? Title, string? Icon, string? Badge, bool Disabled)[] CaptureHeaderInputs()
+        => _panels.Select(panel => (panel.Title, panel.Icon, panel.Badge, panel.Disabled)).ToArray();
+
     internal void UnregisterPanel(TmTabPanel panel)
     {
         _panels.RemoveAll(p => p.Id == panel.Id);
@@ -327,6 +342,17 @@
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Dynamic header inputs (see _renderedHeaderInputs): the panels' parameters landed AFTER
+        // the strip of this pass was built, so a changed badge/title would otherwise lag one
+        // interaction. One extra render shows it; the next pass sees equal snapshots and the
+        // compare never re-arms (a strip whose inputs are static stays a single render).
+        var current = CaptureHeaderInputs();
+        if (_renderedHeaderInputs is null || !current.SequenceEqual(_renderedHeaderInputs))
+        {
+            _renderedHeaderInputs = current;
+            StateHasChanged();
+        }
+
         if (!_focusSelectedTabAfterRender) return;
 
         _focusSelectedTabAfterRender = false;
