@@ -111,6 +111,42 @@ lane run and now. Two candidate fixes are recorded on remaining task f25a9d47: f
 when the trigger is below the fold (core), or move that spec to the documented
 open-on-desktop-then-resize pattern (test-side).
 
+#### 2.1.1 FIXED (f25a9d47) — the overflow panel clamps and scrolls instead of leaving the viewport
+
+Root cause, measured (not inferred): the panel is in the browser TOP LAYER, so no page scroll can bring
+its tail back, and `overlay.js` only flipped + clamped — it never capped the height. A panel taller than
+the viewport therefore landed at the top margin and ran past the bottom edge. Real numbers captured by
+the new `SpreadsheetPhase8OverflowE2ETests` BEFORE the fix:
+
+| Case | Panel box before the fix |
+|---|---|
+| tablet 1024×768, primary row "More" | `y 8 .. 1217` (height 1209) of a 768 px viewport — 449 px off-screen |
+| tablet 1024×430 (short window, trigger near the bottom), formatting row "More" | `y 8 .. 2801` (height 2793) of a 430 px viewport — 2371 px off-screen |
+
+Fix (core, one additive knob the panel already had): `ActionOverflowMenu` now opens its `TmOverlayPanel`
+with `ConstrainHeight`, so the shared placement caps the panel to the room on the resolved side and
+scrolls it internally (`overflow-y: auto`), while `Flip` + `Shift` keep deciding the side. No public API
+change (`ConstrainHeight` already exists on `TmOverlayPanel`), no change for a menu that fits below its
+trigger, no JS change. Files: `src/Tempo.Blazor/Components/Actions/ActionOverflowMenu.cs`,
+`docs/overlays.md`, `docs/toolbar.md`, `CHANGELOG.md` (Fixed, core).
+
+Tests (first run of each is the recorded RED — the RED E2E numbers are the table above):
+
+| Lane | Before | After |
+|---|---|---|
+| `TmToolbarOverflowTests.MoreMenu_AsksThePanelToStayInsideTheViewport` (new, bUnit) | RED — the open options carried `"constrainHeight":false` | green; full `Toolbar\|Overlay\|ActionOverflow\|Spreadsheet` lane 2028/2029 (the single red is the pre-existing `TmSchedulerToolbarTests.Title_Is_A_GoToDate_Button` culture red of §1.1) |
+| `SpreadsheetPhase8OverflowE2ETests` (new, 2 specs) | RED 0/2, the boxes above | **2/2** (1 m 04 s) — panel inside the viewport, content taller than the panel, panel scrolls, LAST entry reachable, and "Custom sort…" opens the Sort dialog from a 430 px viewport |
+| `Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets` (the bisected red) | RED (30 s, "element is outside of the viewport") | **1/1 PASSED** (5 m 27 s) with no test-side change |
+| Core toolbar-overflow consumers | — | 4/4: `Phase6_Tablet_1024_TwoCompactRows_NoTabStrip`, `Phase6_Mobile_BasicCommands_ReachableInTwoTaps`, `DocumentEditorToolbarOverflowAndRenderersE2ETests.OverflowController_NarrowViewport_ShowsMoreMenu_WideViewport_HidesIt`, `MobileActionBarE2ETests.Demo_390_Bar_Sticky_MoreSheet_ConfirmAboveSheet` |
+| `npm run test:overlay` (node, the placement math) | — | 637/637 |
+| `ComponentDocumentationFreshnessTests` + `MarkupClassCoverageTests` + all `TmToolbarOverflowTests` | — | 56/56 |
+
+Screenshots: `tests/Tempo.Blazor.E2E/__screenshots__/spreadsheet/phase8-more-panel--tablet-1024.png` and
+`phase8-more-panel--tablet-1024-short.png` (the panel capped inside the viewport; the short-window shot
+shows the Sort dialog it opened). Re-running the tablet dialog spec regenerated seven tracked
+`phase3-*-tablet.png` baselines (they were stale from the run that died mid-spec) — no assertion or
+product change, committed with the phase under decision `SPREADSHEET-BASELINE-POLICY`.
+
 ### 2.2 How to finish the lane
 
 `bash run-e2e-shards.sh <dir> 8` re-runs the whole lane with the same class split; `bash

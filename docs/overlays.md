@@ -84,6 +84,15 @@ bottom sheet on a mobile one. The host contract every action surface must honour
 - The trigger is a real element passed as the panel's explicit `Anchor` (never a virtual
   anchor), carries `aria-haspopup="menu"`, `aria-expanded` and `aria-controls` pointing at the
   panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
+- **The panel stays inside the viewport, always.** The menu runs with `Flip` + `Shift` + the
+  `ConstrainHeight` knob of `TmOverlayPanel`: it flips to the other side of its trigger when the
+  preferred side has no room, is clamped along both axes, and — when it is taller than the room on
+  the resolved side (a toolbar can put twenty commands and three expanded lists into one "More":
+  1209 px of panel in a 768 px tablet viewport) — caps its own height to that room and scrolls
+  internally. Never let a menu paint entries outside the viewport: a top-layer panel has no page
+  scroll to rescue them, so every entry below the fold is simply unreachable by touch
+  (`tests/Tempo.Blazor.E2E/SpreadsheetPhase8OverflowE2ETests.cs` pins the tablet case, and
+  `TmToolbarOverflowTests.MoreMenu_AsksThePanelToStayInsideTheViewport` the options).
 - The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
   on a disabled button is a no-op and would leave focus on `<body>`); "enabled" here means
   neither native `disabled` nor `aria-disabled="true"` — an item that is only `aria-disabled`

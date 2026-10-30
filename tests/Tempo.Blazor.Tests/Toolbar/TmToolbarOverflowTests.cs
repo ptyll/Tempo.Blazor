@@ -638,6 +638,38 @@ public class TmToolbarOverflowTests : LocalizationTestBase
             "the open menu re-labelled without the toolbar re-rendering");
     }
 
+    /// <summary>
+    /// The placement contract the More panel opens with: it may FLIP to the other side of its trigger (on
+    /// by default) and must CAP its height to the room on the resolved side and scroll, so a menu taller
+    /// than its viewport can never paint entries outside it. The shared placement knobs live on
+    /// <c>TmOverlayPanel</c> (<c>Flip</c> / <c>Shift</c> / <c>ConstrainHeight</c>); without
+    /// <c>ConstrainHeight</c> a 768 px tablet viewport loses the tail of the spreadsheet's primary-row
+    /// More menu and a real tablet user cannot reach those commands (phase 8 regression, f25a9d47).
+    /// </summary>
+    [Fact]
+    public void MoreMenu_AsksThePanelToStayInsideTheViewport()
+    {
+        SetupModule();
+        var overlay = JSInterop.SetupModule("./_content/Tempo.Blazor/js/overlay.js");
+        overlay.SetupVoid("open", _ => true).SetVoidResult();
+        overlay.SetupVoid("update", _ => true).SetVoidResult();
+        overlay.SetupVoid("close", _ => true).SetVoidResult();
+
+        var cut = RenderToolbar(Buttons(
+            new Spec("Hidden", ToolbarButtonPriority.OverflowOnly), new Spec("AlsoHidden", ToolbarButtonPriority.OverflowOnly)));
+        cut.WaitForAssertion(() => cut.FindAll("button.tm-toolbar-more").Should().HaveCount(1));
+        OpenMenu(cut);
+
+        // open(key, panel, anchor, dotNetRef, options) — options is argument index 4.
+        var options = System.Text.Json.JsonSerializer.Serialize(
+            overlay.Invocations["open"].Should().ContainSingle().Subject.Arguments[4]);
+        options.Should().Contain("\"constrainHeight\":true",
+            "the More panel must cap its height to the room and scroll instead of painting entries off-screen");
+        options.Should().Contain("\"flip\":true",
+            "a panel that does not fit below must be allowed to flip above its trigger");
+        options.Should().Contain("\"shift\":true");
+    }
+
     /// <summary>A component between the toolbar and the group that owns the label state: re-rendering it must not re-render the toolbar.</summary>
     private sealed class GroupSlot : Microsoft.AspNetCore.Components.ComponentBase
     {

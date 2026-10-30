@@ -123,7 +123,12 @@ buttons can show their text next to or under the icon.
   host flips the state in `OnClick`. On a phone-sized viewport the menu is the shared bottom
   sheet with 44px entries; an editor/formatting toolbar sets `OverflowPresentation="Popover"` so the
   user's selection survives (see the F4 decision in overlays.md). The menu survives a reorder while
-  open (resize, rotation): its items are keyed and every item carries a stable capture.
+  open (resize, rotation): its items are keyed and every item carries a stable capture. **The popover
+  never leaves the viewport**: `ActionOverflowMenu` opens the panel with `Flip` + `Shift` +
+  `ConstrainHeight`, so a "More" menu taller than the room on the resolved side (the Spreadsheet's
+  tablet rows put ~18 commands and three expanded lists into one menu) flips above its trigger when it
+  can, and otherwise caps its height to that room and scrolls internally — a top-layer panel has no
+  page scroll to bring off-screen entries back, so an uncapped menu is unreachable by touch.
 * **Groups survive into More** (F13/C3). The collapsed members of a `TmToolbarGroup` keep the group:
   each contiguous run of menu items sharing the group renders as a `role="group"` section named by
   the group's `Label` — the visible header is `aria-hidden` (the section's name is its

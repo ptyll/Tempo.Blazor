@@ -542,6 +542,23 @@ findings table and the per-leg results) and the two perf runs
 
 ### Fixed
 
+- **Core: the "More" overflow menu of `TmToolbar` / `TmMobileActionBar` now stays inside the viewport.**
+  The shared `ActionOverflowMenu` panel opens with `TmOverlayPanel.ConstrainHeight` in addition to the
+  flip/clamp placement it already used, so a menu taller than the room on its resolved side flips above
+  its trigger when that side has room and otherwise caps its height to the room it has and scrolls
+  internally. Before, only flip + clamp applied: a panel taller than the viewport was pinned to the top
+  margin and simply ran past the bottom edge — the Spreadsheet's tablet rows put ~18 commands and three
+  expanded lists into one "More" (a 1209 px panel in a 768 px viewport, ~450 px of it off-screen), and a
+  top-layer panel has no page scroll to bring those entries back, so a tablet user could not reach them
+  at all. The public API is unchanged (the knob already existed on `TmOverlayPanel`) and a menu that
+  fits below its trigger is placed exactly as before. Guards:
+  `TmToolbarOverflowTests.MoreMenu_AsksThePanelToStayInsideTheViewport` (the options the panel opens
+  with) and `SpreadsheetPhase8OverflowE2ETests` (tablet 1024×768 with a menu taller than the viewport,
+  and a 430 px short window whose trigger sits near the bottom — both assert the panel and the last
+  entry are inside the viewport and that the entry is clickable). Found by the phase-6 bisect of
+  `SpreadsheetE2ETests.Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets`
+  (plan 8959eebe, f25a9d47).
+
 - **Spreadsheet redesign (phase 8): a host shorter than the phone chrome no longer renders an empty
   grid.** `TmSpreadsheet` keeps a new `--tm-spreadsheet-grid-min-height` (default `9rem`) floor on the
   phone grid and `.tm-spreadsheet--layout-mobile` may scroll its own box, so a host that overrides the
