@@ -140,6 +140,48 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "SigningRolePalette",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Default submitter-role colours shared by TmRecipientRoleEditor (which serializes them into templates as the colour of every newly created role) and the field editor's colour input fallback. The values are the light-theme counterparts of the --tm-signing-role-1..6 tokens declared in the Signing stylesheet, but they stay hex ON PURPOSE: they are serialized data — a stored template carries the colour string verbatim, and the value feeds an input[type=color], which accepts concrete colours only. Hosts rebrand the CSS side by overriding the tokens — ToCssColor maps every default-palette colour onto its token reference, so a rebrand reaches stored default colours without touching template data; a host that wants new templates to start from its own palette assigns SigningSubmitterRole.Color itself before handing roles to the editors.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningRolePalette.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ColorForOrder",
+          "kind": "Method",
+          "type": "string",
+          "description": "The default colour for the role at zero-based order (wraps around).",
+          "parameters": [
+            {
+              "name": "order",
+              "type": "int"
+            }
+          ]
+        },
+        {
+          "name": "ToCssColor",
+          "kind": "Method",
+          "type": "string?",
+          "description": "Maps a stored role colour onto the stylesheet: a default-palette value (case-insensitive) becomes the matching var(--tm-signing-role-N) token reference — hosts that rebrand the tokens then rebrand every default-coloured role at once — the pre-phase-1 role-6 colour #ca8a04 (kept by stored templates) maps onto var(--tm-signing-role-6) like its successor, and any other value passes through verbatim.",
+          "parameters": [
+            {
+              "name": "color",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "DefaultColors",
+          "kind": "Field",
+          "type": "IReadOnlyList<string>",
+          "description": "Default role colours, indexed by the zero-based role order."
+        }
+      ]
+    },
+    {
       "itemName": "TmDocumentPageViewerPointerEventArgs",
       "kind": "Record",
       "category": "Components",
@@ -2061,7 +2103,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows.",
+      "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows. Known limitations / security note (reworked in Signing redesign phase 6): the step only RENDERS the external flow — raising OnStart or OnCheckout marks the field complete without contacting any provider (the runner's default handlers store true), and ExternalUrl merely opens a link in a new tab. The resulting field value is untrusted presentation state, not evidence that a verification or payment happened.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningExternalStep.razor",
       "documentationStatus": "merged",
@@ -2363,6 +2405,12 @@
           "description": "Whether the overlay should be rendered as read-only."
         },
         {
+          "name": "RoleColor",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Submitter role colour rendered as the inline --tm-signing-role-color custom property (plus the tm-signing-field--role class), from which the stylesheet derives the overlay's border and background with color-mix(). Accepts hex, a var(--tm-signing-role-N) token reference, an rgb/hsl/oklch function or one of the CSS basic colour keywords; every other value is dropped by the sanitizer. When null (or dropped) the overlay keeps the primary-tint default."
+        },
+        {
           "name": "Selected",
           "type": "bool",
           "isRequired": false,
@@ -2381,7 +2429,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Coordinates a linear signing ceremony over document pages and signing field steps.",
+      "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Known limitations / security note (reworked in Signing redesign phase 6): the external steps are placeholders — clicking \"Start verification\" / \"Checkout\" (OnStart/OnCheckout store true for the field) marks the step COMPLETE WITHOUT ANY VERIFICATION taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload stays in the browser. Treat the resulting field values as untrusted presentation state, never as proof that a verification, payment, or upload happened.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFormRunner.razor",
       "documentationStatus": "merged",
@@ -2488,6 +2536,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the runner should show a language selector when multiple cultures are available."
+        },
+        {
+          "name": "SubmitterRoles",
+          "type": "IReadOnlyList<SigningSubmitterRole>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Submitter roles whose colours are painted on the field overlays (RoleColor). The colour resolves from the field's own submitter, falling back to SubmitterUuid; roles without a colour keep the primary-tint overlay default."
         },
         {
           "name": "SubmitterUuid",
@@ -2951,16 +3006,20 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/css/tokens-signing.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer.js",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 42,
-    "manualItemCount": 42,
-    "generatedItemCount": 42,
+    "itemCount": 43,
+    "manualItemCount": 43,
+    "generatedItemCount": 43,
     "generatedOnlyItemCount": 0,
     "componentCount": 29,
-    "publicApiTypeCount": 13
+    "publicApiTypeCount": 14
   }
 }

@@ -180,14 +180,10 @@ public class UnconstrainedClassOwnershipTests
         ".tm-timeline-content Tempo.Blazor/_activity-timeline.css|Tempo.Blazor/_timeline.css",
 
         // The colour-picker's action row restyles the shared .tm-btn (white-space, Override);
-        // Signing's field-editor panel reaches into the condition-builder classes it composes
-        // (all Overrides), and the pdf-template-designer re-anchors the shared context-menu
-        // wrapper (position, Override).
+        // Signing's field-editor panel keeps one width-independent padding override on the
+        // composed condition-builder row, and the pdf-template-designer re-anchors the shared
+        // context-menu wrapper (position, Override).
         ".tm-btn Tempo.Blazor/_button.css|Tempo.Blazor/_color-picker.css",
-        ".tm-condition-builder__field-group Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
-        ".tm-condition-builder__field-group--operation Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
-        ".tm-condition-builder__field-group--value Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
-        ".tm-condition-builder__remove Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
         ".tm-condition-builder__row Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
         ".tm-context-menu-wrapper Tempo.Blazor.Signing/_pdf-template-designer.css|Tempo.Blazor/_context-menu.css",
 

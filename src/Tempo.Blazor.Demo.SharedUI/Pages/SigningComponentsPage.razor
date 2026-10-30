@@ -449,6 +449,7 @@
     <div class="showcase-card">
         <TmSigningFormRunner Pages="@_runnerPages"
                              Fields="@_runnerFields"
+                             SubmitterRoles="@_templateRoles"
                              Values="@_runnerValues"
                              ValuesChanged="HandleRunnerValuesChanged"
                              OnAutoSave="HandleRunnerAutoSave"
@@ -736,7 +737,11 @@
     private string? _fieldEditorCulture = "en-US";
     private string? _designerCulture = "cs-CZ";
     private string? _runnerCulture = "en-US";
-    private IReadOnlyList<SigningSubmitterRole> _templateRoles = [];
+    private IReadOnlyList<SigningSubmitterRole> _templateRoles =
+    [
+        new SigningSubmitterRole { Uuid = "template-signer", Name = "Signer 1", Color = SigningRolePalette.DefaultColors[0], Order = 0 },
+        new SigningSubmitterRole { Uuid = "template-approver", Name = "Signer 2", Color = SigningRolePalette.DefaultColors[1], Order = 1 }
+    ];
     private IReadOnlyList<SigningSubmitterRole> _submissionRecipients = [];
     private string _templateRoleStatus = "2 roles";
     private string _submissionRecipientStatus = "2 recipients";
@@ -1782,14 +1787,14 @@
             {
                 Uuid = "template-signer",
                 Name = Loc["SigningComponents_Role_Signer"],
-                Color = "#2563eb",
+                Color = SigningRolePalette.DefaultColors[0],
                 Order = 0
             },
             new SigningSubmitterRole
             {
                 Uuid = "template-approver",
                 Name = Loc["SigningComponents_Role_Approver"],
-                Color = "#16a34a",
+                Color = SigningRolePalette.DefaultColors[1],
                 Order = 1,
                 InviteByRoleUuid = "template-signer"
             }
@@ -1804,7 +1809,7 @@
                 FullName = "Alex Johnson",
                 Email = "alex@example.test",
                 Phone = "+420555010101",
-                Color = "#2563eb",
+                Color = SigningRolePalette.DefaultColors[0],
                 Order = 0
             },
             new SigningSubmitterRole
@@ -1814,7 +1819,7 @@
                 FullName = "Nora Lee",
                 Email = "nora@example.test",
                 Phone = "+420555010102",
-                Color = "#16a34a",
+                Color = SigningRolePalette.DefaultColors[1],
                 Order = 1,
                 IsOptional = true,
                 OptionalInviteByRoleUuid = "recipient-signer"

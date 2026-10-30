@@ -2,7 +2,7 @@
   "itemName": "TmSigningFormRunner",
   "kind": "Component",
   "category": "Signing",
-  "description": "Coordinates a linear signing ceremony over document pages and signing field steps.",
+  "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Known limitations / security note (reworked in Signing redesign phase 6): the external steps are placeholders — clicking \"Start verification\" / \"Checkout\" (OnStart/OnCheckout store true for the field) marks the step COMPLETE WITHOUT ANY VERIFICATION taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload stays in the browser. Treat the resulting field values as untrusted presentation state, never as proof that a verification, payment, or upload happened.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFormRunner.razor",
@@ -116,6 +116,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional signer role filter."
+    },
+    {
+      "name": "SubmitterRoles",
+      "type": "IReadOnlyList<SigningSubmitterRole>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Submitter roles whose colours are painted on the field overlays (RoleColor). The colour resolves from the field's own submitter, falling back to SubmitterUuid; roles without a colour keep the primary-tint overlay default."
     },
     {
       "name": "SupportedCultures",

@@ -2,6 +2,13 @@
     display: grid;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
+    /* The row grids re-wrap by the editor's own width — the editor is embedded in inspectors and
+       dialogs whose width is unrelated to the viewport. */
+    container: tm-recipient-role-editor / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-recipient-role-editor--disabled {
@@ -18,7 +25,7 @@
     gap: var(--tm-space-3) var(--tm-space-2);
     align-items: start;
     padding: var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-sm);
@@ -72,7 +79,7 @@
     width: var(--tm-input-height-sm);
     min-height: var(--tm-input-height-sm);
     padding: 0;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-secondary);
@@ -143,7 +150,7 @@
     width: 100%;
     min-height: var(--tm-input-height-sm);
     padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -155,7 +162,7 @@
     width: var(--tm-input-height-sm);
     height: var(--tm-input-height-sm);
     padding: 0;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     cursor: pointer;
@@ -176,7 +183,7 @@
     gap: var(--tm-space-1);
     min-height: var(--tm-input-height-sm);
     padding: var(--tm-space-1) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -236,7 +243,7 @@
     align-items: center;
     gap: var(--tm-space-1);
     padding: var(--tm-space-2) var(--tm-space-3);
-    border: 1px solid color-mix(in srgb, var(--tm-color-danger) 35%, var(--tm-color-border));
+    border: 1px solid color-mix(in srgb, var(--tm-color-danger) 35%, var(--tm-border-color));
     border-radius: var(--tm-radius-sm);
     background: color-mix(in srgb, var(--tm-color-danger) 8%, var(--tm-bg-surface));
     color: var(--tm-color-danger-text);
@@ -249,7 +256,7 @@
     gap: var(--tm-space-2);
 }
 
-@media (max-width: 64rem) {
+@container tm-recipient-role-editor (width < 1024px) {
     .tm-recipient-role-editor--template .tm-recipient-role-editor__row {
         grid-template-columns: calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1)) var(--tm-space-12) minmax(0, 1fr) auto;
         grid-template-areas:
@@ -275,7 +282,7 @@
     }
 }
 
-@media (max-width: 40rem) {
+@container tm-recipient-role-editor (width < 640px) {
     .tm-recipient-role-editor--template .tm-recipient-role-editor__row,
     .tm-recipient-role-editor--submission .tm-recipient-role-editor__row {
         grid-template-columns: 1fr;

@@ -5,6 +5,12 @@ using Tempo.Blazor.Abstractions.Models;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Renders image, file, and generated stamp signing steps.</summary>
+/// <remarks>
+/// KNOWN LIMITATION (cosmetic in this package): uploads stay in the browser — the picked files are
+/// handed to <see cref="AttachmentsChanged"/> as client-side metadata/preview only, and nothing is
+/// persisted or virus-scanned server-side. Treat the step as complete presentation state, not as
+/// proof of an upload, until a host-provided storage contract lands (Signing redesign phase 6).
+/// </remarks>
 public partial class TmSigningAttachmentStep
 {
     private string? _validationMessage;

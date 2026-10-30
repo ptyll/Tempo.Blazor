@@ -4,6 +4,12 @@ using Tempo.Blazor.Abstractions.Models;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Renders a phone verification signing step with country code, phone input, and OTP state.</summary>
+/// <remarks>
+/// KNOWN LIMITATION (cosmetic in this package): "Send code" only raises <see cref="OnSendCode"/> —
+/// no SMS is dispatched and the OTP is not checked against anything. The typed code is stored
+/// verbatim as the field value; a host must wire a real OTP provider (Signing redesign phase 6)
+/// before treating the step as verified.
+/// </remarks>
 public partial class TmSigningPhoneStep
 {
     private static readonly PhoneCountryOption[] DefaultCountryOptions =

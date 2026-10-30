@@ -45,6 +45,71 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Overlay_ReceivesDefaultPaletteRoleColorAsTokenReference()
+    {
+        var fields = CreateFields();
+        fields[0].SubmitterUuid = "role-manager";
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, fields)
+                      .Add(p => p.SubmitterRoles,
+                      [
+                          new SigningSubmitterRole { Uuid = "role-manager", Name = "Manager", Color = "#9333ea" }
+                      ]));
+
+        cut.Find("[data-field-uuid='field-1']")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:var(--tm-signing-role-4)",
+                "a default-palette colour resolves to the --tm-signing-role-4 token, so a host rebrand reaches it");
+    }
+
+    [Fact]
+    public void Overlay_ReceivesCustomRoleColorVerbatim()
+    {
+        var fields = CreateFields();
+        fields[0].SubmitterUuid = "role-manager";
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, fields)
+                      .Add(p => p.SubmitterRoles,
+                      [
+                          new SigningSubmitterRole { Uuid = "role-manager", Name = "Manager", Color = "#ff8800" }
+                      ]));
+
+        cut.Find("[data-field-uuid='field-1']")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:#ff8800");
+    }
+
+    [Fact]
+    public void Overlay_RoleWithoutColor_FallsBackToPaletteTokenOfRoleOrder()
+    {
+        var fields = CreateFields();
+        fields[0].SubmitterUuid = "role-second";
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, fields)
+                      .Add(p => p.SubmitterRoles,
+                      [
+                          new SigningSubmitterRole { Uuid = "role-first", Name = "First" },
+                          new SigningSubmitterRole { Uuid = "role-second", Name = "Second" }
+                      ]));
+
+        cut.Find("[data-field-uuid='field-1']")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:var(--tm-signing-role-2)",
+                "a colour-less role paints with the palette token of its order (second role → role-2)");
+    }
+
+    [Fact]
+    public void Overlay_WithoutMatchingRole_RendersNoRoleCustomProperty()
+    {
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, CreateFields()));
+
+        cut.Find("[data-field-uuid='field-1']")
+            .GetAttribute("style").Should().NotContain("--tm-signing-role-color");
+    }
+
+    [Fact]
     public void CulturePreviewSelector_ChangesCultureAndKeepsSelectedField()
     {
         string? culture = null;

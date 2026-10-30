@@ -8,6 +8,11 @@
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     text-align: center;
+    container: tm-signing-completion-panel / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-signing-completion-panel[data-state="waiting"] {

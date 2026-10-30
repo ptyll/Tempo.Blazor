@@ -3,10 +3,17 @@
     gap: var(--tm-space-4);
     min-width: 0;
     padding: var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
+    /* Header/grid re-wrap keys off the panel's own width (in the designer inspector it is a narrow
+       column on a wide desktop viewport), never the viewport. */
+    container: tm-signing-field-editor-panel / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-signing-field-editor-panel--readonly {
@@ -57,7 +64,7 @@
     align-items: center;
     min-height: var(--tm-space-6);
     padding: 0 var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-secondary);
@@ -68,7 +75,7 @@
     display: grid;
     gap: var(--tm-space-3);
     padding-block-start: var(--tm-space-4);
-    border-block-start: 1px solid var(--tm-color-border);
+    border-block-start: 1px solid var(--tm-border-color);
 }
 
 .tm-signing-field-editor-panel__field {
@@ -112,7 +119,7 @@
     box-sizing: border-box;
     min-height: var(--tm-input-height-sm);
     padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -176,7 +183,7 @@
     width: var(--tm-input-height-sm);
     height: var(--tm-input-height-sm);
     padding: 0;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
 }
@@ -229,7 +236,7 @@
     gap: var(--tm-space-1);
     min-height: var(--tm-input-height-sm);
     padding: var(--tm-space-1) var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -253,6 +260,13 @@
     color: var(--tm-text-inverse);
 }
 
+/*
+ * Embedded builders. The forced single-column overrides this block used to carry (row grid,
+ * field-group min-width, remove-button alignment) are gone: the builders are CSS containers
+ * themselves, so `@container` rules in _condition-builder.css / _formula-builder.css re-wrap them
+ * by the width they actually get inside the inspector. Only the width-independent compact row
+ * padding of the embedding stays here.
+ */
 .tm-signing-field-editor-panel__condition-builder,
 .tm-signing-field-editor-panel__formula-builder {
     display: grid;
@@ -261,18 +275,7 @@
 }
 
 .tm-signing-field-editor-panel__condition-builder .tm-condition-builder__row {
-    grid-template-columns: minmax(0, 1fr);
     padding: var(--tm-space-2);
-}
-
-.tm-signing-field-editor-panel__condition-builder .tm-condition-builder__field-group,
-.tm-signing-field-editor-panel__condition-builder .tm-condition-builder__field-group--operation,
-.tm-signing-field-editor-panel__condition-builder .tm-condition-builder__field-group--value {
-    min-width: 0;
-}
-
-.tm-signing-field-editor-panel__condition-builder .tm-condition-builder__remove {
-    justify-self: end;
 }
 
 .tm-signing-field-editor-panel button:disabled,
@@ -283,7 +286,7 @@
     cursor: not-allowed;
 }
 
-@media (max-width: 48rem) {
+@container tm-signing-field-editor-panel (width < 768px) {
     .tm-signing-field-editor-panel__header,
     .tm-signing-field-editor-panel__section-header {
         align-items: stretch;

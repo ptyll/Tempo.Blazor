@@ -8,6 +8,18 @@ using Tempo.Blazor.Components.Inputs;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Coordinates a linear signing ceremony over document pages and signing field steps.</summary>
+/// <remarks>
+/// <para>
+/// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the external steps are
+/// placeholders. Clicking "Start verification" / "Checkout" (the runner's
+/// <c>OnStart</c>/<c>OnCheckout</c> handlers store <c>true</c> for the field) marks the step
+/// COMPLETE WITHOUT ANY VERIFICATION actually taking place, and the phone step's OTP and the
+/// attachment step's upload are equally cosmetic in this package — no SMS is sent and no file
+/// leaves the browser. A host MUST wire its own provider-backed flow (or treat the field value as
+/// untrusted) until that phase lands; completion of such a step is presentation state, never proof
+/// that a verification, payment, or upload happened.
+/// </para>
+/// </remarks>
 public partial class TmSigningFormRunner : IDisposable
 {
     private Dictionary<string, object?> _values = new(StringComparer.Ordinal);
@@ -45,6 +57,14 @@ public partial class TmSigningFormRunner : IDisposable
 
     /// <summary>Optional signer role filter.</summary>
     [Parameter] public string? SubmitterUuid { get; set; }
+
+    /// <summary>
+    /// Submitter roles whose colours are painted on the field overlays
+    /// (<see cref="TmSigningFieldOverlay.RoleColor"/>). The colour resolves from the field's own
+    /// submitter, falling back to <see cref="SubmitterUuid"/>; roles without a colour keep the
+    /// primary-tint overlay default.
+    /// </summary>
+    [Parameter] public IReadOnlyList<SigningSubmitterRole> SubmitterRoles { get; set; } = [];
 
     /// <summary>Callback invoked when the current step is submitted by moving forward.</summary>
     [Parameter] public EventCallback<SigningStepItem> OnStepSubmit { get; set; }
@@ -195,6 +215,12 @@ public partial class TmSigningFormRunner : IDisposable
         return Plan.OverlayFields.Where(item =>
             string.Equals(item.Area.AttachmentUuid, page.AttachmentUuid, StringComparison.Ordinal)
             && item.Area.Page == page.PageIndex);
+    }
+
+    /// <summary>The role colour for a field overlay: the field's own role first, then the runner's signer.</summary>
+    private string? GetOverlayRoleColor(SigningField field)
+    {
+        return SigningRolePalette.ResolveRoleColor(SubmitterRoles, field.SubmitterUuid ?? SubmitterUuid);
     }
 
     private bool IsCurrentField(SigningField field)

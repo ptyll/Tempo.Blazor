@@ -1,5 +1,5 @@
 {
-  "count": 4360,
+  "count": 4348,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -1409,7 +1409,6 @@
     "color-literal|src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-variables.css|--tm-notion-text-yellow: #d4ac0d;": 1,
     "color-literal|src/Tempo.Blazor.Reporting/wwwroot/css/tempo-blazor-reporting.css|background: color-mix(in srgb, var(--tm-color-primary, #2563eb) 14%, transparent);": 1,
     "color-literal|src/Tempo.Blazor.Reporting/wwwroot/css/tempo-blazor-reporting.css|outline: 2px solid var(--tm-color-primary, #2563eb);": 1,
-    "color-literal|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|color: var(--tm-color-on-primary, #fff);": 5,
     "color-literal|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Data/TmSpreadsheetFilterDropdown.razor.css|background: var(--tm-color-border-subtle, #e2e8f0);": 1,
     "color-literal|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Data/TmSpreadsheetFilterDropdown.razor.css|background: var(--tm-color-primary, #2563eb);": 1,
     "color-literal|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Data/TmSpreadsheetFilterDropdown.razor.css|background: var(--tm-color-surface-hover, #f1f5f9);": 2,
@@ -2687,13 +2686,6 @@
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionInlineToolbar.razor.css|.tm-notion-inline-toolbar__link-apply": 1,
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMediaUploadDialog.razor.css|.tm-media-dialog__embed-btn": 1,
     "white-on-primary|src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionTemplateGallery.razor.css|.tm-ntg__use": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|.tm-document-comments-layer__area-badge": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|.tm-document-comments-layer__point": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|.tm-document-comments-panel__filter--active, .tm-comment-composer__button--primary": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|.tm-document-comments-panel__thread-marker, .tm-document-comments-panel__avatar": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css|.tm-document-page-viewer__comment-count": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_signing-form-runner.css|.tm-signing-form-runner__next, .tm-signing-form-runner__complete, .tm-signing-form-runner__mobile-expand": 1,
-    "white-on-primary|src/Tempo.Blazor.Signing/wwwroot/css/components/_submission-status-timeline.css|.tm-submission-status-timeline__marker": 1,
     "white-on-primary|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Data/TmSpreadsheetFilterDropdown.razor.css|.tm-spreadsheet-filter-dropdown__btn--ok": 1,
     "white-on-primary|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetCustomFilterDialog.razor.css|.tm-spreadsheet-custom-filter__btn--ok": 1,
     "white-on-primary|src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetRemoveDuplicatesDialog.razor.css|.tm-spreadsheet-dedup__btn--ok": 1,

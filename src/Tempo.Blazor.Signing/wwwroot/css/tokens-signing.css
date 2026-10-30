@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor.Signing — Design Token Overrides
+   Role palette + theme variants. Tokens (definitions) live in a
+   tokens-*.css file, never in a component stylesheet — the strict
+   CSS audit (scripts/audit-css-strict.mjs) enforces that split.
+   ═══════════════════════════════════════════════════════════════ */
+
+/*
+ * Signing submitter-role palette (Signing redesign phase 1).
+ *
+ * These six colours identify the signer roles on field overlays. They are ALSO serialized into
+ * signing templates: TmRecipientRoleEditor stores the same hex values as the default role colours
+ * (SigningRolePalette.DefaultColors), and stored templates carry them verbatim. Keep the C# palette
+ * and these tokens in sync — the tokens exist so CSS can derive role-coloured borders/backgrounds
+ * with color-mix() without ever parsing a hex value, and so hosts can rebrand the fallback palette
+ * in one place. The overlays never inline a stored hex blindly: field overlays reference these
+ * tokens through SigningRolePalette.ToCssColor / ResolveRoleColor, so a default-coloured role
+ * follows the theme variants below and any host override of the tokens.
+ */
+:root {
+    --tm-signing-role-1: #2563eb;
+    --tm-signing-role-2: #16a34a;
+    --tm-signing-role-3: #dc2626;
+    --tm-signing-role-4: #9333ea;
+    --tm-signing-role-5: #0891b2;
+    --tm-signing-role-6: #a16207;
+}
+
+[data-theme="dark"],
+.tm-dark {
+    --tm-signing-role-1: #60a5fa;
+    --tm-signing-role-2: #4ade80;
+    --tm-signing-role-3: #f87171;
+    --tm-signing-role-4: #c084fc;
+    --tm-signing-role-5: #22d3ee;
+    --tm-signing-role-6: #facc15;
+}
+
+/* Light island: a forced-light signing surface inside a dark page keeps the light palette. */
+[data-theme="light"] {
+    --tm-signing-role-1: #2563eb;
+    --tm-signing-role-2: #16a34a;
+    --tm-signing-role-3: #dc2626;
+    --tm-signing-role-4: #9333ea;
+    --tm-signing-role-5: #0891b2;
+    --tm-signing-role-6: #a16207;
+}

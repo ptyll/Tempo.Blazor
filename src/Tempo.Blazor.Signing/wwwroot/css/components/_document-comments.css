@@ -10,7 +10,9 @@
     align-items: start;
 }
 
-@media (min-width: 960px) {
+/* The comments panel sits beside the page once the VIEWER (not the viewport) is a desktop-width
+   container; a designer or runner embedding the viewer in a narrow column keeps the stacked layout. */
+@container tm-document-page-viewer (width >= 1024px) {
     .tm-document-page-viewer--with-comments .tm-document-page-viewer__content {
         grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
     }
@@ -49,7 +51,7 @@
 
 .tm-document-page-viewer__comment-count {
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-document-page-viewer__mention-count {
@@ -153,7 +155,7 @@
     transform: translate(-50%, -50%);
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
 }
@@ -175,7 +177,7 @@
     justify-content: center;
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
 }
@@ -208,6 +210,11 @@
     display: grid;
     gap: var(--tm-space-3);
     padding: var(--tm-space-3);
+    container: tm-document-comments-panel / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-document-comments-panel__title {
@@ -244,7 +251,7 @@
 .tm-comment-composer__button--primary {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-document-comments-panel__list,
@@ -285,7 +292,7 @@
     flex: 0 0 auto;
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
 }
@@ -502,11 +509,11 @@
     cursor: default;
 }
 
-@media (max-width: 959px) {
+@container tm-document-page-viewer (width < 1024px) {
     .tm-document-page-viewer--with-comments .tm-document-page-viewer__comments-shell {
         position: sticky;
         bottom: var(--tm-space-2);
-        z-index: var(--tm-z-sticky, 10);
+        z-index: var(--tm-z-sticky);
         max-height: min(70vh, 34rem);
         overflow: auto;
         border-radius: var(--tm-radius-md);

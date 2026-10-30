@@ -1,0 +1,42 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Default submitter-role colours shared by TmRecipientRoleEditor (which serializes them into templates as the colour of every newly created role) and the field editor's colour input fallback. The values are the light-theme counterparts of the --tm-signing-role-1..6 tokens declared in the Signing stylesheet, but they stay hex ON PURPOSE: they are serialized data — a stored template carries the colour string verbatim, and the value feeds an input[type=color], which accepts concrete colours only. Hosts rebrand the CSS side by overriding the tokens — ToCssColor maps every default-palette colour onto its token reference, so a rebrand reaches stored default colours without touching template data; a host that wants new templates to start from its own palette assigns SigningSubmitterRole.Color itself before handing roles to the editors.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningRolePalette.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "DefaultColors",
+      "kind": "Field",
+      "type": "IReadOnlyList<string>",
+      "description": "Default role colours, indexed by the zero-based role order."
+    },
+    {
+      "name": "ColorForOrder",
+      "kind": "Method",
+      "type": "string",
+      "description": "The default colour for the role at zero-based order (wraps around).",
+      "parameters": [
+        {
+          "name": "order",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "ToCssColor",
+      "kind": "Method",
+      "type": "string?",
+      "description": "Maps a stored role colour onto the stylesheet: a default-palette value (case-insensitive) becomes the matching var(--tm-signing-role-N) token reference — hosts that rebrand the tokens then rebrand every default-coloured role at once — the pre-phase-1 role-6 colour #ca8a04 (kept by stored templates) maps onto var(--tm-signing-role-6) like its successor, and any other value passes through verbatim.",
+      "parameters": [
+        {
+          "name": "color",
+          "type": "string?"
+        }
+      ]
+    }
+  ],
+  "itemName": "SigningRolePalette"
+}

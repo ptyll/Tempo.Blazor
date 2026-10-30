@@ -121,6 +121,12 @@
       "description": "Whether the overlay should be rendered as read-only."
     },
     {
+      "name": "RoleColor",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Submitter role colour rendered as the inline --tm-signing-role-color custom property (plus the tm-signing-field--role class), from which the stylesheet derives the overlay's border and background with color-mix(). Accepts hex, a var(--tm-signing-role-N) token reference, an rgb/hsl/oklch function or one of the CSS basic colour keywords; every other value is dropped by the sanitizer. When null (or dropped) the overlay keeps the primary-tint default."
+    },
+    {
       "name": "Selected",
       "type": "bool",
       "isRequired": false,

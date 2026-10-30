@@ -4,18 +4,15 @@ using Tempo.Blazor.Abstractions.Models;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Edits signing template roles and concrete submission recipient details.</summary>
+/// <remarks>
+/// Newly created roles default to the <see cref="SigningRolePalette"/> colours. Those hex values are
+/// serialized template data — a saved template stores the colour string verbatim — and mirror the
+/// <c>--tm-signing-role-1..6</c> tokens declared in the Signing stylesheet; the tokens exist so CSS
+/// can paint role colours (and so hosts can rebrand the palette), while this editor keeps writing
+/// concrete colours into the model.
+/// </remarks>
 public partial class TmRecipientRoleEditor
 {
-    private static readonly string[] DefaultColors =
-    [
-        "#2563eb",
-        "#16a34a",
-        "#dc2626",
-        "#9333ea",
-        "#0891b2",
-        "#ca8a04"
-    ];
-
     private readonly List<SigningSubmitterRole> _roles = [];
     private IReadOnlyList<SigningSubmitterRole>? _lastRoles;
     private int? _dragSourceIndex;
@@ -321,7 +318,7 @@ public partial class TmRecipientRoleEditor
         return new SigningSubmitterRole
         {
             Name = GetDefaultName(index),
-            Color = DefaultColors[index % DefaultColors.Length],
+            Color = SigningRolePalette.ColorForOrder(index),
             Order = index
         };
     }
@@ -334,7 +331,7 @@ public partial class TmRecipientRoleEditor
     private static string NormalizeColor(string? value, int index)
     {
         return string.IsNullOrWhiteSpace(value)
-            ? DefaultColors[index % DefaultColors.Length]
+            ? SigningRolePalette.ColorForOrder(index)
             : value;
     }
 

@@ -1,9 +1,21 @@
 .tm-signing-form-runner {
+    color: var(--tm-text-primary);
+    /* Responsive decisions (mobile panel, hidden steps rail) are container queries against the
+       runner's own width, so a runner embedded in a narrow column collapses like on a phone. A
+       @container rule can never restyle the CONTAINER itself, so the runner's grid lives on the
+       inner `__layout` element below. */
+    container: tm-signing-runner / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
+}
+
+.tm-signing-form-runner__layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 4), calc(var(--tm-space-16) * 6));
     gap: var(--tm-space-4);
     min-height: 0;
-    color: var(--tm-text-primary);
 }
 
 .tm-signing-form-runner--loading {
@@ -25,7 +37,7 @@
 .tm-signing-form-runner__document {
     min-width: 0;
     overflow: auto;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface-secondary);
 }
@@ -43,7 +55,7 @@
     gap: var(--tm-space-3);
     min-width: 0;
     padding: var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-sm);
@@ -71,7 +83,7 @@
     width: 100%;
     min-height: calc(var(--tm-space-5) + var(--tm-space-4));
     padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -91,7 +103,7 @@
     justify-content: center;
     min-height: calc(var(--tm-space-5) + var(--tm-space-4));
     padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -163,7 +175,7 @@
 .tm-signing-form-runner__mobile-expand {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary);
-    color: var(--tm-color-white);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-signing-form-runner__next:hover:not(:disabled),
@@ -185,8 +197,8 @@
     display: none;
 }
 
-@media (max-width: 48rem) {
-    .tm-signing-form-runner {
+@container tm-signing-runner (width < 768px) {
+    .tm-signing-form-runner__layout {
         grid-template-columns: minmax(0, 1fr);
         padding-bottom: calc(var(--tm-space-16) * 2);
     }
@@ -198,7 +210,7 @@
     .tm-signing-form-runner__mobile-panel {
         position: sticky;
         inset-block-end: var(--tm-space-3);
-        z-index: var(--tm-z-modal);
+        z-index: var(--tm-z-sticky);
         display: grid;
         gap: var(--tm-space-2);
         margin-inline: var(--tm-space-3);
@@ -210,7 +222,7 @@
 
     .tm-signing-form-runner__mobile-panel--expanded {
         padding: var(--tm-space-3);
-        border: 1px solid var(--tm-color-border);
+        border: 1px solid var(--tm-border-color);
         border-radius: var(--tm-radius-lg);
         background: var(--tm-bg-surface);
         box-shadow: var(--tm-shadow-lg);

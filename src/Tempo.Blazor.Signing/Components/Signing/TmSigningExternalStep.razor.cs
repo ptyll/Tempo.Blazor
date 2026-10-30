@@ -5,6 +5,17 @@ using Tempo.Blazor.Abstractions.Models;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Provider-agnostic placeholder step for verification, KBA, and payment flows.</summary>
+/// <remarks>
+/// <para>
+/// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the step only RENDERS
+/// the external flow. Raising <see cref="OnStart"/> or <see cref="OnCheckout"/> marks the field
+/// complete; the runner's default handlers store <c>true</c> without contacting any provider, so
+/// "Start verification" / "Checkout" completing the step is NOT evidence that a verification or a
+/// payment happened. <see cref="ExternalUrl"/> merely opens a link in a new tab. Hosts must treat
+/// the resulting field value as untrusted presentation state until a provider-backed contract
+/// replaces this placeholder.
+/// </para>
+/// </remarks>
 public partial class TmSigningExternalStep
 {
     private readonly Dictionary<string, string?> _answers = [];

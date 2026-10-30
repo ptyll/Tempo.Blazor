@@ -270,6 +270,84 @@
 
 - **Scheduler toolbar class names.** The desktop toolbar is now the core `TmToolbar`, so the hand-rolled button classes are gone. `.tm-scheduler-toolbar-nav-btn` remains, but only on the compact (mobile) row. `.tm-scheduler-toolbar-today-btn` and `.tm-scheduler-toolbar-add` are removed; Today and New event are `button.tm-toolbar-btn`, and Print lives in the More menu (`button.tm-toolbar-more`, group `data-tm-group="export"`). A selector that matched `.tm-scheduler-toolbar-today-btn` or `.tm-scheduler-toolbar-add` matches nothing now — use `[data-testid="scheduler-today"]` and `[data-testid="scheduler-add"]`.
 
+- **Signing components respond to their CONTAINER, not the viewport (Signing redesign phase 1).**
+  Every Signing stylesheet root (`tm-signing-runner`, `tm-pdf-template-designer` workspace,
+  `tm-signing-field-editor-panel`, `tm-condition-builder`, `tm-formula-builder`,
+  `tm-recipient-role-editor`, `tm-document-page-viewer`, `tm-document-comments-panel`,
+  `tm-signing-step-shell`, `tm-signing-completion-panel`, `tm-submission-status-timeline`,
+  `tm-share-link-panel`, `tm-pdf-signature-verification`, `tm-audit-trail-viewer`) is now a CSS
+  size container (`container-type: inline-size`), and every width `@media` query moved to
+  `@container` with the library-convention breakpoints (640 / 768 / 1024 / 1280). The visible
+  behavior change: a Signing panel squeezed into a narrow column on a WIDE screen collapses exactly
+  like on a phone — before, the layouts keyed off the viewport, so a narrow designer inspector or a
+  runner in a half-width column kept the roomy desktop layout. On the designer the steps are named
+  on its own workspace container: the right panel drops below the canvas under a 768px workspace
+  and the palette stacks under 640px (the pre-change steps were viewport 1100/900). One tablet
+  consequence to plan for: hosts embedding the runner in <768px columns on tablets get the mobile
+  panel; pin a wider column or wait for the Phase 5 bottom sheet.
+  ```css
+  /* before: the runner collapsed only when the VIEWPORT was narrow */
+  @media (max-width: 48rem) { .tm-signing-form-runner { grid-template-columns: minmax(0, 1fr); } }
+
+  /* after: it collapses when the RUNNER's own container is narrow (breakpoints 640/768/1024/1280).
+     A @container rule can never restyle the container itself, so the grid moved onto an inner
+     element — the runner root gained `__layout`, the designer workspace gained `__workspace-grid`. */
+  .tm-signing-form-runner { container: tm-signing-runner / inline-size; }
+  @container tm-signing-runner (width < 768px) { .tm-signing-form-runner__layout { grid-template-columns: minmax(0, 1fr); } }
+  ```
+  Two documented specifics: the designer's container is the `__workspace` region and NOT the
+  component root, because the root hosts the `position: fixed` context menu (a container becomes
+  the containing block of fixed descendants and would displace the menu); and the temporary
+  force-single-column overrides the field editor panel carried for the embedded condition builder
+  are gone — the builder is a container itself and re-wraps by the width it actually gets. Host CSS
+  that set `grid-template-columns` on `.tm-signing-form-runner` or
+  `.tm-pdf-template-designer__workspace` directly must retarget `.tm-signing-form-runner__layout` /
+  `.tm-pdf-template-designer__workspace-grid`. Every container root also declares
+  `min-inline-size: 0; inline-size: 100%` — inline-size containment sizes the box as if it had no
+  contents, so without these declarations a Signing component placed in a flex row (or an
+  auto-sized grid track) shrink-to-fit to nothing. A host that gives the root an explicit width is
+  unaffected; a host that relied on content-driven growth must size the component (or its
+  flex/grid track) itself. The new
+  `SigningCssTokenHygieneTests` bUnit gate keeps this honest (no width `@media`, no undefined
+  tokens, no hex outside the role palette, one border alias, no white-on-primary text, sticky never
+  rides `--tm-z-modal`).
+
+- **Signing CSS token hygiene (Signing redesign phase 1).** The package stylesheets no longer carry
+  colour literals outside the new role palette, scattered border aliases or white text on coloured
+  fills: `var(--tm-color-on-primary, #fff)` lost its `#fff` fallback (dark mode had white-on-light
+  ink), `--tm-color-border` / `--tm-z-sticky, 10` / `--tm-z-tooltip, 1090` collapsed onto the
+  canonical `--tm-border-color` / `--tm-z-sticky` / `--tm-z-tooltip`, the runner's primary buttons
+  and the submission timeline markers paint their text with `--tm-color-on-primary` (identical in
+  light mode — inverse ink in dark mode), and the sticky mobile panel uses `--tm-z-sticky` instead
+  of `--tm-z-modal`. Only a host that overrode one of the removed fallback spellings is affected.
+
+- **Signing role colours (Signing redesign phase 1).** New `--tm-signing-role-1..6` tokens (light +
+  dark, overridable) in the package's `tokens-signing.css`; `TmSigningFieldOverlay` gained `RoleColor`
+  (rendered as the inline `--tm-signing-role-color` custom property plus the
+  `tm-signing-field--role` class; the stylesheet derives border and background via `color-mix()`,
+  the border mixing 20% primary ink into the role colour and the label ink staying plain primary
+  text, and the value is allow-list sanitized — hex, `var(--tm-signing-role-N)`, rgb/hsl/oklch or a
+  colour keyword; anything else is dropped),
+  `TmPdfTemplateDesigner` and `TmSigningFormRunner` (new optional `SubmitterRoles` parameter) pass
+  the owning submitter's colour to every overlay, and the field editor's colour input falls back to
+  the field's role colour instead of a hard-coded `#2563eb`. Role colour 6 changed from `#ca8a04`
+  to `#a16207` (light theme and the default palette; dark mode keeps `#facc15`) so the yellow stays
+  readable as a border on light surfaces. Stored templates that already carry `#ca8a04` keep
+  rendering with it — only defaults move. The `TmRecipientRoleEditor` default
+  palette stays hex ON PURPOSE — it is serialized template data (`SigningRolePalette`) mirroring
+  the tokens; a host that overrode role colours through stored templates is unaffected. An invalid
+  field is no longer colour-only: `.tm-signing-field--invalid` adds a dashed 2px border (WCAG
+  1.4.1).
+
+### Known issues
+
+- **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
+  "Start verification" / "Checkout" marks the step complete WITHOUT any verification or payment
+  taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload
+  stays in the browser. The resulting field values are untrusted presentation state. The XML docs
+  and the JSON component documentation carry a "Known limitations / security note"; a
+  provider-backed contract is planned for Signing redesign phase 6.
+
 ### Added
 
 - **`TmGantt` desktop structure (redesign phase 4), all opt-in and additive.**

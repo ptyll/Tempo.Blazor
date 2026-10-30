@@ -5,11 +5,27 @@
 }
 
 .tm-pdf-template-designer__workspace {
+    min-width: 0;
+    /*
+     * The workspace region — not the component root — is the CSS container on purpose: the designer
+     * renders its context menu as a `position: fixed` host anchored to viewport coordinates, and a
+     * container would become that fixed host's containing block (the Gantt lesson) and displace the
+     * menu. The host is a SIBLING of the workspace under the root, so the workspace is a safe
+     * container. A @container rule can never restyle the CONTAINER itself, so the workspace's
+     * responsive grid lives on the inner `__workspace-grid` element below.
+     */
+    container: tm-pdf-template-designer / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
+}
+
+.tm-pdf-template-designer__workspace-grid {
     display: grid;
     grid-template-columns: minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 3.25)) minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 4.25), calc(var(--tm-space-16) * 5));
     gap: var(--tm-space-4);
     align-items: start;
-    min-width: 0;
 }
 
 .tm-pdf-template-designer--disabled {
@@ -236,7 +252,7 @@
 
 .tm-pdf-template-designer__context-host {
     position: fixed;
-    z-index: var(--tm-z-tooltip, 1090);
+    z-index: var(--tm-z-tooltip);
 }
 
 .tm-pdf-template-designer__context-actions {
@@ -291,8 +307,15 @@
     margin-bottom: var(--tm-space-3);
 }
 
-@media (max-width: 1100px) {
-    .tm-pdf-template-designer__workspace {
+/* Breakpoints are the library convention (640/768/1024/1280) applied to the designer's own width.
+   Measured at a 1440×900 demo viewport the workspace container is ~1030px, while the pre-change
+   viewport steps fired at 1100/900 — i.e. at container ≈787/644px. The container thresholds are
+   therefore the LOWER steps (768/640): keying the collapse to 1024 would have dropped the designer
+   to two columns at common desktop sizes (the container runs ~72% of the viewport inside the demo
+   shell). The right panel drops below the canvas once the workspace is tablet-narrow, and the
+   palette stacks once it is phone-narrow — independent of how wide the viewport is. */
+@container tm-pdf-template-designer (width < 768px) {
+    .tm-pdf-template-designer__workspace-grid {
         grid-template-columns: minmax(calc(var(--tm-space-16) * 2.5), calc(var(--tm-space-16) * 3)) minmax(0, 1fr);
     }
 
@@ -301,9 +324,9 @@
     }
 }
 
-@media (max-width: 900px) {
-    .tm-pdf-template-designer__workspace,
-    .tm-pdf-template-designer--mobile .tm-pdf-template-designer__workspace {
+@container tm-pdf-template-designer (width < 640px) {
+    .tm-pdf-template-designer__workspace-grid,
+    .tm-pdf-template-designer--mobile .tm-pdf-template-designer__workspace-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 

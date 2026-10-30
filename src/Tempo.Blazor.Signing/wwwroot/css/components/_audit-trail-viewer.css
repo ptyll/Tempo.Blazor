@@ -2,6 +2,11 @@
     display: grid;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
+    container: tm-audit-trail-viewer / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-audit-trail-viewer__empty {

@@ -84,6 +84,92 @@ public class TmSigningFieldOverlayTests : LocalizationTestBase
     }
 
     [Fact]
+    public void RoleColor_RendersSigningRoleColorCustomProperty()
+    {
+        var cut = Render<TmSigningFieldOverlay>(parameters => parameters
+            .Add(p => p.Field, CreateField())
+            .Add(p => p.Area, CreateArea())
+            .Add(p => p.RoleColor, "#16a34a"));
+
+        var root = cut.Find(".tm-signing-field");
+        root.GetAttribute("style").Should().Contain("--tm-signing-role-color:#16a34a");
+        root.ClassList.Should().Contain("tm-signing-field--role",
+            "the role-coloured presentation derives border and background through color-mix()");
+    }
+
+    [Fact]
+    public void RoleColor_WithoutValue_RendersNoRoleCustomProperty()
+    {
+        var cut = Render<TmSigningFieldOverlay>(parameters => parameters
+            .Add(p => p.Field, CreateField())
+            .Add(p => p.Area, CreateArea()));
+
+        var root = cut.Find(".tm-signing-field");
+        root.GetAttribute("style").Should().NotContain("--tm-signing-role-color");
+        root.ClassList.Should().NotContain("tm-signing-field--role");
+    }
+
+    [Theory]
+    [InlineData("#16a34a")]
+    [InlineData("#16A34AFF")]
+    [InlineData("var(--tm-signing-role-2)")]
+    [InlineData("rgb(22, 163, 74)")]
+    [InlineData("rgba(22, 163, 74, 0.5)")]
+    [InlineData("oklch(0.7 0.15 160)")]
+    public void RoleColor_AllowListedValue_RendersRoleCustomProperty(string roleColor)
+    {
+        var cut = Render<TmSigningFieldOverlay>(parameters => parameters
+            .Add(p => p.Field, CreateField())
+            .Add(p => p.Area, CreateArea())
+            .Add(p => p.RoleColor, roleColor));
+
+        var root = cut.Find(".tm-signing-field");
+        root.GetAttribute("style").Should().Contain($"--tm-signing-role-color:{roleColor}");
+        root.ClassList.Should().Contain("tm-signing-field--role");
+    }
+
+    [Theory]
+    [InlineData("red")]
+    [InlineData("teal")]
+    [InlineData("Fuchsia")]
+    public void RoleColor_BasicColourKeyword_IsAllowListed(string roleColor)
+    {
+        var cut = Render<TmSigningFieldOverlay>(parameters => parameters
+            .Add(p => p.Field, CreateField())
+            .Add(p => p.Area, CreateArea())
+            .Add(p => p.RoleColor, roleColor));
+
+        var root = cut.Find(".tm-signing-field");
+        root.GetAttribute("style").Should().Contain($"--tm-signing-role-color:{roleColor}");
+        root.ClassList.Should().Contain("tm-signing-field--role");
+    }
+
+    [Theory]
+    [InlineData("expression(alert(1))")]
+    [InlineData("url(javascript:alert(1))")]
+    [InlineData("red; } * { background: url(//evil.example) }")]
+    [InlineData("var(--not-a-tempo-token)")]
+    [InlineData("#123456789")]
+    [InlineData("rgb(1;2;3)")]
+    [InlineData(";;")]
+    [InlineData("darkred")]
+    [InlineData("palevioletred")]
+    [InlineData("notacolor")]
+    public void RoleColor_WithInjectionAttempt_IsDropped(string roleColor)
+    {
+        // darkred / palevioletred are extended CSS named colours: the sanitizer only admits the
+        // basic keywords, so anything outside the closed set rides the inline style never.
+        var cut = Render<TmSigningFieldOverlay>(parameters => parameters
+            .Add(p => p.Field, CreateField())
+            .Add(p => p.Area, CreateArea())
+            .Add(p => p.RoleColor, roleColor));
+
+        var root = cut.Find(".tm-signing-field");
+        root.GetAttribute("style").Should().NotContain("--tm-signing-role-color");
+        root.ClassList.Should().NotContain("tm-signing-field--role");
+    }
+
+    [Fact]
     public void Render_StateClassesAndAria_AreApplied()
     {
         var cut = Render<TmSigningFieldOverlay>(parameters =>

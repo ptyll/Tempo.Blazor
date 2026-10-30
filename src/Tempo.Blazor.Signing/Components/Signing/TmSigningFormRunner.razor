@@ -6,6 +6,9 @@
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
      aria-busy="@BoolText(IsLoading)">
+    @* The runner root is the CSS size container (see _signing-form-runner.css); its grid lives on
+       an inner element because a @container rule can never restyle the container itself. *@
+    <div class="tm-signing-form-runner__layout">
     @if (Plan.Steps.Count == 0)
     {
         <div class="tm-signing-form-runner__empty" role="status">
@@ -26,6 +29,7 @@
                             <TmSigningFieldOverlay Field="@overlay.Field"
                                                    Area="@overlay.Area"
                                                    Value="@GetOverlayValue(overlay.Field)"
+                                                   RoleColor="@GetOverlayRoleColor(overlay.Field)"
                                                    Selected="@IsCurrentField(overlay.Field)"
                                                    Focused="@IsCurrentField(overlay.Field)"
                                                    Invalid="@IsInvalid(overlay.Field)"
@@ -65,6 +69,7 @@
             }
         </div>
     }
+    </div>
 </div>
 
 @code {

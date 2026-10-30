@@ -4,6 +4,13 @@
     justify-items: center;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
+    /* The comments layout and future responsive rules query the viewer's own width, not the
+       viewport — the viewer is embedded in designers and runners at arbitrary widths. */
+    container: tm-document-page-viewer / inline-size;
+    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
+       instead of shrink-to-fit. */
+    min-inline-size: 0;
+    inline-size: 100%;
 }
 
 .tm-document-page-viewer__toolbar {

@@ -33,6 +33,71 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Overlay_ReceivesDefaultPaletteRoleColorAsTokenReference()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.SubmitterUuid, "role-signer")
+            .Add(p => p.SubmitterRoles,
+            [
+                new SigningSubmitterRole { Uuid = "role-signer", Name = "Signer", Color = "#0891b2" }
+            ]));
+
+        cut.Find(".tm-signing-field-overlay")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:var(--tm-signing-role-5)",
+                "the runner paints the current submitter's role colour onto the field overlays; " +
+                "a default-palette colour resolves to the --tm-signing-role-5 token");
+    }
+
+    [Fact]
+    public void Overlay_LegacyRole6Colour_ResolvesToTheRole6Token()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.SubmitterUuid, "role-signer")
+            .Add(p => p.SubmitterRoles,
+            [
+                new SigningSubmitterRole { Uuid = "role-signer", Name = "Signer", Color = "#ca8a04" }
+            ]));
+
+        cut.Find(".tm-signing-field-overlay")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:var(--tm-signing-role-6)",
+                "stored templates keep the pre-phase-1 role-6 hex; it must follow theme/host " +
+                "overrides of --tm-signing-role-6 exactly like the current default");
+    }
+
+    [Fact]
+    public void Overlay_RoleWithoutColor_FallsBackToPaletteTokenOfRoleOrder()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.SubmitterUuid, "role-signer")
+            .Add(p => p.SubmitterRoles,
+            [
+                new SigningSubmitterRole { Uuid = "role-approver", Name = "Approver" },
+                new SigningSubmitterRole { Uuid = "role-signer", Name = "Signer" }
+            ]));
+
+        cut.Find(".tm-signing-field-overlay")
+            .GetAttribute("style").Should().Contain("--tm-signing-role-color:var(--tm-signing-role-2)",
+                "a colour-less role paints with the palette token of its order (second role → role-2)");
+    }
+
+    [Fact]
+    public void Overlay_FieldWithoutRoleAndWithoutSubmitter_RendersNoRoleCustomProperty()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)]));
+
+        cut.Find(".tm-signing-field-overlay")
+            .GetAttribute("style").Should().NotContain("--tm-signing-role-color");
+    }
+
+    [Fact]
     public void ClickOverlay_SelectsMatchingStep()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters

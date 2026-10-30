@@ -2,7 +2,7 @@
   "itemName": "TmSigningExternalStep",
   "kind": "Component",
   "category": "Signing",
-  "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows.",
+  "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows. Known limitations / security note (reworked in Signing redesign phase 6): the step only RENDERS the external flow — raising OnStart or OnCheckout marks the field complete without contacting any provider (the runner's default handlers store true), and ExternalUrl merely opens a link in a new tab. The resulting field value is untrusted presentation state, not evidence that a verification or payment happened.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningExternalStep.razor",

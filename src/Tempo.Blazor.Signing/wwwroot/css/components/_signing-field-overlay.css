@@ -19,6 +19,20 @@
     overflow: visible;
 }
 
+/*
+ * A field carrying its submitter role colour (the component renders the role colour as the inline
+ * `--tm-signing-role-color` custom property plus this class) derives its border and background from
+ * that colour; the border stays readable on a light role tint by mixing 20% primary ink in, and the
+ * label ink is plain primary text (a mid-tone role colour fails contrast as text on its own tint).
+ * The untinted default above stays pixel-identical for fields without a role, and the state
+ * variants below (invalid / completed / disabled) keep winning over this rule.
+ */
+.tm-signing-field--role {
+    border-color: color-mix(in srgb, var(--tm-signing-role-color) 80%, var(--tm-text-primary));
+    background: color-mix(in srgb, var(--tm-signing-role-color) 12%, var(--tm-bg-surface));
+    color: var(--tm-text-primary);
+}
+
 .tm-signing-field--selected,
 .tm-signing-field-overlay--selected {
     box-shadow: var(--tm-shadow-focus);
@@ -29,8 +43,11 @@
     outline-offset: var(--tm-space-1);
 }
 
+/* Invalid is never colour-only (WCAG 1.4.1): the dashed 2px border is the non-colour cue. */
 .tm-signing-field--invalid {
     border-color: var(--tm-color-danger);
+    border-style: dashed;
+    border-width: 2px;
     background: var(--tm-color-danger-subtle);
     color: var(--tm-color-danger-text);
 }
@@ -121,7 +138,7 @@
     align-items: center;
     max-width: 100%;
     padding: 0 var(--tm-space-1);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-full);
     overflow-wrap: anywhere;
     white-space: normal;

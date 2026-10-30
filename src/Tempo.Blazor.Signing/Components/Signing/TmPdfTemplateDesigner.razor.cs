@@ -251,6 +251,7 @@ public partial class TmPdfTemplateDesigner
                 builder.OpenComponent<TmSigningFieldOverlay>(sequence++);
                 builder.AddAttribute(sequence++, "Field", currentField);
                 builder.AddAttribute(sequence++, "Area", currentArea);
+                builder.AddAttribute(sequence++, "RoleColor", GetFieldRoleColor(currentField));
                 builder.AddAttribute(sequence++, "Selected", _selectedFieldUuids.Contains(currentField.Uuid));
                 builder.AddAttribute(sequence++, "Draggable", !Disabled && !_drawType.HasValue);
                 builder.AddAttribute(sequence++, "Editable", !Disabled && _selectedFieldUuids.Contains(currentField.Uuid));
@@ -290,6 +291,17 @@ public partial class TmPdfTemplateDesigner
 
         builder.CloseElement();
     };
+
+    /// <summary>
+    /// The colour of the submitter role that owns <paramref name="field"/>, painted on the field's
+    /// overlay through <see cref="TmSigningFieldOverlay.RoleColor"/>. A field whose role carries no
+    /// colour gets the palette token of the role's order; a field without a matching role keeps the
+    /// primary-tint default.
+    /// </summary>
+    private string? GetFieldRoleColor(SigningField field)
+    {
+        return SigningRolePalette.ResolveRoleColor(SubmitterRoles, field.SubmitterUuid);
+    }
 
     private Task SelectFieldTypeAsync(SigningFieldType type)
     {
