@@ -24,7 +24,14 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
 
     /// <summary>Armed by the demo <c>?scenario=save-conflict</c> route: the NEXT save reports
     /// the conflict path (the source moved on from the version the editor based its edit on)
-    /// and the flag disarms itself, so a later save succeeds.</summary>
+    /// and the flag disarms itself, so a later save succeeds.
+    /// <para>
+    /// DEMO-ONLY: a STATIC mutable flag shared by the whole process — two browser sessions (or
+    /// two editors on one page) would arm each other's conflict. A real writer scopes conflict
+    /// state per session/request; the demo accepts the coupling because the writer is demo
+    /// infrastructure, not a contract example.
+    /// </para>
+    /// </summary>
     public static bool ConflictArmed { get; set; }
 
     /// <summary>The persisted model (the last successful save or the initial demo model).</summary>
@@ -63,13 +70,17 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
             if (!string.Equals(changes.BaseVersion, expectedVersion, StringComparison.Ordinal))
             {
                 // Simulated concurrent write: the source moved on from the version the model was
-                // loaded with. The editor shows the conflict alert with a reload action.
+                // loaded with. The editor shows the conflict alert with a reload action. The
+                // returned model carries the CURRENT source version so the editor's next diff
+                // bases its edit on the version the source is actually on (review fix, phase 14).
+                var persistedNow = PersistedModel;
+                persistedNow.Metadata.SourceVersion = SourceVersion;
                 return Task.FromResult(new ModelingModelSaveResult
                 {
                     Succeeded = false,
                     IsConflict = true,
                     Message = $"The model changed in the meantime (source version {SourceVersion}, edit was based on {changes.BaseVersion}).",
-                    Model = Clone(PersistedModel)
+                    Model = Clone(persistedNow)
                 });
             }
 
@@ -140,6 +151,10 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
             }
 
             SourceVersion = $"2026.06-{++SaveCount}";
+            // The persisted model carries the NEW source version: the adopted result (and the
+            // reloaded model) then base the next diff on the version the source moved to —
+            // without it two consecutive saves would conflict on a stale version (review fix).
+            persisted.Metadata.SourceVersion = SourceVersion;
             _persisted = persisted;
 
             return Task.FromResult(new ModelingModelSaveResult

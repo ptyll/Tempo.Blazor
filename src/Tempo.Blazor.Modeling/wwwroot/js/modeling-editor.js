@@ -24,6 +24,15 @@
  *    trigger first, the host-div proxy as the fallback).
  *  - isFocusWithin(root, selector): whether the document's active element is inside `root` and
  *    matches `selector` (the layout-flip focus probe of TmModelingEditor).
+ *  - registerUndoShortcutBridge(editorRoot): CAPTURE-phase keydown guard scoped to one editor
+ *    root (review fix, phase 14). The editor's own undo/redo stack consumes Ctrl+Z /
+ *    Ctrl+Shift+Z / Ctrl+Y through the inspector's @onkeydown, but the browser's DOCUMENT-level
+ *    undo ALSO fires as the same keypress's default action (Chrome routes it to the last edited
+ *    control even when the focus sits elsewhere), which fights the controlled inspector inputs.
+ *    The guard preventDefaults the shortcut only when the keystroke CANNOT be a native text
+ *    undo — the target is not a text-entry control. Inside a field the native text undo keeps
+ *    its default role: the inspector's keydown handler yields to it whenever an editing draft
+ *    differs from the committed value.
  */
 
 let dragBridgeRegistered = false;
@@ -50,6 +59,53 @@ export function registerTreeDragBridge() {
 
   document.addEventListener('dragend', () => {
     window.__tmModelingDraggedElementId = '';
+  }, true);
+}
+
+const UNDO_BRIDGE_TEXT_INPUT_TYPES = new Set([
+  '', 'text', 'search', 'email', 'url', 'password', 'tel', 'number',
+]);
+
+function isUndoBridgeTextEntryTarget(target) {
+  if (target instanceof HTMLTextAreaElement || (target && target.isContentEditable)) {
+    return true;
+  }
+
+  // Only TEXT-entry inputs keep the native undo (a checkbox/radio/… has none).
+  if (target instanceof HTMLInputElement) {
+    return UNDO_BRIDGE_TEXT_INPUT_TYPES.has((target.getAttribute('type') || 'text').toLowerCase());
+  }
+
+  return false;
+}
+
+export function registerUndoShortcutBridge(editorRoot) {
+  if (!editorRoot || typeof editorRoot.addEventListener !== 'function') {
+    return;
+  }
+
+  // One guard per root: a second registration would double-prevent the same keystroke.
+  if (editorRoot.__tmUndoShortcutBridge) {
+    return;
+  }
+
+  editorRoot.__tmUndoShortcutBridge = true;
+
+  editorRoot.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+
+    const key = (event.key || '').toLowerCase();
+    if (key !== 'z' && key !== 'y') {
+      return;
+    }
+
+    if (isUndoBridgeTextEntryTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
   }, true);
 }
 

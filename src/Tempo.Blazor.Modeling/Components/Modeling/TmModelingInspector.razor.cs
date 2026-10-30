@@ -43,6 +43,11 @@ public partial class TmModelingInspector
     /// save/discard buttons when the editor shows them). Null keeps the plain header.</summary>
     [Parameter] public RenderFragment? HeaderActions { get; set; }
 
+    /// <summary>Whether a model save is currently in flight (review fix, phase 14): every
+    /// editing input disables and the drafts are NOT re-seeded from the re-renders the saving
+    /// state causes — a keystroke mid-save cannot be silently wiped.</summary>
+    [Parameter] public bool Saving { get; set; }
+
     // ── Editing drafts ───────────────────────────────────────────────────────
     // The drafts belong to the SELECTED entity and are re-seeded only when the committed values
     // actually change (a commit, an undo, a reload) — never on an unrelated parent render, so a
@@ -72,6 +77,13 @@ public partial class TmModelingInspector
             _draftElement = null;
             _draftRelationship = null;
             _nameErrorText = null;
+            return;
+        }
+
+        if (Saving)
+        {
+            // A save re-renders the editor several times; the drafts are the user's in-flight
+            // typing and the inputs are disabled — leave them alone (review fix, phase 14).
             return;
         }
 
@@ -204,8 +216,21 @@ public partial class TmModelingInspector
 
         if (Relationship is not null)
         {
-            if (string.IsNullOrWhiteSpace(_nameDraft) || string.Equals(_nameDraft, Relationship.Name, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(_nameDraft))
             {
+                // An empty relationship name is refused the same way an element's is (review
+                // fix, phase 14) — the field shows the localized NameRequired error.
+                if (!string.Equals(_nameDraft, Relationship.Name, StringComparison.Ordinal))
+                {
+                    _nameErrorText = Loc["TmModelingInspector_NameRequired"];
+                }
+
+                return Task.CompletedTask;
+            }
+
+            if (string.Equals(_nameDraft, Relationship.Name, StringComparison.Ordinal))
+            {
+                _nameErrorText = null;
                 return Task.CompletedTask;
             }
 
@@ -228,6 +253,26 @@ public partial class TmModelingInspector
     private Task HandleDescriptionInput(string value)
     {
         _descriptionDraft = value;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Escape on the description textarea reverts the DISPLAYED value to the committed
+    /// one (review fix, phase 14): the draft goes back and the re-render pushes the textarea's
+    /// bound value — unlike the name input this is not a native-revert control.</summary>
+    private Task HandleDescriptionKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (!string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        var committed = Element?.Description ?? string.Empty;
+        if (!string.Equals(_descriptionDraft, committed, StringComparison.Ordinal))
+        {
+            _descriptionDraft = committed;
+            StateHasChanged();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -273,8 +318,18 @@ public partial class TmModelingInspector
         if (source is not null && source.TryGetValue(key, out var value))
         {
             _scalarDrafts[key] = FormatPropertyValue(value);
+            // The TmNumberInput is a controlled component whose bound Value may equal the
+            // committed one — bump the render key so the input REMOUNTS and the DOM shows the
+            // committed value again (review fix, phase 14).
+            _scalarRenderKeys[key] = _scalarRenderKeys.GetValueOrDefault(key) + 1;
         }
     }
+
+    /// <summary>Per-key render keys of the scalar inputs — bumped on an Escape revert so the
+    /// remount resets the displayed value even when the bound value did not change.</summary>
+    private readonly Dictionary<string, int> _scalarRenderKeys = new(StringComparer.Ordinal);
+
+    private string ScalarRenderKey(string key) => $"{key}-{_scalarRenderKeys.GetValueOrDefault(key)}";
 
     private async Task CommitScalarAsync(string key)
     {
@@ -362,10 +417,13 @@ public partial class TmModelingInspector
     }
 
     /// <summary>The inspector-scope keyboard handler: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y drive the
-    /// editor's own stack (raised as callbacks) — the diagram canvas keyboard scope is separate.</summary>
+    /// editor's own stack (raised as callbacks) — the diagram canvas keyboard scope is separate.
+    /// While ANY draft differs from its committed value the handler returns early and the
+    /// browser's NATIVE text undo owns the keystroke (review fix, phase 14): the editor stack
+    /// must not swallow Ctrl+Z inside a field with uncommitted typing.</summary>
     private Task HandleInspectorKeyDownAsync(KeyboardEventArgs args)
     {
-        if (!args.CtrlKey && !args.MetaKey)
+        if ((!args.CtrlKey && !args.MetaKey) || HasActiveDraft)
         {
             return Task.CompletedTask;
         }
@@ -384,11 +442,35 @@ public partial class TmModelingInspector
         return Task.CompletedTask;
     }
 
+    /// <summary>Whether any editing draft (name, description, scalar) differs from its committed
+    /// value — the native-text-undo window.</summary>
+    private bool HasActiveDraft
+    {
+        get
+        {
+            if (Element is not null)
+            {
+                return !string.Equals(_nameDraft, Element.Name, StringComparison.Ordinal)
+                    || !string.Equals(_descriptionDraft, Element.Description, StringComparison.Ordinal)
+                    || !ScalarDraftsMatch(Element.Properties);
+            }
+
+            if (Relationship is not null)
+            {
+                return !string.Equals(_nameDraft, Relationship.Name, StringComparison.Ordinal)
+                    || !ScalarDraftsMatch(Relationship.Properties);
+            }
+
+            return false;
+        }
+    }
+
     /// <summary>Attributes for the description textarea (the core TmTextArea has no blur/key
-    /// passthrough parameters — the splat carries the commit handler).</summary>
+    /// passthrough parameters — the splat carries the commit handler and the Escape revert).</summary>
     private Dictionary<string, object> DescriptionAttributes => new()
     {
-        ["onblur"] = EventCallback.Factory.Create<FocusEventArgs>(this, CommitDescriptionAsync)
+        ["onblur"] = EventCallback.Factory.Create<FocusEventArgs>(this, CommitDescriptionAsync),
+        ["onkeydown"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, HandleDescriptionKeyDownAsync)
     };
 
     /// <summary>The scalar input's current draft value.</summary>

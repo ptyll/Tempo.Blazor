@@ -194,11 +194,14 @@
 
 /* ── Fáze 14: the editable surface ─────────────────────────────────────────
    The editing fields reuse the core input components (TmTextInput / TmTextArea /
-   TmNumberInput / TmToggle); the inspector only spaces them and keeps the summary grid
-   readable while one of the rows is a field. No color literals — every value is a token. */
+   TmNumberInput / TmToggle); the inspector only spaces them. The name edit field sits ABOVE
+   the summary <dl> (review fix, phase 14 — a full-width block OUTSIDE the dt/dd grid) with a
+   small bottom gap so the summary reads as its own block. No color literals — every value is
+   a token. */
 
 .tm-modeling-inspector__edit-field {
     padding-block: var(--tm-space-1);
+    margin-block-end: var(--tm-space-2);
 }
 
 .tm-modeling-inspector__edit-field ::deep .tm-input-wrapper {

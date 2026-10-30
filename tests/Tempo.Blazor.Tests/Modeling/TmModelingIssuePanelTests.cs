@@ -829,6 +829,56 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
         new() { Id = "el-review", Name = "Review Task" }
     ];
 
+    [Fact]
+    public void ContentVersion_bump_re_renders_after_an_in_place_rename()
+    {
+        // ONE element list across all passes: the editor renames the DTO IN PLACE, so the
+        // gate/memo reference comparison alone cannot see the change.
+        var issues = CreateIssues();
+        var elements = CreateSearchElements();
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, elements)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.ContentVersion, 0));
+        var rendersAfterSeed = cut.Instance.RenderCount;
+
+        // The editor renamed the element and bumped the content version — the panel must
+        // repaint (the source-name index feeds the text search and the Source sort).
+        elements[0].Name = "Renamed Element";
+        cut.Render(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, elements)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.ContentVersion, 1));
+
+        cut.Instance.RenderCount.Should().BeGreaterThan(rendersAfterSeed,
+            "a ContentVersion bump invalidates the render gate even with unchanged collection references");
+    }
+
+    [Fact]
+    public void ContentVersion_echo_does_not_force_a_render()
+    {
+        var issues = CreateIssues();
+        var elements = CreateSearchElements();
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, elements)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.ContentVersion, 3));
+        var rendersAfterSeed = cut.Instance.RenderCount;
+
+        // The same version with the same references is a plain parent pass — nothing renders.
+        cut.Render(parameters => parameters
+            .Add(p => p.Issues, issues)
+            .Add(p => p.Elements, elements)
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.ContentVersion, 3));
+
+        cut.Instance.RenderCount.Should().Be(rendersAfterSeed,
+            "an unchanged version keeps the M26 render gate quiet");
+    }
+
     private static ModelingRelationshipDto[] CreateSearchRelationships() =>
     [
         new() { Id = "rel-beta", Name = "Beta Relationship" }

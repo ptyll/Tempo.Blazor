@@ -117,7 +117,10 @@ public partial class TmModelingEditor
         _ => "preview"
     };
 
-    /// <summary>TmTabs selection receiver: stores the active panel the strip reports.</summary>
+    /// <summary>TmTabs selection receiver: stores the active panel the strip reports. Re-entering
+    /// the Inspector tab with a PENDING edit arms a post-render focus move onto the name field —
+    /// the compact band stacks the source card above the inspector, so the edited field would
+    /// otherwise sit below the fold (review fix, phase 14).</summary>
     private Task SelectMobilePanelAsync(string tabId)
     {
         _activePanel = tabId switch
@@ -127,8 +130,21 @@ public partial class TmModelingEditor
             "issues" => ModelingEditorPanel.Issues,
             _ => ModelingEditorPanel.Preview
         };
+
+        if (_activePanel == ModelingEditorPanel.Inspector && IsEditingEnabled && HasPendingModelChanges)
+        {
+            _focusInspectorFieldAfterRender = true;
+        }
+
         return Task.CompletedTask;
     }
+
+    /// <summary>Armed by the Inspector-tab re-entry with a pending edit: the next render focuses
+    /// the inspector's name input (the primary edit field) through the editor-root hook.</summary>
+    private bool _focusInspectorFieldAfterRender;
+
+    /// <summary>The inspector edit-field selector the mobile re-entry focuses.</summary>
+    internal const string InspectorNameFieldSelector = "#modeling-inspector-name";
 
     /// <summary>The Issues tab badge: the issue count as visible text; null (no badge span) at zero.</summary>
     private string? IssueTabBadge => IssueCount > 0

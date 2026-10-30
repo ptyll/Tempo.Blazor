@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Tests.Localization;
@@ -223,6 +224,109 @@ public sealed class TmModelingInspectorEditingTests : LocalizationTestBase
 
         changes.Should().ContainSingle();
         changes[0].RemovedProperties.Should().Contain("lane");
+    }
+
+    // ── Review-fix tests (phase 14 follow-up) ────────────────────────────────
+
+    [Fact]
+    public void Name_edit_field_renders_above_and_outside_the_summary_list()
+    {
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, CreateElement())
+            .Add(p => p.ReadOnly, false));
+
+        var field = cut.Find("[data-testid='modeling-inspector-name-field']");
+        field.TagName.Should().Be("DIV");
+        field.ParentElement!.GetAttribute("data-testid").Should().Be("modeling-inspector-selected-element",
+            "the name field is a block ABOVE the summary list, not a row inside the <dl>");
+        field.NextElementSibling!.TagName.Should().Be("DL");
+    }
+
+    [Fact]
+    public void Ctrl_Z_with_an_active_draft_lets_the_native_text_undo_win()
+    {
+        var undoRequests = 0;
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, CreateElement())
+            .Add(p => p.ReadOnly, false)
+            .Add(p => p.OnUndoRequested, EventCallback.Factory.Create(this, () => undoRequests++)));
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Uncommitted typing");
+
+        cut.Find(".tm-modeling-inspector").KeyDown(new KeyboardEventArgs { Key = "z", CtrlKey = true });
+        undoRequests.Should().Be(0, "a field with uncommitted typing owns Ctrl+Z natively");
+
+        // Once the draft matches the committed value again the editor stack takes over.
+        name.KeyDown("Escape");
+        cut.Find(".tm-modeling-inspector").KeyDown(new KeyboardEventArgs { Key = "z", CtrlKey = true });
+        undoRequests.Should().Be(1);
+    }
+
+    [Fact]
+    public void Empty_relationship_name_shows_validation_and_does_not_commit()
+    {
+        var raised = new List<ModelingRelationshipChange>();
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Relationship, CreateRelationship())
+            .Add(p => p.ReadOnly, false)
+            .Add(p => p.OnRelationshipEdited, EventCallback.Factory.Create<ModelingRelationshipChange>(this, raised.Add)));
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("   ");
+        name.KeyDown("Enter");
+
+        cut.Find(".tm-modeling-inspector").TextContent.Should().Contain("required");
+        raised.Should().BeEmpty("an empty relationship name is never committed");
+        name.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void Escape_reverts_the_description_displayed_value()
+    {
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, CreateElement())
+            .Add(p => p.ReadOnly, false));
+
+        var description = cut.Find("#modeling-inspector-description");
+        description.Input("Typed draft");
+        description.KeyDown("Escape");
+
+        cut.Find("#modeling-inspector-description").TextContent.Should().Be("Original description",
+            "the textarea is a controlled component — the re-render pushes the committed value back");
+    }
+
+    [Fact]
+    public void Escape_on_a_number_property_reverts_the_draft_before_the_commit()
+    {
+        var changes = new List<ModelingElementChange>();
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, CreateElement())
+            .Add(p => p.ReadOnly, false)
+            .Add(p => p.OnElementEdited, EventCallback.Factory.Create<ModelingElementChange>(this, changes.Add)));
+
+        var priority = cut.Find("[data-testid='modeling-inspector-property-priority'] input");
+        priority.Change("9");
+        priority.KeyDown("Escape");
+        priority.Blur();
+
+        changes.Should().BeEmpty("Escape reverted the draft, so the blur commits nothing");
+        // The render key bumped with the revert: the input remounts onto the committed value.
+        priority.GetAttribute("value").Should().Be("3");
+    }
+
+    [Fact]
+    public void Saving_disables_the_editing_inputs()
+    {
+        using var cut = Render<TmModelingInspector>(parameters => parameters
+            .Add(p => p.Element, CreateElement())
+            .Add(p => p.ReadOnly, false)
+            .Add(p => p.Saving, true));
+
+        cut.Find("#modeling-inspector-name").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("#modeling-inspector-description").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='modeling-inspector-property-priority'] input").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid='modeling-inspector-property-active'] input").HasAttribute("disabled").Should().BeTrue();
     }
 
     private static string ReadPackageCss(string fileName)

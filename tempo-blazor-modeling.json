@@ -151,7 +151,7 @@
           "name": "ConflictArmed",
           "kind": "Property",
           "type": "static bool",
-          "description": "Armed by the demo ?scenario=save-conflict route: the NEXT save reports the conflict path (the source moved on from the version the editor based its edit on) and the flag disarms itself, so a later save succeeds."
+          "description": "Armed by the demo ?scenario=save-conflict route: the NEXT save reports the conflict path (the source moved on from the version the editor based its edit on) and the flag disarms itself, so a later save succeeds. DEMO-ONLY: a STATIC mutable flag shared by the whole process — two browser sessions (or two editors on one page) would arm each other's conflict. A real writer scopes conflict state per session/request; the demo accepts the coupling because the writer is demo infrastructure, not a contract example."
         },
         {
           "name": "ProviderKey",
@@ -802,6 +802,13 @@
           "type": "ModelingRelationshipDto?",
           "isRequired": false,
           "description": "Selected modeling relationship."
+        },
+        {
+          "name": "Saving",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a model save is currently in flight. Every editing input disables and the drafts are not re-seeded from the re-renders the saving state causes, so a keystroke mid-save cannot be silently wiped.",
+          "default": "false"
         }
       ],
       "cssClasses": [
@@ -866,6 +873,13 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Raised when the user toggles the panel through the header button; enables @bind-Collapsed."
+        },
+        {
+          "name": "ContentVersion",
+          "type": "int",
+          "isRequired": false,
+          "description": "Host-owned content version of the element/relationship tables. The editor mutates the DTOs in place (an inspector rename), so the render gate and the visible-issues memo key on this counter too - bump it whenever the names behind Elements/Relationships change without replacing the collections.",
+          "default": "0"
         },
         {
           "name": "Elements",

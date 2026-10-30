@@ -527,6 +527,43 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
         }
     }
 
+    /// <summary>Fáze 14 review: the TABLET band editing surface — the inspector SHEET with a
+    /// pending rename at 1024x768 (touch), light and dark. The sheets start closed, so the
+    /// capture opens the sheet through the panel tab first (the Capture_SourceSheet_Tablet
+    /// pattern); the save affordance lives in the sheet's own header.</summary>
+    [TestMethod]
+    [DataRow("light", 1024, 768)]
+    [DataRow("dark", 1024, 768)]
+    [Description("Captures inspector-edit-tablet-{theme}-1024x768: the tablet inspector sheet with a pending rename")]
+    public async Task Capture_InspectorEditing_Tablet(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            // The tablet sheets start closed: the selection (a tree node tap in the drawer)
+            // swaps the drawer for the inspector sheet — the sheet then carries the edit field.
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-drawer']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-inspector-sheet']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            var name = page.Locator("[data-testid='modeling-inspector-sheet'] #modeling-inspector-name");
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-sheet'] [data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-tablet-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     /// <summary>Fáze 14: the mobile G2 editing surface — the Inspector tab with a pending rename
     /// and the sticky Save entry leading the action bar.</summary>
     [TestMethod]

@@ -60,14 +60,21 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
             await name.PressAsync("Enter");
             await ExpectTextContainsAsync(page, "[data-testid='modeling-tree-node-bpmn-validate-order']", "Renamed order step");
 
-            // Ctrl+Z dispatched while the focus is inside the inspector — the editor's own stack
-            // consumes it and the diagram canvas keyboard scope is never involved.
-            await name.FocusAsync();
+            // Ctrl+Z dispatched while the focus is INSIDE the inspector — the editor's own stack
+            // consumes it and the diagram canvas keyboard scope is never involved. The focus sits
+            // on the inspector header's undo button (a control inside the section, not a text
+            // field): a focused text input owns Ctrl+Z natively (the browser's text undo/redo is
+            // the default action and always fires — the editor stack only takes over when no
+            // editing draft differs from its committed value).
+            await page.Locator("[data-testid='modeling-inspector-undo']").FocusAsync();
             await page.Keyboard.PressAsync("Control+z");
 
             await ExpectTextContainsAsync(page, "[data-testid='modeling-tree-node-bpmn-validate-order']", "Validate order");
             await ExpectTextContainsAsync(page, "[data-model-element-id='bpmn-validate-order'] .tm-diagram-node__text", "Validate order");
 
+            // The undo disables its button and drops focus to the body — the redo press goes
+            // through the (now enabled) redo button, which stays inside the inspector.
+            await page.Locator("[data-testid='modeling-inspector-redo']").FocusAsync();
             await page.Keyboard.PressAsync("Control+Shift+z");
             await ExpectTextContainsAsync(page, "[data-testid='modeling-tree-node-bpmn-validate-order']", "Renamed order step");
         }
@@ -247,6 +254,38 @@ public sealed class ModelingEditingF14E2ETests : WasmTestBase
             // The tree keeps the persisted name after the save.
             await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
             await ExpectTextContainsAsync(page, "[data-testid='modeling-tree-node-bpmn-validate-order']", "Renamed order step");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    [TestMethod]
+    [Description("Two consecutive saves both succeed: the adopted model carries the bumped source version, so the second edit bases on it (review fix, phase 14)")]
+    public async Task Editing_TwoConsecutiveSavesSucceed()
+    {
+        var page = await OpenLoadedEditingPageAsync();
+        try
+        {
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+
+            var name = page.Locator("#modeling-inspector-name");
+            await name.FillAsync("First renamed order");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-save']").ClickAsync();
+            await page.Locator("[data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+
+            // The selection survived the adopted model (remapped by Id) — the same input keeps editing.
+            await name.FillAsync("Second renamed order");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-save']").ClickAsync();
+
+            // A version mismatch would surface the conflict alert; the second save clears the affordance.
+            await page.Locator("[data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+            await ExpectTextContainsAsync(page, "[data-testid='modeling-tree-node-bpmn-validate-order']", "Second renamed order");
         }
         finally
         {

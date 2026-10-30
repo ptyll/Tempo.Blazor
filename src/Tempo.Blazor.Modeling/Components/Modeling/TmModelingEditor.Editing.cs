@@ -60,6 +60,23 @@ public partial class TmModelingEditor
     private Func<Task>? _pendingDiscardAction;
     private string? _historyAnnouncement;
 
+    /// <summary>
+    /// The edit-generation counter (review fix, phase 14): bumped by every commit, undo and redo
+    /// — the save race guard compares it across the writer await, and the pending-set cache keys
+    /// on it (the model is mutated IN PLACE, so a reference check cannot detect an edit).
+    /// </summary>
+    private int _commitVersion;
+
+    /// <summary>Whether an Immediate-mode commit landed while a save was in flight; the save
+    /// loop consumes the flag after the writer settles and runs the follow-up save.</summary>
+    private bool _saveQueued;
+
+    /// <summary>The cached pending change set and the (commit version, model, provider) key it
+    /// was computed for — the diff is an O(model) pass, and the render path (pending indicator,
+    /// mobile action items, save button) reads it several times per render.</summary>
+    private ModelingModelChangeSet? _pendingChangeSetCache;
+    private (int CommitVersion, ModelingModelDto? Model, string? ProviderKey) _pendingChangeSetCacheKey;
+
     /// <summary>Test seam (InternalsVisibleTo): the generated document the preview renders.</summary>
     internal DiagramDocument? TestDocument => _document;
 
@@ -127,11 +144,16 @@ public partial class TmModelingEditor
                 new Dictionary<string, JsonElement>(relationship.Properties, StringComparer.Ordinal)),
             StringComparer.Ordinal);
         _baselineKey = (model, EffectiveProviderKey);
+        // A new baseline changes the diff inputs without bumping the commit version — the
+        // cached pending set must go.
+        _pendingChangeSetCache = null;
     }
 
     /// <summary>
     /// The pending change set: the diff of the LIVE model against the baseline. Returns null when
     /// nothing differs (or no baseline was captured for the current model + provider pair).
+    /// Cached on the commit version + model + provider triple — a commit, an undo/redo or a
+    /// baseline change invalidates it, an unrelated re-render reuses it.
     /// </summary>
     private ModelingModelChangeSet? ComputePendingChangeSet()
     {
@@ -141,14 +163,28 @@ public partial class TmModelingEditor
             return null;
         }
 
+        var cacheKey = (_commitVersion, _model, EffectiveProviderKey);
+        if (_pendingChangeSetCache is not null && _pendingChangeSetCacheKey.Equals(cacheKey))
+        {
+            return _pendingChangeSetCache;
+        }
+
+        var changeSet = BuildPendingChangeSet(_model);
+        _pendingChangeSetCache = changeSet;
+        _pendingChangeSetCacheKey = cacheKey;
+        return changeSet;
+    }
+
+    private ModelingModelChangeSet? BuildPendingChangeSet(ModelingModelDto model)
+    {
         var changeSet = new ModelingModelChangeSet
         {
-            ModelId = _model.Id,
+            ModelId = model.Id,
             ProviderKey = EffectiveProviderKey ?? string.Empty,
-            BaseVersion = _model.Metadata.SourceVersion
+            BaseVersion = model.Metadata.SourceVersion
         };
 
-        foreach (var element in _model.Elements)
+        foreach (var element in model.Elements)
         {
             if (!_baselineElements.TryGetValue(element.Id, out var baseline))
             {
@@ -184,7 +220,7 @@ public partial class TmModelingEditor
             }
         }
 
-        foreach (var relationship in _model.Relationships)
+        foreach (var relationship in model.Relationships)
         {
             if (!_baselineRelationships.TryGetValue(relationship.Id, out var baseline))
             {
@@ -303,7 +339,10 @@ public partial class TmModelingEditor
             change.Description,
             change.SetProperties,
             change.RemovedProperties,
-            DocumentsForSync()));
+            DocumentsForSync));
+
+        // One edit generation per commit — the save race guard and the pending-set cache key on it.
+        unchecked { _commitVersion++; }
 
         await AfterCommitAsync(new ModelingModelChangeSet
         {
@@ -334,7 +373,9 @@ public partial class TmModelingEditor
             change.Name,
             change.SetProperties,
             change.RemovedProperties,
-            DocumentsForSync()));
+            DocumentsForSync));
+
+        unchecked { _commitVersion++; }
 
         await AfterCommitAsync(new ModelingModelChangeSet
         {
@@ -345,9 +386,12 @@ public partial class TmModelingEditor
         });
     }
 
-    /// <summary>The documents a commit must synchronize: the preview document and the open-editor
-    /// dialog document when one is open (usually the SAME instance — the dialog shows the live
-    /// preview document).</summary>
+    /// <summary>
+    /// The document resolver a commit hands to its command: evaluated on EVERY Execute/Undo so
+    /// the sync targets the documents that exist at THAT moment — a preview regeneration or an
+    /// adopted model replaces the <see cref="DiagramDocument"/> instance, and a snapshot list
+    /// taken at push time would sync a dead document (review fix, phase 14).
+    /// </summary>
     private IEnumerable<DiagramDocument> DocumentsForSync()
     {
         if (_document is not null)
@@ -369,6 +413,15 @@ public partial class TmModelingEditor
         InvalidateTreeProjection();
         StateHasChanged();
 
+        // The editor stack owns Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y inside the editor root once editing
+        // is live — the JS guard stops the browser's DOCUMENT-level undo from double-firing on
+        // the same keystroke outside text fields (review fix, phase 14).
+        if (!_undoShortcutBridgeRegistered)
+        {
+            _undoShortcutBridgeRegistered = true;
+            await Interop.InvokeVoidSafeAsync("registerUndoShortcutBridge", _editorRoot);
+        }
+
         await OnModelChanged.InvokeAsync(new ModelingModelChangedEventArgs
         {
             ChangeSet = commitChangeSet,
@@ -377,7 +430,16 @@ public partial class TmModelingEditor
 
         if (SaveMode == ModelingSaveMode.Immediate)
         {
-            await SaveModelChangesAsync();
+            if (_isSaving)
+            {
+                // A save is already in flight: re-entering would no-op and drop the edit. Queue
+                // it — the save loop runs the follow-up save once the writer settles.
+                _saveQueued = true;
+            }
+            else
+            {
+                await SaveModelChangesAsync();
+            }
         }
     }
 
@@ -390,6 +452,7 @@ public partial class TmModelingEditor
         {
             var name = _commandStack.NextUndoName;
             _commandStack.Undo();
+            unchecked { _commitVersion++; }
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_UndoAction"], name ?? string.Empty);
             InvalidateTreeProjection();
             StateHasChanged();
@@ -405,6 +468,7 @@ public partial class TmModelingEditor
         {
             var name = _commandStack.NextRedoName;
             _commandStack.Redo();
+            unchecked { _commitVersion++; }
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_RedoAction"], name ?? string.Empty);
             InvalidateTreeProjection();
             StateHasChanged();
@@ -422,38 +486,23 @@ public partial class TmModelingEditor
     /// <summary>The last history announcement for the inspector's live region (or null).</summary>
     internal string? TestHistoryAnnouncement => _historyAnnouncement;
 
-    /// <summary>The inspector keydown handler: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y drive the editor's
-    /// own stack while the focus is inside the inspector (the diagram canvas — a separate
-    /// component with its own keyboard scope — never sees these events).</summary>
-    private Task HandleInspectorKeyDownAsync(KeyboardEventArgs args)
-    {
-        if (!args.CtrlKey && !args.MetaKey)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (string.Equals(args.Key, "z", StringComparison.OrdinalIgnoreCase) && !args.ShiftKey)
-        {
-            return UndoModelEditAsync();
-        }
-
-        if ((string.Equals(args.Key, "z", StringComparison.OrdinalIgnoreCase) && args.ShiftKey)
-            || string.Equals(args.Key, "y", StringComparison.OrdinalIgnoreCase))
-        {
-            return RedoModelEditAsync();
-        }
-
-        return Task.CompletedTask;
-    }
-
     // ── Save + conflict ──────────────────────────────────────────────────────
 
     /// <summary>
     /// Saves the pending change set through the writer. In Manual mode the aggregated diff is
-    /// sent once and the pending state clears on success; in Immediate mode it is usually a
-    /// no-op (each commit already saved). A conflict result keeps the pending changes and shows
-    /// the alert; a failed save shows the failure message. Returns the writer's result, or null
-    /// when there was nothing to save / no writer is registered.
+    /// sent once and the pending state clears on success; in Immediate mode a commit that raced
+    /// an in-flight save queues itself and this method loops after the writer settles. A
+    /// conflict result keeps the pending changes and shows the alert; a failed save shows the
+    /// failure message. Returns the writer's result, or null when there was nothing to save / no
+    /// writer is registered.
+    /// <para>
+    /// Race safety (review fix, phase 14): the load version, the model reference and the commit
+    /// version are captured BEFORE the writer await. After it, a load or a model swap DISCARDS
+    /// the result (the state it was computed from is gone); a successful save advances the
+    /// baseline by applying the SENT change set onto the baseline snapshot — never the live
+    /// model — and adopts the returned model only when no commit raced the save (else the live
+    /// model and the undo stack stay, with the racing edits still pending).
+    /// </para>
     /// </summary>
     public async Task<ModelingModelSaveResult?> SaveModelChangesAsync()
     {
@@ -472,11 +521,18 @@ public partial class TmModelingEditor
         if (writer is null)
         {
             // A host that only binds OnModelChanged writes the change set itself; the pending
-            // state clears so the next diff starts from the delivered state.
+            // state clears so the next diff starts from the delivered state. The completed
+            // event still raises — the host drives its own persistence and needs the settled
+            // signal (review fix, phase 14).
             CaptureBaseline(_model);
+            await OnSaveCompleted.InvokeAsync();
             StateHasChanged();
             return null;
         }
+
+        var loadVersionAtStart = _loadVersion;
+        var modelAtStart = _model;
+        var commitVersionAtStart = _commitVersion;
 
         _isSaving = true;
         StateHasChanged();
@@ -488,6 +544,7 @@ public partial class TmModelingEditor
         catch (OperationCanceledException)
         {
             _isSaving = false;
+            StateHasChanged();
             return null;
         }
         catch (Exception ex)
@@ -496,44 +553,168 @@ public partial class TmModelingEditor
         }
 
         _isSaving = false;
-        _lastSaveResult = result;
+        var stateUnchanged = loadVersionAtStart == _loadVersion && ReferenceEquals(modelAtStart, _model);
 
-        if (result.Succeeded)
+        if (stateUnchanged)
         {
-            if (result.Model is not null)
+            _lastSaveResult = result;
+            if (result.Succeeded)
             {
-                AdoptModel(result.Model);
-            }
-            else
-            {
-                CaptureBaseline(_model);
+                if (result.Model is not null && commitVersionAtStart == _commitVersion)
+                {
+                    await AdoptModelAsync(result.Model);
+                }
+                else
+                {
+                    // The baseline advances by the SENT change set — applied onto the baseline
+                    // snapshot, never the live model (a racing edit must stay pending).
+                    ApplyChangeSetToBaseline(changeSet);
+                }
+
+                if (commitVersionAtStart == _commitVersion)
+                {
+                    _commandStack?.Clear();
+                    _historyAnnouncement = Loc["TmModelingEditor_Saved"];
+                }
             }
 
-            _commandStack?.Clear();
+            await OnSaveCompleted.InvokeAsync();
         }
 
-        await OnSaveCompleted.InvokeAsync();
         StateHasChanged();
+
+        if (SaveMode == ModelingSaveMode.Immediate && _saveQueued)
+        {
+            _saveQueued = false;
+            if (stateUnchanged)
+            {
+                await SaveModelChangesAsync();
+            }
+        }
+
         return result;
     }
 
-    /// <summary>Replaces the loaded model with a saved/restored one: regenerates the preview and
-    /// captures the new baseline (the pending set becomes empty).</summary>
-    private void AdoptModel(ModelingModelDto model)
+    /// <summary>
+    /// Applies a SENT change set onto the BASELINE snapshot (review fix, phase 14): the baseline
+    /// becomes "the state the source now has" without touching the live model, so a commit that
+    /// raced the save stays pending and undoable against the advanced baseline.
+    /// </summary>
+    private void ApplyChangeSetToBaseline(ModelingModelChangeSet changeSet)
     {
+        foreach (var elementChange in changeSet.Elements)
+        {
+            if (!_baselineElements.TryGetValue(elementChange.ElementId, out var elementBaseline))
+            {
+                continue;
+            }
+
+            var properties = new Dictionary<string, JsonElement>(elementBaseline.Properties, StringComparer.Ordinal);
+            if (elementChange.SetProperties is not null)
+            {
+                foreach (var property in elementChange.SetProperties)
+                {
+                    properties[property.Key] = property.Value.Clone();
+                }
+            }
+
+            if (elementChange.RemovedProperties is not null)
+            {
+                foreach (var key in elementChange.RemovedProperties)
+                {
+                    properties.Remove(key);
+                }
+            }
+
+            _baselineElements[elementChange.ElementId] = new ElementBaseline(
+                elementChange.Name ?? elementBaseline.Name,
+                elementChange.Description ?? elementBaseline.Description,
+                properties);
+        }
+
+        foreach (var relationshipChange in changeSet.Relationships)
+        {
+            if (!_baselineRelationships.TryGetValue(relationshipChange.RelationshipId, out var relationshipBaseline))
+            {
+                continue;
+            }
+
+            var properties = new Dictionary<string, JsonElement>(relationshipBaseline.Properties, StringComparer.Ordinal);
+            if (relationshipChange.SetProperties is not null)
+            {
+                foreach (var property in relationshipChange.SetProperties)
+                {
+                    properties[property.Key] = property.Value.Clone();
+                }
+            }
+
+            if (relationshipChange.RemovedProperties is not null)
+            {
+                foreach (var key in relationshipChange.RemovedProperties)
+                {
+                    properties.Remove(key);
+                }
+            }
+
+            _baselineRelationships[relationshipChange.RelationshipId] = new RelationshipBaseline(
+                relationshipChange.Name ?? relationshipBaseline.Name,
+                properties);
+        }
+
+        _pendingChangeSetCache = null;
+    }
+
+    /// <summary>Replaces the loaded model with a saved/restored one: regenerates the preview,
+    /// remaps the selection by Id and captures the new baseline (the pending set becomes empty).
+    /// The open-editor dialog — if any — closes through the regular close path so the focus
+    /// restore contract runs (never a silent null).</summary>
+    private async Task AdoptModelAsync(ModelingModelDto model)
+    {
+        // The DTO references belong to the REPLACED model instance — remap the selection into the
+        // new model by Id (null when the element/relationship is gone), or every comparison on
+        // the stale references (draft seeding, the related-elements panel) goes dead.
+        var selectedElementId = _selectedElement?.Id;
+        var selectedRelationshipId = _selectedRelationship?.Id;
+        var draggedElementId = _draggedElement?.Id;
+
         _model = model;
+        _selectedElement = RemapElement(model, selectedElementId);
+        _selectedRelationship = RemapRelationship(model, selectedRelationshipId);
+        _draggedElement = RemapElement(model, draggedElementId);
+
         var result = GenerateDiagram(model);
         _document = result.Document;
         _issues = result.Issues;
-        _openedEditorDocument = null;
         _completedGenerationCount++;
         InvalidateTreeProjection();
+        await CloseGeneratedDiagramAsync();
         CaptureBaseline(model);
         _lastSaveResult = null;
     }
 
+    private static ModelingElementDto? RemapElement(ModelingModelDto model, string? elementId)
+        => string.IsNullOrWhiteSpace(elementId)
+            ? null
+            : model.Elements.FirstOrDefault(item => string.Equals(item.Id, elementId, StringComparison.Ordinal));
+
+    private static ModelingRelationshipDto? RemapRelationship(ModelingModelDto model, string? relationshipId)
+        => string.IsNullOrWhiteSpace(relationshipId)
+            ? null
+            : model.Relationships.FirstOrDefault(item => string.Equals(item.Id, relationshipId, StringComparison.Ordinal));
+
+    /// <summary>Whether the document-level undo/redo shortcut guard was registered for the
+    /// editor root (once per component instance; the JS side is also idempotent per element).</summary>
+    private bool _undoShortcutBridgeRegistered;
+
     /// <summary>Whether a save is currently in flight (the saving indicator).</summary>
     private bool IsSaving => _isSaving;
+
+    /// <summary>
+    /// The editing generation the issue panels receive (review fix, phase 14): the model DTOs
+    /// mutate IN PLACE, so the panels' render gates and memo keys (which compare collection
+    /// references) need a counter to invalidate after a rename/undo/redo.
+    /// </summary>
+    private int EditContentVersion => _commitVersion;
 
     /// <summary>Whether the conflict alert with the reload action is showing.</summary>
     private bool ShowConflictAlert => _lastSaveResult is { IsConflict: true };
@@ -547,8 +728,11 @@ public partial class TmModelingEditor
     // ── Discard / reload guard ───────────────────────────────────────────────
 
     /// <summary>Handles the conflict alert's "Reload" action: asks for confirmation (the pending
-    /// changes are discarded) and then reloads through the regular path.</summary>
-    private Task RequestConflictReloadAsync() => RequestDiscardThenAsync(DiscardPendingEditsAndReloadAsync);
+    /// changes are discarded) and then reloads through the regular path. Blocked while a save is
+    /// in flight — a reload would make the in-flight result stale (review fix, phase 14).</summary>
+    private Task RequestConflictReloadAsync() => _isSaving
+        ? Task.CompletedTask
+        : RequestDiscardThenAsync(DiscardPendingEditsAndReloadAsync);
 
     private async Task DiscardPendingEditsAndReloadAsync()
     {
@@ -652,6 +836,8 @@ public partial class TmModelingEditor
         _discardConfirmationOpen = false;
         _pendingDiscardAction = null;
         _historyAnnouncement = null;
+        _saveQueued = false;
+        _pendingChangeSetCache = null;
     }
 }
 

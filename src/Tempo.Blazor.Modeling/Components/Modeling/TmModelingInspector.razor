@@ -41,21 +41,28 @@
         @if (Element is not null)
         {
             <div data-testid="@TestId("modeling-inspector-selected-element")">
+                @if (IsEditing)
+                {
+                    @* Fáze 14 review: the name field sits ABOVE the summary list (full width,
+                       outside the <dl>) — the summary stays a pure dt/dd grid and the primary
+                       edit field reads first. *@
+                    <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
+                        <TmTextInput Id="modeling-inspector-name"
+                                     Label="@Loc["TmModelingInspector_Name"]"
+                                     Value="@_nameDraft"
+                                     ValueChanged="HandleNameInput"
+                                     OnKeyDown="HandleNameKeyDownAsync"
+                                     OnBlur="@(() => CommitNameAsync())"
+                                     Error="@NameError"
+                                     Disabled="@Saving"
+                                     Required="true" />
+                    </div>
+                }
                 <dl class="tm-modeling-inspector__summary">
                     @if (IsEditing)
                     {
-                        @* Fáze 14: the name becomes a field; the rest of the summary (semantic
-                           type, notation, source triple) stays read-only FOREVER. *@
-                        <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
-                            <TmTextInput Id="modeling-inspector-name"
-                                         Label="@Loc["TmModelingInspector_Name"]"
-                                         Value="@_nameDraft"
-                                         ValueChanged="HandleNameInput"
-                                         OnKeyDown="HandleNameKeyDownAsync"
-                                         OnBlur="@(() => CommitNameAsync())"
-                                         Error="@NameError"
-                                         Required="true" />
-                        </div>
+                        @* The rest of the summary (semantic type, notation, source triple) stays
+                           read-only FOREVER. *@
                         <div data-testid="@TestId("modeling-inspector-type")">
                             <dt>@Loc["TmModelingInspector_SemanticType"]</dt>
                             <dd class="tm-modeling-inspector__value">@DisplayType</dd>
@@ -96,6 +103,7 @@
                                     Value="@_descriptionDraft"
                                     ValueChanged="HandleDescriptionInput"
                                     Rows="3"
+                                    Disabled="@Saving"
                                     AdditionalAttributes="@DescriptionAttributes" />
                     </section>
                 }
@@ -142,6 +150,7 @@
                                                     <TmToggle Id="@($"modeling-inspector-property-{property.Key}")"
                                                               Value="@(property.Value.GetBoolean())"
                                                               ValueChanged="@(value => HandleToggleChangeAsync(property.Key, value))"
+                                                              Disabled="@Saving"
                                                               AriaLabel="@property.Key" />
                                                 }
                                                 else if (IsIntegerProperty(property.Value))
@@ -150,7 +159,9 @@
                                                                    Label="@property.Key"
                                                                    Value="@(property.Value.GetInt32())"
                                                                    ValueChanged="@(value => HandleScalarInputAsync(property.Key, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty))"
-                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)" />
+                                                                   Disabled="@Saving"
+                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)"
+                                                                   @key="@ScalarRenderKey(property.Key)" />
                                                 }
                                                 else
                                                 {
@@ -159,7 +170,8 @@
                                                                  Value="@ScalarDraft(property.Key)"
                                                                  ValueChanged="@(value => HandleScalarInputAsync(property.Key, value))"
                                                                  OnKeyDown="@(args => HandleScalarKeyDownAsync(property.Key, args))"
-                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))" />
+                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))"
+                                                                 Disabled="@Saving" />
                                                 }
                                             </td>
                                         }
@@ -184,17 +196,24 @@
                     <strong aria-hidden="true">→</strong>
                     <span>@DisplayTargetName</span>
                 </div>
+                @if (IsEditing)
+                {
+                    @* Fáze 14 review: the name field above the summary list (full width, outside
+                       the <dl>) — the empty-name commit shows the NameRequired error here too. *@
+                    <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
+                        <TmTextInput Id="modeling-inspector-name"
+                                     Label="@Loc["TmModelingInspector_Name"]"
+                                     Value="@_nameDraft"
+                                     ValueChanged="HandleNameInput"
+                                     OnKeyDown="HandleNameKeyDownAsync"
+                                     OnBlur="@(() => CommitNameAsync())"
+                                     Error="@NameError"
+                                     Disabled="@Saving" />
+                    </div>
+                }
                 <dl class="tm-modeling-inspector__summary">
                     @if (IsEditing)
                     {
-                        <div class="tm-modeling-inspector__edit-field" data-testid="@TestId("modeling-inspector-name-field")">
-                            <TmTextInput Id="modeling-inspector-name"
-                                         Label="@Loc["TmModelingInspector_Name"]"
-                                         Value="@_nameDraft"
-                                         ValueChanged="HandleNameInput"
-                                         OnKeyDown="HandleNameKeyDownAsync"
-                                         OnBlur="@(() => CommitNameAsync())" />
-                        </div>
                         <div data-testid="@TestId("modeling-inspector-type")">
                             <dt>@Loc["TmModelingInspector_SemanticType"]</dt>
                             <dd class="tm-modeling-inspector__value">@DisplayType</dd>
@@ -249,6 +268,7 @@
                                                     <TmToggle Id="@($"modeling-inspector-property-{property.Key}")"
                                                               Value="@(property.Value.GetBoolean())"
                                                               ValueChanged="@(value => HandleToggleChangeAsync(property.Key, value))"
+                                                              Disabled="@Saving"
                                                               AriaLabel="@property.Key" />
                                                 }
                                                 else if (IsIntegerProperty(property.Value))
@@ -257,7 +277,9 @@
                                                                    Label="@property.Key"
                                                                    Value="@(property.Value.GetInt32())"
                                                                    ValueChanged="@(value => HandleScalarInputAsync(property.Key, value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty))"
-                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)" />
+                                                                   Disabled="@Saving"
+                                                                   AdditionalAttributes="@ScalarNumberAttributes(property.Key)"
+                                                                   @key="@ScalarRenderKey(property.Key)" />
                                                 }
                                                 else
                                                 {
@@ -266,7 +288,8 @@
                                                                  Value="@ScalarDraft(property.Key)"
                                                                  ValueChanged="@(value => HandleScalarInputAsync(property.Key, value))"
                                                                  OnKeyDown="@(args => HandleScalarKeyDownAsync(property.Key, args))"
-                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))" />
+                                                                 OnBlur="@(() => CommitScalarAsync(property.Key))"
+                                                                 Disabled="@Saving" />
                                                 }
                                             </td>
                                         }

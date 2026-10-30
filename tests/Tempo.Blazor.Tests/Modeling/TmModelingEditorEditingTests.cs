@@ -29,6 +29,8 @@ public sealed class TmModelingEditorEditingTests : LocalizationTestBase
         Services.AddTempoBlazorModeling();
         Services.AddSingleton<TimeProvider>(_clock);
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new EditingModelingModelProvider()));
+        // The second provider backs the stale-save race test (a provider switch mid-save).
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
     }
 
     [Fact]
@@ -405,6 +407,251 @@ public sealed class TmModelingEditorEditingTests : LocalizationTestBase
         });
     }
 
+    // ── Review-fix tests (phase 14 follow-up) ────────────────────────────────
+
+    [Fact]
+    public async Task Successful_save_announces_through_the_history_region()
+    {
+        var writer = new RecordingModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Renamed task");
+        name.KeyDown("Enter");
+        await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+
+        cut.Instance.TestHistoryAnnouncement.Should().Be("Changes saved",
+            "a completed save is announced in the same live region the undo/redo actions use");
+    }
+
+    [Fact]
+    public async Task Manual_save_without_writer_raises_OnSaveCompleted()
+    {
+        // No writer registered — the host binds OnModelChanged and writes the set itself; the
+        // settled signal still raises (review fix, phase 14).
+        var completed = false;
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { }))
+            .Add(p => p.OnSaveCompleted, EventCallback.Factory.Create(this, () => completed = true)));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Renamed task");
+        name.KeyDown("Enter");
+
+        var result = await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+
+        result.Should().BeNull("no writer — the host owns the persistence");
+        completed.Should().BeTrue();
+        cut.Instance.HasPendingModelChanges.Should().BeFalse("the pending state cleared with the delivered set");
+    }
+
+    [Fact]
+    public async Task Save_with_returned_model_remaps_selection_and_a_second_rename_lands()
+    {
+        var writer = new CloningModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("First rename");
+        name.KeyDown("Enter");
+        var first = await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+        first!.Succeeded.Should().BeTrue();
+
+        // The writer returned a CLONED model: the selection must be remapped by Id into it, so
+        // the same input keeps editing the element (and the tree shows the adopted name).
+        var name2 = cut.Find("#modeling-inspector-name");
+        name2.Input("Second rename");
+        name2.KeyDown("Enter");
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Instance.TestModel!.Elements.Single(e => e.Id == "task-a").Name.Should().Be("Second rename");
+            cut.Find("[data-testid='modeling-tree-node-task-a']").TextContent.Should().Contain("Second rename");
+        });
+        cut.Find("#modeling-inspector-name").GetAttribute("value").Should().Be("Second rename");
+    }
+
+    [Fact]
+    public async Task Two_consecutive_saves_succeed_with_version_progression()
+    {
+        var writer = new CloningModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Rename one");
+        name.KeyDown("Enter");
+        var first = await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+        first!.Succeeded.Should().BeTrue();
+
+        var name2 = cut.Find("#modeling-inspector-name");
+        name2.Input("Rename two");
+        name2.KeyDown("Enter");
+        var second = await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+
+        // The adopted model carried the bumped SourceVersion, so the second save bases its edit
+        // on it instead of the stale initial one (DemoModelingModelWriter contract).
+        second.Should().NotBeNull();
+        second!.Succeeded.Should().BeTrue();
+        writer.Calls.Should().HaveCount(2);
+        writer.Calls[1].BaseVersion.Should().Be("2026.06-1");
+    }
+
+    [Fact]
+    public async Task Edit_during_in_flight_manual_save_stays_pending()
+    {
+        var writer = new GatedModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Rename one");
+        name.KeyDown("Enter");
+
+        var saveTask = cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+        cut.WaitForAssertion(() => writer.Calls.Should().HaveCount(1)); // the save is in flight behind the gate
+
+        // The racing commit lands while the writer awaits.
+        name.Input("Rename two");
+        name.KeyDown("Enter");
+
+        writer.Release(new ModelingModelSaveResult { Succeeded = true });
+        var result = await saveTask;
+        result!.Succeeded.Should().BeTrue();
+
+        cut.Instance.HasPendingModelChanges.Should().BeTrue("the racing edit is still pending against the advanced baseline");
+        cut.Instance.TestModel!.Elements.Single(e => e.Id == "task-a").Name.Should().Be("Rename two");
+        writer.Calls.Should().HaveCount(1, "the racing edit was not sent with the in-flight save");
+        cut.Instance.TestStack!.CanUndo.Should().BeTrue("the undo stack stays for the racing edits");
+        cut.Instance.TestLastSaveResult.Should().NotBeNull();
+
+        // The follow-up save persists the racing edit.
+        var second = await cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+        second!.Succeeded.Should().BeTrue();
+        writer.Calls.Should().HaveCount(2);
+        writer.Calls[1].Elements[0].Name.Should().Be("Rename two");
+    }
+
+    [Fact]
+    public async Task Immediate_edit_during_save_gets_saved_after()
+    {
+        var writer = new GatedModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.SaveMode, ModelingSaveMode.Immediate)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Rename one");
+        name.KeyDown("Enter");
+
+        cut.WaitForAssertion(() => writer.Calls.Should().HaveCount(1)); // the Immediate commit saved (behind the gate)
+
+        // A commit racing the Immediate save queues itself instead of being dropped.
+        name.Input("Rename two");
+        name.KeyDown("Enter");
+        writer.Calls.Should().HaveCount(1, "a re-entered save during the in-flight one is queued, not run");
+
+        writer.Release(new ModelingModelSaveResult { Succeeded = true });
+
+        cut.WaitForAssertion(() => writer.Calls.Should().HaveCount(2)); // the queued commit saved after the in-flight one settled
+        writer.Calls[1].Elements[0].Name.Should().Be("Rename two");
+        cut.Instance.HasPendingModelChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Reload_during_save_discards_the_stale_result()
+    {
+        var writer = new GatedModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        var completed = false;
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { }))
+            .Add(p => p.OnSaveCompleted, EventCallback.Factory.Create(this, () => completed = true)));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Rename one");
+        name.KeyDown("Enter");
+
+        var saveTask = cut.InvokeAsync(() => cut.Instance.SaveModelChangesAsync());
+        cut.WaitForAssertion(() => writer.Calls.Should().HaveCount(1));
+
+        // A load invalidates the state the save was computed from (provider switch → reload).
+        cut.Render(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        writer.Release(new ModelingModelSaveResult { Succeeded = true });
+        var result = await saveTask;
+
+        result.Should().NotBeNull();
+        cut.Instance.TestLastSaveResult.Should().BeNull("a stale result is never adopted into the alert state");
+        completed.Should().BeFalse("the settled signal belongs to the discarded generation");
+        cut.Instance.TestModel!.Elements.Single(e => e.Id == "task-a").Name.Should().Be("Approve request",
+            "the reloaded model shows the SOURCE state, not the discarded save");
+    }
+
+    [Fact]
+    public async Task Undo_after_preview_regeneration_reverts_the_label()
+    {
+        var writer = new RecordingModelingModelWriter(EditingModelingModelProvider.Key);
+        Services.AddSingleton<IModelingModelWriter>(writer);
+
+        using var cut = RenderEditor(parameters => parameters
+            .Add(p => p.AllowModelEditing, true)
+            .Add(p => p.OnModelChanged, EventCallback.Factory.Create<ModelingModelChangedEventArgs>(this, _ => { })));
+
+        SelectElementAsync(cut);
+
+        var name = cut.Find("#modeling-inspector-name");
+        name.Input("Renamed task");
+        name.KeyDown("Enter");
+
+        // Regenerate the preview: a NEW document instance replaces the one the command captured.
+        cut.Find("[data-testid='modeling-generate-diagram-button']").Click();
+
+        // The undo's document resolver must target the LIVE document, not the dead instance.
+        await cut.InvokeAsync(() => cut.Instance.UndoModelEditAsync());
+
+        cut.Instance.TestModel!.Elements.Single(e => e.Id == "task-a").Name.Should().Be("Approve request");
+        var node = cut.Instance.TestDocument!.Nodes
+            .Single(n => string.Equals((string?)n.Data["modelElementId"], "task-a", StringComparison.Ordinal));
+        ((string)node.Data["label"]).Should().Be("Approve request",
+            "the undo synchronized the regenerated document");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private IRenderedComponent<TmModelingEditor> RenderEditor(
@@ -546,4 +793,134 @@ internal sealed class EditingModelingModelProvider : IModelingModelProvider
 
         return Task.FromResult(model);
     }
+}
+
+/// <summary>
+/// Review-fix writer (phase 14): applies the change set onto a FRESH editing model and returns
+/// it with the bumped source version — the <see cref="DemoModelingModelWriter"/> contract shape.
+/// A version mismatch (the editor based its edit on a stale version) reports the conflict path.
+/// </summary>
+internal sealed class CloningModelingModelWriter : IModelingModelWriter
+{
+    private string _sourceVersion = "2026.06";
+    private int _saves;
+
+    public CloningModelingModelWriter(string providerKey) => ProviderKey = providerKey;
+
+    public string ProviderKey { get; }
+
+    public List<ModelingModelChangeSet> Calls { get; } = [];
+
+    public async Task<ModelingModelSaveResult> SaveChangesAsync(ModelingModelChangeSet changes, CancellationToken cancellationToken)
+    {
+        Calls.Add(changes);
+
+        if (!string.Equals(changes.BaseVersion, _sourceVersion, StringComparison.Ordinal))
+        {
+            return new ModelingModelSaveResult
+            {
+                Succeeded = false,
+                IsConflict = true,
+                Message = $"stale (expected {_sourceVersion}, got {changes.BaseVersion})"
+            };
+        }
+
+        _sourceVersion = $"2026.06-{++_saves}";
+        var model = await new EditingModelingModelProvider().GetModelAsync(new ModelingModelRequest { ProviderKey = ProviderKey }, cancellationToken);
+        ApplyChanges(changes, model);
+        model.Metadata.SourceVersion = _sourceVersion;
+        return new ModelingModelSaveResult { Succeeded = true, Model = model };
+    }
+
+    internal static void ApplyChanges(ModelingModelChangeSet changes, ModelingModelDto model)
+    {
+        foreach (var change in changes.Elements)
+        {
+            var element = model.Elements.FirstOrDefault(item => item.Id == change.ElementId);
+            if (element is null)
+            {
+                continue;
+            }
+
+            if (change.Name is not null)
+            {
+                element.Name = change.Name;
+            }
+
+            if (change.Description is not null)
+            {
+                element.Description = change.Description;
+            }
+
+            if (change.SetProperties is not null)
+            {
+                foreach (var property in change.SetProperties)
+                {
+                    element.Properties[property.Key] = property.Value.Clone();
+                }
+            }
+
+            if (change.RemovedProperties is not null)
+            {
+                foreach (var key in change.RemovedProperties)
+                {
+                    element.Properties.Remove(key);
+                }
+            }
+        }
+
+        foreach (var change in changes.Relationships)
+        {
+            var relationship = model.Relationships.FirstOrDefault(item => item.Id == change.RelationshipId);
+            if (relationship is null)
+            {
+                continue;
+            }
+
+            if (change.Name is not null)
+            {
+                relationship.Name = change.Name;
+            }
+
+            if (change.SetProperties is not null)
+            {
+                foreach (var property in change.SetProperties)
+                {
+                    relationship.Properties[property.Key] = property.Value.Clone();
+                }
+            }
+
+            if (change.RemovedProperties is not null)
+            {
+                foreach (var key in change.RemovedProperties)
+                {
+                    relationship.Properties.Remove(key);
+                }
+            }
+        }
+    }
+}
+
+/// <summary>Review-fix writer (phase 14): the save stays in flight until
+/// <see cref="Release"/> — the race tests drive the timing explicitly.</summary>
+internal sealed class GatedModelingModelWriter : IModelingModelWriter
+{
+    private TaskCompletionSource<ModelingModelSaveResult> _gate = NewGate();
+
+    public GatedModelingModelWriter(string providerKey) => ProviderKey = providerKey;
+
+    public string ProviderKey { get; }
+
+    public List<ModelingModelChangeSet> Calls { get; } = [];
+
+    public void Release(ModelingModelSaveResult result) => _gate.TrySetResult(result);
+
+    public Task<ModelingModelSaveResult> SaveChangesAsync(ModelingModelChangeSet changes, CancellationToken cancellationToken)
+    {
+        Calls.Add(changes);
+        return _gate.Task;
+    }
+
+    private static TaskCompletionSource<ModelingModelSaveResult> NewGate()
+        => new(TaskCreationOptions.RunContinuationsAsynchronously);
 }

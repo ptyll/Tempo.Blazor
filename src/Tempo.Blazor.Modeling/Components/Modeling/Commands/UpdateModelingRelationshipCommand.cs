@@ -9,7 +9,9 @@ namespace Tempo.Blazor.Components.Modeling;
 /// One inspector field commit for a RELATIONSHIP: updates the <see cref="ModelingRelationshipDto"/>
 /// in place and mirrors the name onto the diagram edge whose Id matches the relationship id
 /// (<c>Label</c>). Pairs with <see cref="UpdateModelingElementCommand"/> under the same one
-/// transaction per commit rule.
+/// transaction per commit rule. The documents resolve through the supplied delegate on every
+/// Execute/Undo — the editor may regenerate the preview between the push and the undo, and the
+/// sync must follow the LIVE document.
 /// </summary>
 public sealed class UpdateModelingRelationshipCommand : IDiagramCommand
 {
@@ -17,7 +19,7 @@ public sealed class UpdateModelingRelationshipCommand : IDiagramCommand
     private readonly string? _name;
     private readonly Dictionary<string, JsonElement>? _setProperties;
     private readonly List<string>? _removedProperties;
-    private readonly IReadOnlyList<DiagramDocument> _documents;
+    private readonly Func<IEnumerable<DiagramDocument>>? _documents;
 
     private string? _originalName;
     private Dictionary<string, JsonElement>? _originalProperties;
@@ -29,21 +31,22 @@ public sealed class UpdateModelingRelationshipCommand : IDiagramCommand
     /// <param name="name">New name, or null when the name did not change.</param>
     /// <param name="setProperties">Property values to set (JSON kind preserved), or null.</param>
     /// <param name="removedProperties">Property keys to remove, or null.</param>
-    /// <param name="documents">Diagram documents whose edges are synced by relationship id.</param>
+    /// <param name="documents">Resolver of the diagram documents whose edges are synced by
+    /// relationship id — evaluated on every Execute/Undo.</param>
     public UpdateModelingRelationshipCommand(
         string transactionName,
         ModelingRelationshipDto relationship,
         string? name,
         Dictionary<string, JsonElement>? setProperties,
         List<string>? removedProperties,
-        IEnumerable<DiagramDocument> documents)
+        Func<IEnumerable<DiagramDocument>>? documents)
     {
         Name = transactionName;
         _relationship = relationship ?? throw new ArgumentNullException(nameof(relationship));
         _name = name;
         _setProperties = setProperties;
         _removedProperties = removedProperties;
-        _documents = documents?.Where(document => document is not null).Distinct().ToList() ?? [];
+        _documents = documents;
     }
 
     /// <inheritdoc />
@@ -109,7 +112,12 @@ public sealed class UpdateModelingRelationshipCommand : IDiagramCommand
 
     private void SynchronizeDocuments()
     {
-        foreach (var document in _documents)
+        if (_documents is null)
+        {
+            return;
+        }
+
+        foreach (var document in _documents.Invoke().Where(document => document is not null).Distinct())
         {
             foreach (var edge in document.Edges)
             {

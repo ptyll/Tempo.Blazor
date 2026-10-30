@@ -279,7 +279,9 @@ The inspector becomes editable through an explicit OPT-IN; with no opt-in nothin
 - **What is editable** — the element/relationship NAME, the element DESCRIPTION and the SCALAR
   `Properties` entries: `string` → `TmTextInput`, integer → `TmNumberInput`, other numbers → a
   text field parsed invariantly, `bool` → `TmToggle`; the JSON value kind is preserved on every
-  commit. Clearing a scalar property commits it through `RemovedProperties`. NEVER editable:
+  commit. Clearing a scalar property commits it through `RemovedProperties`. The name edit
+  field renders ABOVE the summary `<dl>` (full width, outside the dt/dd grid) in both the
+  element and the relationship branches. NEVER editable:
   `SemanticType`, `Notation`, the `Source*` triple, `Governance` and complex (object/array)
   JSON values — those render as the historical read-only rows.
 - **Commit semantics** — text fields commit on blur or Enter (Escape reverts the draft and
@@ -298,7 +300,34 @@ The inspector becomes editable through an explicit OPT-IN; with no opt-in nothin
   inside the inspector — the diagram canvas keyboard scope is never involved.
 - **The pending set is a diff, not an accumulator**: it is recomputed from the live model
   against the baseline snapshot (the model as loaded, or as last saved/adopted), so undo/redo,
-  a discarded edit or a reload keep it consistent without field-by-field bookkeeping.
+  a discarded edit or a reload keep it consistent without field-by-field bookkeeping. The
+  result is cached against the editor's commit-version counter — an unrelated re-render never
+  recomputes the diff; a commit/undo/redo or a baseline change invalidates the cache.
+- **Save race safety (review fix, phase 14)** — the load version, the model reference and the
+  commit version are captured before the writer await; after it, a load or a model swap
+  DISCARDS the result (no alert, no baseline change, no `OnSaveCompleted` — the state it was
+  computed from is gone). A successful save advances the baseline by applying the SENT change
+  set onto the baseline snapshot (never the live model) and adopts the returned `Model` only
+  when no commit raced the save; a racing commit keeps the live model and the undo stack, and
+  a follow-up save (also in `Immediate` mode, which queues commits that land during an
+  in-flight save) persists the remaining diff. While a save is in flight the inspector inputs
+  are disabled (`Saving`) and a Reload is blocked. `OnSaveCompleted` also raises for a save
+  without a registered writer (an `OnModelChanged`-only host).
+- **Selection remap** — when a save adopts the writer's returned model, the selection, the
+  drag source and the open-editor document are remapped by Id into the new model (dropped when
+  the element/relationship is gone) and the dialog closes through the regular close path, so
+  the same inspector input keeps editing the element.
+- **Live document sync** — `UpdateModelingElementCommand` /
+  `UpdateModelingRelationshipCommand` receive a DOCUMENT RESOLVER evaluated on every
+  Execute/Undo: a preview regeneration or an adopted model replaces the `DiagramDocument`
+  instance between the push and the undo, and the sync must follow the live document.
+- **Inspector Ctrl+Z ownership** — the editor's undo/redo handles the keystroke only when
+  every editing draft matches its committed value; with uncommitted typing the browser's
+  native text undo wins. Escape on the number input / the description textarea reverts the
+  DISPLAYED value too (a render-key remount / a draft revert + re-render).
+- **Issue panels follow in-place edits** — `TmModelingIssuePanel.ContentVersion` (the
+  editor-passed commit counter) invalidates the render gate and the visible-issues memo: the
+  DTOs mutate in place, so a rename would otherwise not repaint a 500-issue list.
 - **Conflict & guards** — an `IsConflict` result keeps the pending edits and renders a `TmAlert`
   in the inspector with a localized "Reload" action (`modeling-conflict-reload`); a failed save
   renders the failure message. A reload (`Source` tab Load, the mobile action bar) or a
@@ -310,7 +339,11 @@ The inspector becomes editable through an explicit OPT-IN; with no opt-in nothin
   with sticky Save/Discard entries.
 - **Demo** — `/modeling-editor` shows an "Allow editing" switch, a Manual/Immediate selector,
   the last change set (`OnModelChanged`) and `?scenario=save-conflict` (the in-memory demo
-  writer reports one conflict per arm).
+  writer reports one conflict per arm). The demo `DemoModelingModelWriter` bumps the persisted
+  model's `Metadata.SourceVersion` on every successful save (and the conflict path returns the
+  current version), so two consecutive saves — and the conflict reload — base their next diff
+  on the version the source moved to. Its `ConflictArmed` static is DEMO-ONLY (process-wide
+  mutable state; a real writer scopes conflict state per session).
 
 ## Non-drag alternative (WCAG 2.5.7)
 
@@ -401,6 +434,7 @@ instance (`ModelingInteropModule`, disposed with the component). Exports:
 | `focusTreeElement(treeRoot, elementId)` | Tree keyboard navigation onto a node. |
 | `focusTreeGroupHeader(treeRoot, groupKey)` | Tree keyboard navigation onto the APG group `treeitem` (via its `data-group-key`). |
 | `focusWithin(root, selector)` | Overlay focus move + focus return in `TmModelingEditor`, scoped to the editor root. Accepts a comma-separated priority list; the hook selectors are the stable `data-modeling-focus="open-in-editor"` / `"open-editor-close"` / `"inspector-panel"` attributes — never `data-testid`. |
+| `registerUndoShortcutBridge(editorRoot)` | CAPTURE-phase keydown guard scoped to one editor root (review fix, phase 14): preventDefaults Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y when the target is NOT a text-entry control, so the browser's document-level undo cannot double-fire on the editor's own stack. Inside a text field the native text undo keeps its role (the inspector's keydown handler yields whenever an editing draft differs from the committed value). Idempotent per root. |
 
 The tree helpers query INSIDE the caller's `treeRoot` `ElementReference`; a failed import is not
 cached and every call site degrades to a no-op.

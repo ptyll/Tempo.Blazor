@@ -145,9 +145,10 @@ public interface IModelingModelWriter
     string ProviderKey { get; }
 
     /// <summary>Persists the supplied change set against the source system.
-    /// <paramref name="changes.BaseVersion"/> carries the <see cref="ModelingMetadataDto.SourceVersion"/>
-    /// the edited model was loaded with — the writer compares it against the current source
-    /// version and returns <see cref="ModelingModelSaveResult.IsConflict"/> when the source moved on.</summary>
+    /// <paramref name="changes"/> carries its <see cref="ModelingModelChangeSet.BaseVersion"/>
+    /// — the <see cref="ModelingMetadataDto.SourceVersion"/> the edited model was loaded with —
+    /// and the writer compares it against the current source version, returning
+    /// <see cref="ModelingModelSaveResult.IsConflict"/> when the source moved on.</summary>
     /// <param name="changes">The aggregated changes to persist (only changed fields are set).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The save outcome; a failed save carries a message, a conflict also carries the
@@ -206,7 +207,6 @@ public sealed class ModelingModelChangeSet
 public sealed class ModelingElementChange
 {
     private string _elementId = string.Empty;
-    private List<string>? _removedProperties;
 
     /// <summary>Identifier of the edited <see cref="ModelingElementDto.Id"/>.</summary>
     public string ElementId
@@ -226,18 +226,13 @@ public sealed class ModelingElementChange
     public Dictionary<string, JsonElement>? SetProperties { get; set; }
 
     /// <summary>Property keys to remove; null when no property was removed.</summary>
-    public List<string>? RemovedProperties
-    {
-        get => _removedProperties;
-        set => _removedProperties = value ?? [];
-    }
+    public List<string>? RemovedProperties { get; set; }
 }
 
 /// <summary>A single relationship's changed fields. A <c>null</c> property means "unchanged".</summary>
 public sealed class ModelingRelationshipChange
 {
     private string _relationshipId = string.Empty;
-    private List<string>? _removedProperties;
 
     /// <summary>Identifier of the edited <see cref="ModelingRelationshipDto.Id"/>.</summary>
     public string RelationshipId
@@ -254,11 +249,7 @@ public sealed class ModelingRelationshipChange
     public Dictionary<string, JsonElement>? SetProperties { get; set; }
 
     /// <summary>Property keys to remove; null when no property was removed.</summary>
-    public List<string>? RemovedProperties
-    {
-        get => _removedProperties;
-        set => _removedProperties = value ?? [];
-    }
+    public List<string>? RemovedProperties { get; set; }
 }
 
 /// <summary>The outcome of <see cref="IModelingModelWriter.SaveChangesAsync"/>.</summary>

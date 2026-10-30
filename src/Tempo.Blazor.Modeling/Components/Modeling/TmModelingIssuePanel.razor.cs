@@ -31,6 +31,7 @@ public partial class TmModelingIssuePanel
              string? TestIdPrefix,
              IReadOnlyList<ModelingElementDto>? Elements,
              IReadOnlyList<ModelingRelationshipDto>? Relationships,
+             int ContentVersion,
              string FilterText,
              string? SeverityKey,
              ModelingIssueSortMode SortMode,
@@ -121,6 +122,15 @@ public partial class TmModelingIssuePanel
 
     /// <summary>Optional relationship list — the source of relationship names (as <see cref="Elements"/>).</summary>
     [Parameter] public IReadOnlyList<ModelingRelationshipDto>? Relationships { get; set; }
+
+    /// <summary>
+    /// Host-owned content version of the element/relationship tables (review fix, phase 14):
+    /// the editor mutates the DTOs IN PLACE (an inspector rename), so a collection-reference
+    /// comparison alone cannot see the change — the gate and the memo below key on this counter
+    /// too. Bump it whenever the names behind <see cref="Elements"/> / <see cref="Relationships"/>
+    /// change without replacing the collections.
+    /// </summary>
+    [Parameter] public int ContentVersion { get; set; }
 
     /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
@@ -255,7 +265,7 @@ public partial class TmModelingIssuePanel
     private bool RenderSurfaceChanged()
     {
         var snapshot = (Issues, ShowFilterBar, Collapsed, ShowToggle, Class, DataTestId, TestIdPrefix,
-            Elements, Relationships, _filterText, SeverityFilterKey, _sortMode, CultureInfo.CurrentUICulture.Name);
+            Elements, Relationships, ContentVersion, _filterText, SeverityFilterKey, _sortMode, CultureInfo.CurrentUICulture.Name);
         var changed = !snapshot.Equals(_renderSnapshot);
         _renderSnapshot = snapshot;
         return changed;
@@ -324,7 +334,7 @@ public partial class TmModelingIssuePanel
         get
         {
             var key = (Issues, _filterText, SeverityFilterKey, _sortMode,
-                CultureInfo.CurrentUICulture.Name, Elements, Relationships);
+                CultureInfo.CurrentUICulture.Name, Elements, Relationships, ContentVersion);
             if (_visibleIssues is not null && key.Equals(_visibleIssuesKey))
             {
                 return _visibleIssues;
@@ -358,7 +368,7 @@ public partial class TmModelingIssuePanel
     }
 
     private IReadOnlyList<(ModelingIssueDto, int)>? _visibleIssues;
-    private (IReadOnlyList<ModelingIssueDto>, string, string?, ModelingIssueSortMode, string, IReadOnlyList<ModelingElementDto>?, IReadOnlyList<ModelingRelationshipDto>?) _visibleIssuesKey;
+    private (IReadOnlyList<ModelingIssueDto>, string, string?, ModelingIssueSortMode, string, IReadOnlyList<ModelingElementDto>?, IReadOnlyList<ModelingRelationshipDto>?, int) _visibleIssuesKey;
 
     /// <summary>Builds an id → name map with a loop + <see cref="Dictionary{TKey, TValue}.TryAdd"/>:
     /// duplicate ids keep the FIRST entry instead of throwing (review fix, Fáze 11 — the host may

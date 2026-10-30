@@ -491,6 +491,7 @@
     /// owns the filter/sort state — the SAME fields feed the tablet sheet and the mobile tab.
     /// </summary>
     private RenderFragment IssuesDockContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
+                                                                       ContentVersion="@EditContentVersion"
                                                                        OnIssueSelected="SelectIssueAsync"
                                                                        Collapsed="@IssuesCollapsed"
                                                                        CollapsedChanged="SetIssuesCollapsedAsync"
@@ -539,6 +540,7 @@
                     </div>
                     <div class="tm-modeling-editor__sheet-body" id="@_issuesSheetId">
                         <TmModelingIssuePanel Issues="@DisplayIssues"
+                                              ContentVersion="@EditContentVersion"
                                               OnIssueSelected="SelectIssueAsync"
                                               ShowToggle="false"
                                               Collapsed="false"
@@ -570,6 +572,7 @@
                                                                      Relationship="@_selectedRelationship"
                                                                      Elements="@LoadedElements"
                                                                      ReadOnly="@(!IsEditingEnabled)"
+                                                                     Saving="@IsSaving"
                                                                      OnElementEdited="CommitElementEditAsync"
                                                                      OnRelationshipEdited="CommitRelationshipEditAsync"
                                                                      OnUndoRequested="UndoModelEditAsync"
@@ -610,6 +613,7 @@
                         class="tm-modeling-editor__history-btn tm-modeling-editor__history-btn--save"
                         data-testid="@TestId("modeling-inspector-save")"
                         disabled="@IsSaving"
+                        title="@Loc["TmModelingEditor_Save"]"
                         @onclick="SaveFromInspectorAsync">
                     <TmIcon Name="@IconNames.Save" Size="IconSize.Sm" />
                     <span class="tm-sr-only">@(IsSaving ? Loc["TmModelingEditor_Saving"] : Loc["TmModelingEditor_Save"])</span>
@@ -617,6 +621,7 @@
                 <button type="button"
                         class="tm-modeling-editor__history-btn"
                         data-testid="@TestId("modeling-inspector-discard")"
+                        title="@Loc["TmModelingEditor_Discard"]"
                         @onclick="DiscardFromInspectorAsync">
                     <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
                     <span class="tm-sr-only">@Loc["TmModelingEditor_Discard"]</span>
@@ -660,6 +665,7 @@
     /// heading (the desktop/tablet dock keeps its toggle).
     /// </summary>
     private RenderFragment MobileIssuesContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
+                                                                         ContentVersion="@EditContentVersion"
                                                                          OnIssueSelected="SelectIssueAsync"
                                                                          ShowToggle="false"
                                                                          Collapsed="@_mobileIssuesCollapsed"
@@ -770,7 +776,7 @@
     private RenderFragment EditingAlertsContent => @<text>
         @if (ShowConflictAlert)
         {
-            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-conflict")" role="alert">
+            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-conflict")">
                 <TmAlert Severity="AlertSeverity.Warning" Variant="AlertVariant.Soft" Title="@Loc["TmModelingEditor_SaveConflict"]">
                     <p>@(LastSaveResultText)</p>
                 </TmAlert>
@@ -785,7 +791,7 @@
         }
         else if (ShowSaveFailure)
         {
-            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-save-failure")" role="alert">
+            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-save-failure")">
                 <TmAlert Severity="AlertSeverity.Error" Variant="AlertVariant.Soft" Title="@Loc["TmModelingEditor_SaveFailed"]">
                     <p>@(LastSaveResultText)</p>
                 </TmAlert>

@@ -84,7 +84,6 @@ public partial class TmModelingEditor : IAsyncDisposable
     private EditorShellPanel _shellCollapsed;
     private bool _issuesCollapsed;
 
-
     /// <summary>The resolved layout of the editor's own container (Fáze 6): the compact branch
     /// keeps the panel-tab state, the docked branch uses it for the tablet sheet rules. A forced
     /// mode adopts in OnInitialized/OnParametersSet; an Auto editor follows the shell's
@@ -545,6 +544,15 @@ public partial class TmModelingEditor : IAsyncDisposable
             await FocusWithinAsync(RelatedPanelFocusSelector);
         }
 
+        if (_focusInspectorFieldAfterRender)
+        {
+            // Review fix (phase 14): the mobile Inspector tab re-opened with a pending edit —
+            // focus the edited field instead of leaving it below the source card. Progressive
+            // enhancement: swallowed without the module.
+            _focusInspectorFieldAfterRender = false;
+            await FocusWithinAsync(InspectorNameFieldSelector);
+        }
+
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
@@ -703,8 +711,9 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     private Task ReloadModelAsync()
         // Fáze 14: a reload over pending edits first asks for confirmation (the confirm dialog
-        // runs the actual reload after the user accepts; no pending changes → direct path).
-        => RequestDiscardThenAsync(ReloadModelCoreAsync);
+        // runs the actual reload after the user accepts). Blocked while a save is in flight —
+        // the reload would discard a result the writer is still computing (review fix, 14).
+        => _isSaving ? Task.CompletedTask : RequestDiscardThenAsync(ReloadModelCoreAsync);
 
     private async Task ReloadModelCoreAsync()
     {

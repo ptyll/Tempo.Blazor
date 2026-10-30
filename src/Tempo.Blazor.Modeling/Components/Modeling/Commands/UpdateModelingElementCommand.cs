@@ -15,9 +15,12 @@ namespace Tempo.Blazor.Components.Modeling;
 /// command, so one undo/redo step reverts the model AND the preview together.
 /// <para>
 /// The command is created by the editor with the LOCALIZED transaction name (the undo/redo
-/// tooltips are user-facing text) and with the documents to synchronize. The pre-change values
-/// are captured on the FIRST execute — a redo then re-applies the captured delta instead of
-/// re-capturing the already-applied state.
+/// tooltips are user-facing text) and with a DOCUMENT RESOLVER — evaluated on every
+/// Execute/Undo, so the sync targets the documents that exist at that moment: the editor may
+/// regenerate the preview (or adopt a saved model) between the push and the undo, and a
+/// snapshot list would then sync a dead document. The pre-change values are captured on the
+/// FIRST execute — a redo then re-applies the captured delta instead of re-capturing the
+/// already-applied state.
 /// </para>
 /// </summary>
 public sealed class UpdateModelingElementCommand : IDiagramCommand
@@ -27,7 +30,7 @@ public sealed class UpdateModelingElementCommand : IDiagramCommand
     private readonly string? _description;
     private readonly Dictionary<string, JsonElement>? _setProperties;
     private readonly List<string>? _removedProperties;
-    private readonly IReadOnlyList<DiagramDocument> _documents;
+    private readonly Func<IEnumerable<DiagramDocument>>? _documents;
 
     private string? _originalName;
     private string? _originalDescription;
@@ -41,7 +44,8 @@ public sealed class UpdateModelingElementCommand : IDiagramCommand
     /// <param name="description">New description, or null when unchanged.</param>
     /// <param name="setProperties">Property values to set (JSON kind preserved), or null.</param>
     /// <param name="removedProperties">Property keys to remove, or null.</param>
-    /// <param name="documents">Diagram documents whose <c>modelElementId</c> nodes are synced.</param>
+    /// <param name="documents">Resolver of the diagram documents whose <c>modelElementId</c>
+    /// nodes are synced — evaluated on every Execute/Undo.</param>
     public UpdateModelingElementCommand(
         string transactionName,
         ModelingElementDto element,
@@ -49,7 +53,7 @@ public sealed class UpdateModelingElementCommand : IDiagramCommand
         string? description,
         Dictionary<string, JsonElement>? setProperties,
         List<string>? removedProperties,
-        IEnumerable<DiagramDocument> documents)
+        Func<IEnumerable<DiagramDocument>>? documents)
     {
         Name = transactionName;
         _element = element ?? throw new ArgumentNullException(nameof(element));
@@ -57,7 +61,7 @@ public sealed class UpdateModelingElementCommand : IDiagramCommand
         _description = description;
         _setProperties = setProperties;
         _removedProperties = removedProperties;
-        _documents = documents?.Where(document => document is not null).Distinct().ToList() ?? [];
+        _documents = documents;
     }
 
     /// <inheritdoc />
@@ -134,9 +138,14 @@ public sealed class UpdateModelingElementCommand : IDiagramCommand
 
     private void SynchronizeDocuments()
     {
-        foreach (var document in _documents)
+        if (_documents is null)
         {
-            var label = _element.Name;
+            return;
+        }
+
+        var label = _element.Name;
+        foreach (var document in _documents.Invoke().Where(document => document is not null).Distinct())
+        {
             foreach (var node in document.Nodes)
             {
                 if (node.Data is not null
