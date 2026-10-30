@@ -12,6 +12,19 @@
 
 ### Breaking / Migration
 
+- **DiagramEditor: the area OUTSIDE the diagram page now follows the theme (phase 15b).** The `.tm-diagram-page-backdrop` rect used to pin the theme-invariant `--tm-paper-backdrop` (gray-100), so in dark mode the white page floated inside a light frame. The paint now rides a new `--tm-diagram-backdrop` token — `var(--tm-paper-backdrop)` (the same gray) in light themes, the workspace tone on the dark/indigo-dark theme roots — so the paper stays white and the canvas turns dark with the rest of the chrome. A host that overrode `--tm-paper-backdrop` *because of the editor* should override `--tm-diagram-backdrop` instead (the old override still works, but it restyles every surface aliased to the paper backdrop):
+  ```css
+  /* before: restyling the editor's canvas backdrop (and everything aliased to the token) */
+  :root { --tm-paper-backdrop: #eef2f7; }
+  /* after: the diagram canvas backdrop alone */
+  .tm-diagram-canvas { --tm-diagram-backdrop: #eef2f7; }
+  ```
+  A host that wants the old always-light canvas back pins the light value on the theme roots:
+  ```css
+  [data-theme="dark"] .tm-diagram-canvas, .tm-dark .tm-diagram-canvas { --tm-diagram-backdrop: var(--tm-paper-backdrop); }
+  ```
+  The literal `fill="#f3f4f6"` fallback attributes on the SVG rects are unchanged (viewers without the stylesheet), and `exportViewportAsSvg` still copies the computed values, so an export carries exactly the paints the user saw.
+
 - **TmModelingEditor previews now show a notation legend card by default (Fáze 15).** `ShowPreviewLegend` defaults to `true`: the desktop/tablet preview renders a collapsible "Legend" card in the canvas's top-right corner (listing only the notation shapes the document uses; collapsed above 12 nodes) and the mobile band gains a "Legend" entry in the compact header "⋯". A host that wants the pre-Fáze-15 look passes `ShowPreviewLegend="false"`:
   ```razor
   <!-- before (2.9.x): no legend -->
@@ -215,6 +228,13 @@
   ```
 
 ### Added
+
+- **`TmChip` gains a pressed toggle variant (phase 15b).** `Pressed` (`bool?`, default `null`) is additive: unset, the chip renders today's `<span>`; set, it renders a native `<button type="button" aria-pressed>` with the same classes plus `tm-chip--pressed`, raises `PressedChanged` with the flipped value (enable `@bind-Pressed`) and renders `disabled` from `Disabled`. With `Removable` the remove button stays a SIBLING of the toggle inside a bare `.tm-chip__shell` wrapper — a button never nests inside a button. Keyboard follows [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md): the browser activates the native button — no Enter/Space emulation, exactly one activation per press; the focus ring is the shared `--tm-focus-ring`, the coarse-pointer floor the shared `--tm-touch-target`, and forced-colors keeps a system outline. New `ChildContent` renders trailing content (a count badge) that joins the chip's accessible name. The wireframe `TmChip` stencil gained the matching `pressed` prop.
+  ```razor
+  <TmChip Label="Error" Pressed="@showErrors" PressedChanged="@v => showErrors = v">
+      <span class="chip-count">@errorCount</span>
+  </TmChip>
+  ```
 
 - **Modeling: notation palette in the "Open in editor" dialog and a preview legend (Fáze 15 of the Modeling redesign plan).** The dialog's toolbox now pins the ACTIVE notation's stencils as the FIRST library (labelled with the notation profile's display name, order preserved) while the rest of the stencil library starts collapsed — and stays searchable across the whole library. The preview carries a collapsible legend card explaining only the notation shapes the generated document actually uses. Both run on one shared catalog and additive DiagramEditor API.
   - **DiagramEditor (all additive — defaults are today's behavior)**: `TmDiagramEditor.PreferredStencilIds` (`IReadOnlyList<string>?`, default `null` = today's toolbox) and `PreferredStencilsLabel` (`string?`) pass through to `TmDiagramToolbox`, which renders the pinned library FIRST (`data-library-id="notation-palette"`, `data-pinned="true"`), collapses every other palette while the set is active (a live search still expands matches everywhere) and treats the pinned library as the "first category" for `CollapseCategoriesExceptFirst` on the mobile Shapes sheet. Unknown preferred ids are ignored. New public `TmDiagramStencilIcon` (`StencilId`, `Size`, `Class`) — the toolbox tile preview pipeline (including the text-trimming) for hosts presenting stencils outside the toolbox; always `aria-hidden`, unknown ids render the generic fallback shape.
@@ -1236,6 +1256,8 @@
 - **overlay.js restores Escape focus immediately again, and waits only for a focus trap.** A non-trap panel (a dropdown, a picker popup) gets its anchor focus back inside `dismiss('escape')`, as before. A `TrapFocus` panel keeps the page inert until it hides, so that restore waits for `hidePanel` (or `release` when the panel node is already gone). A vetoed dismissal clears the pending restore, and the late path still refuses to move a focus that already landed somewhere.
 
 ### Changed
+
+- **`Tempo.Blazor.Modeling` issue panel: the severity chips are core `TmChip`s (phase 15b — DOM classes changed, the test-id/aria contract is unchanged).** The panel no longer hand-rolls its aria-pressed `<button>`; each severity chip is now a `TmChip` in the pressed variant, so the chip carries the core chip vocabulary (`tm-chip tm-chip--outlined tm-chip--md tm-chip--pressed`) NEXT TO the panel's own `tm-modeling-issue-panel__chip[--error|--warning|--info]` classes, and the keyboard/focus/forced-colors story (the shared `--tm-focus-ring`, the coarse-pointer `--tm-touch-target`) comes from the core `_chip.css`. `data-testid="modeling-issue-severity-chip-*"`, `aria-pressed` and the count inside the accessible name are unchanged. A selector written against the removed `.tm-modeling-issue-panel__chip-label` span must target `.tm-chip__label` instead (the panel's compact row sizing and severity palette keep working through the panel hook class).
 
 - **`Tempo.Blazor.Modeling` issue panel: the editor now renders the filter bar above the issue list (Fáze 11 — a new DOM block above the list, NOT breaking unless a host keys off the panel's first child).** `TmModelingEditor` passes `ShowFilterBar="true"` to its issue panel on every band (desktop dock, tablet sheet, mobile Issues tab), so a `.tm-modeling-issue-panel__filterbar` row renders between the header and the list when the model has issues. A host that selects the list as the panel's FIRST descendant (`> div`, `.tm-modeling-issue-panel__content > :first-child`) must now skip the bar or pin `ShowFilterBar="false"`; the default `false` (a standalone `TmModelingIssuePanel` without the binding) keeps the pre-2.10 DOM exactly.
   ```razor

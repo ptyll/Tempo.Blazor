@@ -307,6 +307,14 @@ declared light-only (NOT re-declared in `tokens-dark.css`) so the paper stays wh
 stays dark grey in every theme. Hosts rebrand them by targeting `:root`, `[data-theme="dark"]`
 and `.tm-dark` together, or per-canvas through the aliases below.
 
+The one paper-adjacent surface that DOES follow the theme is the area OUTSIDE the page: the
+`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — light keeps the historical
+paper-backdrop gray (an alias of `--tm-paper-backdrop`, declared in `tokens.css`), and the dark
+theme roots re-map it to the workspace tone (`tokens-dark.css`), so the white page floats on a
+dark canvas instead of inside a light frame (carry-forward F8 m5). Hosts restyle the backdrop by
+overriding `--tm-diagram-backdrop` (per canvas like the aliases below, or on the theme roots);
+overriding `--tm-paper-backdrop` still works but restyles every surface aliased to it.
+
 Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves two
 canvas-scoped aliases declared on `.tm-diagram-canvas`:
 

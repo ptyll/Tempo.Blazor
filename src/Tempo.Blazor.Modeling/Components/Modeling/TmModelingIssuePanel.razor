@@ -76,23 +76,24 @@
             <div class="tm-modeling-issue-panel__filterbar"
                  data-testid="@TestId("modeling-issue-filterbar")">
                 <div class="tm-modeling-issue-panel__chips" role="group" aria-label="@Loc["TmModelingIssuePanel_SeverityFilterLabel"]">
-                    @* Severity chips are NATIVE toggle buttons (aria-pressed): one activation per
-                       press and keyboard reachable by construction — the keyboard-activation
-                       convention rules out an emulated clickable span for a new control. The
-                       visible label carries the localized severity name plus its count. *@
+                    @* Severity chips are the CORE TmChip pressed variant (native toggle buttons,
+                       aria-pressed): one activation per press and keyboard reachable by
+                       construction — the keyboard-activation convention rules out an emulated
+                       clickable span for a new control. The visible label carries the localized
+                       severity name plus its count. *@
                     @foreach (var severity in new[] { ModelingIssueSeverity.Error, ModelingIssueSeverity.Warning, ModelingIssueSeverity.Info })
                     {
-                        <button type="button"
-                                class="@GetChipClass(severity)"
-                                data-testid="@TestId($"modeling-issue-severity-chip-{GetSeverityKey(severity)}")"
-                                aria-pressed="@IsSeverityActive(severity).ToString().ToLowerInvariant()"
-                                @onclick="() => ToggleSeverityAsync(severity)">
-                            <span class="tm-modeling-issue-panel__chip-label">@GetSeverityChipLabel(severity)</span>
+                        <TmChip Label="@GetSeverityChipLabel(severity)"
+                                Pressed="@IsSeverityActive(severity)"
+                                PressedChanged="@(pressed => HandleSeverityChipPressedAsync(severity, pressed))"
+                                Variant="ChipVariant.Outlined"
+                                Class="@GetChipClass(severity)"
+                                data-testid="@TestId($"modeling-issue-severity-chip-{GetSeverityKey(severity)}")">
                             @* Review fix (Fáze 11): the count is NOT aria-hidden — it belongs to
                                the chip's accessible name ("Error 2"), so the number reaches
                                assistive tech without a second announcement mechanism. *@
                             <span class="tm-modeling-issue-panel__chip-count">@CountBySeverity(severity)</span>
-                        </button>
+                        </TmChip>
                     }
                 </div>
                 @* The input and the select sit in PANEL-OWNED wrappers: the compact single-row

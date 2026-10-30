@@ -13,23 +13,25 @@
 @* Demo only: the modeling editor resolves its layout from its own container width (desktop from
    1200, the DiagramEditor pair; the tablet band is 768-1199 — phase 6). With the 296px demo
    sidebar a 1440 viewport leaves it ~1080px, so from 1264px up (the 1200px desktop floor + the
-   layout's 2rem side padding) this page collapses the sidebar AND lifts the layout's max-w-7xl
-   (1280px) cap, giving the editor the full width of the viewport as soon as it can afford the
-   desktop dock (a link back to the demo index stays in the header) — the 1280x800 and 1440x900
+   layout's 2rem side padding) this page collapses the sidebar AND lifts the content's max-width
+   cap, giving the editor the full width of the viewport as soon as it can afford the desktop
+   dock (a link back to the demo index stays in the header) — the 1280x800 and 1440x900
    baselines show the full docked desktop workspace. From 1024px up (the tablet band's floor plus
    the same padding) the sidebar hides too, so a 1024/1180 touch viewport lands the editor in the
    768-1199 tablet band (960/1116px of container) instead of the compact workspace — the tablet
-   E2E and the tablet baselines need that band reachable. The library breakpoints are untouched. *@
+   E2E and the tablet baselines need that band reachable. The library breakpoints are untouched.
+   Phase 15b: the collapse targets the STABLE data-demo-shell attributes on the demo layout
+   (aside/main/page-body) instead of Tailwind utility class names, and the index link rides
+   --tm-text-link so the theme recolours it without a hex fallback. *@
 <style>
     @@media (min-width: 1024px) {
-        .demo-shell:has(.modeling-demo-page) aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }
-        .demo-shell:has(.modeling-demo-page) main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
-        .demo-shell:has(.modeling-demo-page) main .max-w-7xl { max-width: none !important; }
+        .demo-shell:has(.modeling-demo-page) [data-demo-shell="sidebar"] { display: none !important; }
+        .demo-shell:has(.modeling-demo-page) [data-demo-shell="main"] { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+        .demo-shell:has(.modeling-demo-page) [data-demo-shell="page-body"] { max-width: none !important; }
     }
     .modeling-demo-page__index-link { display: none; }
     @@media (min-width: 1024px) {
-        .modeling-demo-page__index-link { display: inline-block; margin-top: 1rem; scroll-margin-top: 5rem; color: var(--tm-color-primary-700, #1d4ed8); text-decoration: underline; }
-        .dark .modeling-demo-page__index-link, [data-theme="dark"] .modeling-demo-page__index-link { color: var(--tm-color-primary-300, #93c5fd); }
+        .modeling-demo-page__index-link { display: inline-block; margin-top: 1rem; scroll-margin-top: 5rem; color: var(--tm-text-link); text-decoration: underline; }
     }
     /* Fáze 7 review (above the fold): the editor's default height contract (min(768px, 100vh - 32px))
        plus the demo chrome (fixed 4rem mobile header + ~4.5rem top bar + the 2rem page padding)

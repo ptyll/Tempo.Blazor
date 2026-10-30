@@ -1056,6 +1056,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("removable", "Removable", PropType.Bool,   true,      cat: "Behavior"),
                 P("variant",   "Variant",   PropType.Enum,   "default", cat: "Appearance",
                     opts: ["default","primary","success","danger","warning"]),
+                // Phase 15b: the toggle variant (native <button aria-pressed>) — the wireframe
+                // draws the pressed look, the same contract as the toolbar button.
+                P("pressed",   "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 

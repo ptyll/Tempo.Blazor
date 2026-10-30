@@ -9183,7 +9183,7 @@
       "kind": "Component",
       "category": "Data Display",
       "namespace": "Tempo.Blazor.Components.DataDisplay",
-      "description": "Small labelled element with Soft, Filled, and Outlined variants, optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
+      "description": "Small labelled element with Soft, Filled, and Outlined variants, an optional pressed toggle variant (a native <button aria-pressed> via Pressed/PressedChanged with trailing ChildContent for a count), optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmChip.razor",
       "documentationStatus": "merged",
@@ -9191,6 +9191,12 @@
         "@using Tempo.Blazor.Components.DataDisplay"
       ],
       "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional trailing content (e.g. a count badge) rendered after the label. It is part of the chip's visible content and therefore of its accessible name - do NOT aria-hide it."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -9241,6 +9247,19 @@
           "description": "Fires when remove is clicked."
         },
         {
+          "name": "Pressed",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Pressed state of the TOGGLE variant. null (the default) keeps the legacy <span> chip; any value renders a NATIVE <button type=\"button\" aria-pressed> with the same classes plus tm-chip--pressed. Per docs/keyboard-activation-convention.md the button activates natively - the component adds NO Enter/Space emulation, so a press raises the event exactly once. The value is host-owned: the toggle raises PressedChanged with the flipped value and never mutates the parameter (enable @bind-Pressed). Pressed and Clickable/OnClick are exclusive paths.",
+          "default": "null"
+        },
+        {
+          "name": "PressedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the user presses a pressed chip with the flipped value; enables @bind-Pressed."
+        },
+        {
           "name": "Removable",
           "type": "bool",
           "isRequired": false,
@@ -9278,7 +9297,9 @@
         "tm-chip--selected",
         "tm-chip__icon",
         "tm-chip__label",
-        "tm-chip__remove"
+        "tm-chip__remove",
+        "tm-chip--pressed",
+        "tm-chip__shell"
       ],
       "examples": [
         {
@@ -9288,6 +9309,10 @@
         {
           "title": "Clickable chip with icon and custom color",
           "code": "<TmChip Label=\"Priority: High\"\n        Icon=\"flag\"\n        Color=\"#ef4444\"\n        Variant=\"ChipVariant.Filled\"\n        Clickable=\"true\"\n        Selected=\"@isSelected\"\n        OnClick=\"ToggleSelection\" />"
+        },
+        {
+          "title": "Pressed toggle chip with a count",
+          "code": "<TmChip Label=\"Error\"\n        Pressed=\"@isErrorActive\"\n        PressedChanged=\"@v => isErrorActive = v\">\n    <span class=\"chip-count\">@errorCount</span>\n</TmChip>"
         }
       ]
     },

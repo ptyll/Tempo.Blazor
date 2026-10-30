@@ -418,6 +418,41 @@ public sealed class TmModelingIssuePanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Severity_chips_use_core_TmChip_pressed()
+    {
+        // Phase 15b carry-forward: the severity chips ARE core TmChips (the pressed variant) —
+        // the panel no longer hand-rolls its own aria-pressed button. The stable contract that
+        // hosts and E2E key off (data-testid, counts in the accessible name) is unchanged.
+        IReadOnlyCollection<ModelingIssueSeverity>? raised = null;
+        using var cut = Render<TmModelingIssuePanel>(parameters => parameters
+            .Add(p => p.Issues, CreateCountedIssues())
+            .Add(p => p.ShowFilterBar, true)
+            .Add(p => p.SeverityFilterChanged, EventCallback.Factory
+                .Create<IReadOnlyCollection<ModelingIssueSeverity>?>(this, value => raised = value)));
+
+        var errorChip = cut.Find("[data-testid='modeling-issue-severity-chip-error']");
+        errorChip.TagName.Should().Be("BUTTON", "the core TmChip pressed variant is a native button");
+        errorChip.ClassList.Should().Contain("tm-chip", "the chip carries the core vocabulary");
+        errorChip.ClassList.Should().Contain("tm-modeling-issue-panel__chip", "the panel keeps its own hook class");
+        errorChip.ClassList.Should().Contain("tm-chip--pressed",
+            "every severity chip is the toggle VARIANT (aria-pressed carries the state)");
+        errorChip.GetAttribute("aria-pressed").Should().Be("false", "no severity filter is active initially");
+        errorChip.TextContent.Should().Contain("Error").And.Contain("2", "the count stays in the accessible name");
+
+        errorChip.Click();
+        cut.WaitForAssertion(() =>
+        {
+            var active = cut.Find("[data-testid='modeling-issue-severity-chip-error']");
+            active.ClassList.Should().Contain("tm-chip--pressed", "the core pressed class flips with the state");
+            active.GetAttribute("aria-pressed").Should().Be("true");
+        });
+        raised.Should().NotBeNull();
+
+        // Toggling through the core path keeps filtering the list.
+        cut.WaitForAssertion(() => VisibleMessages(cut).Should().HaveCount(2));
+    }
+
+    [Fact]
     public void Filter_text_matches_message_category_and_source_name_case_insensitive()
     {
         using var cut = Render<TmModelingIssuePanel>(parameters => parameters

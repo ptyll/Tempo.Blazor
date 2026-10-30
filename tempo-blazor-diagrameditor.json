@@ -4972,6 +4972,12 @@
           "title": "Tablet layout in a fixed-width host pane",
           "code": "<div style=\"width: 1100px\"><TmDiagramEditor Document=\"@document\" /></div>"
         }
+      ],
+      "cssVariables": [
+        {
+          "name": "--tm-diagram-backdrop",
+          "description": "Fill of the area OUTSIDE the diagram page (.tm-diagram-page-backdrop). Follows the THEME: light keeps the historical --tm-paper-backdrop gray, a dark theme re-maps it to the workspace tone so the white paper floats on a dark canvas. Override this token (not --tm-paper-backdrop) to restyle the backdrop."
+        }
       ]
     },
     {

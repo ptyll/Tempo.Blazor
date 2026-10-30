@@ -1098,7 +1098,7 @@
         },
         {
           "name": "tm-modeling-issue-panel__chip",
-          "description": "A severity filter chip - a native toggle button carrying aria-pressed and the per-severity count."
+          "description": "Panel hook on the severity filter chips - the chips are CORE TmChips in the pressed variant (native toggle buttons carrying aria-pressed and the per-severity count); the panel class adds the compact row sizing and the severity palette."
         },
         {
           "name": "tm-modeling-issue-panel__filter-input",

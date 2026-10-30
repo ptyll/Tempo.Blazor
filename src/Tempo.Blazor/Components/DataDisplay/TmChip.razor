@@ -1,27 +1,48 @@
 @namespace Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Icons
 
-<span class="tm-chip @VariantCss @SizeCss @(Selected ? "tm-chip--selected" : "") @(Clickable ? "tm-chip--clickable" : "") @(Disabled ? "tm-chip-disabled" : "") @Class"
-      style="@ColorStyle"
-      @onclick="HandleClick"
-      @attributes="AdditionalAttributes">
-    @if (!string.IsNullOrEmpty(Icon))
-    {
-        <span class="tm-chip__icon">
-            <TmIcon Name="@Icon" Size="IconSize.Xs" />
-        </span>
-    }
-    <span class="tm-chip__label">@Label</span>
-    @if (Removable)
-    {
-        <button type="button" class="tm-chip__remove" aria-label="@Loc["TmChip_Remove"]" @onclick="HandleRemove" @onclick:stopPropagation="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+@if (Pressed is null)
+{
+    <span class="@RootCss"
+          style="@ColorStyle"
+          @onclick="HandleClick"
+          @attributes="AdditionalAttributes">
+        @ChipContent
+        @if (Removable)
+        {
+            @RemoveButton
+        }
+    </span>
+}
+else if (Removable)
+{
+    @* A remove button must never nest inside the pressed toggle button (HTML forbids a
+       <button> inside a <button>): the shell wrapper keeps the two as SIBLINGS. The chip
+       classes live on the pressed BUTTON so selectors keying on the chip root keep working. *@
+    <span class="tm-chip__shell" @attributes="AdditionalAttributes">
+        <button type="button"
+                class="@RootCss"
+                style="@ColorStyle"
+                aria-pressed="@(Pressed.Value ? "true" : "false")"
+                disabled="@Disabled"
+                @onclick="HandleToggle">
+            @ChipContent
         </button>
-    }
-</span>
+        @RemoveButton
+    </span>
+}
+else
+{
+    <button type="button"
+            class="@RootCss"
+            style="@ColorStyle"
+            aria-pressed="@(Pressed.Value ? "true" : "false")"
+            disabled="@Disabled"
+            @onclick="HandleToggle"
+            @attributes="AdditionalAttributes">
+        @ChipContent
+    </button>
+}
 
 @code {
     /// <summary>Chip label text.</summary>
@@ -57,6 +78,27 @@
     /// <summary>Whether the chip is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Pressed state of the TOGGLE variant. <c>null</c> (the default) keeps the legacy
+    /// <c>&lt;span&gt;</c> chip; any value renders a NATIVE <c>&lt;button type="button"
+    /// aria-pressed&gt;</c> with the same classes plus <c>tm-chip--pressed</c>. Per
+    /// docs/keyboard-activation-convention.md the button activates natively — the component
+    /// adds NO Enter/Space emulation, so a press raises the event exactly once. The value is
+    /// host-owned: the toggle raises <see cref="PressedChanged"/> with the flipped value and
+    /// never mutates the parameter (enable <c>@bind-Pressed</c>). Pressed and
+    /// <see cref="Clickable"/>/<see cref="OnClick"/> are exclusive paths.
+    /// </summary>
+    [Parameter] public bool? Pressed { get; set; }
+
+    /// <summary>Raised when the user presses a pressed chip with the flipped value; enables <c>@bind-Pressed</c>.</summary>
+    [Parameter] public EventCallback<bool> PressedChanged { get; set; }
+
+    /// <summary>
+    /// Optional trailing content (e.g. a count badge) rendered after the label. It is part of
+    /// the chip's visible content and therefore of its accessible name — do NOT aria-hide it.
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -76,13 +118,60 @@
         _ => "tm-chip--md"
     };
 
+    /// <summary>The full class list; the pressed variant adds <c>tm-chip--pressed</c> and drops
+    /// the click affordance (the toggle carries its own).</summary>
+    private string RootCss => string.Join(" ", new[]
+    {
+        "tm-chip",
+        VariantCss,
+        SizeCss,
+        Selected ? "tm-chip--selected" : null,
+        Pressed is null && Clickable ? "tm-chip--clickable" : null,
+        Pressed is not null ? "tm-chip--pressed" : null,
+        Disabled ? "tm-chip-disabled" : null,
+        Class
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
     private string? ColorStyle => !string.IsNullOrEmpty(Color) ? $"--tm-chip-color: {Color};" : null;
+
+    /// <summary>The shared chip body — icon, label and the trailing child content — so the
+    /// span root, the pressed button and the removable wrapper can never drift.</summary>
+    private RenderFragment ChipContent => @<text>
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <span class="tm-chip__icon">
+                <TmIcon Name="@Icon" Size="IconSize.Xs" />
+            </span>
+        }
+        <span class="tm-chip__label">@Label</span>
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </text>;
+
+    private RenderFragment RemoveButton => @<button type="button"
+            class="tm-chip__remove"
+            aria-label="@Loc["TmChip_Remove"]"
+            @onclick="HandleRemove"
+            @onclick:stopPropagation="true">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+    </button>;
 
     private async Task HandleClick()
     {
         if (Disabled) return;
         if (Clickable)
             await OnClick.InvokeAsync();
+    }
+
+    private async Task HandleToggle()
+    {
+        if (Disabled || Pressed is null) return;
+        await PressedChanged.InvokeAsync(!Pressed.Value);
     }
 
     private async Task HandleRemove()

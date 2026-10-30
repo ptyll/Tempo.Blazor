@@ -374,22 +374,15 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     min-width: 0;
 }
 
-/* Severity chips are native toggle buttons (aria-pressed): one activation per press and
-   keyboard reachable by construction. Styling follows the chip vocabulary with tokens only. */
+/* Severity chips are the CORE TmChip pressed variant (native toggle buttons, aria-pressed).
+   The core sheet owns the chip vocabulary — layout, radius, font, the focus ring, the
+   coarse-pointer floor and forced-colors — so the panel keeps only the compact row sizing and
+   the severity palette: a bordered surface chip at rest, the severity tint while pressed. */
 .tm-modeling-issue-panel__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
     min-height: var(--tm-space-7);
-    padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-full, var(--tm-radius-md));
+    border-color: var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-medium);
-    line-height: var(--tm-line-height-tight);
-    cursor: pointer;
 }
 
 .tm-modeling-issue-panel__chip:hover {
@@ -402,11 +395,6 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
     color: var(--tm-color-primary);
-}
-
-.tm-modeling-issue-panel__chip:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: 2px;
 }
 
 .tm-modeling-issue-panel__chip--error[aria-pressed="true"] {

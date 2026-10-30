@@ -1435,6 +1435,8 @@ Chip/tag element s variantami.
 | `tm-chip--filled` / `--outlined` / `--soft` | Varianta |
 | `tm-chip--sm` / `--md` | Velikost |
 | `tm-chip--selected` / `--clickable` | Stavy |
+| `tm-chip--pressed` | Přepínací varianta (nativní `<button aria-pressed>`) |
+| `tm-chip__shell` | Obal pro pressed + removable (odebrání zůstává sourozenec) |
 | `tm-chip__icon` / `__label` / `__remove` | Části |
 
 #### Parametry
@@ -1451,6 +1453,9 @@ Chip/tag element s variantami.
 | `Clickable` | `bool` | `false` | Klikatelný |
 | `OnClick` | `EventCallback` | — | Událost kliknutí |
 | `Selected` | `bool` | `false` | Vybraný stav |
+| `Pressed` | `bool?` | `null` | Přepínací varianta: `null` = dnešní `<span>`, jinak nativní `<button aria-pressed>` |
+| `PressedChanged` | `EventCallback<bool>` | — | Zvedne překlopenou hodnotu (`@bind-Pressed`) |
+| `ChildContent` | `RenderFragment?` | `null` | Obsah za labelem (počet), součást přístupného názvu |
 | `Disabled` | `bool` | `false` | Zakáže chip |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
@@ -1462,6 +1467,10 @@ Chip/tag element s variantami.
 <TmChip Label="C#" Variant="ChipVariant.Filled" Icon="@IconNames.Code" />
 <TmChip Label="Nový" Variant="ChipVariant.Outlined" Removable="true" OnRemove="RemoveTag" />
 <TmChip Label="Filtr" Clickable="true" Selected="_isSelected" OnClick="ToggleFilter" />
+@* Přepínač (Fáze 15b): nativní button s aria-pressed, počet v přístupném názvu *@
+<TmChip Label="Chyby" Pressed="@_errors" PressedChanged="@v => _errors = v">
+    <span>@_errorCount</span>
+</TmChip>
 ```
 
 ### TmChipGroup

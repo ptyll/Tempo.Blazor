@@ -528,12 +528,20 @@ public partial class TmModelingIssuePanel
         return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
-    private async Task ToggleSeverityAsync(ModelingIssueSeverity severity)
+    /// <summary>Applies the core TmChip toggle to the severity filter: pressed adds the
+    /// severity, released removes it — an empty set is the "all severities" <c>null</c>
+    /// contract. Mirrors the old toggle path, driven by the chip's pressed VALUE instead of
+    /// an inversion (the chip raises the new state, not a click).</summary>
+    private async Task HandleSeverityChipPressedAsync(ModelingIssueSeverity severity, bool pressed)
     {
         var next = new HashSet<ModelingIssueSeverity>(_activeSeverities ?? []);
-        if (!next.Remove(severity))
+        if (pressed)
         {
             next.Add(severity);
+        }
+        else
+        {
+            next.Remove(severity);
         }
 
         _activeSeverities = next.Count > 0 ? next : null;

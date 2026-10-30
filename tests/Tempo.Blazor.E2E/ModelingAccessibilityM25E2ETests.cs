@@ -213,6 +213,56 @@ public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("The canvas area OUTSIDE the page follows the theme (phase 15b): in the open-editor dialog the dark backdrop is dark (not a light frame around the white paper), light keeps the paper-backdrop gray")]
+    public async Task CanvasBackdrop_FollowsTheTheme()
+    {
+        static string? BackdropFill(IPage page) => page.EvaluateAsync<string?>(
+            """
+            () => {
+                const rect = document.querySelector("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas'] .tm-diagram-page-backdrop");
+                return rect ? getComputedStyle(rect).fill : null;
+            }
+            """).GetAwaiter().GetResult();
+
+        static int[] Rgb(string fill) => fill.Split(',')
+            .Select(part => int.Parse(part.Trim().TrimStart("rgb(".ToCharArray()).TrimEnd(')')))
+            .ToArray();
+
+        // The page-backdrop rect renders only where the embedded editor shows the page view —
+        // the modeling preview runs ShowPageView=false, so the probe targets the embedded
+        // editor inside the "Open in editor" dialog (the surface F8 m5 shipped the defect on).
+        var light = await OpenEditorDialogAsync("?scenario=issues-mixed");
+        var lightFill = BackdropFill(light);
+        Assert.IsNotNull(lightFill, "the dialog's embedded canvas renders the page-backdrop rect");
+        var lightRgb = Rgb(lightFill!);
+        Assert.IsTrue(lightRgb[0] > 200 && lightRgb[1] > 200 && lightRgb[2] > 200,
+            $"light backdrop stays the paper-backdrop gray, got '{lightFill}'");
+        Assert.IsFalse(lightRgb[0] > 250 && lightRgb[1] > 250 && lightRgb[2] > 250,
+            $"light backdrop is the gray-100 paper backdrop, not the white paper itself, got '{lightFill}'");
+
+        var dark = await OpenEditorDialogAsync("?scenario=issues-mixed", dark: true);
+        var darkFill = BackdropFill(dark);
+        Assert.IsNotNull(darkFill, "the dark dialog's embedded canvas renders the page-backdrop rect");
+        var darkRgb = Rgb(darkFill!);
+        Assert.IsTrue(darkRgb[0] < 80 && darkRgb[1] < 80 && darkRgb[2] < 80,
+            $"dark backdrop follows the theme (workspace tone), got '{darkFill}' — a light frame around the paper is the F8 m5 defect");
+    }
+
+    /// <summary>Opens the modeling page and the "Open in editor" dialog, waiting for the
+    /// embedded DiagramEditor canvas to be visible (the same waits the M23 demo route uses).</summary>
+    private async Task<IPage> OpenEditorDialogAsync(string query, bool dark = false)
+    {
+        var page = await OpenLoadedModelingPageAsync(query, dark);
+        await page.Locator("[data-testid='modeling-open-in-editor-button']").ClickAsync();
+        await page.Locator("[data-testid='modeling-open-diagram-editor']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.Locator("[data-testid='modeling-open-diagram-editor'] [data-testid='diagram-canvas']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.WaitForTimeoutAsync(300);
+        return page;
+    }
+
+    [TestMethod]
     [Description("Forced-colors mode keeps toolbar, panels, focus outlines, and status surface distinguishable")]
     public async Task ForcedColors_KeepsToolbarAndPanelsDistinguishable()
     {

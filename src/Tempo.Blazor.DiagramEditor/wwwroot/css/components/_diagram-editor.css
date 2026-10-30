@@ -3181,8 +3181,12 @@ line.tm-diagram-rotate-handle-stem {
 /* The page rects keep literal fill/stroke ATTRIBUTES as a fallback for viewers without
    the stylesheet; CSS beats presentation attributes on screen, so the tokens (and any host
    override) win in the editor. exportViewportAsSvg additionally copies the computed values
-   onto the serialized clone, so an export always carries the paints the user actually saw. */
-.tm-diagram-page-backdrop { fill: var(--tm-paper-backdrop); }
+   onto the serialized clone, so an export always carries the paints the user actually saw.
+   The backdrop is the area OUTSIDE the page and follows the THEME (carry-forward F8 m5):
+   --tm-diagram-backdrop keeps the historical paper-backdrop gray in light themes and flips
+   to the workspace tone in dark ones (declared in tokens.css / tokens-dark.css — a dark
+   override may not live in a component stylesheet). The paper itself stays theme-invariant. */
+.tm-diagram-page-backdrop { fill: var(--tm-diagram-backdrop); }
 .tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-paper-border); }
 
 /* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
