@@ -303,9 +303,9 @@ public sealed class MarkupClassCoverageTests
         "tm-signing-field-editor-panel__signature-id",
         "tm-signing-field-editor-panel__stamp-logo",
         "tm-signing-form-runner--accessibility",
-        "tm-signing-form-runner__mobile-panel--collapsed",
         "tm-signing-number-step",
         "tm-signing-phone-step",
+        "tm-signing-signature-step",
         "tm-signing-step-shell--invalid",
         "tm-signing-step-shell--required",
         "tm-signing-text-step",
@@ -415,7 +415,14 @@ public sealed class MarkupClassCoverageTests
             ExpectedUnmeasurableStems: 53),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
-            ExpectedUnmeasurableStems: 6),
+            // Signing redesign phase 2 (B25): the runner's single step panel id
+            // ("tm-signing-runner-panel-{Guid…}"), the choice step's per-instance radio name
+            // ("tm-signing-choice-{Guid…}") and hint id ("tm-signing-choice-hint-{Guid…}") and the
+            // per-instance accessible ids the step components own ("tm-signing-step-title-{Guid…}",
+            // "tm-signing-step-description-{…}", "tm-signing-step-validation-{Guid…}") joined the
+            // scanned population; the text step's old "tm-signing-text-validation-{Guid…}" stem
+            // merged into the shared step-validation stem — 6 → 11.
+            ExpectedUnmeasurableStems: 11),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 17),

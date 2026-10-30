@@ -23,6 +23,13 @@ public partial class TmSigningPhoneStep
     private bool _codeSent;
     private string? _validationMessage;
 
+    // Per-instance accessible plumbing (Signing redesign phase 2): ids are owned by THIS component
+    // instance and handed to the shell, so two rendered steps never share an id even when they
+    // represent the same field uuid.
+    private readonly string _titleId = $"tm-signing-step-title-{Guid.NewGuid():N}";
+    private readonly string _descriptionId = $"tm-signing-step-description-{Guid.NewGuid():N}";
+    private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
+
     /// <summary>Signing field represented by this step.</summary>
     [Parameter] public SigningField Field { get; set; } = new() { Type = SigningFieldType.Phone };
 
@@ -81,7 +88,46 @@ public partial class TmSigningPhoneStep
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The runner's step validation, cascaded by <see cref="TmSigningFormRunner"/> (absent for standalone steps).</summary>
+    [CascadingParameter(Name = "TmSigningRunnerValidation")]
+    private string? RunnerValidationMessage { get; set; }
+
     private string ShellClass => string.Join(" ", new[] { "tm-signing-phone-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));
+
+    private bool HasDescription => !string.IsNullOrWhiteSpace(SigningTextResolver.FieldDescription(Field, Culture, FallbackCulture));
+
+    /// <summary>The message the shell renders as the step's single alert (own message first, then the runner's).</summary>
+    private string? EffectiveValidationMessage => !string.IsNullOrWhiteSpace(_validationMessage)
+        ? _validationMessage
+        : RunnerValidationMessage;
+
+    private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);
+
+    /// <summary>
+    /// The ids the phone input references — per-instance, and the SAME instances the shell renders
+    /// (they are passed to the shell as parameters), so every reference resolves inside the
+    /// rendered DOM (Signing redesign phase 2).
+    /// </summary>
+    private string? DescribedBy
+    {
+        get
+        {
+            var parts = new List<string>(2);
+            if (HasDescription)
+            {
+                parts.Add(_descriptionId);
+            }
+
+            if (HasValidationMessage)
+            {
+                parts.Add(_validationId);
+            }
+
+            return parts.Count == 0 ? null : string.Join(" ", parts);
+        }
+    }
+
+    private static string BoolText(bool value) => value ? "true" : "false";
 
     private string PhonePlaceholderText => SigningLocalizationResolver.ResolveFieldPlaceholder(Field, Culture, FallbackCulture, Loc["TmSigningStep_PhonePlaceholder"]);
 

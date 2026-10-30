@@ -2,7 +2,10 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@_validationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
@@ -10,26 +13,37 @@
                     @attributes="AdditionalAttributes">
     @if (IsCheckboxGroup)
     {
-        <div class="tm-signing-choice-step__hint">@Loc["TmSigningStep_CheckboxGroupHint"]</div>
-        <div class="tm-signing-choice-step__options">
-            @foreach (var checkboxField in CheckboxFields)
-            {
-                <label class="tm-signing-choice-step__option">
-                    <input type="checkbox"
-                           class="tm-signing-choice-step__checkbox"
-                           checked="@IsGroupCheckboxChecked(checkboxField)"
-                           disabled="@Disabled"
-                           @onchange="args => HandleGroupCheckboxChangedAsync(checkboxField, args)" />
-                    <span>@GetFieldLabel(checkboxField)</span>
-                </label>
-            }
-        </div>
+        @* The group is a real fieldset named by a visually hidden legend; each checkbox is named
+           by its own wrapping label. The fieldset carries the hint / description / validation ids
+           and the invalid state while the step shows a message. *@
+        <fieldset class="tm-signing-choice-step__group"
+                  aria-invalid="@InvalidText"
+                  aria-describedby="@GroupDescribedBy">
+            <legend class="tm-signing-choice-step__legend tm-sr-only">@GroupLegendText</legend>
+            <div id="@_hintId" class="tm-signing-choice-step__hint">@Loc["TmSigningStep_CheckboxGroupHint"]</div>
+            <div class="tm-signing-choice-step__options">
+                @foreach (var checkboxField in CheckboxFields)
+                {
+                    <label class="tm-signing-choice-step__option">
+                        <input type="checkbox"
+                               class="tm-signing-choice-step__checkbox"
+                               checked="@IsGroupCheckboxChecked(checkboxField)"
+                               disabled="@Disabled"
+                               @onchange="args => HandleGroupCheckboxChangedAsync(checkboxField, args)" />
+                        <span>@GetFieldLabel(checkboxField)</span>
+                    </label>
+                }
+            </div>
+        </fieldset>
     }
     else if (Field.Type == SigningFieldType.Select)
     {
         <select class="tm-signing-choice-step__select"
                 value="@SingleValue"
                 disabled="@Disabled"
+                aria-labelledby="@_titleId"
+                aria-describedby="@DescribedBy"
+                aria-invalid="@InvalidText"
                 @onchange="HandleSingleValueChangedAsync">
             <option value="">@Loc["TmSigningStep_SelectPlaceholder"]</option>
             @foreach (var option in Field.Options)
@@ -40,38 +54,50 @@
     }
     else if (Field.Type == SigningFieldType.Radio)
     {
-        <div class="tm-signing-choice-step__options" role="radiogroup">
-            @foreach (var option in Field.Options)
-            {
-                <label class="tm-signing-choice-step__option">
-                    <input type="radio"
-                           name="@Field.Uuid"
-                           class="tm-signing-choice-step__radio"
-                           value="@option.Uuid"
-                           checked="@string.Equals(SingleValue, option.Uuid, StringComparison.Ordinal)"
-                           disabled="@Disabled"
-                           @onchange="args => HandleSingleValueChangedAsync(args)" />
-                    <span>@GetOptionLabel(option)</span>
-                </label>
-            }
-        </div>
+        @* The radio group is a fieldset named by a visually hidden legend; the name is unique per
+            component instance so two rendered groups never merge into one browser-level group. *@
+        <fieldset class="tm-signing-choice-step__group"
+                  aria-invalid="@InvalidText"
+                  aria-describedby="@DescribedBy">
+            <legend class="tm-signing-choice-step__legend tm-sr-only">@GroupLegendText</legend>
+            <div class="tm-signing-choice-step__options">
+                @foreach (var option in Field.Options)
+                {
+                    <label class="tm-signing-choice-step__option">
+                        <input type="radio"
+                               name="@_radioName"
+                               class="tm-signing-choice-step__radio"
+                               value="@option.Uuid"
+                               checked="@string.Equals(SingleValue, option.Uuid, StringComparison.Ordinal)"
+                               disabled="@Disabled"
+                               @onchange="args => HandleSingleValueChangedAsync(args)" />
+                        <span>@GetOptionLabel(option)</span>
+                    </label>
+                }
+            </div>
+        </fieldset>
     }
     else if (Field.Type == SigningFieldType.Multiple)
     {
-        <div class="tm-signing-choice-step__options">
-            @foreach (var option in Field.Options)
-            {
-                <label class="tm-signing-choice-step__option">
-                    <input type="checkbox"
-                           class="tm-signing-choice-step__checkbox"
-                           value="@option.Uuid"
-                           checked="@SelectedValues.Contains(option.Uuid)"
-                           disabled="@Disabled"
-                           @onchange="args => HandleMultipleValueChangedAsync(option.Uuid, args)" />
-                    <span>@GetOptionLabel(option)</span>
-                </label>
-            }
-        </div>
+        <fieldset class="tm-signing-choice-step__group"
+                  aria-invalid="@InvalidText"
+                  aria-describedby="@DescribedBy">
+            <legend class="tm-signing-choice-step__legend tm-sr-only">@GroupLegendText</legend>
+            <div class="tm-signing-choice-step__options">
+                @foreach (var option in Field.Options)
+                {
+                    <label class="tm-signing-choice-step__option">
+                        <input type="checkbox"
+                               class="tm-signing-choice-step__checkbox"
+                               value="@option.Uuid"
+                               checked="@SelectedValues.Contains(option.Uuid)"
+                               disabled="@Disabled"
+                               @onchange="args => HandleMultipleValueChangedAsync(option.Uuid, args)" />
+                        <span>@GetOptionLabel(option)</span>
+                    </label>
+                }
+            </div>
+        </fieldset>
     }
     else
     {
@@ -80,6 +106,7 @@
                    class="tm-signing-choice-step__checkbox"
                    checked="@BoolValue"
                    disabled="@Disabled"
+                   aria-invalid="@InvalidText"
                    @onchange="HandleCheckboxChangedAsync" />
             <span>@(AnonymousCheckbox ? Loc["TmSigningStep_CheckboxInstruction"] : GetFieldLabel(Field))</span>
         </label>

@@ -44,38 +44,58 @@
             }
         </div>
 
-        <aside class="tm-signing-form-runner__steps" data-testid="@TestId("signing-runner-steps")">
-            @RenderStepPanel(false)
-        </aside>
-
-        <div class="@MobilePanelClass" data-complete-target="@MobileCompleteTargetSelector">
-            @if (!_mobileExpanded)
-            {
+        @* B25 (Signing redesign phase 2): the steps rail hosts the ONE step panel. The column vs.
+           mobile-sheet presentation is CSS only (@container tm-signing-runner); the sheet state is
+           carried by the --sheet-collapsed / --sheet-expanded classes below, so the panel content
+           exists exactly once in the DOM at every width. *@
+        <aside class="@StepsClass"
+               data-testid="@TestId("signing-runner-steps")"
+               data-complete-target="@MobileCompleteTargetSelector">
+            <div class="tm-signing-form-runner__sheet-bar">
+                @* BOTH affordances always render — CSS hides the one that does not match the
+                   current sheet state, so a toggle focus move (OnAfterRenderAsync) can target the
+                   button that becomes visible. aria-expanded describes the sheet state. *@
                 <button type="button"
                         class="tm-signing-form-runner__mobile-expand"
+                        aria-expanded="@BoolText(_sheetExpanded)"
+                        aria-controls="@_stepPanelId"
+                        @ref="_mobileExpandButton"
                         @onclick="ExpandMobilePanel">
                     @Loc["TmSigningFormRunner_SignNow"]
                 </button>
-            }
-            else
-            {
                 <button type="button"
                         class="tm-signing-form-runner__mobile-minimize"
-                        @onclick="MinimizeMobilePanel"
-                        aria-label="@Loc["TmSigningFormRunner_Minimize"]">
+                        aria-expanded="@BoolText(_sheetExpanded)"
+                        aria-controls="@_stepPanelId"
+                        aria-label="@Loc["TmSigningFormRunner_Minimize"]"
+                        @ref="_mobileMinimizeButton"
+                        @onclick="MinimizeMobilePanel">
                     @Loc["TmSigningFormRunner_Minimize"]
                 </button>
-                @RenderStepPanel(true)
-            }
-        </div>
+            </div>
+
+            <CascadingValue Value="_stepFocusSignal" IsFixed="true">
+                <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
+                    @RenderStepPanel()
+                </CascadingValue>
+            </CascadingValue>
+        </aside>
     }
     </div>
 </div>
 
 @code {
-    private RenderFragment RenderStepPanel(bool mobile) => @<div class="tm-signing-form-runner__step-panel" data-mobile="@BoolText(mobile)">
+    // INVARIANT (Signing redesign phase 2, bug B25): RenderStepPanel renders the ONE step panel
+    // instance of the runner — the desktop rail and the mobile bottom sheet are CSS presentations
+    // of it, never a second copy. The Phase 9 migration of this panel into a shared TmDrawer MUST
+    // MOVE this exact instance into the sheet host (moving the RenderFragment / element), never
+    // render it twice; the bUnit gate Runner_RendersExactlyOneStepShell_AndOneSignatureCapture
+    // and the E2E SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
+    private RenderFragment RenderStepPanel() => @<div id="@_stepPanelId" class="tm-signing-form-runner__step-panel">
         <div class="tm-signing-form-runner__progress"
              role="status"
+             aria-live="polite"
+             aria-atomic="true"
              aria-label="@ProgressAriaLabel">
             @Loc["TmSigningFormRunner_Progress", CurrentStepIndex + 1, Plan.Steps.Count]
         </div>
@@ -181,13 +201,15 @@
                         break;
                     case SigningFieldType.Signature:
                     case SigningFieldType.Initials:
-                        <TmSignatureCapture Value="@GetStringValue(CurrentStep.Field.Uuid)"
-                                            ValueChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
-                                            Required="@CurrentStep.Field.Required"
-                                            Initials="@(CurrentStep.Field.Type == SigningFieldType.Initials)"
-                                            Mode="@GetSignatureCaptureMode(CurrentStep.Field)"
-                                            ModeChanged="mode => SetSignatureCaptureModeAsync(CurrentStep.Field.Uuid, mode)"
-                                            Disabled="@IsLoading" />
+                        <TmSigningSignatureStep Field="CurrentStep.Field"
+                                                Value="@GetStringValue(CurrentStep.Field.Uuid)"
+                                                ValueChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
+                                                Mode="@GetSignatureCaptureMode(CurrentStep.Field)"
+                                                ModeChanged="mode => SetSignatureCaptureModeAsync(CurrentStep.Field.Uuid, mode)"
+                                                AppearsOn="@CurrentStep.AppearsOn"
+                                                Culture="@CurrentCulture"
+                                                FallbackCulture="@FallbackCulture"
+                                                Disabled="@IsLoading" />
                         break;
                     case SigningFieldType.Phone:
                         <TmSigningPhoneStep Field="CurrentStep.Field"
@@ -214,9 +236,12 @@
             </div>
         }
 
-        @if (!string.IsNullOrWhiteSpace(_validationMessage))
+        @* The runner-level validation box is reserved for CompleteBlocked / completion errors; a
+           step validation travels into the step shell through the TmSigningRunnerValidation
+           cascade, so a failed step shows exactly ONE alert. *@
+        @if (!string.IsNullOrWhiteSpace(_completionMessage))
         {
-            <div class="tm-signing-form-runner__validation" role="alert">@_validationMessage</div>
+            <div class="tm-signing-form-runner__validation" role="alert">@_completionMessage</div>
         }
 
         <div class="tm-signing-form-runner__autosave" data-state="@_autoSaveState">

@@ -53,7 +53,8 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__validation")).ToContainTextAsync("Full name is required.");
+        // Phase 2: the step validation surfaces in the step shell (one alert per step).
+        await Assertions.Expect(panel.Locator(".tm-signing-step-shell__validation")).ToContainTextAsync("Full name is required.");
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
     }
 
@@ -114,12 +115,95 @@ public class SigningFormRunnerE2ETests : WasmTestBase
     {
         var page = await OpenRunnerAsync(390, 820);
         var runner = GetRunner(page);
+        var steps = GetStepsRail(runner);
 
-        await runner.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
-        await Assertions.Expect(runner.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
+        // B25 (phase 2): the sheet is a presentation of the ONE steps rail — collapsing hides it.
+        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
+        await Assertions.Expect(steps.Locator(".tm-signing-form-runner__progress")).Not.ToBeVisibleAsync();
 
-        await runner.Locator(".tm-signing-form-runner__mobile-expand").ClickAsync();
-        await Assertions.Expect(runner.Locator(".tm-signing-form-runner__mobile-panel .tm-signing-form-runner__progress")).ToBeVisibleAsync();
+        await steps.Locator(".tm-signing-form-runner__mobile-expand").ClickAsync();
+        await Assertions.Expect(steps.Locator(".tm-signing-form-runner__progress")).ToBeVisibleAsync();
+    }
+
+    /// <summary>
+    /// Expanding the mobile sheet with the keyboard moves focus onto the affordance that became
+    /// visible (the minimize button), so the next Enter / Tab continues from the sheet.
+    /// </summary>
+    [TestMethod]
+    [Description("After expanding the mobile sheet with Enter on 'Sign now', focus lands on the minimize button")]
+    public async Task SigningFormRunner_ExpandingSheetKeepsFocusOnTheVisibleAffordance()
+    {
+        var page = await OpenRunnerAsync(390, 820);
+        var runner = GetRunner(page);
+        var steps = GetStepsRail(runner);
+
+        // Collapse first: the sheet starts expanded at 390, so "Sign now" becomes visible.
+        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
+
+        var expand = steps.Locator(".tm-signing-form-runner__mobile-expand").First;
+        await expand.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        var activeClass = await page.EvaluateAsync<string>("() => document.activeElement?.className?.toString() ?? ''");
+        StringAssert.Contains(activeClass, "tm-signing-form-runner__mobile-minimize",
+            $"expanding the sheet must move focus onto the now-visible minimize button, got '{activeClass}'");
+    }
+
+    /// <summary>
+    /// B25 (Signing redesign phase 2): the step panel exists EXACTLY ONCE in the DOM at every
+    /// width — the column vs. mobile-sheet presentation is CSS-only. Before the fix the mobile
+    /// panel was a second rendered copy, so every input and alert existed twice for assistive
+    /// technology.
+    /// </summary>
+    [TestMethod]
+    [Description("The step panel is rendered once in the DOM at 390px and at 1440px")]
+    public async Task SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop()
+    {
+        foreach (var (width, height) in new[] { (390, 820), (1440, 900) })
+        {
+            var page = await OpenRunnerAsync(width, height);
+            var runner = GetRunner(page);
+            var steps = GetStepsRail(runner);
+
+            await Assertions.Expect(steps.Locator(".tm-signing-step-shell__title").First).ToBeVisibleAsync();
+
+            var panelCount = await runner.Locator(".tm-signing-form-runner__step-panel").CountAsync();
+            Assert.AreEqual(1, panelCount, $"at {width}px the step panel must exist once (found {panelCount})");
+            var progressCount = await runner.Locator(".tm-signing-form-runner__progress").CountAsync();
+            Assert.AreEqual(1, progressCount, $"at {width}px the progress region must exist once (found {progressCount})");
+            var nextCount = await runner.Locator(".tm-signing-form-runner__next").CountAsync();
+            Assert.AreEqual(1, nextCount, $"at {width}px the action row must exist once (found {nextCount})");
+            var shellCount = await runner.Locator(".tm-signing-step-shell").CountAsync();
+            Assert.AreEqual(1, shellCount, $"at {width}px the step shell must exist once (found {shellCount})");
+
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Every runner input is reachable through its accessible name (getByLabel).</summary>
+    [TestMethod]
+    [Description("Runner inputs resolve their accessible names (getByLabel) while the signer walks the steps")]
+    public async Task SigningFormRunner_InputsAreReachableByLabel()
+    {
+        var page = await OpenRunnerAsync();
+        var runner = GetRunner(page);
+        var steps = GetStepsRail(runner);
+
+        // Text step: the field label names the input.
+        await steps.GetByLabel("Full name").FillAsync("Alex Johnson");
+        await steps.Locator(".tm-signing-form-runner__next").ClickAsync();
+
+        // Select step.
+        await steps.GetByLabel("Delivery method").SelectOptionAsync("paper");
+        await steps.Locator(".tm-signing-form-runner__next").ClickAsync();
+
+        // Number step.
+        await steps.GetByLabel("Amount without tax").FillAsync("100");
+        await steps.Locator(".tm-signing-form-runner__next").ClickAsync();
+
+        await Assertions.Expect(steps.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Add internal note");
     }
 
     private async Task<IPage> OpenRunnerAsync(int width = 1280, int height = 720)
@@ -140,6 +224,11 @@ public class SigningFormRunnerE2ETests : WasmTestBase
     }
 
     private static ILocator GetDesktopPanel(ILocator runner)
+    {
+        return runner.Locator(".tm-signing-form-runner__steps").First;
+    }
+
+    private static ILocator GetStepsRail(ILocator runner)
     {
         return runner.Locator(".tm-signing-form-runner__steps").First;
     }

@@ -193,7 +193,8 @@
     color: var(--tm-text-muted);
 }
 
-.tm-signing-form-runner__mobile-panel {
+.tm-signing-form-runner__sheet-bar {
+    /* The sheet affordances (expand / minimize) exist only in the mobile sheet presentation. */
     display: none;
 }
 
@@ -203,24 +204,23 @@
         padding-bottom: calc(var(--tm-space-16) * 2);
     }
 
+    /* The single steps rail IS the bottom sheet: sticky card, expand / minimize affordances in
+       the sheet bar, and the sheet state carried by --sheet-collapsed / --sheet-expanded. The
+       panel content itself is rendered once (B25) — collapsing only hides it. */
     .tm-signing-form-runner__steps {
-        display: none;
-    }
-
-    .tm-signing-form-runner__mobile-panel {
         position: sticky;
         inset-block-end: var(--tm-space-3);
         z-index: var(--tm-z-sticky);
-        display: grid;
-        gap: var(--tm-space-2);
         margin-inline: var(--tm-space-3);
+        border-left: 0;
+        padding-left: 0;
     }
 
-    .tm-signing-form-runner__mobile-panel--has-complete-target {
+    .tm-signing-form-runner__steps--has-complete-target {
         inset-block-end: calc(var(--tm-space-16) + var(--tm-space-3));
     }
 
-    .tm-signing-form-runner__mobile-panel--expanded {
+    .tm-signing-form-runner__steps--sheet-expanded {
         padding: var(--tm-space-3);
         border: 1px solid var(--tm-border-color);
         border-radius: var(--tm-radius-lg);
@@ -228,7 +228,24 @@
         box-shadow: var(--tm-shadow-lg);
     }
 
-    .tm-signing-form-runner__mobile-panel .tm-signing-form-runner__step-panel {
+    .tm-signing-form-runner__sheet-bar {
+        display: grid;
+        gap: var(--tm-space-2);
+    }
+
+    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__mobile-minimize {
+        display: none;
+    }
+
+    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__mobile-expand {
+        display: none;
+    }
+
+    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__step-panel {
+        display: none;
+    }
+
+    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__step-panel {
         position: static;
         padding: 0;
         border: 0;

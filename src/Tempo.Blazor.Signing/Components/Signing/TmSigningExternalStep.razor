@@ -2,7 +2,10 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@Error"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
@@ -17,6 +20,8 @@
     }
     else if (Field.Type == SigningFieldType.Kba && Questions.Count > 0)
     {
+        @* Each answer keeps its per-question label (the question IS the name) and references the
+           step's description / validation ids while they render. *@
         <div class="tm-signing-external-step__questions">
             @foreach (var question in Questions)
             {
@@ -25,6 +30,8 @@
                     <input class="tm-signing-external-step__answer"
                            value="@GetAnswer(question)"
                            disabled="@Disabled"
+                           aria-describedby="@DescribedBy"
+                           aria-invalid="@BoolText(HasValidationMessage)"
                            @onchange="args => HandleAnswerChangedAsync(question, args)" />
                 </label>
             }

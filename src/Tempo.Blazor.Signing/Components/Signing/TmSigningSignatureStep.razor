@@ -1,0 +1,33 @@
+@namespace Tempo.Blazor.Components.Signing
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
+
+<TmSigningStepShell Field="Field"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
+                    Description="@ResolvedDescription"
+                    AppearsOn="@AppearsOn"
+                    Culture="@Culture"
+                    FallbackCulture="@FallbackCulture"
+                    Class="@ShellClass"
+                    @attributes="AdditionalAttributes">
+    @* The shell owns the required / invalid presentation and the single step alert, so the
+       capture itself is driven with Required="false" (see the class remarks). The group wrapper
+       names the canvas with the step title and carries the description / validation ids and the
+       invalid state while a message shows. *@
+    <div role="group"
+         aria-labelledby="@_titleId"
+         aria-describedby="@DescribedBy"
+         aria-invalid="@BoolText(HasValidationMessage)">
+        <TmSignatureCapture Value="@Value"
+                            ValueChanged="ValueChanged"
+                            Required="false"
+                            Initials="@IsInitials"
+                            Mode="Mode"
+                            ModeChanged="ModeChanged"
+                            Modes="@Modes"
+                            Disabled="@Disabled" />
+    </div>
+</TmSigningStepShell>

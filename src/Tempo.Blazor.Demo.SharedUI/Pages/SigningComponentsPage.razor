@@ -426,6 +426,10 @@
                                 ValueChanged="value => _stepPhoneValue = value"
                                 OnSendCode="HandleStepPhoneCodeSent"
                                 data-testid="signing-step-phone" />
+            <TmSigningSignatureStep Field="@_stepSignatureField"
+                                    Value="@_stepSignatureValue"
+                                    ValueChanged="value => _stepSignatureValue = value"
+                                    data-testid="signing-step-signature" />
             <TmSigningExternalStep Field="@_stepPaymentField"
                                    OnCheckout="HandleStepCheckout"
                                    data-testid="signing-step-payment" />
@@ -1241,6 +1245,14 @@
         Type = SigningFieldType.Phone,
         Required = true
     };
+    private readonly SigningField _stepSignatureField = new()
+    {
+        Uuid = "step-signature",
+        Name = "Signature",
+        Type = SigningFieldType.Signature,
+        Required = true
+    };
+    private string? _stepSignatureValue;
     private readonly SigningField _stepPaymentField = new()
     {
         Uuid = "step-payment",

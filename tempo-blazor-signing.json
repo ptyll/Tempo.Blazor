@@ -368,6 +368,36 @@
       ]
     },
     {
+      "itemName": "TmSigningStepShellContext",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "The accessible-name plumbing of one signing step: the shell's title id (the accessible name of every unlabelled input of the step) and, when they exist, the description and validation ids. The shell cascades the context to its content, so a step's inputs (or a host's custom step content) can reference the ids with aria-labelledby / aria-describedby and Playwright's getByLabel resolves every runner input. The ids are unique per rendered step component — the step components own them and pass them to the shell through its TitleId / DescriptionId / ValidationMessageId parameters, so two rendered steps never share an id even for the same field uuid.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningStepShell.razor.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "TitleId",
+          "kind": "Property",
+          "type": "string",
+          "description": "HTML id of the step title heading — the accessible name of the step's unlabelled inputs."
+        },
+        {
+          "name": "DescriptionId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "HTML id of the step description block; null when the step renders no description."
+        },
+        {
+          "name": "ValidationMessageId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "HTML id of the step validation alert; null when the step shows no validation message."
+        }
+      ]
+    },
+    {
       "itemName": "SigningServiceCollectionExtensions",
       "kind": "Class",
       "category": "Configuration",
@@ -2761,6 +2791,100 @@
       ]
     },
     {
+      "itemName": "TmSigningSignatureStep",
+      "kind": "Component",
+      "category": "Signing",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Renders a signature or initials signing step inside the shared step shell. Signing redesign phase 2: the form runner renders this wrapper instead of a bare TmSignatureCapture, so a signature step carries the step title, the required / optional badge, the signing instruction and the \"appears on\" hint like every other step. The capture is wrapped in a role=group element named by the step title id. The shell owns the required / invalid presentation of the step (the badge, the single role=alert validation message and aria-invalid), so the embedded capture is deliberately driven with Required = false — a required signature step shows exactly one \"signature is required\" alert.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningSignatureStep.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Signing"
+      ],
+      "parameters": [
+        {
+          "name": "AppearsOn",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Short text describing where the field appears in the document."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes for the shell element."
+        },
+        {
+          "name": "Culture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Culture used to resolve localized field text."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the controls are disabled."
+        },
+        {
+          "name": "FallbackCulture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Fallback culture used when localized field text is missing."
+        },
+        {
+          "name": "Field",
+          "type": "SigningField",
+          "isRequired": true,
+          "description": "Signing field represented by this step."
+        },
+        {
+          "name": "Initials",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Whether the capture draws initials instead of a full signature. Defaults to the field type."
+        },
+        {
+          "name": "Mode",
+          "type": "TmSignatureCaptureMode",
+          "isRequired": false,
+          "default": "TmSignatureCaptureMode.Typed",
+          "description": "Current capture mode."
+        },
+        {
+          "name": "ModeChanged",
+          "type": "EventCallback<TmSignatureCaptureMode>",
+          "isRequired": false,
+          "description": "Callback invoked when the capture mode changes."
+        },
+        {
+          "name": "Modes",
+          "type": "IReadOnlyList<TmSignatureCaptureMode>?",
+          "isRequired": false,
+          "description": "Offered capture modes. Defaults to draw, type and upload."
+        },
+        {
+          "name": "ValidationMessage",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Validation message shown by the step shell below the capture."
+        },
+        {
+          "name": "Value",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Current signature value (typed text, drawn SVG or uploaded data URL)."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Callback invoked when the signature value changes."
+        }
+      ]
+    },
+    {
       "itemName": "TmSigningStepShell",
       "kind": "Component",
       "category": "Signing",
@@ -2804,6 +2928,12 @@
           "description": "Optional description rendered below the label."
         },
         {
+          "name": "DescriptionId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional HTML id for the description block. Generated per instance when omitted."
+        },
+        {
           "name": "FallbackCulture",
           "type": "string?",
           "isRequired": false,
@@ -2828,6 +2958,12 @@
           "description": "Whether the step is required. Defaults to the field requirement."
         },
         {
+          "name": "TitleId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional HTML id for the title heading. Generated per instance when omitted."
+        },
+        {
           "name": "ValidationMessage",
           "type": "string?",
           "isRequired": false,
@@ -2837,7 +2973,7 @@
           "name": "ValidationMessageId",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional HTML id applied to the validation message for aria-describedby links."
+          "description": "Optional HTML id applied to the validation message for aria-describedby links. Generated per instance when omitted."
         }
       ]
     },
@@ -3015,11 +3151,11 @@
     }
   ],
   "summary": {
-    "itemCount": 43,
-    "manualItemCount": 43,
-    "generatedItemCount": 43,
+    "itemCount": 45,
+    "manualItemCount": 45,
+    "generatedItemCount": 45,
     "generatedOnlyItemCount": 0,
-    "componentCount": 29,
-    "publicApiTypeCount": 14
+    "componentCount": 30,
+    "publicApiTypeCount": 15
   }
 }

@@ -26,12 +26,30 @@ public partial class TmSigningFormRunner : IDisposable
     private IReadOnlyDictionary<string, object?>? _lastValues;
     private int _currentStepIndex;
     private string? _validationMessage;
+    private string? _completionMessage;
     private string? _autoSaveError;
     private string _autoSaveState = "idle";
     private bool _accessibilityMode;
-    private bool _mobileExpanded;
+    private bool _sheetExpanded;
+    private bool _pendingToggleFocus;
+    private ElementReference _mobileExpandButton;
+    private ElementReference _mobileMinimizeButton;
+    private readonly string _stepPanelId = $"tm-signing-runner-panel-{Guid.NewGuid():N}";
+    private readonly TmSigningStepFocusSignal _stepFocusSignal = new();
     private readonly Dictionary<string, TmSignatureCaptureMode> _signatureCaptureModes = new(StringComparer.Ordinal);
     private CancellationTokenSource? _autoSaveCts;
+
+    // Plan cache (Signing redesign phase 2): the plan is a pure function of Fields / Pages /
+    // values / SubmitterUuid, and it used to be recomputed on EVERY access — several times per
+    // render. The cache keys track the inputs; in-place value mutations bump _valuesVersion
+    // because the dictionary instance itself stays the same.
+    private SigningStepPlan? _planCache;
+    private IReadOnlyList<SigningField>? _planFields;
+    private IReadOnlyList<SigningDocumentPage>? _planPages;
+    private IReadOnlyDictionary<string, object?>? _planValues;
+    private string? _planSubmitterUuid;
+    private int _planValuesVersion;
+    private int _valuesVersion;
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
@@ -115,7 +133,36 @@ public partial class TmSigningFormRunner : IDisposable
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private SigningStepPlan Plan => SigningStepPlanner.Plan(Fields, Pages, _values, SubmitterUuid);
+    /// <summary>
+    /// Observability for the plan cache test (InternalsVisibleTo): counts how often the step plan
+    /// was recomputed. While the plan is uncached this increments on every access, so the cache
+    /// test has teeth before and after the cache lands.
+    /// </summary>
+    internal int PlanComputationsForTests { get; private set; }
+
+    private SigningStepPlan Plan
+    {
+        get
+        {
+            if (_planCache is null
+                || !ReferenceEquals(_planFields, Fields)
+                || !ReferenceEquals(_planPages, Pages)
+                || !ReferenceEquals(_planValues, _values)
+                || _planValuesVersion != _valuesVersion
+                || !string.Equals(_planSubmitterUuid, SubmitterUuid, StringComparison.Ordinal))
+            {
+                _planCache = SigningStepPlanner.Plan(Fields, Pages, _values, SubmitterUuid);
+                _planFields = Fields;
+                _planPages = Pages;
+                _planValues = _values;
+                _planValuesVersion = _valuesVersion;
+                _planSubmitterUuid = SubmitterUuid;
+                PlanComputationsForTests++;
+            }
+
+            return _planCache;
+        }
+    }
 
     private SigningStepItem? CurrentStep => Plan.Steps.Count == 0
         ? null
@@ -155,14 +202,19 @@ public partial class TmSigningFormRunner : IDisposable
         }
     }
 
-    private string MobilePanelClass
+    /// <summary>
+    /// The single steps rail. On a mobile-sized container it presents as the bottom sheet: the
+    /// <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> state classes drive the CSS-only sheet
+    /// presentation (the panel itself stays one DOM instance at every width).
+    /// </summary>
+    private string StepsClass
     {
         get
         {
-            var classes = new List<string> { "tm-signing-form-runner__mobile-panel" };
-            AddClass(classes, _mobileExpanded, "tm-signing-form-runner__mobile-panel--expanded");
-            AddClass(classes, !_mobileExpanded, "tm-signing-form-runner__mobile-panel--collapsed");
-            AddClass(classes, !string.IsNullOrWhiteSpace(MobileCompleteTargetSelector), "tm-signing-form-runner__mobile-panel--has-complete-target");
+            var classes = new List<string> { "tm-signing-form-runner__steps" };
+            AddClass(classes, _sheetExpanded, "tm-signing-form-runner__steps--sheet-expanded");
+            AddClass(classes, !_sheetExpanded, "tm-signing-form-runner__steps--sheet-collapsed");
+            AddClass(classes, !string.IsNullOrWhiteSpace(MobileCompleteTargetSelector), "tm-signing-form-runner__steps--has-complete-target");
             return string.Join(" ", classes);
         }
     }
@@ -180,16 +232,23 @@ public partial class TmSigningFormRunner : IDisposable
     /// <inheritdoc />
     protected override void OnInitialized()
     {
-        _mobileExpanded = MobilePanelMode == TmSigningFormRunnerMobilePanelMode.Expanded;
+        _sheetExpanded = MobilePanelMode == TmSigningFormRunnerMobilePanelMode.Expanded;
     }
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // The plan cache is invalidated on EVERY parameter set: a Fields list can be mutated in
+        // place by the host (same list instance, new steps), and only a fresh plan observes that.
+        // The _valuesVersion bumps below stay — in-place value mutations keep invalidating the
+        // cached plan between parameter sets too.
+        _planCache = null;
+
         if (!ReferenceEquals(Values, _lastValues))
         {
             _values = Values.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             _lastValues = Values;
+            _valuesVersion++;
         }
 
         if (_currentStepIndex >= Plan.Steps.Count)
@@ -198,11 +257,25 @@ public partial class TmSigningFormRunner : IDisposable
         }
     }
 
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_pendingToggleFocus)
+        {
+            return;
+        }
+
+        _pendingToggleFocus = false;
+        // Keyboard users expanded / collapsed the mobile sheet: move focus onto the affordance
+        // that is NOW visible, so the next Enter / Tab works without hunting for the button.
+        await SigningFocus.TryFocusAsync(_sheetExpanded ? _mobileMinimizeButton : _mobileExpandButton);
+    }
+
     private async Task HandleCultureChangedAsync(ChangeEventArgs args)
     {
         var culture = args.Value?.ToString();
         Culture = string.IsNullOrWhiteSpace(culture) ? null : culture;
-        _validationMessage = null;
+        ClearValidationMessages();
         await CultureChanged.InvokeAsync(Culture);
         if (OnLocalizationSnapshotChanged.HasDelegate)
         {
@@ -291,8 +364,13 @@ public partial class TmSigningFormRunner : IDisposable
         var index = Plan.Steps.FindIndex(step => step.Fields.Any(field => string.Equals(field.Uuid, args.Field.Uuid, StringComparison.Ordinal)));
         if (index >= 0)
         {
+            if (index != _currentStepIndex)
+            {
+                _stepFocusSignal.Version++;
+            }
+
             _currentStepIndex = index;
-            _validationMessage = null;
+            ClearValidationMessages();
         }
 
         return Task.CompletedTask;
@@ -300,8 +378,14 @@ public partial class TmSigningFormRunner : IDisposable
 
     private Task SelectStep(int index)
     {
-        _currentStepIndex = Math.Clamp(index, 0, Math.Max(0, Plan.Steps.Count - 1));
-        _validationMessage = null;
+        var clamped = Math.Clamp(index, 0, Math.Max(0, Plan.Steps.Count - 1));
+        if (clamped != _currentStepIndex)
+        {
+            _stepFocusSignal.Version++;
+        }
+
+        _currentStepIndex = clamped;
+        ClearValidationMessages();
         return Task.CompletedTask;
     }
 
@@ -320,18 +404,20 @@ public partial class TmSigningFormRunner : IDisposable
             _values[step.Field.Uuid] = value;
         }
 
+        _valuesVersion++;
         await PublishValuesAsync();
     }
 
     private async Task SetFieldValueAsync(string fieldUuid, object? value)
     {
         _values[fieldUuid] = value;
+        _valuesVersion++;
         await PublishValuesAsync();
     }
 
     private async Task PublishValuesAsync()
     {
-        _validationMessage = null;
+        ClearValidationMessages();
         var snapshot = SnapshotValues();
         await ValuesChanged.InvokeAsync(snapshot);
         ScheduleAutoSave(snapshot);
@@ -347,7 +433,13 @@ public partial class TmSigningFormRunner : IDisposable
         if (!IsStepComplete(CurrentStep))
         {
             _validationMessage = GetRequiredMessage(CurrentStep);
-            _currentStepIndex = FindFirstInvalidRequiredStep();
+            var invalidIndex = FindFirstInvalidRequiredStep();
+            if (invalidIndex != _currentStepIndex)
+            {
+                _stepFocusSignal.Version++;
+            }
+
+            _currentStepIndex = invalidIndex;
             return;
         }
 
@@ -355,6 +447,7 @@ public partial class TmSigningFormRunner : IDisposable
         if (_currentStepIndex < Plan.Steps.Count - 1)
         {
             _currentStepIndex++;
+            _stepFocusSignal.Version++;
         }
     }
 
@@ -363,7 +456,8 @@ public partial class TmSigningFormRunner : IDisposable
         if (!IsPreviousDisabled)
         {
             _currentStepIndex--;
-            _validationMessage = null;
+            _stepFocusSignal.Version++;
+            ClearValidationMessages();
         }
 
         return Task.CompletedTask;
@@ -374,7 +468,8 @@ public partial class TmSigningFormRunner : IDisposable
         if (!IsSkipDisabled && _currentStepIndex < Plan.Steps.Count - 1)
         {
             _currentStepIndex++;
-            _validationMessage = null;
+            _stepFocusSignal.Version++;
+            ClearValidationMessages();
         }
 
         return Task.CompletedTask;
@@ -384,10 +479,26 @@ public partial class TmSigningFormRunner : IDisposable
     {
         if (IsCompleteDisabled)
         {
-            _currentStepIndex = FindFirstInvalidRequiredStep();
-            _validationMessage = CurrentStep is null
-                ? Loc["TmSigningFormRunner_CompleteBlocked"]
-                : GetRequiredMessage(CurrentStep);
+            var invalidIndex = FindFirstInvalidRequiredStep();
+            if (invalidIndex != _currentStepIndex)
+            {
+                // Landing on a different step is a step navigation: move focus to its title,
+                // exactly like a failed Next does.
+                _stepFocusSignal.Version++;
+            }
+
+            _currentStepIndex = invalidIndex;
+            if (CurrentStep is null)
+            {
+                _completionMessage = Loc["TmSigningFormRunner_CompleteBlocked"];
+            }
+            else
+            {
+                // The blocked completion is caused by the step the signer lands on: its message
+                // travels through the step shell, exactly like a failed Next.
+                _validationMessage = GetRequiredMessage(CurrentStep);
+            }
+
             return;
         }
 
@@ -399,11 +510,11 @@ public partial class TmSigningFormRunner : IDisposable
             }
 
             await OnComplete.InvokeAsync(SnapshotValues());
-            _validationMessage = null;
+            ClearValidationMessages();
         }
         catch (Exception ex)
         {
-            _validationMessage = ex.Message;
+            _completionMessage = ex.Message;
         }
     }
 
@@ -414,12 +525,20 @@ public partial class TmSigningFormRunner : IDisposable
 
     private void ExpandMobilePanel()
     {
-        _mobileExpanded = true;
+        _sheetExpanded = true;
+        _pendingToggleFocus = true;
     }
 
     private void MinimizeMobilePanel()
     {
-        _mobileExpanded = false;
+        _sheetExpanded = false;
+        _pendingToggleFocus = true;
+    }
+
+    private void ClearValidationMessages()
+    {
+        _validationMessage = null;
+        _completionMessage = null;
     }
 
     private bool AllRequiredFieldsComplete()

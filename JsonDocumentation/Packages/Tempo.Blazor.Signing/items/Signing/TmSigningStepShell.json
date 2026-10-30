@@ -48,6 +48,12 @@
       "description": "Optional description rendered below the label."
     },
     {
+      "name": "DescriptionId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional HTML id for the description block. Generated per instance when omitted."
+    },
+    {
       "name": "FallbackCulture",
       "type": "string?",
       "isRequired": false,
@@ -66,6 +72,12 @@
       "description": "Whether the step is required. Defaults to the field requirement."
     },
     {
+      "name": "TitleId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional HTML id for the title heading. Generated per instance when omitted."
+    },
+    {
       "name": "ValidationMessage",
       "type": "string?",
       "isRequired": false,
@@ -75,7 +87,7 @@
       "name": "ValidationMessageId",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional HTML id applied to the validation message for aria-describedby links."
+      "description": "Optional HTML id applied to the validation message for aria-describedby links. Generated per instance when omitted."
     }
   ]
 }

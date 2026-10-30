@@ -2,12 +2,17 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <TmSigningStepShell Field="Field"
-                    ValidationMessage="@_validationMessage"
+                    TitleId="@_titleId"
+                    DescriptionId="@_descriptionId"
+                    ValidationMessage="@EffectiveValidationMessage"
+                    ValidationMessageId="@(HasValidationMessage ? _validationId : null)"
                     AppearsOn="@AppearsOn"
                     Culture="@Culture"
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
+    @* Native <input type="date"> per SI1; the shell title (this instance's stable id) is its
+       accessible name, the validation alert (while one shows) its description. *@
     <div class="tm-signing-date-step__row">
         <input class="tm-signing-date-step__input"
                type="@InputType"
@@ -16,6 +21,9 @@
                max="@NormalizeDateToken(Field.Validation?.Max)"
                disabled="@Disabled"
                placeholder="@PlaceholderText"
+               aria-labelledby="@_titleId"
+               aria-describedby="@DescribedBy"
+               aria-invalid="@BoolText(HasValidationMessage)"
                @onchange="HandleValueChangedAsync" />
         @if (ShowTodayButton)
         {

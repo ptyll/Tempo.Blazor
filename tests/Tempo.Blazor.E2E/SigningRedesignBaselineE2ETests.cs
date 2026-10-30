@@ -123,15 +123,20 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 20_000 });
 
             // The demo shell's sticky page bar (and its fixed mobile counterpart) floats above the
-            // content and bleeds into the element captures of tall components at every viewport.
-            // The baseline documents the COMPONENT, not the demo chrome.
+            // content and bleeds into the element captures of tall components at every viewport,
+            // and the runner's sticky steps rail slides over the content below it while Playwright
+            // scrolls an element into view. The baseline documents the COMPONENT, not the chrome.
             await page.AddStyleTagAsync(new PageAddStyleTagOptions
             {
-                Content = ".sticky.top-0, .fixed.top-0 { visibility: hidden !important; }"
+                Content = ".sticky.top-0, .fixed.top-0 { visibility: hidden !important; } " +
+                          ".tm-signing-form-runner__steps { position: static !important; }"
             });
 
             foreach (var (screen, testId) in ComponentScreens)
             {
+                // Start every element from a known scroll position: the previous element's scroll
+                // state (and the sticky chrome reacting to it) must not bleed into this capture.
+                await page.EvaluateAsync("() => window.scrollTo(0, 0)");
                 var element = page.Locator($"[data-testid='{testId}']").First;
                 await element.ScrollIntoViewIfNeededAsync();
                 await page.WaitForTimeoutAsync(120);
@@ -203,15 +208,19 @@ public class SigningRedesignBaselineE2ETests : BaselineGeneratorTestBase
         await page.EvaluateAsync(
             "() => { document.documentElement.dataset.theme = 'dark';" +
             " document.querySelectorAll('[data-theme]').forEach(el => { el.dataset.theme = 'dark'; }); }");
+        // The runner's sticky steps rail slides over the content below it while Playwright scrolls
+        // an element into view; for the captures it renders in flow, like the light pass above.
         await page.AddStyleTagAsync(new PageAddStyleTagOptions
         {
-            Content = ".sticky.top-0, .fixed.top-0 { visibility: hidden !important; }"
+            Content = ".sticky.top-0, .fixed.top-0 { visibility: hidden !important; } " +
+                      ".tm-signing-form-runner__steps { position: static !important; }"
         });
         await page.WaitForTimeoutAsync(150);
 
         foreach (var screen in DarkScreens)
         {
             var testId = ComponentScreens.Single(entry => entry.Screen == screen).TestId;
+            await page.EvaluateAsync("() => window.scrollTo(0, 0)");
             var element = page.Locator($"[data-testid='{testId}']").First;
             await element.ScrollIntoViewIfNeededAsync();
             await page.WaitForTimeoutAsync(120);

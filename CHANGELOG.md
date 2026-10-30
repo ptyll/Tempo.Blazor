@@ -339,6 +339,102 @@
   field is no longer colour-only: `.tm-signing-field--invalid` adds a dashed 2px border (WCAG
   1.4.1).
 
+- **Signing form runner renders ONE step panel, and every step input has an accessible name
+  (Signing redesign phase 2, bug B25 + S2-1).** The runner used to render the step panel TWICE —
+  once in the desktop steps rail and once in a mobile panel div that CSS merely hid above 768px —
+  so every input, id, live region and alert existed twice in the DOM for assistive technology.
+  The column vs. mobile-sheet presentation is now CSS only (`@container tm-signing-runner`), the
+  sheet state lives on the rail as `tm-signing-form-runner__steps--sheet-collapsed` /
+  `--sheet-expanded` (the expand / minimize buttons carry `aria-expanded` / `aria-controls`), and
+  the panel exists exactly once at every width. What changes in the DOM and for hosts:
+  - *Runner DOM.* `.tm-signing-form-runner__mobile-panel` (with `--expanded` / `--collapsed` /
+    `--has-complete-target` and the `data-complete-target` attribute) is gone; the single
+    `aside.tm-signing-form-runner__steps` carries `--sheet-collapsed` / `--sheet-expanded`, the
+    `--has-complete-target` class and `data-complete-target`. A host or test that reached the
+    mobile panel's content through it retargets the rail:
+    ```html
+    <!-- before: two rendered panels; the mobile one hidden by CSS above 768px -->
+    <aside class="tm-signing-form-runner__steps">…panel…</aside>
+    <div class="tm-signing-form-runner__mobile-panel tm-signing-form-runner__mobile-panel--expanded">…panel…</div>
+
+    <!-- after: ONE panel; the mobile sheet is a presentation of the rail -->
+    <aside class="tm-signing-form-runner__steps tm-signing-form-runner__steps--sheet-expanded">…panel…</aside>
+    ```
+    ```js
+    // before
+    runner.locator(".tm-signing-form-runner__mobile-panel .tm-signing-form-runner__progress");
+    // after
+    runner.locator(".tm-signing-form-runner__steps .tm-signing-form-runner__progress");
+    ```
+    `MobilePanelMode` still picks the initial sheet state; on a desktop-sized container the
+    affordances are hidden and the panel always shows. Both affordances ("Sign now" expand /
+    "Minimize") now ALWAYS render and CSS hides the one that does not match the sheet state —
+    toggling the sheet moves keyboard focus onto the button that becomes visible. The step panel
+    no longer carries the `data-mobile` attribute: `div.tm-signing-form-runner__step-panel[data-mobile="true"]`
+    and `[data-mobile="false"]` selectors match nothing — the panel is one instance at every
+    width, keyed by `.tm-signing-form-runner__steps--sheet-collapsed` / `--sheet-expanded`.
+    ```html
+    <!-- before: the panel was duplicated; the copy carried data-mobile -->
+    <div class="tm-signing-form-runner__step-panel">…</div>
+    <div class="tm-signing-form-runner__step-panel" data-mobile="true">…</div>
+
+    <!-- after: one panel, no data-mobile -->
+    <aside class="tm-signing-form-runner__steps tm-signing-form-runner__steps--sheet-expanded">
+      <div id="tm-signing-runner-panel-…" class="tm-signing-form-runner__step-panel">…</div>
+    </aside>
+    ```
+  - *Choice steps are real groups.* `div.tm-signing-choice-step__options[role="radiogroup"]` with
+    radio inputs named `name="{field-uuid}"` is now `fieldset.tm-signing-choice-step__group >
+    legend.tm-signing-choice-step__legend.tm-sr-only + div.tm-signing-choice-step__options`
+    (the legend names the group), and the radios' `name` is per component instance
+    (`tm-signing-choice-{guid}`) — two rendered radio groups no longer merge into one
+    browser-level group and no longer share the field-uuid-derived name. A selector on
+    `[role="radiogroup"]` or `input[name="{uuid}"]` retargets `fieldset.tm-signing-choice-step__group`
+    / `.tm-signing-choice-step__radio`. The checkbox-group hint carries its own id and is part of
+    the group's `aria-describedby`.
+  - *Signature steps are nested.* `.tm-signature-capture` now renders inside
+    `section.tm-signing-step-shell.tm-signing-signature-step` (the step shell supplies the title,
+    the required / optional badge, the instruction and the single `role="alert"`; the capture is
+    wrapped in a `role="group"` named by the step title). A selector assuming the capture is a
+    top-level element retargets `.tm-signing-signature-step .tm-signature-capture`. The capture is
+    deliberately driven with `Required=false` — the shell owns the required / invalid presentation
+    so a required signature step shows exactly ONE alert.
+  - *One validation message per step.* The runner forwards its step validation into the step shell
+    (a named `TmSigningRunnerValidation` cascade the shell falls back to when the step has no
+    message of its own), so a failed Next renders exactly ONE `role="alert"` — inside the step
+    shell. `.tm-signing-form-runner__validation` is reserved for CompleteBlocked and completion
+    errors. A selector that read the runner's validation box after a failed Next must read
+    `.tm-signing-step-shell__validation`.
+  - *Accessible names.* The step shell gives its title a stable per-instance HTML id
+    (`tm-signing-step-title-{guid}`, `tabindex="-1"`, exposed through the new `TitleId` /
+    `DescriptionId` parameters — the existing `ValidationMessageId` is now generated per instance
+    when omitted — and cascaded as `TmSigningStepShellContext`) and every step input references
+    it (`aria-labelledby`, plus
+    `aria-describedby` for the description and the step's validation alert) and carries
+    `aria-invalid="true"` while the step shows its message (on the input for single controls, on
+    the `fieldset` for groups, including the runner-forwarded validation) — so `getByLabel`
+    resolves every runner input; the choice step renders real `<fieldset>` groups named by a
+    visually hidden `<legend>`, radio groups get a per-instance `name` (two rendered radio groups
+    no longer merge), and the phone step's country / number / OTP controls carry explicit
+    `aria-label`s. Ids are unique per rendered component: two runners (or two steps) showing the
+    SAME field uuid never share an id.
+  - *Focus.* The runner moves focus to the new step's title on every programmatic step change
+    (Next / Previous / Skip, overlay click, jump to the first invalid step, blocked Complete that
+    lands on another step) through the internal navigation signal the runner cascades; a page load
+    never steals focus. The title's programmatic focus paints no ring (`:focus:not(:focus-visible)`);
+    keyboard focus keeps the token focus ring. The progress region is an explicit
+    `aria-live="polite"` status.
+  - *The signature step is a component.* `TmSigningSignatureStep` (shell + `TmSignatureCapture`)
+    replaces the runner's bare capture, so a signature step finally carries the title, the
+    required / optional badge, the signing instruction ("Add your signature in the field below.")
+    and the "appears on" hint. The shell owns the invalid presentation —
+    the embedded capture is driven with `Required=false`, so the duplicate "Signature is
+    required." alert the old bare capture rendered alongside the runner's message is gone; hosts
+    that want the old single-capture look keep placing `TmSignatureCapture` directly.
+  - *Performance.* The step plan (a pure function of `Fields` / `Pages` / values /
+    `SubmitterUuid`) is cached between renders and events; every parameter set from the host
+    recomputes it, so in-place `Fields` / `Pages` edits are still picked up.
+
 ### Known issues
 
 - **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
@@ -350,6 +446,18 @@
 
 ### Added
 
+- **Signing step a11y plumbing (Signing redesign phase 2), additive.** `TmSigningSignatureStep`
+  (shell + capture wrapper the runner uses for signature / initials steps — place it wherever a
+  signing form needs a titled signature step; the embedded capture is deliberately driven with
+  `Required=false` so a required signature step shows exactly ONE `role="alert"`, the shell's),
+  `TmSigningStepShellContext` (the plain cascaded record with the title / description / validation
+  ids a step's inputs reference) and `TmSigningStepShell.TitleId` / `DescriptionId` (per-instance
+  ids — pass them from a host wrapper, the shell generates unique ones when omitted), and
+  `TmSigningStepShell.FocusTitleAsync()` (the public best-effort focus move onto the step title;
+  interop failures stay local). The existing `TmSigningStepShell.ValidationMessageId` is now
+  generated per instance when omitted. New localized strings
+  `TmSigningSignatureStep_Instruction`, `TmSigningStep_CountryCodeAria`,
+  `TmSigningStep_PhoneInputAria` and `TmSigningStep_OtpInputAria` in en / cs / sk / fr.
 - **`TmGantt` desktop structure (redesign phase 4), all opt-in and additive.**
   - `ToolbarLabels` (`Icons` default | `IconsWithText` | `Auto`) maps straight onto the core `TmToolbar.Labels`; the items carry `Priority` (`Primary | Secondary`) so a later tablet / mobile phase can switch the bar to `Overflow=Menu`. The filter button shows the number of active filters as a badge (`aria-label` "Filter (2 active)"); `ShowQuickSearch` (default `false`) adds a debounced "Search tasks…" box that keeps one `Title` / `Contains` entry in `Filters` (other filters stay; emptying the box removes it) and raises `OnFiltersChanged`.
     ```razor

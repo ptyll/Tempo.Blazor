@@ -81,6 +81,45 @@ public class SigningStepsE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator("[data-testid='signing-steps-status']")).ToContainTextAsync("Checkout: Payment");
     }
 
+    /// <summary>
+    /// Signing redesign phase 2: every step input carries an accessible name — the step shell's
+    /// title id (aria-labelledby) for bare inputs, explicit aria-labels for the phone controls and
+    /// wrapping labels for checkbox / radio / upload controls — so getByLabel resolves each of
+    /// them (B25 follow-up: the runner is an end-user surface).
+    /// </summary>
+    [TestMethod]
+    [Description("Every signing step input resolves its accessible name through getByLabel")]
+    public async Task SigningSteps_EveryStepInputIsReachableByLabel()
+    {
+        var page = await OpenStepsAsync();
+        var steps = GetSteps(page);
+
+        await steps.GetByLabel("Full name").FillAsync("Alex Johnson");
+        await steps.GetByLabel("Amount").FillAsync("42.5");
+        await steps.GetByLabel("Signing date").FillAsync("2026-05-08");
+        // Exact: "Country calling code" (the phone select's aria-label) also contains "Country".
+        await steps.GetByLabel("Country", new() { Exact = true }).SelectOptionAsync("option-1");
+
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-text'] input")).ToHaveValueAsync("Alex Johnson");
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-number'] input")).ToHaveValueAsync("42.5");
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-date'] input")).ToHaveValueAsync("2026-05-08");
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-select'] select")).ToHaveValueAsync("option-1");
+
+        // Radio and multiple checkboxes are named by their option labels inside the fieldset group.
+        await steps.Locator("[data-testid='signing-step-radio'] input[type='radio'][value='option-1']").CheckAsync();
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-radio'] input[type='radio'][value='option-1']")).ToBeCheckedAsync();
+
+        // Phone controls: country calling code, phone number, and (after send) the OTP input.
+        var phone = steps.Locator("[data-testid='signing-step-phone']");
+        await phone.GetByLabel("Phone number").FillAsync("777 123 456");
+        await phone.Locator(".tm-signing-phone-step__send").ClickAsync();
+        await Assertions.Expect(phone.GetByLabel("Verification code")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("[data-testid='signing-steps-status']")).ToContainTextAsync("+420777123456");
+
+        // The image upload input is named by its wrapping label.
+        await Assertions.Expect(steps.Locator("[data-testid='signing-step-image']").GetByLabel("Upload image").First).ToBeAttachedAsync();
+    }
+
     private async Task<IPage> OpenStepsAsync()
     {
         var context = await CreateContextAsync();

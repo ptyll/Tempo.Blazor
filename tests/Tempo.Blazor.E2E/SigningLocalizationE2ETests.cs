@@ -76,7 +76,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
         var input = panel.Locator("input.tm-signing-text-step__input").First;
@@ -97,7 +97,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await panel.Locator("input.tm-signing-text-step__input").First.FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
@@ -120,7 +120,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
         var language = panel.Locator(".tm-signing-form-runner__language-select").First;
 
         await language.FocusAsync();
@@ -179,12 +179,12 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__validation")).ToContainTextAsync("Full name is required.");
+        await Assertions.Expect(panel.Locator(".tm-signing-step-shell__validation")).ToContainTextAsync("Full name is required.");
     }
 
     [TestMethod]
@@ -194,7 +194,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__step-panel[data-mobile='false']").First;
+        var panel = runner.Locator(".tm-signing-form-runner__step-panel").First;
 
         await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
 
