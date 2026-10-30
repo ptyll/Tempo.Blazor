@@ -32466,6 +32466,18 @@
           "description": "Creates a deep copy of this style."
         },
         {
+          "name": "CopyFrom",
+          "kind": "Method",
+          "type": "void",
+          "description": "Copies every visual property of source onto this style (the border objects are copied, not shared). Used by the spreadsheet's Fill down / Fill right, which follows Excel and copies the SOURCE cell's format into the filled cells, and by the style command so the copy is one undoable step.",
+          "parameters": [
+            {
+              "name": "source",
+              "type": "SpreadsheetCellStyle"
+            }
+          ]
+        },
+        {
           "name": "BackgroundColor",
           "kind": "Property",
           "type": "string",

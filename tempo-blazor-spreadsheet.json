@@ -1092,6 +1092,12 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Anchor",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The gesture that opened the menu: \"touch\" for a long-press, \"pointer\" for a mouse. A finger-sized menu is offset from the fingerprint (the finger would cover the first entry), and a host may key its own presentation off it. Null when the caller did not report one."
+        },
+        {
           "name": "ClientX",
           "kind": "Property",
           "type": "double",
@@ -1120,6 +1126,12 @@
           "kind": "Property",
           "type": "int",
           "description": "Zero-based index of the sheet the menu applies to; -1 for a grid request."
+        },
+        {
+          "name": "ViewportHeight",
+          "kind": "Property",
+          "type": "double",
+          "description": "The viewport height the gesture reported, so a menu with no room below can FLIP above the press point instead of being clamped into the bottom edge. Null when the caller did not report one."
         }
       ]
     },
@@ -3764,6 +3776,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/css/theme-spreadsheet-dark.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet-benchmark.js",
       "kind": "JavaScript"
     },
@@ -3777,6 +3793,10 @@
     },
     {
       "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-theme.test.mjs",
       "kind": "JavaScript"
     },
     {

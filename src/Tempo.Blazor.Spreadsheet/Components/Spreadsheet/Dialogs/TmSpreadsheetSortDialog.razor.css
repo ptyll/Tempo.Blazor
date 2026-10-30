@@ -3,6 +3,12 @@
    level table; the phone renders the same level as a card, because three selects squeezed into one
    row were the phase-3 UX finding. */
 
+/* The body measures ITSELF: the spreadsheet embeds in a Notion block/modal, so the phone toolbar
+   layout follows the dialog's content width, never the viewport. */
+.tm-spreadsheet-sort__body {
+    container-type: inline-size;
+}
+
 .tm-spreadsheet-sort__toolbar {
     display: flex;
     align-items: center;
@@ -19,8 +25,42 @@
     flex-wrap: wrap;
 }
 
+/* ── Phone: the reference's TWO columns ─────────────────────────────────────
+   Add level in the left column, both option checkboxes STACKED in the right one (the phase-4 review
+   found them wrapped onto a row under the button). Below 20rem of body width (320) the options stack
+   UNDER the button instead — readability wins over the reference on the narrowest phone. */
+.tm-spreadsheet-sort__body--mobile .tm-spreadsheet-sort__toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    justify-content: initial;
+}
+
+/* `TmButton` renders the `<button>` itself, so its root carries the CHILD component's scope attribute,
+   not this file's — the class needs the deep combinator (`::deep`) exactly like the checkbox label
+   below. Without it the add-level button never filled its grid column (7c review, item 1). */
+.tm-spreadsheet-sort__body--mobile ::deep .tm-spreadsheet-sort__tool {
+    width: 100%;
+    min-height: var(--tm-touch-target);
+}
+
+.tm-spreadsheet-sort__body--mobile .tm-spreadsheet-sort__toggles {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+}
+
+/* TmCheckbox renders the wrapper that carries the passed class — same scope story as the button. */
 .tm-spreadsheet-sort__toggles ::deep .tm-spreadsheet-sort__header-toggle {
     font-size: var(--tm-text-sm);
+}
+
+/* A 320 px body (272 px of content) cannot carry two columns: the options stack under the button. */
+@container (width < 20rem) {
+    .tm-spreadsheet-sort__body--mobile .tm-spreadsheet-sort__toolbar {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 /* ── Desktop / tablet: the level table ─────────────────────────────────────── */

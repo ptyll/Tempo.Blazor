@@ -19,7 +19,13 @@
    The theme condition is wrapped in `:where(...)` ON PURPOSE: the selector keeps the specificity of
    `.tm-spreadsheet` alone (0,1,0) instead of 0,2,0, so a host rule
    `.tm-spreadsheet { --tm-spreadsheet-header-active-bg: … }` that loads AFTER the package bundle still
-   wins in dark mode (a bare `[data-theme="dark"] .tm-spreadsheet` would out-rank it and pin the token). */
-:where([data-theme="dark"], .tm-dark) .tm-spreadsheet {
+   wins in dark mode (a bare `[data-theme="dark"] .tm-spreadsheet` would out-rank it and pin the token).
+
+   The two switches are written as TWO selector parts, each with its own `:where(...)`, instead of one
+   `:where(A, B)`: the repo's dark-theme parity guard (DarkThemeSelectorParityTests) splits a selector on
+   commas, so a comma INSIDE `:where(...)` reads as two fragments that each miss the other switch and
+   reports a phantom "half-themed" rule. Two parts also keep the zero-specificity wrapper on both. */
+:where([data-theme="dark"]) .tm-spreadsheet,
+:where(.tm-dark) .tm-spreadsheet {
     --tm-spreadsheet-header-active-bg: color-mix(in srgb, var(--tm-color-primary) 22%, var(--tm-spreadsheet-header-bg));
 }

@@ -55,6 +55,26 @@ to `OnOpen` / `OnDownload`; they drive the component's own XLSX import/export. W
 legacy `File` ribbon tab is not rendered (`ShowFileTab` is forced off). App-shell chrome from the
 reference ("Saved", the document switcher, the overflow menu) is host content in the two slots.
 
+**File actions (decision `SPREADSHEET-HEADER-FILE-ACTIONS`).** There is deliberately NO dedicated
+header command callback (`Func<Task> OnOpenDocument` / `OnDownloadDocument`): `OnOpen` / `OnDownload`
+already are the file contract (they render the built-in Open / Download and run the embedded XLSX
+import/export), and a second pair with those names would collide. A host that wants its OWN document
+picker puts it in `HeaderActions` and keeps the component's file commands off (or keeps both):
+
+```razor
+<TmSpreadsheet ShowHeader="true" Title="Budget 2026"
+               @bind-Data="_workbook" OnOpen="ImportXlsxAsync" OnDownload="ExportXlsxAsync">
+    <HeaderActions>
+        @* The host's own picker — the built-in XLSX actions stay reachable next to it. *@
+        <TmButton Variant="ButtonVariant.Ghost" Icon="folder-open" OnClick="PickDocumentAsync">
+            Open from library
+        </TmButton>
+    </HeaderActions>
+</TmSpreadsheet>
+```
+
+Any future dedicated callback is a new requirement (backlog), not a silent addition to this surface.
+
 ## Formula bar and name box
 
 The `fx` mark is permanent. While editing, the bar shows ✓ / ✗ (localized accessible names) with the
@@ -124,6 +144,38 @@ The dialogs and sheets are **siblings** of the layout container. `container-type
 `contain: layout`, which makes the box the containing block of `position: fixed` descendants: an overlay
 rendered inside it would be trapped in the card. Keep every new overlay outside
 `.tm-spreadsheet__layout` and read the resolved mode from the component (`DialogLayout`).
+
+### Dialogs at 320 px
+
+Every dialog is on the core `TmModal` (G6) and the phone presentation is decided by the viewport scope
+(`MobilePresentation.Auto` / `AutoFullscreen`), so a 320 px phone gets the fullscreen panel. The three
+dialogs that carry the most content were measured at 320 and 390:
+
+- **Name Manager** — the phone card puts the name (+ the live value) on the left and the reference
+  formula, the scope chip and the comment on the right (the reference's two columns). At 320 the card
+  stacks: the name stays ONE ellipsised line, the **"Refers to" line WRAPS** (`overflow-wrap: anywhere`,
+  clamped to two lines) with the full formula in the element's `title`/`aria-label`, and the scope chip
+  moves up under the name. The threshold is `@container (width < 22rem)` measured on the DIALOG's own
+  width — 320 px = 20rem flips it, a 390 phone (24.4rem) keeps the reference's two columns. Decision:
+  `SPREADSHEET-NAME-MANAGER-320-WRAP`.
+- **Sort** — on a phone the toolbar is the reference's TWO-column grid: "Add level" on the left, the
+  "My data has headers" / "Case sensitive" checkboxes stacked on the right. Below `20rem` of the
+  dialog body (320) the options stack UNDER the button instead — readability wins over the reference on
+  the narrowest phone. The desktop/tablet table row is unchanged.
+- **Format Cells** — the category is a `TmSelect` ABOVE the options on a phone (the reference's 140 px
+  listbox column cannot be read at 320), the tabs wrap, and the border tab is not offered (G2).
+
+The Name Manager, Sort and Format Cells 320/390 flow is guarded by
+`SpreadsheetPhase7cDialogs320E2ETests` (`scrollWidth == clientWidth` inside the modal body and the
+page, the footer visible, no clipped control) plus the screenshots
+`__screenshots__/spreadsheet/phase7c-{name-manager,sort,format-cells}--mobile-320.png` and
+`phase7c-sort--mobile-390.png`.
+
+**Data Validation breakpoint.** The `label | field` grid of `TmSpreadsheetDataValidationDialog` appears
+from `@container (width >= 640px)`, measured on the modal OVERLAY, because the dialog stays
+`ModalSize.Medium` by design (its body is ~470 px even on a 1440 viewport, so a body-level container
+would never reach 640 px). `DataValidationDialog_KeepsMediumSize_ForOverlayBreakpoint` guards the size:
+if the dialog ever grows to Large/XLarge, recompute the threshold before shipping the change.
 
 ## Sheet tabs
 
@@ -241,6 +293,13 @@ Consequences a host or a test must know:
   that `color-mix()` itself (`parseColor` / `resolveColorToken`), so the strip is opaque even where
   `fillStyle` would refuse the function. A host that imports the individual CSS files instead of the
   bundle must import that theme file too.
+- **A live theme flip repaints the canvas without a resize.** The palette is a snapshot of the
+  resolved tokens, taken on init and on every resize, so flipping `data-theme` / `data-tm-theme` on a
+  live page used to recolour the chrome while the canvas kept the old colours. The engine now watches
+  both attributes on `documentElement` (one `MutationObserver` per grid instance, disconnected in
+  `dispose`) and rebuilds the palette + requests a FULL redraw on every change. Guarded by the node lane
+  (`themeAttributeChange_RebuildsThePalette`, `npm run test:spreadsheet`) and by the E2E
+  `Phase7c_LiveThemeFlip_RepaintsTheCanvasWithoutResize` (no viewport nudge).
 - **Performance evidence**: the wall-clock A/B of the mouse selection drag (v2.9.0 against the current
   canvas, alternating arms, median + IQR) lives in `eng/release-evidence/spreadsheet-perf-<yyyyMMdd>/`
   and is produced by `SpreadsheetPerformanceE2ETests.SelectionDrag_AB_WithinBudget`

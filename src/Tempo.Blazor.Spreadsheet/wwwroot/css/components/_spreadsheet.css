@@ -746,6 +746,31 @@
     }
 }
 
+/* At 320 the three actions used to wrap onto two rows (Delete alone under New/Edit). One row of three
+   equal tracks keeps the primary action next to its siblings and the filter keeps the full width below
+   it. The labels stay textual (no icon-only mode): every button keeps its accessible name from its own
+   text, and the 44px touch height is unchanged. The threshold is the same 22rem of DIALOG width the card
+   uses (the toolbar itself is a container, so the query resolves against `.tm-modal-overlay.…`). */
+@container (width < 22rem) {
+    .tm-spreadsheet-name-manager__toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tm-spreadsheet-name-manager__tool {
+        width: 100%;
+        min-width: 0;
+        padding-inline: var(--tm-space-2);
+        font-size: var(--tm-text-sm);
+    }
+
+    .tm-spreadsheet-name-manager__filter {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+    }
+}
+
 
 /* Name Manager table */
 .tm-spreadsheet-name-manager__table-wrap {
@@ -842,15 +867,19 @@
     min-width: 0;
 }
 
+/* The name is ONE line with an ellipsis: a wrapping name pushed the value and the reference away on a
+   320 px card. The full name stays reachable through the element's title (phase 7c). */
 .tm-spreadsheet-name-manager__card-name {
     font-size: var(--tm-text-md);
     font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-color-text);
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* The phone card keeps both halves readable: the name wraps, the detail keeps a minimum width and
-   the scope chip never breaks mid-word. */
+/* The phone card keeps both halves readable: the detail column keeps a minimum width and the scope
+   chip never breaks mid-word (the name is a single ellipsised line, above). */
 .tm-spreadsheet-name-manager__card-detail {
     flex: 1 1 0;
     min-width: 8rem;
@@ -873,8 +902,17 @@
     overflow-wrap: anywhere;
 }
 
+/* The reference formula WRAPS instead of being squeezed out: `overflow-wrap: anywhere` breaks a long
+   `=Sheet!$B$2:$B$16` at any character, and two clamped lines keep the rest of the card (the scope
+   chip, the comment) reachable. The full reference stays in the element's title/aria-label. */
 .tm-spreadsheet-name-manager__card-refers {
     color: var(--tm-color-text);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .tm-spreadsheet-name-manager__chip {
@@ -898,6 +936,56 @@
     flex: 0 0 auto;
     margin-top: var(--tm-space-1);
     color: var(--tm-color-text-muted);
+}
+
+/* The 320 px card (decision SPREADSHEET-NAME-MANAGER-320-WRAP): the 22rem threshold is measured on the
+   DIALOG's own width — the overlay is the only surface that spans it (the body loses its 2 x 24 px
+   padding, which would flip the layout at 390 too). 320 px = 20rem < 22rem, a 390 phone = 24.4rem stays
+   the reference's two columns. `display: contents` lets the detail column's children join the card so the
+   scope chip can move UP under the name; the order values place it there, the reference keeps it under
+   the formula everywhere wider. */
+.tm-modal-overlay.tm-spreadsheet-name-manager {
+    container-type: inline-size;
+}
+
+@container (width < 22rem) {
+    .tm-spreadsheet-name-manager__card {
+        position: relative;
+        flex-direction: column;
+        gap: var(--tm-space-1);
+        padding-inline-end: var(--tm-space-8);
+    }
+
+    .tm-spreadsheet-name-manager__card-main {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .tm-spreadsheet-name-manager__card-detail {
+        display: contents;
+    }
+
+    .tm-spreadsheet-name-manager__chip {
+        order: 1;
+    }
+
+    .tm-spreadsheet-name-manager__card-refers {
+        order: 2;
+        margin-top: var(--tm-space-1);
+    }
+
+    .tm-spreadsheet-name-manager__card-comment {
+        order: 3;
+        margin-top: var(--tm-space-1);
+    }
+
+    /* Out of flow, so the stacked card does not start with an empty chevron row. */
+    .tm-spreadsheet-name-manager__card-chevron {
+        position: absolute;
+        inset-block-start: var(--tm-space-3);
+        inset-inline-end: var(--tm-space-3);
+        margin: 0;
+    }
 }
 
 .tm-spreadsheet-name-manager__empty {
@@ -1382,7 +1470,11 @@
 /* The container is the DIALOG OVERLAY (the viewport-sized surface the modal paints), so "label |
    field from 640px" describes the dialog's available width: desktop and tablet get the grid, a
    390/320 phone stacks. A body-level container would never reach it — the Medium card's body is
-   ~470px even on a 1440 viewport. */
+   ~470px even on a 1440 viewport.
+   640px is tied to `ModalSize.Medium` (TmSpreadsheetDataValidationDialog stays Medium by design,
+   guarded by `DataValidationDialog_KeepsMediumSize_ForOverlayBreakpoint`): if the dialog ever grows to
+   Large/XLarge, the card itself would pass 640px and this threshold would describe the wrong surface —
+   recompute it before changing the size. */
 .tm-modal-overlay.tm-dvd {
     container-type: inline-size;
 }

@@ -6007,6 +6007,129 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return onChange;
     }
 
+    // ── Live theme watcher (phase 7c, finding 18f08937) ─────────────────────────────────────
+    // The palette is a SNAPSHOT of the resolved tokens, so a dark/light or indigo flip on a live page
+    // used to recolour the chrome while the canvas (headers, selection) kept the OLD colours until the
+    // ResizeObserver happened to fire. One watcher repaints the canvas as fast as the CSS flips.
+    const liveThemeAttributes = ["data-theme", "data-tm-theme"];
+    // The `tm-dark` CLASS is Tempo's SECOND public dark switch (src/Tempo.Blazor/AGENT.md): a host that
+    // toggles it produces no theme-attribute mutation at all, so the class needs its own cheap observer.
+    const darkThemeClass = "tm-dark";
+    // The attributes are NOT always on <html>: the demo shell (and many hosts) put data-theme on a
+    // wrapper div while only `data-tm-theme` lives on :root, and ANY ancestor carrying one of them
+    // re-resolves the tokens for the grid. So the attribute observer watches the whole document subtree
+    // for just these two attribute names - Chromium filters the attribute changes before it notifies, and
+    // a theme flip is a rare user action, so this never turns into a per-frame cost.
+
+    /**
+     * Rebuilds the palette from the NEW token values and repaints every layer. Header, selection and
+     * content all read colours from the palette, so the repaint is `full` - a partial kind would leave
+     * one of them in the previous theme.
+     */
+    function applyLiveTheme(root) {
+        const s = getState(root);
+        if (!s) return false;
+        s.palette = buildPalette(root);
+        // Cell colour snapshots cache the painted style of a cell; the theme owns the ink, so drop them.
+        clearCellSnapshots(root, "theme-change");
+        requestCanvasRedraw(root, "theme-change", "full");
+        return true;
+    }
+
+    /** Whether a node carries the `.tm-dark` class switch (a fake node in the node lane may not). */
+    function hasDarkClass(node) {
+        const list = node ? node.classList : null;
+        return !!(list && typeof list.contains === "function" && list.contains(darkThemeClass));
+    }
+
+    /** The dark state the class switch currently describes (`html.tm-dark` OR `body.tm-dark`). */
+    function readDarkClassState(session) {
+        const doc = session ? session.document : null;
+        return hasDarkClass(doc ? doc.documentElement : null) || hasDarkClass(doc ? doc.body : null);
+    }
+
+    /**
+     * Repaints ONLY when the `tm-dark` class really changed: `class` mutates for many unrelated reasons
+     * (a menu opens, a layout helper toggles), so a blindly repainting observer would be a per-interaction
+     * full canvas redraw. Returns whether a repaint was requested.
+     */
+    function applyDarkClassChange(root, session) {
+        if (!session) return false;
+        const dark = readDarkClassState(session);
+        if (dark === session.lastDark) return false;
+        session.lastDark = dark;
+        return applyLiveTheme(root);
+    }
+
+    /**
+     * Watches BOTH live dark switches for the LIFETIME of a grid: the `data-theme` / `data-tm-theme`
+     * attributes (document subtree, two attribute names) and the `.tm-dark` class on `documentElement`
+     * and `body` (exactly two nodes, no subtree). Returns a session `{ observers, document, lastDark }`
+     * so `dispose` can disconnect every observer, or null when the environment has no MutationObserver
+     * (an ancient host keeps the resize-only behaviour). `environment` is the node-test seam.
+     */
+    function observeLiveTheme(root, environment) {
+        if (!root) return null;
+        const env = environment || {};
+        const doc = env.document || (typeof document !== "undefined" ? document : null);
+        const Observer = env.MutationObserver
+            || (typeof MutationObserver !== "undefined" ? MutationObserver : null);
+        const element = doc ? doc.documentElement : null;
+        if (!element || typeof Observer !== "function") return null;
+        const onChange = typeof env.onChange === "function" ? env.onChange : () => applyLiveTheme(root);
+        const session = {
+            root,
+            document: doc,
+            observers: [],
+            lastDark: false
+        };
+        session.lastDark = readDarkClassState(session);
+
+        const attributeObserver = new Observer(() => {
+            try { onChange(root); } catch (e) { /* a repaint must never break the mutation loop */ }
+        });
+        const classObserver = new Observer(() => {
+            try { applyDarkClassChange(root, session); } catch (e) { /* same: never break the loop */ }
+        });
+
+        try {
+            attributeObserver.observe(element, {
+                attributes: true,
+                attributeFilter: liveThemeAttributes.slice(),
+                subtree: true
+            });
+            session.observers.push(attributeObserver);
+
+            // Two nodes only: a class observer on the whole subtree would fire on every hover/menu class.
+            for (const node of [element, doc.body]) {
+                if (!node || typeof node !== "object") continue;
+                classObserver.observe(node, { attributes: true, attributeFilter: ["class"] });
+            }
+            if (doc.body) session.observers.push(classObserver);
+        } catch (e) {
+            detachLiveTheme(session);
+            return null;
+        }
+        return session;
+    }
+
+    /**
+     * Disconnects a live-theme session (or a single observer). Returns whether anything was detached.
+     */
+    function detachLiveTheme(session) {
+        if (!session) return false;
+        const observers = Array.isArray(session.observers)
+            ? session.observers
+            : (typeof session.disconnect === "function" ? [session] : []);
+        let detached = false;
+        for (const observer of observers) {
+            if (!observer || typeof observer.disconnect !== "function") continue;
+            try { observer.disconnect(); } catch (e) { /* already gone */ }
+            detached = true;
+        }
+        return detached;
+    }
+
     /**
      * Watches the `(pointer: coarse)` media query for the LIFETIME of a grid, so attaching a mouse to a
      * tablet (or undocking a 2-in-1) re-resolves the Auto density instead of keeping the first answer.
@@ -6885,6 +7008,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.resizeObserver.observe(root);
         }
 
+        // A theme flip is an attribute change, not a resize: without this watcher the canvas keeps the
+        // palette it built on the last resize (finding 18f08937, phase 7c).
+        s.themeObserver = observeLiveTheme(root);
+
         // The state must be reachable through getState() BEFORE the phase-7 sessions attach: both read
         // it (unlike the observable helpers below, which already had it).
         root[stateKey] = s;
@@ -6914,6 +7041,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             root.removeEventListener(event, listener, options);
         }
         if (s.resizeObserver) s.resizeObserver.disconnect();
+        detachLiveTheme(s.themeObserver);
+        s.themeObserver = null;
         try { s.touch?.detach?.(); } catch (e) { /* the helpers were never loaded */ }
         s.touch = null;
         disarmTouchReleaseClickGuard(root);
@@ -9204,6 +9333,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
      */
     window.tmSpreadsheetCanvas._internals = {
         buildPalette,
+        // Phase 7c: the live theme watcher and the engine state slot it mutates (the node lane drives
+        // the shipped MutationObserver wiring with a fake observer instead of a browser).
+        observeLiveTheme,
+        detachLiveTheme,
+        readDarkClassState,
+        stateKey,
+        getState,
         resolveDensity,
         resolveDensityFromModel,
         resolveHeaderHighlight,

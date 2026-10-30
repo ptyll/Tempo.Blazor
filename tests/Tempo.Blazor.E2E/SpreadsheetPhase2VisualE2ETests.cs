@@ -136,13 +136,10 @@ public partial class SpreadsheetE2ETests
             await ApplyPhase2ThemeAsync(page, theme == "dark" ? "dark" : "indigo");
             if (theme == "indigo-with-dark")
             {
+                // A LIVE theme flip: no viewport nudge any more. Phase 7c's live theme watcher (a
+                // MutationObserver on documentElement) rebuilds the palette and repaints, so the flip
+                // alone must be enough — this branch would catch a regression of that watcher.
                 await ToggleDarkModeAsync(page);
-                // A LIVE theme flip without a resize leaves the canvas painting its previous palette
-                // (the palette is rebuilt from the ResizeObserver); nudge the viewport like
-                // ApplyPhase2ThemeAsync does for the other themes so the repaint reads the new tokens.
-                var size = page.ViewportSize;
-                await page.SetViewportSizeAsync(size!.Width - 2, size.Height);
-                await page.SetViewportSizeAsync(size.Width, size.Height);
                 await page.WaitForTimeoutAsync(400);
             }
 

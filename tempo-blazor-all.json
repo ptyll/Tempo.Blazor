@@ -26887,13 +26887,13 @@
               "name": "OnOpen",
               "type": "EventCallback<SpreadsheetOpenEventArgs>",
               "isRequired": false,
-              "description": "Fires when a file is opened via the toolbar."
+              "description": "Fires when the user picks Open. With ShowHeader=true it renders the header's Open action (the built-in XLSX import); in the desktop ribbon it is the File tab's Open. Subscribe and the host owns loading the returned file - the component never changes the workbook behind the host's back."
             },
             {
               "name": "OnDownload",
               "type": "EventCallback<SpreadsheetDownloadEventArgs>",
               "isRequired": false,
-              "description": "Fires when the workbook is downloaded."
+              "description": "Fires when the user asks for a download. With ShowHeader=true it renders the header's Download action (the component's own XLSX export). This pair IS the header file contract (decision SPREADSHEET-HEADER-FILE-ACTIONS); a host that wants its own document picker adds it to HeaderActions."
             },
             {
               "name": "Class",
@@ -26943,7 +26943,7 @@
               "name": "HeaderActions",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+              "description": "Host actions on the RIGHT of the document header (rendered only with ShowHeader=true), before the built-in Open / Download and the Show grid lines toggle - e.g. a host document picker (decision SPREADSHEET-HEADER-FILE-ACTIONS, example in docs/spreadsheet.md)."
             },
             {
               "name": "ShowFileTab",
@@ -44044,6 +44044,12 @@
           "documentationStatus": "merged",
           "members": [
             {
+              "name": "Anchor",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The gesture that opened the menu: \"touch\" for a long-press, \"pointer\" for a mouse. A finger-sized menu is offset from the fingerprint (the finger would cover the first entry), and a host may key its own presentation off it. Null when the caller did not report one."
+            },
+            {
               "name": "ClientX",
               "kind": "Property",
               "type": "double",
@@ -44072,6 +44078,12 @@
               "kind": "Property",
               "type": "int",
               "description": "Zero-based index of the sheet the menu applies to; -1 for a grid request."
+            },
+            {
+              "name": "ViewportHeight",
+              "kind": "Property",
+              "type": "double",
+              "description": "The viewport height the gesture reported, so a menu with no room below can FLIP above the press point instead of being clamped into the bottom edge. Null when the caller did not report one."
             }
           ]
         },
@@ -46716,6 +46728,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/css/theme-spreadsheet-dark.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet-benchmark.js",
           "kind": "JavaScript"
         },
@@ -46729,6 +46745,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-theme.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -100966,6 +100986,18 @@
               "kind": "Method",
               "type": "SpreadsheetCellStyle",
               "description": "Creates a deep copy of this style."
+            },
+            {
+              "name": "CopyFrom",
+              "kind": "Method",
+              "type": "void",
+              "description": "Copies every visual property of source onto this style (the border objects are copied, not shared). Used by the spreadsheet's Fill down / Fill right, which follows Excel and copies the SOURCE cell's format into the filled cells, and by the style command so the copy is one undoable step.",
+              "parameters": [
+                {
+                  "name": "source",
+                  "type": "SpreadsheetCellStyle"
+                }
+              ]
             },
             {
               "name": "BackgroundColor",

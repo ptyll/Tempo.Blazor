@@ -79,13 +79,13 @@
       "name": "OnOpen",
       "type": "EventCallback<SpreadsheetOpenEventArgs>",
       "isRequired": false,
-      "description": "Fires when a file is opened via the toolbar."
+      "description": "Fires when the user picks Open. With ShowHeader=true it renders the header's Open action (the built-in XLSX import); in the desktop ribbon it is the File tab's Open. Subscribe and the host owns loading the returned file - the component never changes the workbook behind the host's back."
     },
     {
       "name": "OnDownload",
       "type": "EventCallback<SpreadsheetDownloadEventArgs>",
       "isRequired": false,
-      "description": "Fires when the workbook is downloaded."
+      "description": "Fires when the user asks for a download. With ShowHeader=true it renders the header's Download action (the component's own XLSX export). This pair IS the header file contract (decision SPREADSHEET-HEADER-FILE-ACTIONS); a host that wants its own document picker adds it to HeaderActions."
     },
     {
       "name": "Class",
@@ -135,7 +135,7 @@
       "name": "HeaderActions",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+      "description": "Host actions on the RIGHT of the document header (rendered only with ShowHeader=true), before the built-in Open / Download and the Show grid lines toggle - e.g. a host document picker (decision SPREADSHEET-HEADER-FILE-ACTIONS, example in docs/spreadsheet.md)."
     },
     {
       "name": "ShowFileTab",

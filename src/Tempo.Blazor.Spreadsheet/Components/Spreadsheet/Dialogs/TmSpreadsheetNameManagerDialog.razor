@@ -62,11 +62,17 @@
                          @onclick="() => OnRowClick(range)"
                          @ondblclick="() => OnRowDoubleClick(range)">
                         <div class="tm-spreadsheet-name-manager__card-main">
-                            <div class="tm-spreadsheet-name-manager__card-name">@range.Name</div>
+                            @* Name = ONE ellipsised line; the title carries the full name for the
+                               long-name edge case (phase 7c). *@
+                            <div class="tm-spreadsheet-name-manager__card-name" title="@range.Name">@range.Name</div>
                             <div class="tm-spreadsheet-name-manager__card-value">@GetPreviewValue(range)</div>
                         </div>
                         <div class="tm-spreadsheet-name-manager__card-detail">
-                            <div class="tm-spreadsheet-name-manager__card-refers">@range.RefersTo</div>
+                            @* Refers to WRAPS (up to two clamped lines) instead of being squeezed out at
+                               320 px; the TITLE keeps the full formula readable. No aria-label: it is
+                               prohibited on a generic div and the text itself is the accessible name. *@
+                            <div class="tm-spreadsheet-name-manager__card-refers"
+                                 title="@range.RefersTo">@range.RefersTo</div>
                             <span class="tm-spreadsheet-name-manager__chip">
                                 @if (range.Scope == NamedRangeScope.Workbook)
                                 {

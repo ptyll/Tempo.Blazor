@@ -220,7 +220,11 @@ public sealed class SpreadsheetDesignTokenTests
         // The theme CONDITION is wrapped in :where(...) so the rule keeps `.tm-spreadsheet`'s own
         // specificity (0,1,0) — a bare `[data-theme="dark"] .tm-spreadsheet` would be 0,2,0 and would
         // out-rank a host's `.tm-spreadsheet { --tm-spreadsheet-header-active-bg: … }` override in dark.
-        stripped.Should().Contain(":where([data-theme=\"dark\"], .tm-dark) .tm-spreadsheet");
+        // The two switches are TWO selector parts (each with its own :where), not one `:where(A, B)`: the
+        // dark-theme parity guard splits selectors on commas, so a comma inside :where() would read as two
+        // half-themed fragments (DarkThemeSelectorParityTests).
+        stripped.Should().Contain(":where([data-theme=\"dark\"]) .tm-spreadsheet");
+        stripped.Should().Contain(":where(.tm-dark) .tm-spreadsheet");
         stripped.Should().NotContain("[data-theme=\"dark\"] .tm-spreadsheet",
             "the theme condition must stay inside :where(), otherwise a host token override loses in dark");
         DarkThemeRule.Matches(stripped).Should().ContainSingle(
