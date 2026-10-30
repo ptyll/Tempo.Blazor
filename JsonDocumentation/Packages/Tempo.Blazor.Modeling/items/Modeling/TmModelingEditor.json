@@ -143,6 +143,32 @@
    "isRequired": false,
    "default": "null",
    "description": "The editor's block size (a CSS length only - e.g. 600px, 100%, 100dvh). Null keeps the stylesheet contract min(768px, 100vh - 32px) (the token pair on .tm-modeling-editor). When set, the editor renders exactly this height (the token min-height floor is dropped with an inline min-height: 0) - the host owns the sizing. The shell inside fills the box."
+  },
+  {
+   "name": "AllowModelEditing",
+   "type": "bool",
+   "isRequired": false,
+   "default": "false",
+   "description": "Turns the inspector editing mode on (Fáze 14). Editing is active only when an IModelingModelWriter is registered for the effective provider key OR an OnModelChanged delegate is bound — otherwise the inspector stays read-only (MO2)."
+  },
+  {
+   "name": "SaveMode",
+   "type": "ModelingSaveMode",
+   "isRequired": false,
+   "default": "ModelingSaveMode.Manual",
+   "description": "How committed edits reach the writer: Manual (default) aggregates the pending change set until SaveModelChangesAsync; Immediate calls the writer after every field commit."
+  },
+  {
+   "name": "OnModelChanged",
+   "type": "EventCallback<ModelingModelChangedEventArgs>",
+   "isRequired": false,
+   "description": "Raised after every committed field edit with the change set of that commit and the current model. Binding it alone (without a writer) makes the host own the persistence."
+  },
+  {
+   "name": "OnSaveCompleted",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Raised after a completed save (success, conflict or failure)."
   }
  ],
  "cssClasses": [
@@ -193,6 +219,26 @@
   {
    "name": "tm-modeling-editor__inspector",
    "description": "The inspector wrapper inside the shell's right dock; carries the frozen modeling-inspector-panel test id and the Properties | Source TmTabs (sticky tab strip)."
+  },
+  {
+   "name": "tm-modeling-editor__history-btn",
+   "description": "Inspector header undo/redo button (with the keyboard hint in its title)."
+  },
+  {
+   "name": "tm-modeling-editor__editing-alert",
+   "description": "Wrapper of the save/conflict feedback alerts above the inspector."
+  },
+  {
+   "name": "tm-modeling-editor__conflict-reload",
+   "description": "The conflict alert's localized \"Reload\" action (asks for confirmation before discarding pending changes)."
+  },
+  {
+   "name": "tm-modeling-editor__discard-body",
+   "description": "Body of the discard-confirmation modal."
+  },
+  {
+   "name": "tm-modeling-editor__discard-actions",
+   "description": "Confirm/Cancel row of the discard-confirmation modal."
   }
  ]
 }

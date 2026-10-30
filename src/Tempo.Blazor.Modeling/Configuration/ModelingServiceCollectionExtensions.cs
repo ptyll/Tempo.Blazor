@@ -44,6 +44,12 @@ public static class ModelingServiceCollectionExtensions
         services.TryAddSingleton<IModelingViewpointRulesProvider, BuiltInModelingViewpointRulesProvider>();
         services.TryAddSingleton<IModelingStencilMapper, BuiltInModelingStencilMapper>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider, DemoModelingModelProvider>());
+
+        // Fáze 14: the write contract is SEPARATE from the read-only provider (decision
+        // MODELING-INSPECTOR-EDITING). Writers are resolved by ProviderKey; the demo provider
+        // ships an in-memory demo writer so the demo page can edit out of the box.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelWriter, DemoModelingModelWriter>());
+
         services.TryAddScoped<ModelingDiagramGenerator>();
         services.TryAddScoped<IModelingDiagramProjector>(sp => sp.GetRequiredService<ModelingDiagramGenerator>());
 

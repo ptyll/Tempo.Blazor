@@ -662,6 +662,11 @@ public partial class TmModelingEditor : IAsyncDisposable
             _completedLoadCount++;
             _completedGenerationCount++;
 
+            // Fáze 14: the loaded model is the editing baseline; the editor-owned undo/redo stack
+            // belongs to the previous document and is dropped with it.
+            ResetEditingState();
+            CaptureBaseline(loadedModel);
+
             if (_document is not null)
             {
                 await OnDiagramGenerated.InvokeAsync(_document);
@@ -692,18 +697,24 @@ public partial class TmModelingEditor : IAsyncDisposable
             _errorMessage = ex.Message;
             _showLongLoadingMessage = false;
             _isReloading = false;
+            ResetEditingState();
         }
     }
 
     private Task ReloadModelAsync()
+        // Fáze 14: a reload over pending edits first asks for confirmation (the confirm dialog
+        // runs the actual reload after the user accepts; no pending changes → direct path).
+        => RequestDiscardThenAsync(ReloadModelCoreAsync);
+
+    private async Task ReloadModelCoreAsync()
     {
         if (_state == ModelingEditorState.Loading)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         _activeLoadKey = null;
-        return LoadModelAsync(force: true);
+        await LoadModelAsync(force: true);
     }
 
     private IModelingModelProvider? ResolveProvider()
@@ -763,6 +774,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         _showLongLoadingMessage = false;
         _isReloading = false;
         _completedGenerationCount = 0;
+        ResetEditingState();
     }
 
     private Task SelectElementAsync(ModelingElementDto element)
@@ -919,6 +931,13 @@ public partial class TmModelingEditor : IAsyncDisposable
             return;
         }
 
+        // Fáze 14: a provider switch with pending edits asks for confirmation first — the switch
+        // AND the reload run only after the user accepts the discard.
+        await RequestDiscardThenAsync(() => ApplyProviderChangeAsync(normalized));
+    }
+
+    private async Task ApplyProviderChangeAsync(string? normalized)
+    {
         _effectiveProviderKey = normalized;
         _effectiveNotationKey = string.IsNullOrWhiteSpace(NotationKey) ? null : NotationKey;
         _effectiveViewpointKey = string.IsNullOrWhiteSpace(ViewpointKey) ? null : ViewpointKey;
@@ -926,10 +945,10 @@ public partial class TmModelingEditor : IAsyncDisposable
         // The opened diagram-editor overlay closes through the regular close path so the focus
         // restore onto the preview's "Open in editor" trigger still runs (review fix, phase 3).
         await CloseGeneratedDiagramAsync();
-        var reload = LoadModelAsync(force: true);
         await ProviderKeyChanged.InvokeAsync(_effectiveProviderKey);
         await OnProviderChanged.InvokeAsync(_effectiveProviderKey);
-        await reload;
+        _activeLoadKey = null;
+        await LoadModelAsync(force: true);
     }
 
     private Task HandleProviderChangedAsync(ChangeEventArgs args)

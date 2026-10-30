@@ -12233,6 +12233,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "IModelingModelWriter",
+      "kind": "Interface",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Writes edited modeling model data back to the source that IModelingModelProvider loaded it from (Fáze 14, decision MODELING-INSPECTOR-EDITING). The provider contract stays READ-ONLY: a host that wants an editable inspector registers a separate writer resolved by ProviderKey.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "IModelingNotationProfile",
       "kind": "Interface",
       "category": "Modeling",
@@ -12323,6 +12333,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingElementChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingElementDto",
       "kind": "Class",
       "category": "Modeling",
@@ -12373,6 +12393,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelChangeSet",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync (ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, Elements, Relationships).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingModelDto",
       "kind": "Class",
       "category": "Modeling",
@@ -12393,6 +12423,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelSaveResult",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The outcome of IModelingModelWriter.SaveChangesAsync (Succeeded, IsConflict, Message, Model?, Issues).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingNotationProfileRegistry",
       "kind": "Class",
       "category": "Modeling",
@@ -12400,6 +12440,16 @@
       "description": "DI-backed registry of modeling notation profiles.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingNotationProfiles.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingRelationshipChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -37538,11 +37588,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1495,
-    "manualItemCount": 1495,
-    "generatedItemCount": 1478,
+    "itemCount": 1500,
+    "manualItemCount": 1500,
+    "generatedItemCount": 1483,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1478
+    "publicApiTypeCount": 1483
   }
 }

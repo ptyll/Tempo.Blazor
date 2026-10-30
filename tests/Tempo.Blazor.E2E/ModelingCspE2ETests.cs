@@ -105,7 +105,26 @@ public sealed class ModelingCspE2ETests : ServerTestBase
         return await page.EvaluateAsync<string>("() => window.__tmModelingDraggedElementId || ''");
     }
 
-    private async Task<CspRun> OpenLoadedModelingPageAsync(bool captureHeader = false)
+    [TestMethod]
+    [Description("Fáze 14: inspector editing (rename → tree + preview) works under a strict CSP without unsafe-eval")]
+    public async Task CspPage_InspectorEditing_WorksWithoutEval()
+    {
+        var run = await OpenLoadedModelingPageAsync(querySuffix: "&editing=1");
+
+        await run.Page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+        var name = run.Page.Locator("#modeling-inspector-name");
+        await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await name.FillAsync("Renamed under CSP");
+        await name.PressAsync("Enter");
+
+        await run.Page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']",
+                new PageLocatorOptions { HasText = "Renamed under CSP" })
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        AssertNoEvalViolations(run);
+    }
+
+    private async Task<CspRun> OpenLoadedModelingPageAsync(bool captureHeader = false, string querySuffix = "")
     {
         var context = await CreateContextAsync();
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
@@ -124,7 +143,7 @@ public sealed class ModelingCspE2ETests : ServerTestBase
         };
         CaptureEvalViolations(page, violations);
 
-        await page.GotoAsync($"{BaseUrl}{CspModelingEditorUrl}", new PageGotoOptions
+        await page.GotoAsync($"{BaseUrl}{CspModelingEditorUrl}{querySuffix}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
             Timeout = 60000

@@ -191,3 +191,59 @@
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
 }
+
+/* ── Fáze 14: the editable surface ─────────────────────────────────────────
+   The editing fields reuse the core input components (TmTextInput / TmTextArea /
+   TmNumberInput / TmToggle); the inspector only spaces them and keeps the summary grid
+   readable while one of the rows is a field. No color literals — every value is a token. */
+
+.tm-modeling-inspector__edit-field {
+    padding-block: var(--tm-space-1);
+}
+
+.tm-modeling-inspector__edit-field ::deep .tm-input-wrapper {
+    width: 100%;
+}
+
+.tm-modeling-inspector__section ::deep .tm-input-wrapper {
+    width: 100%;
+}
+
+.tm-modeling-inspector__property-edit ::deep .tm-input-wrapper,
+.tm-modeling-inspector__property-edit ::deep .tm-number-input,
+.tm-modeling-inspector__property-edit ::deep .tm-toggle {
+    width: 100%;
+    min-width: 0;
+}
+
+/* The header gains an actions cluster when the editor hosts its undo/redo pair here. */
+.tm-modeling-inspector__header {
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__header-actions {
+    margin-inline-start: auto;
+}
+
+/* 44px touch targets: the editing inputs reach the shared touch target on a coarse pointer
+   (Fáze 14 — mobile G2 light edits). The knob is the CORE height variable — the wrappers
+   override the token instead of re-declaring min-height/height on the core .tm-input class
+   (the unconstrained-class-ownership guard forbids exactly that specificity fight). */
+@media (pointer: coarse) {
+    .tm-modeling-inspector__edit-field,
+    .tm-modeling-inspector__property-edit {
+        --tm-input-height-md: var(--tm-touch-target);
+    }
+
+    .tm-modeling-inspector__property-edit ::deep .tm-toggle {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-inspector__edit-field,
+    .tm-modeling-inspector__property-edit {
+        transition: none;
+    }
+}

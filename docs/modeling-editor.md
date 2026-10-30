@@ -41,7 +41,7 @@ performance-large|bpmn2-*|uml25-*|invalid|scenario-invalid-relationship`.
 | `TmModelingEditor` | The workspace shell: header, model tree, diagram preview + issues dock, inspector, status bar. Owns loading, generation, selection and the open-editor dialog. |
 | `TmModelingDiagramPreview` | The generated diagram: a read-only `TmDiagramEditor` (`ToolbarPreset.Viewer`, `ReadOnly=true`, `ShowTitle=false`) in a labelled section with the Primary "Open in editor" + Secondary "Generate diagram" actions and a drop target. |
 | `TmModelingModelTree` | The APG `role="tree"` of model elements — flat `SemanticType` groups or the nested `ParentId` hierarchy (`Grouping`, Fáze 12) — with filter, collapse state and the drag/insert bridge. |
-| `TmModelingInspector` | Read-only inspector for the selected element/relationship (MO2 — the inspector never edits). |
+| `TmModelingInspector` | Inspector for the selected element/relationship. Read-only by default (MO2); with the editor's opt-in (`AllowModelEditing` + a writer or `OnModelChanged`, Fáze 14) the name, the description and the scalar properties become inputs — source-backed fields, governance and complex JSON values are never editable. |
 | `TmModelingRelatedElementsPanel` | The Relations tab body (Fáze 13): the selected element's outgoing/incoming relationships (type + counterpart with the type icon) and the selected relationship's source/target as navigable rows; activations reuse the editor's selection paths. |
 | `TmModelingSourcePanel` | The "Source" inspector tab: provider/system/version/trust metadata, freshness and the "Load model" reload. |
 | `TmModelingIssuePanel` | The issues list (severity, message, recommended fix, source navigation) with a collapsible dock header. |
@@ -82,6 +82,10 @@ window still resolves the DE tablet layout).
 | `OnOpenInEditor` | `EventCallback<DiagramDocument>` | — | When the user opens the generated document in the full editor. |
 | `AllowNodeDrop` | `bool` | `true` | Tree→preview reuse (drop AND the non-drag insert); `false` removes the drop zone and the "+" affordance. |
 | `TreeGrouping` | `ModelingTreeGrouping` | `Auto` | Fáze 12 pass-through to the model tree: `Auto` renders the `ParentId` hierarchy when at least one element resolves to a valid parent and keeps the flat SemanticType groups otherwise. |
+| `AllowModelEditing` | `bool` | `false` | Turns the inspector editing mode on (Fáze 14). Editing is active only when an `IModelingModelWriter` is registered for the effective provider key OR `OnModelChanged` has a delegate — otherwise the inspector stays read-only (MO2), regardless of this flag. |
+| `SaveMode` | `ModelingSaveMode` | `Manual` | `Manual` aggregates the pending change set until `SaveModelChangesAsync()` (or the inspector Save button / the mobile action-bar entry); `Immediate` calls the writer after every field commit. |
+| `OnModelChanged` | `EventCallback<ModelingModelChangedEventArgs>` | — | After every committed field edit: the commit's change set + the current model. Binding it alone (without a writer) makes the HOST own the persistence — the editor clears its pending state after the callback. |
+| `OnSaveCompleted` | `EventCallback` | — | After a completed save (success, conflict or failure). |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Raised by a real drop AND by the insert alternative (same contract). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | see above | `Auto` / `Desktop` / `new(768, 1200)` | Presentation resolution from the editor's own container. |
 | `Height` | `string?` | `null` | The editor's block size (CSS length only). `null` keeps the stylesheet contract `min(768px, 100vh - 32px)`; a set value renders exactly that height (the token floor is dropped) and the shell fills the box. A value that is not a simple CSS length or a single `calc()` expression — anything carrying `;`/`{`/`}` — is REJECTED and falls back to the stylesheet default (final review: the inline style is never an injection vector). |
@@ -251,8 +255,62 @@ built ONCE per `Relationships` / `Elements` reference (guarded by
 `OnViewpointChanged`; labels sit ABOVE the fields (`--tm-input-height-md`), the disabled
 viewpoint select's placeholder is localized. `TmModelingSourcePanel` — `Metadata`, `IsLoading`,
 `OnLoadRequested` (the "Load model" button drives the editor's reload); a wide panel container
-(≥ 640px) lays the metadata cells into columns. `TmModelingInspector` — read-only
-`Element`/`Relationship`/`Elements` presentation (MO2).
+(≥ 640px) lays the metadata cells into columns. `TmModelingInspector` — `Element`/
+`Relationship`/`Elements` presentation: read-only (MO2) until the editor turns editing on.
+
+## Editing (Fáze 14, decision `MODELING-INSPECTOR-EDITING`)
+
+The inspector becomes editable through an explicit OPT-IN; with no opt-in nothing changes.
+
+- **Write contract (Abstractions, `Tempo.Blazor.Modeling`)** — `IModelingModelWriter`
+  (`ProviderKey` + `SaveChangesAsync(ModelingModelChangeSet, CancellationToken)` →
+  `ModelingModelSaveResult`). `IModelingModelProvider` stays READ-ONLY; a host registers a
+  writer alongside its provider and the editor resolves it BY provider key. `ModelingModelChangeSet`
+  carries `ModelId`, `ProviderKey`, `BaseVersion` (the `Metadata.SourceVersion` the model was
+  loaded with), `Elements` and `Relationships`; each `ModelingElementChange` /
+  `ModelingRelationshipChange` sets ONLY the changed fields (a `null` member means "unchanged" —
+  never conflated with "changed to null/empty"). The result carries `Succeeded`, `IsConflict`,
+  `Message`, an optional restored `Model` and `Issues`.
+- **Editor opt-in** — `AllowModelEditing` AND (a writer for the effective provider key OR an
+  `OnModelChanged` delegate). `SaveMode` is `Manual` (default — the pending change set is
+  aggregated until `SaveModelChangesAsync()`) or `Immediate` (the writer is called after every
+  field commit). `HasPendingModelChanges` is public so a host's `TmNavigationGuard` can block
+  navigation away.
+- **What is editable** — the element/relationship NAME, the element DESCRIPTION and the SCALAR
+  `Properties` entries: `string` → `TmTextInput`, integer → `TmNumberInput`, other numbers → a
+  text field parsed invariantly, `bool` → `TmToggle`; the JSON value kind is preserved on every
+  commit. Clearing a scalar property commits it through `RemovedProperties`. NEVER editable:
+  `SemanticType`, `Notation`, the `Source*` triple, `Governance` and complex (object/array)
+  JSON values — those render as the historical read-only rows.
+- **Commit semantics** — text fields commit on blur or Enter (Escape reverts the draft and
+  raises nothing); the toggle commits on click; an empty name shows the localized
+  `TmModelingInspector_NameRequired` message (`aria-invalid` + described-by) and does not
+  commit. Every commit raises `OnElementEdited` / `OnRelationshipEdited` with ONLY the changed
+  fields, then `TmModelingEditor.OnModelChanged` with the commit's change set + the current
+  model.
+- **Undo/redo is editor-owned**: each field commit is ONE `DiagramCommandTransaction`
+  ("Edit element" / "Edit relationship") wrapping `UpdateModelingElementCommand` /
+  `UpdateModelingRelationshipCommand`, which mutate the model DTO in place and synchronize the
+  diagram document (node `Data["name"]/["label"]` by `modelElementId`, edge `Label` by
+  relationship id) — so the model tree, the preview canvas and the open-editor dialog update in
+  the same step. The pair lives in the inspector header (`Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y`,
+  `aria-keyshortcuts`, polite live-region announcement) and works ONLY while the focus is
+  inside the inspector — the diagram canvas keyboard scope is never involved.
+- **The pending set is a diff, not an accumulator**: it is recomputed from the live model
+  against the baseline snapshot (the model as loaded, or as last saved/adopted), so undo/redo,
+  a discarded edit or a reload keep it consistent without field-by-field bookkeeping.
+- **Conflict & guards** — an `IsConflict` result keeps the pending edits and renders a `TmAlert`
+  in the inspector with a localized "Reload" action (`modeling-conflict-reload`); a failed save
+  renders the failure message. A reload (`Source` tab Load, the mobile action bar) or a
+  provider switch with pending edits opens the discard-confirmation modal
+  (`modeling-discard-changes-modal`, `TmModelingEditor_DiscardChangesTitle`/`_Text`,
+  "Unsaved changes: {0}" count) — confirm discards and reloads, cancel keeps everything.
+- **Mobile (G2 light edits)** — the Inspector tab edits exactly like the docked bands and all
+  editing inputs grow to 44px targets; while edits are pending the F5 `TmMobileActionBar` leads
+  with sticky Save/Discard entries.
+- **Demo** — `/modeling-editor` shows an "Allow editing" switch, a Manual/Immediate selector,
+  the last change set (`OnModelChanged`) and `?scenario=save-conflict` (the in-memory demo
+  writer reports one conflict per arm).
 
 ## Non-drag alternative (WCAG 2.5.7)
 

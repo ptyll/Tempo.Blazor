@@ -8,6 +8,32 @@ namespace Tempo.Blazor.E2E;
 [TestCategory("WASM")]
 public sealed class ModelingAccessibilityM25E2ETests : WasmTestBase
 {
+    [TestMethod]
+    [Description("Fáze 14: the editing inputs carry visible labels and the name-required error is announced")]
+    public async Task Editing_InputsLabeledAndValidationErrorAnnounced()
+    {
+        var page = await OpenLoadedModelingPageAsync("?editing=1");
+
+        await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+        var name = page.Locator("#modeling-inspector-name");
+        await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        // Every editing input is labeled (the label's for= points at the input).
+        var labelFor = await page.Locator("label[for='modeling-inspector-name']").GetAttributeAsync("for");
+        Assert.AreEqual("modeling-inspector-name", labelFor);
+        Assert.AreEqual(1, await page.Locator("label[for='modeling-inspector-description']").CountAsync(),
+            "the description textarea is labeled");
+        Assert.AreEqual(1, await page.Locator("label[for='modeling-inspector-property-owner']").CountAsync(),
+            "the scalar property input is labeled");
+
+        // An empty name commit shows the localized required message and marks the field invalid.
+        await name.FillAsync(string.Empty);
+        await name.PressAsync("Enter");
+        var error = page.Locator("[data-testid='modeling-inspector'] .tm-input-error-message").First;
+        await error.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        Assert.AreEqual("true", await name.GetAttributeAsync("aria-invalid"), "the invalid name is aria-invalid");
+    }
+
     private const string ModelingEditorUrl = "/modeling-editor";
 
     [TestMethod]

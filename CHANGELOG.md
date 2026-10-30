@@ -207,6 +207,36 @@
 
 ### Added
 
+- **Modeling: an editable inspector behind a write contract (Fáze 14 of the Modeling redesign plan, decision `MODELING-INSPECTOR-EDITING`).** The modeling inspector can now edit the selected element or relationship — the name, the description and the SCALAR properties (string, number, boolean; complex object/array values stay read-only, as do semantic type, notation, source metadata and governance) — with an editor-owned undo/redo stack and an explicit save contract. Everything is OPT-IN; with no opt-in the behavior is byte-identical to the read-only MO2 inspector.
+  - **New Abstractions contract** (namespace `Tempo.Blazor.Modeling`): `IModelingModelWriter` (`ProviderKey` + `SaveChangesAsync(ModelingModelChangeSet, CancellationToken)` returning `ModelingModelSaveResult`) with `ModelingModelChangeSet` (`ModelId`, `ProviderKey`, `BaseVersion` = `Metadata.SourceVersion`, `Elements`, `Relationships`), `ModelingElementChange` / `ModelingRelationshipChange` (a `null` member means "unchanged") and `ModelingModelSaveResult` (`Succeeded`, `IsConflict`, `Message`, `Model?`, `Issues`). `IModelingModelProvider` is UNCHANGED — reads stay read-only.
+  - **`TmModelingEditor`** gains `AllowModelEditing` (default `false`), `SaveMode` (`ModelingSaveMode.Manual` | `Immediate`, default `Manual`), `OnModelChanged` (`EventCallback<ModelingModelChangedEventArgs>` — the commit's change set + the current model, after every commit), `OnSaveCompleted` and the public `Task<ModelingModelSaveResult?> SaveModelChangesAsync()` + `bool HasPendingModelChanges`. Editing is active only when a writer is registered for the effective provider key OR `OnModelChanged` has a delegate. A reload or a provider switch with pending edits asks for confirmation (discard first); a conflict result (`IsConflict`) shows a `TmAlert` with a localized "Reload" action.
+  - **`TmModelingInspector`** gains `ReadOnly` (default `true`), `OnElementEdited` / `OnRelationshipEdited`, `OnUndoRequested` / `OnRedoRequested` and a `HeaderActions` slot. Fields commit on blur/Enter (the toggle on click), an empty name shows a localized validation message and does not commit, and Escape reverts the field. The inspector header hosts the editor's undo/redo pair (`Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y` with `aria-keyshortcuts` and a polite live-region announcement) — the shortcuts work only while the focus is inside the inspector, so the diagram canvas keyboard scope is never involved.
+  - **Undo/redo is editor-owned**: each field commit is ONE `DiagramCommandTransaction` ("Edit element" / "Edit relationship") wrapping the new `UpdateModelingElementCommand` / `UpdateModelingRelationshipCommand`, which mutate the model DTO and synchronize the diagram document (node `Data["name"]/["label"]` by `modelElementId`, edge `Label` by relationship id) — so the model tree, the preview canvas and the open-editor dialog update in the same step.
+  - **Mobile (G2 light edits)**: the Inspector tab edits exactly like the docked bands (44px targets) and while edits are pending the F5 `TmMobileActionBar` leads with sticky Save/Discard entries.
+  - The demo ships an in-memory `DemoModelingModelWriter` (registered by `AddTempoBlazorModeling` for the demo provider key) and the `/modeling-editor` page exposes an "Allow editing" switch, a Manual/Immediate selector, a live last-change-set dump and a `?scenario=save-conflict` route.
+  - New keys in en / cs / sk / fr + `MockTmLocalizer`: `TmModelingInspector_NameRequired`, `_EditHint`, `TmModelingEditor_EditElement`, `_EditRelationship`, `_Undo`, `_Redo`, `_UndoAction`, `_RedoAction`, `_Save`, `_Saving`, `_Saved`, `_SaveConflict`, `_SaveFailed`, `_ReloadChanges`, `_Discard`, `_DiscardChangesTitle`, `_DiscardChangesText`, `_PendingChanges`, `_Cancel`.
+  ```razor
+  @* How to enable editing: register a writer for your provider key (reads stay on the provider) *@
+  <TmModelingEditor ProviderKey="erp.modeling"
+                    AllowModelEditing="true"
+                    SaveMode="ModelingSaveMode.Manual"
+                    OnModelChanged="HandleModelChanged"
+                    OnSaveCompleted="HandleSaveCompleted" />
+
+  public sealed class ErpModelingWriter : IModelingModelWriter
+  {
+      public string ProviderKey => "erp.modeling";
+
+      public Task<ModelingModelSaveResult> SaveChangesAsync(
+          ModelingModelChangeSet changes, CancellationToken cancellationToken)
+      {
+          // changes.BaseVersion is the Metadata.SourceVersion the editor loaded the model with —
+          // compare it with the current source version and return IsConflict on a mismatch.
+          ...
+      }
+  }
+  ```
+
 - **`TmModelingRelatedElementsPanel` — the inspector's "Relations" tab (Fáze 13 of the Modeling redesign plan).** The modeling inspector's docked tablist is now **Properties | Relations | Source** on the desktop and tablet bands (the tablet inspector side sheet carries the same three tabs), and the mobile Inspector tab shows the Relations SECTION under the properties — no extra tab level there. The new read-only panel lists the selected element's OUTGOING and INCOMING relationships grouped with counts (`TmModelingRelated_Outgoing` / `_Incoming`, sr-only counts through the `TmModelingRelated_RelationshipCount_*` plural family) and, for a selected relationship, its source and target as navigable rows. Every element-view row carries TWO native buttons — the counterpart (semantic-type icon + display name, `modeling-related-{direction}-counterpart-{relationshipId}`, `aria-label` `TmModelingRelated_SelectElement` "{0}") and the relationship type (Link2 icon + type, `modeling-related-{direction}-relationship-{relationshipId}`, `TmModelingRelated_SelectRelationshipTo` "{0} to {1}" / `_SelectRelationshipFrom` "{0} from {1}") — never nested; a relationship-view row is one native button. A dangling counterpart renders the localized `TmModelingEditor_Unknown` fallback NON-interactively (never a dead button), a self-reference renders safely in both directions, and the empty state is localized (`TmModelingRelated_Empty`). The by-element relationship index is memoized per `Relationships` reference (a selection change or an unrelated re-render never re-scans the list, M26), rows grow to 44px targets on a coarse pointer and rows carry `data-testid` `modeling-related-{outgoing|incoming|source|target}-{relationshipId}`.
   - `TmModelingEditor` hosts the tab (`modeling-tab-relations`) between the existing two and shows the related-row count as the tab badge for the current selection (an element counts its outgoing + incoming relationships, a relationship 2). Activating a row routes through the SAME selection paths an issue or an edge pick uses (`SelectElementAsync` / `SelectRelationshipAsync` flow, including the tablet rule "a selection opens the inspector sheet") and returns the docked inspector to the Properties tab presenting the navigated item; on mobile the section updates in place inside the Inspector tab.
   - New keys in en / cs / sk / fr + `MockTmLocalizer`: `TmModelingEditor_Relations`, `TmModelingRelated_Outgoing`, `_Incoming`, `_Source`, `_Target`, `_Empty`, `_SelectElement` ({0}), `_SelectRelationshipTo` ({0}, {1}) / `_SelectRelationshipFrom` ({0}, {1}) and the `TmModelingRelated_RelationshipCount_*` plural family.

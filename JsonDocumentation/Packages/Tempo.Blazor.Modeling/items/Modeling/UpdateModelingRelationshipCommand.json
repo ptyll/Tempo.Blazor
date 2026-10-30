@@ -1,0 +1,10 @@
+{
+  "itemName": "UpdateModelingRelationshipCommand",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "One inspector field commit for a relationship: updates the DTO in place and mirrors the name onto the matching edge Label. Pairs with UpdateModelingElementCommand.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/UpdateModelingRelationshipCommand.cs",
+  "documentationStatus": "generated"
+}

@@ -1,0 +1,10 @@
+{
+  "itemName": "DemoModelingModelWriter",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "In-memory demo writer for the demo modeling provider (Fáze 14): persists inspector edits against an in-memory copy of the demo model, simulates the source version for the save-conflict scenario and is registered by AddTempoBlazorModeling.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingModelWriter.cs",
+  "documentationStatus": "generated"
+}

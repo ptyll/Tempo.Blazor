@@ -1124,3 +1124,102 @@
         background: Canvas;
     }
 }
+
+/* ── Fáze 14: editing chrome ────────────────────────────────────────────────
+   The inspector header's undo/redo pair, the editing alerts and the discard modal body.
+   Tokens only — no literals; the buttons are small icon buttons that grow to the touch
+   target on coarse pointers. */
+
+.tm-modeling-editor__history-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-modeling-editor__history-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
+    padding: var(--tm-space-1);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-editor__history-btn:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__history-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tm-modeling-editor__history-btn:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-modeling-editor__history-btn--save {
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__editing-alert {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin-block-end: var(--tm-space-3);
+}
+
+.tm-modeling-editor__conflict-reload {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    justify-self: start;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-editor__conflict-reload:hover {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__conflict-reload:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-modeling-editor__discard-body {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-editor__discard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-editor__history-btn,
+    .tm-modeling-editor__conflict-reload {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-editor__history-btn,
+    .tm-modeling-editor__conflict-reload {
+        transition: none;
+    }
+}

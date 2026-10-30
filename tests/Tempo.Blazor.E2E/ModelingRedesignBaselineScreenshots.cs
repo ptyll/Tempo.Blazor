@@ -498,6 +498,65 @@ public sealed class ModelingRedesignBaselineScreenshots : BaselineGeneratorTestB
     /// LIGHT (the dark baselines were mislabeled light shots). The indigo accent is the demo's
     /// colour theme (localStorage `tm-demo-color-theme=indigo`, consumed by the demo's
     /// color-theme.js before Blazor boots), seeded through the context init script.</summary>
+    /// <summary>Fáze 14: the EDITABLE inspector — a selected element with a pending rename (the
+    /// save affordance visible) at the two review viewports, light and dark. The demo page is
+    /// opened with the editing opt-in (<c>?editing=1</c>).</summary>
+    [TestMethod]
+    [DataRow("light", 1440, 900)]
+    [DataRow("dark", 1440, 900)]
+    [Description("Captures inspector-edit-{theme}-{w}x{h}: the editing inspector with a pending rename")]
+    public async Task Capture_InspectorEditing_Desktop(string theme, int width, int height)
+    {
+        var page = await OpenThemedModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+            var name = page.Locator("#modeling-inspector-name").First;
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-testid='modeling-inspector-save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
+    /// <summary>Fáze 14: the mobile G2 editing surface — the Inspector tab with a pending rename
+    /// and the sticky Save entry leading the action bar.</summary>
+    [TestMethod]
+    [DataRow("light", 390, 844)]
+    [DataRow("dark", 390, 844)]
+    [Description("Captures inspector-edit-mobile-{theme}-390x844: the mobile Inspector tab with a pending rename")]
+    public async Task Capture_InspectorEditing_Mobile(string theme, int width, int height)
+    {
+        var page = await OpenThemedTouchModelingPageAsync("?editing=1", theme, width, height);
+        try
+        {
+            await WaitForLoadedStateAsync(page);
+            await page.Locator("[data-testid='modeling-panel-tab-tree']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            await page.Locator("[data-testid='modeling-panel-tab-inspector']").TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+            var name = page.Locator("#modeling-inspector-name");
+            await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await name.FillAsync("Validate order (edited)");
+            await name.PressAsync("Enter");
+            await page.Locator("[data-action-id='save']")
+                .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+            await SettleAsync(page);
+            await SaveViewportScreenshotAsync(page, $"inspector-edit-mobile-{theme}-{width}x{height}");
+        }
+        finally
+        {
+            await page.Context.CloseAsync();
+        }
+    }
+
     private async Task<IPage> OpenThemedModelingPageAsync(string query, string theme, int width, int height)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions

@@ -8351,7 +8351,7 @@ akční lišta, bez dragu). Dialog „Otevřít v editoru" je jádrový `TmModal
 |------------|------|-------------------|
 | `TmModelingDiagramPreview` | Náhled vygenerovaného diagramu (read-only `TmDiagramEditor`, preset Viewer) s Primárním „Otevřít v editoru". | `Document`/`DocumentChanged`, `ShowHeader`, `ShowEditActions`, `ShowEmbeddedEditorChrome`, `OpenInEditorTriggerId`, `AllowNodeDrop`, `OnNodeDropped`; metoda `InsertAtViewportCenterAsync(element)` (střed viewportu). |
 | `TmModelingModelTree` | APG strom prvků skupinovaných podle `SemanticType`. | `SelectedElement`, dvousměrné `FilterText`/`CollapsedGroups`, `AllowNodeDrop`, `OnInsertIntoPreview`, `ShowTitle`. |
-| `TmModelingInspector` | Read-only inspektor vybraného prvku/vazby (MO2). | `Element`, `Relationship`, `Elements`. |
+| `TmModelingInspector` | Inspektor vybraného prvku/vazby — read-only (MO2), s opt-inem (`AllowModelEditing` + writer/`OnModelChanged`, Fáze 14) editovatelný název, popis a skalární vlastnosti s undo/redo a kontraktem zápisu `IModelingModelWriter`. | `Element`, `Relationship`, `Elements`, `ReadOnly`, `OnElementEdited`, `OnRelationshipEdited`, `OnUndoRequested`, `OnRedoRequested`, `HeaderActions`. |
 | `TmModelingSourcePanel` | Záložka „Source": metadata, svěžest, „Load model". | `Metadata`, `IsLoading`, `OnLoadRequested`. |
 | `TmModelingIssuePanel` | Nálezy se závažností a doporučenou opravou; sbalitelný dock. | `Issues`, `OnIssueSelected`, dvousměrné `Collapsed`, `ShowToggle`. |
 | `TmModelingViewSelector` | Labelovaný výběr Notace/Pohledu v hlavičce. | `NotationKey`, `ViewpointKey`, `OnNotationChanged`, `OnViewpointChanged`. |

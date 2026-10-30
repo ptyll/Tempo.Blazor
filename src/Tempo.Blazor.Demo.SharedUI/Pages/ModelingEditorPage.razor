@@ -2,6 +2,8 @@
 @using Microsoft.AspNetCore.Components
 @using System.Text.Json
 @using Tempo.Blazor.Components.Diagram.Models
+@using Tempo.Blazor.Components.Modeling
+@using Tempo.Blazor.Modeling
 @using Tempo.Blazor.Demo.SharedUI.Services
 @inject ITmLocalizer Loc
 @inject IEnumerable<IModelingModelProvider> ModelProviders
@@ -41,7 +43,18 @@
        scoped to .modeling-demo-page only. */
     @@media (max-width: 1023.98px) {
         .modeling-demo-page .tm-modeling-editor {
-            height: calc(100dvh - 11.5rem) !important;
+            /* Fáze 14: the editing-controls row above the editor is extra demo chrome — the
+               subtraction grew by its height so the in-flow F5 action bar stays in the first
+               paint at 390/320 (the phase-7 fold contract). Below 640 the controls row wraps
+               to two lines, so it claims 3rem more there. */
+            height: calc(100dvh - 13.5rem) !important;
+            min-height: 0 !important;
+        }
+    }
+
+    @@media (max-width: 639.98px) {
+        .modeling-demo-page .tm-modeling-editor {
+            height: calc(100dvh - 16.5rem) !important;
             min-height: 0 !important;
         }
     }
@@ -50,6 +63,21 @@
 <div class="modeling-demo-page">
     <a href="./" class="modeling-demo-page__index-link text-sm mb-2" data-testid="modeling-demo-index-link">← All demos</a>
 
+    <div class="modeling-demo-page__editing-controls text-sm mb-2 flex gap-4 items-center" data-testid="modeling-demo-editing-controls">
+        <label class="inline-flex items-center gap-2">
+            <input type="checkbox" checked="@AllowModelEditing" @onchange="HandleAllowEditingChanged" />
+            <span>@Loc["TmDemo_Modeling_AllowEditing"]</span>
+        </label>
+        <label class="inline-flex items-center gap-2">
+            <span>@Loc["TmDemo_Modeling_SaveMode"]</span>
+            <select value="@SaveModeValue" @onchange="HandleSaveModeChanged" disabled="@(!AllowModelEditing)">
+                <option value="manual">@Loc["TmDemo_Modeling_SaveModeManual"]</option>
+                <option value="immediate">@Loc["TmDemo_Modeling_SaveModeImmediate"]</option>
+            </select>
+        </label>
+        <span class="text-xs opacity-70" data-testid="modeling-demo-pending">@string.Format(Loc["TmDemo_Modeling_Pending"], PendingCount)</span>
+    </div>
+
     <TmModelingEditor ProviderKey="@ResolvedProviderKey"
                       ShowProviderSelector="true"
                       ProviderKeyChanged="HandleProviderChanged"
@@ -57,8 +85,20 @@
                       NotationKey="@Notation"
                       ViewpointKey="@Viewpoint"
                       AllowNodeDrop="@AllowNodeDrop"
+                      AllowModelEditing="@AllowModelEditing"
+                      SaveMode="@EffectiveSaveMode"
+                      OnModelChanged="HandleModelChanged"
+                      OnSaveCompleted="HandleSaveCompleted"
                       ModelLoaderOverride="@ModelLoaderOverride"
                       OnDiagramGenerated="HandleDiagramGenerated" />
+
+    @if (_lastChangeSet is { } lastChangeSet)
+    {
+        <section class="modeling-demo-page__changeset mt-4 text-xs" data-testid="modeling-demo-last-changeset">
+            <h3 class="font-semibold mb-1">@Loc["TmDemo_Modeling_LastChangeSet"]</h3>
+            <pre class="overflow-auto" style="max-height: 12rem;">@JsonSerializer.Serialize(lastChangeSet, new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull })</pre>
+        </section>
+    }
 </div>
 
 @code {
@@ -80,9 +120,19 @@
     [SupplyParameterFromQuery(Name = "fresh")]
     public bool? Fresh { get; set; }
 
+    /// <summary>Fáze 14: <c>?editing=1</c> (or <c>true</c>) turns the inspector editing on for
+    /// the session (the opt-in the contract requires); the checkbox in the editing controls
+    /// does the same live. A string — the query parser accepts only bool literals.</summary>
+    [SupplyParameterFromQuery(Name = "editing")]
+    public string? Editing { get; set; }
+
     private DiagramDocument? _lastGeneratedDocument;
     private string? _selectedProvider;
     private string? _lastProviderQuery;
+    private ModelingModelChangeSet? _lastChangeSet;
+    private bool _allowModelEditing;
+    private ModelingSaveMode _saveMode = ModelingSaveMode.Manual;
+    private int _pendingCount;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -97,6 +147,57 @@
     }
 
     private bool AllowNodeDrop => !string.Equals(Scenario, "drag-readonly", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Fáze 14: editing is OPT-IN (decision MODELING-INSPECTOR-EDITING) — the checkbox
+    /// or <c>?editing=1</c> enables it; the save-conflict scenario arms it too so the conflict
+    /// path is reachable in one deep link.</summary>
+    private bool AllowModelEditing => _allowModelEditing
+        || Editing is "1" or "true"
+        || string.Equals(Scenario, "save-conflict", StringComparison.OrdinalIgnoreCase);
+
+    private ModelingSaveMode EffectiveSaveMode
+    {
+        get
+        {
+            if (string.Equals(Scenario, "save-conflict", StringComparison.OrdinalIgnoreCase))
+            {
+                DemoModelingModelWriter.ConflictArmed = true;
+            }
+
+            return _saveMode;
+        }
+    }
+
+    private string SaveModeValue => _saveMode == ModelingSaveMode.Immediate ? "immediate" : "manual";
+
+    private int PendingCount => _pendingCount;
+
+    private Task HandleAllowEditingChanged(ChangeEventArgs args)
+    {
+        _allowModelEditing = args.Value is bool value && value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSaveModeChanged(ChangeEventArgs args)
+    {
+        _saveMode = string.Equals(args.Value?.ToString(), "immediate", StringComparison.OrdinalIgnoreCase)
+            ? ModelingSaveMode.Immediate
+            : ModelingSaveMode.Manual;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleModelChanged(ModelingModelChangedEventArgs args)
+    {
+        _lastChangeSet = args.ChangeSet;
+        _pendingCount = args.ChangeSet.Elements.Count + args.ChangeSet.Relationships.Count;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSaveCompleted()
+    {
+        _pendingCount = 0;
+        return Task.CompletedTask;
+    }
 
     // The ?provider= query stays the deep-link source; an in-editor selector change takes
     // precedence for the session (the editor keeps its own override until the param changes).

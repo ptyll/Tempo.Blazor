@@ -9,6 +9,10 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
     /// <summary>Provider key used for the built-in demo modeling data.</summary>
     public const string ProviderKeyValue = "tempo.demo.modeling";
 
+    /// <summary>Identifier of the default demo model (shared with <see cref="DemoModelingModelWriter"/>
+    /// so the in-memory demo writer can resolve the persisted copy).</summary>
+    public const string ModelIdValue = "demo-modeling-model";
+
     private static readonly DateTimeOffset LoadedAt = new(2026, 6, 6, 8, 0, 0, TimeSpan.Zero);
 
     /// <inheritdoc />
@@ -64,11 +68,13 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
         return model;
     }
 
-    private static ModelingModelDto CreateModel()
+    /// <summary>The default demo model. Public so the demo writer can build its in-memory
+    /// persisted copy from the same deterministic source.</summary>
+    public static ModelingModelDto CreateModel()
     {
         return new ModelingModelDto
         {
-            Id = "demo-modeling-model",
+            Id = ModelIdValue,
             Title = "Demo order fulfillment model",
             Notation = "mixed",
             SupportedNotations = ["bpmn", "archimate"],

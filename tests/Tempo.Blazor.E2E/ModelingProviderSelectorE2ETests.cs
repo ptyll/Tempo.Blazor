@@ -40,7 +40,10 @@ public sealed class ModelingProviderSelectorE2ETests : WasmTestBase
 
             await WaitForEditorAttributeAsync(page, "data-provider", DemoUmlProviderKey);
             await WaitForEditorAttributeAsync(page, "data-state", "loaded");
-            await WaitForEditorAttributeAsync(page, "data-element-count", "3");
+            // The UML demo provider ships FOUR elements since the phase-12 hierarchy change
+            // (the "Order domain" Package parenting the three classes) — the stale "3" here
+            // predates it and made this wait time out on every provider switch.
+            await WaitForEditorAttributeAsync(page, "data-element-count", "4");
 
             await TakeScreenshotAsync(page, "provider-switched");
             await SaveStableScreenshotAsync(page, "provider-switched-1440.png");

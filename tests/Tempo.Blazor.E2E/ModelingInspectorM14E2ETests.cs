@@ -130,6 +130,22 @@ public sealed class ModelingInspectorM14E2ETests : WasmTestBase
         await ExpectTextContainsAsync(page, "[data-testid='modeling-inspector-name']", "Ship order");
     }
 
+    [TestMethod]
+    [Description("Fáze 14: without the editing opt-in the inspector stays read-only (MO2 regression)")]
+    public async Task Inspector_WithoutEditingOptIn_StaysReadOnly()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+
+        await page.Locator("[data-testid='modeling-tree-node-bpmn-validate-order']").ClickAsync();
+
+        await page.Locator("[data-testid='modeling-inspector'][data-kind='element']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-inspector'] input").CountAsync(),
+            "no editing inputs render without AllowModelEditing + a writer/callback");
+        Assert.AreEqual(0, await page.Locator("[data-testid='modeling-inspector-undo']").CountAsync(),
+            "the undo/redo pair renders only when editing is enabled");
+    }
+
     private async Task<IPage> OpenLoadedModelingPageAsync(string query = "")
     {
         var context = await CreateContextAsync();

@@ -190,7 +190,7 @@ public partial class TmModelingEditor
     /// the inputs changes — every list element is reference-stable between editor renders, so
     /// the TmMobileActionBar parameter diff stays quiet).</summary>
     private IReadOnlyList<TmActionItem>? _cachedMobileActionItems;
-    private (bool WorkspaceMounted, ModelingModelDto? Model, ModelingEditorState State, DiagramDocument? Document, string? Prefix, string Culture) _mobileActionItemsKey;
+    private (bool WorkspaceMounted, ModelingModelDto? Model, ModelingEditorState State, DiagramDocument? Document, string? Prefix, string Culture, bool Pending) _mobileActionItemsKey;
 
     /// <summary>
     /// The mobile action bar items. With the workspace mounted: Reload / Change view / Issues on
@@ -205,7 +205,7 @@ public partial class TmModelingEditor
     {
         get
         {
-            var key = (WorkspaceMounted, _model, _state, _document, TestIdPrefix, CultureInfo.CurrentUICulture.Name);
+            var key = (WorkspaceMounted, _model, _state, _document, TestIdPrefix, CultureInfo.CurrentUICulture.Name, IsEditingEnabled && HasPendingModelChanges);
             if (_cachedMobileActionItems is not null && _mobileActionItemsKey.Equals(key))
             {
                 return _cachedMobileActionItems;
@@ -239,8 +239,35 @@ public partial class TmModelingEditor
             return [reload, changeView];
         }
 
+        // Fáze 14 (G2 light edits): while edits are pending the sticky Save/Discard entries LEAD
+        // the bar (the user must not scroll the "More" overflow to save); they disappear again
+        // once the pending set is empty.
+        var pendingItems = IsEditingEnabled && HasPendingModelChanges
+            ? new List<TmActionItem>
+            {
+                new()
+                {
+                    Id = "save",
+                    Label = IsSaving ? Loc["TmModelingEditor_Saving"] : Loc["TmModelingEditor_Save"],
+                    Icon = IconNames.Save,
+                    TestId = TestId("modeling-action-save"),
+                    Disabled = IsSaving,
+                    OnClick = EventCallback.Factory.Create(this, SaveFromInspectorAsync)
+                },
+                new()
+                {
+                    Id = "discard",
+                    Label = Loc["TmModelingEditor_Discard"],
+                    Icon = IconNames.Trash2,
+                    TestId = TestId("modeling-action-discard"),
+                    OnClick = EventCallback.Factory.Create(this, DiscardFromInspectorAsync)
+                }
+            }
+            : [];
+
         return
         [
+            .. pendingItems,
             reload,
             changeView,
             new()

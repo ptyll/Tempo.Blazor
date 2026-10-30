@@ -5,6 +5,7 @@
 @using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Abstractions.Layout
+@using System.Globalization
 @using Tempo.Blazor.Modeling
 
 @* Fáze 5 (MO1): the editor resolves its presentation from ITS OWN container (TmLayoutObserver)
@@ -259,6 +260,7 @@
        button and every focus-return host in every layout). *@
     @ChangeViewSheetContent
     @OpenEditorModalContent
+    @EditingOverlaysContent
 </section>
 
 @code {
@@ -560,10 +562,69 @@
                                                                          IsLoading="@(_state == ModelingEditorState.Loading || _isReloading)"
                                                                          OnLoadRequested="ReloadModelAsync" />;
 
-    /// <summary>The element/relationship inspector (read-only, MO2).</summary>
+    /// <summary>The element/relationship inspector. Fáze 14: read-only (MO2) unless the editing
+    /// contract is active — the editor passes <c>ReadOnly=false</c> together with the commit
+    /// callbacks and the inspector-scope undo/redo wiring; the header hosts the editor's
+    /// undo/redo pair (and the docked Save/Discard while a Manual save is pending).</summary>
     private RenderFragment InspectorContent => @<TmModelingInspector Element="@_selectedElement"
                                                                      Relationship="@_selectedRelationship"
-                                                                     Elements="@LoadedElements" />;
+                                                                     Elements="@LoadedElements"
+                                                                     ReadOnly="@(!IsEditingEnabled)"
+                                                                     OnElementEdited="CommitElementEditAsync"
+                                                                     OnRelationshipEdited="CommitRelationshipEditAsync"
+                                                                     OnUndoRequested="UndoModelEditAsync"
+                                                                     OnRedoRequested="RedoModelEditAsync"
+                                                                     HeaderActions="@(IsEditingEnabled ? InspectorHeaderActions : null)" />;
+
+    /// <summary>
+    /// Fáze 14: the editing surface of the inspector header — the undo/redo pair (with the
+    /// keyboard hints and the live announcement region) plus the docked Save/Discard while a
+    /// Manual save is pending. On the MOBILE band the save/discard live in the sticky action
+    /// bar instead, so the header only carries the history pair.
+    /// </summary>
+    private RenderFragment InspectorHeaderActions => @<text>
+        <span class="tm-modeling-editor__history-buttons">
+            <button type="button"
+                    class="tm-modeling-editor__history-btn"
+                    data-testid="@TestId("modeling-inspector-undo")"
+                    aria-keyshortcuts="Control+Z"
+                    disabled="@(!CanUndoModelEdits)"
+                    title="@Loc["TmModelingEditor_Undo"]"
+                    @onclick="UndoModelEditAsync">
+                <TmIcon Name="@IconNames.Undo2" Size="IconSize.Sm" />
+                <span class="tm-sr-only">@Loc["TmModelingEditor_Undo"]</span>
+            </button>
+            <button type="button"
+                    class="tm-modeling-editor__history-btn"
+                    data-testid="@TestId("modeling-inspector-redo")"
+                    aria-keyshortcuts="Control+Shift+Z"
+                    disabled="@(!CanRedoModelEdits)"
+                    title="@Loc["TmModelingEditor_Redo"]"
+                    @onclick="RedoModelEditAsync">
+                <TmIcon Name="@IconNames.Redo2" Size="IconSize.Sm" />
+                <span class="tm-sr-only">@Loc["TmModelingEditor_Redo"]</span>
+            </button>
+            @if (!IsMobileLayout && SaveMode == ModelingSaveMode.Manual && HasPendingModelChanges)
+            {
+                <button type="button"
+                        class="tm-modeling-editor__history-btn tm-modeling-editor__history-btn--save"
+                        data-testid="@TestId("modeling-inspector-save")"
+                        disabled="@IsSaving"
+                        @onclick="SaveFromInspectorAsync">
+                    <TmIcon Name="@IconNames.Save" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@(IsSaving ? Loc["TmModelingEditor_Saving"] : Loc["TmModelingEditor_Save"])</span>
+                </button>
+                <button type="button"
+                        class="tm-modeling-editor__history-btn"
+                        data-testid="@TestId("modeling-inspector-discard")"
+                        @onclick="DiscardFromInspectorAsync">
+                    <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_Discard"]</span>
+                </button>
+            }
+        </span>
+        <span id="@_historyLiveId" class="tm-sr-only" role="status" aria-live="polite">@_historyAnnouncement</span>
+    </text>;
 
     /// <summary>
     /// Fáze 13: the "Relations" tab body — the selected element's outgoing/incoming relationships
@@ -587,6 +648,7 @@
     /// </summary>
     private RenderFragment CompactInspectorContent => @<text>
         @SourcePanelContent
+        @EditingAlertsContent
         @InspectorContent
         @RelatedElementsContent
     </text>;
@@ -694,6 +756,88 @@
             </div>
         </ChildContent>
     </TmModal>;
+
+    /// <summary>
+    /// Fáze 14: the editing overlays rendered ONCE — the save/conflict feedback alerts (placed
+    /// in the inspector surfaces by the fragments below) and the discard-confirmation modal.
+    /// The modal is a core TmModal with the localized title/text and Confirm/Cancel.
+    /// </summary>
+    private readonly string _historyLiveId = $"tm-modeling-history-live-{Guid.NewGuid():N}";
+
+    /// <summary>The save/conflict alerts of the editing surface: the conflict alert carries the
+    /// localized "Reload" action (which asks for confirmation before discarding the pending
+    /// changes); a failed save shows its message. Rendered above the inspector in every band.</summary>
+    private RenderFragment EditingAlertsContent => @<text>
+        @if (ShowConflictAlert)
+        {
+            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-conflict")" role="alert">
+                <TmAlert Severity="AlertSeverity.Warning" Variant="AlertVariant.Soft" Title="@Loc["TmModelingEditor_SaveConflict"]">
+                    <p>@(LastSaveResultText)</p>
+                </TmAlert>
+                <button type="button"
+                        class="tm-modeling-editor__conflict-reload"
+                        data-testid="@TestId("modeling-conflict-reload")"
+                        @onclick="RequestConflictReloadAsync">
+                    <TmIcon Name="@IconNames.RotateCw" Size="IconSize.Sm" />
+                    @Loc["TmModelingEditor_ReloadChanges"]
+                </button>
+            </div>
+        }
+        else if (ShowSaveFailure)
+        {
+            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-save-failure")" role="alert">
+                <TmAlert Severity="AlertSeverity.Error" Variant="AlertVariant.Soft" Title="@Loc["TmModelingEditor_SaveFailed"]">
+                    <p>@(LastSaveResultText)</p>
+                </TmAlert>
+            </div>
+        }
+    </text>;
+
+    private string LastSaveResultText => _lastSaveResult?.Message ?? string.Empty;
+
+    /// <summary>The discard-confirmation modal (Fáze 14): a reload, a provider switch or a
+    /// discard with pending edits asks first. Confirm runs the guarded action; cancel keeps
+    /// everything.</summary>
+    private RenderFragment EditingOverlaysContent => @<TmModal Show="@DiscardConfirmationOpen"
+                                                               Title="@Loc["TmModelingEditor_DiscardChangesTitle"]"
+                                                               Size="ModalSize.Small"
+                                                               ShowFooter="false"
+                                                               ShowDefaultFooterButtons="false"
+                                                               CloseOnOverlayClick="false"
+                                                               CloseOnEscape="true"
+                                                               OnClose="CancelDiscardAsync"
+                                                               Class="tm-modeling-editor__discard-modal"
+                                                               AdditionalAttributes="@DiscardModalAttributes">
+        <ChildContent>
+            <div class="tm-modeling-editor__discard-body">
+                <p>@string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_PendingChanges"], PendingChangeCount)</p>
+                <p>@Loc["TmModelingEditor_DiscardChangesText"]</p>
+                <div class="tm-modeling-editor__discard-actions">
+                    <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelDiscardAsync" data-testid="@TestId("modeling-discard-cancel")">
+                        @Loc["TmModelingEditor_Cancel"]
+                    </TmButton>
+                    <TmButton Variant="ButtonVariant.Primary" OnClick="ConfirmDiscardAsync" data-testid="@TestId("modeling-discard-confirm")">
+                        @Loc["TmModelingEditor_Discard"]
+                    </TmButton>
+                </div>
+            </div>
+        </ChildContent>
+    </TmModal>;
+
+    private Dictionary<string, object> DiscardModalAttributes => new()
+    {
+        ["data-testid"] = TestId("modeling-discard-changes-modal")
+    };
+
+    /// <summary>How many element/relationship entries are pending (the modal's neutral count).</summary>
+    private int PendingChangeCount
+    {
+        get
+        {
+            var pending = ComputePendingChangeSet();
+            return pending is null ? 0 : pending.Elements.Count + pending.Relationships.Count;
+        }
+    }
 
     /// <summary>
     /// Fáze 10: the dialog's header close affordance. On the docked bands (desktop/tablet) it is
@@ -848,6 +992,7 @@
             <TmTabPanel Id="properties"
                         Title="@Loc["TmModelingEditor_Properties"]"
                         TabAttributes="@PropertiesTabAttributes">
+                @EditingAlertsContent
                 @InspectorContent
             </TmTabPanel>
             <TmTabPanel Id="relations"
