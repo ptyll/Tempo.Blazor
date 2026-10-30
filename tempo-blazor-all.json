@@ -45153,6 +45153,12 @@
               "description": "The sheet to render."
             },
             {
+              "name": "SuppressFocusRestore",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the host's own surface currently owns the focus (an open context menu, a resize dialog). While true the grid does not restore the focus to itself: the canvas activation that opened the surface arms that restore, and the grid's OnAfterRenderAsync runs in the same batch as the surface's, so the probe would answer stale and the FocusAsync hop would steal the caret out of the menu that just took it. Default false keeps the historical restore."
+            },
+            {
               "name": "ValidationDropButtonClicked",
               "type": "EventCallback<(int Row, int Col, double ClientX, double ClientY)>",
               "isRequired": false,
@@ -46741,6 +46747,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-filter-buttons.test.mjs",
           "kind": "JavaScript"
         },
         {

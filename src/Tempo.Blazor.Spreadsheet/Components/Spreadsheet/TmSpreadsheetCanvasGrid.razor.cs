@@ -55,7 +55,10 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     /// <summary>
     /// Set by an EXPLICIT navigation (name box, Find next, a named range): the grid takes the focus even
     /// when the focus currently sits in another control. A pointer-originated request (a canvas click)
-    /// stays guarded by <c>isFocusOutside</c>, so a late frame cannot blur what the user just focused.
+    /// stays guarded by the atomic <c>tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway</c> call (check and
+    /// focus in ONE task — a probe followed by <c>ElementReference.FocusAsync</c> is a TOCTOU race) and is
+    /// skipped entirely while <see cref="SuppressFocusRestore"/> says the host's surface owns the focus, so
+    /// a late frame can neither blur what the user just focused nor steal the caret out of an open menu.
     /// </summary>
     private bool _forceFocusAfterRender;
     private bool _shouldFocusEditorAfterRender;
@@ -187,6 +190,18 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     /// cell (or column header) under the gesture has already become active, so the host's commands act on it.
     /// </summary>
     [Parameter] public EventCallback<SpreadsheetContextMenuRequest> OnContextMenuRequested { get; set; }
+
+    /// <summary>
+    /// Whether the host's own surface currently OWNS the focus — an open context menu (the anchored menu or
+    /// the phone sheet), a resize dialog, any overlay the host renders over the grid. While <c>true</c> the
+    /// grid does NOT restore the focus to itself: the canvas activation that opened the surface arms the
+    /// restore, and both <see cref="TmSpreadsheetCanvasGrid"/> and the surface run their
+    /// <c>OnAfterRenderAsync</c> in the same batch, so the grid's <c>isFocusOutside</c> probe answers
+    /// BEFORE the surface focused its first entry and the stale answer then stole the caret back
+    /// (phase 7d: the context menu's ArrowDown / Home / End were dead in a real browser). This is explicit
+    /// precedence, not a timing guess; an EXPLICIT navigation (<c>NavigateToCellAsync</c>) still wins.
+    /// </summary>
+    [Parameter] public bool SuppressFocusRestore { get; set; }
 
     /// <summary>Called when the active cell changes.</summary>
     [Parameter] public EventCallback<string?> ActiveCellChanged { get; set; }
@@ -1299,6 +1314,10 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         if (!RenderContextMenu)
         {
             // The host renders the menu outside the container; the gesture has already set the active cell.
+            // The FOCUS belongs to that menu, so the activation above must not arm this grid's own restore:
+            // it would run in the same batch as the menu's focus and (its isFocusOutside probe answering
+            // stale) pull the caret back out of the menu a few ms later. See SuppressFocusRestore.
+            _shouldFocusAfterRender = false;
             return InvokeAsync(() => OnContextMenuRequested.InvokeAsync(new SpreadsheetContextMenuRequest
             {
                 Row = _contextMenuRowIndex,
@@ -2135,18 +2154,23 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             // typed ref on blur, and the Enter meant for it is then handled by the grid. An EXPLICIT
             // navigation (force) is different: the user asked the grid to go somewhere, so it takes the
             // focus and typing continues in the grid.
-            var focusElsewhere = false;
-            if (!force)
+            //
+            // Phase 7d: the guard is ONE JS call that checks AND focuses. An `isFocusOutside` probe followed
+            // by ElementReference.FocusAsync is a TOCTOU race — the host's context menu focuses its first
+            // entry from its own OnAfterRenderAsync in the same batch, so the probe answered "still in the
+            // grid" and the focus hop then stole the caret back ~25 ms later (the menu's ArrowDown / Home /
+            // End / Escape walk was dead while every DOM assertion passed). SuppressFocusRestore lets the
+            // host stand the restore down entirely while one of its surfaces owns the focus.
+            if (force)
             {
-                try { focusElsewhere = await JS.InvokeAsync<bool>("tmSpreadsheetCanvas.isFocusOutside", _rootElement); }
+                try { await _rootElement.FocusAsync(); } catch { }
+            }
+            else if (!SuppressFocusRestore)
+            {
+                try { await JS.InvokeVoidAsync("tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway", _rootElement); }
                 catch (JSException) { }
                 catch (InvalidOperationException) { }
                 catch (NotSupportedException) { }
-            }
-
-            if (force || !focusElsewhere)
-            {
-                try { await _rootElement.FocusAsync(); } catch { }
             }
         }
     }

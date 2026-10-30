@@ -240,14 +240,11 @@ public partial class SpreadsheetE2ETests
     {
         foreach (var dialog in Phase4Dialogs())
         {
-            var page = await OpenPhase2DemoAsync(width, height, touch);
-            await OpenPhase3GridAsync(page);
-            if (dialog.Name == "name-manager")
-            {
-                await SeedNamedRangeAsync(page);
-            }
-
-            await dialog.Open(page);
+            // The dialog is opened on the DESKTOP chrome and the viewport is narrowed afterwards: the
+            // advanced commands behind these dialogs have no compact-chrome entry on a phone (G2) and
+            // the tablet chrome has no tab strip at all, while the frame's phone/tablet PRESENTATION,
+            // which is what this spec asserts, follows the app-level viewport scope.
+            var page = await OpenPhase3DialogThenResizeAsync(dialog, width, height, touch);
 
             var root = page.Locator($".tm-modal-overlay.{dialog.RootClass}");
             await root.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -373,16 +370,23 @@ public partial class SpreadsheetE2ETests
                      (390, 844, true, "mobile")
                  })
         {
-            var page = await OpenPhase2DemoAsync(width, height, touch);
-            var grid = await OpenPhase3GridAsync(page);
-            await EditCanvasCellAsync(page, grid, "D1", "Jan;Novak;Praha");
-            await EditCanvasCellAsync(page, grid, "D2", "Petr;Svoboda;Brno");
-            var topLeft = await GetCanvasCellCenterAsync(grid, "D1");
-            await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = topLeft.X, Y = topLeft.Y } });
-            await WaitForCanvasActiveRefAsync(grid, "D1");
-            await page.Keyboard.PressAsync("Shift+ArrowDown");
+            // Text to columns has no compact-chrome entry (G2 keeps the advanced commands desktop-only), so
+            // the wizard is opened on the DESKTOP chrome and the viewport is narrowed afterwards — the
+            // stepper/how-it-folds assertions below are what the phone and tablet arms verify.
+            var page = await OpenOnDesktopThenResizeAsync(async p =>
+            {
+                var setupGrid = await OpenPhase3GridAsync(p);
+                await EditCanvasCellAsync(p, setupGrid, "D1", "Jan;Novak;Praha");
+                await EditCanvasCellAsync(p, setupGrid, "D2", "Petr;Svoboda;Brno");
+                var topLeft = await GetCanvasCellCenterAsync(setupGrid, "D1");
+                await setupGrid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = topLeft.X, Y = topLeft.Y } });
+                await WaitForCanvasActiveRefAsync(setupGrid, "D1");
+                await p.Keyboard.PressAsync("Shift+ArrowDown");
+                await ClickDataTabButtonAsync(p, "Text to columns");
+                await p.Locator(".tm-spreadsheet-t2c")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+            }, width, height, touch);
 
-            await ClickDataTabButtonAsync(page, "Text to columns");
             var dialog = page.Locator(".tm-spreadsheet-t2c");
             await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
             await WaitForResolvedLayoutAsync(page, "tm-spreadsheet-t2c", expectMobile: layout == "mobile");
@@ -419,9 +423,16 @@ public partial class SpreadsheetE2ETests
     {
         foreach (var (width, height, touch, layout) in new[] { (1440, 900, false, "desktop"), (390, 844, true, "mobile") })
         {
-            var page = await OpenPhase2DemoAsync(width, height, touch);
-            await OpenPhase3GridAsync(page);
-            await OpenSortAsync(page);
+            // The phone arm opens the Sort dialog on the desktop chrome and then narrows the viewport
+            // (7c's rotated-phone pattern) — a phone has no ribbon entry for the custom Sort (G2), but
+            // the dialog itself must still render as the phone card at 390.
+            var page = await OpenOnDesktopThenResizeAsync(async p =>
+            {
+                await OpenPhase3GridAsync(p);
+                await OpenSortAsync(p);
+                await p.Locator(".tm-spreadsheet-sort")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+            }, width, height, touch);
 
             var dialog = page.Locator(".tm-spreadsheet-sort");
             await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -450,9 +461,15 @@ public partial class SpreadsheetE2ETests
     {
         foreach (var (width, height, touch, layout) in new[] { (1440, 900, false, "desktop"), (390, 844, true, "mobile") })
         {
-            var page = await OpenPhase2DemoAsync(width, height, touch);
-            await OpenPhase3GridAsync(page);
-            await ClickDataTabButtonAsync(page, "Name Manager");
+            // Same G2 rule: the Name Manager has no phone entry, so it is opened on the desktop chrome
+            // and the viewport is narrowed afterwards — the phone CARD layout is what this spec asserts.
+            var page = await OpenOnDesktopThenResizeAsync(async p =>
+            {
+                await OpenPhase3GridAsync(p);
+                await ClickDataTabButtonAsync(p, "Name Manager");
+                await p.Locator(".tm-modal-overlay.tm-spreadsheet-name-manager")
+                    .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+            }, width, height, touch);
 
             var manager = page.Locator(".tm-modal-overlay.tm-spreadsheet-name-manager");
             await manager.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -491,10 +508,16 @@ public partial class SpreadsheetE2ETests
     {
         foreach (var (width, height, touch, layout) in new[] { (1440, 900, false, "desktop"), (390, 844, true, "mobile") })
         {
-            var page = await OpenPhase2DemoAsync(width, height, touch);
-            var grid = await OpenPhase3GridAsync(page);
+            // The validation RULE is set through the desktop chrome (a phone has no Data validation entry,
+            // G2); the viewport is narrowed before the out-of-range value is typed, so the ALERT — the
+            // surface this spec asserts — resolves the phone presentation.
+            var page = await OpenOnDesktopThenResizeAsync(async p =>
+            {
+                var setupGrid = await OpenPhase3GridAsync(p);
+                await SetWholeNumberValidationAsync(p, setupGrid, "H6", "1", "10", viaNameBox: true);
+            }, width, height, touch);
+            var grid = DemoGrid(page);
 
-            await SetWholeNumberValidationAsync(page, grid, "H6", "1", "10", viaNameBox: true);
             await TypeIntoCanvasCellAsync(page, grid, "H6", "99");
 
             var alert = page.Locator(".tm-modal-overlay.tm-spreadsheet-alert");

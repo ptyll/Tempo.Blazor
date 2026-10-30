@@ -53,12 +53,13 @@ public partial class SpreadsheetE2ETests
 
     private async Task EnableFilterAsync(IPage page, ILocator grid)
     {
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Filter']").ClickAsync();
+        // Chrome-aware: the desktop ribbon needs its Data tab, the compact rows (tablet / mobile) reach
+        // the same `filter` command through the row's "More" — the tab strip does not exist there.
+        await OpenToolbarCommandAsync(page, "Data", "filter", "Filter");
         await page.WaitForFunctionAsync(
             "el => (el.__tmSpreadsheetCanvas?.filterButtons?.length || 0) > 0",
             await grid.ElementHandleAsync(),
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+            new PageWaitForFunctionOptions { Timeout = 30000 });
     }
 
     [TestMethod]

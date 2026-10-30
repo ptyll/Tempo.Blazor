@@ -147,8 +147,11 @@ public partial class SpreadsheetE2ETests
     {
         foreach (var dialog in Phase3Dialogs())
         {
-            var page = await OpenPhase2DemoAsync(390, 844, touch: true);
-            await dialog.Open(page);
+            // MOBILE is G2: the advanced commands (Data validation, Name Manager, custom Sort, Text to
+            // columns, …) have no phone entry at all, so the dialog is opened on the DESKTOP chrome and
+            // the viewport is narrowed afterwards. The core frame resolves the phone presentation from
+            // the app-level viewport scope, so what the assertions below see IS the phone surface.
+            var page = await OpenPhase3DialogThenResizeAsync(dialog, 390, 844, touch: true);
 
             var root = page.Locator($".tm-modal-overlay.{dialog.RootClass}");
             await root.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -202,8 +205,8 @@ public partial class SpreadsheetE2ETests
         foreach (var name in new[] { "format-cells", "text-to-columns", "name-manager" })
         {
             var dialog = Phase3Dialogs().Single(d => d.Name == name);
-            var page = await OpenPhase2DemoAsync(320, 640, touch: true);
-            await dialog.Open(page);
+            // Same G2 rule as the 390 pass: open on the desktop chrome, then narrow to the phone.
+            var page = await OpenPhase3DialogThenResizeAsync(dialog, 320, 640, touch: true);
 
             var root = page.Locator($".tm-modal-overlay.{dialog.RootClass}");
             await root.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
@@ -367,9 +370,15 @@ public partial class SpreadsheetE2ETests
                      (390, 844, "tm-modal--sheet", "mobile")
                  })
         {
-            var sized = await OpenPhase2DemoAsync(width, height, touch: true);
-            var sizedGrid = await OpenPhase3GridAsync(sized);
-            await SetWholeNumberValidationAsync(sized, sizedGrid, "H6", "1", "10", viaNameBox: true);
+            // The RULE is set through the desktop chrome (a phone has no Data validation entry — G2, and the
+            // tablet chrome has no tab strip); the viewport is narrowed before the out-of-range value is
+            // typed, so the alert below resolves this arm's presentation.
+            var sized = await OpenOnDesktopThenResizeAsync(async p =>
+            {
+                var setupGrid = await OpenPhase3GridAsync(p);
+                await SetWholeNumberValidationAsync(p, setupGrid, "H6", "1", "10", viaNameBox: true);
+            }, width, height, touch: true);
+            var sizedGrid = DemoGrid(sized);
             await TypeIntoCanvasCellAsync(sized, sizedGrid, "H6", "99");
 
             var sizedAlert = sized.Locator(".tm-modal-overlay.tm-spreadsheet-alert");
@@ -582,17 +591,36 @@ public partial class SpreadsheetE2ETests
         return grid;
     }
 
+    /// <summary>Every ribbon command these specs open, by its frozen <c>data-command-id</c>.</summary>
+    private static readonly Dictionary<string, string> Phase3CommandIds = new()
+    {
+        ["Custom sort\u2026"] = "custom-sort",
+        ["Remove duplicates"] = "remove-duplicates",
+        ["Text to columns"] = "text-to-columns",
+        ["Paste special"] = "paste-special",
+        ["Name Manager"] = "name-manager",
+        ["Data validation..."] = "data-validation",
+        ["Insert link"] = "insert-link",
+        ["Insert image"] = "insert-image",
+        ["Filter"] = "filter",
+    };
+
+    private static string CommandIdFor(string title)
+        => Phase3CommandIds.TryGetValue(title, out var id) ? id : title.TrimEnd('.', '\u2026').ToLowerInvariant();
+
     private static Task ClickDataTabButtonAsync(IPage page, string title)
         => ClickTabButtonAsync(page, "Data", title);
 
     private static Task ClickInsertTabButtonAsync(IPage page, string title)
         => ClickTabButtonAsync(page, "Insert", title);
 
+    /// <summary>
+    /// Opens a ribbon command in whatever chrome the container resolved: the desktop tab strip plus the
+    /// button, or the compact row / its "More" menu (the tab strip does not exist on tablet / mobile).
+    /// </summary>
     private static async Task ClickTabButtonAsync(IPage page, string tab, string title)
     {
-        await DemoGrid(page).FocusAsync();
-        await page.Locator(".tm-spreadsheet-toolbar__tab", new() { HasTextString = tab }).First.ClickAsync();
-        await page.Locator($"button[title='{title}']").First.ClickAsync();
+        await OpenToolbarCommandAsync(page, tab, CommandIdFor(title), title);
         await page.WaitForTimeoutAsync(200);
     }
 

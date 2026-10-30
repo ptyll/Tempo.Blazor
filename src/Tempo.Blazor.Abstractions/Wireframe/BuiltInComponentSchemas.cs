@@ -2577,6 +2577,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("sheetCount", "Sheet Count", PropType.Int, 2, cat: "Appearance"),
                 P("showHeader", "Show Header", PropType.Bool, false, cat: "Behavior"),
                 P("title", "Title", PropType.String, "Spreadsheet", cat: "Content"),
+                // The spreadsheet chrome follows its CONTAINER width (TmSpreadsheet.LayoutMode). "auto"
+                // renders the desktop variant; tablet draws two compact command rows, mobile a compact
+                // header, one command row and the core mobile action bar.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

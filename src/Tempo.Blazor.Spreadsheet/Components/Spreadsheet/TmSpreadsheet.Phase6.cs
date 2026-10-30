@@ -258,6 +258,18 @@ public partial class TmSpreadsheet
     private int _resizeIndex = -1;
     private string _resizeInputValue = string.Empty;
 
+    /// <summary>
+    /// True while one of the host's OWN surfaces owns the focus: an open context menu (the anchored desktop
+    /// menu or the phone sheet) or the host-owned resize dialog. The grid's canvased focus restore is then
+    /// suppressed — the canvas activation that opened the surface arms it, and the grid's
+    /// <c>OnAfterRenderAsync</c> runs in the same batch as the surface's, so its <c>isFocusOutside</c>
+    /// probe answers stale and the <c>FocusAsync</c> hop lands ~25 ms AFTER the menu focused its first
+    /// entry, killing the menu's ArrowDown / Home / End walk (phase 7d).
+    /// </summary>
+    private bool IsHostSurfaceFocused => _gridContextMenu is not null
+        || _sheetTabContextMenu is not null
+        || _showResizeDialog;
+
     /// <summary>Which model size the host-owned resize dialog edits.</summary>
     private enum SpreadsheetResizeTarget
     {

@@ -364,7 +364,13 @@ public partial class SpreadsheetE2ETests
         await page.WaitForSelectorAsync(".tm-spreadsheet-context-menu",
             new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
 
-        // The first entry takes the focus on open, the arrows rove, Home/End jump.
+        // The first entry takes the focus on open, the arrows rove, Home/End jump. The focus lands in the
+        // menu's OnAfterRenderAsync through one JS interop hop, so WAIT for it — reading activeElement in
+        // the same tick as "the menu is visible" races the frame on a loaded box.
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement?.getAttribute('data-context-menu-id')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30_000 });
         var first = await page.EvaluateAsync<string>(
             "() => document.activeElement?.getAttribute('data-context-menu-id') || 'none'");
         Assert.AreEqual("format-cells", first, "the first menu entry is focused on open");
@@ -389,50 +395,84 @@ public partial class SpreadsheetE2ETests
     [TestMethod]
     public async Task Phase6_NotionEditModal_At390_IsMobile_AndKeepsTheFooterInView()
     {
-        var page = await OpenPhase6DemoAsync(Phase6DesktopWidth, 1000, hasTouch: false);
-        await page.GotoAsync($"{BaseUrl}/notion-editor");
-        await WaitForAppReadyAsync(page);
-        await page.WaitForTimeoutAsync(2500);
-
-        var opened = await page.EvaluateAsync<bool>(@"() => {
-            const btn = document.querySelector(""[data-testid='spreadsheet-demo']"");
-            return !!btn;
-        }");
-        _ = opened;
-
-        // The demo's notion page hosts a spreadsheet block on the seeded page; open its editor.
-        var edit = page.Locator(".tm-notion-spreadsheet-block .tm-notion-spreadsheet-block__edit-btn").First;
-        if (await edit.CountAsync() == 0)
+        // The seeded /notion-editor page has an EMPTY spreadsheet block (no saved document), so its
+        // inline edit button does not exist — the modal is reached through the real "Create Spreadsheet"
+        // entry point of the block's upload zone, the same path SpreadsheetBlockE2ETests uses.
+        // The /notion-editor page is stateful (the block store lives in the demo API), so reset it to the
+        // seeded page first — exactly what SpreadsheetBlockE2ETests does before it looks for the block.
+        using (var http = DemoApiTestHttp.CreateClient())
         {
-            Assert.Inconclusive("the seeded Notion page has no spreadsheet block to edit on this run");
-            return;
+            try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
+            catch { /* the API may be unreachable or its certificate untrusted; the spec then runs on live state */ }
         }
 
+        var page = await CreatePageAsync();
+        await page.SetViewportSizeAsync(Phase6DesktopWidth, 1000);
+        await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
+        await page.WaitForSelectorAsync(".tm-notion-editor", new() { Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(2000);
+
+        var block = page.Locator(".tm-notion-spreadsheet-block").First;
+        await block.WaitForAsync(new LocatorWaitForOptions { Timeout = 15_000 });
+        await block.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        var create = block.Locator(".tm-notion-media-upload-zone--spreadsheet").First;
+        await create.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await create.ClickAsync();
+
+        var modal = page.Locator(".tm-notion-spreadsheet-edit-modal").First;
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await modal.Locator(".tm-notion-spreadsheet-edit-modal__btn--primary").First
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+
+        // The modal is the measured container, not the viewport: narrowing the page is what a phone does
+        // to this fullscreen surface (the spreadsheet itself resolves its chrome from the modal's width).
         await page.SetViewportSizeAsync(390, 844);
-        await edit.ClickAsync();
-        await page.WaitForSelectorAsync(".tm-notion-spreadsheet-edit-modal .tm-spreadsheet",
-            new() { State = WaitForSelectorState.Visible, Timeout = 60_000 });
-        await page.WaitForTimeoutAsync(800);
+        await AssertNotionModalIsPhoneAtAsync(page, modal, viewportHeight: 844);
 
-        Assert.AreEqual("mobile", await page.Locator(".tm-notion-spreadsheet-edit-modal .tm-spreadsheet")
-            .First.GetAttributeAsync("data-layout"),
-            "the fullscreen modal is a 390px container, so the editor resolves the phone chrome");
-
-        var footer = await page.Locator(".tm-notion-spreadsheet-edit-modal__footer").BoundingBoxAsync();
-        var viewport = page.ViewportSize!;
-        Assert.IsNotNull(footer);
-        Assert.IsTrue(footer!.Y + footer.Height <= viewport.Height + 1,
-            $"the Save / Discard footer stays inside the viewport (footer bottom {footer.Y + footer.Height:0} vs {viewport.Height})");
-
-        // And at 568x320 (landscape phone) the footer must still be visible.
+        // …and at 568x320 (landscape phone) the footer must still be inside the viewport.
         await page.SetViewportSizeAsync(568, 320);
-        await page.WaitForTimeoutAsync(800);
-        var smallFooter = await page.Locator(".tm-notion-spreadsheet-edit-modal__footer").BoundingBoxAsync();
-        Assert.IsNotNull(smallFooter);
-        Assert.IsTrue(smallFooter!.Y + smallFooter.Height <= 321,
-            $"the footer stays in view at 568x320 (bottom {smallFooter.Y + smallFooter.Height:0})");
+        await AssertNotionModalIsPhoneAtAsync(page, modal, viewportHeight: 320);
 
         await ShotPhase6Async(page, "notion-edit-modal-568x320");
+
+        // Leave no modal behind for a later spec in this class.
+        await page.Locator(".tm-notion-spreadsheet-edit-modal__btn--discard").First.ClickAsync();
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 30_000 });
+        await page.CloseAsync();
+    }
+
+    /// <summary>
+    /// Asserts the Notion edit modal resolved the PHONE chrome at this viewport and that its Save /
+    /// Discard footer stays on screen — the phone-height trap this spec exists for.
+    /// </summary>
+    private static async Task AssertNotionModalIsPhoneAtAsync(IPage page, ILocator modal, int viewportHeight)
+    {
+        var layout = modal.Locator(".tm-spreadsheet").First;
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\".tm-notion-spreadsheet-edit-modal .tm-spreadsheet\")?.getAttribute('data-layout') === 'mobile'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.AreEqual("mobile", await layout.GetAttributeAsync("data-layout"),
+            $"the fullscreen modal is a {page.ViewportSize!.Width}px container, so the editor resolves the phone chrome");
+        // The sheet transition has settled by the time data-layout flips; still give the frame a beat so
+        // the footer is measured at rest instead of mid-animation.
+        await page.WaitForTimeoutAsync(400);
+
+        var footer = await modal.Locator(".tm-notion-spreadsheet-edit-modal__footer").First.BoundingBoxAsync();
+        Assert.IsNotNull(footer, "the Save / Discard footer renders");
+        Assert.IsTrue(footer!.Y >= 0 && footer.Y + footer.Height <= viewportHeight + 1,
+            $"the Save / Discard footer stays inside the {viewportHeight}px viewport "
+            + $"(footer {footer.Y:0}..{footer.Y + footer.Height:0})");
+
+        foreach (var action in new[] { ".tm-notion-spreadsheet-edit-modal__btn--primary", ".tm-notion-spreadsheet-edit-modal__btn--discard" })
+        {
+            var box = await modal.Locator(action).First.BoundingBoxAsync();
+            Assert.IsNotNull(box, $"{action} renders");
+            Assert.IsTrue(box!.Y >= 0 && box.Y + box.Height <= viewportHeight + 1,
+                $"{action} is reachable ({box.Y:0}..{box.Y + box.Height:0} of {viewportHeight})");
+        }
     }
 
     // ── Review round: the tablet chrome in a reference-width (~1000px) container ──

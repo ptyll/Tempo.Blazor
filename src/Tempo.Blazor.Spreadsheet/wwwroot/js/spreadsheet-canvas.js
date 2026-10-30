@@ -2464,8 +2464,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
 
     /**
      * The header filter button's hit rect. A fine pointer keeps the painted glyph rect exactly (no
-     * mouse regression); a coarse pointer grows the hit box to the touch floor, filling the header
-     * gutter and never leaving its own column.
+     * mouse regression); a coarse pointer grows the hit box to the touch floor, filling the row it
+     * sits in and never leaving its own column.
+     *
+     * The vertical bound is the BOX the funnel belongs to, not "the top of the canvas": the auto
+     * filter's funnel is painted in the header ROW (y = columnHeaderHeight + row top), so a resolver
+     * that clamped to `[0, headerHeight - height]` moved the whole touch target up into the column
+     * header gutter — the funnel itself became untappable and a tap on the gutter over that column
+     * opened the filter menu. `boundsTop` / `boundsHeight` carry the funnel's own box; the historic
+     * defaults (0 / `headerHeight`) keep every previous caller's answer identical.
      */
     function resolveFilterButtonHitRect(input) {
         const opts = input || {};
@@ -2477,12 +2484,14 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         if (opts.coarse !== true) return { x, y, width: w, height: h };
 
         const columnWidth = Math.max(w, Number(opts.columnWidth) || w);
-        const headerHeight = Math.max(h, Number(opts.headerHeight) || h);
+        const boundsTop = Number(opts.boundsTop) || 0;
+        const headerHeight = Math.max(h, Number(opts.boundsHeight ?? opts.headerHeight) || h);
         const width = Math.min(columnWidth, Math.max(coarseTouchHitPx, w));
         const height = Math.min(headerHeight, Math.max(coarseTouchHitPx, h));
         const columnLeft = x + w - columnWidth;
         const left = Math.max(columnLeft, Math.min(Math.round(x + w / 2 - width / 2), x + w - width));
-        const top = Math.max(0, Math.min(Math.round(y + h / 2 - height / 2), headerHeight - height));
+        const top = Math.max(boundsTop,
+            Math.min(Math.round(y + h / 2 - height / 2), boundsTop + headerHeight - height));
         return { x: left, y: top, width, height };
     }
 
@@ -8448,8 +8457,14 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 hit: resolveFilterButtonHitRect({
                     rect: btn,
                     coarse: read(model, "PointerCoarse", false) === true,
-                    headerHeight: columnHeaderHeight,
-                    columnWidth: read(colFrame, "Width", btn.w)
+                    // The funnel's own CELL is the box: its painted width is the column width (a merged
+                    // header cell's funnel is clamped to the merged box) and its top/height keep the
+                    // touch target on the row the funnel is drawn in. `colFrame` does not exist here —
+                    // reading it threw inside the rAF paint and killed every AutoFilter button
+                    // (phase 7d regression, pinned by the node funnel lane).
+                    boundsTop: y,
+                    boundsHeight: h,
+                    columnWidth: w
                 }),
                 active
             });
@@ -9307,12 +9322,38 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     window.tmSpreadsheetCanvas.getGridGutters = resolveGridGutters;
 
     /**
+     * Focuses the grid ONLY when the focus has not moved into another control. The previous shape —
+     * an `isFocusOutside` probe followed by `ElementReference.FocusAsync` — is a TOCTOU race: the
+     * probe answers for the moment it runs, and the focus hop lands a few ms later, so a surface that
+     * took the focus in between (the host's context menu, which focuses its first entry from its own
+     * OnAfterRenderAsync in the same batch) lost it again and its ArrowDown / Home / End walk was dead
+     * (phase 7d). One synchronous check-and-focus cannot be overtaken.
+     */
+    window.tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway = function (root) {
+        if (!root) return false;
+        let active = null;
+        try { active = document.activeElement; } catch (e) { return false; }
+        // Nothing focused, or the grid already owns it (or one of its own controls) → take it.
+        const insideGrid = !active || active === document.body || active === document.documentElement
+            || active === root || root.contains?.(active) === true;
+        if (!insideGrid) return false;
+        try { root.focus({ preventScroll: true }); } catch (e) { return false; }
+        return true;
+    };
+
+    /**
      * Whether the document's focus currently sits on a control OUTSIDE this grid. The grid claims the
      * focus after a canvas activation, but a render can land AFTER the user has already moved on (a
      * command-log flush, the viewport sync that the grid's own focusout schedules). Yanking the focus
      * back then blurs that control — the formula bar's name box resets its typed ref on blur and the
      * Enter that should navigate is swallowed by the grid's key handling instead. `body`/`html` (nothing
      * focused) count as "not outside", so the historical focusing behaviour is unchanged.
+     * <para>
+     * Kept for compatibility: a host integration may still call it, but the GRID no longer does — a probe
+     * followed by a separate `ElementReference.FocusAsync` hop is a TOCTOU race, so the component uses
+     * {@link window.tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway}, which checks and focuses in one
+     * task (phase 7d).
+     * </para>
      */
     window.tmSpreadsheetCanvas.isFocusOutside = function (root) {
         if (!root) return false;
@@ -9361,6 +9402,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         clipTouchHandleRect,
         isCanvasShortcutCommand,
         resolveFilterButtonHitRect,
+        // The funnel bookkeeping itself: drawFilterButtons aborts the whole content paint (it runs in a
+        // requestAnimationFrame) if it throws, so the node lane drives it with a stub 2D context.
+        drawFilterButtons,
         // Phase 7b: the density gutter contract, the header font scale, the colour parser behind the
         // OPAQUE dark active header and the live pointer-kind decision (only Auto follows the media
         // query; an explicitly pinned density ignores it).

@@ -208,9 +208,13 @@
                              OnNavigateToRef="@OnNameBoxNavigate" />
     }
 
+        @* The host's OPEN SURFACE owns the focus: the grid stands down (SuppressFocusRestore) so its own
+           focus restore cannot land after the context menu / resize dialog focused its first control —
+           both components run OnAfterRenderAsync in the same batch (phase 7d). *@
         <TmSpreadsheetCanvasGrid @ref="_grid"
                                  RenderContextMenu="false"
                                  OnContextMenuRequested="OpenGridContextMenu"
+                                 SuppressFocusRestore="@IsHostSurfaceFocused"
                                  RootDomId="@GridRootDomId"
                                  Sheet="_workbook.ActiveSheet"
                                  RowHeight="RowHeight"

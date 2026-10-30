@@ -50,8 +50,7 @@ public partial class SpreadsheetE2ETests
         await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
         await WaitForCanvasActiveRefAsync(grid, cellRef);
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -93,8 +92,7 @@ public partial class SpreadsheetE2ETests
 
         await WaitForCanvasActiveRefAsync(grid, cellRef);
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -233,8 +231,7 @@ public partial class SpreadsheetE2ETests
         await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
         await WaitForCanvasActiveRefAsync(grid, "E5");
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
