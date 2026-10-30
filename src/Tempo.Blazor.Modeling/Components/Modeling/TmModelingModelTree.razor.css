@@ -197,6 +197,64 @@
     min-width: 0;
 }
 
+/* ── Phase 12: the ParentId hierarchy ────────────────────────────────────────
+   Each hierarchy node button carries --tm-modeling-tree-level (its aria-level); the
+   token-driven indentation is computed HERE as (level − 1) × the --tm-space-4 step — no
+   hard-coded pixel in either language. Flat-mode nodes keep their own padding. */
+.tm-modeling-model-tree__branch {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-modeling-model-tree__branch .tm-modeling-model-tree__node {
+    padding-inline-start: calc((var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-4));
+}
+
+.tm-modeling-model-tree__branch-children {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* The disclosure affordance of a parent node (pointer path; the keyboard path is the APG
+   Right/Left arrows). Rotation mirrors the group chevron via the button's aria-expanded. */
+.tm-modeling-model-tree__type-chevron {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-modeling-model-tree__node[aria-expanded="false"] .tm-modeling-model-tree__type-chevron {
+    transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-model-tree__type-chevron {
+        transition: none;
+    }
+}
+
+/* A parent node renders two extra leading tracks (chevron + direct child count pill) before
+   the icon/body/handle columns the flat nodes use. */
+.tm-modeling-model-tree__node--branch {
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+}
+
+.tm-modeling-model-tree__child-count {
+    flex: 0 0 auto;
+    min-width: var(--tm-space-5);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: center;
+}
+
 /* Nodes are quiet rows: transparent chrome, hairline-free, hover paints muted. */
 .tm-modeling-model-tree__node {
     display: grid;
@@ -362,6 +420,8 @@
     .tm-modeling-model-tree__node-meta,
     .tm-modeling-model-tree__drag-handle,
     .tm-modeling-model-tree__type-icon,
+    .tm-modeling-model-tree__type-chevron,
+    .tm-modeling-model-tree__child-count,
     .tm-modeling-model-tree__group-icon,
     .tm-modeling-model-tree__group-chevron,
     .tm-modeling-model-tree__insert {

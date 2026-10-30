@@ -1,0 +1,9 @@
+{
+  "itemName": "ModelingTreeGrouping",
+  "kind": "Enum",
+  "category": "Modeling",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "How TmModelingModelTree structures its elements (Fáze 12). The default Auto renders the ParentId hierarchy when at least one element resolves to a valid parent and keeps today's SemanticType groups for flat models, so a model without ParentId looks and behaves exactly as before. SemanticType is the pre-phase-12 flat grouping; Hierarchy always renders the nested APG tree built from ModelingElementDto.ParentId.",
+  "sourcePath": "src/Tempo.Blazor.Modeling/ModelingTreeGrouping.cs"
+}

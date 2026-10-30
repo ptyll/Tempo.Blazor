@@ -152,6 +152,53 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("Live hierarchy filtering on 200 elements in 6-level chains updates the DOM under 200ms (Fáze 12)")]
+    public async Task HierarchyFilterLatency_UpdatesDomUnderBudget()
+    {
+        // The Fáze 12 hierarchy budget, calibrated on the same desktop pair as the flat filter
+        // above: the ?scenario=hierarchy-large model is 200 elements in 6-level ParentId chains,
+        // so the filter has to walk ancestors AND annotate levels on every keystroke.
+        var context = await CreateContextAsync();
+        await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.GotoAsync($"{BaseUrl}{ModelingEditorUrl}?scenario=hierarchy-large&notation=bpmn", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = 60000
+        });
+        await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
+
+        var latencyMs = await page.EvaluateAsync<double>(
+            """
+            async () => {
+                const input = document.querySelector('[data-testid="modeling-tree-search"]');
+                const tree = document.querySelector('[data-testid="modeling-model-tree"]');
+                if (!input || !tree) throw new Error('Modeling tree search input was not found.');
+                input.value = '';
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward', data: null }));
+                await new Promise(requestAnimationFrame);
+
+                const start = performance.now();
+                input.value = 'hierarchy element 199';
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'hierarchy element 199' }));
+                while (performance.now() - start < 2000) {
+                    if (tree.getAttribute('data-visible-count') === '1') {
+                        return performance.now() - start;
+                    }
+                    await new Promise(requestAnimationFrame);
+                }
+
+                throw new Error(`Hierarchy filter did not reach one visible item. Count: ${tree.getAttribute('data-visible-count')}`);
+            }
+            """);
+
+        Console.WriteLine($"[perf] hierarchy filter latency={latencyMs:0.0} ms");
+        Assert.IsTrue(latencyMs < 200, $"Hierarchy filter latency should stay under 200 ms. Actual: {latencyMs:0.0} ms.");
+    }
+
+    [TestMethod]
     [Description("Canvas and issue-panel scrolling stay inside frame-budget smoke limits for large surfaces")]
     public async Task LargeSurfaces_ScrollWithoutJank()
     {

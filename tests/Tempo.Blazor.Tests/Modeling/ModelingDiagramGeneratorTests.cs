@@ -350,6 +350,27 @@ public sealed class ModelingDiagramGeneratorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Generator_ignores_element_ParentId_for_node_nesting()
+    {
+        // Phase 12 decision (confirmed): element ParentId drives the MODEL TREE hierarchy only.
+        // Diagram nesting stays owned by ModelingViewNodeDto.ParentNodeId — the generator must
+        // never map element ParentId onto DiagramNode.ParentNodeId.
+        var parent = Element("element-parent", "source-parent", "bpmn", "subProcess", "Parent");
+        var child = Element("element-child", "source-child", "bpmn", "userTask", "Child");
+        child.ParentId = "element-parent";
+
+        var generator = CreateGenerator();
+        var result = generator.Generate(CreateModel(parent, child));
+
+        result.Document.Should().NotBeNull();
+        result.Issues.Should().NotContain(issue => issue.Category == "hierarchy");
+        var nodes = result.Document!.Nodes;
+        nodes.Should().HaveCount(2);
+        nodes.Should().OnlyContain(node => node.ParentNodeId == null,
+            "element ParentId is never projected onto the diagram node nesting");
+    }
+
+    [Fact]
     public void Generated_document_renders_in_diagram_editor_without_exception()
     {
         var generator = CreateGenerator();

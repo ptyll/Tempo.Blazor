@@ -40,7 +40,7 @@ performance-large|bpmn2-*|uml25-*|invalid|scenario-invalid-relationship`.
 |-----------|---------|
 | `TmModelingEditor` | The workspace shell: header, model tree, diagram preview + issues dock, inspector, status bar. Owns loading, generation, selection and the open-editor dialog. |
 | `TmModelingDiagramPreview` | The generated diagram: a read-only `TmDiagramEditor` (`ToolbarPreset.Viewer`, `ReadOnly=true`, `ShowTitle=false`) in a labelled section with the Primary "Open in editor" + Secondary "Generate diagram" actions and a drop target. |
-| `TmModelingModelTree` | The APG `role="tree"` of model elements grouped by `SemanticType`, with filter, collapse groups and the drag/insert bridge. |
+| `TmModelingModelTree` | The APG `role="tree"` of model elements — flat `SemanticType` groups or the nested `ParentId` hierarchy (`Grouping`, Fáze 12) — with filter, collapse state and the drag/insert bridge. |
 | `TmModelingInspector` | Read-only inspector for the selected element/relationship (MO2 — the inspector never edits). |
 | `TmModelingSourcePanel` | The "Source" inspector tab: provider/system/version/trust metadata, freshness and the "Load model" reload. |
 | `TmModelingIssuePanel` | The issues list (severity, message, recommended fix, source navigation) with a collapsible dock header. |
@@ -80,6 +80,7 @@ window still resolves the DE tablet layout).
 | `OnDiagramGenerated` | `EventCallback<DiagramDocument>` | — | After a model is loaded and converted. |
 | `OnOpenInEditor` | `EventCallback<DiagramDocument>` | — | When the user opens the generated document in the full editor. |
 | `AllowNodeDrop` | `bool` | `true` | Tree→preview reuse (drop AND the non-drag insert); `false` removes the drop zone and the "+" affordance. |
+| `TreeGrouping` | `ModelingTreeGrouping` | `Auto` | Fáze 12 pass-through to the model tree: `Auto` renders the `ParentId` hierarchy when at least one element resolves to a valid parent and keeps the flat SemanticType groups otherwise. |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Raised by a real drop AND by the insert alternative (same contract). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | see above | `Auto` / `Desktop` / `new(768, 1200)` | Presentation resolution from the editor's own container. |
 | `Height` | `string?` | `null` | The editor's block size (CSS length only). `null` keeps the stylesheet contract `min(768px, 100vh - 32px)`; a set value renders exactly that height (the token floor is dropped) and the shell fills the box. A value that is not a simple CSS length or a single `calc()` expression — anything carrying `;`/`{`/`}` — is REJECTED and falls back to the stylesheet default (final review: the inline style is never an injection vector). |
@@ -125,9 +126,11 @@ band's `ShowZoomOverlay` adds the DE's floating zoom pill plus the fit-to-width 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `Elements` | `IReadOnlyList<ModelingElementDto>` | — | The tree source. |
-| `SelectedElement` / `SelectedElementChanged` / `OnElementSelected` | — | — | Selection (an external arrival inside a collapsed group auto-reveals and scrolls to it). |
+| `SelectedElement` / `SelectedElementChanged` / `OnElementSelected` | — | — | Selection (an external arrival inside a collapsed group auto-reveals and scrolls to it; in the hierarchy it reveals the WHOLE ancestor chain). |
 | `FilterText` / `FilterTextChanged` | `string?` / `EventCallback<string?>` | `null` | Two-way filter. The parameter SEEDS the internal filter and is never assigned inside the component; user edits raise the callback (and clear the transient filter-collapse set). |
 | `CollapsedGroups` / `CollapsedGroupsChanged` | `IReadOnlyCollection<string>?` / `EventCallback<...>` | `null` | Two-way collapsed `SemanticType` group keys (owned and bound by the editor). While a filter is active, toggling works on a transient set cleared when the filter text changes. |
+| `Grouping` | `ModelingTreeGrouping` | `Auto` | Fáze 12. `SemanticType` keeps the flat groups; `Hierarchy` always renders the `ParentId` nesting; `Auto` uses the hierarchy when at least one element resolves to a valid parent and the flat groups otherwise. |
+| `CollapsedElementIds` / `CollapsedElementIdsChanged` | `IReadOnlyCollection<string>?` / `EventCallback<...>` | `null` | Fáze 12: two-way collapsed hierarchy nodes — element ids, a SEPARATE key space from `CollapsedGroups` (no migration). The editor owns the state across tree remounts; while a filter is active, toggles work on a transient set. |
 | `AllowNodeDrop` / `OnInsertIntoPreview` | `bool` / `EventCallback<ModelingElementDto>` | `true` / — | The drag handle and the non-drag "+" alternative. The "+" button renders only when `AllowNodeDrop && OnInsertIntoPreview.HasDelegate`. |
 | `OnElementDragStarted` / `OnElementDragEnded` | — | — | Drag bridge events. |
 | `ShowTitle` | `bool` | `true` | The heading block. The tablet drawer passes `false` (its sheet already says "Model tree"; the search field stays and `role="tree"` is named by `aria-label`). |
@@ -142,6 +145,26 @@ emulated group treeitem — the node buttons stay native and fence their keys wi
 `aria-keyshortcuts="Insert Control+Enter"` and names the "+" button per row
 (`TmModelingModelTree_InsertIntoPreviewNamed`). Root counters: `data-visible-count` (matching
 elements across ALL groups) and `data-rendered-count` (nodes actually in the DOM).
+
+**Hierarchy view (Fáze 12).** With `Grouping=Auto` and at least one resolvable
+`ModelingElementDto.ParentId`, the tree renders the model's containment instead of the flat
+type groups: every element is a treeitem at its own `aria-level` with
+`aria-setsize`/`aria-posinset` computed among the VISIBLE siblings, parents are disclosures
+(chevron + the direct child count through the localized plural
+`TmModelingModelTree_ChildCount_*`, `aria-expanded` + `aria-controls`), and the same flat
+visible list drives keyboard navigation (Right expands a collapsed parent or descends, Left
+collapses or moves to the nearest visible ancestor; Insert / Ctrl+Enter keep the insert paths).
+Indentation rides the per-node `--tm-modeling-tree-level` custom property through
+`--tm-space-*` — no hard-coded pixels. Robustness contract: an element whose `ParentId` does
+not resolve to another element renders at the root; a parent cycle (and anything hanging off
+one) is broken deterministically to the root — no recursion, no stack overflow, whatever the
+input order; the hierarchy is built once per `Elements` reference (a dictionary of children by
+parent, memoized) so a 200-element / 6-level model re-filters in well under 200 ms (M26).
+The filter keeps every ancestor of a match visible and expanded while it is active, and
+`data-visible-count` counts MATCHES (never dropping to zero because the only matching
+subtree is collapsed) while `data-rendered-count` counts the nodes in the DOM. The diagram
+generator never maps `ParentId` onto `ModelingViewNodeDto.ParentNodeId` — diagram nesting
+stays owned by the view.
 
 ### `TmModelingIssuePanel`
 
@@ -317,6 +340,9 @@ All user-facing strings resolve through `ITmLocalizer` keys in the four core tab
 filter/sort keys `TmModelingIssuePanel_FilterPlaceholder`, `_SortLabel`, `_SortInput`,
 `_SortSeverity`, `_SortSource`, `_SeverityFilterLabel`, `_NoMatch`, `_ClearFilters` and
 `_CountFiltered` ("Issues: {0} of {1}" / "Nálezy: {0} z {1}" — a plain key, no plural family).
+Fáze 12 adds the hierarchy disclosure keys: `TmModelingModelTree_ExpandNode` / `_CollapseNode`
+("{0}" = the node display name, used as the chevron `title`) and the plural family
+`TmModelingModelTree_ChildCount_*` ("{0} child(ren)", spoken on a parent node's aria-label).
 
 ## Demo
 

@@ -30,6 +30,11 @@ public partial class TmModelingEditor : IAsyncDisposable
     private ModelingRelationshipDto? _selectedRelationship;
     private ModelingElementDto? _draggedElement;
     private IReadOnlyCollection<string>? _collapsedGroups;
+
+    /// <summary>Collapsed hierarchy node ids (Fáze 12) — a separate key space from
+    /// <see cref="_collapsedGroups"/> (element ids vs semantic-type group keys), owned by the
+    /// editor so the state survives a tree remount on a layout flip.</summary>
+    private IReadOnlyCollection<string>? _collapsedElementIds;
     private string? _errorMessage;
     private string? _activeLoadKey;
     private string? _effectiveNotationKey;
@@ -245,6 +250,15 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     /// <summary>Whether model tree elements can be reused by dropping them onto the preview canvas.</summary>
     [Parameter] public bool AllowNodeDrop { get; set; } = true;
+
+    /// <summary>
+    /// How the model tree structures its elements (Fáze 12 pass-through).
+    /// <see cref="ModelingTreeGrouping.Auto"/> (the default) renders the
+    /// <see cref="ModelingElementDto.ParentId"/> hierarchy when at least one element resolves to
+    /// a valid parent and keeps the SemanticType groups for flat models — a model without
+    /// <c>ParentId</c> looks and behaves exactly as before.
+    /// </summary>
+    [Parameter] public ModelingTreeGrouping TreeGrouping { get; set; } = ModelingTreeGrouping.Auto;
 
     /// <summary>Callback raised after a model tree element is reused as a new preview node.</summary>
     [Parameter] public EventCallback<ModelingNodeDroppedEventArgs> OnNodeDropped { get; set; }

@@ -46,122 +46,225 @@
              role="tree"
              aria-labelledby="@(ShowTitle ? TreeTitleId : null)"
              aria-label="@(ShowTitle ? null : Loc["TmModelingModelTree_Title"])">
-            @foreach (var (group, groupPosition) in FilteredGroups.Select((value, index) => (value, index + 1)))
+            @if (IsHierarchyMode)
             {
-                var expanded = IsGroupExpanded(group.Key);
-                var groupContentId = expanded ? GetGroupContentId(groupPosition) : null;
-                <div role="treeitem"
-                     aria-level="1"
-                     aria-expanded="@expanded.ToString().ToLowerInvariant()"
-                     aria-controls="@groupContentId"
-                     aria-setsize="@FilteredGroups.Count"
-                     aria-posinset="@groupPosition"
-                     aria-label="@GetGroupAriaLabel(group)"
-                     tabindex="@GetGroupTabIndex(group.Key, activeTreeItemId)"
-                     class="tm-modeling-model-tree__group"
-                     data-testid="@($"modeling-tree-group-{group.Key}")"
-                     data-group-key="@group.Key"
-                     data-expanded="@expanded.ToString().ToLowerInvariant()"
-                     @onkeydown="args => HandleGroupKeyDownAsync(group.Key, args)"
-                     @onkeyup="args => HandleGroupKeyUpAsync(group.Key, args)">
-                    @* APG tree pattern: the group TREEITEM carries focus, aria-expanded and the
-                       roving tabindex; the header row inside it is presentational (@onclick only)
-                       and the count pill is aria-hidden (the treeitem's aria-label already names
-                       label + count). Enter/Space are EMULATED on the treeitem (non-native) —
-                       Enter on keydown (!repeat), Space on keyup — the native split
-                       (docs/keyboard-activation-convention.md). *@
-                    <div class="tm-modeling-model-tree__group-header"
-                         data-testid="@($"modeling-tree-group-header-{group.Key}")"
-                         title="@GetGroupHeaderTitle(expanded)"
-                         @onclick="() => ToggleGroupAsync(group.Key)">
-                        <span class="tm-modeling-model-tree__group-chevron" aria-hidden="true">
-                            <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
-                        </span>
-                        <span class="tm-modeling-model-tree__group-icon" aria-hidden="true">
-                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(group.Key)" Size="IconSize.Xs" />
-                        </span>
-                        <span class="tm-modeling-model-tree__group-label">@group.Label</span>
-                        <span class="tm-modeling-model-tree__group-count" aria-hidden="true">@group.Elements.Count</span>
-                    </div>
-                    @if (expanded)
-                    {
-                        <div id="@GetGroupContentId(groupPosition)" class="tm-modeling-model-tree__nodes" role="group">
-                            @foreach (var (element, nodePosition) in group.Elements.Select((value, index) => (value, index + 1)))
-                            {
-                                <div role="none" class="tm-modeling-model-tree__node-row tm-reveal-host">
-                                    @* The node is a NATIVE button: Enter/Space activate it natively.
-                                       The stopPropagation fences keep those keys from reaching the
-                                       emulating group treeitem (Space keyup would toggle the group
-                                       on top of the node's own click). *@
-                                    <button type="button"
-                                            class="@GetNodeClass(element)"
-                                            data-testid="@($"modeling-tree-node-{element.Id}")"
-                                            data-element-id="@element.Id"
-                                            data-semantic-type="@element.SemanticType"
-                                            data-modeling-drag-element-id="@(AllowNodeDrop ? element.Id : null)"
-                                            draggable="@(AllowNodeDrop ? "true" : null)"
-                                            role="treeitem"
-                                            aria-level="2"
-                                            aria-setsize="@group.Elements.Count"
-                                            aria-posinset="@nodePosition"
-                                            aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
-                                            aria-label="@GetNodeAriaLabel(element)"
-                                            aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert Control+Enter" : null)"
-                                            title="@GetDisplayName(element)"
-                                            tabindex="@GetNodeTabIndex(element.Id, activeTreeItemId)"
-                                            @onclick="() => SelectElementAsync(element)"
-                                            @onkeydown="args => HandleNodeKeyDownAsync(element, args)"
-                                            @onkeydown:stopPropagation="true"
-                                            @onkeyup:stopPropagation="true"
-                                            @ondragstart="() => HandleDragStartedAsync(element)"
-                                            @ondragend="HandleDragEndedAsync">
-                                        <span class="tm-modeling-model-tree__type-icon" aria-hidden="true">
-                                            <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Sm" />
-                                        </span>
-                                        <span class="tm-modeling-model-tree__node-body">
-                                            <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
-                                            <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
-                                        </span>
-                                        @if (AllowNodeDrop)
-                                        {
-                                            @* Fáze 7 (G2): the grip affordance belongs to the DRAG — a layout
-                                               that ignores drops (mobile) renders no handle, so the row
-                                               never promises a gesture it cannot do. *@
-                                            <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
-                                                <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
-                                            </span>
-                                        }
-                                    </button>
-                                    @if (CanInsertIntoPreview)
-                                    {
-                                        @* Fáze 6 (WCAG 2.5.7): the non-drag alternative to dragging the
-                                           node into the preview — a SIBLING button (a button must never
-                                           nest inside a button). The core .tm-reveal-on-hover pair
-                                           hides it until hover on a fine pointer only; it stays
-                                           visible on (hover: none) and under :focus-within
-                                           (docs/responsive-conventions.md). tabindex="-1": the
-                                           keyboard path is the NODE treeitem's Insert / Ctrl+Enter
-                                           (aria-keyshortcuts above) — the button itself is a
-                                           pointer/touch affordance and stays out of the tab order.
-                                           The HOST computes the drop geometry (the preview's viewport
-                                           center) and routes the request through the preview's
-                                           existing drop path — the tree raises the request only. *@
-                                        <button type="button"
-                                                class="tm-modeling-model-tree__insert tm-reveal-on-hover"
-                                                data-testid="@($"modeling-tree-insert-{element.Id}")"
-                                                tabindex="-1"
-                                                aria-label="@GetInsertAriaLabel(element)"
-                                                title="@GetInsertAriaLabel(element)"
-                                                @onclick="() => HandleInsertRequestedAsync(element)">
-                                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
-                                        </button>
-                                    }
-                                </div>
-                            }
+                @* Phase 12: the ParentId hierarchy — every element is a treeitem nested to its
+                   own aria-level; parents are disclosures (chevron + direct child count) and
+                   keyboard navigation walks ONE flat visible list (modeling-editor.js
+                   focusTreeElement, unchanged API). *@
+                @foreach (var root in FilteredHierarchy)
+                {
+                    @RenderHierarchyBranch(root, activeTreeItemId)
+                }
+            }
+            else
+            {
+                @foreach (var (group, groupPosition) in FilteredGroups.Select((value, index) => (value, index + 1)))
+                {
+                    var expanded = IsGroupExpanded(group.Key);
+                    var groupContentId = expanded ? GetGroupContentId(groupPosition) : null;
+                    <div role="treeitem"
+                         aria-level="1"
+                         aria-expanded="@expanded.ToString().ToLowerInvariant()"
+                         aria-controls="@groupContentId"
+                         aria-setsize="@FilteredGroups.Count"
+                         aria-posinset="@groupPosition"
+                         aria-label="@GetGroupAriaLabel(group)"
+                         tabindex="@GetGroupTabIndex(group.Key, activeTreeItemId)"
+                         class="tm-modeling-model-tree__group"
+                         data-testid="@($"modeling-tree-group-{group.Key}")"
+                         data-group-key="@group.Key"
+                         data-expanded="@expanded.ToString().ToLowerInvariant()"
+                         @onkeydown="args => HandleGroupKeyDownAsync(group.Key, args)"
+                         @onkeyup="args => HandleGroupKeyUpAsync(group.Key, args)">
+                        @* APG tree pattern: the group TREEITEM carries focus, aria-expanded and the
+                           roving tabindex; the header row inside it is presentational (@onclick only)
+                           and the count pill is aria-hidden (the treeitem's aria-label already names
+                           label + count). Enter/Space are EMULATED on the treeitem (non-native) —
+                           Enter on keydown (!repeat), Space on keyup — the native split
+                           (docs/keyboard-activation-convention.md). *@
+                        <div class="tm-modeling-model-tree__group-header"
+                             data-testid="@($"modeling-tree-group-header-{group.Key}")"
+                             title="@GetGroupHeaderTitle(expanded)"
+                             @onclick="() => ToggleGroupAsync(group.Key)">
+                            <span class="tm-modeling-model-tree__group-chevron" aria-hidden="true">
+                                <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-modeling-model-tree__group-icon" aria-hidden="true">
+                                <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(group.Key)" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-modeling-model-tree__group-label">@group.Label</span>
+                            <span class="tm-modeling-model-tree__group-count" aria-hidden="true">@group.Elements.Count</span>
                         </div>
-                    }
-                </div>
+                        @if (expanded)
+                        {
+                            <div id="@GetGroupContentId(groupPosition)" class="tm-modeling-model-tree__nodes" role="group">
+                                @foreach (var (element, nodePosition) in group.Elements.Select((value, index) => (value, index + 1)))
+                                {
+                                    <div role="none" class="tm-modeling-model-tree__node-row tm-reveal-host">
+                                        @* The node is a NATIVE button: Enter/Space activate it natively.
+                                           The stopPropagation fences keep those keys from reaching the
+                                           emulating group treeitem (Space keyup would toggle the group
+                                           on top of the node's own click). *@
+                                        <button type="button"
+                                                class="@GetNodeClass(element)"
+                                                data-testid="@($"modeling-tree-node-{element.Id}")"
+                                                data-element-id="@element.Id"
+                                                data-semantic-type="@element.SemanticType"
+                                                data-modeling-drag-element-id="@(AllowNodeDrop ? element.Id : null)"
+                                                draggable="@(AllowNodeDrop ? "true" : null)"
+                                                role="treeitem"
+                                                aria-level="2"
+                                                aria-setsize="@group.Elements.Count"
+                                                aria-posinset="@nodePosition"
+                                                aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
+                                                aria-label="@GetNodeAriaLabel(element)"
+                                                aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert Control+Enter" : null)"
+                                                title="@GetDisplayName(element)"
+                                                tabindex="@GetNodeTabIndex(element.Id, activeTreeItemId)"
+                                                @onclick="() => SelectElementAsync(element)"
+                                                @onkeydown="args => HandleNodeKeyDownAsync(element, args)"
+                                                @onkeydown:stopPropagation="true"
+                                                @onkeyup:stopPropagation="true"
+                                                @ondragstart="() => HandleDragStartedAsync(element)"
+                                                @ondragend="HandleDragEndedAsync">
+                                            <span class="tm-modeling-model-tree__type-icon" aria-hidden="true">
+                                                <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Sm" />
+                                            </span>
+                                            <span class="tm-modeling-model-tree__node-body">
+                                                <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
+                                                <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
+                                            </span>
+                                            @if (AllowNodeDrop)
+                                            {
+                                                @* Fáze 7 (G2): the grip affordance belongs to the DRAG — a layout
+                                                   that ignores drops (mobile) renders no handle, so the row
+                                                   never promises a gesture it cannot do. *@
+                                                <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
+                                                    <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
+                                                </span>
+                                            }
+                                        </button>
+                                        @if (CanInsertIntoPreview)
+                                        {
+                                            @* Fáze 6 (WCAG 2.5.7): the non-drag alternative to dragging the
+                                               node into the preview — a SIBLING button (a button must never
+                                               nest inside a button). The core .tm-reveal-on-hover pair
+                                               hides it until hover on a fine pointer only; it stays
+                                               visible on (hover: none) and under :focus-within
+                                               (docs/responsive-conventions.md). tabindex="-1": the
+                                               keyboard path is the NODE treeitem's Insert / Ctrl+Enter
+                                               (aria-keyshortcuts above) — the button itself is a
+                                               pointer/touch affordance and stays out of the tab order.
+                                               The HOST computes the drop geometry (the preview's viewport
+                                               center) and routes the request through the preview's
+                                               existing drop path — the tree raises the request only. *@
+                                            <button type="button"
+                                                    class="tm-modeling-model-tree__insert tm-reveal-on-hover"
+                                                    data-testid="@($"modeling-tree-insert-{element.Id}")"
+                                                    tabindex="-1"
+                                                    aria-label="@GetInsertAriaLabel(element)"
+                                                    title="@GetInsertAriaLabel(element)"
+                                                    @onclick="() => HandleInsertRequestedAsync(element)">
+                                                <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             }
         </div>
     }
 </section>
+
+@code {
+    /// <summary>One hierarchy branch: the node treeitem (a native selection button that is also
+    /// a disclosure when it has children) plus its nested children container. Recursion happens
+    /// through the template itself — the VIEW is already cycle-broken and level-annotated.</summary>
+    private RenderFragment RenderHierarchyBranch(HierarchyViewNode node, string activeTreeItemId) => @<div class="tm-modeling-model-tree__branch">
+        <div role="none" class="tm-modeling-model-tree__node-row tm-reveal-host">
+            @{
+                var element = node.Element;
+                var expanded = HasChildren(node) && IsNodeExpanded(node);
+                var childrenId = HasChildren(node) && expanded ? GetHierarchyChildrenId(element.Id) : null;
+            }
+            <button type="button"
+                    class="@GetHierarchyNodeClass(node)"
+                    style="@GetHierarchyLevelStyle(node)"
+                    data-testid="@($"modeling-tree-node-{element.Id}")"
+                    data-element-id="@element.Id"
+                    data-semantic-type="@element.SemanticType"
+                    data-modeling-drag-element-id="@(AllowNodeDrop ? element.Id : null)"
+                    draggable="@(AllowNodeDrop ? "true" : null)"
+                    role="treeitem"
+                    aria-level="@node.Level"
+                    aria-setsize="@node.SetSize"
+                    aria-posinset="@node.PositionInSet"
+                    aria-expanded="@(HasChildren(node) ? expanded.ToString().ToLowerInvariant() : null)"
+                    aria-controls="@childrenId"
+                    aria-selected="@IsSelected(element).ToString().ToLowerInvariant()"
+                    aria-label="@GetHierarchyNodeAriaLabel(node)"
+                    aria-keyshortcuts="@(CanInsertIntoPreview ? "Insert Control+Enter" : null)"
+                    title="@GetDisplayName(element)"
+                    tabindex="@(activeTreeItemId == $"node:{element.Id}" ? "0" : "-1")"
+                    @onclick="() => SelectElementAsync(element)"
+                    @onkeydown="args => HandleHierarchyNodeKeyDownAsync(node, args)"
+                    @onkeydown:stopPropagation="true"
+                    @onkeyup:stopPropagation="true"
+                    @ondragstart="() => HandleDragStartedAsync(element)"
+                    @ondragend="HandleDragEndedAsync">
+                @if (HasChildren(node))
+                {
+                    @* The disclosure affordance: pointer users click it to expand WITHOUT selecting
+                       (stopPropagation keeps the click off the selection); keyboard users use the
+                       APG Right/Left arrows. aria-hidden: the state rides aria-expanded on the
+                       treeitem, the tooltip carries the localized node name. *@
+                    <span class="tm-modeling-model-tree__type-chevron" aria-hidden="true"
+                          title="@GetNodeDisclosureTitle(GetDisplayName(element), expanded)"
+                          @onclick="() => ToggleNodeAsync(element.Id)"
+                          @onclick:stopPropagation="true">
+                        <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
+                    </span>
+                    <span class="tm-modeling-model-tree__child-count" aria-hidden="true">@node.Children.Count</span>
+                }
+                <span class="tm-modeling-model-tree__type-icon" aria-hidden="true">
+                    <TmIcon Name="@ModelingSemanticTypeIcons.ForSemanticType(element.SemanticType)" Size="IconSize.Sm" />
+                </span>
+                <span class="tm-modeling-model-tree__node-body">
+                    <span class="tm-modeling-model-tree__node-name">@GetDisplayName(element)</span>
+                    <span class="tm-modeling-model-tree__node-meta">@GetNodeMetadata(element)</span>
+                </span>
+                @if (AllowNodeDrop)
+                {
+                    <span class="tm-modeling-model-tree__drag-handle" aria-hidden="true">
+                        <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Xs" />
+                    </span>
+                }
+            </button>
+            @if (CanInsertIntoPreview)
+            {
+                <button type="button"
+                        class="tm-modeling-model-tree__insert tm-reveal-on-hover"
+                        data-testid="@($"modeling-tree-insert-{element.Id}")"
+                        tabindex="-1"
+                        aria-label="@GetInsertAriaLabel(element)"
+                        title="@GetInsertAriaLabel(element)"
+                        @onclick="() => HandleInsertRequestedAsync(element)">
+                    <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                </button>
+            }
+        </div>
+        @if (HasChildren(node) && expanded)
+        {
+            <div id="@GetHierarchyChildrenId(element.Id)" class="tm-modeling-model-tree__branch-children" role="group">
+                @foreach (var child in node.Children)
+                {
+                    @RenderHierarchyBranch(child, activeTreeItemId)
+                }
+            </div>
+        }
+    </div>;
+}

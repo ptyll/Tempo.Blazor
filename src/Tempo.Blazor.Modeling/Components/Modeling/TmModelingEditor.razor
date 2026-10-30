@@ -427,7 +427,8 @@
         <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
     </div>;
 
-    /// <summary>The model tree. CollapsedGroups and FilterText stay bound to the editor's own
+    /// <summary>The model tree. CollapsedGroups / CollapsedElementIds (Fáze 12, a separate key
+    /// space: element ids vs group keys) and FilterText stay bound to the editor's own
     /// fields: the tree may remount when the layout flips, and the editor — not the tree instance
     /// — owns the state. AllowNodeDrop follows the editor's switch; the non-drag "Insert into
     /// preview" action routes back through <see cref="HandleInsertIntoPreviewAsync"/> (the
@@ -438,13 +439,16 @@
     {
         get
         {
-            var (selected, dragStarted, dragEnded, insert, collapsedChanged) = TreeCallbacks;
+            var (selected, dragStarted, dragEnded, insert, collapsedChanged, collapsedElementsChanged) = TreeCallbacks;
             return @<TmModelingModelTree Elements="@VisibleTreeElements"
                                          SelectedElement="@_selectedElement"
                                          AllowNodeDrop="@EffectiveAllowNodeDrop"
                                          OnInsertIntoPreview="@insert"
+                                         Grouping="@TreeGrouping"
                                          CollapsedGroups="@_collapsedGroups"
                                          CollapsedGroupsChanged="@collapsedChanged"
+                                         CollapsedElementIds="@_collapsedElementIds"
+                                         CollapsedElementIdsChanged="@collapsedElementsChanged"
                                          FilterText="@_treeFilterHolder.Value"
                                          FilterTextChanged="@TreeFilterChanged"
                                          ShowTitle="@(false == IsTablet && !IsMobileLayout)"

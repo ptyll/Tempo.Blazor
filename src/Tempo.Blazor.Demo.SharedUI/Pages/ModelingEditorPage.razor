@@ -132,6 +132,7 @@
                 || HasArchimate32ProfileScenario
                 || HasErdProfileScenario
                 || HasPerformanceScenario
+                || HasHierarchyScenario
                 ? CustomModelLoaderAsync
             : null;
 
@@ -165,6 +166,85 @@
         string.Equals(Scenario, "diacritics", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "large-tree", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "long-name", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Fáze 12: <c>?scenario=hierarchy</c> (the BPMN subprocess model) and
+    /// <c>?scenario=hierarchy-large</c> (200 elements in 6-level chains, the M26 hierarchy
+    /// filter budget) drive the ParentId hierarchy through the model tree.</summary>
+    private bool HasHierarchyScenario =>
+        string.Equals(Scenario, "hierarchy", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Scenario, "hierarchy-large", StringComparison.OrdinalIgnoreCase);
+
+    private bool HasHierarchyLargeScenario =>
+        string.Equals(Scenario, "hierarchy-large", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Fáze 12 / M26: 200 elements in 6-level chains (33 full chains + 2 extra roots)
+    /// — the hierarchy filter budget runs against this shape.</summary>
+    private static ModelingModelDto CreateHierarchyLargeScenarioModel()
+    {
+        const int chainLength = 6;
+        var elements = new List<ModelingElementDto>(capacity: 200);
+        var nodes = new List<ModelingViewNodeDto>(capacity: 200);
+        for (var index = 0; index < 200; index++)
+        {
+            var position = index % chainLength;
+            var elementId = $"hierarchy-element-{index:000}";
+            elements.Add(new ModelingElementDto
+            {
+                Id = elementId,
+                SourceId = $"demo/hierarchy/{elementId}",
+                SourceType = "bpmn-task",
+                SourcePath = $"/Demo/Hierarchy/{index:000}",
+                Notation = "bpmn",
+                SemanticType = "userTask",
+                Name = $"Hierarchy element {index:000}",
+                Description = $"Generated hierarchy row {index:000} at depth {position + 1}.",
+                Tags = ["hierarchy", "demo"],
+                ParentId = position == 0 ? string.Empty : $"hierarchy-element-{index - 1:000}",
+                Governance = new ModelingGovernanceDto
+                {
+                    TrustLevel = "demo",
+                    ReviewState = "generated",
+                    SyncState = "fresh",
+                    DataSource = "Tempo.Blazor Demo"
+                }
+            });
+            nodes.Add(new ModelingViewNodeDto
+            {
+                ElementId = elementId,
+                X = 80 + (index % 20) * 190,
+                Y = 80 + (index / 20) * 130,
+                Width = 160,
+                Height = 88
+            });
+        }
+
+        return new ModelingModelDto
+        {
+            Id = "demo-hierarchy-large-model",
+            Title = "Hierarchy large demo model",
+            Notation = "bpmn",
+            SupportedNotations = ["bpmn"],
+            Elements = elements,
+            Views =
+            [
+                new ModelingViewDto
+                {
+                    Id = "demo-hierarchy-large-overview",
+                    Name = "Hierarchy overview",
+                    Notation = "bpmn",
+                    ViewpointKey = "overview",
+                    Nodes = nodes
+                }
+            ],
+            Metadata = new ModelingMetadataDto
+            {
+                SourceSystem = "Tempo.Blazor Demo",
+                SourceVersion = "2026.06-hierarchy",
+                LoadedAt = DateTimeOffset.UtcNow,
+                IsFresh = true
+            }
+        };
+    }
 
     private bool HasDiagramPreviewScenario =>
         string.Equals(Scenario, "empty-preview", StringComparison.OrdinalIgnoreCase)
@@ -201,6 +281,13 @@
         }
 
         var model = await provider.GetModelAsync(request, cancellationToken);
+        if (HasHierarchyScenario)
+        {
+            return HasHierarchyLargeScenario
+                ? CreateHierarchyLargeScenarioModel()
+                : DemoModelingModelProvider.CreateHierarchyModel();
+        }
+
         if (HasBpmnProfileScenario)
         {
             return CreateBpmnProfileScenarioModel();

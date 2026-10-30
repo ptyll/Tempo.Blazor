@@ -248,13 +248,15 @@ public partial class TmModelingEditor
     private EventCallback? _onElementDragEndedCallback;
     private EventCallback<ModelingElementDto>? _onInsertIntoPreviewCallback;
     private EventCallback<IReadOnlyCollection<string>>? _collapsedGroupsChangedCallback;
+    private EventCallback<IReadOnlyCollection<string>>? _collapsedElementsChangedCallback;
 
     /// <summary>The tree's callbacks, built once per editor instance.</summary>
     private (EventCallback<ModelingElementDto> Selected,
              EventCallback<ModelingElementDto> DragStarted,
              EventCallback DragEnded,
              EventCallback<ModelingElementDto> Insert,
-             EventCallback<IReadOnlyCollection<string>> CollapsedChanged) TreeCallbacks
+             EventCallback<IReadOnlyCollection<string>> CollapsedChanged,
+             EventCallback<IReadOnlyCollection<string>> CollapsedElementsChanged) TreeCallbacks
     {
         get
         {
@@ -267,11 +269,17 @@ public partial class TmModelingEditor
                 _collapsedGroups = value;
                 return Task.CompletedTask;
             });
+            _collapsedElementsChangedCallback ??= EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, value =>
+            {
+                _collapsedElementIds = value;
+                return Task.CompletedTask;
+            });
             return (_onElementSelectedCallback!.Value,
                     _onElementDragStartedCallback!.Value,
                     _onElementDragEndedCallback!.Value,
                     _onInsertIntoPreviewCallback!.Value,
-                    _collapsedGroupsChangedCallback!.Value);
+                    _collapsedGroupsChangedCallback!.Value,
+                    _collapsedElementsChangedCallback!.Value);
         }
     }
 }

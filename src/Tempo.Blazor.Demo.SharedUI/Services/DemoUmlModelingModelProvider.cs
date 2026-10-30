@@ -42,7 +42,14 @@ public sealed class DemoUmlModelingModelProvider : IModelingModelProvider
             },
             Elements =
             [
+                Element("uml-package-order", "Package", "Order domain", "demo/uml/order-domain",
+                    description: "UML package containing the order domain classifiers.",
+                    properties: new()
+                    {
+                        ["stencilId"] = Json("uml25.package")
+                    }),
                 Element("uml-order", "Class", "Order", "demo/uml/order",
+                    parentId: "uml-package-order",
                     properties: new()
                     {
                         ["stencilId"] = Json("uml2.class"),
@@ -50,12 +57,14 @@ public sealed class DemoUmlModelingModelProvider : IModelingModelProvider
                         ["operations"] = Json("+ Submit(): void")
                     }),
                 Element("uml-customer", "Class", "Customer", "demo/uml/customer",
+                    parentId: "uml-package-order",
                     properties: new()
                     {
                         ["stencilId"] = Json("uml2.class"),
                         ["attributes"] = Json("- name: string\n- email: string")
                     }),
                 Element("uml-order-repository", "Interface", "IOrderRepository", "demo/uml/order-repository",
+                    parentId: "uml-package-order",
                     properties: new()
                     {
                         ["stencilId"] = Json("uml2.interface"),
@@ -96,6 +105,8 @@ public sealed class DemoUmlModelingModelProvider : IModelingModelProvider
         string semanticType,
         string name,
         string sourcePath,
+        string? parentId = null,
+        string? description = null,
         Dictionary<string, JsonElement>? properties = null)
         => new()
         {
@@ -106,8 +117,9 @@ public sealed class DemoUmlModelingModelProvider : IModelingModelProvider
             Notation = "uml25",
             SemanticType = semanticType,
             Name = name,
-            Description = $"{name} from the demo UML source.",
+            Description = description ?? $"{name} from the demo UML source.",
             Tags = ["uml", "demo"],
+            ParentId = parentId ?? string.Empty,
             Properties = properties ?? [],
             Governance = new ModelingGovernanceDto
             {

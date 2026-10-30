@@ -21,6 +21,49 @@ public sealed class DemoModelingModelProvider : IModelingModelProvider
         return Task.FromResult(CreateModel());
     }
 
+    /// <summary>
+    /// The <c>?scenario=hierarchy</c> demo model (Fáze 12): the default mixed model enriched
+    /// with a BPMN subprocess that parents the order activities through
+    /// <see cref="ModelingElementDto.ParentId"/> — the model tree flips to the nested hierarchy
+    /// view while the default model above stays flat (a model without parents must look and
+    /// behave exactly as before).
+    /// </summary>
+    public static ModelingModelDto CreateHierarchyModel()
+    {
+        var model = CreateModel();
+        model.Elements.Add(Element(
+            id: "bpmn-subprocess-fulfillment",
+            sourceId: "demo/bpmn/subprocess-fulfillment",
+            sourceType: "bpmn-subprocess",
+            sourcePath: "/Order fulfillment/Order fulfillment",
+            notation: "bpmn",
+            semanticType: "subprocess",
+            name: "Order fulfillment",
+            description: "BPMN subprocess containing the order activities.",
+            tags: ["bpmn", "subprocess", "order"],
+            properties: new()
+            {
+                ["stencilId"] = Json("bpmn2.subprocess")
+            }));
+        foreach (var element in model.Elements)
+        {
+            if (element.Id is "bpmn-start-order" or "bpmn-validate-order" or "bpmn-ship-order")
+            {
+                element.ParentId = "bpmn-subprocess-fulfillment";
+            }
+        }
+
+        model.Views[0].Nodes.Add(new ModelingViewNodeDto
+        {
+            ElementId = "bpmn-subprocess-fulfillment",
+            X = 40,
+            Y = 60,
+            Width = 620,
+            Height = 190
+        });
+        return model;
+    }
+
     private static ModelingModelDto CreateModel()
     {
         return new ModelingModelDto

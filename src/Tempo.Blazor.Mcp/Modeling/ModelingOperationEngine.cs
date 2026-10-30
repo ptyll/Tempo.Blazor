@@ -91,13 +91,20 @@ internal static class ModelingOperationEngine
             return;
         }
 
+        var parentId = GetString(op, "parentId");
+        if (!ValidateParentReference(model, id, parentId, i, "add_element", result))
+        {
+            return;
+        }
+
         model.Elements.Add(new ModelingElementDto
         {
             Id = id,
             Name = name,
             SemanticType = semanticType,
             Notation = GetString(op, "notation") ?? model.Notation,
-            Description = GetString(op, "description") ?? string.Empty
+            Description = GetString(op, "description") ?? string.Empty,
+            ParentId = parentId ?? string.Empty
         });
     }
 
@@ -121,6 +128,62 @@ internal static class ModelingOperationEngine
         if (op.ContainsKey("semanticType")) element.SemanticType = GetString(op, "semanticType") ?? string.Empty;
         if (op.ContainsKey("description")) element.Description = GetString(op, "description") ?? string.Empty;
         if (op.ContainsKey("notation")) element.Notation = GetString(op, "notation") ?? string.Empty;
+        if (op.ContainsKey("parentId"))
+        {
+            // An empty string clears the parent (the element becomes a root); any other value
+            // must resolve to an existing element and must not close a cycle.
+            var parentId = GetString(op, "parentId") ?? string.Empty;
+            if (!ValidateParentReference(model, id, parentId, i, "update_element", result))
+            {
+                return;
+            }
+
+            element.ParentId = parentId;
+        }
+    }
+
+    /// <summary>Validates a proposed ParentId edge (phase 12): the parent must exist, must not be
+    /// the element itself, and walking up its ancestor chain must never reach the element — a
+    /// chain that does would close a parent cycle.</summary>
+    private static bool ValidateParentReference(
+        ModelingModelDto model,
+        string elementId,
+        string? parentId,
+        int index,
+        string opName,
+        ModelingOperationResult result)
+    {
+        if (string.IsNullOrWhiteSpace(parentId))
+        {
+            return true;
+        }
+
+        if (parentId == elementId)
+        {
+            result.Errors.Add($"operations[{index}] {opName}: element '{elementId}' cannot be its own parent (cycle).");
+            return false;
+        }
+
+        if (!model.Elements.Any(e => e.Id == parentId))
+        {
+            result.Errors.Add($"operations[{index}] {opName}: parent element '{parentId}' not found.");
+            return false;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var current = parentId;
+        while (!string.IsNullOrEmpty(current) && seen.Add(current))
+        {
+            if (current == elementId)
+            {
+                result.Errors.Add($"operations[{index}] {opName}: setting '{parentId}' as the parent of '{elementId}' would create a parent cycle.");
+                return false;
+            }
+
+            current = model.Elements.FirstOrDefault(e => e.Id == current)?.ParentId;
+        }
+
+        return true;
     }
 
     private static void ApplyDeleteElement(ModelingModelDto model, JsonObject op, int i, ModelingOperationResult result)
@@ -148,6 +211,19 @@ internal static class ModelingOperationEngine
         {
             result.Errors.Add(
                 $"operations[{i}] delete_element: element '{id}' is still referenced by relationship(s) [{string.Join(", ", referencing)}]. Delete them in the same batch first.");
+            return;
+        }
+
+        // No silent cascade either way (phase 12): an element that still parents other elements
+        // must be reparented or deleted afterwards — the agent orders the batch.
+        var children = model.Elements
+            .Where(e => e.ParentId == id)
+            .Select(e => e.Id)
+            .ToList();
+        if (children.Count > 0)
+        {
+            result.Errors.Add(
+                $"operations[{i}] delete_element: element '{id}' still has child element(s) [{string.Join(", ", children)}]. Delete or reparent them in the same batch first.");
             return;
         }
 

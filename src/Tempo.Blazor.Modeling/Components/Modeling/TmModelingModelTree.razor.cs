@@ -41,6 +41,8 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private (IReadOnlyList<ModelingElementDto>? Elements,
              ModelingElementDto? SelectedElement,
              IReadOnlyCollection<string>? CollapsedGroups,
+             IReadOnlyCollection<string>? CollapsedElementIds,
+             ModelingTreeGrouping Grouping,
              string FilterText,
              bool AllowNodeDrop,
              bool CanInsert,
@@ -55,7 +57,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// rides along too — both rewrite every <c>data-testid</c> the tree paints.</summary>
     private bool RenderSurfaceChanged()
     {
-        var snapshot = (Elements, SelectedElement, CollapsedGroups, _filterText,
+        var snapshot = (Elements, SelectedElement, CollapsedGroups, CollapsedElementIds, Grouping, _filterText,
             AllowNodeDrop, CanInsertIntoPreview, ShowTitle, Class, TestIdPrefix, DataTestId,
             CultureInfo.CurrentUICulture.Name);
         var changed = !snapshot.Equals(_renderSnapshot);
@@ -138,6 +140,8 @@ public partial class TmModelingModelTree : IAsyncDisposable
     [Parameter] public EventCallback<IReadOnlyCollection<string>> CollapsedGroupsChanged { get; set; }
 
     /// <summary>
+
+    /// <summary>
     /// Optional two-way binding of the live filter text (Fáze 6 review fix). The parameter SEEDS
     /// the internal filter whenever the host hands over a new value and is never assigned inside
     /// the component — user edits update the working copy, clear the transient filter-collapse
@@ -194,15 +198,16 @@ public partial class TmModelingModelTree : IAsyncDisposable
         }
     }
 
-    /// <summary>Number of elements MATCHING the current filter across all groups — the phase-1
-    /// contract reported on <c>data-visible-count</c> (M10/M23/M26). Collapsed groups still count:
-    /// the value never drops to zero just because the single matching group is collapsed.</summary>
-    private int MatchingElementCount => FilteredGroups.Sum(group => group.Elements.Count);
+    /// <summary>Number of elements MATCHING the current filter (M10/M23/M26). Collapsed groups
+    /// and collapsed hierarchy nodes still count: the value never drops to zero just because
+    /// the only matching subtree is collapsed.</summary>
+    private int MatchingElementCount => IsHierarchyMode ? FilteredMatchCount : FilteredGroups.Sum(group => group.Elements.Count);
 
-    /// <summary>Number of element treeitems actually RENDERED (nodes of expanded groups), reported
-    /// on <c>data-rendered-count</c> — the observable distinction the old single attribute hid.</summary>
+    /// <summary>Number of element treeitems actually RENDERED (nodes of expanded groups /
+    /// expanded hierarchy branches), reported on <c>data-rendered-count</c> — the observable
+    /// distinction the old single attribute hid.</summary>
     private int RenderedNodeCount
-        => FilteredGroups.Where(group => IsGroupExpanded(group.Key)).Sum(group => group.Elements.Count);
+        => IsHierarchyMode ? CountRenderedHierarchyNodes() : FilteredGroups.Where(group => IsGroupExpanded(group.Key)).Sum(group => group.Elements.Count);
 
     /// <summary>True while a filter text is active: toggles then operate on a transient set
     /// (<see cref="_filterCollapsedGroups"/>) so the user's stored state comes back when the
@@ -290,6 +295,26 @@ public partial class TmModelingModelTree : IAsyncDisposable
             _renderPending = true;
         }
 
+        // Two-way collapsed hierarchy nodes: the same seed contract as CollapsedGroups, but a
+        // SEPARATE key space (element ids, never group keys — no migration between them).
+        if (!ReferenceEquals(CollapsedElementIds, _lastCollapsedElementIdsParameter))
+        {
+            _lastCollapsedElementIdsParameter = CollapsedElementIds;
+            _collapsedElementIds.Clear();
+            if (CollapsedElementIds is not null)
+            {
+                foreach (var elementId in CollapsedElementIds)
+                {
+                    if (!string.IsNullOrWhiteSpace(elementId))
+                    {
+                        _collapsedElementIds.Add(elementId);
+                    }
+                }
+            }
+
+            _renderPending = true;
+        }
+
         // Two-way filter text (Fáze 6 review fix): seed the working copy whenever the host hands
         // over a new value — the comparison runs against the LAST value seen from the host (the
         // echo path records it in SetParametersAsync), so a host RESET to that value re-seeds
@@ -328,6 +353,30 @@ public partial class TmModelingModelTree : IAsyncDisposable
                 }
 
                 _filterCollapsedGroups.Remove(groupKey);
+            }
+
+            // Hierarchy mode: reveal the WHOLE ancestor chain of the externally selected element
+            // so the node can render (and scroll into view) on the upcoming pass. The walk keys
+            // off the TREE edges (cycle members render at the root, so they have no tree parent).
+            var structure = HierarchyStructureOrNull();
+            if (structure is not null
+                && !string.IsNullOrWhiteSpace(SelectedElement.Id)
+                && structure.ById.ContainsKey(SelectedElement.Id))
+            {
+                var current = SelectedElement.Id;
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                while (structure.TreeParentOf.TryGetValue(current, out var parent)
+                       && parent != current
+                       && seen.Add(parent))
+                {
+                    if (_collapsedElementIds.Remove(parent))
+                    {
+                        _pendingCollapsedElementIdsChanged = true;
+                    }
+
+                    _filterCollapsedElementIds.Remove(parent);
+                    current = parent;
+                }
             }
         }
 
@@ -373,6 +422,15 @@ public partial class TmModelingModelTree : IAsyncDisposable
             }
         }
 
+        if (_pendingCollapsedElementIdsChanged)
+        {
+            _pendingCollapsedElementIdsChanged = false;
+            if (CollapsedElementIdsChanged.HasDelegate)
+            {
+                await CollapsedElementIdsChanged.InvokeAsync(_collapsedElementIds.ToArray());
+            }
+        }
+
         if (SelectedElement is null
             || string.IsNullOrWhiteSpace(SelectedElement.Id)
             || string.Equals(_lastScrolledElementId, SelectedElement.Id, StringComparison.Ordinal))
@@ -389,8 +447,10 @@ public partial class TmModelingModelTree : IAsyncDisposable
         _filterText = args.Value?.ToString() ?? string.Empty;
         // The filter view has its own transient collapse state: editing the filter starts a new
         // transient session instead of inheriting the previous one (a USER edit only — a host
-        // re-seed goes through OnParametersSet and keeps the session).
+        // re-seed goes through OnParametersSet and keeps the session). Both key spaces: the
+        // flat groups' keys AND the hierarchy's element ids.
         _filterCollapsedGroups.Clear();
+        _filterCollapsedElementIds.Clear();
         _renderPending = true;
         await FilterTextChanged.InvokeAsync(_filterText);
     }
@@ -431,6 +491,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
             await CollapsedGroupsChanged.InvokeAsync(_collapsedGroups.ToArray());
         }
     }
+
 
     /// <summary>Keys on a GROUP treeitem over the ONE flat visible list
     /// [header, its nodes if expanded, next header…]: Up/Down/Home/End traverse, Right expands a
@@ -544,6 +605,12 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private List<TreeNavEntry> GetFlatVisibleEntries()
     {
         var entries = new List<TreeNavEntry>();
+        if (IsHierarchyMode)
+        {
+            AppendVisibleHierarchyEntries(_filteredHierarchy, entries);
+            return entries;
+        }
+
         foreach (var group in FilteredGroups)
         {
             entries.Add(new TreeNavEntry("group", group.Key));
@@ -555,6 +622,16 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
         return entries;
     }
+
+    private static void AppendVisibleHierarchyEntries(IReadOnlyList<HierarchyViewNode> nodes, List<TreeNavEntry> entries)
+    {
+        foreach (var node in nodes)
+        {
+            entries.Add(new TreeNavEntry("node", node.Element.Id));
+            AppendVisibleHierarchyEntries(node.Children, entries);
+        }
+    }
+
 
     private async Task FocusRelativeEntryAsync(string kind, string key, int offset)
     {
@@ -646,6 +723,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
         => SelectedElement is not null
             && string.Equals(SelectedElement.Id, element.Id, StringComparison.Ordinal);
 
+
     private string GetNodeClass(ModelingElementDto element)
         => IsSelected(element)
             ? "tm-modeling-model-tree__node tm-modeling-model-tree__node--selected"
@@ -700,6 +778,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
     private string GetNodeAriaLabel(ModelingElementDto element)
         => $"{GetDisplayName(element)}, {GetNodeMetadata(element)}, {element.SemanticType}".Trim();
 
+
     /// <summary>The per-row "Insert into preview" name: the localized "{0}" pattern carries the
     /// element's display name (Fáze 6 review fix — the generic label could not tell two rows
     /// apart for a screen reader).</summary>
@@ -711,6 +790,7 @@ public partial class TmModelingModelTree : IAsyncDisposable
 
     private string GetGroupHeaderTitle(bool expanded)
         => Loc[expanded ? "TmModelingModelTree_CollapseGroup" : "TmModelingModelTree_ExpandGroup"];
+
 
     /// <summary>Localized semantic-type label when the host provides one
     /// (<c>TmModelingSemanticType_{key}</c>), otherwise the humanized camel/Pascal key

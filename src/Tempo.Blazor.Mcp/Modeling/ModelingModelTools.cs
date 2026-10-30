@@ -45,7 +45,7 @@ public static class ModelingModelTools
     }
 
     [McpServerTool(Name = "modeling_get_model_tree")]
-    [Description("Get an architecture/modeling model by id as a structured tree: notation, elements (id, notation, semanticType, name, description, tags), relationships (id, type, source→target), views, counts, existing issues and concurrencyToken (pass as expectedModifiedAt to modeling_apply_operations). Returns not_found if missing.")]
+    [Description("Get an architecture/modeling model by id as a structured tree: notation, elements (id, notation, semanticType, name, description, parentId — the model tree hierarchy, empty at the roots), relationships (id, type, source→target), views, counts, existing issues and concurrencyToken (pass as expectedModifiedAt to modeling_apply_operations). Returns not_found if missing.")]
     public static async Task<string> GetModelTree(
         ITempoDocumentLibraryProvider library,
         IModelingModelDocumentProvider models,
@@ -83,6 +83,7 @@ public static class ModelingModelTools
                 semanticType = e.SemanticType,
                 name = e.Name,
                 description = e.Description,
+                parentId = e.ParentId,
                 tags = e.Tags
             }).ToList(),
             relationships = model.Relationships.Select(r => new

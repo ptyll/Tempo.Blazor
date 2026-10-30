@@ -2,7 +2,7 @@
  "itemName": "TmModelingModelTree",
  "kind": "Component",
  "category": "Modeling",
- "description": "Displays semantic modeling elements grouped by type with live filtering and selection. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the CENTER of the diagram viewport. The action names its row (\"Insert {0} into preview\"), stays out of the tab order (tabindex=-1) — the keyboard path is the node treeitem's Insert / Ctrl+Enter (aria-keyshortcuts) — and renders only when AllowNodeDrop is set AND a listener is bound to OnInsertIntoPreview. FilterText/FilterTextChanged optionally two-way bind the live filter so the hosting editor can own the value across tree remounts.",
+ "description": "Displays semantic modeling elements with live filtering and selection (Fáze 12). The default Grouping=Auto renders the ParentId hierarchy as a nested APG tree — every element is a treeitem at its own aria-level with aria-setsize/posinset among the visible siblings, parents are disclosures (chevron + direct child count, aria-expanded) and keyboard navigation walks ONE flat visible list over the unchanged modeling-editor.js focusTreeElement/focusTreeGroupHeader API; indentation is token-driven via the --tm-modeling-tree-level variable. Grouping=SemanticType keeps the flat type groups; a model without resolvable ParentId falls back to it under Auto, and a parent cycle is broken deterministically to the root (never a stack overflow). The filter keeps every ancestor of a match visible and expanded, and the matching-element count on data-visible-count never drops when only the subtree is collapsed. CollapsedElementIds/CollapsedElementIdsChanged two-way bind the hierarchy's collapsed nodes (element ids — a separate key space from CollapsedGroups, which stays the flat mode's group keys); the state is seeded from the host on a new collection and raised with a fresh snapshot on every user toggle. External selection reveals the whole collapsed ancestor chain before scrolling it into view. Each node row also carries the non-drag \"Insert into preview\" action (Fáze 6): a sibling button using the core tm-reveal-on-hover contract (hidden until hover on a fine pointer only, always visible on coarse pointers and keyboard focus) that asks the host to reuse the element through the preview's existing drop path at the CENTER of the diagram viewport. The action names its row (\"Insert {0} into preview\"), stays out of the tab order (tabindex=-1) — the keyboard path is the node treeitem's Insert / Ctrl+Enter (aria-keyshortcuts) — and renders only when AllowNodeDrop is set AND a listener is bound to OnInsertIntoPreview. FilterText/FilterTextChanged optionally two-way bind the live filter so the hosting editor can own the value across tree remounts.",
  "packageId": "Tempo.Blazor.Modeling",
  "namespace": "Tempo.Blazor.Components.Modeling",
  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingModelTree.razor",
@@ -41,6 +41,25 @@
    "type": "EventCallback<IReadOnlyCollection<string>>",
    "isRequired": false,
    "description": "Raised when the user collapses or expands a group (not while a filter drives the transient state)."
+  },
+  {
+   "name": "Grouping",
+   "type": "ModelingTreeGrouping",
+   "isRequired": false,
+   "default": "ModelingTreeGrouping.Auto",
+   "description": "How the tree structures its elements (Fáze 12). Auto (the default) renders the ModelingElementDto.ParentId hierarchy when at least one element resolves to a valid parent and keeps the SemanticType groups for flat models — a model without parents looks and behaves exactly as before."
+  },
+  {
+   "name": "CollapsedElementIds",
+   "type": "IReadOnlyCollection<string>?",
+   "isRequired": false,
+   "description": "Optional two-way binding of the collapsed ELEMENT ids of the hierarchy view (Fáze 12) — a separate key space from CollapsedGroups (group keys are semantic types, these are element ids; no migration between them). Seeded whenever the host hands over a new collection; every user toggle raises CollapsedElementIdsChanged with a fresh snapshot. The parameter is NEVER assigned inside the component."
+  },
+  {
+   "name": "CollapsedElementIdsChanged",
+   "type": "EventCallback<IReadOnlyCollection<string>>",
+   "isRequired": false,
+   "description": "Raised when the user collapses or expands a hierarchy node (not while a filter drives the transient state)."
   },
   {
    "name": "Elements",
