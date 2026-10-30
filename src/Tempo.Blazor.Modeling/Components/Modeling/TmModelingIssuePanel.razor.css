@@ -377,45 +377,52 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
 /* Severity chips are the CORE TmChip pressed variant (native toggle buttons, aria-pressed).
    The core sheet owns the chip vocabulary — layout, radius, font, the focus ring, the
    coarse-pointer floor and forced-colors — so the panel keeps only the compact row sizing and
-   the severity palette: a bordered surface chip at rest, the severity tint while pressed. */
-.tm-modeling-issue-panel__chip {
+   the severity palette: a bordered surface chip at rest, the severity tint while pressed.
+   Review fix (phase 15b BLOCKER): the chip button is rendered by the CORE TmChip, so the
+   panel's scope attribute NEVER lands on it — every chip rule keys off the PANEL-OWNED
+   chips wrapper plus ::deep (compiles to .tm-modeling-issue-panel__chips[scope] …). The
+   compact padding + tight line-height keep the chip on the ~41px filter bar row (the 28px
+   --tm-space-7 body + the bar's 2×--tm-space-1 padding). */
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip {
     min-height: var(--tm-space-7);
+    padding: 0 var(--tm-space-3);
     border-color: var(--tm-color-border);
     background: var(--tm-color-surface);
     color: var(--tm-text-secondary);
+    line-height: var(--tm-line-height-tight);
 }
 
-.tm-modeling-issue-panel__chip:hover {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip:hover {
     border-color: var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-color-text);
 }
 
-.tm-modeling-issue-panel__chip[aria-pressed="true"] {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip[aria-pressed="true"] {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary-subtle, var(--tm-bg-surface-secondary));
     color: var(--tm-color-primary);
 }
 
-.tm-modeling-issue-panel__chip--error[aria-pressed="true"] {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--error[aria-pressed="true"] {
     border-color: var(--tm-color-danger-soft-border);
     background: var(--tm-color-danger-subtle);
     color: var(--tm-color-danger-text);
 }
 
-.tm-modeling-issue-panel__chip--warning[aria-pressed="true"] {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--warning[aria-pressed="true"] {
     border-color: var(--tm-color-warning-soft-border);
     background: var(--tm-color-warning-subtle);
     color: var(--tm-color-warning-text);
 }
 
-.tm-modeling-issue-panel__chip--info[aria-pressed="true"] {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip--info[aria-pressed="true"] {
     border-color: var(--tm-color-info-soft-border, var(--tm-color-border));
     background: var(--tm-color-info-subtle, var(--tm-bg-surface-secondary));
     color: var(--tm-color-info-text, var(--tm-text-secondary));
 }
 
-.tm-modeling-issue-panel__chip-count {
+.tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip-count {
     display: inline-grid;
     place-items: center;
     min-width: var(--tm-space-4);
@@ -514,7 +521,9 @@ button.tm-modeling-issue-panel__item--navigable:focus-visible {
         padding-bottom: 0;
     }
 
-    .tm-modeling-issue-panel__chip {
+    /* ::deep through the panel-owned chips wrapper — the chip button is rendered by the core
+       TmChip, so the scope attribute never lands on it (see the BLOCKER note above). */
+    .tm-modeling-issue-panel__chips ::deep .tm-modeling-issue-panel__chip {
         min-height: var(--tm-touch-target);
     }
 

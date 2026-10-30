@@ -96,6 +96,74 @@ public sealed class ModelingIssueFilterPhase11E2ETests : WasmTestBase
             null, new PageWaitForFunctionOptions { Timeout = 10_000 });
     }
 
+    // ── Phase 15b review: the scoped-CSS boundary ────────────────────────────
+
+    [TestMethod]
+    [Description("Phase 15b review: the pressed error chip paints the panel's --tm-color-danger-subtle severity tint through the scoped-CSS boundary (::deep) and reaches the 28px compact row at a fine pointer, 44px on a coarse one")]
+    public async Task PressedChip_ComputedStyle_CrossesTheScopedCssBoundary()
+    {
+        // The chip button is rendered by the CORE TmChip, so the panel's severity rules must
+        // cross the scope boundary (wrapper + ::deep). The probe presses the chip and compares
+        // its computed background against the computed --tm-color-danger-subtle token.
+        const string probeJs = """
+            async () => {
+                const chip = document.querySelector("[data-testid='modeling-issue-severity-chip-error']");
+                if (!chip) return JSON.stringify({ error: 'chip missing' });
+                const probe = document.createElement('div');
+                probe.style.background = 'var(--tm-color-danger-subtle)';
+                document.body.appendChild(probe);
+                const tokenRgb = getComputedStyle(probe).backgroundColor;
+                probe.remove();
+                chip.click();
+                await new Promise((resolve) => {
+                    const check = () => chip.getAttribute('aria-pressed') === 'true' ? resolve() : setTimeout(check, 10);
+                    setTimeout(() => resolve(), 10000);
+                });
+                const style = getComputedStyle(chip);
+                return JSON.stringify({
+                    pressed: chip.getAttribute('aria-pressed'),
+                    tokenRgb,
+                    background: style.backgroundColor,
+                    height: chip.getBoundingClientRect().height
+                });
+            }
+            """;
+
+        var page = await OpenModelingPageAsync("?scenario=issues-mixed", 1440, 900, touch: false);
+        await page.WaitForFunctionAsync(
+            "() => !!document.querySelector(\"[data-testid='modeling-issue-severity-chip-error']\")",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        var desktop = System.Text.Json.JsonDocument.Parse(
+            await page.EvaluateAsync<string>(probeJs)).RootElement;
+        Assert.AreEqual("true", desktop.GetProperty("pressed").GetString(), "the probe pressed the error chip");
+        Assert.AreEqual(desktop.GetProperty("tokenRgb").GetString(),
+            desktop.GetProperty("background").GetString(),
+            "the pressed error chip paints the computed --tm-color-danger-subtle token");
+        var desktopHeight = desktop.GetProperty("height").GetDouble();
+        Assert.IsTrue(desktopHeight >= 28,
+            $"the pressed chip reaches the compact 28px row at a fine pointer, measured {desktopHeight:0.#} px");
+        Assert.IsTrue(desktopHeight < 44,
+            $"the fine-pointer chip stays on the compact row (below the 44px target), measured {desktopHeight:0.#} px");
+
+        // Coarse pointer (the 390 mobile band per the repo's touch convention): the same chip
+        // must reach the shared 44px target.
+        var mobile = await OpenModelingPageAsync("?scenario=issues-mixed", 390, 844, touch: true);
+        await mobile.Locator("[data-testid='modeling-panel-tab-issues']")
+            .TapAsync(new LocatorTapOptions { Timeout = 10_000 });
+        await mobile.WaitForFunctionAsync(
+            "() => !!document.querySelector(\"[data-testid='modeling-issues-panel'] [data-testid='modeling-issue-severity-chip-error']\")",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+        var coarse = System.Text.Json.JsonDocument.Parse(
+            await mobile.EvaluateAsync<string>(probeJs)).RootElement;
+        Assert.AreEqual("true", coarse.GetProperty("pressed").GetString(), "the probe pressed the error chip on mobile");
+        Assert.AreEqual(coarse.GetProperty("tokenRgb").GetString(),
+            coarse.GetProperty("background").GetString(),
+            "the severity tint crosses the scoped-CSS boundary on the mobile band too");
+        var coarseHeight = coarse.GetProperty("height").GetDouble();
+        Assert.IsTrue(coarseHeight >= 44,
+            $"the chip reaches the 44px coarse-pointer target, measured {coarseHeight:0.#} px");
+    }
+
     // ── Tablet sheet ─────────────────────────────────────────────────────────
 
     [TestMethod]

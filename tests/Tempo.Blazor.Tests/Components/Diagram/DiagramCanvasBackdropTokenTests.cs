@@ -7,9 +7,10 @@ namespace Tempo.Blazor.Tests.Components.Diagram;
 /// Phase 15b carry-forward (F8 m5): the area OUTSIDE the diagram page (the
 /// <c>.tm-diagram-page-backdrop</c> rect) must follow the THEME instead of pinning the
 /// theme-invariant <c>--tm-paper-backdrop</c> — in dark mode a white frame around the white
-/// paper was the defect. The canvas owns a local <c>--tm-diagram-backdrop</c> (light keeps the
-/// historical paper-backdrop gray, a dark theme re-maps it), and the dark token registry never
-/// re-declares <c>--tm-paper*</c> (they stay theme-invariant by design).
+/// paper was the defect. The paint rides the generic <c>--tm-canvas-backdrop</c> (light keeps
+/// the historical paper-backdrop gray, a dark theme re-maps it), aliased back to the
+/// phase-15b <c>--tm-diagram-backdrop</c> name on <c>.tm-diagram-canvas</c>, and the dark
+/// token registry never re-declares <c>--tm-paper*</c> (they stay theme-invariant by design).
 /// </summary>
 public class DiagramCanvasBackdropTokenTests
 {
@@ -41,23 +42,37 @@ public class DiagramCanvasBackdropTokenTests
         rule.Success.Should().BeTrue("the backdrop rule must exist");
         var body = ThemeCss.Normalise(rule.Groups[1].Value);
         body.Should().Contain("fill: var(--tm-diagram-backdrop)",
-            "the backdrop paint rides the new theme-aware token, not the theme-invariant paper one");
+            "the backdrop paint rides the theme-aware token, not the theme-invariant paper one");
         body.Should().NotContain("--tm-paper-backdrop",
             "the backdrop rule must not reference --tm-paper-backdrop directly");
     }
 
     [Fact]
+    public void Diagram_canvas_aliases_the_phase_15b_token_to_the_generic_canvas_token()
+    {
+        // Phase 15b review: the generic core token is --tm-canvas-backdrop; the package keeps
+        // a --tm-diagram-backdrop alias on .tm-diagram-canvas so hosts that targeted the
+        // phase-15b name (per canvas) keep working.
+        var canvas = System.Text.RegularExpressions.Regex.Match(
+            DiagramCss(), @"\.tm-diagram-canvas\s*\{(?<body>[^}]*)\}");
+        canvas.Success.Should().BeTrue("the canvas rule must exist");
+        ThemeCss.Normalise(canvas.Groups["body"].Value)
+            .Should().Contain("--tm-diagram-backdrop: var(--tm-canvas-backdrop)",
+                "the package alias points at the generic core token");
+    }
+
+    [Fact]
     public void Backdrop_token_is_light_in_root_and_dark_on_the_theme_roots()
     {
-        // Light: the historical paper-backdrop gray, aliased so a host override of
-        // --tm-paper-backdrop keeps applying to the diagram backdrop.
+        // Light: the historical paper-backdrop gray — the generic canvas token; a host override
+        // of --tm-paper-backdrop reaches it in LIGHT themes only (the dark roots re-map it).
         ThemeCss.Normalise(TokensCss())
-            .Should().Contain("--tm-diagram-backdrop: var(--tm-paper-backdrop)");
+            .Should().Contain("--tm-canvas-backdrop: var(--tm-paper-backdrop)");
 
         // Dark: the token re-maps to the themed workspace tone — on the theme roots
         // (a component stylesheet may not carry a dark block), never a literal.
         var dark = ThemeCss.Normalise(TokensDarkCss());
-        dark.Should().Contain("--tm-diagram-backdrop: var(--tm-bg-workspace)",
+        dark.Should().Contain("--tm-canvas-backdrop: var(--tm-bg-workspace)",
             "the dark canvas rides the same workspace tone as the editor chrome");
 
         // The light island re-pins the :root value (ThemeLightIslandTests requires the mirror).
@@ -65,7 +80,7 @@ public class DiagramCanvasBackdropTokenTests
             TokensDarkCss(), @"\[data-theme=""light""\]\s*\{(?<body>[^}]*)\}");
         island.Success.Should().BeTrue();
         ThemeCss.Normalise(island.Groups["body"].Value)
-            .Should().Contain("--tm-diagram-backdrop: var(--tm-paper-backdrop)");
+            .Should().Contain("--tm-canvas-backdrop: var(--tm-paper-backdrop)");
     }
 
     [Fact]

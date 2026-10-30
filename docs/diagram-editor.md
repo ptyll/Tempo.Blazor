@@ -308,16 +308,21 @@ stays dark grey in every theme. Hosts rebrand them by targeting `:root`, `[data-
 and `.tm-dark` together, or per-canvas through the aliases below.
 
 The one paper-adjacent surface that DOES follow the theme is the area OUTSIDE the page: the
-`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — light keeps the historical
-paper-backdrop gray (an alias of `--tm-paper-backdrop`, declared in `tokens.css`), and the dark
-theme roots re-map it to the workspace tone (`tokens-dark.css`), so the white page floats on a
-dark canvas instead of inside a light frame (carry-forward F8 m5). Hosts restyle the backdrop by
-overriding `--tm-diagram-backdrop` (per canvas like the aliases below, or on the theme roots);
-overriding `--tm-paper-backdrop` still works but restyles every surface aliased to it.
+`.tm-diagram-page-backdrop` rect paints `--tm-diagram-backdrop` — a package alias of the
+generic core `--tm-canvas-backdrop` token (declared on `.tm-diagram-canvas`). Light keeps the
+historical paper-backdrop gray (`--tm-canvas-backdrop: var(--tm-paper-backdrop)` in
+`tokens.css`), and the dark theme roots re-map the generic token to the workspace tone
+(`tokens-dark.css`), so the white page floats on a dark canvas instead of inside a light frame
+(carry-forward F8 m5). Hosts restyle the backdrop by overriding `--tm-canvas-backdrop` (on
+`[data-theme="dark"]`/`.tm-dark` and `:root` together, or `:root` for both themes) or
+`--tm-diagram-backdrop` per canvas; **overriding `--tm-paper-backdrop` only applies in LIGHT
+themes now** — the dark theme roots re-map the canvas token and win over `:root` by source
+order (and it still restyles every surface aliased to the paper backdrop).
 
-Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves two
+Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves the
 canvas-scoped aliases declared on `.tm-diagram-canvas`:
 
+- `--tm-diagram-backdrop` — the page-backdrop fill (alias of the generic `--tm-canvas-backdrop`).
 - `--tm-diagram-paper` — the page fill (alias of the theme-invariant `--tm-paper`, white in
   every theme). Edge-label pills reuse it so the edge stroke never runs through the text.
 - `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-paper-ink-muted`).

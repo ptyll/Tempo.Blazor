@@ -171,10 +171,10 @@
      they are theme-invariant by design and stay literal light values declared ONLY in
      tokens.css, so a descendant-scoped dark theme keeps the paper white. Do NOT add
      dark re-declarations for them — that would undo the guarantee. */
-  /* The diagram canvas BACKDROP is not paper: the area outside the page follows the theme
+  /* The canvas BACKDROP is not paper: the area outside the page follows the theme
      (carry-forward F8 m5) — the white page floats on a dark workspace instead of a light
      frame. The light island below re-pins the :root value. */
-  --tm-diagram-backdrop:       var(--tm-bg-workspace);
+  --tm-canvas-backdrop:        var(--tm-bg-workspace);
   --tm-radius-card:            var(--tm-radius-lg);
   --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
@@ -378,7 +378,7 @@
   --tm-shadow-focus:                0 0 0 3px rgb(from var(--tm-color-primary-500) r g b / 0.4);
   --tm-chart-area-fill-opacity:     0.25;
   --tm-bg-workspace:                var(--tm-bg-page);
-  --tm-diagram-backdrop:            var(--tm-paper-backdrop);
+  --tm-canvas-backdrop:            var(--tm-paper-backdrop);
   --tm-radius-card:                 var(--tm-radius-lg);
   --tm-radius-control:              var(--tm-radius-md);
   --tm-shadow-card:                 var(--tm-shadow-md);

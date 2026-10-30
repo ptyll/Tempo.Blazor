@@ -18,14 +18,19 @@ else if (Removable)
 {
     @* A remove button must never nest inside the pressed toggle button (HTML forbids a
        <button> inside a <button>): the shell wrapper keeps the two as SIBLINGS. The chip
-       classes live on the pressed BUTTON so selectors keying on the chip root keep working. *@
-    <span class="tm-chip__shell" @attributes="AdditionalAttributes">
+       classes live on the pressed BUTTON so selectors keying on the chip root keep working.
+       Review fix (phase 15b): aria-* and data-testid additional attributes are ROUTED to the
+       pressed button — assistive tech and host/E2E selectors must reach the activatable
+       element, not the layout wrapper; every other attribute stays on the shell (the legacy
+       "root" position). *@
+    <span class="tm-chip__shell" @attributes="ShellAttributes">
         <button type="button"
                 class="@RootCss"
                 style="@ColorStyle"
                 aria-pressed="@(Pressed.Value ? "true" : "false")"
                 disabled="@Disabled"
-                @onclick="HandleToggle">
+                @onclick="HandleToggle"
+                @attributes="PressedButtonAttributes">
             @ChipContent
         </button>
         @RemoveButton
@@ -102,7 +107,12 @@ else
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
-    /// <summary>Additional HTML attributes to apply to the root element.</summary>
+    /// <summary>
+    /// Additional HTML attributes to apply to the root element. A removable + pressed chip
+    /// routes <c>aria-*</c> and <c>data-testid</c> to the pressed toggle button (assistive
+    /// tech and host/E2E selectors must reach the activatable element); the rest stay on the
+    /// shell wrapper. Every other variant applies them to the rendered root.
+    /// </summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string VariantCss => Variant switch
@@ -133,6 +143,38 @@ else
     }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private string? ColorStyle => !string.IsNullOrEmpty(Color) ? $"--tm-chip-color: {Color};" : null;
+
+    /// <summary>
+    /// Removable + pressed: the additional attributes bound to the pressed BUTTON —
+    /// <c>aria-*</c> (assistive tech must reach the activatable element) and
+    /// <c>data-testid</c> (host/E2E selectors key the interactive element). Empty when
+    /// nothing qualifies.
+    /// </summary>
+    private Dictionary<string, object>? PressedButtonAttributes =>
+        AdditionalAttributes?.Where(IsButtonBoundAttribute)
+            .ToDictionary(static attribute => attribute.Key, static attribute => attribute.Value, StringComparer.Ordinal);
+
+    /// <summary>The additional attributes that STAY on the shell wrapper — everything that is
+    /// not routed to the pressed button (the wrapper keeps the legacy "root" position).</summary>
+    private Dictionary<string, object>? ShellAttributes
+    {
+        get
+        {
+            if (AdditionalAttributes is null)
+            {
+                return null;
+            }
+
+            var shell = AdditionalAttributes
+                .Where(attribute => !IsButtonBoundAttribute(attribute))
+                .ToDictionary(static attribute => attribute.Key, static attribute => attribute.Value, StringComparer.Ordinal);
+            return shell.Count == 0 ? null : shell;
+        }
+    }
+
+    private static bool IsButtonBoundAttribute(KeyValuePair<string, object> attribute) =>
+        attribute.Key.StartsWith("aria-", StringComparison.Ordinal) ||
+        attribute.Key.Equals("data-testid", StringComparison.Ordinal);
 
     /// <summary>The shared chip body — icon, label and the trailing child content — so the
     /// span root, the pressed button and the removable wrapper can never drift.</summary>

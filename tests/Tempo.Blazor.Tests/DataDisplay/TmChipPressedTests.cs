@@ -112,6 +112,45 @@ public class TmChipPressedTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Removable_pressed_routes_aria_and_testid_to_the_toggle_button()
+    {
+        // Phase 15b review: assistive tech and host/E2E selectors must reach the ACTIVATABLE
+        // element — aria-* and data-testid route to the pressed button, the rest stay on the
+        // shell wrapper (the legacy "root" position).
+        using var cut = Render<TmChip>(p => p
+            .Add(x => x.Label, "Tag")
+            .Add(x => x.Pressed, true)
+            .Add(x => x.Removable, true)
+            .AddUnmatched("data-testid", "chip-tag")
+            .AddUnmatched("aria-describedby", "hint-1")
+            .AddUnmatched("id", "chip-shell"));
+
+        var button = cut.Find("button.tm-chip");
+        button.GetAttribute("data-testid").Should().Be("chip-tag",
+            "data-testid is routed to the toggle button");
+        button.GetAttribute("aria-describedby").Should().Be("hint-1",
+            "aria-* attributes are routed to the toggle button");
+
+        var shell = cut.Find(".tm-chip__shell");
+        shell.GetAttribute("id").Should().Be("chip-shell",
+            "non-aria/testid attributes stay on the shell wrapper");
+        shell.HasAttribute("data-testid").Should().BeFalse(
+            "the routed attribute must not be duplicated on the shell");
+    }
+
+    [Fact]
+    public void Removable_pressed_without_routed_attributes_keeps_shell_clean()
+    {
+        using var cut = Render<TmChip>(p => p
+            .Add(x => x.Label, "Tag")
+            .Add(x => x.Pressed, true)
+            .Add(x => x.Removable, true));
+
+        cut.Find(".tm-chip__shell").Attributes.Should().NotContain(a => a.Name == "data-testid");
+        cut.Find("button.tm-chip").HasAttribute("aria-describedby").Should().BeFalse();
+    }
+
+    [Fact]
     public void Pressed_native_button_does_not_emulate_enter()
     {
         using var cut = Render<TmChip>(p => p

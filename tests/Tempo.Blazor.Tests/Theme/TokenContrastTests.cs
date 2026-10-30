@@ -476,10 +476,12 @@ public sealed class TokenContrastTests
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
-            // Phase 15b: the diagram canvas backdrop is deliberately THEME-AWARE — light keeps
-            // the paper-backdrop gray, dark rides the workspace tone so the white page floats on
-            // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5).
-            "--tm-diagram-backdrop",
+            // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
+            // paper-backdrop gray, dark rides the workspace tone so the white page floats on
+            // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the
+            // generic --tm-canvas-backdrop in the phase 15b review; the DiagramEditor keeps
+            // a --tm-diagram-backdrop alias on .tm-diagram-canvas.
+            "--tm-canvas-backdrop",
             "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
             "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
             "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",

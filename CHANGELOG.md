@@ -12,18 +12,22 @@
 
 ### Breaking / Migration
 
-- **DiagramEditor: the area OUTSIDE the diagram page now follows the theme (phase 15b).** The `.tm-diagram-page-backdrop` rect used to pin the theme-invariant `--tm-paper-backdrop` (gray-100), so in dark mode the white page floated inside a light frame. The paint now rides a new `--tm-diagram-backdrop` token — `var(--tm-paper-backdrop)` (the same gray) in light themes, the workspace tone on the dark/indigo-dark theme roots — so the paper stays white and the canvas turns dark with the rest of the chrome. A host that overrode `--tm-paper-backdrop` *because of the editor* should override `--tm-diagram-backdrop` instead (the old override still works, but it restyles every surface aliased to the paper backdrop):
+- **DiagramEditor: the area OUTSIDE the diagram page now follows the theme (phase 15b).** The `.tm-diagram-page-backdrop` rect used to pin the theme-invariant `--tm-paper-backdrop` (gray-100), so in dark mode the white page floated inside a light frame. The paint now rides the theme-aware `--tm-canvas-backdrop` token (renamed from the phase-15b `--tm-diagram-backdrop` in review; the DiagramEditor keeps a `--tm-diagram-backdrop` **alias** on `.tm-diagram-canvas`, so overrides written against that name on the canvas keep working) — `var(--tm-paper-backdrop)` (the same gray) in light themes, the workspace tone on the dark/indigo-dark theme roots — so the paper stays white and the canvas turns dark with the rest of the chrome. **Breaking: an override of `--tm-paper-backdrop` now only applies in LIGHT themes** — the dark theme roots re-map the canvas token and win over `:root` by source order, so the old override no longer reaches the dark canvas (it still restyles every surface aliased to the paper backdrop). A host that overrode `--tm-paper-backdrop` *because of the editor* should override `--tm-canvas-backdrop` instead:
   ```css
   /* before: restyling the editor's canvas backdrop (and everything aliased to the token) */
   :root { --tm-paper-backdrop: #eef2f7; }
-  /* after: the diagram canvas backdrop alone */
-  .tm-diagram-canvas { --tm-diagram-backdrop: #eef2f7; }
+  /* after: the canvas backdrop alone, in both themes */
+  :root { --tm-canvas-backdrop: #eef2f7; }
   ```
   A host that wants the old always-light canvas back pins the light value on the theme roots:
   ```css
   [data-theme="dark"] .tm-diagram-canvas, .tm-dark .tm-diagram-canvas { --tm-diagram-backdrop: var(--tm-paper-backdrop); }
   ```
   The literal `fill="#f3f4f6"` fallback attributes on the SVG rects are unchanged (viewers without the stylesheet), and `exportViewportAsSvg` still copies the computed values, so an export carries exactly the paints the user saw.
+
+- **TmChip pressed + removable: `aria-*` and `data-testid` additional attributes move to the toggle button (phase 15b review).** When `Pressed` and `Removable` combine, the shell wrapper used to receive ALL additional attributes, so a `data-testid` (host/E2E selectors) or an `aria-label` / `aria-describedby` (assistive tech) landed on a non-interactive `<span>` instead of the activatable `<button>`. The two kinds are routed to the pressed button now; every other attribute stays on the shell. A host that keyed a selector on the SHELL carrying those attribute kinds must key the button instead (`button.tm-chip`).
+
+- **TmChip: the pressed toggle is visibly pressed, and `TmModelingIssuePanel` filter chips actually style across the scope boundary (phase 15b review).** The pressed toggle `<button>` used to render with the UA button chrome (system font, ButtonFace background, outset border) and NO visible pressed state outside forced-colors mode — the focus ring also erased the pressed paint (both were box-shadows). `_chip.css` now strips the UA chrome through a zero-specificity `:where(.tm-chip--pressed)` reset (variants still win), paints an `inset` ring on `[aria-pressed="true"]` and moves the focus ring to `outline`. The Modeling issue filter chips (severity) render through the core `TmChip`, so the panel's compact sizing and severity tints key off the panel-owned chips wrapper with `::deep` — hosts that copied the old un-prefixed `.tm-modeling-issue-panel__chip…` rules from the panel's scoped stylesheet should copy the `…__chips ::deep …` form. `Disabled` chips now paint the shared `--tm-opacity-disabled` (0.5) with `cursor: not-allowed` via `.tm-chip-disabled` (the class existed unstyled before).
 
 - **TmModelingEditor previews now show a notation legend card by default (Fáze 15).** `ShowPreviewLegend` defaults to `true`: the desktop/tablet preview renders a collapsible "Legend" card in the canvas's top-right corner (listing only the notation shapes the document uses; collapsed above 12 nodes) and the mobile band gains a "Legend" entry in the compact header "⋯". A host that wants the pre-Fáze-15 look passes `ShowPreviewLegend="false"`:
   ```razor
