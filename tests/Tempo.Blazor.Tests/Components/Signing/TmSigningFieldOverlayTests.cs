@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Signing;
 
@@ -68,6 +69,43 @@ public class TmSigningFieldOverlayTests : LocalizationTestBase
         var required = cut.Find(".tm-signing-field__required");
         required.TextContent.Should().Be("*");
         required.GetAttribute("aria-label").Should().Be("Required");
+    }
+
+    /// <summary>
+    /// CSS contract of the overlay head (phase 3 review round 2 fix): the LABEL + PROMPT pair is a
+    /// PLAIN flex pair — the head is NOT an inline-size container (a container has zero intrinsic
+    /// width, so labels truncated to stubs no matter how wide the field is) and there is no
+    /// width-based prompt hiding left: the runner passes the prompt only for the current field.
+    /// The label keeps its natural width (may shrink, never below 6rem while there is room) and
+    /// the prompt absorbs the remaining head room with an ellipsis. The prompt paints with the
+    /// secondary text token, not an opacity wash. The FIELD ROOT must not be a container either —
+    /// root containment wrapped the choice chips letter-by-letter.
+    /// </summary>
+    [Fact]
+    public void FieldOverlay_CssContract_LabelKeepsItsWidth_PromptRidesTheCurrentFieldRule()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-field-overlay.css"));
+
+        css.Should().NotContain("container:",
+            "neither the head nor any overlay element may be a size container: an inline-size "
+            + "container has zero intrinsic width and truncated labels to stubs");
+        css.Should().NotContain("@container",
+            "there is no width-based prompt hiding — the runner passes the prompt only for the current field");
+        css.Should().NotContain("max-width: 60%",
+            "the label keeps its natural width instead of a hard cap that truncated it");
+        css.Should().Contain("min-width: min(calc(100% - var(--tm-space-16)), 12rem)",
+            "the head keeps the room past a 4rem value-area reserve (capped at 12rem) — without that "
+            + "floor the head shrank as easily as the value area and the label's own percentage "
+            + "floor had nothing to hold on to");
+        css.Should().Contain("min-width: min(100%, 6rem)",
+            "the label may shrink but never below 6rem while there is room, so wide fields read fully");
+        css.Should().Contain("text-overflow: ellipsis",
+            "both the label and the prompt ellipsize instead of overflowing");
+        css.Should().Contain("color: var(--tm-text-secondary)",
+            "the prompt reads through the secondary text token (no opacity wash)");
+        css.Should().NotContain("opacity: 0.85");
     }
 
     [Fact]

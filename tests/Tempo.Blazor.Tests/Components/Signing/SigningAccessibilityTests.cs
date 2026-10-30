@@ -90,6 +90,10 @@ public class SigningAccessibilityTests : LocalizationTestBase
         invoked.Should().BeTrue();
     }
 
+    /// <summary>
+    /// The progress live region describes COMPLETED FIELDS (phase 3: the signer may fill in any
+    /// order through the permanent field list), so the accessible name carries the done count.
+    /// </summary>
     [Fact]
     public void RunnerProgress_HasAriaLabel()
     {
@@ -99,7 +103,24 @@ public class SigningAccessibilityTests : LocalizationTestBase
         cut.Find(".tm-signing-form-runner__progress")
             .GetAttribute("aria-label")
             .Should()
-            .Contain("Step 1 of 1");
+            .Contain("0 of 1 done");
+    }
+
+    /// <summary>
+    /// The runner's progress BAR is decorative (phase 3 review): the polite status text next to it
+    /// already announces the count, so the bar carries <c>aria-hidden="true"</c> instead of a
+    /// redundant second progressbar role.
+    /// </summary>
+    [Fact]
+    public void RunnerProgress_BarIsAriaHidden()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters =>
+            parameters.Add(p => p.Fields, [CreateTextField()]));
+
+        cut.Find(".tm-signing-form-runner__progress .tm-progress-bar")
+            .GetAttribute("aria-hidden")
+            .Should()
+            .Be("true");
     }
 
     /// <summary>

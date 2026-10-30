@@ -64,6 +64,17 @@ public partial class TmSigningFieldOverlay
     /// </summary>
     [Parameter] public string? RoleColor { get; set; }
 
+    /// <summary>
+    /// Short prompt rendered inside the overlay while it is NOT completed (Signing redesign
+    /// phase 3) — the runner passes the localized "Click to sign / fill in" call to action for
+    /// the CURRENT field only, and only while that field is empty and required. Hidden once the
+    /// field is completed or when null/whitespace, so the designer's compact presentation stays
+    /// prompt-free. The label + prompt head is a plain flex pair (no size container and no
+    /// width-based hiding — a container truncated labels to stubs), so a host that wants a prompt
+    /// on every field should keep the set small for the same readability reasons.
+    /// </summary>
+    [Parameter] public string? Prompt { get; set; }
+
     /// <summary>Callback invoked when the overlay is clicked.</summary>
     [Parameter] public EventCallback<TmSigningFieldOverlayPointerEventArgs> OnClick { get; set; }
 
@@ -133,6 +144,8 @@ public partial class TmSigningFieldOverlay
 
     private bool HasRoleColor => SafeRoleColor is not null;
 
+    private bool ShowPrompt => !Completed && !string.IsNullOrWhiteSpace(Prompt);
+
     private string Label => SigningTextResolver.FieldLabel(Field, Culture, FallbackCulture, Loc);
 
     private string AriaLabel => Field?.Required == true
@@ -145,25 +158,9 @@ public partial class TmSigningFieldOverlay
 
     private string LocalizedTypeName => SigningTextResolver.FieldTypeLabel(Field?.Type ?? SigningFieldType.Text, Loc);
 
-    private string IconName => Field?.Type switch
-    {
-        SigningFieldType.Signature or SigningFieldType.Initials => "edit",
-        SigningFieldType.Date or SigningFieldType.DateNow => "calendar",
-        SigningFieldType.Number => "hash",
-        SigningFieldType.Image => "image",
-        SigningFieldType.File => "file",
-        SigningFieldType.Select or SigningFieldType.Multiple => "list",
-        SigningFieldType.Checkbox => "check-square",
-        SigningFieldType.Radio => "circle",
-        SigningFieldType.Cells => "grid",
-        SigningFieldType.Stamp => "shield",
-        SigningFieldType.Phone => "phone",
-        SigningFieldType.Verification or SigningFieldType.Kba => "lock",
-        SigningFieldType.Payment => "tag",
-        SigningFieldType.Heading => "type",
-        SigningFieldType.Strikethrough => "minus",
-        _ => "file-text"
-    };
+    // Signing redesign phase 3: the map moved to the shared SigningFieldTypeIcons so the palette,
+    // the overlays and the runner's field list render the same icon per field type.
+    private string IconName => SigningFieldTypeIcons.Get(Field?.Type ?? SigningFieldType.Text);
 
     private string RootClass
     {

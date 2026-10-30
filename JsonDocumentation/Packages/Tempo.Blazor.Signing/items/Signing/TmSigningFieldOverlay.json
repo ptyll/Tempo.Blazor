@@ -115,6 +115,12 @@
       "description": "Whether the browser context menu is prevented for context menu interactions. Defaults to true."
     },
     {
+      "name": "Prompt",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Short prompt rendered inside the overlay while it is NOT completed (Signing redesign phase 3) — the runner passes the localized \"Click to sign / fill in\" call to action for the CURRENT field only, and only while that field is empty and required. Hidden once the field is completed or when null/whitespace, so the designer's compact presentation stays prompt-free. The label + prompt head is a plain flex pair (no size container and no width-based hiding — a container truncated labels to stubs), so a host that wants a prompt on every field should keep the set small for the same readability reasons."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,

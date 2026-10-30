@@ -81,12 +81,17 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Full name");
         var input = panel.Locator("input.tm-signing-text-step__input").First;
         await input.FillAsync("Alex Johnson");
+        // The text input commits on change (blur) — Tab so the completed-field progress below
+        // reflects the entered value.
+        await input.PressAsync("Tab");
 
         await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Celé jméno");
         await Assertions.Expect(input).ToHaveValueAsync("Alex Johnson");
-        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__progress")).ToContainTextAsync("1");
+        // Phase 3: the progress counts completed FIELDS ("1 of 6 done") — the count survives the
+        // language switch together with the value.
+        await Assertions.Expect(panel.Locator(".tm-signing-form-runner__progress")).ToContainTextAsync("1 of 6 done");
         await Assertions.Expect(await GetByTestIdAsync(page, "signing-runner-status")).ToContainTextAsync("Language snapshot: cs-CZ");
     }
 

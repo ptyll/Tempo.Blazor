@@ -10,6 +10,15 @@ namespace Tempo.Blazor.Components.Signing;
 /// <summary>Coordinates a linear signing ceremony over document pages and signing field steps.</summary>
 /// <remarks>
 /// <para>
+/// Signing redesign phase 3: the panel is a guided wizard — a titled header with a completed-field
+/// progress bar (the bar itself is decorative, the text announces), the PERMANENT field list (SI4;
+/// the old "Accessibility mode" toggle was removed), a polite success status once every required
+/// field is done, and a sticky contextual action footer (Previous / Next → Complete, Skip only for
+/// an optional non-final field). <see cref="DocumentTitle"/>, <see cref="ShowDocumentToolbar"/>
+/// (zoom controls; pagination comes later) and <see cref="DocumentHeaderActions"/> add the U4
+/// document chrome; the default stays today's chrome-free look.
+/// </para>
+/// <para>
 /// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the external steps are
 /// placeholders. Clicking "Start verification" / "Checkout" (the runner's
 /// <c>OnStart</c>/<c>OnCheckout</c> handlers store <c>true</c> for the field) marks the step
@@ -29,11 +38,7 @@ public partial class TmSigningFormRunner : IDisposable
     private string? _completionMessage;
     private string? _autoSaveError;
     private string _autoSaveState = "idle";
-    private bool _accessibilityMode;
-    private bool _sheetExpanded;
-    private bool _pendingToggleFocus;
-    private ElementReference _mobileExpandButton;
-    private ElementReference _mobileMinimizeButton;
+    private double _documentScale = 1.0;
     private readonly string _stepPanelId = $"tm-signing-runner-panel-{Guid.NewGuid():N}";
     private readonly TmSigningStepFocusSignal _stepFocusSignal = new();
     private readonly Dictionary<string, TmSignatureCaptureMode> _signatureCaptureModes = new(StringComparer.Ordinal);
@@ -63,6 +68,28 @@ public partial class TmSigningFormRunner : IDisposable
 
     /// <summary>Document pages shown during signing.</summary>
     [Parameter] public IReadOnlyList<SigningDocumentPage> Pages { get; set; } = [];
+
+    /// <summary>
+    /// Optional document title shown above the pages (Signing redesign phase 3, U4). Rendered only
+    /// when set (or when <see cref="DocumentHeaderActions"/> has content), so the default look
+    /// stays today's chrome-free document area.
+    /// </summary>
+    [Parameter] public string? DocumentTitle { get; set; }
+
+    /// <summary>
+    /// Shows the document toolbar's ZOOM controls on every page viewer (Signing redesign phase 3,
+    /// U4). The zoom level is SHARED across all pages through the runner's own scale state.
+    /// Pagination controls stay off — the runner presents one page at a time, so per-page
+    /// previous/next buttons would be dead chrome (they come with a later phase if a host needs
+    /// them). Defaults to <c>false</c> — today's chrome-free look.
+    /// </summary>
+    [Parameter] public bool ShowDocumentToolbar { get; set; }
+
+    /// <summary>
+    /// Host actions rendered in the document header row next to <see cref="DocumentTitle"/>
+    /// (Signing redesign phase 3, U4) — for example a language or metadata control the host owns.
+    /// </summary>
+    [Parameter] public RenderFragment? DocumentHeaderActions { get; set; }
 
     /// <summary>Signing fields available to the signer.</summary>
     [Parameter] public IReadOnlyList<SigningField> Fields { get; set; } = [];
@@ -172,13 +199,19 @@ public partial class TmSigningFormRunner : IDisposable
         ? 0
         : Math.Clamp(_currentStepIndex, 0, Plan.Steps.Count - 1);
 
-    private bool IsPreviousDisabled => IsLoading || CurrentStepIndex == 0;
-
-    private bool IsNextDisabled => IsLoading || IsCompleting || CurrentStepIndex >= Plan.Steps.Count - 1;
-
-    private bool IsSkipDisabled => IsLoading || IsCompleting || CurrentStep is null || CurrentStep.Field.Required;
+    // The Previous / Next / Skip navigation and the mobile-sheet presentation live in their own
+    // partial parts (phase 3 review split): TmSigningFormRunner.Navigation.cs carries the step
+    // navigation, TmSigningFormRunner.MobileSheet.cs the sheet state; the progress counts are in
+    // TmSigningFormRunner.Progress.cs.
 
     private bool IsCompleteDisabled => IsLoading || IsCompleting || !AllRequiredFieldsComplete();
+
+    /// <summary>
+    /// The primary action is contextual (Signing redesign phase 3): "Next" while later steps remain,
+    /// otherwise "Complete" — on the LAST step Complete renders (disabled while required work is
+    /// missing) so the signer always sees the finishing action instead of a dead Next.
+    /// </summary>
+    private bool ShowCompleteButton => AllRequiredFieldsComplete() || CurrentStepIndex >= Plan.Steps.Count - 1;
 
     private string CurrentCulture => !string.IsNullOrWhiteSpace(Culture)
         ? Culture!
@@ -186,13 +219,15 @@ public partial class TmSigningFormRunner : IDisposable
 
     private bool ShowLanguagePicker => ShowLanguageSelector && SupportedCultures.Count > 1;
 
+    /// <summary>The document header renders only when it has content (default = chrome-free look).</summary>
+    private bool HasDocumentHeader => !string.IsNullOrWhiteSpace(DocumentTitle) || DocumentHeaderActions is not null;
+
     private string RootClass
     {
         get
         {
             var classes = new List<string> { "tm-signing-form-runner" };
             AddClass(classes, IsLoading, "tm-signing-form-runner--loading");
-            AddClass(classes, _accessibilityMode, "tm-signing-form-runner--accessibility");
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes.Add(Class);
@@ -202,25 +237,6 @@ public partial class TmSigningFormRunner : IDisposable
         }
     }
 
-    /// <summary>
-    /// The single steps rail. On a mobile-sized container it presents as the bottom sheet: the
-    /// <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> state classes drive the CSS-only sheet
-    /// presentation (the panel itself stays one DOM instance at every width).
-    /// </summary>
-    private string StepsClass
-    {
-        get
-        {
-            var classes = new List<string> { "tm-signing-form-runner__steps" };
-            AddClass(classes, _sheetExpanded, "tm-signing-form-runner__steps--sheet-expanded");
-            AddClass(classes, !_sheetExpanded, "tm-signing-form-runner__steps--sheet-collapsed");
-            AddClass(classes, !string.IsNullOrWhiteSpace(MobileCompleteTargetSelector), "tm-signing-form-runner__steps--has-complete-target");
-            return string.Join(" ", classes);
-        }
-    }
-
-    private string ProgressAriaLabel => Loc["TmSigningFormRunner_ProgressAria", CurrentStepIndex + 1, Plan.Steps.Count];
-
     private string AutoSaveStatusText => _autoSaveState switch
     {
         "saving" => Loc["TmSigningFormRunner_Saving"],
@@ -228,12 +244,6 @@ public partial class TmSigningFormRunner : IDisposable
         "error" => _autoSaveError ?? Loc["TmSigningFormRunner_SaveError"],
         _ => Loc["TmSigningFormRunner_Unsaved"]
     };
-
-    /// <inheritdoc />
-    protected override void OnInitialized()
-    {
-        _sheetExpanded = MobilePanelMode == TmSigningFormRunnerMobilePanelMode.Expanded;
-    }
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -255,20 +265,6 @@ public partial class TmSigningFormRunner : IDisposable
         {
             _currentStepIndex = Math.Max(0, Plan.Steps.Count - 1);
         }
-    }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!_pendingToggleFocus)
-        {
-            return;
-        }
-
-        _pendingToggleFocus = false;
-        // Keyboard users expanded / collapsed the mobile sheet: move focus onto the affordance
-        // that is NOW visible, so the next Enter / Tab works without hunting for the button.
-        await SigningFocus.TryFocusAsync(_sheetExpanded ? _mobileMinimizeButton : _mobileExpandButton);
     }
 
     private async Task HandleCultureChangedAsync(ChangeEventArgs args)
@@ -294,6 +290,37 @@ public partial class TmSigningFormRunner : IDisposable
     private string? GetOverlayRoleColor(SigningField field)
     {
         return SigningRolePalette.ResolveRoleColor(SubmitterRoles, field.SubmitterUuid ?? SubmitterUuid);
+    }
+
+    /// <summary>
+    /// The "click to sign / fill in" call to action for the document overlays (Signing redesign
+    /// phase 3): only the CURRENT field prompts, and only while it is an empty REQUIRED field —
+    /// every other field (and the completed current one) stays quiet, so the document never
+    /// fills with prompts and the labels keep their room. Read-only (formula) overlays never
+    /// become steps, so they can never be current.
+    /// </summary>
+    private string? GetOverlayPrompt(SigningField field)
+    {
+        return IsCurrentField(field) && field.Required && !IsFieldComplete(field)
+            ? Loc["TmSigningFieldOverlay_EmptyRequiredPrompt"]
+            : null;
+    }
+
+    /// <summary>
+    /// Whether a step's fields are actually FILLED (every field of the step has a value). This is
+    /// the field list's status — distinct from <see cref="IsStepComplete"/>, which treats an
+    /// optional empty step as completable: an empty optional field reads "Optional", not "Done".
+    /// </summary>
+    private bool IsStepFilled(SigningStepItem step)
+    {
+        return step.Fields.All(IsFieldComplete);
+    }
+
+    private Task HandleDocumentScaleChangedAsync(double scale)
+    {
+        // One shared zoom level across every page viewer (U4).
+        _documentScale = scale;
+        return Task.CompletedTask;
     }
 
     private bool IsCurrentField(SigningField field)
@@ -376,19 +403,6 @@ public partial class TmSigningFormRunner : IDisposable
         return Task.CompletedTask;
     }
 
-    private Task SelectStep(int index)
-    {
-        var clamped = Math.Clamp(index, 0, Math.Max(0, Plan.Steps.Count - 1));
-        if (clamped != _currentStepIndex)
-        {
-            _stepFocusSignal.Version++;
-        }
-
-        _currentStepIndex = clamped;
-        ClearValidationMessages();
-        return Task.CompletedTask;
-    }
-
     private async Task SetChoiceValueAsync(SigningStepItem step, object? value)
     {
         if (step.IsCheckboxGroup && value is IEnumerable<string> selected)
@@ -421,58 +435,6 @@ public partial class TmSigningFormRunner : IDisposable
         var snapshot = SnapshotValues();
         await ValuesChanged.InvokeAsync(snapshot);
         ScheduleAutoSave(snapshot);
-    }
-
-    private async Task GoNextAsync()
-    {
-        if (IsLoading || CurrentStep is null)
-        {
-            return;
-        }
-
-        if (!IsStepComplete(CurrentStep))
-        {
-            _validationMessage = GetRequiredMessage(CurrentStep);
-            var invalidIndex = FindFirstInvalidRequiredStep();
-            if (invalidIndex != _currentStepIndex)
-            {
-                _stepFocusSignal.Version++;
-            }
-
-            _currentStepIndex = invalidIndex;
-            return;
-        }
-
-        await OnStepSubmit.InvokeAsync(CurrentStep);
-        if (_currentStepIndex < Plan.Steps.Count - 1)
-        {
-            _currentStepIndex++;
-            _stepFocusSignal.Version++;
-        }
-    }
-
-    private Task GoPreviousAsync()
-    {
-        if (!IsPreviousDisabled)
-        {
-            _currentStepIndex--;
-            _stepFocusSignal.Version++;
-            ClearValidationMessages();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task SkipCurrentAsync()
-    {
-        if (!IsSkipDisabled && _currentStepIndex < Plan.Steps.Count - 1)
-        {
-            _currentStepIndex++;
-            _stepFocusSignal.Version++;
-            ClearValidationMessages();
-        }
-
-        return Task.CompletedTask;
     }
 
     private async Task CompleteAsync()
@@ -518,23 +480,6 @@ public partial class TmSigningFormRunner : IDisposable
         }
     }
 
-    private void ToggleAccessibilityMode()
-    {
-        _accessibilityMode = !_accessibilityMode;
-    }
-
-    private void ExpandMobilePanel()
-    {
-        _sheetExpanded = true;
-        _pendingToggleFocus = true;
-    }
-
-    private void MinimizeMobilePanel()
-    {
-        _sheetExpanded = false;
-        _pendingToggleFocus = true;
-    }
-
     private void ClearValidationMessages()
     {
         _validationMessage = null;
@@ -547,16 +492,6 @@ public partial class TmSigningFormRunner : IDisposable
             .SelectMany(step => step.Fields)
             .Where(field => field.Required)
             .All(IsFieldComplete);
-    }
-
-    private bool IsStepComplete(SigningStepItem step)
-    {
-        if (!step.Field.Required && step.Fields.All(field => !field.Required))
-        {
-            return true;
-        }
-
-        return step.Fields.Where(field => field.Required || step.Field.Required).All(IsFieldComplete);
     }
 
     private bool IsFieldComplete(SigningField field)
@@ -574,12 +509,6 @@ public partial class TmSigningFormRunner : IDisposable
             SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment => value is bool boolValue && boolValue || !string.IsNullOrWhiteSpace(FormatValue(value)),
             _ => !string.IsNullOrWhiteSpace(FormatValue(value))
         };
-    }
-
-    private int FindFirstInvalidRequiredStep()
-    {
-        var index = Plan.Steps.FindIndex(step => step.Fields.Any(field => field.Required && !IsFieldComplete(field)));
-        return index >= 0 ? index : CurrentStepIndex;
     }
 
     private void ScheduleAutoSave(IReadOnlyDictionary<string, object?> snapshot)
@@ -621,11 +550,6 @@ public partial class TmSigningFormRunner : IDisposable
     private IReadOnlyDictionary<string, object?> SnapshotValues()
     {
         return new Dictionary<string, object?>(_values, StringComparer.Ordinal);
-    }
-
-    private string GetStepLabel(SigningStepItem step)
-    {
-        return SigningLocalizationResolver.ResolveFieldLabel(step.Field, CurrentCulture, FallbackCulture, step.Field.Type.ToString());
     }
 
     private string GetRequiredMessage(SigningStepItem step)

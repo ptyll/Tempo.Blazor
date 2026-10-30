@@ -36,4 +36,36 @@ internal static class SigningFocus
             // No live JS runtime behind the element reference (disposed view / static render).
         }
     }
+
+    /// <summary>
+    /// Focuses <paramref name="element"/> without scrolling it into view (the completion panel's
+    /// status announcement must not yank a scrolled signer back to the panel top) and swallows the
+    /// same interop failures as <see cref="TryFocusAsync(ElementReference)"/>.
+    /// </summary>
+    public static async Task TryFocusAsync(ElementReference element, bool preventScroll)
+    {
+        if (!preventScroll)
+        {
+            await TryFocusAsync(element);
+            return;
+        }
+
+        try
+        {
+            await element.FocusAsync(preventScroll: true);
+        }
+        catch (JSException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+            // No live JS runtime behind the element reference (disposed view / static render).
+        }
+    }
 }

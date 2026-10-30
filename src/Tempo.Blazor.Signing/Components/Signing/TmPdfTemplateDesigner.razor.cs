@@ -1089,22 +1089,8 @@ public partial class TmPdfTemplateDesigner
 
     private static string GetIconName(SigningFieldType type)
     {
-        return type switch
-        {
-            SigningFieldType.Signature or SigningFieldType.Initials => "edit",
-            SigningFieldType.Date or SigningFieldType.DateNow => "calendar",
-            SigningFieldType.Number or SigningFieldType.Payment => "hash",
-            SigningFieldType.Checkbox => "check-square",
-            SigningFieldType.Radio => "circle-dot",
-            SigningFieldType.Select or SigningFieldType.Multiple => "list",
-            SigningFieldType.File => "paperclip",
-            SigningFieldType.Image => "image",
-            SigningFieldType.Stamp => "stamp",
-            SigningFieldType.Phone => "phone",
-            SigningFieldType.Heading => "heading",
-            SigningFieldType.Strikethrough => "strikethrough",
-            _ => "type"
-        };
+        // Signing redesign phase 3: the shared map (overlay + designer + runner field list).
+        return SigningFieldTypeIcons.Get(type);
     }
 
     private static string GetPageKey(SigningDocumentPage page) => $"{page.AttachmentUuid}:{page.PageIndex}";

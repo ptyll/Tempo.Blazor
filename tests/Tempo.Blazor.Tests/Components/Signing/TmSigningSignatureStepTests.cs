@@ -60,14 +60,31 @@ public class TmSigningSignatureStepTests : LocalizationTestBase
     /// <summary>
     /// In the runner: a required signature step keeps its required badge and, after a failed Next,
     /// shows EXACTLY ONE <c>role="alert"</c> — the shell's, never the capture's duplicate
-    /// (the capture's <c>Required=false</c> is deliberate; see the component remarks).
+    /// (the capture's <c>Required=false</c> is deliberate; see the component remarks). The signature
+    /// step is NOT the last step here: on a LAST step the phase-3 primary is Complete (disabled
+    /// while incomplete) and a failed Next is unreachable — the alert contract lives on the
+    /// reachable path.
     /// </summary>
     [Fact]
     public async Task SignatureStep_FailedNext_ShowsRequiredBadge_AndExactlyOneAlert()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Pages, [CreateRunnerPage()])
-            .Add(p => p.Fields, [CreateSignatureField()]));
+            .Add(p => p.Fields,
+            [
+                CreateSignatureField(),
+                new SigningField
+                {
+                    Uuid = "name",
+                    Name = "Name",
+                    Type = SigningFieldType.Text,
+                    Required = true,
+                    Areas =
+                    [
+                        new SigningFieldArea { AttachmentUuid = "doc", Page = 0, X = 0.1, Y = 0.2, Width = 0.2, Height = 0.05 }
+                    ]
+                }
+            ]));
 
         await cut.Find(".tm-signing-form-runner__next").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
 

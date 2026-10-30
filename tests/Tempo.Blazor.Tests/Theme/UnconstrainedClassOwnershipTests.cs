@@ -219,6 +219,11 @@ public class UnconstrainedClassOwnershipTests
         // (.tm-scheduler .tm-toolbar-more, @media print). The toolbar's bare display stays the
         // winner everywhere else; the print rule is the strictly narrower context.
         ".tm-toolbar-more Tempo.Blazor/_scheduler.css|Tempo.Blazor/_toolbar.css",
+
+        // Signing redesign phase 3: inside the runner's workspace area the white page sheet opts
+        // into the card shadow (Strictly-narrower .tm-signing-form-runner__document context; the
+        // viewer's own --tm-shadow-sm stays the winner everywhere else — Override).
+        ".tm-document-page-viewer__page Tempo.Blazor.Signing/_document-page-viewer.css|Tempo.Blazor.Signing/_signing-form-runner.css",
     ];
 
     [Fact]

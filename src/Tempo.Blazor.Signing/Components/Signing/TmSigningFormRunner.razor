@@ -1,7 +1,10 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Icons
 
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
@@ -20,10 +23,40 @@
     else
     {
         <div class="tm-signing-form-runner__documents" data-testid="@TestId("signing-runner-documents")">
+            @* U4 (Signing redesign phase 3): optional document header. The default stays today's
+               chrome-free look — the header renders only when a title or host actions exist. *@
+            @if (HasDocumentHeader)
+            {
+                <div class="tm-signing-form-runner__document-header" data-testid="@TestId("signing-runner-document-header")">
+                    @if (!string.IsNullOrWhiteSpace(DocumentTitle))
+                    {
+                        <h2 class="tm-signing-form-runner__document-title">@DocumentTitle</h2>
+                    }
+                    @if (DocumentHeaderActions is not null)
+                    {
+                        <div class="tm-signing-form-runner__document-actions">@DocumentHeaderActions</div>
+                    }
+                </div>
+            }
+
             @foreach (var documentPage in Pages)
             {
-                <div class="tm-signing-form-runner__document" data-attachment-uuid="@(documentPage.AttachmentUuid)" data-page-index="@(documentPage.PageIndex)">
-                    <TmDocumentPageViewer Page="@documentPage">
+                @* Light island (phase 3 review): the paper sheet stays white inside a dark host, so
+                   the field overlays and their prompt keep the light tokens (`tokens-dark.css`
+                   re-declares the light palette under [data-theme="light"]). *@
+                <div class="tm-signing-form-runner__document"
+                     data-theme="light"
+                     data-attachment-uuid="@(documentPage.AttachmentUuid)"
+                     data-page-index="@(documentPage.PageIndex)">
+                    @* Zoom only (phase 3 review): the runner shows ONE page at a time, so per-page
+                       pagination controls would be dead chrome — pagination comes with a later phase
+                       if it is ever needed. *@
+                    <TmDocumentPageViewer Page="@documentPage"
+                                          ShowToolbar="@ShowDocumentToolbar"
+                                          ShowZoomControls="@ShowDocumentToolbar"
+                                          ShowPaginationControls="false"
+                                          Scale="@_documentScale"
+                                          ScaleChanged="HandleDocumentScaleChangedAsync">
                         @foreach (var overlay in GetPageOverlays(documentPage))
                         {
                             <TmSigningFieldOverlay Field="@overlay.Field"
@@ -34,6 +67,7 @@
                                                    Focused="@IsCurrentField(overlay.Field)"
                                                    Invalid="@IsInvalid(overlay.Field)"
                                                    Completed="@IsFieldComplete(overlay.Field)"
+                                                   Prompt="@GetOverlayPrompt(overlay.Field)"
                                                    ReadOnly="true"
                                                    Culture="@CurrentCulture"
                                                    FallbackCulture="@FallbackCulture"
@@ -92,54 +126,43 @@
     // render it twice; the bUnit gate Runner_RendersExactlyOneStepShell_AndOneSignatureCapture
     // and the E2E SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
     private RenderFragment RenderStepPanel() => @<div id="@_stepPanelId" class="tm-signing-form-runner__step-panel">
-        <div class="tm-signing-form-runner__progress"
-             role="status"
-             aria-live="polite"
-             aria-atomic="true"
-             aria-label="@ProgressAriaLabel">
-            @Loc["TmSigningFormRunner_Progress", CurrentStepIndex + 1, Plan.Steps.Count]
-        </div>
+        <header class="tm-signing-form-runner__panel-header">
+            <h2 class="tm-signing-form-runner__panel-title">@Loc["TmSigningFormRunner_PanelTitle"]</h2>
+            <p class="tm-signing-form-runner__panel-subtitle">@Loc["TmSigningFormRunner_PanelSubtitle"]</p>
 
-        @if (ShowLanguagePicker)
-        {
-            <label class="tm-signing-form-runner__language">
-                <span>@Loc["TmSigningFormRunner_Language"]</span>
-                <select class="tm-signing-form-runner__language-select"
-                        value="@CurrentCulture"
-                        aria-label="@Loc["TmSigningFormRunner_LanguageAria"]"
-                        @onchange="HandleCultureChangedAsync">
-                    @foreach (var culture in SupportedCultures)
-                    {
-                        <option value="@culture">@GetCultureDisplayName(culture)</option>
-                    }
-                </select>
-            </label>
-        }
-
-        <button type="button"
-                class="tm-signing-form-runner__accessibility-entry"
-                @onclick="ToggleAccessibilityMode">
-            @Loc["TmSigningFormRunner_AccessibilityMode"]
-        </button>
-
-        @if (_accessibilityMode)
-        {
-            <div class="tm-signing-form-runner__accessibility-list">
-                @foreach (var step in Plan.Steps.Select((value, index) => new { value, index }))
-                {
-                    <button type="button"
-                            class="tm-signing-form-runner__accessibility-field"
-                            aria-current="@BoolText(step.index == CurrentStepIndex)"
-                            @onclick="() => SelectStep(step.index)">
-                        @GetStepLabel(step.value)
-                    </button>
-                }
+            <div class="tm-signing-form-runner__progress"
+                 role="status"
+                 aria-live="polite"
+                 aria-atomic="true"
+                 aria-label="@ProgressAriaLabel">
+                <span class="tm-signing-form-runner__progress-text">@DoneCountText</span>
+                @* The status text above already announces the count — the bar itself is decorative
+                   (phase 3 review): a second progressbar role would be announced redundantly. *@
+                <TmProgressBar Value="@CompletedFieldCount"
+                               Max="@TotalFieldCount"
+                               Size="ProgressBarSize.Sm"
+                               Class="tm-signing-form-runner__progress-bar"
+                               aria-hidden="true" />
             </div>
-        }
+        </header>
+
+        @* SI4 (Signing redesign phase 3): the field list is a PERMANENT part of the panel — the
+           "accessibility mode" toggle was removed (U2). Fields of other submitters never appear
+           (the plan is already filtered by SubmitterUuid). The markup lives in the internal
+           TmSigningRunnerFieldList part (phase 3 review split). *@
+        <TmSigningRunnerFieldList Steps="@Plan.Steps"
+                                  CurrentIndex="@CurrentStepIndex"
+                                  IsStepFilled="IsStepFilled"
+                                  OnSelect="SelectStep"
+                                  Culture="@CurrentCulture"
+                                  FallbackCulture="@FallbackCulture" />
 
         @if (CurrentStep is not null)
         {
             <div class="tm-signing-form-runner__current-step">
+                @* h3 (phase 3 review): the caption is a real heading in the panel's outline; the
+                   class keeps the exact look the div had. *@
+                <h3 class="tm-signing-form-runner__current-step-heading">@Loc["TmSigningFormRunner_SelectedField"]</h3>
                 @switch (CurrentStep.Field.Type)
                 {
                     case SigningFieldType.Text:
@@ -244,35 +267,88 @@
             <div class="tm-signing-form-runner__validation" role="alert">@_completionMessage</div>
         }
 
-        <div class="tm-signing-form-runner__autosave" data-state="@_autoSaveState">
-            @AutoSaveStatusText
+        @if (AllRequiredFieldsComplete())
+        {
+            @* The banner is a POLITE status (phase 3 review): TmAlert's Role parameter renders the
+                status role on the alert root itself (no wrapper element), so the "everything is
+                done" news announces politely instead of interrupting as a second alert. *@
+            <TmAlert Severity="AlertSeverity.Success"
+                     Role="status"
+                     Title="@Loc["TmSigningFormRunner_AllDoneTitle"]"
+                     Class="tm-signing-form-runner__all-done">
+                @Loc["TmSigningFormRunner_AllDoneDescription"]
+            </TmAlert>
+        }
+
+        @* Sticky action footer (Signing redesign phase 3). The primary action is contextual:
+           "Next" while later steps remain, "Complete" once every required field is done — and on
+           the LAST step Complete renders (disabled while required work is missing) so the signer
+           sees the finishing action instead of a dead Next. Skip renders ONLY for an optional,
+           non-final current field and lives INSIDE the sticky footer as a full-width row, so the
+           keyboard order stays Previous → Next/Complete → Skip. The BEM classes
+           (__previous / __next / __skip / __complete) are the E2E contract — keep them on the
+           TmButton Class. *@
+        <div class="tm-signing-form-runner__actions">
+            <TmButton Variant="ButtonVariant.Secondary"
+                      Size="ButtonSize.Lg"
+                      Class="tm-signing-form-runner__previous"
+                      Disabled="@IsPreviousDisabled"
+                      OnClick="GoPreviousAsync">
+                @Loc["TmSigning_Previous"]
+            </TmButton>
+            @if (ShowCompleteButton)
+            {
+                <TmButton Variant="ButtonVariant.Primary"
+                          Size="ButtonSize.Lg"
+                          Class="tm-signing-form-runner__complete"
+                          Disabled="@IsCompleteDisabled"
+                          IsLoading="@IsCompleting"
+                          OnClick="CompleteAsync">
+                    @(IsCompleting ? Loc["TmSigningFormRunner_Completing"] : Loc["TmSigning_Complete"])
+                </TmButton>
+            }
+            else
+            {
+                <TmButton Variant="ButtonVariant.Primary"
+                          Size="ButtonSize.Lg"
+                          Class="tm-signing-form-runner__next"
+                          Disabled="@IsNextDisabled"
+                          OnClick="GoNextAsync">
+                    @Loc["TmSigning_Next"]
+                </TmButton>
+            }
+            @if (ShowSkipButton)
+            {
+                <TmButton Variant="ButtonVariant.Link"
+                          Class="tm-signing-form-runner__skip"
+                          OnClick="SkipCurrentAsync">
+                    @Loc["TmSigningFormRunner_Skip"]
+                </TmButton>
+            }
         </div>
 
-        <div class="tm-signing-form-runner__actions">
-            <button type="button"
-                    class="tm-signing-form-runner__previous"
-                    disabled="@IsPreviousDisabled"
-                    @onclick="GoPreviousAsync">
-                @Loc["TmSigning_Previous"]
-            </button>
-            <button type="button"
-                    class="tm-signing-form-runner__skip"
-                    disabled="@IsSkipDisabled"
-                    @onclick="SkipCurrentAsync">
-                @Loc["TmSigningFormRunner_Skip"]
-            </button>
-            <button type="button"
-                    class="tm-signing-form-runner__next"
-                    disabled="@IsNextDisabled"
-                    @onclick="GoNextAsync">
-                @Loc["TmSigning_Next"]
-            </button>
-            <button type="button"
-                    class="tm-signing-form-runner__complete"
-                    disabled="@IsCompleteDisabled"
-                    @onclick="CompleteAsync">
-                @(IsCompleting ? Loc["TmSigningFormRunner_Completing"] : Loc["TmSigning_Complete"])
-            </button>
+        @* The quiet footer row UNDER the sticky actions (phase 3 review): the autosave text and
+           the compact language selector share it, keeping the header to title / subtitle /
+           progress. *@
+        <div class="tm-signing-form-runner__footer">
+            <div class="tm-signing-form-runner__autosave" data-state="@_autoSaveState">
+                @AutoSaveStatusText
+            </div>
+            @if (ShowLanguagePicker)
+            {
+                <label class="tm-signing-form-runner__language">
+                    <span>@Loc["TmSigningFormRunner_Language"]</span>
+                    <select class="tm-signing-form-runner__language-select"
+                            value="@CurrentCulture"
+                            aria-label="@Loc["TmSigningFormRunner_LanguageAria"]"
+                            @onchange="HandleCultureChangedAsync">
+                        @foreach (var culture in SupportedCultures)
+                        {
+                            <option value="@culture">@GetCultureDisplayName(culture)</option>
+                        }
+                    </select>
+                </label>
+            }
         </div>
     </div>;
 }

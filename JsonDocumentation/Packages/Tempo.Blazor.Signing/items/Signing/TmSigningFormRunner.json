@@ -12,11 +12,30 @@
   ],
   "parameters": [
     {
+      "name": "DocumentHeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions rendered in the document header row next to DocumentTitle (Signing redesign phase 3, U4) — for example a language or metadata control the host owns."
+    },
+    {
+      "name": "DocumentTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional document title shown above the pages (Signing redesign phase 3, U4). Rendered only when set (or when DocumentHeaderActions has content), so the default look stays today's chrome-free document area."
+    },
+    {
       "name": "Pages",
       "type": "IReadOnlyList<SigningDocumentPage>",
       "isRequired": false,
       "default": "[]",
       "description": "Document pages shown during signing."
+    },
+    {
+      "name": "ShowDocumentToolbar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the document toolbar's ZOOM controls on every page viewer (Signing redesign phase 3, U4). The zoom level is SHARED across all pages through the runner's own scale state. Pagination controls stay off — the runner presents one page at a time, so per-page previous/next buttons would be dead chrome (they come with a later phase if a host needs them). Defaults to false — today's chrome-free look."
     },
     {
       "name": "AutoSaveDelay",

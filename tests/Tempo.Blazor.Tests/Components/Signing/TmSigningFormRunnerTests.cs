@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Signing;
 
@@ -33,7 +34,9 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             .Add(p => p.Pages, [CreatePage()])
             .Add(p => p.Fields,
             [
-                CreateField("signature", "Signature", SigningFieldType.Signature)
+                // Required: the primary action is contextual (phase 3) and an all-optional plan
+                // renders Complete in the primary slot instead of Next.
+                CreateField("signature", "Signature", SigningFieldType.Signature, required: true)
             ]));
 
         cut.FindAll(".tm-signing-form-runner__step-panel").Should().ContainSingle(
@@ -41,7 +44,9 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         cut.FindAll(".tm-signing-step-shell").Should().ContainSingle();
         cut.FindAll(".tm-signature-capture").Should().ContainSingle();
         cut.FindAll(".tm-signing-form-runner__progress").Should().ContainSingle();
-        cut.FindAll(".tm-signing-form-runner__next").Should().ContainSingle(
+        // The single-step plan's primary slot is Complete (phase 3: on the last step the primary
+        // reads Complete); the invariant is ONE primary action, never a duplicated row.
+        cut.FindAll(".tm-signing-form-runner__complete").Should().ContainSingle(
             "the action row must not be duplicated for screen readers");
         cut.FindAll("input.tm-signing-text-step__input").Should().BeEmpty(
             "only the current step's inputs render — no hidden second panel");
@@ -183,12 +188,14 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields,
             [
-                CreateField("name", "Name", SigningFieldType.Text),
-                CreateField("date", "Date", SigningFieldType.Date, y: 0.2)
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2, required: true)
             ])
             .Add(p => p.ValuesChanged, EventCallback.Factory.Create<IReadOnlyDictionary<string, object?>>(this, v => values = v))
             .Add(p => p.OnStepSubmit, EventCallback.Factory.Create<SigningStepItem>(this, step => submitted = step)));
 
+        // Phase 3: the primary action switches to Complete once everything required is done, so the
+        // Next click must happen while the SECOND required step is still empty.
         await cut.Find("input.tm-signing-text-step__input").ChangeAsync(new ChangeEventArgs { Value = "Alice" });
         await cut.Find(".tm-signing-form-runner__next").ClickAsync(new MouseEventArgs());
 
@@ -229,17 +236,59 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         cut.Find(".tm-signing-form-runner__step-panel").TextContent.Should().Contain("Date");
     }
 
+    /// <summary>
+    /// Signing redesign phase 3: the primary action is CONTEXTUAL. While later steps remain the
+    /// footer renders "Next"; on the LAST step — and once every required field is complete — the
+    /// same slot switches to "Complete" (enabled only when the required work is done, so a click
+    /// can no longer land the signer on an empty step).
+    /// </summary>
     [Fact]
-    public void Complete_DisabledUntilRequiredValuesArePresent()
+    public void Runner_PrimaryButton_SwitchesToComplete_WhenAllDone()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
-            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text, required: true)]));
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2, required: true)
+            ]));
 
-        cut.Find(".tm-signing-form-runner__complete").HasAttribute("disabled").Should().BeTrue();
+        cut.FindAll(".tm-signing-form-runner__next").Should().ContainSingle(
+            "while later steps remain the primary action is Next");
+        cut.FindAll(".tm-signing-form-runner__complete").Should().BeEmpty(
+            "Complete is not offered before the last step");
 
         cut.Find("input.tm-signing-text-step__input").Change("Alice");
+        cut.Find(".tm-signing-form-runner__next").Click();
 
-        cut.Find(".tm-signing-form-runner__complete").HasAttribute("disabled").Should().BeFalse();
+        // Last step, required work missing: the primary already reads Complete, but stays disabled.
+        cut.FindAll(".tm-signing-form-runner__next").Should().BeEmpty();
+        cut.Find(".tm-signing-form-runner__complete").HasAttribute("disabled").Should().BeTrue(
+            "on the last step the primary shows the finishing action, disabled while work is missing");
+
+        cut.Find("input.tm-signing-date-step__input").Change("2026-05-08");
+
+        cut.Find(".tm-signing-form-runner__complete").HasAttribute("disabled").Should().BeFalse(
+            "with every required field complete the Complete action is enabled");
+    }
+
+    /// <summary>The OnComplete contract is unchanged: one snapshot dictionary of the entered values.</summary>
+    [Fact]
+    public async Task Runner_OnComplete_ContractUnchanged()
+    {
+        IReadOnlyDictionary<string, object?>? completed = null;
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.2)
+            ])
+            .Add(p => p.OnComplete, EventCallback.Factory.Create<IReadOnlyDictionary<string, object?>>(this, v => completed = v)));
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+        await cut.Find(".tm-signing-form-runner__complete").ClickAsync(new MouseEventArgs());
+
+        completed.Should().NotBeNull();
+        completed!["name"].Should().Be("Alice");
     }
 
     [Fact]
@@ -332,7 +381,11 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     public void Loading_DisablesNavigation()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
-            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2, required: true)
+            ])
             .Add(p => p.IsLoading, true));
 
         cut.Find(".tm-signing-form-runner__next").HasAttribute("disabled").Should().BeTrue();
@@ -344,8 +397,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields,
             [
-                CreateField("name", "Name", SigningFieldType.Text),
-                CreateField("date", "Date", SigningFieldType.Date, y: 0.2)
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2, required: true)
             ])
             .Add(p => p.IsCompleting, true));
 
@@ -412,7 +465,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     /// <summary>
     /// Focus management: moving to the next step moves focus to the new step's title heading
     /// (which carries <c>tabindex="-1"</c>), so keyboard and screen-reader users land at the top of
-    /// the step instead of on the clicked button.
+    /// the step instead of on the clicked button. The step must be VALID to advance (phase 3: the
+    /// primary action refuses an invalid step), so the test completes the first field first.
     /// </summary>
     [Fact]
     public async Task Runner_GoNext_RequestsFocusOnStepTitle()
@@ -420,10 +474,11 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields,
             [
-                CreateField("name", "Name", SigningFieldType.Text),
-                CreateField("date", "Date", SigningFieldType.Date, y: 0.2)
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2, required: true)
             ]));
 
+        await cut.Find("input.tm-signing-text-step__input").ChangeAsync(new ChangeEventArgs { Value = "Alice" });
         await cut.Find(".tm-signing-form-runner__next").ClickAsync(new MouseEventArgs());
 
         var invocation = JSInterop.VerifyFocusAsyncInvoke();
@@ -477,9 +532,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
 
         cut.Find(".tm-signing-form-runner__progress").TextContent.Should().Contain("of 3",
             "the in-place Fields mutation must produce a new plan");
-        cut.Find(".tm-signing-form-runner__accessibility-entry").Click();
-        cut.FindAll(".tm-signing-form-runner__accessibility-field").Should().HaveCount(3);
-        cut.FindAll(".tm-signing-form-runner__accessibility-field").Last().TextContent.Should().Contain("Added field");
+        cut.FindAll(".tm-signing-form-runner__field-button").Should().HaveCount(3);
+        cut.FindAll(".tm-signing-form-runner__field-button").Last().TextContent.Should().Contain("Added field");
 
         var computations = cut.Instance.PlanComputationsForTests;
         cut.Find("input.tm-signing-text-step__input").Change("Alice");
@@ -525,7 +579,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             .Add(p => p.Fields,
             [
                 CreateField("name", "Name", SigningFieldType.Text, required: true),
-                CreateChoiceField("delivery", "Delivery", SigningFieldType.Select, y: 0.2, required: true)
+                CreateChoiceField("delivery", "Delivery", SigningFieldType.Select, y: 0.2, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.3)
             ]));
 
         cut.Find(".tm-signing-form-runner__next").Click();
@@ -536,8 +591,10 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         input.GetAttribute("aria-describedby")!.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Should().Contain(validationId!, "the step alert is part of the input's description");
 
-        // Complete the text step, land on the select step, and fail THERE: the validation travels
+        // Complete the text step, land on the SELECT step, and fail THERE: the validation travels
         // into the choice step through the runner cascade, so the select is marked invalid too.
+        // (A trailing optional step keeps the primary a Next on the select step — on a LAST step
+        // the primary is Complete and a disabled TmButton swallows the click like a browser does.)
         cut.Find("input.tm-signing-text-step__input").Change("Alice");
         cut.Find(".tm-signing-form-runner__next").Click();
         cut.Find(".tm-signing-form-runner__next").Click();
@@ -550,39 +607,127 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// Blocked completion that lands on a DIFFERENT step is a step navigation: the focus signal
-    /// fires and the signer's keyboard lands on the blocking step's title (like a failed Next).
+    /// Signing redesign phase 3 (SI4): the field list is a PERMANENT panel section — the old
+    /// "Accessibility mode" toggle (U2) is gone. The progress count reflects COMPLETED FIELDS, not
+    /// the step index: filling the second of three required fields reads "1 of 3 done", no matter
+    /// which step the signer is on.
     /// </summary>
     [Fact]
-    public async Task Complete_BlockedOnEarlierStep_RequestsFocusOnThatStepTitle()
+    public void Runner_Progress_CountsCompletedFields_NotStepIndex()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields,
             [
                 CreateField("first", "First", SigningFieldType.Text, y: 0.1, required: true),
-                CreateField("second", "Second", SigningFieldType.Text, y: 0.2, required: true)
+                CreateField("second", "Second", SigningFieldType.Text, y: 0.2, required: true),
+                CreateField("third", "Third", SigningFieldType.Text, y: 0.3, required: true)
             ]));
 
-        // Complete the LAST step so Complete is enabled while the first step stays empty.
-        cut.Find(".tm-signing-form-runner__accessibility-entry").Click();
-        cut.FindAll(".tm-signing-form-runner__accessibility-field")[1].Click();
-        cut.Find("input.tm-signing-text-step__input").Change("Bob");
+        cut.Find(".tm-signing-form-runner__progress-text").TextContent.Should().Contain("0 of 3");
 
-        await cut.Find(".tm-signing-form-runner__complete").ClickAsync(new MouseEventArgs());
+        // Jump to the SECOND field through the list and complete it: the count follows the FIELDS
+        // (1 of 3), not the step position (which would announce "2 of 3").
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].Click();
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
 
-        // TWO focus moves happened: the accessibility jump to the last step, then the blocked
-        // Complete landing back on the FIRST (empty) step — a blocked Complete that changes the
-        // step navigates (and moves keyboard focus) exactly like a failed Next. The PRECISE target
-        // node is pinned by Runner_GoNext_RequestsFocusOnStepTitle (asserting the reference against
-        // a twice-patched bUnit node is not reliable).
-        var invocations = JSInterop.VerifyFocusAsyncInvoke(2);
-        invocations.Should().HaveCount(2, "the accessibility jump and the blocked Complete each navigate");
-        cut.Find(".tm-signing-step-shell__title").TextContent.Should().Be("First");
-        cut.Find(".tm-signing-step-shell__validation").TextContent.Should().Contain("required");
+        cut.Find(".tm-signing-form-runner__progress-text").TextContent.Should().Contain("1 of 3",
+            "the progress counts completed fields, never the step index");
+        cut.Find(".tm-signing-form-runner__progress").GetAttribute("aria-label").Should().Contain("1 of 3");
     }
 
+    /// <summary>
+    /// Every list row renders the type icon, the label and the META line (page + status chip);
+    /// the done status carries the check icon, the required status is a danger-subtle chip.
+    /// </summary>
     [Fact]
-    public void AccessibilityMode_ListsFieldsAndFocusesStep()
+    public void Runner_FieldList_RendersIconLabelPageAndStatus()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Full name", SigningFieldType.Text, y: 0.1, required: true),
+                CreateField("note", "Internal note", SigningFieldType.Text, y: 0.2)
+            ]));
+
+        var rows = cut.FindAll(".tm-signing-form-runner__field-button");
+        rows.Should().HaveCount(2);
+
+        var requiredRow = rows[0];
+        requiredRow.QuerySelector(".tm-signing-form-runner__field-icon")!.GetAttribute("data-icon").Should().Be("file-text");
+        requiredRow.QuerySelector(".tm-signing-form-runner__field-label")!.TextContent.Should().Be("Full name");
+        var requiredMeta = requiredRow.QuerySelector(".tm-signing-form-runner__field-meta")!;
+        requiredMeta.Should().NotBeNull("page + status share the meta line under the label");
+        requiredMeta.QuerySelector(".tm-signing-form-runner__field-page")!.TextContent.Should().Contain("1");
+        requiredMeta.QuerySelector(".tm-signing-form-runner__field-status")!.TextContent.Should().Contain("Required");
+        requiredMeta.QuerySelector(".tm-signing-form-runner__field-status")!.ClassList
+            .Should().Contain("tm-signing-form-runner__field-status--required");
+
+        var optionalRow = rows[1];
+        var optionalMeta = optionalRow.QuerySelector(".tm-signing-form-runner__field-meta")!;
+        optionalMeta.QuerySelector(".tm-signing-form-runner__field-status")!.TextContent.Should().Contain("Optional");
+    }
+
+    /// <summary>
+    /// The done row reads success + a check icon; after the value lands the status flips and the
+    /// check appears (never colour-only, WCAG 1.4.1).
+    /// </summary>
+    [Fact]
+    public void Runner_FieldList_DoneRow_ShowsSuccessStatusWithCheckIcon()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Full name", SigningFieldType.Text, y: 0.1, required: true),
+                CreateField("note", "Internal note", SigningFieldType.Text, y: 0.2, required: true)
+            ]));
+
+        cut.FindAll(".tm-signing-form-runner__field-status--done").Should().BeEmpty();
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+
+        var done = cut.Find(".tm-signing-form-runner__field-status--done");
+        done.TextContent.Should().Contain("Done");
+        done.QuerySelector("svg.tm-icon, .tm-icon").Should().NotBeNull("the done chip carries the check icon");
+    }
+
+    /// <summary>
+    /// CSS contract of the field-list rows (phase 3 review): the button grid is the two-line
+    /// AREA layout (icon spans both rows, label above the meta line), and the status chips carry
+    /// the token-driven states.
+    /// </summary>
+    [Fact]
+    public void Runner_FieldList_CssContract_GridAreasAndStatusChips()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-form-runner.css"));
+
+        css.Should().Contain(".tm-signing-form-runner__field-meta", "page + status are wrapped in the meta line");
+        css.Should().Contain("grid-template-areas:")
+            .And.Contain("\"icon label\"")
+            .And.Contain("\"icon meta\"", "the button grid is the icon / label+meta area layout");
+        css.Should().Contain(".tm-signing-form-runner__field-status--done", "done has its own status rule");
+        css.Should().Contain(".tm-signing-form-runner__field-status--required");
+        css.Should().Contain(".tm-signing-form-runner__field-status--optional");
+    }
+
+    /// <summary>
+    /// The active row's accent bar derives from the border-width token (no 3px length literal).
+    /// </summary>
+    [Fact]
+    public void Runner_FieldList_CssContract_ActiveBarUsesBorderWidthToken()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-form-runner.css"));
+
+        css.Should().Contain("inset calc(var(--tm-border-width) * 3)",
+            "the active-row bar is border-width-token math, not a bare 3px");
+        css.Should().NotContain("inset 3px");
+    }
+
+    /// <summary>The active list row carries <c>aria-current="step"</c>; the others carry nothing.</summary>
+    [Fact]
+    public void Runner_FieldList_ActiveItemHasAriaCurrentStep()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields,
@@ -591,11 +736,273 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
                 CreateField("second", "Second", SigningFieldType.Text, y: 0.2)
             ]));
 
-        cut.Find(".tm-signing-form-runner__accessibility-entry").Click();
-        cut.FindAll(".tm-signing-form-runner__accessibility-field")[1].Click();
+        cut.FindAll(".tm-signing-form-runner__field-button")[0].GetAttribute("aria-current").Should().Be("step");
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].GetAttribute("aria-current").Should().BeNull();
+
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].Click();
+
+        cut.FindAll(".tm-signing-form-runner__field-button")[0].GetAttribute("aria-current").Should().BeNull();
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].GetAttribute("aria-current").Should().Be("step");
+    }
+
+    /// <summary>Clicking a list row selects that step (the old accessibility list's jump, now permanent).</summary>
+    [Fact]
+    public void Runner_FieldListClick_SelectsStep()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields,
+            [
+                CreateField("first", "First", SigningFieldType.Text, y: 0.1),
+                CreateField("second", "Second", SigningFieldType.Text, y: 0.2)
+            ]));
+
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].Click();
 
         cut.Find(".tm-signing-form-runner__step-panel").TextContent.Should().Contain("Second");
-        cut.Find(".tm-signing-form-runner__progress").GetAttribute("aria-label").Should().Contain("Step");
+        cut.FindAll(".tm-signing-field-overlay")[1].ClassList.Should().Contain("tm-signing-field--selected");
+    }
+
+    /// <summary>Fields of OTHER submitters never appear in the list (the plan is submitter-filtered).</summary>
+    [Fact]
+    public void Runner_FieldList_ExcludesOtherSubmittersFields()
+    {
+        var mine = CreateField("mine", "My field", SigningFieldType.Text, y: 0.1);
+        mine.SubmitterUuid = "signer-1";
+        var theirs = CreateField("theirs", "Other field", SigningFieldType.Text, y: 0.2);
+        theirs.SubmitterUuid = "signer-2";
+
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [mine, theirs])
+            .Add(p => p.SubmitterUuid, "signer-1"));
+
+        cut.FindAll(".tm-signing-form-runner__field-button").Should().ContainSingle(
+            "a signer's list never shows another submitter's fields");
+        cut.Find(".tm-signing-form-runner__field-list").TextContent.Should().NotContain("Other field");
+    }
+
+    /// <summary>Once every required field is complete the success banner appears.</summary>
+    [Fact]
+    public void Runner_AllRequiredDone_ShowsSuccessBanner()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.2)
+            ]));
+
+        cut.FindAll(".tm-signing-form-runner__all-done").Should().BeEmpty(
+            "the banner waits until the required work is done");
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+
+        var banner = cut.Find(".tm-signing-form-runner__all-done");
+        banner.ClassList.Should().Contain("tm-alert--success");
+        banner.TextContent.Should().Contain("All required fields are complete");
+    }
+
+    /// <summary>
+    /// Skip renders ONLY for an optional current field that is NOT the last step: a required step
+    /// has no skip at all, and a final optional step has nowhere to skip to.
+    /// </summary>
+    [Fact]
+    public void Runner_SkipButton_NotRenderedForRequiredField()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, y: 0.1, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.2),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.3)
+            ]));
+
+        cut.FindAll(".tm-signing-form-runner__skip").Should().BeEmpty(
+            "a required current step offers no skip");
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+        cut.FindAll(".tm-signing-form-runner__skip").Should().BeEmpty(
+            "filling the field does not add a skip while the required step is current");
+
+        // Jump to the optional MIDDLE field through the permanent list: only THERE the skip exists.
+        cut.FindAll(".tm-signing-form-runner__field-button")[1].Click();
+
+        cut.FindAll(".tm-signing-form-runner__skip").Should().ContainSingle(
+            "an optional non-final current step offers the skip");
+
+        // The LAST step (optional here) has nowhere to skip to: no skip on it either.
+        cut.FindAll(".tm-signing-form-runner__field-button")[2].Click();
+
+        cut.FindAll(".tm-signing-form-runner__skip").Should().BeEmpty(
+            "the last step offers no skip even when it is optional");
+    }
+
+    /// <summary>Skip lives INSIDE the sticky action footer as a full-width row (phase 3 review),
+    /// keeping the keyboard order Previous → Next/Complete → Skip.</summary>
+    [Fact]
+    public void Runner_SkipButton_RendersInsideTheActionsFooter()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.1),
+                CreateField("date", "Date", SigningFieldType.Date, y: 0.2)
+            ]));
+
+        var actions = cut.Find(".tm-signing-form-runner__actions");
+        actions.QuerySelector(".tm-signing-form-runner__skip").Should().NotBeNull(
+            "the skip row renders inside the sticky action footer");
+    }
+
+    /// <summary>U4 (G9): the optional document header renders the title and the host actions slot.</summary>
+    [Fact]
+    public void Runner_DocumentTitle_AndHeaderActionsSlot_Render()
+    {
+        var withHeader = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.DocumentTitle, "Service order approval")
+            .Add(p => p.DocumentHeaderActions, builder => builder.AddContent(0, "host-action-marker")));
+
+        var header = withHeader.Find(".tm-signing-form-runner__document-header");
+        header.TextContent.Should().Contain("Service order approval");
+        header.TextContent.Should().Contain("host-action-marker");
+
+        // The default stays today's chrome-free look: no title, no slot, no header element.
+        var withoutHeader = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)]));
+        withoutHeader.FindAll(".tm-signing-form-runner__document-header").Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// ShowDocumentToolbar renders the page viewers' ZOOM controls only (phase 3 review): the
+    /// runner presents one page at a time, so the per-page pagination group would be dead chrome.
+    /// </summary>
+    [Fact]
+    public void Runner_ShowDocumentToolbar_RendersZoomOnly_NoDeadPagination()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.ShowDocumentToolbar, true));
+
+        cut.FindAll(".tm-document-page-viewer__toolbar").Should().NotBeEmpty("the toolbar renders");
+        cut.FindAll(".tm-document-page-viewer__zoom-controls").Should().NotBeEmpty("the zoom controls render");
+        cut.FindAll(".tm-document-page-viewer__pagination").Should().BeEmpty(
+            "per-page pagination controls are dead chrome on a one-page-at-a-time runner");
+
+        // The default stays chrome-free.
+        var withoutToolbar = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)]));
+        withoutToolbar.FindAll(".tm-document-page-viewer__toolbar").Should().BeEmpty();
+    }
+
+    /// <summary>The "all done" banner is a POLITE status region, never a second alert (phase 3
+    /// review): the TmAlert root itself carries role=status via the Role parameter — no wrapper,
+    /// and no alert nested inside the status.</summary>
+    [Fact]
+    public void Runner_AllDone_IsPoliteStatusRegion()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.2)
+            ]));
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+
+        var banner = cut.Find(".tm-signing-form-runner__all-done");
+        banner.GetAttribute("role").Should().Be("status",
+            "the banner announces politely, not as a role=alert interruption");
+        banner.QuerySelectorAll("[role='alert']").Should().BeEmpty(
+            "no alert role may live inside the polite status region");
+    }
+
+    /// <summary>Phase 3 review (dark-mode contrast): every document wrapper is a LIGHT island — the
+    /// paper sheet keeps the light tokens under a dark host, so overlay ink stays readable.</summary>
+    [Fact]
+    public void Runner_DocumentWrapper_IsALightIsland()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)]));
+
+        cut.FindAll(".tm-signing-form-runner__document")
+            .Should().OnlyContain(document => document.GetAttribute("data-theme") == "light",
+                "the white paper sheet must keep the light tokens inside a dark host");
+    }
+
+    /// <summary>The compact language selector shares the quiet footer row with the autosave text
+    /// (phase 3 review — the header keeps title / subtitle / progress only).</summary>
+    [Fact]
+    public void Runner_LanguageSelect_RendersInTheFooterRow_NextToAutosave()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.SupportedCultures, ["en", "cs"])
+            .Add(p => p.ShowLanguageSelector, true));
+
+        var footer = cut.Find(".tm-signing-form-runner__footer");
+        footer.QuerySelector(".tm-signing-form-runner__autosave").Should().NotBeNull();
+        footer.QuerySelector(".tm-signing-form-runner__language-select").Should().NotBeNull();
+
+        var header = cut.Find(".tm-signing-form-runner__panel-header");
+        header.QuerySelector(".tm-signing-form-runner__language-select").Should().BeNull(
+            "the language selector left the panel header");
+    }
+
+    /// <summary>CSS contract of the sticky action footer (phase 3 review): desktop/tablet panels
+    /// cap at the viewport and keep the actions reachable; the skip row spans the grid.</summary>
+    [Fact]
+    public void Runner_CssContract_StickyFooter_AndSkipRow()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-form-runner.css"));
+
+        css.Should().Contain("@container tm-signing-runner (width >= 768px)",
+            "the sticky footer is scoped to desktop/tablet containers");
+        css.Should().Contain("max-height: calc(100dvh - (2 * var(--tm-space-4)))");
+        css.Should().Contain("inset-block-end: 0");
+        css.Should().Contain("z-index: var(--tm-z-sticky)", "a sticky surface never rides the modal band");
+        css.Should().Contain("grid-column: 1 / -1", "the skip renders as a full-width row inside the actions");
+        // Phase 3 review: the footer language select flexes and never overflows the footer row.
+        css.Should().Contain("flex: 1 1 auto", "the language select grows with the footer row");
+        css.Should().Contain("min-width: 0", "the language select may shrink instead of overflowing");
+    }
+
+    /// <summary>
+    /// The document overlay prompts ONLY the current field while it is an empty REQUIRED field
+    /// (review round 2 fix): other required fields stay quiet so the document never fills with
+    /// prompts, optional fields never prompt, and the current field drops the prompt once it is
+    /// completed.
+    /// </summary>
+    [Fact]
+    public void Overlay_ShowsPrompt_OnlyForTheCurrentEmptyRequiredField()
+    {
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Pages, [CreatePage()])
+            .Add(p => p.Fields,
+            [
+                CreateField("name", "Name", SigningFieldType.Text, y: 0.1, required: true),
+                CreateField("email", "Email", SigningFieldType.Text, y: 0.2, required: true),
+                CreateField("note", "Note", SigningFieldType.Text, y: 0.3)
+            ]));
+
+        var overlays = cut.FindAll(".tm-signing-field-overlay");
+        overlays[0].QuerySelector(".tm-signing-field__prompt")!.TextContent.Should().Contain("Click to sign",
+            "the CURRENT empty required field carries the call to action");
+        overlays[1].QuerySelector(".tm-signing-field__prompt").Should().BeNull(
+            "a required field that is NOT current stays quiet");
+        overlays[2].QuerySelector(".tm-signing-field__prompt").Should().BeNull(
+            "an optional field never carries the required-field prompt");
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+
+        cut.FindAll(".tm-signing-field-overlay")[0].QuerySelector(".tm-signing-field__prompt").Should().BeNull(
+            "the prompt disappears once the current field is completed");
     }
 
     [Fact]
@@ -604,10 +1011,10 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         string? culture = null;
         IReadOnlyDictionary<string, object?>? values = null;
         SigningSubmissionLocalizationSnapshot? snapshot = null;
-        var first = CreateField("first", "First", SigningFieldType.Text, y: 0.1);
+        var first = CreateField("first", "First", SigningFieldType.Text, y: 0.1, required: true);
         first.Labels.Translations["en"] = "First name";
         first.Labels.Translations["cs"] = "Jméno";
-        var second = CreateField("second", "Second", SigningFieldType.Text, y: 0.2);
+        var second = CreateField("second", "Second", SigningFieldType.Text, y: 0.2, required: true);
         second.Labels.Translations["en"] = "Second name";
         second.Labels.Translations["cs"] = "Druhé jméno";
 

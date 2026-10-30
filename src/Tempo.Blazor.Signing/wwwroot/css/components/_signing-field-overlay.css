@@ -19,6 +19,27 @@
     overflow: visible;
 }
 
+/* Signing redesign phase 3 review round 2: the label + prompt pair is a PLAIN flex pair. The
+   head used to be its own inline-size container — an inline-size container has zero intrinsic
+   width, so the label truncated to a stub and the container-query rule hid the prompt no matter
+   how wide the document area is. The prompt no longer needs width-based hiding: the runner
+   passes it only for the CURRENT field. The FIELD itself must never be a size container either —
+   inline-size containment on the root made the choice chips (`.tm-signing-field__option`) wrap
+   letter-by-letter. */
+.tm-signing-field__head {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    /* The head keeps the room past a 4rem (--tm-space-16) value-area reserve, capped at 12rem.
+       Without a floor the label + prompt pair collapsed to a sliver whenever the value text
+       competed for the row — a flex head shrinks exactly as easily as the value area — and the
+       label's own `min(100%, 6rem)` floor below is measured against the head, so the head must
+       actually hold that room for the label floor to be real. The cap keeps a wide field from
+       handing its whole row to the head, and because the floor never exceeds the field's own
+       content width the label always stays inside the field box. */
+    min-width: min(calc(100% - var(--tm-space-16)), 12rem);
+}
+
 /*
  * A field carrying its submitter role colour (the component renders the role colour as the inline
  * `--tm-signing-role-color` custom property plus this class) derives its border and background from
@@ -80,11 +101,33 @@
 }
 
 .tm-signing-field__label {
+    /* Phase 3 review round 2: the label keeps its natural width — it may shrink when the head
+       runs out of room, but never below 6rem while there IS room (`min(100%, 6rem)` keeps tiny
+       fields from over-promising space) — so a field ≥ 160px never truncates its label to a
+       stub. The prompt's `flex: 1 1 0` below absorbs the rest. */
     flex: 0 1 auto;
+    min-width: min(100%, 6rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Signing redesign phase 3: the runner's "click to sign / fill in" call to action, passed ONLY
+   for the CURRENT empty required field (review round 2: the prompt rides the current-field rule,
+   not a width-based hiding). The component renders .tm-signing-field__prompt only while a prompt
+   is given and the field is incomplete. The prompt takes the remaining head room with an
+   ellipsis; the neutral secondary ink replaces the old opacity wash (token-driven, readable in
+   dark mode). */
+.tm-signing-field__prompt {
+    flex: 1 1 0;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-normal);
+    font-style: italic;
 }
 
 .tm-signing-field__required {

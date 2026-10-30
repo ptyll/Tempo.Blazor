@@ -194,7 +194,7 @@ public partial class TmSigningStepShell
     /// <summary>
     /// Moves focus to the step title heading. Best effort: a view whose JS circuit is already gone
     /// keeps the exception local instead of crashing the host — see
-    /// <see cref="SigningFocus.TryFocusAsync"/>.
+    /// <see cref="SigningFocus.TryFocusAsync(ElementReference)"/>.
     /// </summary>
     public async Task FocusTitleAsync()
     {

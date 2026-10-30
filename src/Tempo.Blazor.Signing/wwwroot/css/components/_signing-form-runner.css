@@ -26,20 +26,53 @@
     grid-column: 1 / -1;
 }
 
+/* Signing redesign phase 3: the document area is a workspace surface; the white page sheet on it
+   carries the card shadow (rule below — recorded in UnconstrainedClassOwnershipTests as an
+   intentional, strictly-scoped override of the viewer's own --tm-shadow-sm). */
 .tm-signing-form-runner__documents {
     display: grid;
     align-content: start;
     gap: var(--tm-space-4);
     min-width: 0;
     min-height: 0;
+    padding: var(--tm-space-4);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-workspace);
 }
 
+/* Signing redesign phase 3 review: the page wrapper is a LIGHT ISLAND (`data-theme="light"` on
+   the markup) — the paper sheet stays white in a dark host, so the overlay prompt and the field
+   ink keep their light-theme tokens instead of dark-on-dark (dark-mode contrast finding). */
 .tm-signing-form-runner__document {
     min-width: 0;
     overflow: auto;
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-signing-form-runner__document .tm-document-page-viewer__page {
+    box-shadow: var(--tm-shadow-card);
+}
+
+.tm-signing-form-runner__document-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-signing-form-runner__document-title {
+    margin: 0;
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-signing-form-runner__document-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
 }
 
 .tm-signing-form-runner__steps {
@@ -48,6 +81,8 @@
     padding-left: var(--tm-space-4);
 }
 
+/* Signing redesign phase 3: the panel becomes the wizard card — card radius, card shadow, a titled
+   header and the permanent field list. */
 .tm-signing-form-runner__step-panel {
     position: sticky;
     top: var(--tm-space-4);
@@ -56,9 +91,28 @@
     min-width: 0;
     padding: var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-card);
     background: var(--tm-bg-surface);
-    box-shadow: var(--tm-shadow-sm);
+    box-shadow: var(--tm-shadow-card);
+}
+
+.tm-signing-form-runner__panel-header {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-signing-form-runner__panel-title {
+    margin: 0;
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-signing-form-runner__panel-subtitle {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
 }
 
 .tm-signing-form-runner__progress,
@@ -68,88 +122,184 @@
 }
 
 .tm-signing-form-runner__progress {
+    display: grid;
+    gap: var(--tm-space-1);
+    margin-top: var(--tm-space-2);
     font-weight: var(--tm-font-weight-semibold);
 }
 
+.tm-signing-form-runner__progress-bar {
+    font-weight: var(--tm-font-weight-normal);
+}
+
 .tm-signing-form-runner__language {
-    display: grid;
-    gap: var(--tm-space-1);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
     min-width: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-signing-form-runner__language-select {
-    width: 100%;
-    min-height: calc(var(--tm-space-5) + var(--tm-space-4));
+    /* Phase 3 review: the select flexes inside its label and never overflows the footer — it may
+       shrink (min-width 0) and grows with the row, but never past the label's own box. */
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--tm-touch-target);
     padding: 0 var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     font: inherit;
 }
 
-.tm-signing-form-runner__accessibility-entry,
-.tm-signing-form-runner__accessibility-field,
-.tm-signing-form-runner__previous,
-.tm-signing-form-runner__skip,
-.tm-signing-form-runner__next,
-.tm-signing-form-runner__complete,
-.tm-signing-form-runner__mobile-expand,
-.tm-signing-form-runner__mobile-minimize {
-    display: inline-flex;
+/* SI4: the permanent field list (the old "Accessibility mode" list, always on). */
+.tm-signing-form-runner__field-list {
+    min-width: 0;
+}
+
+.tm-signing-form-runner__field-items {
+    display: grid;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Phase 3 review: the row is a two-line layout keyed by grid AREAS — the icon spans both rows,
+   the label sits on the first and the meta (page + status chip) on the second, so long labels
+   never push the meta out of line. */
+.tm-signing-form-runner__field-button {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "icon label"
+        "icon meta";
     align-items: center;
-    justify-content: center;
-    min-height: calc(var(--tm-space-5) + var(--tm-space-4));
-    padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
+    gap: var(--tm-space-1) var(--tm-space-2);
+    width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
     color: var(--tm-text-primary);
     font: inherit;
     font-size: var(--tm-font-size-sm);
+    text-align: start;
     cursor: pointer;
 }
 
-.tm-signing-form-runner__accessibility-entry:hover,
-.tm-signing-form-runner__accessibility-field:hover,
-.tm-signing-form-runner__previous:hover:not(:disabled),
-.tm-signing-form-runner__skip:hover:not(:disabled),
-.tm-signing-form-runner__next:hover:not(:disabled),
-.tm-signing-form-runner__complete:hover:not(:disabled),
-.tm-signing-form-runner__mobile-expand:hover,
-.tm-signing-form-runner__mobile-minimize:hover {
+.tm-signing-form-runner__field-button:hover {
     background: var(--tm-bg-muted);
 }
 
-.tm-signing-form-runner__accessibility-list {
-    display: grid;
-    gap: var(--tm-space-2);
-}
-
-.tm-signing-form-runner__accessibility-field {
-    justify-content: flex-start;
-    width: 100%;
-}
-
-.tm-signing-form-runner__accessibility-field[aria-current="true"] {
-    border-color: var(--tm-color-primary);
+.tm-signing-form-runner__field-button--active {
+    border-color: var(--tm-border-color);
     background: var(--tm-color-primary-subtle);
+    /* The active bar is 3 border-widths of the primary ink (token math, no length literal). */
+    box-shadow: inset calc(var(--tm-border-width) * 3) 0 0 0 var(--tm-color-primary);
     color: var(--tm-color-primary-text);
+}
+
+.tm-signing-form-runner__field-icon {
+    grid-area: icon;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+}
+
+.tm-signing-form-runner__field-button--active .tm-signing-form-runner__field-icon {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-signing-form-runner__field-label {
+    grid-area: label;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-signing-form-runner__field-meta {
+    grid-area: meta;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-signing-form-runner__field-page {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+/* The status is a compact chip: Done = success text + check, Required = danger-subtle,
+   Optional = quiet tertiary text. */
+.tm-signing-form-runner__field-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-signing-form-runner__field-status--done {
+    color: var(--tm-color-success-text);
+}
+
+.tm-signing-form-runner__field-status--required {
+    padding: 0 var(--tm-space-2);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-signing-form-runner__field-status--optional {
+    color: var(--tm-text-tertiary);
 }
 
 .tm-signing-form-runner__current-step {
     min-width: 0;
 }
 
+.tm-signing-form-runner__current-step-heading {
+    /* The caption is an h3 now (phase 3 review, same look): reset the user-agent margins and keep
+       the space the div had. */
+    margin: 0 0 var(--tm-space-2);
+    color: var(--tm-text-tertiary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    /* No letter-spacing token exists in the design system yet; the 0.04em stays a local value. */
+    letter-spacing: 0.04em;
+}
+
 .tm-signing-form-runner__validation {
     padding: var(--tm-space-2) var(--tm-space-3);
     border: 1px solid var(--tm-color-danger-soft-border);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-color-danger-subtle);
     color: var(--tm-color-danger-text);
     font-size: var(--tm-font-size-sm);
+}
+
+.tm-signing-form-runner__all-done {
+    margin: 0;
 }
 
 .tm-signing-form-runner__autosave[data-state="saved"] {
@@ -164,33 +314,70 @@
     color: var(--tm-color-danger-text);
 }
 
+/* The action footer composes TmButton variants; the runner only owns the layout and the 44px
+   touch floor. The BEM classes stay on the buttons as the E2E contract. The sticky behaviour is
+   container-scoped below (desktop/tablet only). */
 .tm-signing-form-runner__actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--tm-space-2);
 }
 
+.tm-signing-form-runner__previous,
 .tm-signing-form-runner__next,
 .tm-signing-form-runner__complete,
+.tm-signing-form-runner__skip {
+    min-height: var(--tm-touch-target);
+}
+
+/* The skip affordance is a FULL-WIDTH row inside the action grid (phase 3 review): it keeps the
+   keyboard order Previous → Next/Complete → Skip and stays inside the sticky footer. */
+.tm-signing-form-runner__skip {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+/* The quiet row under the sticky actions: autosave text left, compact language selector right. */
+.tm-signing-form-runner__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-3);
+    min-width: 0;
+}
+
+/* The sheet affordances (expand / minimize) keep their own button skin: they are plain buttons
+   outside the TmButton variants. */
+.tm-signing-form-runner__mobile-expand,
+.tm-signing-form-runner__mobile-minimize {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tm-touch-target);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-signing-form-runner__mobile-expand:hover,
+.tm-signing-form-runner__mobile-minimize:hover {
+    background: var(--tm-bg-muted);
+}
+
 .tm-signing-form-runner__mobile-expand {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary);
     color: var(--tm-color-on-primary);
 }
 
-.tm-signing-form-runner__next:hover:not(:disabled),
-.tm-signing-form-runner__complete:hover:not(:disabled),
 .tm-signing-form-runner__mobile-expand:hover {
     background: var(--tm-color-primary-hover);
-}
-
-.tm-signing-form-runner__previous:disabled,
-.tm-signing-form-runner__skip:disabled,
-.tm-signing-form-runner__next:disabled,
-.tm-signing-form-runner__complete:disabled {
-    cursor: not-allowed;
-    background: var(--tm-bg-muted);
-    color: var(--tm-text-muted);
 }
 
 .tm-signing-form-runner__sheet-bar {
@@ -255,5 +442,24 @@
     .tm-signing-form-runner__mobile-expand {
         width: 100%;
         box-shadow: var(--tm-shadow-md);
+    }
+}
+
+/* Sticky action footer (Signing redesign phase 3 review) — DESKTOP/TABLET containers only: the
+   panel caps at the viewport height and scrolls internally, and the action row sticks to its
+   bottom, so Previous / Next | Complete (and the skip row) stay reachable without scrolling the
+   panel. The mobile sheet keeps its own rules above (the sheet scrolls with the page). */
+@container tm-signing-runner (width >= 768px) {
+    .tm-signing-form-runner__step-panel {
+        max-height: calc(100dvh - (2 * var(--tm-space-4)));
+        overflow: auto;
+    }
+
+    .tm-signing-form-runner__actions {
+        position: sticky;
+        inset-block-end: 0;
+        z-index: var(--tm-z-sticky);
+        background: var(--tm-bg-surface);
+        padding-block: var(--tm-space-2);
     }
 }

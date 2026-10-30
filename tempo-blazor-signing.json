@@ -1981,7 +1981,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Confirmation panel shown after a signer finishes, reflecting either a completed or waiting-for-others state. Offers actions to download the signed document, send a copy by email, and an optional custom action.",
+      "description": "Confirmation panel shown after a signer finishes, reflecting either a completed or waiting-for-others state. Offers actions to download the signed document, send a copy by email, and an optional custom action. Announces through a role=\"status\" region on its content (title + description), optionally focuses the title after the first render (FocusTitleOnRender) and colours only the hero circle in the waiting state.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningCompletionPanel.razor",
       "documentationStatus": "merged",
@@ -1989,6 +1989,12 @@
         "@using Tempo.Blazor.Components.Signing"
       ],
       "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional host content rendered between the description and the action row (Signing redesign phase 3) — for example a submission status timeline or a next-steps hint."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -2018,6 +2024,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Optional completed document download URL."
+        },
+        {
+          "name": "FocusTitleOnRender",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the panel moves focus onto its title after the first render (default true) so assistive technology announces the completion status. Hosts that render the panel next to other content — or several instances on one screen — pass false: a programmatic focus move from each instance would yank the signer's scroll/focus to the last rendered panel."
         },
         {
           "name": "IsWaitingForOthers",
@@ -2429,6 +2442,12 @@
           "description": "Whether the browser context menu is prevented for context menu interactions. Defaults to true."
         },
         {
+          "name": "Prompt",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Short prompt rendered inside the overlay while it is NOT completed (Signing redesign phase 3) — the runner passes the localized \"Click to sign / fill in\" call to action for the CURRENT field only, and only while that field is empty and required. Hidden once the field is completed or when null/whitespace, so the designer's compact presentation stays prompt-free. The label + prompt head is a plain flex pair (no size container and no width-based hiding — a container truncated labels to stubs), so a host that wants a prompt on every field should keep the set small for the same readability reasons."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
@@ -2491,6 +2510,18 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when the signing culture changes."
+        },
+        {
+          "name": "DocumentHeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host actions rendered in the document header row next to DocumentTitle (Signing redesign phase 3, U4) — for example a language or metadata control the host owns."
+        },
+        {
+          "name": "DocumentTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional document title shown above the pages (Signing redesign phase 3, U4). Rendered only when set (or when DocumentHeaderActions has content), so the default look stays today's chrome-free document area."
         },
         {
           "name": "FallbackCulture",
@@ -2560,6 +2591,13 @@
           "isRequired": false,
           "default": "[]",
           "description": "Document pages shown during signing."
+        },
+        {
+          "name": "ShowDocumentToolbar",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the document toolbar's ZOOM controls on every page viewer (Signing redesign phase 3, U4). The zoom level is SHARED across all pages through the runner's own scale state. Pagination controls stay off — the runner presents one page at a time, so per-page previous/next buttons would be dead chrome (they come with a later phase if a host needs them). Defaults to false — today's chrome-free look.",
+          "default": "false"
         },
         {
           "name": "ShowLanguageSelector",
@@ -2787,6 +2825,59 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when the normalized phone value changes."
+        }
+      ]
+    },
+    {
+      "itemName": "TmSigningRunnerFieldList",
+      "kind": "Component",
+      "category": "Signing",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Internal part of TmSigningFormRunner (Signing redesign phase 3): the permanent field list of the wizard panel — one row per step with the type icon, the localized label, the page and the Done / Required / Optional status chip. A host places TmSigningFormRunner, never this component: the runner owns the step plan, the selection state and the single-panel invariant.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningRunnerFieldList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Signing"
+      ],
+      "parameters": [
+        {
+          "name": "Culture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Culture used to resolve the localized field labels."
+        },
+        {
+          "name": "CurrentIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "Index of the step the runner currently presents; it renders aria-current=\"step\"."
+        },
+        {
+          "name": "FallbackCulture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Fallback culture used when a field's translation is missing."
+        },
+        {
+          "name": "IsStepFilled",
+          "type": "Func<SigningStepItem, bool>",
+          "isRequired": false,
+          "default": "_ => false",
+          "description": "The runner's completeness predicate for a step (every field of the step has a value) — the \"Done\" status and the check icon read from it."
+        },
+        {
+          "name": "OnSelect",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised with the clicked step index; the runner selects and focuses that step."
+        },
+        {
+          "name": "Steps",
+          "type": "IReadOnlyList<SigningStepItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The runner's planned steps, in field order (already submitter-filtered)."
         }
       ]
     },
@@ -3151,11 +3242,11 @@
     }
   ],
   "summary": {
-    "itemCount": 45,
-    "manualItemCount": 45,
-    "generatedItemCount": 45,
+    "itemCount": 46,
+    "manualItemCount": 46,
+    "generatedItemCount": 46,
     "generatedOnlyItemCount": 0,
-    "componentCount": 30,
+    "componentCount": 31,
     "publicApiTypeCount": 15
   }
 }

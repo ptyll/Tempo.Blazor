@@ -3,7 +3,7 @@
 
 @if (!_dismissed)
 {
-    <div class="tm-alert @SeverityClass @VariantClass @Class" @attributes="AdditionalAttributes" role="alert">
+    <div class="tm-alert @SeverityClass @VariantClass @Class" @attributes="AdditionalAttributes" role="@Role">
         <span class="tm-alert__icon">
             <TmIcon Name="@ResolvedIcon" Size="IconSize.Sm" />
         </span>
@@ -40,6 +40,13 @@
 
     /// <summary>Severity level controlling color and default icon.</summary>
     [Parameter] public AlertSeverity Severity { get; set; } = AlertSeverity.Info;
+
+    /// <summary>
+    /// WAI-ARIA role of the alert root. Defaults to <c>alert</c> (an assertive live region); pass
+    /// <c>status</c> when the news must announce politely instead of interrupting — for example a
+    /// success banner that must not speak over an active announcement.
+    /// </summary>
+    [Parameter] public string Role { get; set; } = "alert";
 
     /// <summary>Visual variant: Soft, Filled, or Outlined.</summary>
     [Parameter] public AlertVariant Variant { get; set; } = AlertVariant.Soft;

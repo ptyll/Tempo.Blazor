@@ -302,7 +302,12 @@ public sealed class MarkupClassCoverageTests
         "tm-signing-field-editor-panel__required",
         "tm-signing-field-editor-panel__signature-id",
         "tm-signing-field-editor-panel__stamp-logo",
-        "tm-signing-form-runner--accessibility",
+        // Signing redesign phase 3: the "Accessibility mode" toggle is gone, so
+        // "tm-signing-form-runner--accessibility" left the markup AND this inventory. The new
+        // rule-free hooks are the list item wrapper (styled through the .tm-signing-form-runner__field-items
+        // grid) and the progress count span (visually carried by .tm-signing-form-runner__progress).
+        "tm-signing-form-runner__progress-text",
+        "tm-signing-form-runner__field-item",
         "tm-signing-number-step",
         "tm-signing-phone-step",
         "tm-signing-signature-step",

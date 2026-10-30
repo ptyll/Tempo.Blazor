@@ -435,6 +435,130 @@
     `SubmitterUuid`) is cached between renders and events; every parameter set from the host
     recomputes it, so in-place `Fields` / `Pages` edits are still picked up.
 
+- **Signing form runner is a guided wizard panel, and the completion panel colours only its hero
+  (Signing redesign phase 3, S2-2 + S2-6).** The runner panel gains a titled header with a
+  completed-field progress bar, the field list becomes a PERMANENT panel section, a success banner
+  appears once every required field is done, and the action footer composes `TmButton`s with a
+  contextual primary action. `TmSigningCompletionPanel` inherits `TmComponentBase` and restructures
+  its markup. What breaks and how to migrate:
+  - *"Accessibility mode" is removed (U2).* The `button.tm-signing-form-runner__accessibility-entry`
+    toggle, the `tm-signing-form-runner__accessibility-list` / `__accessibility-field` rows, the
+    `tm-signing-form-runner--accessibility` root class and the `TmSigningFormRunner_AccessibilityMode`
+    localization key are gone — the field list is always rendered:
+    ```html
+    <!-- before: the list lived behind a toggle -->
+    <button class="tm-signing-form-runner__accessibility-entry">Accessibility mode</button>
+    <div class="tm-signing-form-runner__accessibility-list">
+      <button class="tm-signing-form-runner__accessibility-field" aria-current="true">…</button>
+    </div>
+
+    <!-- after: a permanent, structured list -->
+    <nav class="tm-signing-form-runner__field-list" aria-label="Fields to complete">
+      <ol class="tm-signing-form-runner__field-items">
+        <li class="tm-signing-form-runner__field-item">
+          <button class="tm-signing-form-runner__field-button tm-signing-form-runner__field-button--active"
+                  aria-current="step" data-field-uuid="…">…</button>
+        </li>
+      </ol>
+    </nav>
+    ```
+    A test or host that clicked the toggle retargets the list row:
+    `.tm-signing-form-runner__accessibility-field` → `.tm-signing-form-runner__field-button`
+    (rows carry `data-field-uuid`, `aria-current="step"` on the active one, and a
+    `.tm-signing-form-runner__field-status` chip reading Done / Required / Optional).
+  - *Progress counts completed fields.* `.tm-signing-form-runner__progress` now shows the count
+    span `.tm-signing-form-runner__progress-text` ("1 of 3 done", the neutral
+    `TmSigningFormRunner_DoneCount` key — `{0} of {1}`, no plural forms) above a `TmProgressBar`;
+    the old `TmSigningFormRunner_Progress` / `_ProgressAria` keys are gone. An assertion on
+    `"Step 2 of 3"` retargets the completed-field count (`"1 of 3"`); the `aria-label` mirrors it.
+  - *The primary action is contextual.* The footer is two `TmButton`s: secondary Previous
+    (`button.tm-btn.tm-btn-secondary.tm-btn-lg.tm-signing-form-runner__previous`) and ONE primary —
+    `button.tm-btn.tm-btn-primary.tm-btn-lg.tm-signing-form-runner__next` while later steps remain,
+    otherwise `button.tm-btn.tm-btn-primary.tm-btn-lg.tm-signing-form-runner__complete`. The raw
+    `button.tm-signing-form-runner__next` skin is gone (the class stays on the `TmButton`, so
+    `[data-testid]`/class selectors keep working, but `button.tm-signing-form-runner__next:not(.tm-btn)`
+    style overrides must be rewritten against the `tm-btn` classes). On the LAST step the primary
+    already reads Complete (disabled while required work is missing) — the old always-rendered
+    disabled pair Next + Complete is gone, and a Complete click can no longer land the signer on an
+    empty step. "Skip" renders ONLY for an optional current field that is NOT the last step (a
+    final optional step has nowhere to skip to), as a full-width text row INSIDE the sticky
+    action footer (`tm-btn-link`); the old always-rendered disabled `__skip` is gone.
+    ```html
+    <!-- before: four always-rendered raw buttons -->
+    <button class="tm-signing-form-runner__previous">…</button>
+    <button class="tm-signing-form-runner__skip" disabled>…</button>
+    <button class="tm-signing-form-runner__next">…</button>
+    <button class="tm-signing-form-runner__complete" disabled>…</button>
+
+    <!-- after: TmButton pair + conditional text skip -->
+    <button class="tm-btn tm-btn-secondary tm-btn-lg tm-signing-form-runner__previous">…</button>
+    <button class="tm-btn tm-btn-primary tm-btn-lg tm-signing-form-runner__next">…</button>
+    <!-- or, when every required field is done / on the last step: -->
+    <button class="tm-btn tm-btn-primary tm-btn-lg tm-signing-form-runner__complete">…</button>
+    <button class="tm-btn tm-btn-link tm-signing-form-runner__skip">…</button> <!-- optional step only -->
+    ```
+  - *The success banner is a `TmAlert` in a polite status region.* Once `AllRequiredFieldsComplete()`
+    the panel renders `div.tm-alert.tm-alert--success.tm-alert--soft.tm-signing-form-runner__all-done`
+    with `role="status"` on the alert root itself (title `TmSigningFormRunner_AllDoneTitle`) — the
+    "all done" news announces politely instead of interrupting as a second `role="alert"`. The
+    banner uses the new `TmAlert.Role` parameter (the old `role="status"` wrapper div around the
+    alert is gone).
+  - *Panel chrome.* `.tm-signing-form-runner__step-panel` carries `--tm-radius-card` /
+    `--tm-shadow-card` and a header (`__panel-title` / `__panel-subtitle`, keys
+    `TmSigningFormRunner_PanelTitle` / `_PanelSubtitle`, subtitle "Fill in the following fields in
+    the document."); the language selector moved OUT of the header into the quiet footer row
+    (`.tm-signing-form-runner__footer`) next to the autosave status, compact. On a
+    desktop/tablet container the panel caps at `calc(100dvh - 2 * --tm-space-4)` and scrolls
+    internally with the action row (`.tm-signing-form-runner__actions`) sticky at its bottom, so
+    the primary action never scrolls away (the mobile sheet keeps the old in-flow behaviour). The
+    document area paints `--tm-bg-workspace` and the
+    page sheet uses `--tm-shadow-card`; controls use `--tm-radius-control` and a `--tm-touch-target`
+    (44 px) floor. The "Selected field" caption is an
+    `<h3 class="tm-signing-form-runner__current-step-heading">` (was a `div`; same look). New
+    overlay prompt: the CURRENT field shows
+    `span.tm-signing-field__prompt` while it is an empty REQUIRED field ("Click to sign / fill
+    in", key `TmSigningFieldOverlay_EmptyRequiredPrompt`) — other required fields stay quiet, and
+    a completed-field assertion that read the overlay's whole text must skip it. The label +
+    prompt head is a plain flex pair (no size container, no width-based hiding): the label keeps
+    its natural width instead of truncating to a stub, and the prompt ellipsizes into the
+    remaining head room.
+  - *Shared type icons.* The designer palette, the document overlays and the runner field list
+    render the SAME icon per field type (`SigningFieldTypeIcons`): the designer's palette icons for
+    Radio (`circle-dot` → `circle`), File (`paperclip` → `file`), Stamp (`stamp` → `shield`),
+    Payment (`hash` → `tag`), Heading (`heading` → `type`) and Strikethrough (`strikethrough` →
+    `minus`) changed to the overlay's names (the `[data-icon]` contract E2E pinned). A selector on
+    the old designer icon names retargets the new ones.
+  - *Completion panel structure.* `TmSigningCompletionPanel` now inherits `TmComponentBase`
+    (`DataTestId` / `TestIdPrefix`; an unmatched-attribute `data-testid` splat still wins over
+    the component's own default), announces through `role="status"` on
+    `div.tm-signing-completion-panel__content` (title + description — the actions stay outside
+    the live region), focuses its title (`tabindex="-1"`) after the first render unless the host
+    passes `FocusTitleOnRender="false"` (no scroll: the move runs with `preventScroll`), wraps
+    the icon in `span.tm-signing-completion-panel__hero` and takes a new `ChildContent` slot
+    between the description and the actions (`div.tm-signing-completion-panel__body`). The panel
+    aligns to the START of its host cell (`align-content: start; align-self: start`) instead of
+    stretching to a taller row. The WAITING state
+    colours ONLY the hero circle (warning-subtle) — the card keeps the neutral surface, and the
+    title grows to 2xl. Selectors that read the icon as a direct child of the panel retarget
+    `.tm-signing-completion-panel__hero .tm-icon`; on a phone-width container the actions stack
+    full-width at 48 px.
+    ```html
+    <!-- before: waiting tinted the whole card -->
+    <section class="tm-signing-completion-panel" data-state="waiting">
+      <svg class="tm-icon tm-icon-lg …">…</svg>
+      <div class="tm-signing-completion-panel__content">…</div>
+
+    <!-- after: the status lives in the hero circle; the card stays neutral -->
+    <section class="tm-signing-completion-panel" data-state="waiting" data-testid="…">
+      <span class="tm-signing-completion-panel__hero" aria-hidden="true">
+        <svg class="tm-icon tm-icon-xl …">…</svg>
+      </span>
+      <div class="tm-signing-completion-panel__content" role="status">…</div>
+      <!-- optional ChildContent renders here -->
+      <div class="tm-signing-completion-panel__actions">…</div>
+    </section>
+    ```
+
 ### Known issues
 
 - **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
@@ -446,6 +570,36 @@
 
 ### Added
 
+- **Signing runner document chrome (Signing redesign phase 3, U4), all opt-in.** `TmSigningFormRunner`
+  gains `DocumentTitle` (a header above the pages), `ShowDocumentToolbar` (default `false` — today's
+  chrome-free look; `true` passes `ShowToolbar` / `ShowZoomControls` to
+  every `TmDocumentPageViewer` and shares ONE zoom scale across all pages — zoom only, the per-page
+  pagination controls come later) and the
+  `DocumentHeaderActions` slot rendered next to the title. The header renders only when a title or
+  slot content exists.
+  ```razor
+  <TmSigningFormRunner Pages="pages" Fields="fields"
+                       DocumentTitle="Service order approval"
+                       ShowDocumentToolbar="true">
+      <DocumentHeaderActions><TmButton Variant="ButtonVariant.Ghost" Icon="info" /></DocumentHeaderActions>
+  </TmSigningFormRunner>
+  ```
+  Runner panel additions (same phase): the permanent field list (SI4) with the localized status
+  chips (the list markup lives in the internal `TmSigningRunnerFieldList` part — **not a supported
+  public API; it may change without notice** — place `TmSigningFormRunner`, not the part), the
+  success banner, the contextual action footer, the
+  shared `SigningFieldTypeIcons` map
+  and the `TmSigningFieldOverlay.Prompt` parameter (the localized empty-required call to action the
+  runner passes). `TmSigningCompletionPanel` gains the `ChildContent` slot between description and
+  actions, inherits `TmComponentBase` (`DataTestId` / `TestIdPrefix`) and takes `FocusTitleOnRender`
+  (default `true`; pass `false` when several panels share one screen so they do not fight over the
+  initial focus). Core, additive: `TmAlert` gains the `Role` parameter (default `alert`) so a host
+  can render the alert as a polite `status` live region — the signing runner's all-done banner
+  passes `Role="status"`. New localized keys
+  `TmSigningFormRunner_PanelTitle`, `_PanelSubtitle`, `_DoneCount`, `_AllDoneTitle`,
+  `_AllDoneDescription`, `_FieldListAria`, `_FieldStatusDone`, `_FieldStatusRequired`,
+  `_FieldStatusOptional`, `_PageLabel`, `_SelectedField` and
+  `TmSigningFieldOverlay_EmptyRequiredPrompt` in en / cs / sk / fr.
 - **Signing step a11y plumbing (Signing redesign phase 2), additive.** `TmSigningSignatureStep`
   (shell + capture wrapper the runner uses for signature / initials steps — place it wherever a
   signing form needs a titled signature step; the embedded capture is deliberately driven with

@@ -24,7 +24,19 @@
         <TmIcon Name="@IconName" Size="IconSize.Xs" />
     </span>
 
-    <span class="tm-signing-field__label">@Label</span>
+    @* The label + prompt pair is one head element (phase 3 review round 2): a PLAIN flex pair —
+       the head must NOT be a size container (an inline-size container has zero intrinsic width,
+       which truncated labels to stubs), and the field root must not be one either (root
+       containment wrapped the choice chips letter-by-letter). The runner passes the prompt only
+       for the current field, so no width-based hiding is needed. *@
+    <span class="tm-signing-field__head">
+        <span class="tm-signing-field__label">@Label</span>
+
+        @if (ShowPrompt)
+        {
+            <span class="tm-signing-field__prompt">@Prompt</span>
+        }
+    </span>
 
     @if (Field?.Required == true)
     {
