@@ -2,30 +2,139 @@
 @using Tempo.Blazor.Components.Spreadsheet.Models
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Dialogs
+@inherits Tempo.Blazor.Components.TmComponentBase
 
-<div class="tm-spreadsheet @Class"
-     style="width: @(Width ?? "100%"); height: @(Height ?? "600px");"
+<div class="tm-spreadsheet @(Mode == SpreadsheetMode.Full ? "tm-spreadsheet--workspace" : "tm-spreadsheet--chrome-flat") tm-spreadsheet--layout-@(LayoutName) @Class"
+     style="width: @EffectiveWidth; height: @EffectiveHeight;"
+     data-layout="@LayoutName"
      data-formula-point-mode="@(HostFormulaPointMode ? "true" : null)"
      data-formula-guard-active="@(_formulaReferencePickingGuardActive ? "true" : "false")"
      data-formula-argument-separator="@FormulaArgumentSeparator"
      data-formula-decimal-separator="@FormulaDecimalSeparator"
      data-formula-culture="@FormulaCultureName"
+     data-testid="@RootTestId()"
      @attributes="AdditionalAttributes">
+    @* The layout is measured from the spreadsheet's OWN container (never the viewport). The OBSERVER's root
+       (`div.tm-spreadsheet__layout`, a NEW wrapper element inside the component root) is the named
+       container-query surface `tm-spreadsheet` — NOT the component root: container-type implies
+       `contain: layout`, and that would trap every position:fixed overlay (dialogs, sheets, the context
+       menus) inside the card. LayoutContent reconciles the mode at RENDER time, so a page that mounts inside a
+       narrow container flips on its first frame instead of waiting for the observer's first callback. *@
+    <TmLayoutObserver LayoutMode="LayoutMode"
+                      InitialMode="TmLayoutMode.Desktop"
+                      ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                      IsContainer="false"
+                      Class="tm-spreadsheet__layout">
+        <LayoutContent Context="lay">
+            @{
+                ApplyLayout(lay.Resolved);
+            }
     @if (Mode == SpreadsheetMode.Full)
     {
-    <TmSpreadsheetToolbar CanUndo="CanUndo"
+    @if (ShowHeader && !IsMobileLayout)
+    {
+        @* Document header (opt-in, G9/SP3). On the mobile layout the COMPACT header below replaces it (a
+           phone cannot hold the file actions and the grid switch), so the two are mutually exclusive: a
+           host that sets ShowHeader="true" gets exactly ONE header at every width. The title and both host
+           slots are additive; the built-in Open / Download actions render only for a host that listens to
+           OnOpen / OnDownload, and the "Show grid lines" switch is the core TmToggle driving the active
+           sheet. The app-shell elements of the reference ("Saved", hamburger, overflow menu, document
+           switcher) are the host's HeaderStart / HeaderActions content, never built in. *@
+        <header class="tm-spreadsheet__header" data-testid="@TestId("tm-spreadsheet-header")">
+            <div class="tm-spreadsheet__header-start">
+                @HeaderStart
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <span class="tm-spreadsheet__title">@Title</span>
+                }
+            </div>
+            <div class="tm-spreadsheet__header-actions">
+                @HeaderActions
+                @* A custom ribbon tool placed on the File tab has no File tab once the header owns the file
+                   actions; it renders as a header action instead of silently disappearing. *@
+                @foreach (var tool in HeaderCustomTools)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-tool-id="@tool.Id"
+                            title="@tool.Title"
+                            @onclick="() => OnCustomToolClick.InvokeAsync(tool)">
+                        <TmIcon Name="@(string.IsNullOrEmpty(tool.IconName) ? "link" : tool.IconName)" />
+                        <span class="tm-spreadsheet__header-action-label">@tool.Title</span>
+                    </button>
+                }
+                @if (OnOpen.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-testid="@TestId("tm-spreadsheet-header-open")"
+                            title="@Loc["TmSpreadsheet_OpenDocument"]"
+                            @onclick="TriggerFileInput">
+                        <TmIcon Name="folder-open" />
+                        <span class="tm-spreadsheet__header-action-label">@Loc["TmSpreadsheet_OpenDocument"]</span>
+                    </button>
+                }
+                @if (OnDownload.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-spreadsheet__header-action"
+                            data-testid="@TestId("tm-spreadsheet-header-download")"
+                            title="@Loc["TmSpreadsheet_DownloadDocument"]"
+                            @onclick="DownloadXlsx">
+                        <TmIcon Name="download" />
+                        <span class="tm-spreadsheet__header-action-label">@Loc["TmSpreadsheet_DownloadDocument"]</span>
+                    </button>
+                }
+                @if (HasHeaderFileActions)
+                {
+                    <span class="tm-spreadsheet__header-divider" aria-hidden="true"></span>
+                }
+                <div class="tm-spreadsheet__grid-toggle">
+                    <TmIcon Name="grid" />
+                    <TmToggle Value="ShowGridLines"
+                              ValueChanged="SetGridLines"
+                              Label="@Loc["TmSpreadsheet_ShowGridLines"]" />
+                </div>
+            </div>
+        </header>
+    }
+
+    @if (IsMobileLayout && HasMobileHeaderContent)
+    {
+        @* G2 mobile chrome: a compact header instead of the document header — the title and the host slots.
+           It renders ONLY when the host actually gives it content: an empty 50px row above a phone grid is
+           worse than no row at all, and the undo/redo pair therefore leads the mobile FORMATTING row
+           (SpreadsheetToolbarLayout) so their availability never depends on the header. *@
+        <header class="tm-spreadsheet__mobile-header" data-testid="@TestId("tm-spreadsheet-mobile-header")">
+            <div class="tm-spreadsheet__mobile-header-start">
+                @HeaderStart
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <span class="tm-spreadsheet__mobile-title">@Title</span>
+                }
+            </div>
+            <div class="tm-spreadsheet__mobile-header-actions">
+                @HeaderActions
+            </div>
+        </header>
+    }
+
+    <TmSpreadsheetToolbar LayoutMode="@DialogLayout"
+                          CanUndo="CanUndo"
                           CanRedo="CanRedo"
-                          SelectedFontFamily="ToolbarFontFamily"
-                          SelectedFontSize="ToolbarFontSize"
+                          SelectedFontFamily="@ToolbarFontFamily"
+                          SelectedFontSize="@ToolbarFontSize"
                           IsBold="ToolbarIsBold"
                           IsItalic="ToolbarIsItalic"
                           IsUnderline="ToolbarIsUnderline"
                           IsStrikeThrough="ToolbarIsStrikeThrough"
                           IsFormatPainterActive="ToolbarIsFormatPainterActive"
-                          TextColor="ToolbarTextColor"
-                          BackgroundColor="ToolbarBackgroundColor"
-                          SelectedHorizontalAlign="ToolbarAlign"
-                          SelectedNumberFormat="ToolbarNumberFormat"
+                          TextColor="@ToolbarTextColor"
+                          BackgroundColor="@ToolbarBackgroundColor"
+                          SelectedHorizontalAlign="@ToolbarAlign"
+                          SelectedVerticalAlign="@ToolbarVerticalAlign"
+                          OnVerticalAlignChanged="ApplyVerticalAlign"
+                          SelectedNumberFormat="@ToolbarNumberFormat"
                           IsPercentageFormat="ToolbarIsPercentageFormat"
                           IsThousandsFormat="ToolbarIsThousandsFormat"
                           OnUndo="Undo"
@@ -77,9 +186,12 @@
                           OnPasteSpecial="OpenPasteSpecialDialog"
                           OnDataValidation="OpenDataValidationDialog"
                           OnCircleInvalidData="() => _ = CircleInvalidData()"
-                          OnClearValidationCircles="() => _ = ClearValidationCircles()" />
+                          OnClearValidationCircles="() => _ = ClearValidationCircles()"
+                          ShowFileTab="EffectiveShowFileTab"
+                          CustomTools="CustomTools"
+                          OnCustomToolClick="OnCustomToolClick" />
 
-    <InputFile id="tm-spreadsheet-file-input"
+    <InputFile id="@FileInputDomId"
                OnChange="HandleFileSelected"
                style="display:none"
                accept=".xlsx" />
@@ -94,13 +206,23 @@
                              OnValueChanged="@OnFormulaBarValueChanged"
                              OnTabPressed="@OnFormulaBarTabPressed"
                              OnTransferToInlineEditorRequested="@OnFormulaBarTransferToInlineEditorRequested"
+                             NamedRanges="NameBoxNamedRanges"
                              OnNavigateToRef="@OnNameBoxNavigate" />
     }
 
+        @* The host's OPEN SURFACE owns the focus: the grid stands down (SuppressFocusRestore) so its own
+           focus restore cannot land after the context menu / resize dialog focused its first control —
+           both components run OnAfterRenderAsync in the same batch (phase 7d). *@
         <TmSpreadsheetCanvasGrid @ref="_grid"
+                                 RenderContextMenu="false"
+                                 OnContextMenuRequested="OpenGridContextMenu"
+                                 SuppressFocusRestore="@IsHostSurfaceFocused"
+                                 RootDomId="@GridRootDomId"
                                  Sheet="_workbook.ActiveSheet"
                                  RowHeight="RowHeight"
                                  ColumnWidth="ColumnWidth"
+                                 Density="EffectiveDensity"
+                                 LayoutMode="@DialogLayout"
                                  Zoom="Zoom"
                                  IsReadonly="@(Mode == SpreadsheetMode.Embedded)"
                                  ExternalFormulaSessionActive="@(IsFormulaBarPointSessionActive || _formulaReferencePickingGuardActive || (_formulaOriginSheetIndex >= 0 && _formulaOriginCellRef is not null))"
@@ -143,12 +265,17 @@
                                  OnClearAllRequested="ClearAll"
                                  OnZoomStep="OnZoomStep"
                                  OnZoomResetRequested="ResetZoom"
+                                 OnZoomChanged="OnZoomChanged"
+                                 OnFillRequested="OnGridFillRequested"
                                  OnFindRequested="OpenFind"
                                  OnReplaceRequested="OpenReplace"
                                  FilterButtonClicked="OnFilterButtonClicked"
                                  ValidationDropButtonClicked="OnValidationDropButtonClicked" />
 
-    <TmSpreadsheetSheetTabs Sheets="_workbook.Sheets"
+    <TmSpreadsheetSheetTabs @ref="_sheetTabs"
+                            RenderContextMenu="false"
+                            OnContextMenuRequested="OpenSheetTabContextMenu"
+                            Sheets="_workbook.Sheets"
                             ActiveIndex="_workbook.ActiveSheetIndex"
                             IsReadonly="@(Mode == SpreadsheetMode.Embedded)"
                             IsFormulaPointMode="@(_grid?.IsInFormulaPointMode == true)"
@@ -158,13 +285,100 @@
                             OnDeleteSheetRequested="DeleteSheet"
                             OnRenameSheetRequested="RenameSheet" />
 
-    <TmSpreadsheetStatusBar Aggregation="StatusAggregation"
-                            Zoom="Zoom"
-                            OnZoomChanged="OnZoomChanged" />
+    @if (IsMobileLayout)
+    {
+        @* The phone chrome has no status bar: the zoom controls AND the aggregations move into the
+           action bar's "More" menu (see BuildMobileActions). *@
+        @if (Mode == SpreadsheetMode.Full)
+        {
+            @* An EMBEDDED (read-only) spreadsheet at phone width is viewing only: no action bar. *@
+            <TmMobileActionBar Items="BuildMobileActions()"
+                               LayoutMode="TmLayoutMode.Mobile"
+                               MaxVisible="3"
+                               AriaLabel="@Loc["TmSpreadsheet_Mobile_AriaLabel"]"
+                               Class="@MobileBarClass" />
+        }
+    }
+    else
+    {
+        <TmSpreadsheetStatusBar Aggregation="StatusAggregation"
+                                Zoom="Zoom"
+                                OnZoomChanged="OnZoomChanged" />
+    }
 
+        </LayoutContent>
+    </TmLayoutObserver>
+
+    @* The two context menus are SIBLINGS of the layout container for the same reason the dialogs are: their
+       surface is position:fixed, and the container's `container-type: inline-size` implies `contain: layout`,
+       which would make it the containing block of that surface (the menu would be positioned against the
+       card instead of the viewport). The phone chrome renders them as the core TmDrawer sheet with real
+       role=menuitem buttons; the desktop/tablet chrome as the anchored menu at the gesture's client point. *@
+    @if (_gridContextMenu is { } gridRequest)
+    {
+        <TmSpreadsheetContextMenu Request="gridRequest"
+                                  Items="GridContextMenuItems"
+                                  Title="@Loc["TmSpreadsheet_CellMenu"]"
+                                  IsMobile="IsMobileLayout"
+                                  OnSelect="OnGridContextMenuSelect"
+                                  OnClose="CloseGridContextMenu" />
+    }
+
+    @if (_showResizeDialog)
+    {
+        @* Host-owned resize dialog: a TmModal surface (position: fixed) must be a SIBLING of the layout
+           container, exactly like the other dialogs. It edits the MODEL size and applies through the same
+           resize path the canvas drag uses. *@
+        <TmModal Show="true"
+                 Title="@ResizeDialogTitle"
+                 Size="ModalSize.Small"
+                 MobilePresentation="MobilePresentation.Auto"
+                 FooterLayout="FooterLayout.Inline"
+                 CloseOnEscape="true"
+                 CloseOnOverlayClick="true"
+                 InitialFocusTargetId="@ResizeInputDomId"
+                 RestoreFocusTargetId="@GridRootDomId"
+                 Class="tm-spreadsheet-resize-dialog"
+                 OnClose="CloseResizeDialog">
+            <ChildContent>
+                <input class="tm-spreadsheet-resize-dialog__input"
+                       id="@ResizeInputDomId"
+                       type="number"
+                       min="@(_resizeTarget == SpreadsheetResizeTarget.Column ? 16 : 8)"
+                       max="@(_resizeTarget == SpreadsheetResizeTarget.Column ? 1000 : 500)"
+                       aria-label="@ResizeDialogTitle"
+                       value="@_resizeInputValue"
+                       @oninput="e => _resizeInputValue = e.Value?.ToString() ?? _resizeInputValue"
+                       @onkeydown="OnResizeInputKeyDownAsync" />
+            </ChildContent>
+            <Footer>
+                <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                        @onclick="CloseResizeDialog">@Loc["Tm_Cancel"]</button>
+                <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                        @onclick="ApplyResizeDialogAsync">@Loc["Tm_Apply"]</button>
+            </Footer>
+        </TmModal>
+    }
+
+    @if (_sheetTabContextMenu is { } tabRequest)
+    {
+        <TmSpreadsheetContextMenu Request="tabRequest"
+                                  Items="SheetTabContextMenuItems"
+                                  Title="@Loc["TmSpreadsheet_SheetMenu"]"
+                                  IsMobile="IsMobileLayout"
+                                  Class="tm-spreadsheet-sheet-tabs__context-menu"
+                                  OnSelect="OnSheetTabContextMenuSelect"
+                                  OnClose="CloseSheetTabContextMenu" />
+    }
+
+    @* Every overlay/dialog is a SIBLING of the layout container: `container-type: inline-size` on the
+       container is `contain: layout`, which would make it the containing block of the dialogs'
+       position:fixed surfaces and trap them inside the card. They read the resolved layout from
+       DialogLayout (a field), never from the cascade. *@
     @if (_showFindReplace)
     {
-        <TmSpreadsheetFindReplaceDialog InitialOptions="_searchOptions"
+        <TmSpreadsheetFindReplaceDialog LayoutMode="@DialogLayout"
+                                        InitialOptions="_searchOptions"
                                         MatchIndex="SearchMatchIndex"
                                         MatchCount="SearchMatchCount"
                                         OnSearchRequested="OnSearchRequested"
@@ -179,47 +393,43 @@
     {
         <TmSpreadsheetHyperlinkDialog Workbook="_workbook"
                                       Hyperlink="_editHyperlink"
+                                      RestoreFocusTargetId="@GridRootDomId"
                                       OnSave="OnHyperlinkSave"
-                                      OnCancel="() => _showHyperlinkDialog = false" />
+                                      OnCancel="CloseHyperlinkDialog" />
     }
 
     @if (_showNameManagerDialog)
     {
         <TmSpreadsheetNameManagerDialog Workbook="_workbook"
+                                        RestoreFocusTargetId="@GridRootDomId"
                                         OnNew="OnNameManagerNew"
                                         OnEdit="OnNameManagerEdit"
                                         OnDelete="OnNameManagerDelete"
-                                        OnClose="() => _showNameManagerDialog = false" />
+                                        OnClose="CloseNameManagerDialog" />
     }
 
     @if (_showNamedRangeEditDialog)
     {
+        @* Opened from the Name Manager, which stays open underneath: the editor restores the focus to
+           its OPENER inside the manager (the frame's default), never to the grid behind two inert
+           surfaces. When the manager closes, ITS restore target is the grid. *@
         <TmSpreadsheetNamedRangeEditDialog Workbook="_workbook"
                                            Range="_editNamedRange"
                                            OnSave="OnNamedRangeEditSave"
-                                           OnCancel="() => _showNamedRangeEditDialog = false" />
+                                           OnCancel="CloseNamedRangeEditDialog" />
     }
 
     @if (_showInsertImageDialog)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="() => _showInsertImageDialog = false">
-            <div class="tm-spreadsheet-dialog" @onclick:stopPropagation>
-                <h3 class="tm-spreadsheet-dialog__title">@Loc["TmSpreadsheet_InsertImage"]</h3>
-                <div class="tm-spreadsheet-dialog__body">
-                    <label class="tm-spreadsheet-dialog__label">@Loc["TmSpreadsheet_ImageUrl"]</label>
-                    <input class="tm-spreadsheet-dialog__input" value="@_insertImageUrl" @oninput="OnImageUrlInput" placeholder="https://..." />
-                </div>
-                <div class="tm-spreadsheet-dialog__actions">
-                    <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _showInsertImageDialog = false">@Loc["Tm_Cancel"]</TmButton>
-                    <TmButton OnClick="ApplyInsertImage">@Loc["Tm_Apply"]</TmButton>
-                </div>
-            </div>
-        </div>
+        <TmSpreadsheetInsertImageDialog RestoreFocusTargetId="@GridRootDomId"
+                                        OnApply="ApplyInsertImage"
+                                        OnCancel="CloseInsertImageDialog" />
     }
 
     @if (_showFormatCellsDialog)
     {
         <TmSpreadsheetFormatCellsDialog Style="_formatCellsStyle"
+                                        RestoreFocusTargetId="@GridRootDomId"
                                         OnApply="OnFormatCellsApply"
                                         OnClose="() => _showFormatCellsDialog = false" />
     }
@@ -230,6 +440,7 @@
             Sheet="_workbook.ActiveSheet"
             Filter="filterDef"
             ColumnIndex="filterCol"
+            LayoutMode="@DialogLayout"
             X="_filterDropdownX"
             Y="_filterDropdownY"
             OnSortAscending="SortColumnAscending"
@@ -243,6 +454,7 @@
     {
         <TmSpreadsheetCustomFilterDialog ColumnIndex="customCol"
                                          Kind="_customFilterKind"
+                                         RestoreFocusTargetId="@GridRootDomId"
                                          OnApply="ApplyColumnFilter"
                                          OnClose="() => _showCustomFilterDialog = false" />
     }
@@ -250,6 +462,7 @@
     @if (_showSortDialog && _sortDialogRange is { } sortRange)
     {
         <TmSpreadsheetSortDialog Range="sortRange"
+                                 RestoreFocusTargetId="@GridRootDomId"
                                  OnApply="ApplySortSpec"
                                  OnClose="() => _showSortDialog = false" />
     }
@@ -258,6 +471,7 @@
     {
         <TmSpreadsheetRemoveDuplicatesDialog Range="dedupRange"
                                              HeaderLabels="_dedupHeaderLabels"
+                                             RestoreFocusTargetId="@GridRootDomId"
                                              OnApply="ApplyRemoveDuplicates"
                                              OnClose="() => _showRemoveDuplicatesDialog = false" />
     }
@@ -265,26 +479,29 @@
     @if (_showTextToColumnsDialog)
     {
         <TmSpreadsheetTextToColumnsDialog SourceRows="_t2cSourceRows"
+                                          RestoreFocusTargetId="@GridRootDomId"
                                           OnApply="ApplyTextToColumns"
                                           OnClose="() => _showTextToColumnsDialog = false" />
     }
 
     @if (_showPasteSpecialDialog)
     {
-        <TmSpreadsheetSpecialPasteDialog OnApply="ApplyPasteSpecial"
+        <TmSpreadsheetSpecialPasteDialog RestoreFocusTargetId="@GridRootDomId"
+                                         OnApply="ApplyPasteSpecial"
                                          OnClose="() => _showPasteSpecialDialog = false" />
     }
 
     @if (_showValidationDialog && _pendingValidation is not null)
     {
         <TmSpreadsheetDataValidationDialog Validation="_pendingValidation"
+                                           RestoreFocusTargetId="@GridRootDomId"
                                            OnSave="ApplyDataValidation"
                                            OnClose="CloseValidationDialog" />
     }
 
     @if (_showValidationDropdown)
     {
-        <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-dialog-backdrop--transparent" @onclick="CloseValidationDropdown">
+        <div class="tm-spreadsheet-popup-backdrop" @onclick="CloseValidationDropdown">
             <div class="tm-spreadsheet-vd" style="left: @(_validationDropdownX)px; top: @(_validationDropdownY)px;" @onclick:stopPropagation>
                 @foreach (var item in _validationDropdownItems)
                 {
@@ -297,40 +514,40 @@
         </div>
     }
 
+    @* Both validation alerts are the shared TmSpreadsheetValidationAlert on the core TmModal frame.
+       The severity drives the icon, the default words and the exit paths: Stop is a hard block (only
+       its acknowledge action or Escape dismisses it, a backdrop click does nothing), Warning and
+       Information offer "Cancel" plus "use the value anyway" and also close on a backdrop click. The
+       alertdialog contract (role, aria-modal, name + description, initial focus, Escape, focus
+       restore) is the frame's. *@
     @if (_showValidationError)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="DismissValidationError">
-            <div class="tm-spreadsheet-alert" @onclick:stopPropagation>
-                <h4 class="tm-spreadsheet-alert__title">@_validationErrorTitle</h4>
-                <p class="tm-spreadsheet-alert__message">@_validationErrorMessage</p>
-                <div class="tm-spreadsheet-alert__actions">
-                    <TmButton OnClick="DismissValidationError">@Loc["Tm_Confirm"]</TmButton>
-                </div>
-            </div>
-        </div>
+        <TmSpreadsheetValidationAlert Title="@_validationErrorTitle"
+                                      Message="@_validationErrorMessage"
+                                      Severity="@_validationErrorStyle"
+                                      RestoreFocusTargetId="@GridRootDomId"
+                                      OnPrimary="DismissValidationError" />
     }
 
     @if (_showValidationConfirm)
     {
-        <div class="tm-spreadsheet-dialog-backdrop" @onclick="DismissValidationConfirm">
-            <div class="tm-spreadsheet-alert" @onclick:stopPropagation>
-                <h4 class="tm-spreadsheet-alert__title">@_validationConfirmTitle</h4>
-                <p class="tm-spreadsheet-alert__message">@_validationConfirmMessage</p>
-                <div class="tm-spreadsheet-alert__actions">
-                    <TmButton Variant="ButtonVariant.Secondary" OnClick="DismissValidationConfirm">@Loc["Tm_Cancel"]</TmButton>
-                    <TmButton OnClick="ConfirmValidationWarning">@Loc["Tm_Yes"]</TmButton>
-                </div>
-            </div>
-        </div>
+        <TmSpreadsheetValidationAlert Title="@_validationConfirmTitle"
+                                      Message="@_validationConfirmMessage"
+                                      Severity="@_validationConfirmStyle"
+                                      RestoreFocusTargetId="@GridRootDomId"
+                                      OnPrimary="ConfirmValidationWarning"
+                                      OnCancel="DismissValidationConfirm" />
     }
 
     @if (_dataToolMessage is not null)
     {
         <div class="tm-spreadsheet__datatool-toast" role="status">
+            <span class="tm-spreadsheet__datatool-toast-icon"><TmIcon Name="check-circle" Size="IconSize.Sm" /></span>
             <span>@_dataToolMessage</span>
             <button type="button" class="tm-spreadsheet__datatool-toast-close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="DismissDataToolMessage">
                 <TmIcon Name="close" />
             </button>
         </div>
-    }
+    
+}
 </div>

@@ -163,4 +163,109 @@ public class TmSpreadsheetSheetTabsTests : LocalizationTestBase
         received!.Value.Index.Should().Be(0);
         received!.Value.NewName.Should().Be("NewName");
     }
+
+    // ── Phase 5: tab close buttons, underline and overflow arrows ──
+
+    [Fact]
+    public void SheetTabs_ShowCloseButtonsFalse_HidesX_DeleteViaContextMenu()
+    {
+        var sheets = new List<SpreadsheetSheet>
+        {
+            new() { Name = "Sheet1" },
+            new() { Name = "Sheet2" },
+        };
+        int? deleted = null;
+
+        var cut = Render<TmSpreadsheetSheetTabs>(parameters => parameters
+            .Add(p => p.Sheets, sheets)
+            .Add(p => p.ActiveIndex, 0)
+            .Add(p => p.ShowTabCloseButtons, false)
+            .Add(p => p.OnDeleteSheetRequested, EventCallback.Factory.Create<int>(this, i => deleted = i)));
+
+        cut.FindAll(".tm-spreadsheet-sheet-tab__close").Should().BeEmpty(
+            "the host asked for the clean tab look (close lives in the context menu)");
+
+        cut.FindAll(".tm-spreadsheet-sheet-tab")[1].ContextMenu();
+        cut.FindAll(".tm-spreadsheet-sheet-tabs__context-item")
+            .First(i => i.TextContent.Contains("Delete"))
+            .Click();
+
+        deleted.Should().Be(1, "deleting from the context menu must keep working without the X buttons");
+    }
+
+    [Fact]
+    public void SheetTabs_ShowCloseButtons_DefaultsToTrue()
+    {
+        var sheets = new List<SpreadsheetSheet>
+        {
+            new() { Name = "Sheet1" },
+            new() { Name = "Sheet2" },
+        };
+
+        var cut = Render<TmSpreadsheetSheetTabs>(parameters => parameters
+            .Add(p => p.Sheets, sheets)
+            .Add(p => p.ActiveIndex, 0));
+
+        cut.FindAll(".tm-spreadsheet-sheet-tab__close").Count.Should().Be(2);
+    }
+
+    [Fact]
+    public void SheetTabs_ActiveTab_CarriesTheUnderlineContract()
+    {
+        var sheets = new List<SpreadsheetSheet>
+        {
+            new() { Name = "Sheet1" },
+            new() { Name = "Sheet2" },
+        };
+
+        var cut = Render<TmSpreadsheetSheetTabs>(parameters => parameters
+            .Add(p => p.Sheets, sheets)
+            .Add(p => p.ActiveIndex, 1));
+
+        var active = cut.FindAll(".tm-spreadsheet-sheet-tab")[1];
+        active.ClassList.Should().Contain("tm-spreadsheet-sheet-tab--active");
+        active.QuerySelector(".tm-spreadsheet-sheet-tab__label").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void SheetTabs_ScrollArrows_AppearOnOverflow_AndScrollTheStrip()
+    {
+        var sheets = Enumerable.Range(1, 12).Select(i => new SpreadsheetSheet { Name = $"Sheet{i}" }).ToList();
+
+        JSInterop.Setup<bool>("tmSpreadsheetSheetTabs.hasOverflow", _ => true).SetResult(true);
+        var scroll = JSInterop.SetupVoid("tmSpreadsheetSheetTabs.scrollTabs", _ => true);
+        scroll.SetVoidResult();
+
+        var cut = Render<TmSpreadsheetSheetTabs>(parameters => parameters
+            .Add(p => p.Sheets, sheets)
+            .Add(p => p.ActiveIndex, 0));
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-spreadsheet-sheet-tabs__scroll-button").Count.Should().Be(2));
+
+        var next = cut.FindAll(".tm-spreadsheet-sheet-tabs__scroll-button")
+            .First(b => b.GetAttribute("data-direction") == "right");
+        next.GetAttribute("aria-label").Should().Be("Scroll sheets right");
+        next.Click();
+
+        cut.WaitForAssertion(() => scroll.Invocations.Count.Should().BeGreaterThan(0));
+    }
+
+    [Fact]
+    public void SheetTabs_ScrollArrows_HiddenWithoutOverflow()
+    {
+        var sheets = new List<SpreadsheetSheet>
+        {
+            new() { Name = "Sheet1" },
+            new() { Name = "Sheet2" },
+        };
+
+        JSInterop.Setup<bool>("tmSpreadsheetSheetTabs.hasOverflow", _ => true).SetResult(false);
+
+        var cut = Render<TmSpreadsheetSheetTabs>(parameters => parameters
+            .Add(p => p.Sheets, sheets)
+            .Add(p => p.ActiveIndex, 0));
+
+        cut.FindAll(".tm-spreadsheet-sheet-tabs__scroll-button").Should().BeEmpty();
+    }
 }

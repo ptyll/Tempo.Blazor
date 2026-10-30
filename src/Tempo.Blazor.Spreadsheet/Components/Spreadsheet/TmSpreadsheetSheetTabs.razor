@@ -2,7 +2,31 @@
 @using Tempo.Blazor.Components.Spreadsheet.Models
 
 <div class="tm-spreadsheet-sheet-tabs">
-    <div class="tm-spreadsheet-sheet-tabs__scroll">
+    @if (_hasOverflow)
+    {
+        @* Scroll arrows, only when the strip actually overflows (SP: the reference draws the ‹ at the
+           left edge; the pair keeps every sheet reachable without a horizontal swipe). They sit OUTSIDE
+           the scroller so revealing them cannot change what counts as overflow. *@
+        <div class="tm-spreadsheet-sheet-tabs__nav">
+            <button type="button"
+                    class="tm-spreadsheet-sheet-tabs__scroll-button"
+                    data-direction="left"
+                    title="@Loc["TmSpreadsheet_ScrollSheetsLeft"]"
+                    aria-label="@Loc["TmSpreadsheet_ScrollSheetsLeft"]"
+                    @onclick='() => ScrollTabsAsync("left")'>
+                <TmIcon Name="chevron-left" />
+            </button>
+            <button type="button"
+                    class="tm-spreadsheet-sheet-tabs__scroll-button"
+                    data-direction="right"
+                    title="@Loc["TmSpreadsheet_ScrollSheetsRight"]"
+                    aria-label="@Loc["TmSpreadsheet_ScrollSheetsRight"]"
+                    @onclick='() => ScrollTabsAsync("right")'>
+                <TmIcon Name="chevron-right" />
+            </button>
+        </div>
+    }
+    <div class="tm-spreadsheet-sheet-tabs__scroll" @ref="_scrollRef">
         @for (int i = 0; i < Sheets.Count; i++)
         {
             var index = i;
@@ -26,7 +50,7 @@
                 {
                     <span class="tm-spreadsheet-sheet-tab__label">@sheet.Name</span>
                 }
-                @if (!IsReadonly && Sheets.Count > 1)
+                @if (ShowTabCloseButtons && !IsReadonly && Sheets.Count > 1)
                 {
                     <button class="tm-spreadsheet-sheet-tab__close"
                             title="@Loc["TmSpreadsheet_DeleteSheet"]"

@@ -1,5 +1,7 @@
 @page "/spreadsheet"
 @inject IJSRuntime JS
+@inject ITmLocalizer Loc
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Spreadsheet
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 @using Tempo.Blazor.Components.Spreadsheet.Models
@@ -22,6 +24,77 @@
         <TmSpreadsheet @ref="_canvasSpreadsheet"
                        RowsCount="1000"
                        ColumnsCount="120"
+                       Height="500px" />
+    </div>
+</section>
+
+<!-- Document header (opt-in) + the grouped ribbon -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Document Header &amp; Ribbon</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Ribbon v2</span>
+    </div>
+
+    <div class="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl mb-4">
+        <p class="text-sm text-primary-800 dark:text-primary-200">
+            <code>ShowHeader</code> (default <code>false</code>) renders the document header: the title, the
+            <code>HeaderStart</code> / <code>HeaderActions</code> slots, the built-in Open / Download actions
+            (only for a host that listens to <code>OnOpen</code> / <code>OnDownload</code>) and the
+            &bdquo;Show grid lines&ldquo; switch. While it is on, the toolbar's legacy <code>File</code> tab is gone —
+            the header owns the file actions. The ribbon groups (Clipboard, Font with the cell-border picker,
+            Alignment, Number, Cells and Insert for Home; Insert for the Insert tab; Data; View) carry visible
+            labels and large or small commands; every mark is an icon.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-header-demo">
+        <TmSpreadsheet @ref="_headerSpreadsheet"
+                       ShowHeader="true"
+                       Title="Projekt Aurora"
+                       OnOpen="OnHeaderOpen"
+                       OnDownload="OnHeaderDownload"
+                       RowsCount="24"
+                       ColumnsCount="10"
+                       Height="520px">
+            <HeaderStart>
+                <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs text-slate-600 dark:text-slate-300"
+                      data-testid="spreadsheet-header-doc-switcher">
+                    Rozpočet <span aria-hidden="true">▾</span>
+                </span>
+            </HeaderStart>
+            <HeaderActions>
+                <TmButton Variant="ButtonVariant.Outline" Size="ButtonSize.Sm">Sdílet</TmButton>
+            </HeaderActions>
+        </TmSpreadsheet>
+    </div>
+    @if (_headerStatus is not null)
+    {
+        <p class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="spreadsheet-header-status">@_headerStatus</p>
+    }
+</section>
+
+<!-- Dialogs on the shared frame (redesign phase 3) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Dialogs</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Core TmModal</span>
+    </div>
+
+    <div class="p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl mb-4">
+        <p class="text-sm text-sky-800 dark:text-sky-200">
+            Every dialog of the grid rides the core <code>TmModal</code>: Sort, Custom filter, Remove duplicates,
+            Paste special and Text to columns (Data tab), Insert link and Insert image (Insert tab),
+            Format Cells (cell context menu), Name Manager, Data validation and the validation alerts.
+            Each one traps the focus, closes on Escape and returns focus to the grid. On a narrow
+            container the short forms present as a bottom sheet and Format Cells, Text to Columns and the
+            Name Manager take the whole viewport. Find &amp; Replace (Ctrl+F) stays a non-modal panel so the
+            highlighted matches stay visible.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmSpreadsheet RowsCount="30"
+                       ColumnsCount="12"
                        Height="500px" />
     </div>
 </section>
@@ -140,13 +213,130 @@
     </div>
 </section>
 
+<!-- Grid density (SP1) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Grid Density</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Touch Comfort</span>
+    </div>
+
+    <div class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl mb-4">
+        <p class="text-sm text-amber-800 dark:text-amber-200">
+            <code>Density</code> scales what the canvas RENDERS — rows, cell text, the fill handle and the header
+            filter buttons. The workbook model (row heights, XLSX dimensions) is untouched.
+            <code>Auto</code> (the default) picks Comfortable on a touch screen and Compact elsewhere.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-density-compact">
+            <TmSpreadsheet Density="SpreadsheetDensity.Compact"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="430px" />
+        </div>
+        <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-density-comfortable">
+            <TmSpreadsheet Density="SpreadsheetDensity.Comfortable"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="430px" />
+        </div>
+    </div>
+
+    @* A live switch: the parameter is a plain [Parameter], so re-render with a new value repaints the
+       canvas (rows, cell text, gutters, fill handle) without touching the workbook model. *@
+    <div class="showcase-card mt-4" data-testid="spreadsheet-density-switch">
+        <div class="max-w-xs">
+            <TmSelect TValue="SpreadsheetDensity"
+                      Label="@Loc["TmSpreadsheetDemo_DensitySwitch"]"
+                      Options="_densityOptions"
+                      @bind-Value="_density" />
+        </div>
+        <div class="showcase-card p-0 overflow-hidden mt-4" data-testid="spreadsheet-density-live">
+            <TmSpreadsheet Density="_density"
+                           RowsCount="20"
+                           ColumnsCount="12"
+                           Height="360px" />
+        </div>
+    </div>
+</section>
+
+<!-- Responsive chrome (redesign phase 6): the mode follows the CONTAINER, never the viewport -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Responsive Chrome</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Container queries</span>
+    </div>
+
+    <div class="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl mb-4">
+        <p class="text-sm text-emerald-800 dark:text-emerald-200">
+            The layout comes from the width of the spreadsheet's OWN container (<code>container-type: inline-size</code>
+            plus the core <code>TmLayoutObserver</code>), never from the viewport — a phone-width block inside this
+            wide page is a phone. The two boxes below are 420px and 760px wide inside a 1440px page:
+            <code>LayoutMode="Auto"</code> renders the mobile chrome in the first one and the tablet chrome in the
+            second. <code>LayoutMode</code> pins a mode for a host that already knows its surface, and the desktop
+            chrome is unchanged (the tab strip of phase 5).
+        </p>
+    </div>
+
+    <div class="flex flex-wrap items-start gap-4">
+        <div style="width: 420px" data-testid="spreadsheet-responsive-mobile">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="8" />
+        </div>
+        <div style="width: 760px" data-testid="spreadsheet-responsive-tablet">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="10" />
+        </div>
+        <div style="width: 420px" data-testid="spreadsheet-responsive-pinned">
+            <TmSpreadsheet RowsCount="20" ColumnsCount="8" LayoutMode="TmLayoutMode.Desktop" />
+        </div>
+    </div>
+</section>
+
+<!-- Embedded mode: the flat chrome (Notion block / modal host) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Embedded Mode</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full">Flat chrome</span>
+    </div>
+
+    <div class="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl mb-4">
+        <p class="text-sm text-slate-700 dark:text-slate-300">
+            <code>Mode="SpreadsheetMode.Embedded"</code> keeps the grid flat — no ribbon, no formula bar, no card
+            chrome (<code>tm-spreadsheet--chrome-flat</code>) — for a Notion block or a modal host.
+        </p>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden" data-testid="spreadsheet-embedded">
+        <TmSpreadsheet Mode="SpreadsheetMode.Embedded"
+                       RowsCount="12"
+                       ColumnsCount="8"
+                       Height="260px" />
+    </div>
+</section>
+
 @code {
     private TmSpreadsheet _basicSpreadsheet = null!;
     private TmSpreadsheet _formulaSpreadsheet = null!;
     private TmSpreadsheet _xlsxSpreadsheet = null!;
     private TmSpreadsheet _canvasSpreadsheet = null!;
+    private TmSpreadsheet _headerSpreadsheet = null!;
     private SpreadsheetChangeEventArgs? _lastChange;
     private string? _importStatus;
+    private string? _headerStatus;
+    private SpreadsheetDensity _density = SpreadsheetDensity.Comfortable;
+    private IReadOnlyList<SelectOption<SpreadsheetDensity>> _densityOptions = [];
+
+    protected override void OnInitialized()
+    {
+        // Localized enum labels, the same pattern the DataTable demo uses for its switches.
+        _densityOptions = Enum.GetValues<SpreadsheetDensity>()
+            .Select(value => new SelectOption<SpreadsheetDensity>
+            {
+                Value = value,
+                Label = Loc[$"TmSpreadsheetDemo_Enum_SpreadsheetDensity_{value}"],
+            })
+            .ToList();
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -159,6 +349,12 @@
             _canvasSpreadsheet.SetCellValue("B2", "Formula/editor hot path");
         }
     }
+
+    private void OnHeaderOpen(SpreadsheetOpenEventArgs args)
+        => _headerStatus = $"Opened {args.FileName ?? "workbook"}";
+
+    private void OnHeaderDownload(SpreadsheetDownloadEventArgs args)
+        => _headerStatus = $"Downloaded {args.FileName ?? "workbook"}";
 
     private async Task InitializeFormulaSheetAsync()
     {

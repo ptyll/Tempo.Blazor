@@ -14,8 +14,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // A stable instance, not a positional one: the demo page order is not a selector contract.
+        var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
         await grid.ClickAsync();
 
         var before = await grid.EvaluateAsync<double>("el => el.scrollTop");
@@ -40,8 +41,9 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // A stable instance, not a positional one: the demo page order is not a selector contract.
+        var grid = page.Locator("[data-testid='spreadsheet-demo'] .tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
         await grid.ClickAsync();
 
         var before = await grid.EvaluateAsync<double>("el => el.scrollLeft");
@@ -100,28 +102,28 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task DomRenderer_RemainsFunctionalAsFallback()
+    public async Task CanvasRenderer_IsTheOnlyGrid_AndArrowKeysMoveTheActiveCell()
     {
+        // The legacy DOM grid renderer is gone (TmSpreadsheetTests.Render_DoesNotRenderDomGrid pins that
+        // in bUnit); this spec used to click a DOM cell that no longer exists. It now guards the canvas
+        // contract that replaced it: one grid root, and the keyboard moves its active cell.
         var page = await CreatePageAsync();
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
-        var grid = page.Locator(".tm-spreadsheet-grid").Nth(2);
-        await grid.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        var a1 = grid.Locator("[title='A1']").First;
-        await a1.ClickAsync();
-        await grid.Locator("[title='A1'].tm-spreadsheet-cell--active").WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 10000
-        });
-        await page.Keyboard.PressAsync("ArrowRight");
+        var component = page.Locator("[data-testid='spreadsheet-demo']");
+        var grid = component.Locator(".tm-spreadsheet-canvas-grid");
+        await WaitForCanvasGridReadyAsync(page, grid);
+        await grid.ClickAsync();
 
-        await grid.Locator("[title='B1'].tm-spreadsheet-cell--active").WaitForAsync(new LocatorWaitForOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 10000
-        });
+        Assert.AreEqual(0, await component.Locator(".tm-spreadsheet-grid:not(.tm-spreadsheet-canvas-grid)").CountAsync(),
+            "the DOM renderer is gone: the canvas grid is the only grid");
+
+        var before = await GetCanvasActiveRefAsync(grid);
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.WaitForTimeoutAsync(300);
+        var after = await GetCanvasActiveRefAsync(grid);
+        Assert.AreNotEqual(before, after, "ArrowRight moves the canvas active cell");
     }
 
     [TestMethod]
@@ -2909,8 +2911,14 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(result.KeyboardLogicalScrolls > 0, $"Expected keyboard path to use logical scroll. Count: {result.KeyboardLogicalScrolls}.");
     }
 
+    /// <summary>
+    /// An ArrowDown inside the viewport repaints the selection layer AND the two header strips the
+    /// active-row/column highlight moved off and onto — and nothing else (no content repaint). The
+    /// pre-phase-2 assertion was "header layer is never touched", which the header highlight
+    /// deliberately invalidates: the old expectation would have guarded the old behaviour.
+    /// </summary>
     [TestMethod]
-    public async Task CanvasRenderer_ArrowDownInViewportPaintsOnlySelectionLayer()
+    public async Task CanvasRenderer_ArrowDownInViewportPaintsSelectionAndOneHeaderStrip()
     {
         var page = await CreatePageAsync();
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
@@ -2948,7 +2956,8 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.AreEqual(1, result.PaintFrames, $"Expected one local paint frame. Frames: {result.PaintFrames}.");
         Assert.AreEqual(0, result.ContentPaintFrames, $"ArrowDown inside viewport should not paint content. Frames: {result.ContentPaintFrames}.");
         Assert.AreEqual(0, result.ContentLayerPaints, $"ArrowDown inside viewport should not touch the content layer. Paints: {result.ContentLayerPaints}.");
-        Assert.AreEqual(0, result.HeaderLayerPaints, $"ArrowDown inside viewport should not touch the header layer. Paints: {result.HeaderLayerPaints}.");
+        Assert.AreEqual(1, result.HeaderLayerPaints,
+            $"ArrowDown inside viewport repaints exactly one header-layer pass for the moved highlight strips. Paints: {result.HeaderLayerPaints}.");
         Assert.IsTrue(result.SelectionPaintFrames > 0, $"Expected selection paint frame. Frames: {result.SelectionPaintFrames}.");
         Assert.IsTrue(result.SelectionLayerPaints > 0, $"Expected selection layer paint. Paints: {result.SelectionLayerPaints}.");
         Assert.IsTrue(result.SelectionDirtyRects > 0, $"Expected selection dirty rects. Count: {result.SelectionDirtyRects}.");
@@ -5514,34 +5523,24 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
     }
 
+    /// <summary>
+    /// The centre of a cell in the grid element's own coordinate space, asked from the ENGINE
+    /// (<c>tmSpreadsheetCanvas.getCellCenter</c>) instead of being recomputed from model offsets and a
+    /// hardcoded 40/20 gutter. The engine subtracts the FRAME's header gutters — which the component
+    /// scales with the density (40/20 Compact, 56/28 Comfortable) — so a density change can never move
+    /// the cell centres out from under a spec again (the phase-2 learning).
+    /// </summary>
     private static async Task<CanvasCellPointResult> GetCanvasCellCenterAsync(ILocator grid, string cellRef)
     {
         var row = ParseRow(cellRef) - 1;
         var col = ParseColumn(cellRef) - 1;
         return await grid.EvaluateAsync<CanvasCellPointResult>(
             @"(el, args) => {
-                const row = Number(args?.row ?? 0);
-                const col = Number(args?.col ?? 0);
-                const key = `${row}:${col}`;
-                const state = el.__tmSpreadsheetCanvas;
-                const model = state?.model || {};
-                const cell = state?.sheetState?.cellStore?.cells?.get(key);
-                if (!cell) {
+                const engine = window.tmSpreadsheetCanvas;
+                if (!engine || typeof engine.getCellCenter !== 'function') {
                     return { x: -1, y: -1 };
                 }
-
-                const left = Number(cell.left ?? cell.Left ?? 0);
-                const top = Number(cell.top ?? cell.Top ?? 0);
-                const width = Number(cell.width ?? cell.Width ?? 0);
-                const height = Number(cell.height ?? cell.Height ?? 0);
-                const rowHeaderWidth = Number(model.rowHeaderWidth ?? model.RowHeaderWidth ?? 40);
-                const columnHeaderHeight = Number(model.columnHeaderHeight ?? model.ColumnHeaderHeight ?? 20);
-                const scrollLeft = Number(model.scrollLeft ?? model.ScrollLeft ?? 0);
-                const scrollTop = Number(model.scrollTop ?? model.ScrollTop ?? 0);
-                return {
-                    x: Math.round(rowHeaderWidth + left - scrollLeft + width / 2),
-                    y: Math.round(columnHeaderHeight + top - scrollTop + height / 2)
-                };
+                return engine.getCellCenter(el, Number(args?.row ?? 0), Number(args?.col ?? 0));
             }",
             new { row, col });
     }

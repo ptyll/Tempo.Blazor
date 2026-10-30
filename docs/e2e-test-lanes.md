@@ -129,10 +129,13 @@ JS engine unit tests run separately and are cheap enough for every commit:
   `node:vm` context).
 - `npm run test:wireframe` — `src/Tempo.Blazor.Wireframe/wwwroot/js` (`wireframe-designer.js` loaded in a
   `node:vm` context: export paint baking) plus `wireframe-gestures.mjs`.
+- `npm run test:spreadsheet` — `src/Tempo.Blazor.Spreadsheet/wwwroot/js` (`spreadsheet-canvas.js` loaded in
+  a `node:vm` context through `window.tmSpreadsheetCanvas._internals`: the token palette, the SP1 density
+  scales, the header-highlight ranges/strips and the alpha helper).
 - `npm run test:email-templates` — `tm-email-save-shortcut.js` (Ctrl/⌘+S guard).
 - `npm run test:pdf-viewer` — `pdf-viewer-size.mjs` and `pdf-viewer-render.mjs` (RenderTask bookkeeping).
 
-CI: `.github/workflows/js-node-tests.yml` runs all seven lanes (plus the document-editor bundle freshness check) on every push and pull request.
+CI: `.github/workflows/js-node-tests.yml` runs all eight lanes (plus the document-editor bundle freshness check) on every push and pull request.
 
 ## Baseline policy
 

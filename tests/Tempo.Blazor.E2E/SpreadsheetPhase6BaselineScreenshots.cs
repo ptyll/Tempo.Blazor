@@ -13,6 +13,9 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
     public async Task names_01_manager()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -33,6 +36,9 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
     public async Task names_02_namebox()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -52,6 +58,9 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
     public async Task hyperlink_01_dialog()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -72,6 +81,9 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
     public async Task hyperlink_02_incell()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
 
@@ -81,7 +93,7 @@ public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
         await page.ClickAsync(".tm-spreadsheet-toolbar__tab:text-is('Insert')");
         await page.ClickAsync("button[title='Insert link']");
         await page.WaitForSelectorAsync(".tm-spreadsheet-hyperlink", new() { State = WaitForSelectorState.Visible });
-        await page.SelectOptionAsync("#hl-type", "Web");
+        await page.Locator("#hl-type .tm-radio-segment").First.ClickAsync(); // Web page is the first segment
         await page.FillAsync("#hl-target", "https://example.com");
         await page.FillAsync("#hl-display", "Link");
         await page.ClickAsync(".tm-spreadsheet-hyperlink__btn--ok");

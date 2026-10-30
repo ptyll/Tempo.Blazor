@@ -1,12 +1,23 @@
 @namespace Tempo.Blazor.Components.Spreadsheet
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
-<div class="tm-spreadsheet-dialog-backdrop" @onclick="OnCancel">
-    <div class="tm-dvd" @onclick:stopPropagation @onkeydown="OnKeyDown">
-        <div class="tm-dvd__header">
-            <h3 class="tm-dvd__title">@Loc["TmSpreadsheet_Data_DataValidation"]</h3>
-        </div>
-
+@* Data Validation on the one core dialog frame (G6). TmModal owns the overlay, the dialog role, the
+   focus trap, Escape, the focus restore and the mobile sheet; the package owns the tabbed form.
+   The TITLE key has no trailing ellipsis — the "…" spelling belongs to the toolbar command.
+   Content follows the reference: a label | field form once the body is at least 640px wide, stacked
+   fields on a phone, and the core Tm inputs instead of raw selects/inputs. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_Validation_Title"]"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-dvd"
+         OnClose="OnCancel">
+    <ChildContent>
         <!-- Tab bar -->
         <div class="tm-dvd__tabs" role="tablist">
             <button class="tm-dvd__tab @(_activeTab == "Settings" ? "tm-dvd__tab--active" : "")"
@@ -29,110 +40,130 @@
             </button>
         </div>
 
-        <div class="tm-dvd__body">
+        <div class="tm-dvd__form">
             @if (_activeTab == "Settings")
             {
                 <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_AllowLabel"]</label>
-                    <select class="tm-dvd__select" value="@_validationType" @onchange="OnTypeChanged">
-                        @foreach (var t in _allTypes)
-                        {
-                            <option value="@t">@Loc[$"TmSpreadsheet_Validation_Type_{t}"]</option>
-                        }
-                    </select>
+                    <label class="tm-dvd__label" for="@TypeSelectDomId">@Loc["TmSpreadsheet_Validation_AllowLabel"]</label>
+                    <TmSelect TValue="SpreadsheetValidationType"
+                              Id="@TypeSelectDomId"
+                              Class="tm-dvd__select"
+                              Value="_validationType"
+                              ValueChanged="OnTypeChanged"
+                              Options="TypeOptions" />
                 </div>
 
                 @if (_validationType != SpreadsheetValidationType.Any && _validationType != SpreadsheetValidationType.List && _validationType != SpreadsheetValidationType.Custom)
                 {
                     <div class="tm-dvd__field">
-                        <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_DataLabel"]</label>
-                        <select class="tm-dvd__select" value="@_operator" @onchange="OnOperatorChanged">
-                            @foreach (var op in _allOperators)
-                            {
-                                <option value="@op">@Loc[$"TmSpreadsheet_Validation_Op_{op}"]</option>
-                            }
-                        </select>
+                        <label class="tm-dvd__label" for="@OperatorSelectDomId">@Loc["TmSpreadsheet_Validation_DataLabel"]</label>
+                        <TmSelect TValue="SpreadsheetValidationOperator"
+                                  Id="@OperatorSelectDomId"
+                                  Class="tm-dvd__select"
+                                  Value="_operator"
+                                  ValueChanged="OnOperatorChanged"
+                                  Options="OperatorOptions" />
                     </div>
                 }
 
                 @if (_validationType != SpreadsheetValidationType.Any)
                 {
                     <div class="tm-dvd__field">
-                        <label class="tm-dvd__label">
+                        <label class="tm-dvd__label" for="@Formula1DomId">
                             @(_validationType == SpreadsheetValidationType.List
                                 ? Loc["TmSpreadsheet_Validation_SourceLabel"]
                                 : (_operator == SpreadsheetValidationOperator.Between || _operator == SpreadsheetValidationOperator.NotBetween
                                     ? Loc["TmSpreadsheet_Validation_MinimumLabel"]
                                     : Loc["TmSpreadsheet_Validation_ValueLabel"]))
                         </label>
-                        <input class="tm-dvd__input" type="text" @bind="_formula1" />
+                        <TmTextInput Id="@Formula1DomId"
+                                     Class="tm-dvd__input"
+                                     Value="@_formula1"
+                                     ValueChanged="value => _formula1 = value" />
                     </div>
 
                     @if (_operator == SpreadsheetValidationOperator.Between || _operator == SpreadsheetValidationOperator.NotBetween)
                     {
                         <div class="tm-dvd__field">
-                            <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_MaximumLabel"]</label>
-                            <input class="tm-dvd__input" type="text" @bind="_formula2" />
+                            <label class="tm-dvd__label" for="@Formula2DomId">@Loc["TmSpreadsheet_Validation_MaximumLabel"]</label>
+                            <TmTextInput Id="@Formula2DomId"
+                                         Class="tm-dvd__input"
+                                         Value="@_formula2"
+                                         ValueChanged="value => _formula2 = value" />
                         </div>
                     }
                 }
 
-                <div class="tm-dvd__checkbox">
-                    <input type="checkbox" id="tm-dvd-allow-blank" @bind="_allowBlank" />
-                    <label for="tm-dvd-allow-blank">@Loc["TmSpreadsheet_Validation_AllowBlank"]</label>
-                </div>
+                <div class="tm-dvd__checks">
+                    <TmCheckbox Class="tm-dvd__checkbox"
+                                Label="@Loc["TmSpreadsheet_Validation_AllowBlank"]"
+                                Value="@_allowBlank"
+                                ValueChanged="value => _allowBlank = value" />
 
-                @if (_validationType == SpreadsheetValidationType.List)
-                {
-                    <div class="tm-dvd__checkbox">
-                        <input type="checkbox" id="tm-dvd-show-dropdown" @bind="_showDropDown" />
-                        <label for="tm-dvd-show-dropdown">@Loc["TmSpreadsheet_Validation_ShowDropDown"]</label>
-                    </div>
-                }
+                    @if (_validationType == SpreadsheetValidationType.List)
+                    {
+                        <TmCheckbox Class="tm-dvd__checkbox"
+                                    Label="@Loc["TmSpreadsheet_Validation_ShowDropDown"]"
+                                    Value="@_showDropDown"
+                                    ValueChanged="value => _showDropDown = value" />
+                    }
+                </div>
             }
             else if (_activeTab == "InputMessage")
             {
-                <div class="tm-dvd__checkbox">
-                    <input type="checkbox" id="tm-dvd-show-input" @bind="_showInputMessage" />
-                    <label for="tm-dvd-show-input">@Loc["TmSpreadsheet_Validation_ShowInputMessage"]</label>
+                <div class="tm-dvd__checks">
+                    <TmCheckbox Class="tm-dvd__checkbox"
+                                Label="@Loc["TmSpreadsheet_Validation_ShowInputMessage"]"
+                                Value="@_showInputMessage"
+                                ValueChanged="value => _showInputMessage = value" />
                 </div>
                 <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_TitleLabel"]</label>
-                    <input class="tm-dvd__input" type="text" @bind="_inputTitle" />
+                    <label class="tm-dvd__label" for="@InputTitleDomId">@Loc["TmSpreadsheet_Validation_TitleLabel"]</label>
+                    <TmTextInput Id="@InputTitleDomId"
+                                 Class="tm-dvd__input"
+                                 Value="@_inputTitle"
+                                 ValueChanged="value => _inputTitle = value" />
                 </div>
-                <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_MessageLabel"]</label>
-                    <textarea class="tm-dvd__textarea" @bind="_inputMessage" rows="4"></textarea>
+                <div class="tm-dvd__field tm-dvd__field--multiline">
+                    <label class="tm-dvd__label" for="@InputMessageDomId">@Loc["TmSpreadsheet_Validation_MessageLabel"]</label>
+                    <textarea class="tm-dvd__textarea" id="@InputMessageDomId" @bind="_inputMessage" rows="4"></textarea>
                 </div>
             }
             else if (_activeTab == "ErrorAlert")
             {
-                <div class="tm-dvd__checkbox">
-                    <input type="checkbox" id="tm-dvd-show-error" @bind="_showErrorAlert" />
-                    <label for="tm-dvd-show-error">@Loc["TmSpreadsheet_Validation_ShowErrorAlert"]</label>
+                <div class="tm-dvd__checks">
+                    <TmCheckbox Class="tm-dvd__checkbox"
+                                Label="@Loc["TmSpreadsheet_Validation_ShowErrorAlert"]"
+                                Value="@_showErrorAlert"
+                                ValueChanged="value => _showErrorAlert = value" />
                 </div>
                 <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_StyleLabel"]</label>
-                    <select class="tm-dvd__select" value="@_errorStyle" @onchange="OnErrorStyleChanged">
-                        <option value="@SpreadsheetValidationErrorStyle.Stop">@Loc["TmSpreadsheet_Validation_Style_Stop"]</option>
-                        <option value="@SpreadsheetValidationErrorStyle.Warning">@Loc["TmSpreadsheet_Validation_Style_Warning"]</option>
-                        <option value="@SpreadsheetValidationErrorStyle.Information">@Loc["TmSpreadsheet_Validation_Style_Information"]</option>
-                    </select>
+                    <label class="tm-dvd__label" for="@ErrorStyleDomId">@Loc["TmSpreadsheet_Validation_StyleLabel"]</label>
+                    <TmSelect TValue="SpreadsheetValidationErrorStyle"
+                              Id="@ErrorStyleDomId"
+                              Class="tm-dvd__select"
+                              Value="_errorStyle"
+                              ValueChanged="OnErrorStyleChanged"
+                              Options="ErrorStyleOptions" />
                 </div>
                 <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_TitleLabel"]</label>
-                    <input class="tm-dvd__input" type="text" @bind="_errorTitle" />
+                    <label class="tm-dvd__label" for="@ErrorTitleDomId">@Loc["TmSpreadsheet_Validation_TitleLabel"]</label>
+                    <TmTextInput Id="@ErrorTitleDomId"
+                                 Class="tm-dvd__input"
+                                 Value="@_errorTitle"
+                                 ValueChanged="value => _errorTitle = value" />
                 </div>
-                <div class="tm-dvd__field">
-                    <label class="tm-dvd__label">@Loc["TmSpreadsheet_Validation_MessageLabel"]</label>
-                    <textarea class="tm-dvd__textarea" @bind="_errorMessage" rows="4"></textarea>
+                <div class="tm-dvd__field tm-dvd__field--multiline">
+                    <label class="tm-dvd__label" for="@ErrorMessageDomId">@Loc["TmSpreadsheet_Validation_MessageLabel"]</label>
+                    <textarea class="tm-dvd__textarea" id="@ErrorMessageDomId" @bind="_errorMessage" rows="4"></textarea>
                 </div>
             }
         </div>
-
+    </ChildContent>
+    <Footer>
         <div class="tm-dvd__actions">
-            <TmButton Variant="ButtonVariant.Secondary" OnClick="OnCancel">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnCancel">@Loc["Tm_Cancel"]</TmButton>
             <TmButton OnClick="OnApply">@Loc["Tm_Apply"]</TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>

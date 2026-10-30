@@ -1,0 +1,46 @@
+{
+  "itemName": "TmSpreadsheetInsertImageDialog",
+  "kind": "Component",
+  "category": "Spreadsheet",
+  "description": "The Insert Image dialog: one URL field plus a Cancel / Apply footer. It used to be inline markup inside TmSpreadsheet; it now rides the core TmModal frame, which owns the overlay, the dialog role, the initial focus on the URL field, the document-level Escape, the focus restore (to the grid) and the mobile sheet. The URL is validated with Uri.TryCreate and only an absolute http(s) address or a data: URI can be applied — Apply stays disabled and the field carries aria-invalid plus an inline alert until then. Enter applies from the field; applying raises the URL, which the spreadsheet writes to the active cell's ImageUrl (the canvas paints it).",
+  "packageId": "Tempo.Blazor.Spreadsheet",
+  "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
+  "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetInsertImageDialog.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
+  ],
+  "subcategory": "Dialogs",
+  "parameters": [
+    {
+      "name": "ImageUrl",
+      "type": "string",
+      "isRequired": false,
+      "description": "The URL the field starts with (an existing cell image, when the host edits one)."
+    },
+    {
+      "name": "OnApply",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the accepted image URL."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+    }
+  ]
+}

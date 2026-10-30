@@ -1,125 +1,67 @@
-.tm-spreadsheet-dedup__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, 0.32);
-}
-
-.tm-spreadsheet-dedup {
-    width: 440px;
-    max-width: calc(100vw - 32px);
-    background: var(--tm-color-surface, #fff);
-    border-radius: 10px;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
-    padding: 16px;
-    font-size: 13px;
-    color: var(--tm-color-text, #0f172a);
-}
-
-.tm-spreadsheet-dedup__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.tm-spreadsheet-dedup__title {
-    font-weight: 600;
-    font-size: 15px;
-}
-
-.tm-spreadsheet-dedup__close {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--tm-color-text-muted, #64748b);
-}
+/* Remove Duplicates CONTENT only — the card, overlay, header, footer bar and mobile presentation
+   belong to the core TmModal (redesign phase 3). */
 
 .tm-spreadsheet-dedup__hint {
-    margin: 0 0 12px;
-    color: var(--tm-color-text-muted, #64748b);
+    margin: 0 0 var(--tm-space-3);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-dedup__toolbar {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 10px;
+    gap: var(--tm-space-4);
+    margin-bottom: var(--tm-space-3);
+    flex-wrap: wrap;
 }
 
 .tm-spreadsheet-dedup__toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-dedup__select-actions {
     display: flex;
-    gap: 12px;
-    margin-bottom: 6px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--tm-space-3);
+    margin-bottom: var(--tm-space-2);
+}
+
+/* A neutral "Selected N of M" line: the count tells the user what the OK button will act on. */
+.tm-spreadsheet-dedup__count {
+    margin-inline-start: auto;
+    font-size: var(--tm-text-xs);
+    color: var(--tm-color-text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .tm-spreadsheet-dedup__link {
+    padding: 0;
     border: none;
     background: transparent;
-    padding: 0;
+    color: var(--tm-color-primary);
+    font-size: var(--tm-text-sm);
     cursor: pointer;
-    color: var(--tm-color-primary, #2563eb);
-    font-size: 12px;
-}
-
-.tm-spreadsheet-dedup__link:hover {
     text-decoration: underline;
 }
 
 .tm-spreadsheet-dedup__columns {
-    max-height: 260px;
-    overflow-y: auto;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 6px;
-    padding: 8px;
-    margin-bottom: 12px;
-}
-
-.tm-spreadsheet-dedup__column {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 4px;
-    cursor: pointer;
-    border-radius: 4px;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    max-height: 40vh;
+    overflow: auto;
 }
 
-.tm-spreadsheet-dedup__column:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+.tm-spreadsheet-dedup__columns ::deep .tm-spreadsheet-dedup__column {
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-dedup__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-}
-
-.tm-spreadsheet-dedup__btn {
-    padding: 7px 16px;
-    border-radius: 4px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    background: var(--tm-color-surface, #fff);
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.tm-spreadsheet-dedup__btn--ok {
-    background: var(--tm-color-primary, #2563eb);
-    border-color: var(--tm-color-primary, #2563eb);
-    color: #fff;
-}
-
-.tm-spreadsheet-dedup__btn--ok:disabled {
-    opacity: 0.5;
-    cursor: default;
+    gap: var(--tm-space-2);
 }

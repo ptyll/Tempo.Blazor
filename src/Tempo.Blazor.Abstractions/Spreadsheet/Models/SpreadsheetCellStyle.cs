@@ -67,6 +67,39 @@ public sealed class SpreadsheetCellStyle
     /// <summary>The border at the left edge of the cell.</summary>
     public SpreadsheetBorder BorderLeft { get; set; } = new();
 
+    /// <summary>
+    /// Copies every visual property of <paramref name="source"/> onto this style (the border objects are
+    /// copied, not shared). Used by the spreadsheet's Fill down / Fill right, which follows Excel and
+    /// copies the SOURCE cell's format into the filled cells, and by the style command so the copy is one
+    /// undoable step.
+    /// </summary>
+    /// <param name="source">The style to copy from.</param>
+    public void CopyFrom(SpreadsheetCellStyle source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        FontFamily = source.FontFamily;
+        FontSize = source.FontSize;
+        Bold = source.Bold;
+        Italic = source.Italic;
+        Underline = source.Underline;
+        DoubleUnderline = source.DoubleUnderline;
+        StrikeThrough = source.StrikeThrough;
+        Indent = source.Indent;
+        TextRotation = source.TextRotation;
+        ShrinkToFit = source.ShrinkToFit;
+        ForeColor = source.ForeColor;
+        BackgroundColor = source.BackgroundColor;
+        HorizontalAlign = source.HorizontalAlign;
+        VerticalAlign = source.VerticalAlign;
+        TextWrap = source.TextWrap;
+        NumberFormat = source.NumberFormat;
+        BorderTop = new SpreadsheetBorder(source.BorderTop.Style, source.BorderTop.Color);
+        BorderRight = new SpreadsheetBorder(source.BorderRight.Style, source.BorderRight.Color);
+        BorderBottom = new SpreadsheetBorder(source.BorderBottom.Style, source.BorderBottom.Color);
+        BorderLeft = new SpreadsheetBorder(source.BorderLeft.Style, source.BorderLeft.Color);
+    }
+
     /// <summary>Creates a deep copy of this style.</summary>
     public SpreadsheetCellStyle Clone() => new()
     {

@@ -121,6 +121,13 @@
   --tm-bg-surface-secondary:   var(--tm-color-gray-50);
   --tm-bg-muted:               var(--tm-color-gray-100);
   --tm-bg-overlay:             rgba(0, 0, 0, 0.5);
+  /* The scrim a SECOND, stacked modal paints (TmModal/TmDialog opened over another one). It is a
+     light share of the same scrim colour, not a second full one: without it the page behind two
+     dialogs reaches rgba(0,0,0,.75) (light) / .91 (dark) and reads almost black. It also gives the
+     lower dialog a depth cue — it stays visible, but clearly behind. A host that wants the old
+     behaviour overrides this one token with the full scrim:
+     `--tm-modal-stacked-scrim: var(--tm-bg-overlay);` (or `transparent` for none). */
+  --tm-modal-stacked-scrim:    color-mix(in srgb, var(--tm-bg-overlay) 40%, transparent);
 
   /* ── Border ─────────────────────────────────────────────────── */
   --tm-border-color:           var(--tm-color-gray-200);

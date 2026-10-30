@@ -1,15 +1,80 @@
+using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Models;
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 
 namespace Tempo.Blazor.Components.Spreadsheet;
 
 public partial class TmSpreadsheetFormatCellsDialog
 {
+    static TmSpreadsheetFormatCellsDialog() => SpreadsheetIcons.EnsureRegistered();
+
+
+    // Per-instance id suffix: the ids below are implementation detail, never a selector contract.
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private string CategoryLabelDomId => $"spreadsheet-fcd-category-label-{_idSuffix}";
+
     [Parameter, EditorRequired] public SpreadsheetCellStyle Style { get; set; } = new();
     [Parameter, EditorRequired] public EventCallback<SpreadsheetCellStyle> OnApply { get; set; }
     [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope (a
+    /// fullscreen panel on the narrow one); a forced value pins the mode without measuring, so a test
+    /// can render that presentation without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the dialog presents the category as a select above the options (the phone layout). A
+    /// forced <see cref="LayoutMode"/> wins; <see cref="TmLayoutMode.Auto"/> reads the viewport scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
+    /// <summary>The category choices as core select options (labels localized per language).</summary>
+    private IReadOnlyList<SelectOption<string>> CategoryOptions =>
+        _numberCategories.Select(c => new SelectOption<string>(c, Loc[$"TmSpreadsheet_NumCat_{c}"])).ToList();
+
+    private void OnCategorySelected(string? category)
+    {
+        if (string.IsNullOrEmpty(category) || string.Equals(category, _selectedCategory, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _selectedCategory = category;
+        // The phone reaches the category through this select (the desktop/tablet listbox calls
+        // OnCategoryClick); both paths must refresh the working number format, or Apply wrote the
+        // PREVIOUS category's format.
+        UpdateNumberFormat();
+    }
+
+    private void OnDecimalPlacesChanged(int? value)
+    {
+        _numDecimalPlaces = Math.Clamp(value ?? _numDecimalPlaces, 0, 30);
+        UpdateNumberFormat();
+    }
+
 
     private SpreadsheetCellStyle _workingStyle = new();
 
@@ -62,6 +127,11 @@ public partial class TmSpreadsheetFormatCellsDialog
 
     protected override void OnParametersSet()
     {
+        if (!VisibleTabs.Contains(_activeTab, StringComparer.Ordinal))
+        {
+            _activeTab = "Number";
+        }
+
         _workingStyle = Style.Clone();
         InitNumberTabFromFormat(_workingStyle.NumberFormat);
     }
@@ -95,10 +165,72 @@ public partial class TmSpreadsheetFormatCellsDialog
         }
     }
 
+    // Per-item element references: the roving tabindex needs the DOM focus on the option it just
+    // moved to, so the newly selected option's reference is focused after the render that moved it.
+    private readonly Dictionary<string, ElementReference> _categoryElements = [];
+    private string? _pendingCategoryFocus;
+
     private void SelectCategory(string cat)
     {
         _selectedCategory = cat;
         UpdateNumberFormat();
+        _pendingCategoryFocus = cat;
+    }
+
+    /// <summary>A click selects a category and hands it the DOM focus so the arrows work next.</summary>
+    private void OnCategoryClick(string cat) => SelectCategory(cat);
+
+    /// <summary>
+    /// Listbox keyboard contract: ↑/↓ step through the categories and Home/End jump to the ends.
+    /// The roving tabindex keeps exactly one tab stop, and the focus follows the selection after the
+    /// render. Space/Enter have nothing to emulate (the option is a div and the selection already
+    /// follows the arrows), and other keys fall through to the dialog's root shortcuts
+    /// (Ctrl+Enter = Apply).
+    /// </summary>
+    private void OnCategoryKeyDown(KeyboardEventArgs e)
+    {
+        var index = Array.IndexOf(_numberCategories, _selectedCategory);
+        if (index < 0)
+        {
+            index = 0;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                SelectCategory(_numberCategories[Math.Min(index + 1, _numberCategories.Length - 1)]);
+                break;
+            case "ArrowUp":
+                SelectCategory(_numberCategories[Math.Max(index - 1, 0)]);
+                break;
+            case "Home":
+                SelectCategory(_numberCategories[0]);
+                break;
+            case "End":
+                SelectCategory(_numberCategories[^1]);
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        var target = _pendingCategoryFocus;
+        _pendingCategoryFocus = null;
+        if (target is null || !_categoryElements.TryGetValue(target, out var element))
+        {
+            return;
+        }
+
+        try
+        {
+            await element.FocusAsync();
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException or TaskCanceledException)
+        {
+            // The tab can be switched away between the click and the render, or the circuit can be down.
+        }
     }
 
     private void OnCurrencySymbolChange(Microsoft.AspNetCore.Components.ChangeEventArgs e)
@@ -187,29 +319,39 @@ public partial class TmSpreadsheetFormatCellsDialog
             sb.Append($" color: {_workingStyle.ForeColor};");
         if (_workingStyle.BackgroundColor is not null and not "transparent")
             sb.Append($" background-color: {_workingStyle.BackgroundColor};");
+        sb.Append($" text-align: {PreviewAlignment()};");
         return sb.ToString();
     }
+
+    /// <summary>
+    /// The preview aligns like the cell will: an explicit horizontal alignment wins, otherwise a
+    /// numeric format (Number/Currency/Accounting/Percentage) right-aligns and the rest stays left.
+    /// </summary>
+    private string PreviewAlignment() => _workingStyle.HorizontalAlign switch
+    {
+        SpreadsheetHorizontalAlign.Right => "right",
+        SpreadsheetHorizontalAlign.Center => "center",
+        SpreadsheetHorizontalAlign.Left => "left",
+        _ => IsNumericCategory(_selectedCategory) ? "right" : "left"
+    };
+
+    private static bool IsNumericCategory(string category) => category is
+        "Number" or "Currency" or "Accounting" or "Percentage";
 
     private void Apply()
     {
         OnApply.InvokeAsync(_workingStyle);
     }
 
+    /// <summary>
+    /// The dialog's Ctrl+Enter -> Apply shortcut. Escape is the modal's own: the shared frame owns the
+    /// document-level listener and the focus trap, so the package never re-handles it.
+    /// </summary>
     private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape")
-            OnClose.InvokeAsync();
-        else if (e.Key == "Enter" && e.CtrlKey)
+        if (e.Key == "Enter" && e.CtrlKey)
+        {
             Apply();
-    }
-
-    // The dialog's Ctrl+Enter -> Apply shortcut lives on the root; the chrome
-    // (tabs, footer buttons) isolates its keydowns so Enter/Ctrl+Enter on a
-    // button runs only the button's native click. Escape is re-handled here
-    // so it still closes while focus sits on those controls.
-    private void OnChromeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            OnClose.InvokeAsync();
+        }
     }
 }

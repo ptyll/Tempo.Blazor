@@ -32,7 +32,7 @@ public class TmSpreadsheetCustomFilterDialogTests : LocalizationTestBase
             .Add(c => c.OnApply, EventCallback.Factory.Create<SpreadsheetColumnFilter?>(this, f => applied = f)));
 
         // operator defaults to first (Equals); choose GreaterThan
-        var opSelect = cut.Find(".tm-spreadsheet-custom-filter__op");
+        var opSelect = cut.Find(".tm-spreadsheet-custom-filter__op select");
         opSelect.Change(SpreadsheetFilterOperator.GreaterThan.ToString());
 
         var valueInput = cut.Find(".tm-spreadsheet-custom-filter__value");

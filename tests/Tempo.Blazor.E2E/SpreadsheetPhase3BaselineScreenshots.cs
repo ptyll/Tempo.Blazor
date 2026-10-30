@@ -64,7 +64,7 @@ public partial class SpreadsheetBaselineScreenshots
         var dropdown = page.Locator(".tm-spreadsheet-filter-dropdown");
         await dropdown.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await dropdown.Locator(".tm-spreadsheet-filter-dropdown__check", new() { HasTextString = "Banana" })
-            .Locator("input[type=checkbox]").UncheckAsync();
+            .Locator("input[type=checkbox]").EvaluateAsync("el => el.click()");
         await dropdown.Locator(".tm-spreadsheet-filter-dropdown__btn--ok").ClickAsync();
         await dropdown.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
         await page.WaitForTimeoutAsync(500);

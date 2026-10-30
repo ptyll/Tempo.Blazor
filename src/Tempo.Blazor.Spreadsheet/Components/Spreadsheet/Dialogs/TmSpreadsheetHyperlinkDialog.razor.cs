@@ -1,6 +1,8 @@
+using Tempo.Blazor.Components.Inputs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -10,11 +12,46 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetHyperlinkDialog
 {
+    // The form-field ids predate the redesign and stay constant: the published E2E lane keys off
+    // them (#hl-type, #hl-target, …) and one dialog is open at a time, so they cannot collide.
+    private string TargetInputDomId => "hl-target";
+
+    private string TypeSelectDomId => "hl-type";
+
+    private string EmailSubjectDomId => "hl-subject";
+
+    private string DisplayInputDomId => "hl-display";
+
+    private string TooltipInputDomId => "hl-tooltip";
+
+    /// <summary>A web address takes a URL keyboard on a phone, a mailbox an e-mail one.</summary>
+    private string TargetInputMode => _kind switch
+    {
+        SpreadsheetHyperlinkKind.Email => "email",
+        SpreadsheetHyperlinkKind.Web => "url",
+        _ => "text"
+    };
+
+    /// <summary>The four link kinds as the segmented control's options.</summary>
+    private List<RadioOption<SpreadsheetHyperlinkKind>> KindOptions =>
+    [
+        new(Loc["TmSpreadsheet_Hyperlink_TypeWeb"], SpreadsheetHyperlinkKind.Web),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeEmail"], SpreadsheetHyperlinkKind.Email),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeInternal"], SpreadsheetHyperlinkKind.InternalRef),
+        new(Loc["TmSpreadsheet_Hyperlink_TypeNamedRange"], SpreadsheetHyperlinkKind.NamedRange)
+    ];
+
+    private void OnKindChanged(SpreadsheetHyperlinkKind kind) => _kind = kind;
+
+    private void OnTargetChanged(string? target) => _target = target ?? string.Empty;
+
     private SpreadsheetHyperlinkKind _kind = SpreadsheetHyperlinkKind.Web;
     private string _target = string.Empty;
     private string? _display;
     private string? _tooltip;
     private string? _emailSubject;
+    private bool _seeded;
+    private SpreadsheetHyperlink? _seededFor;
 
     /// <summary>The workbook (used for named range choices).</summary>
     [Parameter, EditorRequired] public SpreadsheetWorkbook Workbook { get; set; } = null!;
@@ -28,8 +65,31 @@ public partial class TmSpreadsheetHyperlinkDialog
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     protected override void OnParametersSet()
     {
+        // Seed the form from the parameters ONCE per edit target: a Spreadsheet re-renders on its own
+        // and re-sets this dialog's parameters with it, and re-seeding would wipe the address the user
+        // is typing.
+        if (_seeded && ReferenceEquals(_seededFor, Hyperlink))
+        {
+            return;
+        }
+
+        _seeded = true;
+        _seededFor = Hyperlink;
+
         if (Hyperlink is not null)
         {
             _kind = Hyperlink.Kind;
@@ -66,21 +126,9 @@ public partial class TmSpreadsheetHyperlinkDialog
 
     private void OnCancelClick() => OnCancel.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
+    private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
-        else if (e.Key == "Enter" && e.CtrlKey)
+        if (e.Key == "Enter" && e.CtrlKey)
             OnSaveClick();
-    }
-
-    // The dialog's Ctrl+Enter -> save shortcut lives on the root; the chrome
-    // buttons isolate their keydowns (stopPropagation) so Enter/Ctrl+Enter on
-    // them runs only the button's native click. Escape is re-handled here so
-    // it still cancels while focus sits on a button.
-    private async Task OnChromeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
     }
 }

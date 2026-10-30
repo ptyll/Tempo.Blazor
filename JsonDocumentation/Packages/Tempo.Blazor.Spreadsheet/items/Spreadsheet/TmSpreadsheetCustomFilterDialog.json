@@ -35,6 +35,18 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised when the dialog is dismissed."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     }
   ],
   "subcategory": "Dialogs"

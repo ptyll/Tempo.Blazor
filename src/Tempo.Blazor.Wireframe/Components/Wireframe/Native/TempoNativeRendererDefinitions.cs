@@ -5,7 +5,7 @@ using static Tempo.Blazor.Components.Wireframe.WireframeSvg;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
-internal static class TempoNativeRendererDefinitions
+internal static partial class TempoNativeRendererDefinitions
 {
     private static readonly BuiltInComponentSchemas Schemas = new();
 
@@ -426,65 +426,6 @@ internal static class TempoNativeRendererDefinitions
             sb.Append(Icon("send", el.W - 24, el.H - 24, 14));
         }
 
-        Svg(b, sb.ToString());
-    }
-
-    private static void RenderSpreadsheet(WireframeElement el, RenderTreeBuilder b)
-    {
-        var rows = el.Props.GetInt("rows", 8);
-        var cols = el.Props.GetInt("columns", 6);
-        var sheets = el.Props.GetInt("sheetCount", 2);
-        var sb = new StringBuilder();
-        sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
-        sb.Append(Rect(0, 0, el.W, 28, FillDark, "none", 4));
-        sb.Append(HLine(0, el.W, 28));
-        sb.Append(Rect(4, 4, 36, 20, Fill, Border, 2));
-        sb.Append(Text("A1", 22, 14, 9, ColorText, "middle"));
-        sb.Append(VLine(40, 0, 28, Border));
-        sb.Append(Text("fx  =SUM(A1:A5)", 48, 14, 9, ColorMuted));
-        var headerH = 20.0;
-        var rowNumW = 28.0;
-        var gridY = 28.0;
-        var gridH = el.H - 28 - 24;
-        var colW = (el.W - rowNumW) / cols;
-        var rowH = (gridH - headerH) / rows;
-        sb.Append(Rect(rowNumW, gridY, el.W - rowNumW, headerH, FillDark, "none", 0));
-        sb.Append(HLine(0, el.W, gridY + headerH));
-        for (var c = 0; c < cols; c++)
-        {
-            var cx = rowNumW + c * colW;
-            sb.Append(VLine(cx, gridY, gridY + gridH));
-            sb.Append(Text(((char)('A' + c)).ToString(), cx + colW / 2, gridY + headerH / 2, 9, ColorMuted, "middle"));
-        }
-
-        for (var r = 0; r < rows; r++)
-        {
-            var ry = gridY + headerH + r * rowH;
-            sb.Append(HLine(0, el.W, ry + rowH));
-            sb.Append(Text((r + 1).ToString(), rowNumW / 2, ry + rowH / 2, 9, ColorMuted, "middle"));
-            if (r == 0)
-            {
-                for (var c = 0; c < cols; c++)
-                {
-                    var cx = rowNumW + c * colW;
-                    sb.Append(Rect(cx + 1, ry + 1, colW - 1, rowH - 1, FillAccent, "none", 0));
-                    sb.Append(Text(c == 0 ? "Name" : c == 1 ? "Value" : "—", cx + 4, ry + rowH / 2, 8, Accent));
-                }
-            }
-        }
-
-        sb.Append(VLine(rowNumW, gridY, gridY + gridH));
-        sb.Append(HLine(0, el.W, gridY + gridH));
-        var tabY = el.H - 24;
-        sb.Append(Rect(0, tabY, el.W, 24, FillDark, "none", 0));
-        sb.Append(HLine(0, el.W, tabY));
-        for (var s = 0; s < sheets; s++)
-        {
-            sb.Append(Rect(4 + s * 62, tabY + 4, 56, 16, s == 0 ? Fill : FillDark, s == 0 ? Border : "none", 3));
-            sb.Append(Text($"Sheet {s + 1}", 32 + s * 62, tabY + 12, 8, s == 0 ? ColorText : ColorMuted, "middle"));
-        }
-
-        sb.Append(Text("+", el.W - 16, tabY + 12, 10, ColorMuted, "middle"));
         Svg(b, sb.ToString());
     }
 

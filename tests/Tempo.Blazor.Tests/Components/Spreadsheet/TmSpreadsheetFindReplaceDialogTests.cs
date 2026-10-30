@@ -61,7 +61,7 @@ public class TmSpreadsheetFindReplaceDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetFindReplaceDialog>(p => p
             .Add(x => x.OnSearchRequested, EventCallback.Factory.Create<SpreadsheetSearchOptions>(this, o => received = o)));
 
-        cut.FindAll(".tm-spreadsheet-find__option input")[2].Change(true);
+        cut.FindAll(".tm-spreadsheet-find__option input")[1].Change(true);
 
         received!.SearchIn.Should().Be(SpreadsheetSearchIn.Formulas);
     }

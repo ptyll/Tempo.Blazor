@@ -1,66 +1,94 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Data
 
-<div class="tm-spreadsheet-custom-filter__backdrop" @onclick="Close">
-    <div class="tm-spreadsheet-custom-filter"
-         role="dialog"
-         aria-label="@Loc["TmSpreadsheet_CustomFilter_Title"]"
-         @onclick:stopPropagation
-         @onkeydown="OnKeyDown">
-        <div class="tm-spreadsheet-custom-filter__header">
-            <span class="tm-spreadsheet-custom-filter__title">@Loc["TmSpreadsheet_CustomFilter_Title"]</span>
-            <button type="button" class="tm-spreadsheet-custom-filter__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="Close">
-                <TmIcon Name="close" />
-            </button>
-        </div>
-
-        <div class="tm-spreadsheet-custom-filter__row">
-            <select class="tm-spreadsheet-custom-filter__op" aria-label="@Loc["TmSpreadsheet_CustomFilter_Title"]" @bind="_op1">
-                @foreach (var op in Operators)
+@* Custom filter on the one core dialog frame (G6). TmModal owns the overlay, the dialog role, the
+   focus trap, Escape and the mobile sheet; the package contributes the criteria form. The A/Nebo
+   choice is the core segmented radio group (convention P17), the operands ask for the keyboard their
+   column kind needs. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_CustomFilter_Title"]"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@FirstOperatorDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-custom-filter"
+         OnClose="Close">
+    <ChildContent>
+        <div class="tm-spreadsheet-custom-filter__form">
+            <div class="tm-spreadsheet-custom-filter__row">
+                <TmSelect TValue="SpreadsheetFilterOperator"
+                          Id="@FirstOperatorDomId"
+                          Class="tm-spreadsheet-custom-filter__op"
+                          AriaLabel="@Loc["TmSpreadsheet_CustomFilter_FirstOperator"]"
+                          Value="_op1"
+                          ValueChanged="OnFirstOperatorChanged"
+                          Options="OperatorOptions" />
+                @if (NeedsValue(_op1))
                 {
-                    <option value="@op">@Loc[OperatorKey(op)]</option>
+                    <TmTextInput Class="tm-spreadsheet-custom-filter__value"
+                                 Placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
+                                 aria-label="@Loc["TmSpreadsheet_CustomFilter_FirstValue"]"
+                                 Value="@(_value1a ?? string.Empty)"
+                                 ValueChanged="value => _value1a = value"
+                                 inputmode="@ValueInputMode" />
                 }
-            </select>
-            @if (NeedsValue(_op1))
-            {
-                <input class="tm-spreadsheet-custom-filter__value" placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
-                       aria-label="@Loc["TmSpreadsheet_CustomFilter_Value"]" value="@_value1a" @oninput="e => _value1a = e.Value?.ToString()" />
-            }
-            @if (NeedsSecondValue(_op1))
-            {
-                <input class="tm-spreadsheet-custom-filter__value" placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
-                       value="@_value1b" @oninput="e => _value1b = e.Value?.ToString()" />
-            }
-        </div>
-
-        <div class="tm-spreadsheet-custom-filter__join">
-            <label><input type="radio" name="join" checked="@(_join == SpreadsheetFilterJoin.And)" @onchange="() => _join = SpreadsheetFilterJoin.And" /> @Loc["TmSpreadsheet_CustomFilter_And"]</label>
-            <label><input type="radio" name="join" checked="@(_join == SpreadsheetFilterJoin.Or)" @onchange="() => _join = SpreadsheetFilterJoin.Or" /> @Loc["TmSpreadsheet_CustomFilter_Or"]</label>
-        </div>
-
-        <div class="tm-spreadsheet-custom-filter__row">
-            <select class="tm-spreadsheet-custom-filter__op" @bind="_op2">
-                <option value="">—</option>
-                @foreach (var op in Operators)
+                @if (NeedsSecondValue(_op1))
                 {
-                    <option value="@op">@Loc[OperatorKey(op)]</option>
+                    <TmTextInput Class="tm-spreadsheet-custom-filter__value"
+                                 Placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
+                                 aria-label="@Loc["TmSpreadsheet_CustomFilter_FirstValueTo"]"
+                                 Value="@(_value1b ?? string.Empty)"
+                                 ValueChanged="value => _value1b = value"
+                                 inputmode="@ValueInputMode" />
                 }
-            </select>
-            @if (_op2 is not null && NeedsValue(_op2.Value))
-            {
-                <input class="tm-spreadsheet-custom-filter__value" placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
-                       value="@_value2a" @oninput="e => _value2a = e.Value?.ToString()" />
-            }
-            @if (_op2 is not null && NeedsSecondValue(_op2.Value))
-            {
-                <input class="tm-spreadsheet-custom-filter__value" placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
-                       value="@_value2b" @oninput="e => _value2b = e.Value?.ToString()" />
-            }
-        </div>
+            </div>
 
+            <div class="tm-spreadsheet-custom-filter__join">
+                <TmRadioGroup T="SpreadsheetFilterJoin"
+                              Name="custom-filter-join"
+                              Appearance="RadioAppearance.Segmented"
+                              Layout="RadioLayout.Horizontal"
+                              Value="_join"
+                              ValueChanged="OnJoinChanged"
+                              Options="JoinOptions" />
+            </div>
+
+            <div class="tm-spreadsheet-custom-filter__row">
+                <TmSelect TValue="SpreadsheetFilterOperator?"
+                          Class="tm-spreadsheet-custom-filter__op"
+                          AriaLabel="@Loc["TmSpreadsheet_CustomFilter_SecondOperator"]"
+                          Value="_op2"
+                          ValueChanged="OnSecondOperatorChanged"
+                          Options="SecondOperatorOptions" />
+                @if (_op2 is not null && NeedsValue(_op2.Value))
+                {
+                    <TmTextInput Class="tm-spreadsheet-custom-filter__value"
+                                 Placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
+                                 aria-label="@Loc["TmSpreadsheet_CustomFilter_SecondValue"]"
+                                 Value="@(_value2a ?? string.Empty)"
+                                 ValueChanged="value => _value2a = value"
+                                 inputmode="@ValueInputMode" />
+                }
+                @if (_op2 is not null && NeedsSecondValue(_op2.Value))
+                {
+                    <TmTextInput Class="tm-spreadsheet-custom-filter__value"
+                                 Placeholder="@Loc["TmSpreadsheet_CustomFilter_Value"]"
+                                 aria-label="@Loc["TmSpreadsheet_CustomFilter_SecondValueTo"]"
+                                 Value="@(_value2b ?? string.Empty)"
+                                 ValueChanged="value => _value2b = value"
+                                 inputmode="@ValueInputMode" />
+                }
+            </div>
+        </div>
+    </ChildContent>
+    <Footer>
         <div class="tm-spreadsheet-custom-filter__actions">
-            <button type="button" class="tm-spreadsheet-custom-filter__btn tm-spreadsheet-custom-filter__btn--cancel" @onclick="Close">@Loc["Tm_Cancel"]</button>
-            <button type="button" class="tm-spreadsheet-custom-filter__btn tm-spreadsheet-custom-filter__btn--ok" @onclick="Apply">@Loc["Tm_Apply"]</button>
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="Close" Class="tm-spreadsheet-custom-filter__btn tm-spreadsheet-custom-filter__btn--cancel">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton OnClick="Apply" Class="tm-spreadsheet-custom-filter__btn tm-spreadsheet-custom-filter__btn--ok">@Loc["Tm_Apply"]</TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>

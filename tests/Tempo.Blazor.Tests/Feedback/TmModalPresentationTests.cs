@@ -67,6 +67,24 @@ public class TmModalPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void AutoFullscreen_IsTheTallSurfaceVariantOfAuto()
+    {
+        // A tall form must not be clipped by a sheet: AutoFullscreen takes the whole viewport on a
+        // mobile layout and stays the centred dialog everywhere else.
+        var mobile = Render<ViewportHost>(p => p
+            .Add(x => x.ViewportMode, TmLayoutMode.Mobile)
+            .Add(x => x.Presentation, MobilePresentation.AutoFullscreen));
+        mobile.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--fullscreen-presentation");
+        mobile.Find(".tm-modal-overlay").ClassList.Should().NotContain("tm-modal--sheet");
+
+        var tablet = Render<ViewportHost>(p => p
+            .Add(x => x.ViewportMode, TmLayoutMode.Tablet)
+            .Add(x => x.Presentation, MobilePresentation.AutoFullscreen));
+        tablet.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--dialog");
+        tablet.Find(".tm-modal-overlay").ClassList.Should().NotContain("tm-modal--fullscreen-presentation");
+    }
+
+    [Fact]
     public void ForcedLayoutMode_RendersTheMatchingPresentationWithoutADom()
     {
         var cut = Render<TmModal>(p => p
@@ -271,6 +289,9 @@ public class TmModalPresentationTests : LocalizationTestBase
 
         [Parameter] public EventCallback<TmLayoutMode> OnResolved { get; set; }
 
+        /// <summary>The modal's mobile presentation; AutoFullscreen covers the tall-surface variant.</summary>
+        [Parameter] public MobilePresentation Presentation { get; set; } = MobilePresentation.Auto;
+
         protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
         {
             builder.OpenComponent<CascadingValue<TmLayoutContext>>(0);
@@ -286,7 +307,8 @@ public class TmModalPresentationTests : LocalizationTestBase
                     modal.AddAttribute(1, "Show", true);
                     modal.AddAttribute(2, "Title", "Create");
                     modal.AddAttribute(3, "ResolvedLayoutChanged", OnResolved);
-                    modal.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddMarkupContent(0, "<p>Body</p>")));
+                    modal.AddAttribute(4, "MobilePresentation", Presentation);
+                    modal.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddMarkupContent(0, "<p>Body</p>")));
                     modal.CloseComponent();
                 }));
                 inner.CloseComponent();

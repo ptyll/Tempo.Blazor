@@ -32972,6 +32972,18 @@
           "description": "Creates a deep copy of this style."
         },
         {
+          "name": "CopyFrom",
+          "kind": "Method",
+          "type": "void",
+          "description": "Copies every visual property of source onto this style (the border objects are copied, not shared). Used by the spreadsheet's Fill down / Fill right, which follows Excel and copies the SOURCE cell's format into the filled cells, and by the style command so the copy is one undoable step.",
+          "parameters": [
+            {
+              "name": "source",
+              "type": "SpreadsheetCellStyle"
+            }
+          ]
+        },
+        {
           "name": "BackgroundColor",
           "kind": "Property",
           "type": "string",
@@ -33435,6 +33447,16 @@
       "description": "Pure engine that finds duplicate rows within a range by comparing the values of a chosen set of key columns. The first occurrence of each distinct key combination is kept; every later row with the same combination is reported for removal. Comparison is type-aware (numbers, dates and booleans compare by value, not by their formatted text) and honours case sensitivity for text.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Data/SpreadsheetDeduplicate.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SpreadsheetDensity",
+      "kind": "Enum",
+      "category": "Spreadsheet",
+      "namespace": "Tempo.Blazor.Components.Spreadsheet.Enums",
+      "description": "Grid density of a spreadsheet: how large the canvas draws rows and cell text. Auto (0) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else; Compact (1) is the classic 20px row, Comfortable (2) draws rows 1.5x with 1.25x text. The scale is render-only, so the workbook model and every XLSX height keep their values.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Enums/SpreadsheetDensity.cs",
       "documentationStatus": "merged"
     },
     {
@@ -37876,11 +37898,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1513,
-    "manualItemCount": 1513,
-    "generatedItemCount": 1496,
+    "itemCount": 1514,
+    "manualItemCount": 1514,
+    "generatedItemCount": 1497,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1496
+    "publicApiTypeCount": 1497
   }
 }

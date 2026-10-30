@@ -11,6 +11,7 @@
 .tm-spreadsheet-sheet-tabs__scroll {
     display: flex;
     flex: 1 1 auto;
+    min-width: 0;
     overflow-x: auto;
     gap: 2px;
     padding: 4px 0;
@@ -44,10 +45,12 @@
     color: var(--tm-color-text);
 }
 
+/* The active sheet is marked by its accent underline only (reference): the card keeps neutral
+   side/top borders and the surface background. */
 .tm-spreadsheet-sheet-tab--active {
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
-    border-color: var(--tm-color-primary);
+    border-color: var(--tm-color-border);
     border-bottom: 2px solid var(--tm-color-primary);
     font-weight: var(--tm-font-weight-semibold);
 }
@@ -71,7 +74,7 @@
     color: var(--tm-color-text-muted);
     cursor: pointer;
     border-radius: var(--tm-radius-sm);
-    font-size: 10px;
+    font-size: var(--tm-text-xs);
     transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
 }
 
@@ -141,8 +144,40 @@
     background: var(--tm-color-primary-subtle);
 }
 
+.tm-spreadsheet-sheet-tabs__nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet-sheet-tabs__scroll-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+}
+
+.tm-spreadsheet-sheet-tabs__scroll-button:hover {
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-color-border);
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet-sheet-tabs__scroll-button:focus-visible {
+    outline: 2px solid var(--tm-focus-ring);
+    outline-offset: 1px;
+}
+
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@container tm-spreadsheet (width < 640px) {
     .tm-spreadsheet-sheet-tab {
         padding: 2px 6px;
         font-size: var(--tm-font-size-xs);

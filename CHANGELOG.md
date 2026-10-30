@@ -22,7 +22,299 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Spreadsheet redesign — plan summary (plan 8959eebe, phases 1–8)
+
+The `Tempo.Blazor.Spreadsheet` package was rebuilt against 57 reference mockups
+(`output/imagegen/tempo-reimagined/Tempo.Blazor.Spreadsheet/`, gap analysis in
+`output/imagegen/tempo-reimagined/analysis/spreadsheet.md`) under four binding decisions:
+
+- **G2** — a phone is *viewing plus basic editing* (select, edit a value, scroll/zoom, basic format,
+  filter); full editing starts at the tablet. Nothing below the tablet breakpoint is silently missing:
+  the mobile command model simply does not contain the advanced tools, so the toolbar cannot re-offer
+  them.
+- **G6** — all 14 dialogs ride the core `TmModal` (phone: bottom sheet / fullscreen panel, focus trap,
+  Escape, focus back to the grid); Find & Replace stays non-modal on purpose.
+- **SP1** — grid density is a RENDER scale (`Density`, `Auto|Compact|Comfortable`) driven by
+  `(pointer: coarse)`; the workbook model and every XLSX value are untouched.
+- **SP2/SP3/SP4** — no Layout/Review/Formulas tabs, the document header is opt-in
+  (`ShowHeader`/`Title`/`HeaderStart`/`HeaderActions`) and takes over the file actions, the formula bar
+  carries ✓/✗ and the grid-line toggle.
+
+Per phase (each entry below carries its own breaking-change contract):
+
+| Phase | Result |
+|---|---|
+| 1 | Name Manager / Named Range Edit / Hyperlink / Insert Image wrapped in the core `TmFocusScope`; new `TmSpreadsheetValidationAlert` (alertdialog); roving tabindex in the Format Cells listbox and the Name Manager rows |
+| 2 | Component tokens on `.tm-spreadsheet`, token-only package CSS, the canvas palette built from tokens (light/dark/indigo), active row/column header highlight, `SpreadsheetDensity`, workspace vs flat chrome, `npm run test:spreadsheet` |
+| 3 | Every dialog on the core `TmModal` with the phone presentation, focus trap and focus restore; `TmSpreadsheetInsertImageDialog`; core additive `MobilePresentation.AutoFullscreen`, `TmModal.RestoreFocus`/`DialogRole`/`AriaDescribedBy` |
+| 4 | Dialog content and hierarchy follow the references (core inputs, phone cards for Sort/Name Manager, SVG border icons, validation card) |
+| 5 | Ribbon v2 (Home/Insert/Data/View + labelled groups, frozen `data-tm-group`), the opt-in document header, the `fx` + ✓/✗ formula bar with the named-range list, sheet tabs with underline/close/overflow arrows |
+| 6 | Container-driven responsive chrome (`TmLayoutObserver` + `TmLayoutMode`), the tablet two-row model on the core overflow toolbar, the phone compact row + core `TmMobileActionBar` + sheets |
+| 7 / 7b / 7c / 7d | Canvas touch interaction on the shared core `pointer-drag.js`/`pointer-gesture.js` (tap, double-tap edit, long-press menu, pinch zoom, corner drops, touch fill handle, `touch-action: pan-x pan-y`), density gutters + header font scaling, the opaque dark active header and the live theme flip, geometry getters for E2E, the 320 px dialog pass, and the class-by-class regression gate that closed two real regressions |
+| 8 | Documentation (this summary, `docs/spreadsheet.md`, `COMPONENTS.md`, the demo page), the full per-project test run, and the final UX review; the phone grid now keeps `--tm-spreadsheet-grid-min-height` in a host shorter than its chrome (the Notion edit modal at 568×320 used to show no rows at all) |
+
+What a consumer must do (details and before/after in every "Spreadsheet redesign (phase N)" entry of
+`### Breaking / Migration` below):
+
+1. **Serve `_content/Tempo.Blazor/js/` alongside `_content/Tempo.Blazor.Spreadsheet/js/`.** The canvas
+   dynamically imports the shared `pointer-drag.js` / `pointer-gesture.js`; without them the grid keeps
+   its mouse path, logs one warning, and touch gestures are off. A per-file CSP hash must list
+   `spreadsheet-canvas.js`, `pointer-drag.js` and `pointer-gesture.js`.
+2. **Import the package bundle, or the package theme layer too.** `_spreadsheet.css` reads kernel tokens;
+   the dark active header lives in `wwwroot/css/theme-spreadsheet-dark.css`, which the bundle
+   (`tempo-blazor-spreadsheet.css`) imports. A host that imports individual component files must import
+   that theme file as well.
+3. **Key off the frozen contracts, never positional DOM.** `data-tm-tab`, `data-tm-group`,
+   `data-command-id`, `data-toolbar-row`/`data-toolbar-layout`, `data-layout` and the `data-testid`s are
+   the host surface; the internal chrome DOM (ribbon → compact rows → phone row) changes with the
+   container width by design.
+4. **Host a dialog overlay outside `.tm-spreadsheet__layout`.** That wrapper is an inline-size query
+   container (`contain: layout`), so a `position: fixed` descendant would be trapped inside the card —
+   the component's own dialogs and sheets are siblings for exactly this reason.
+
+Evidence: the regression lanes (`eng/release-evidence/spreadsheet-lanes-20261030/`), the final
+per-project run plus the PARTIAL full E2E lane (`eng/release-evidence/spreadsheet-final-20261030/` —
+shard 1 of the eight class shards plus the isolated re-run of its failures; its `README.md` holds the UX
+findings table and the per-leg results) and the two perf runs
+(`eng/release-evidence/spreadsheet-perf-20261029/`).
+
+**Open / unfinished, tracked in the plan's remaining tasks:**
+
+- **The full E2E lane is not finished** (cd641f4a). The 8-shard run was stopped in shard 1 after 4 h 40 m
+  because this box runs ~60–90 s per test under concurrent load (~20–25 h for the ~1500-test suite); the
+  runner writes one TRX per shard at the END, so shard 1 produced no TRX. Resume on an idle box with
+  that folder's `run-e2e-shards.sh <dir> 8` (add an `OnlyShard`
+  list such as `8 3,5` to repeat single shards) and then summarise with `node e2e-summary.mjs <dir>`.
+  What IS proven on this tree: the isolated re-run of shard 1's 16 failures (12 green) and a plan-area
+  lane that is 4/4 green (the demo density switch, the 568×320 Notion modal, both wireframe-stencil
+  captures).
+- **`SpreadsheetE2ETests.Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets` is red**
+  (f25a9d47), and the bisect puts it on the phase-6 container-driven chrome commit (`e0febc25`): phase 5
+  (`b1a8fc10`) passes, phase 7c (`32305292`), phase 7d (`50aa7fbc`) and this tree all fail identically.
+  Before phase 6 a 1024 px viewport resolved the DESKTOP chrome, so *Custom sort…* sat on the ribbon;
+  from phase 6 the ~700 px demo container resolves the TABLET chrome, the command moves into the row's
+  core `ActionOverflowMenu` "More" panel, and that panel is anchored BELOW its trigger — with the trigger
+  near the bottom of the viewport its entries are painted outside the viewport and nothing scrolls a
+  top-layer panel into view. The phase-7d lane evidence recorded this group green, so the regression
+  slipped between that run and now. Not fixed here: the placement is core (shared with the diagram,
+  wireframe and dashboard toolbars) and `e0febc25` is outside this phase's budget — a flip-up placement
+  or the documented open-on-desktop-then-resize pattern in that one spec are the two candidates.
+- **The wall-clock performance budget is *Inconclusive*** (12bc2afb, fcee0469, dc12ae21):
+  `SpreadsheetPerformanceE2ETests.SelectionDrag_AB_WithinBudget` measured a rAF cadence swinging between
+  ~5 and ~36 fps, so the 30 % IQR guard trips in both directions and the ratio sign flips between runs;
+  the deterministic counters (one header paint per selection change, unchanged content paints) are green.
+  It must be re-run on an idle machine or the dedicated perf lane (`scripts/run-e2e-perf.ps1`) before the
+  ≤ +10 % budget is claimed.
+
 ### Breaking / Migration
+
+- **Spreadsheet redesign (phase 7c): the Sort dialog wraps its content in `div.tm-spreadsheet-sort__body`.** The wrapper is the inline-size query container the phone toolbar needs (it is the element the 320 px "stack the options" rule measures), and it carries the phone modifier `tm-spreadsheet-sort__body--mobile`. Every existing hook still matches — `.tm-spreadsheet-sort__toolbar`, `.tm-spreadsheet-sort__toggles`, `.tm-spreadsheet-sort__table`, `.tm-spreadsheet-sort__card`, `.tm-spreadsheet-sort__tool`, `__btn--ok` / `__btn--cancel` are untouched — but a selector that assumed the toolbar was a DIRECT child of the modal body must become a descendant selector:
+
+  ```css
+  /* before */
+  .tm-modal-body > .tm-spreadsheet-sort__toolbar { /* host override */ }
+  /* after */
+  .tm-spreadsheet-sort__body .tm-spreadsheet-sort__toolbar { /* host override */ }
+  ```
+
+  The Name Manager card is a visual change, not a DOM change: the name is now ONE ellipsised line and the "Refers to" formula wraps to at most two clamped lines (the full value is in the element's `title` / `aria-label`), so a host that relied on a wrapping name must read the `title`.
+
+- **Spreadsheet redesign (phase 6): the chrome is responsive to the CONTAINER, not the viewport, and the phone layout is viewing plus basic editing (G2).** `TmSpreadsheet` now renders through the core `TmLayoutObserver` and classifies the width of its OWN box — the root is a named inline-size query container (`container-type: inline-size; container-name: tm-spreadsheet`) — so a 390px Notion block or modal inside a 1440px page is a phone. The four `@media (max-width: 768px)` blocks of the package (`_spreadsheet.css`, `TmSpreadsheetFormulaBar.razor.css`, `TmSpreadsheetSheetTabs.razor.css`) are gone; every responsive rule is now a `@container tm-spreadsheet (width < 640px)` range query whose literal is a `TmBreakpoints` value (`TmBreakpointsTests`). New parameter `LayoutMode` (`TmLayoutMode`, default `Auto`) pins the mode for a host that already knows its surface and for tests; `Auto` is the desktop chrome until the first measurement, so static SSR is unchanged.
+
+  | Surface | Desktop | Tablet (640–1023px of container — `TmLayoutBreakpoints.Default`) | Mobile (<640px of container) |
+  |---|---|---|---|
+  | Ribbon | phase-5 tab strip (`Home`/`Insert`/`Data`/`View`/`File`) | TWO compact rows over the core `TmToolbar Overflow=Menu`; **no tab strip**; row 1 = open/undo/redo/clipboard/Format Cells/image/link + "More" (advanced data tools + the workbook download live there), row 2 = font, size, B/I/U, colours, alignment, number format, %, 000, decimals, borders, Filter, Sort | ONE basic-formatting row (undo/redo, B/I/U, ONE Align dropdown, number format, %, colours + "More") |
+  | Header | `ShowHeader` document header (opt-in) | same | compact header: `Title` + undo/redo + `HeaderStart`/`HeaderActions`; the document header (file actions, grid switch) does not render |
+  | Status bar | present | present | **absent** — the zoom controls and the aggregations move into the action bar's "More" menu (grouped `zoom` / `summary`, the summary rows are inert information) |
+  | Bottom bar | — | — | core `TmMobileActionBar`: Insert / Format / Insert image + "More" (sheet, data, zoom, summary groups) |
+  | Height | `Height` (600px default) | `Height` | **`100%`** (SP3) with a `--tm-spreadsheet-mobile-min-height` (32rem) floor and a `100dvh` ceiling |
+  | Grid density | `Density` | `Density` | `Density=Auto` resolves to `Comfortable` |
+
+  The mobile height cap is not cosmetic: `height: 100%` inside an auto-height parent resolves to `auto`, and the canvas grid's size spacer is the whole scrollable sheet, so an uncapped mobile spreadsheet grew to thousands of pixels in a normal document flow (found in the phase's own screenshot review). `max-height: 100dvh` keeps the grid scrolling inside the component, like the reference's phone app.
+
+  **New DOM wrapper (breaking for positional CSS).** The component root `.tm-spreadsheet` now contains a
+  `div.tm-spreadsheet__layout` (the core layout observer's root) and everything the chrome renders sits inside
+  it; every overlay — the 14 dialogs, the sheets, the filter dropdown, both context menus — is a SIBLING of
+  that wrapper inside the root. A host selector that assumed direct children (`.tm-spreadsheet > .tm-spreadsheet-toolbar`)
+  must become a descendant selector:
+
+  ```css
+  /* before */
+  .tm-spreadsheet > .tm-spreadsheet-toolbar { /* host override */ }
+  /* after */
+  .tm-spreadsheet .tm-spreadsheet-toolbar { /* host override */ }
+  ```
+
+  **The compact chrome's hooks.** The tablet/mobile rows keep the frozen `data-tm-group` contract (each run of
+  commands is a core `TmToolbarGroup` with `data-tm-group` = one of `clipboard | font | alignment | number |
+  cells | insert | data | view | file | custom`) and add `data-toolbar-layout="tablet|mobile"` on the toolbar,
+  `data-toolbar-row="primary|formatting"` on each row and `data-command-id="…"` on every command (the selects,
+  the colour splits and the border split included). `data-tm-tab` does NOT exist in the compact chrome — there
+  is no tab strip below the desktop breakpoint, so a spec/host that keyed off `data-tm-tab` must key off
+  `data-tm-group`/`data-command-id` (or pin `LayoutMode="TmLayoutMode.Desktop"`). `CustomTools` render one
+  `data-tm-group="custom"` entry per tool on the compact rows: reachable from the row's "More" on a tablet
+  (their `Tab` is irrelevant there — there are no tabs) and only from More on a phone (G2).
+
+  Removed/renamed behaviour: `.tm-spreadsheet-find` keeps its flows, but the Find & Replace panel, the header filter dropdown and the grid context menu now present as a **sheet whenever the CONTAINER is a phone** (they follow the layout the host resolved, not the viewport — new `LayoutMode` parameters on `TmSpreadsheetFindReplaceDialog`, `TmSpreadsheetFilterDropdown`, `TmSpreadsheetCanvasGrid`). The filter dropdown's mobile sheet has 44px rows and a sticky Cancel / OK bar; the grid context menu is a `TmDrawer` sheet (`tm-spreadsheet-context-sheet`).
+
+  ```razor
+  <!-- before: the layout followed the viewport; a narrow embed inside a wide page kept the desktop chrome -->
+  <div style="width:390px"><TmSpreadsheet @bind-Data="@bytes" /></div>
+
+  <!-- after: the container decides; a host (or a test) can still pin it -->
+  <div style="width:390px"><TmSpreadsheet Data="@bytes" /></div>
+  <TmSpreadsheet Data="@bytes" LayoutMode="TmLayoutMode.Desktop" />
+  ```
+
+  ```html
+  <!-- before: viewport query, mode invisible in the DOM -->
+  @media (max-width: 768px) { .tm-spreadsheet-toolbar__button { width: 24px; } }
+
+  <!-- after: container query on the named container + the resolved mode as attributes -->
+  <div class="tm-spreadsheet tm-spreadsheet--layout-mobile" data-layout="mobile">
+  @container tm-spreadsheet (width < 640px) { … }
+  ```
+
+  **Review round (same phase).** The two context menus are now RENDERED BY THE HOST
+  (`TmSpreadsheetContextMenu`, a sibling of the layout container): `TmSpreadsheetCanvasGrid` and
+  `TmSpreadsheetSheetTabs` gained `RenderContextMenu`/`OnContextMenuRequested` and the grid two public entry
+  points (`OpenColumnWidthDialog`, `OpenRowHeightDialog`), because a `position: fixed` menu inside the
+  container is positioned against the card and one inside the scrolling grid is clipped. The phone's cell
+  menu is a MODAL core drawer sheet (backdrop, focus trap, Escape, 44px `role="menuitem"` rows in the sans
+  face, focus back to the grid) and while any sheet owns the phone layout the sticky action bar is removed
+  (`tm-spreadsheet__mobile-bar--suppressed`) so it cannot cover the sheet's footer — the same fix made the
+  filter sheet modal and bounded (`height: 100%` of the drawer, value list scrolls, sticky Cancel / OK) after
+  its footer was measured below the fold. `ShowHeader="true"` no longer renders TWO headers on a phone: the
+  document header is desktop/tablet only and the compact header renders ONLY when the host gives it content
+  (undo/redo lead the mobile formatting row instead of an empty 50px row). The compact rows keep the frozen
+  `data-tm-group` contract (a core `TmToolbarGroup` per run) and render `CustomTools` as
+  `data-tm-group="custom"` entries. The mobile Format Cells hides the Border tab. `SpreadsheetToolbarLayout`
+  and its three types are now `internal` (no public API commitment). The new public surface is
+  `RenderContextMenu` + `OnContextMenuRequested` on the grid and the sheet tabs, and
+  `SpreadsheetContextMenuRequest`; `TmSpreadsheetContextMenu`/`SpreadsheetContextMenuItem` are public only
+  because a Razor component cannot be `internal` — both are `[EditorBrowsable(Never)]` (implementation detail).
+
+  What is NOT offered below the tablet breakpoint (G2 — full editing starts at the tablet): Text to Columns, Remove Duplicates, Data Validation (and the invalid-data circles), the Name Manager, Paste Special, the Format Painter, the cell-border picker (including the **Borders tab of Format Cells**, which the dialog hides on the phone layout), Merge cells, the thousands separator and the workbook Open / Download. Those commands are absent from the mobile model, so the core toolbar cannot re-offer them in "More". A host that needs one on a phone passes `LayoutMode="TmLayoutMode.Tablet"` (or keeps its own button outside the spreadsheet).
+
+- **Spreadsheet redesign (phase 7): the canvas owns `touch-action`, Comfortable draws bigger header gutters, and a DOM touch-handle layer appears on a coarse pointer.** Three separate breaking surfaces:
+
+  1. **`touch-action: pan-x pan-y` on the grid root.** One finger pans/scrolls the grid natively (momentum included). What it BLOCKS over the grid is the browser's own **pinch-zoom and double-tap zoom** — the page can no longer be zoomed with two fingers that start on the grid, because the two-finger pinch is the core `pointer-gesture.js` gesture and zooms the SHEET (50–200 %, the same 10 % grid as the status bar) instead. Page scrolling from outside the grid is unchanged; a finger drag that starts inside the grid scrolls the grid, not the page.
+
+     | Before | After |
+     |---|---|
+     | two fingers over the grid pinch-zoomed the PAGE | the pinch zooms the SHEET and page zoom is blocked over the grid |
+     | the fill handle was a 10 px mouse target | the fill handle keeps the painted square; its HIT box grows with `Density` and reaches 24 px on a coarse pointer |
+
+     A host that relies on pinch-zooming the page must leave the grid (or its embed) with `touch-action` of its own; no API is removed — `OnZoomStep` (Ctrl+wheel / the zoom buttons) is unchanged and the new `OnZoomChanged` (absolute factor, from the pinch) is additive.
+
+  2. **The Comfortable density now scales the header GUTTERS — a geometry change, not only a paint change.** `SpreadsheetDensityScale.GutterScale` is 1.4 at Comfortable: the row-header gutter is 56 px (was 40) and the column header 28 px (was 20), and both travel in the canvas frame (`RowHeaderWidth` / `ColumnHeaderHeight`) so the canvas, the hit-testing and the component geometry cannot drift apart. A host or spec that computes a cell position from the CONSTANTS (40/20) instead of the frame's values will be off by 16 px horizontally / 8 px vertically on a coarse pointer. The workbook model (row heights, column widths, XLSX) is untouched.
+
+  3. **New DOM inside the grid.** `.tm-spreadsheet-canvas-grid__layer` now also carries `.tm-spreadsheet-canvas-grid__touch-handles` with three `[data-touch-handle]` boxes — `start` (top-left drop), `fill` (the fill handle) and `end` (bottom-right drop, offset outside the fill handle). They are transparent hit areas positioned from the painted selection (`start`/`end` paint a 12 px circle on a coarse pointer) and the whole layer is `display: none` on `(pointer: fine)`, so a desktop host sees no new interactive element. A host selector such as `.tm-spreadsheet-canvas-grid__layer > canvas` still matches; `> *` now also matches the handle layer.
+
+  **The cell menu has two new entries** (Fill down / Fill right) in both presentations (the anchored menu and the phone sheet), which shifts the item indexes a host spec might rely on — key off the item text instead. On a phone the anchored menu now flips above the finger when there is no room below, scrolls its own overflow and gives every entry a `--tm-touch-target` height; a long press offsets the menu from the finger (`data-anchor="touch"`).
+
+  **Notion embed.** `TmNotionSpreadsheetBlock` renders a read-only (`Mode=Embedded`) spreadsheet and `TmNotionSpreadsheetEditModal` hosts the editor inside the Notion fullscreen modal, so both inherit the rules above: one finger scrolls the preview and a two-finger pinch zooms the SHEET rather than the Notion page; the read-only grid opens NO cell menu at all (`IsReadonly` blocks the gesture) and the host menu it would render carries no mutating entries; the long-press menu is a phone sheet inside the modal's own stacking context (the menu is a sibling of the layout container, never a child of it). Scrolling stops at the grid's edge rather than chaining to the page behind it (`overscroll-behavior` on the menu; the grid itself keeps the platform's default chaining, deliberately — a nested editor that swallows an edge scroll traps the page).
+
+- **Spreadsheet redesign (phase 5): the ribbon is a grouped tabbed ribbon, the document header is opt-in and every toolbar glyph is an icon.** `TmSpreadsheetToolbar` now renders one tab strip (`Home`, `Insert`, `Data`, `View` and the compatibility `File` tab) above a row of named groups — `tm-spreadsheet-toolbar__group` with a visible `tm-spreadsheet-toolbar__group-label` (Clipboard, Font with the cell-border picker, Alignment, Number, Cells, Insert, Data, View, File) — whose commands are either **large** (`__button--large`, icon above the label: Undo, Redo, Paste, Insert row/column, Delete, Insert link/image) or **small** (`__button--small/--text`, e.g. Cut, Copy, the Data-tab text buttons). Every Unicode glyph is gone (`←|`, `|→`, `.0→`, `.00→`, `☐ ⊞ ▣ ◼ ▬ ▰ ═ ⊟ ▭ ▏ ▕ ⚙ ▾`): the standard marks are lucide `TmIcon`s and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG set (`SpreadsheetIcons`, `tm-ss-border-*`, `tm-ss-align-*`, `tm-ss-decimal-*`). Existing selectors survive: `.tm-spreadsheet-toolbar__tab`, `__button`, `__button--text`, `__select` and every command `title` (Filter, Sort ascending, Custom sort…, Remove duplicates, Text to columns, Paste special, Data validation..., Name Manager, …).
+
+  ```razor
+  <!-- before: one trailing group, the icon name painted as text, File tools lost with the File tab -->
+  <TmSpreadsheet CustomTools="@(new List<SpreadsheetCustomTool> { new() { IconName = "download", Title = "Archive", Tab = "File" } })" />
+
+  <!-- after: one group per tool (data-tm-group="custom", data-tool-id), TmIcon + Title, and a
+       File-tab tool appears as a header action while ShowHeader="true" -->
+  <TmSpreadsheet ShowHeader="true"
+                 CustomTools="@(new List<SpreadsheetCustomTool> { new() { Id = "archive", IconName = "download", Title = "Archive", Tab = "file" } })" />
+  ```
+
+  ```html
+  <!-- before: flat icon row, no group names, text glyphs as icons -->
+  <div class="tm-spreadsheet-toolbar__group">
+    <button class="tm-spreadsheet-toolbar__button" title="Increase Indent">←|</button>
+    <button class="tm-spreadsheet-toolbar__button" title="Increase decimal places">.0→</button>
+  </div>
+  <button class="tm-spreadsheet-toolbar__button" title="Border picker">☐</button>
+
+  <!-- after: named group + large/small buttons, icons only -->
+  <div class="tm-spreadsheet-toolbar__group">
+    <div class="tm-spreadsheet-toolbar__group-body">
+      <button class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon" title="Increase Indent">
+        <TmIcon Name="indent-increase" />
+      </button>
+      <button class="tm-spreadsheet-toolbar__button tm-spreadsheet-toolbar__button--icon" title="Increase decimal places">
+        <TmIcon Name="tm-ss-decimal-increase" />
+      </button>
+    </div>
+    <span class="tm-spreadsheet-toolbar__group-label">Alignment</span>
+  </div>
+  ```
+  Migrations that change behaviour:
+  - **Merge cells moved from the `View` tab to the `Home` tab's Alignment group.** `page.Locator(".tm-spreadsheet-toolbar__tab", new() { HasTextString = "View" })` before clicking `[title='Merge cells']` is no longer needed.
+  - **Delete row/column moved behind the large `Delete` split action in the `Cells` group.** `[title='Delete row']` / `[title='Delete column']` now live in the split menu; open it via `[title='Delete options']` first (`role="menu"`).
+  - **`ActiveTab` is a real parameter.** It was a public property without `[Parameter]`; it is now `[Parameter] ActiveTab` plus `[Parameter] ActiveTabChanged`, so a host can bind the active tab. Without a binding the toolbar still switches tabs internally, but a click now also raises `ActiveTabChanged`.
+  - **`Insert link` / `Insert image` also render on the `Home` tab** (the reference's `Vložení` quick-access group) in addition to the `Insert` tab; both tabs never render at the same time, so `[title='Insert link']` stays unique on screen.
+  - **New `ShowFileTab` (default `true`) on `TmSpreadsheet` and `TmSpreadsheetToolbar`.** With the document header on, the `File` tab is not rendered; the header owns Open / Download.
+  - **Custom ribbon tools render differently.** Each `CustomTools` entry is now its own ribbon group (`data-tm-group="custom"`, `data-tool-id="<tool.Id>"`), painted as a small button with its `IconName` through `TmIcon` plus its `Title` (before, the icon name was painted as literal text and every tool shared one trailing group). The `Tab` match is case-insensitive (`"home"`, `"Home"`). Because Merge cells moved to Home, a tool that was meant to sit next to Merge must use `Tab="Home"`.
+  - **A custom tool placed on `Tab="File"`** has no File tab while the document header renders; the header now renders such tools as its own actions (branded with `data-tool-id`) instead of silently dropping them.
+  - **Stable group/tab contract (additive-only).** Every ribbon group carries `data-tm-group` from the frozen set `clipboard | font | alignment | number | cells | insert | links | data | view | file | custom` (Home quick-insert = `insert`, the Insert tab = `links`), every tab and tabpanel carries `data-tm-tab` (`Home|Insert|Data|View|File`), custom groups also carry `data-tool-id`, and the tab strip follows the WAI-ARIA tabs pattern (per-instance ids, `aria-controls`/`aria-labelledby`, roving `tabindex`, ArrowLeft/Right/Home/End). Hosts and tests should key off these attributes, never off localized label text or position. Contract: [docs/spreadsheet.md](docs/spreadsheet.md#ribbon-contract).
+  - **The hidden XLSX input's id is per instance.** It was the fixed `tm-spreadsheet-file-input`, so a page with two spreadsheets always opened the first one's picker; it is now `tm-spreadsheet-file-input-{instance}` (no published selector used it).
+- **Spreadsheet redesign (phase 5): the document header is opt-in and additive (G9/SP3).** `TmSpreadsheet` gains `ShowHeader` (default `false`), `Title`, `HeaderStart`, `HeaderActions`, `ShowFileTab` and `CustomTools`/`OnCustomToolClick`; with `ShowHeader` the component renders `header.tm-spreadsheet__header` (title on the left, host slots, `Open` / `Download` only for a host that listens to `OnOpen` / `OnDownload`, and the core `TmToggle` labelled "Show grid lines"). "Saved", the hamburger, the ⋮ menu and the document switcher of the reference are host slots, never built in. The custom-tool buttons now render `TmIcon` and their `Title` instead of the icon name as text.
+
+  ```razor
+  <!-- before: no header; file actions only inside the legacy File tab -->
+  <TmSpreadsheet Height="500px" />
+  <!-- after (additive, still false by default) -->
+  <TmSpreadsheet ShowHeader="true" Title="Projekt Aurora"
+                 OnOpen="OnOpened" OnDownload="OnDownloaded"
+                 HeaderActions="@(builder => { /* Share */ })" Height="500px" />
+  ```
+- **Spreadsheet redesign (phase 5): formula bar and sheet tabs.** The formula bar's `fx` mark is now permanent (`tm-spreadsheet-formula-bar__fx`, previously an edit-mode decoration) and while editing it exposes the SP4 ✓ / ✗ buttons (`__confirm`, `__cancel`, localized `aria-label`s, same commit/revert paths as Enter/Escape). The name box gains a named-range dropdown (`__ref-toggle` + `__ref-list`/`__ref-item`, new `TmSpreadsheetFormulaBar.NamedRanges`; selecting an entry raises `OnNavigateToRef` with the range name, and a workbook without names renders no chevron). The sheet tabs gain `ShowTabCloseButtons` (default `true`; deleting always stays available from the right-click menu) and a pair of scroll arrows (`__scroll-button[data-direction=left|right]`) that appear only when the strip overflows. `.tm-spreadsheet-formula-bar__mode` (the old edit-only fx) is gone; `__ref`, `__display`, `__input` and the formula-bar test ids are unchanged.
+
+- **Fixed (core `TmSelect`): a non-nullable value type at its default now emits its `value`.** Before, `SelectedValueString` returned `null` whenever the value equalled `default(TValue)`, so a select bound to `0` / an enum's first member painted a blank control; every spreadsheet dialog that switched back to such an option (Sort order "A → Z", Sort on "Values", data validation "Any"/"Stop"/type "Whole", Format Cells "General", a column index of 0) looked empty. After, a non-nullable struct default renders `FormatOptionValue(Value)` (e.g. `value="0"`, `value="Sunday"`) while the option list keeps its `selected` marker. Nullable value types and reference types keep the empty-option rules unchanged.
+
+  ```html
+  <!-- before: omitted value → the browser shows nothing selected -->
+  <select class="tm-select"><option value="0" selected>Zero</option>…</select>
+  <!-- after -->
+  <select class="tm-select" value="0"><option value="0" selected>Zero</option>…</select>
+  ```
+
+- **Added (core `TmModal`): `InitialFocusSelector`.** An additive CSS-selector alternative to `InitialFocusTargetId`, for a target that has no stable id or a set whose first match is the right one (a checked radio, the first checkbox). The Spreadsheet's Paste Special (`input[name='ps-content']:checked`) and Remove Duplicates (`.tm-spreadsheet-dedup__column input`) use it — their previous targets were non-focusable wrapper elements. `null` keeps the previous markup (no `data-initial-focus-selector` attribute).
+
+- **Spreadsheet redesign (phase 4): dialog content and hierarchy follow the reference mockups.** Every spreadsheet dialog body now renders core Tempo inputs for its choices, toggles and text fields (`TmSelect`, `TmTextInput`, `TmCheckbox`, `TmRadioGroup` segmented, `TmSearchInput`, `TmNumberInput`, `TmStepper`, `TmIcon`, `TmButton`) instead of raw `<select>`/`<input>` elements. The Format Cells Alignment/Font/Border/Fill tabs, the Text to Columns mode radios and the Data validation textareas stay native for now — they are rebuilt with their own tabs in a later phase. The dialog ROOT classes on the modal overlay (`tm-spreadsheet-sort`, `tm-spreadsheet-custom-filter`, `tm-spreadsheet-dedup`, `tm-spreadsheet-pastespecial`, `tm-spreadsheet-t2c`, `tm-spreadsheet-hyperlink`, `tm-spreadsheet-name-manager`, `tm-dvd`, `tm-fcd`, `tm-spreadsheet-alert`) and the action classes (`__btn--ok`, `__btn--cancel`) are unchanged; the inner DOM, the form wrapper class names and several control ids are not. The full per-dialog content contract is [docs/spreadsheet-dialogs.md](docs/spreadsheet-dialogs.md) → "Content and hierarchy (redesign phase 4)".
+
+  ```html
+  <!-- before: native controls, class on the control itself -->
+  <select class="tm-dvd__select">…</select>
+  <select class="tm-spreadsheet-custom-filter__op">…</select>
+  <input class="tm-spreadsheet-name-manager__filter">
+  <select id="hl-type"><option value="Web">Web page</option>…</select>
+  <ol class="tm-spreadsheet-t2c__steps"><li>1</li><li>2</li><li>3</li></ol>
+
+  <!-- after: core components; Class lands on the select WRAPPER, on the text INPUT, or on the root -->
+  <div class="tm-dvd__select tm-select-wrapper"><select class="tm-select">…</select></div>
+  <div class="tm-spreadsheet-custom-filter__op tm-select-wrapper"><select class="tm-select">…</select></div>
+  <div class="tm-spreadsheet-name-manager__filter tm-input-wrapper"><input type="search" class="tm-input"></div>
+  <div id="hl-type" class="tm-radio-group" role="radiogroup">
+    <label class="tm-radio-segment"><input class="tm-sr-only" type="radio">Web page</label>…
+  </div>
+  <div class="tm-stepper"><div class="tm-stepper-item">…Data type…</div>…</div>
+  ```
+
+  Practical migrations (all used by the repo's own Playwright specs):
+  - `.tm-dvd__select`, `.tm-dvd__body` → `.tm-dvd__select select`, `.tm-dvd__form`.
+  - `.tm-dvd__select` on the Error alert tab → `.tm-dvd__select select`; the `#tm-dvd-show-error`/`#tm-dvd-show-input` checkbox ids are gone (the toggles are `TmCheckbox`) — select `.tm-dvd__checks input`, in DOM order.
+  - `.tm-spreadsheet-sort__table select` → `.tm-spreadsheet-sort__select select`; the phone renders `.tm-spreadsheet-sort__card` instead of the table.
+  - `.tm-spreadsheet-custom-filter__op` → `.tm-spreadsheet-custom-filter__op select`; the And/Or radios are `input[name='custom-filter-join']` inside `.tm-radio-segment` labels.
+  - `.tm-spreadsheet-name-manager__filter` → `.tm-spreadsheet-name-manager__filter input` (type `search`); on a mobile layout the rows are `.tm-spreadsheet-name-manager__card` (no `tbody tr`).
+  - `#hl-type` is the segmented radiogroup ROOT, not a `<select>`: `page.SelectOptionAsync("#hl-type", "Web")` becomes `page.Locator("#hl-type .tm-radio-segment").First.ClickAsync()` (Web page is the first segment). `#hl-target` / `#hl-display` keep their ids on the `<input>`.
+  - Paste Special: the operation is a radio column (`input[name='ps-operation']`, five options) inside `.tm-spreadsheet-pastespecial__grid`; the old `select.tm-spreadsheet-pastespecial__op` is gone.
+  - Text to Columns: `<ol class="tm-spreadsheet-t2c__steps">` → the core `.tm-stepper`; the phone shows `.tm-spreadsheet-t2c__step-compact` instead. Delimiters are `.tm-spreadsheet-t2c__delim` wrappers around core checkboxes, and the preview is a `<table>` with a `<thead>` inside `.tm-spreadsheet-t2c__preview-scroll` (row selectors must use `tbody tr`).
+  - Remove Duplicates: `.tm-spreadsheet-dedup__count` states "Selected N of M"; the toggles/columns are core checkboxes (`.tm-spreadsheet-dedup__column` is the checkbox WRAPPER).
+  - Format Cells: the decimal places `input[type=number].tm-fcd__input--sm` → `.tm-fcd__decimal` (`TmNumberInput`, inner `.tm-number-input__input`); a mobile layout replaces `.tm-fcd__listbox[role=listbox]` with `.tm-fcd__category-select` + `.tm-fcd__number-options`; the preview's `style` now carries `text-align` from the format.
+  - Validation alert: `.tm-spreadsheet-alert__icon` → `.tm-spreadsheet-alert__badge`; the card is `ModalSize.Medium`, the badge sits left of the message and there is no divider under the title.
+  - Filter dropdown: the Unicode glyphs `▲ ▼ ⚙ ✕ ›` are gone (shared `TmIcon`), the panel starts with `.tm-spreadsheet-filter-dropdown__title` ("Filter and sort") and its values/select-all are core checkboxes.
+  - Find & Replace keeps its `.tm-spreadsheet-find__query` / `__replace` / `__counter` / `__btn--text` classes; it gains visible `.tm-spreadsheet-find__label`s, a primary "Replace all" (`__btn--primary` on the same button) and a desktop-only `.tm-spreadsheet-find__btn--close`.
 
 - **TmGantt redesign (phases 1–8): the breaking items at a glance.** The component contract is
   [docs/gantt.md](docs/gantt.md); each item below has its detailed entry (with the full before/after)
@@ -320,6 +612,172 @@
 
 - **Scheduler toolbar class names.** The desktop toolbar is now the core `TmToolbar`, so the hand-rolled button classes are gone. `.tm-scheduler-toolbar-nav-btn` remains, but only on the compact (mobile) row. `.tm-scheduler-toolbar-today-btn` and `.tm-scheduler-toolbar-add` are removed; Today and New event are `button.tm-toolbar-btn`, and Print lives in the More menu (`button.tm-toolbar-more`, group `data-tm-group="export"`). A selector that matched `.tm-scheduler-toolbar-today-btn` or `.tm-scheduler-toolbar-add` matches nothing now — use `[data-testid="scheduler-today"]` and `[data-testid="scheduler-add"]`.
 
+- **The Spreadsheet Name Manager / Named Range Edit / Hyperlink dialogs are modal overlays, and the validation alerts are `alertdialog`s.** Before, the three dialogs rendered as an unstyled `<div>` in the document flow, *under* the grid (they had no stylesheet rule at all), and the validation alerts were anonymous `<div class="tm-spreadsheet-alert">` boxes with a backdrop click that dismissed even a Stop-style error. After, each dialog is an overlay card on the shared `.tm-spreadsheet-dialog-backdrop` / `.tm-spreadsheet-dialog` wrappers (plus a per-dialog hook class) inside `_spreadsheet.css`, wrapped in the core `TmFocusScope`, which supplies the dialog contract: `role="dialog"`, `aria-modal`, `aria-labelledby` (the card's `<h2>` title), the initial focus on a real control (the name field, the address field, the active name row or the New button, the URL field), the document-level Escape and the focus restore on close. The restore target is the grid root (`TmFocusScope.RestoreFocusTargetId`), not the toolbar button that opened the dialog, so closing any of them puts focus back into the spreadsheet; the Named Range Edit dialog keeps the default (back to whatever opened it inside the Name Manager). Both validation alerts moved into one component, `TmSpreadsheetValidationAlert`, which wraps the same primitive with `role="alertdialog"`, `aria-labelledby` (title) and `aria-describedby` (message): it focuses its primary action when it opens, Escape closes it, closing restores focus to the grid through the same scope-owned restore target, and a Stop-style error **ignores the backdrop click** — the value stays blocked and only the primary action (or Escape) dismisses it. The warning/information confirm keeps its backdrop-to-cancel. There is no host API for dismissing a Stop error: it is dismissed by the alert's own primary action. The E2E classes `__btn--ok`, `__btn--close` and `.tm-spreadsheet-name-manager__toolbar` are unchanged.
+
+  **Ids and the interim classes are not a contract.** Every element id these surfaces introduce is per instance (`spreadsheet-name-manager-title-{suffix}`, `spreadsheet-validation-alert-primary-{suffix}`, …) and may change between builds; the per-dialog `__backdrop` / card classes are interim as well, because phase 3 of the redesign plan replaces the markup with the core `TmModal`. Key off the roles instead — `[role='dialog']` / `[role='alertdialog']` inside `.tm-spreadsheet` — and the stable E2E hooks listed above.
+
+  ```html
+  <!-- before: in-flow block, no role/name, no overlay, backdrop click dismisses a Stop error -->
+  <div class="tm-spreadsheet-hyperlink">
+    <div class="tm-spreadsheet-hyperlink__header">…</div>
+  </div>
+  <div class="tm-spreadsheet-dialog-backdrop" onclick="dismiss">
+    <div class="tm-spreadsheet-alert">
+      <h4 class="tm-spreadsheet-alert__title">Invalid value</h4>
+      <button class="tm-btn tm-btn-primary tm-btn-md">OK</button>
+    </div>
+  </div>
+
+  <!-- after: shared overlay wrappers + core focus scope; the alert ignores the backdrop -->
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-hyperlink__backdrop">
+    <div class="tm-focus-scope" role="dialog" aria-modal="true"
+         aria-labelledby="spreadsheet-hyperlink-title-{suffix}"
+         data-restore-target="spreadsheet-grid-{suffix}">
+      <div class="tm-spreadsheet-dialog tm-spreadsheet-hyperlink">
+        <h2 class="tm-spreadsheet-hyperlink__title" id="spreadsheet-hyperlink-title-{suffix}">Hyperlink</h2>
+      </div>
+    </div>
+  </div>
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-validation-alert__backdrop">
+    <div class="tm-focus-scope" role="alertdialog" aria-modal="true"
+         aria-labelledby="spreadsheet-validation-alert-title-{suffix}"
+         aria-describedby="spreadsheet-validation-alert-message-{suffix}"
+         data-restore-target="spreadsheet-grid-{suffix}">
+      <div class="tm-spreadsheet-dialog tm-spreadsheet-alert">
+        <h2 class="tm-spreadsheet-alert__title" id="spreadsheet-validation-alert-title-{suffix}">Invalid value</h2>
+        <div class="tm-spreadsheet-alert__actions"><button class="tm-btn tm-btn-primary tm-btn-md">Confirm</button></div>
+      </div>
+    </div>
+  </div>
+  ```
+
+- **`TmSpreadsheet` paints from tokens: the canvas, the dialogs and the chrome follow the palette, dark mode and the indigo theme.** Before, the package shipped literals that are what rendered, so no theme reached the grid: `buildPalette` kept a hardcoded blue selection wash (`rgba(37, 99, 235, 0.12)`) and six hardcoded formula-reference colours, the active auto-filter glyph was `#ffffff`, the validation circles `#e53935`, a hyperlink's ink `#2563EB`, and seven scoped dialog stylesheets carried hex colours plus hex fallbacks (`var(--tm-color-surface, #fff)`) with `z-index: 1100` and `font-size: 13px`. After, the root declares the component tokens (`--tm-spreadsheet-header-bg/-text/-active-bg/-active-text/-font`, `--tm-spreadsheet-gridline`, `--tm-spreadsheet-selection-border/-fill/-fill-alpha`, `--tm-spreadsheet-ref-0..5`) derived from core semantic tokens only — the header gutter reads `--tm-color-surface-secondary` (the same token the data table header row uses, gray-50 in light and #0f172a in dark), so the header strip is a surface of its own instead of the white cell background, and the canvas reads them through `buildPalette` — so the selection wash follows `--tm-color-primary` (dark and indigo included), the formula references follow the categorical palette, and the header labels use `--tm-font-sans` instead of a monospace literal. A host overrides any single token on `.tm-spreadsheet`; nothing in the package is a literal any more (the strict token audit's package baseline is **0**). The dialog deltas are tokenized 1:1 (radius `--tm-radius-card`/`--tm-radius-control`, text `--tm-text-*`, layers `--tm-z-modal`/`--tm-z-dropdown`/`--tm-z-popover`), and the Find/Replace input's soft glow (`--tm-shadow-focus`, 1.62:1) became the two-layer `--tm-focus-ring` (5.17:1) with a forced-colors outline.
+
+  ```css
+  /* before: the fallback is what renders, forever */
+  .tm-spreadsheet-sort { background: var(--tm-color-surface, #fff); border-radius: 10px; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28); }
+
+  /* after: a component token on the root, derived from the core token */
+  .tm-spreadsheet { --tm-spreadsheet-header-bg: var(--tm-color-surface-elevated); }
+  .tm-spreadsheet-sort { background: var(--tm-color-surface); border-radius: var(--tm-radius-card); box-shadow: var(--tm-shadow-xl); }
+  ```
+
+- **`TmSpreadsheet` now has a grid density, and its default changes the look on a touch device.** New `Density` parameter (`SpreadsheetDensity.Auto` default, `Compact`, `Comfortable`). `Auto` resolves to `Comfortable` on a coarse pointer (`pointer: coarse`) and to `Compact` everywhere else, so a tablet or phone renders taller rows (1.5x), larger cell text (1.25x), a bigger fill handle and larger header filter buttons **without any host code** — this is the visual change a mouse host does not see. The scale is render-only: `RowHeight`, a per-row custom height, `SpreadsheetSheet.DefaultRowHeight` and every XLSX height keep their values, so a workbook round-trips untouched. A host that must keep the old look on touch pins it:
+
+  ```razor
+  <!-- before: the only density there was -->
+  <TmSpreadsheet RowHeight="20" />
+
+  <!-- after: opt out of the touch comfort -->
+  <TmSpreadsheet Density="SpreadsheetDensity.Compact" />
+  ```
+
+  The canvas grid root carries `data-density="compact|comfortable"` so a test or a host style can key off the resolved density. A host that reads pixel geometry must expect 30px rows on a touch device instead of 20px (zoom 100%). A row resize (the drag in the row header and the "Set row height" dialog) converts back to model pixels — `rendered ÷ (zoom × density row scale)`, the dialog shows the stored model height — so a comfortable grid never writes 1.5x heights into the workbook (the 150% zoom variant of the same bug is fixed alongside).
+
+- **`TmSpreadsheet` highlights the active row and column header.** Before, every header painted the same elevated surface and the selection was only visible inside the grid. After, the row/column headers of the selection are tinted with `--tm-spreadsheet-header-active-bg`, their labels use `--tm-spreadsheet-header-active-text`, and a 2px `--tm-spreadsheet-selection-border` rail sits on the grid edge of each (a second, non-colour signal for forced-colors and colour-blind readers). The tint follows the selection range, and a selection change repaints ONLY the old and the new header strips (two dirty rects, one header-layer pass) — the header layer is never repainted wholesale for a selection. A host that overrode `.tm-spreadsheet-header-cell` colours now has to override the tokens: `.tm-spreadsheet-header-cell` is the DOM grid's class, the canvas header is painted from the tokens above.
+
+- **`TmSpreadsheet` Full mode paints the workspace and lifts its chrome as cards.** Before, `Mode=Full` and `Mode=Embedded` shared one flat surface with 1px separators. After, the Full root carries `tm-spreadsheet--workspace` (background `--tm-bg-workspace`, a small gap and padding) and the ribbon, formula bar, grid, sheet tabs and status bar become cards (`--tm-radius-card`, `--tm-shadow-card`), while `Mode=Embedded` (the Notion block, a modal host) carries `tm-spreadsheet--chrome-flat` and keeps the flat, gapless chrome. A host selector that matched `.tm-spreadsheet` to override the background keeps working (the modifier is a second class, not a wrapper); a host that measured the grid's offset from the root must expect the workspace padding (8px) to be part of it.
+
+- **The Spreadsheet Custom Filter's first operator select is named by its own role, not by the dialog title.** Before, that `<select>` carried `aria-label="Custom filter"` (the dialog title repeated on a control), so a screen-reader user heard the same name on the dialog and on the field. After, it reads `TmSpreadsheet_CustomFilter_FirstOperator` ("First condition operator"), and the four operand fields and the second operator carry their own names (`…_FirstValue`, `…_FirstValueTo`, `…_SecondOperator`, `…_SecondValue`, `…_SecondValueTo`). A host that overrode the visible dialog title to reword that select must override the new key instead; an automated check that asserted `aria-label="Custom filter"` on the select now matches the dialog container only.
+
+  ```html
+  <!-- before: the select repeated the dialog title -->
+  <div class="tm-spreadsheet-custom-filter" role="dialog" aria-label="Custom filter">
+    <select class="tm-spreadsheet-custom-filter__op" aria-label="Custom filter">…</select>
+
+  <!-- after: dialog and field each carry their own name -->
+  <div class="tm-spreadsheet-custom-filter" role="dialog" aria-label="Custom filter">
+    <select class="tm-spreadsheet-custom-filter__op" aria-label="First condition operator">…</select>
+  ```
+
+- **The Spreadsheet Format Cells category picker is an ARIA listbox with a roving tabindex.** Before, the eight number categories were `<div class="tm-fcd__listbox-item">` boxes with only `@onclick` — not reachable or operable from the keyboard. After, the container is `role="listbox"` named by `aria-labelledby` (the id it points at is per instance, so the label id is **not** a contract), and it carries no `tabindex` and no `aria-activedescendant`: the roving tabindex lives on the options, where the single tab stop is the **selected** one (`tabindex="0"`, all others `-1`). Each option is `role="option"` with `aria-selected="true|false"`. ↑/↓/Home/End move the selection and the DOM focus with it (so the option scrolls into view), a click selects the option and focuses it, and Ctrl+Enter still applies the dialog from it. Consumers key off `[role='listbox'] [role='option']` (or the unchanged `.tm-fcd__listbox-item` class); the removed `#tm-fcd-category-list` container id, its `aria-activedescendant` and the old fixed option ids match nothing now.
+
+  ```html
+  <!-- before -->
+  <div class="tm-fcd__listbox">
+    <div class="tm-fcd__listbox-item tm-fcd__listbox-item--selected">General</div>
+  </div>
+
+  <!-- after: the container is named but not focusable; the selected OPTION is the tab stop -->
+  <div class="tm-fcd__listbox" role="listbox" aria-labelledby="spreadsheet-fcd-category-label-{suffix}">
+    <div class="tm-fcd__listbox-item tm-fcd__listbox-item--selected"
+         role="option" tabindex="0" aria-selected="true">General</div>
+    <div class="tm-fcd__listbox-item" role="option" tabindex="-1" aria-selected="false">Number</div>
+  </div>
+  ```
+
+- **The Spreadsheet dialogs' element ids are per instance — except the form fields the E2E lane keys off.** Every id this phase adds (dialog titles, the validation alert's title / message / primary / cancel, the listbox label, the Name Manager title / New button / rows, the insert-image title and URL field) is stamped with a per-instance suffix and may change between builds, so none of them is a selector contract; key off the roles (`[role='dialog']`, `[role='alertdialog']`, `[role='listbox'] [role='option']`) instead. The **pre-existing** form-field ids `#nr-name`, `#nr-refers`, `#nr-scope`, `#nr-sheet`, `#nr-comment`, `#hl-type`, `#hl-target`, `#hl-subject`, `#hl-display` and `#hl-tooltip` stay stable on purpose — the published E2E lane fills them — and at most one instance of each dialog is open at a time, so they cannot collide.
+
+- **Every Spreadsheet dialog rides the core `TmModal` — the package no longer paints a backdrop of its own.** Before, the package shipped **three** dialog families: five dialogs with their own scoped backdrop (`__backdrop` + `position: fixed` + `z-index` in the component stylesheet: Sort, Custom Filter, Remove Duplicates, Paste Special, Text to Columns), three dialogs on an interim shared `.tm-spreadsheet-dialog-backdrop` / `.tm-spreadsheet-dialog` wrapper (Name Manager, Named Range Edit, Hyperlink), and three inline blocks inside `TmSpreadsheet.razor` (`tm-fcd` Format Cells, `tm-dvd` Data Validation, and the Insert Image markup plus both validation alerts). Each family had its own header, its own close affordance, its own Escape handling and its own stacking band — two open dialogs dimmed the page twice and Escape depended on focus-trap ordering. After, **all of them** render `TmModal` (the same primitive as the rest of the library): the modal owns the fixed overlay, the dialog role, `aria-modal`, the accessible name, the initial focus, the document-level Escape, the focus restore and the mobile presentation. Gone from the package stylesheets: `.tm-spreadsheet-dialog-backdrop`, `.tm-spreadsheet-dialog`, `.tm-spreadsheet-dialog__title/__body/__actions/__label/__input`, `.tm-spreadsheet-dialog-scope`, the six `__backdrop` hooks and every dialog-card rule (`width`, `padding`, `box-shadow`, `border-radius`). The last two, the canvas grid's **column width** and **row height** dialogs (`.tm-spreadsheet-resize-dialog`, opened from the cell context menu), had kept a private `.tm-spreadsheet-resize-dialog-backdrop` with a literal `z-index` and no focus trap; they now render the same frame (`Title` = the old label, the numeric input in the body, Cancel / Apply in the footer, `RestoreFocusTargetId` = the grid root) and keep the `.tm-spreadsheet-resize-dialog__input` / `__btn--ok` / `__btn--cancel` hooks. The dialog's own root class moved from the card to the **overlay** — `.tm-spreadsheet-sort`, `.tm-spreadsheet-custom-filter`, `.tm-spreadsheet-dedup`, `.tm-spreadsheet-pastespecial`, `.tm-spreadsheet-t2c`, `.tm-spreadsheet-name-manager`, `.tm-spreadsheet-named-range-edit`, `.tm-spreadsheet-hyperlink`, `.tm-fcd`, `.tm-dvd`, the new `.tm-spreadsheet-insert-image` and `.tm-spreadsheet-alert` — so a host or an E2E spec that located a dialog by that class still finds exactly one element per dialog (now the fixed overlay instead of the card). The **card** is the modal's: `.tm-modal` inside that root; the title is `.tm-modal-title` inside `.tm-modal-header`; the close affordance is `.tm-modal-close`; the footer bar is `.tm-modal-footer`.
+
+  ```razor
+  <!-- before: the package's own overlay wrapper; the card carried the dialog class -->
+  <div class="tm-spreadsheet-dialog-backdrop tm-spreadsheet-name-manager__backdrop">
+    <TmFocusScope ...><div class="tm-spreadsheet-dialog tm-spreadsheet-name-manager">…</div></TmFocusScope>
+  </div>
+
+  <!-- after: the core frame; the dialog class sits on the modal overlay -->
+  <TmModal Show="true" Title="…" Size="ModalSize.Large" Class="tm-spreadsheet-name-manager" …>
+      <ChildContent>…</ChildContent><Footer>…</Footer>
+  </TmModal>
+  ```
+
+  Migration for a host that styled or selected the old markup:
+  | before | after |
+  | --- | --- |
+  | `.tm-spreadsheet-<dialog>__backdrop { … }` | `.tm-modal-overlay.tm-spreadsheet-<dialog>` |
+  | `.tm-spreadsheet-<dialog>__title` | `.tm-spreadsheet-<dialog> .tm-modal-title` |
+  | `.tm-spreadsheet-<dialog>__close` | `.tm-spreadsheet-<dialog> .tm-modal-close` |
+  | `.tm-spreadsheet-<dialog>{ width/padding/border-radius }` | the modal's `Size` (`ModalSize.Small/Medium/Large`) |
+  | `.tm-spreadsheet-<dialog>__actions` (footer bar) | the same class now holds only the buttons, inside `.tm-modal-footer` |
+  | `#tm-fcd-…` / hardcoded card widths | `.tm-fcd` (overlay) + `Size="ModalSize.Large"` |
+  | backdrop click handler on the old wrapper | `TmModal.OnClose` (`CloseOnOverlayClick`, false for a Stop alert) |
+
+- **All Spreadsheet dialogs have a mobile presentation, and the three tall surfaces go fullscreen.** Before, a dialog was the same fixed card at every width (the only narrow rule was `.tm-spreadsheet-dialog { min-width: 100% }`, which never matched the `tm-fcd`/`tm-dvd` cards). After, each dialog renders the frame's mobile presentation: **a bottom sheet for the short forms** (Sort, Custom Filter, Remove Duplicates, Paste Special, Hyperlink, Named Range Edit, Data Validation, Insert Image, validation alerts) and **a fullscreen panel for the tall ones** (Format Cells, Text to Columns, Name Manager), where a sheet would clip the tabs, the preview or the table. The presentation is the core frame's own resolution from the viewport scope it lives in, so a Spreadsheet embedded in a narrow Notion block/modal gets the same treatment; a new `LayoutMode` parameter on each dialog pins the mode for tests and hosts. A `Dialog_...` assertion that measured the desktop card still finds it: a forced or measured desktop layout renders `tm-modal--dialog`.
+
+  ```razor
+  <!-- pin the desktop card in a narrow host (tests, a kiosk layout) -->
+  <TmSpreadsheetFormatCellsDialog LayoutMode="TmLayoutMode.Desktop" … />
+  ```
+
+- **`TmSpreadsheetValidationAlert` is severity-driven, and its buttons say what they do.** Before, the component took `IsStop` (bool), `PrimaryText`/`CancelText`/`ShowCancel` and both the warning and the information style shared one path with the same default title ("Invalid value") and the same "Confirm"/"Yes" labels, with no severity icon. After, it takes `Severity` (`SpreadsheetValidationErrorStyle`: `Stop`, `Warning`, `Information`): the severity paints its own icon in `--tm-color-danger` / `--tm-color-warning` / `--tm-color-info` with a matching 3px rail on the card, and it picks the default words — `TmSpreadsheet_Validation_DefaultWarningTitle/Message` ("Value outside the recommended range" / "Keep the value anyway?") and `…DefaultInfoTitle/Message` ("Note" / "Just so you know.") — so an **Information** message no longer reads as a warning. A host that relied on a Warning or Information rule **without** its own `ErrorAlert.Title/Message` therefore sees the severity's own default text instead of "Invalid value". The Stop style keeps the hard block: one primary action labelled `TmSpreadsheet_Validation_Acknowledge` ("Got it"), no cancel path, a backdrop click does nothing, Escape acknowledges. Warning/Information offer `Tm_Cancel` plus `TmSpreadsheet_Validation_KeepValue` ("Use anyway"), and a backdrop click cancels. `ShowCancel` is now `bool?`: `null` (default) follows the severity. `IsStop` is **removed**; a host that set it migrates to `Severity`:
+
+  ```razor
+  <!-- before -->
+  <TmSpreadsheetValidationAlert IsStop="false" ShowCancel="true"
+                                PrimaryText="Yes" CancelText="Cancel" … />
+  <!-- after: the severity decides the icon, the defaults and the exit paths -->
+  <TmSpreadsheetValidationAlert Severity="SpreadsheetValidationErrorStyle.Warning" … />
+  ```
+
+  The alert's title moved to the frame header (`.tm-modal-title`); `.tm-spreadsheet-alert__title` matches nothing now. `.tm-spreadsheet-alert`, `__icon`, `__message` and `__actions` remain (the last one now wraps the buttons inside the frame's footer).
+
+- **The Insert Image dialog is a component of its own.** Before, the URL field, its label and both buttons were inline markup inside `TmSpreadsheet.razor`, with no URL validation — any non-empty string reached the canvas `<img>`. After, `TmSpreadsheetInsertImageDialog` (`Tempo.Blazor.Components.Spreadsheet.Dialogs`) renders through the shared frame with the initial focus on the field, `inputmode="url"`, Enter applying from the field, and the URL validated with `Uri.TryCreate` against absolute `http`/`https`/`data:` only: Apply is disabled (and the field carries `aria-invalid` plus a `role="alert"` message using `TmSpreadsheet_InsertImage_InvalidUrl`) until the address can actually be painted. A host that re-implemented the inline markup mounts the component instead.
+
+- **Find & Replace stays non-modal and becomes a non-modal bottom sheet on a narrow container (Q5).** Before, the panel was a floating `position: absolute` card at every width, overlapping the grid's first rows on a phone. After, the DESKTOP layout keeps the floating panel (the grid must stay usable and the highlighted matches visible — it is deliberately NOT a modal), and a mobile layout renders the same panel inside `TmDrawer` with `Modal="false"`, so there is no backdrop, the grid keeps working, the sheet has a grabber and Escape closes it. The `LayoutMode` parameter forces either presentation. Nothing else changed: `Ctrl+F`/`Ctrl+H`, Enter / Shift+Enter / Escape and every `.tm-spreadsheet-find__*` class are the same, and the panel keeps its own `role="dialog"` (non-modal). A host that positioned `.tm-spreadsheet-find` with its own absolute offsets must scope that rule to the desktop panel — the mobile sheet hosts it in `.tm-spreadsheet-find-host`.
+
+- **The Data validation DIALOG title lost its ellipsis.** The toolbar command keeps `TmSpreadsheet_Data_DataValidation` ("Data validation..." — it opens something), but the dialog now titles itself with the new `TmSpreadsheet_Validation_Title` ("Data validation", cs "Ověření dat", sk "Validácia údajov", fr "Validation des données"). Render `Title` from your own resource if you localize the surface yourself; `.tm-dvd .tm-modal-title` is still the selector, only the text changed.
+
+- **Core (visual change): `--tm-modal-stacked-scrim` — two stacked modals no longer dim the page twice.** `TmModal`/`TmDialog` paint `rgba(0, 0, 0, 0.5)` (light) / `0.7` (dark) on every overlay, so a dialog opened over another one reached **0.75 / 0.91** over the page and read almost black. Now the FIRST overlay paints the full page scrim and a second one (a later sibling `.tm-modal-overlay` under the same parent; a modal nested inside another modal's content still paints the full scrim) paints the light `--tm-modal-stacked-scrim` — 40 % of the same scrim colour, derived with `color-mix` from `--tm-bg-overlay`, so both themes follow automatically — and no backdrop blur. The lower dialog keeps a depth cue instead of being dimmed out, and a single modal is byte-identical to before.
+
+  ```css
+  /* restore the pre-2.10 look (two full scrims) … */
+  :root { --tm-modal-stacked-scrim: var(--tm-bg-overlay); }
+  /* … or no scrim at all on the stacked surface */
+  :root { --tm-modal-stacked-scrim: transparent; }
+  ```
+
+- **Core (additive): `MobilePresentation.AutoFullscreen`.** A tall surface (Format Cells, Text to Columns, Name Manager) would be clipped by a bottom sheet, so the enum gained a fourth value: it follows the viewport scope like `Auto` but resolves to a fullscreen panel on a mobile layout and to the centred dialog everywhere else. `Auto` is untouched, so every existing consumer keeps its sheet, and `TmModal`/`TmDialog` only extend their resolution switch.
+
+  ```razor
+  <!-- a tabbed form, a table or a preview: fullscreen on a phone -->
+  <TmModal MobilePresentation="MobilePresentation.AutoFullscreen" … />
+  ```
+
+- **Core (additive): `TmModal.RestoreFocus`.** `bool`, default `true` — the frame's focus restore can now be switched off so a host that owns the destination itself (a surface whose close action moves the focus deliberately) does not fight it. The value is forwarded to the existing `TmFocusScope.RestoreFocus`, so the default path is byte-identical to before; `false` renders `data-restore-focus="false"` and leaves the focus where the close action put it.
+
+- **Core (additive): `TmModal.DialogRole` and `TmModal.AriaDescribedBy`, `TmFocusScope.AriaDescribedBy`.** A surface that IS a message (the Spreadsheet validation alert) can now render `role="alertdialog"` and point `aria-describedby` at its message through the shared frame, instead of dropping out of `TmModal` to hand-roll an `alertdialog`. Both default to the previous behaviour (`"dialog"`, unset), so nothing else changes.
+
 - **Signing components respond to their CONTAINER, not the viewport (Signing redesign phase 1).**
   Every Signing stylesheet root (`tm-signing-runner`, `tm-pdf-template-designer` workspace,
   `tm-signing-field-editor-panel`, `tm-condition-builder`, `tm-formula-builder`,
@@ -609,6 +1067,39 @@
     </section>
     ```
 
+### Fixed
+
+- **Core: the "More" overflow menu of `TmToolbar` / `TmMobileActionBar` now stays inside the viewport.**
+  The shared `ActionOverflowMenu` panel opens with `TmOverlayPanel.ConstrainHeight` in addition to the
+  flip/clamp placement it already used, so a menu taller than the room on its resolved side flips above
+  its trigger when that side has room and otherwise caps its height to the room it has and scrolls
+  internally. Before, only flip + clamp applied: a panel taller than the viewport was pinned to the top
+  margin and simply ran past the bottom edge — the Spreadsheet's tablet rows put ~18 commands and three
+  expanded lists into one "More" (a 1209 px panel in a 768 px viewport, ~450 px of it off-screen), and a
+  top-layer panel has no page scroll to bring those entries back, so a tablet user could not reach them
+  at all. The public API is unchanged (the knob already existed on `TmOverlayPanel`) and a menu that
+  fits below its trigger is placed exactly as before. Guards:
+  `TmToolbarOverflowTests.MoreMenu_AsksThePanelToStayInsideTheViewport` (the options the panel opens
+  with) and `SpreadsheetPhase8OverflowE2ETests` (tablet 1024×768 with a menu taller than the viewport,
+  and a 430 px short window whose trigger sits near the bottom — both assert the panel and the last
+  entry are inside the viewport and that the entry is clickable). Found by the phase-6 bisect of
+  `SpreadsheetE2ETests.Phase3_Dialogs_Tablet1024Touch_StayDialogs_WithTouchSizedTargets`
+  (plan 8959eebe, f25a9d47).
+
+- **Spreadsheet redesign (phase 8): a host shorter than the phone chrome no longer renders an empty
+  grid.** `TmSpreadsheet` keeps a new `--tm-spreadsheet-grid-min-height` (default `9rem`) floor on the
+  phone grid and `.tm-spreadsheet--layout-mobile` may scroll its own box, so a host that overrides the
+  phone height floor (the Notion fullscreen editor sets `--tm-spreadsheet-mobile-min-height: 0` at
+  568×320 so its Save / Discard footer stays visible) shows rows again instead of a grid resolved to
+  ~0px. A host tall enough for the chrome plus the floor never scrolls. Guards:
+  `SpreadsheetDesignTokenTests.MobileLayout_KeepsAUsableGridFloor_WhenTheHostIsShorterThanTheChrome` and
+  `SpreadsheetPhase6ResponsiveE2ETests.Phase6_NotionEditModal_At390_IsMobile_AndKeepsTheFooterInView`
+  (grid ≥ 96 px and reachable by scrolling at 844 and 320 px).
+- **Spreadsheet redesign (phase 8): the wireframe `TmSpreadsheet` stencil stops drawing command chips
+  under the phone "More" chip.** The mobile variant used to paint the alignment/merge chips onward
+  across `el.W - 30` (the "More" chip) on a 340 px element; a chip that would reach the "More" chip is
+  now skipped, and no coordinate of a compact row exceeds `el.W - 18`.
+
 ### Known issues
 
 - **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
@@ -619,6 +1110,61 @@
   provider-backed contract is planned for Signing redesign phase 6.
 
 ### Added
+- **Spreadsheet redesign (phase 8): `TmSpreadsheet` honours the core `data-testid` contract.**
+  The component now derives from `TmComponentBase` and its root renders
+  `data-testid="@RootTestId()"` before the splatted attributes, so `DataTestId` labels the root (and a
+  host can still override it through `AdditionalAttributes`) while `TestIdPrefix` namespaces the
+  internal ids (`tm-spreadsheet-header`, `-header-open`, `-header-download`, `tm-spreadsheet-mobile-header`
+  → `{prefix}-…`). Without `DataTestId` the root carries no `data-testid`, so no existing DOM changes;
+  guarded by `TmSpreadsheetTestIdTests`.
+
+
+- **Wireframe stencil: the `TmSpreadsheet` stencil draws the tablet and phone chrome (`layoutMode`, additive).** The stencil used to preview the DESKTOP tabbed ribbon only, so a designer could not show what a spreadsheet looks like on a tablet or a phone. `TempoNativeRendererDefinitions.RenderSpreadsheet` now reads the same `layoutMode` prop (`auto | desktop | tablet | mobile`, default `auto`) the diagram editor and dashboard stencils already expose, and the `TmSpreadsheet` wireframe schema offers it in the inspector's Behavior group:
+
+  | `layoutMode` | What the stencil draws |
+  |---|---|
+  | `auto` (default, and any unknown value) | the desktop chrome — tab strip + labelled ribbon groups. `auto` renders the desktop variant because a stencil communicates a chosen presentation, it does not re-flow the canvas (X11) |
+  | `desktop` | the same desktop chrome |
+  | `tablet` | TWO compact command rows (`data-region="command-row" data-row-count="2"`, no tab strip), then the formula bar, the grid, the sheet tabs and the status bar |
+  | `mobile` | the compact header (the document title + the host action slot), ONE command row, the formula bar, the grid, the sheet tabs and the core mobile action bar (Insert / Format / Image / More) instead of the status bar |
+
+  `showHeader` keeps its meaning on desktop and tablet, and on the mobile variant the compact header REPLACES the document header (the two are mutually exclusive in the real component, so exactly one header paints). The SVG now carries `data-layout` on the variant group and a `data-region` on every chrome block (`header`, `mobile-header`, `ribbon-tabs`, `ribbon-groups`, `command-row`, `formula-bar`, `grid`, `sheet-tabs`, `status-bar`, `action-bar`), so a spec can assert which chrome was drawn instead of matching pixels. The change is purely additive: the renderer only reuses the stencil palette constants (no new literal), no shared wireframe contract changed, and the desktop variant paints exactly what it painted before. Guarded by `WireframeSpreadsheetRendererTests` (`RenderSpreadsheet_LayoutModeAuto_IsDesktop`, `…_LayoutModeTablet_DrawsTwoCompactRows`, `…_LayoutModeMobile_DrawsCompactHeaderOneRowAndActionBar`, the unknown-value fallback and the `showHeader` interaction); documented in [docs/wireframe-editor.md](docs/wireframe-editor.md#the-tmspreadsheet-stencil-draws-every-chrome-layout).
+
+- **Spreadsheet redesign (phase 7c): the dialogs at 320 px, the Sort phone toolbar and a canvas that follows a LIVE theme flip.**
+
+  - **Sort on a phone is the reference's two columns.** The dialog's top bar is a two-column grid — "Add level" on the left, the "My data has headers" / "Case sensitive" checkboxes STACKED on the right (before, both wrapped onto a row under the button). Below `@container (width < 20rem)` of the dialog body the options stack UNDER the button: at 320 px readability wins over the reference (documented in [docs/spreadsheet.md](docs/spreadsheet.md#dialogs-at-320-px)). The desktop/tablet level table is unchanged and the core `TmCheckbox` roots keep their classes and `data-testid`s.
+  - **Name Manager / Format Cells survive 320 px.** The Name Manager card keeps the name on one ellipsised line, WRAPS the "Refers to" formula (`overflow-wrap: anywhere`, clamped to two lines, full value in `title` + `aria-label`) and moves the scope chip under the name at `@container (width < 22rem)` — measured on the dialog's own width, so 320 (20rem) flips it and a 390 phone keeps the reference's two columns (decision `SPREADSHEET-NAME-MANAGER-320-WRAP`). Format Cells keeps its phase-4 category `TmSelect` above the options, guarded by a regression test.
+  - **A live theme flip repaints the canvas.** `spreadsheet-canvas.js` now watches `data-theme` and `data-tm-theme` on `documentElement` (one `MutationObserver` per grid instance, disconnected in `dispose`) and rebuilds the palette + requests a FULL redraw, so a dark/light or indigo flip recolours the headers, the selection and the content immediately instead of waiting for a resize. Node lane: `themeAttributeChange_RebuildsThePalette` (`npm run test:spreadsheet`); E2E: `Phase7c_LiveThemeFlip_RepaintsTheCanvasWithoutResize` (no viewport nudge).
+  - **Data Validation keeps its measured breakpoint.** `TmSpreadsheetDataValidationDialog` stays `ModalSize.Medium`, so the `@container (width >= 640px)` threshold still describes the OVERLAY; guarded by `DataValidationDialog_KeepsMediumSize_ForOverlayBreakpoint` and documented next to the rule.
+
+- **Spreadsheet redesign (phase 7b): the header labels scale with the density, the dark active header is opaque, and the canvas exposes its live cell geometry.** The follow-up pass over the phase-2/6/7 carry-forwards:
+
+  - **Comfortable scales the header LABEL too.** `drawHeaders` paints `--tm-spreadsheet-header-font` scaled by the density font scale (`resolveHeaderFont`), so the 11 px labels become 13.75 px on a 28 px Comfortable gutter instead of staying cramped next to 12.5 pt cells. The token itself is untouched — a host override still wins — and Compact paints the token exactly (no rounding drift). The `gutterScale` also travels in the canvas frame (`DensityGutterScale`) so the frame and the JS rule can never disagree.
+  - **Two public JS getters replace every hardcoded 40/20 in tests and integrations.** `tmSpreadsheetCanvas.getCellCenter(root, row, col)` returns the cell centre in the root element's coordinate space and `tmSpreadsheetCanvas.getGridGutters(root)` returns `{ rowHeaderWidth, columnHeaderHeight, density, gutterScale }`. Both read the FRAME (the component already scaled the gutters), so a density change can never move a cell centre out from under a spec again; the E2E `GetCanvasCellCenterAsync` helper and the inline pixel-sample probes now call them instead of recomputing `gutter + left - scroll`.
+  - **Opaque dark active header.** See Fixed — the override lives in the package's theme layer, `wwwroot/css/theme-spreadsheet-dark.css`, imported by the package bundle (`tempo-blazor-spreadsheet.css`). A host that imports the individual CSS files instead of the bundle must import that theme file too; the read-only Notion preview and the edit modal get it automatically.
+  - **Wall-clock performance evidence.** New `SpreadsheetPerformanceE2ETests.SelectionDrag_AB_WithinBudget` (`TestCategory=Performance`, outside the smoke lane) runs the selection-drag scenario as an in-session A/B — the shipped `v2.9.0` canvas script served through Playwright route interception against the current build, seven alternations per arm — and reports median + IQR; `median(current) <= 1.10 x median(v2.9.0)` passes, an IQR above 30 % of the median reports **Inconclusive with the numbers**. Every run writes `eng/release-evidence/spreadsheet-perf-<yyyyMMdd>/` as `selection-drag-ab-<HHmmss>.json` + `summary-<HHmmss>.md` (a same-day re-run never overwrites the previous sample). **Current evidence (20261029): Inconclusive** — noise (IQR/median) 50–63 %, above the 30 % threshold, with the ratio's sign flipping between the two runs; the wall-clock budget is awaiting a run on an idle machine or the perf lane. Note the `v2.9.0` arm has no header-highlight layer at all, so it is not a like-for-like arm for this scenario (the deterministic counters are green: one header paint per selection change, zero content repaints, header paint < 5 ms). See [docs/spreadsheet.md](docs/spreadsheet.md#density--the-gutter-scale-and-the-hit-areas).
+
+- **Spreadsheet redesign (phase 7): touch interaction on the canvas.** The grid's gestures now come from the shared core helpers (`pointer-drag.js` for the single pointer, `pointer-gesture.js` `attachPinch` for two fingers), loaded by a dynamic `import()` resolved from `document.currentScript.src` — the package writes no drag and no pinch of its own. On top of the recognizer:
+
+  | Gesture | Result |
+  |---|---|
+  | tap | selects the cell (the compatibility click is swallowed, so the mouse and the touch path can never both act on one press) |
+  | double tap (≤ 320 ms, ≤ 24 px) | opens the cell editor with the virtual keyboard the cell type asks for — `inputmode="decimal"` for a numeric/percent cell, `text` otherwise (dates included) |
+  | long press (500 ms) | opens the cell menu at the finger — the phone layout's bottom sheet, the anchored menu on tablet/desktop. A 400 ms release-click guard stops the lifting finger's click from closing it again |
+  | one-finger drag on a cell | the browser's native pan — the canvas never starts a drag-select from a finger |
+  | drag a ROUND corner drop (top-left / bottom-right) | extends the selection, anchor preserved (drag-only) |
+  | drag the fill handle | fills (unchanged fill semantics, now with a finger-sized hit box) |
+  | two-finger pinch | commits one clamped 10 % zoom step through the new `OnZoomChanged` (the status bar / the phone's More menu are the WCAG 2.5.7 alternative) |
+
+  The corner drops are **drag-only** and the four 24 px EDGE STRIPS of the first implementation are gone: a strip along the selection's edge covered the selected row/column on a phone (30 px rows vs a 44 px finger box) and swallowed the taps and long-presses meant for the cell itself. A tap on a drop does nothing; a tap on the cell next to the selection selects that cell.
+
+  **WCAG 2.5.7 for the fill handle.** A fill is now also reachable from the cell menu's **Fill down** / **Fill right** entries and from **Ctrl+D** / **Ctrl+R** (the canvas claims both chords, so Ctrl+D does not open the browser's bookmark dialog and Ctrl+R does not reload the page). Both go through the C# `AutoFillCommand` — the same pattern engine the pointer drag's JS commit uses, but not a byte-identical code path: the command path fills **every column** (Fill down) / **every row** (Fill right) of the selection, excludes the source row/column from the target, and copies the source cell's FORMAT like Excel, all inside one `BatchCommand` (one undo step). A single-cell selection copies the cell above/left (Excel's behaviour) and an empty source is a no-op — a stray Ctrl+D never clears a cell. New resource keys, all four languages: `TmSpreadsheet_FillDown`, `TmSpreadsheet_FillRight`. New `SpreadsheetFillDirection` enum, `SpreadsheetCellStyle.CopyFrom`, and grid parameters `OnZoomChanged` / `OnFillRequested`.
+
+  **Read-only grids do not offer the mutating menu.** `TmSpreadsheet` builds the host cell menu from `Mode`; an `Embedded` (read-only) spreadsheet offers only Format Cells, Copy, column width and row height — no Paste, Cut, Fill down/right, insert/delete or Clear. A long press inside the CURRENT selection keeps that range (Excel), so the menu's commands act on the whole block instead of collapsing it to the pressed cell.
+
+- **Spreadsheet redesign (phase 7): the density scales the canvas header gutters, and Auto follows the pointer.** `SpreadsheetDensityScale` gained `GutterScale` (1.4 at Comfortable): the row-header gutter draws 40 × 1.4 = 56 px and the column header 20 × 1.4 = 28 px instead of staying at the compact sizes, which is what the tablet reference draws and what gives the auto-filter button a finger-sized height. The gutter values travel in the canvas frame (`RowHeaderWidth` / `ColumnHeaderHeight`), so the canvas, the hit-testing and the component geometry cannot drift apart, and the model is untouched. The auto-filter button's HIT rect grows to the touch floor on a coarse pointer (inside its own column and header gutter) while a fine pointer keeps the painted rect exactly. `Density=Auto` is no longer frozen at the first frame: a `matchMedia('(pointer: coarse)')` listener re-resolves it when the pointer kind flips (a mouse attached to a tablet, a 2-in-1 undocked) and repaints; a forced `Compact`/`Comfortable` is unaffected. The canvas's first paint already used the resolved scale (the coarse-pointer interop completes before the engine is initialised), so no compact rows are painted on a touch device.
+
+- **Fixed (Spreadsheet formula bar): an unrelated parent render no longer overwrites a ref typed into the name box.** `TmSpreadsheetFormulaBar` re-seeded its controlled `_nameBoxValue` from `ActiveCellRef` on EVERY parent pass, so any render that landed between the keystroke and the Enter (a command-log flush after a canvas click, the viewport sync the grid's focusout schedules) patched the input back to the active cell and the Enter navigated there instead of to the typed ref. It is now seeded only when the active cell actually changed. Related: the grid takes the focus back after a canvas activation only while the focus is not already in another control (`tmSpreadsheetCanvas.isFocusOutside`), so a late frame cannot blur a control the user has moved to.
 
 - **Signing runner document chrome (Signing redesign phase 3, U4), all opt-in.** `TmSigningFormRunner`
   gains `DocumentTitle` (a header above the pages), `ShowDocumentToolbar` (default `false` — today's
@@ -1743,6 +2289,20 @@
 
 ### Fixed
 
+- **Spreadsheet: the AutoFilter funnels render again and the context menu keeps the keyboard focus.** Two real defects the phase-7d regression gate uncovered. (1) `drawFilterButtons` pushed each funnel with `columnWidth: read(colFrame, "Width", …)`, but `colFrame` exists only in `drawSelectionOverlay` — the `ReferenceError` aborted the whole content paint inside its `requestAnimationFrame` AFTER `state.filterButtons` had been cleared, so the Filter toggle, the header dropdowns and every custom-filter spec silently stopped working with no DOM change at all. The funnel now uses its own painted cell width, and `resolveFilterButtonHitRect` takes the target's OWN box (`boundsTop`/`boundsHeight`) so the coarse-pointer hit rect stays on the funnel's row instead of jumping up into the column-header gutter (a phone tap on the funnel was impossible; a tap on the gutter opened the menu). Pinned by `spreadsheet-canvas-filter-buttons.test.mjs` (`npm run test:spreadsheet`, 3 tests, stub 2D context). (2) The grid's canvas focus restore was probe-then-focus (`isFocusOutside` → `ElementReference.FocusAsync`); the host-owned context menu focuses its first entry from its own `OnAfterRenderAsync` in the same render batch, so the probe answered "still in the grid" and the focus hop landed ~25 ms later and stole the caret back — the menu's ArrowDown / Home / End / Escape walk was dead in a real browser while every DOM assertion passed. The guard is now ONE atomic JS call (`tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway`: check and focus in the same task), and the host can stand the restore down entirely through the new `TmSpreadsheetCanvasGrid.SuppressFocusRestore` (fed by the open context menu / resize dialog). Pinned by `TmSpreadsheetContextMenuFocusTests`.
+- **Spreadsheet E2E (phase 7d): the specs reach a command in the COMPACT chrome, and the phone dialogs are opened from the desktop ribbon.** Since phase 6 the chrome follows the CONTAINER, so at a tablet width there is no ribbon tab strip, and a phone has no entry at all for the advanced commands (G2 keeps Data validation, Name Manager, the custom Sort, Text to columns, Remove duplicates and Paste special desktop/tablet only). The pre-phase-6 helpers clicked `.tm-spreadsheet-toolbar__tab` and timed out (30 s) on `button[title='Custom sort…']`. A shared `SpreadsheetChromeHelpers` partial now opens a command by its frozen identity — the desktop tab strip plus the button, or the compact row's `data-command-id`, or that row's "More" menu (two taps) — and EVERY spec that needs a command the phone cannot reach opens it on the desktop chrome and narrows the viewport afterwards (the phase-7c rotated-phone pattern), so the phone/tablet PRESENTATION assertions are unchanged. `SpreadsheetPhase6ResponsiveE2ETests.Phase6_NotionEditModal_At390_IsMobile_AndKeepsTheFooterInView` no longer reports `Inconclusive`: the seeded Notion page has no SAVED spreadsheet block, so the spec opens the modal through the real "Create Spreadsheet" entry point of the empty block and then asserts `data-layout="mobile"` plus the Save / Discard footer at 390 × 844 and 568 × 320. Test-only change: no component, token or DOM contract moved.
+- **Core: the `TmModal` header's × is optically centred on the title line.** The header is a flex row aligned to `flex-start`, so the close box shared its TOP edge with the title's first line box (`--tm-font-size-lg` 1.125rem × `line-height` 1.3 = 23.4px) and the icon's centre sat ~4px below the title's centre in every dialog of the library. `.tm-modal-close` now declares the local knob `--tm-modal-close-size` (**2rem** on a fine pointer) and carries
+
+  ```css
+  margin-block-start: calc((var(--tm-font-size-lg) * 1.3 - var(--tm-modal-close-size)) / 2);
+  width: var(--tm-modal-close-size);
+  height: var(--tm-modal-close-size);
+  ```
+
+  A `@media (pointer: coarse)` block in the SAME file (`components/_modal.css`, after the base rule — `breakpoints.css` is imported before the components, so a knob declared there would lose to this file's default) republishes it as `--tm-modal-close-size: var(--tm-touch-target)`. That is what keeps the icon centred at BOTH sizes: the coarse-pointer touch floor is 44px, and a literal `2rem` offset would have put the icon 6px low on every phone. **The target size is unchanged** (2rem on a fine pointer, 44px `--tm-touch-target` on a coarse one — `breakpoints.css` still owns the `min-width`/`min-height` floor), the header keeps its padding and row order, no new animated subject is introduced, and the phone header reads ~10px shorter because the box no longer overhangs the title line. `--tm-modal-close-size` is a per-element knob, not a design token: a host that changes its modal's × size sets it on `.tm-modal-close` (any later declaration would also move the optical offset with it). The fix lives ONCE in the core stylesheet (not per package dialog) and the committed `tempo-blazor.bundled.css` is regenerated. Guarded by `TmModalTests.Modal_Header_CloseButton_SharesTitleLineBox` (markup + the component stylesheet + the media-override ordering + the bundle) and by the E2E `Phase7c_TmModal_CloseButton_IsCentredOnTheTitleLine` (|Δ| ≤ 1px) on a Spreadsheet dialog and two core demo modals (with a subtitle, with a header icon).
+- **The Spreadsheet canvas follows a live theme flip (no resize needed).** The palette is a snapshot of the resolved tokens, so flipping `data-theme` / `data-tm-theme` on a live page recoloured the chrome while the canvas kept the OLD colours until the `ResizeObserver` fired (the phase-2 dark spec had to nudge the viewport to work around it). One `MutationObserver` on `documentElement` per grid instance now rebuilds the palette (`buildPalette`) and requests a FULL redraw on either attribute change; it is disconnected in `dispose`, and a host without `MutationObserver` keeps the previous resize-only behaviour.
+- **The Spreadsheet active header strip is opaque in dark mode.** `--tm-spreadsheet-header-active-bg` resolved through `--tm-color-primary-subtle`, a `rgb(from ... / 0.15)` relative colour, so the 0.15-alpha wash over the dark header surface was barely visible (22 % is the NEW dark mix, not the old light value) and a translucent strip let the cell grid show through while a row was scrolled. The package theme layer (`wwwroot/css/theme-spreadsheet-dark.css`, `:where([data-theme="dark"], .tm-dark) .tm-spreadsheet` — wrapped in `:where()` so a host's own `.tm-spreadsheet` token override still wins in dark) now re-mixes the token with `color-mix(in srgb, var(--tm-color-primary) 22%, var(--tm-spreadsheet-header-bg))` — still token-only, no hex, and the core `tokens-dark.css` is untouched. The canvas mixes that `color-mix()` itself (`parseColor` / `resolveColorToken` in `spreadsheet-canvas.js`, which also parses the `color(srgb ...)` form Chromium computes), because an unregistered custom property keeps the function unevaluated and a backend that refuses it in `fillStyle` would silently keep the previous style. The node lane pins it with `buildPalette_DarkActiveHeader_IsOpaque` (alpha 1, mixed channels) and the phase-2 visual spec pixel-samples the D/5 header. The light theme's `primary-subtle` wash is unchanged.
+
 - **`TmTabs` dynamic badges reach the header strip, with the resync bounded (phase 13 review).** The headers are built by `TmTabs` from its registered panels, so a `Badge` (or `Title`/`Icon`/`Disabled`) that changes AFTER the strip of the same pass was built — the Relations tab's related-count badge — used to lag a render. `TmTabs` re-renders ONCE to resync, and the resync is bounded to one extra render per OUTSIDE render pass (`_headerResyncRendered`): a NON-IDEMPOTENT header input (a title re-evaluated per fragment execution) used to feed the resync with a fresh value on every pass — an unbounded render loop; now it costs exactly one resync render and settles (`TmTabsTests.Non_idempotent_title_does_not_render_loop` pins ≤ 2 renders per parent render, `Badge_change_after_parent_rerender_reaches_header` pins the reach). A strip whose header inputs are static stays a single render.
 
 - **DiagramEditor Escape closes the TOPMOST layer only — one press closes exactly ONE layer (Fáze 10, confirmed ordering).** The layer order is now the context menu > "⋯" view menu > search panel > an inline edit > a running gesture/selection > the host dialog — the REVERSE of the previous search-before-menu behavior (the search consumer ran in the capture phase before the menu's handler was even registered, so with both open the search closed and the menu stayed; now `_onSearchEscape` skips while `_menuOpen` and the view menu outranks the search panel). An Escape typed into an INLINE EDIT of the canvas (the `.tm-diagram-edge-label-input` foreignObject input, a `.tm-diagram-node__inline-input`/`-textarea` section editor, a swimlane header or a table cell) now CANCELS the edit deterministically — the value reverts, nothing is pushed to the undo stack — and is consumed (`preventDefault` + `tmEscapeHandled`), so the open-editor dialog stays open and the next Escape continues with the layer order. The consumer resolves the owner: a node editor through its registered `TmDiagramStencilShape` (new `[JSInvokable] CancelActiveEditFromJs`), everything else through the canvas' new `[JSInvokable] OnInlineEditEscape` (`CancelEdgeLabelEdit`); the Blazor `@onkeydown` Escape branches on the inputs stay as idempotent fallbacks. Node tests: `diagram-editor-escape.test.mjs`; bUnit: `TmDiagramCanvasTests.Escape_in_edge_label_input_cancels_without_command`; E2E: `ModelingOpenInEditorDialogE2ETests` (menu > search > dialog, and the inline-edit cancel).
@@ -1806,6 +2366,13 @@
   This is a visual change, not an API change: no parameter or signature was removed. A template taller than the card is still cut at the card edge.
 - **`TmMultiSelect` sheet keyboard follows the panel's resolved layout.** With `MobilePresentation="Auto"` and `LayoutMode="Auto"` the listbox used to read the parameter, which stays `Auto`, so on a real phone the options had no `tabindex` and no `aria-activedescendant` even though the popup had opened as a sheet. The listbox now follows `TmOverlayPanel.IsSheet`. A forced `Sheet`, or `Auto` with `LayoutMode="Mobile"`, is unchanged.
 - **Calendar and multi-select accessible markup moved.** See Breaking / Migration. The classes `.tm-calendar`, `.tm-cal-nav`, `.tm-cal-day` and `.tm-multiselect__options` are unchanged, and the popup root still keeps `display: flex`.
+- **Three Spreadsheet dialogs no longer render as an unstyled block in the document flow under the grid.** The Name Manager, Named Range Edit and Hyperlink dialogs had no stylesheet rule in `Tempo.Blazor.Spreadsheet` at all, so they landed *below* the grid as raw markup. They now ship a fixed overlay on the `--tm-z-modal` band plus a card (sticky table header, `--tm-color-primary-subtle` selected row with a primary rail, header close button), and the overlay keeps the grid where it was. The card is a column capped to the viewport (`max-height` propagated from the backdrop through the focus-scope wrapper), so a long name list or a short window scrolls the middle instead of pushing the footer off screen. The DOM changes (`role="dialog"`, `aria-modal`, `aria-labelledby`) are listed under Breaking / Migration.
+- **The Spreadsheet validation alerts are `alertdialog`s with a focus contract.** A Stop-style error used to be a plain box that any backdrop click dismissed; it now ignores the backdrop click entirely — the value stays blocked and only its primary action (or Escape) dismisses it. Both alerts are one component, `TmSpreadsheetValidationAlert`, wrapped in the core `TmFocusScope`: it focuses the primary action when it opens, closes on Escape, and puts focus back on the grid when it closes. A warning/information confirm keeps its backdrop-to-cancel and its deferred-commit flow — confirming still commits the deferred value, cancelling still discards it. Screen readers announce the alert as a dialog and read the title (`aria-labelledby`) and the message (`aria-describedby`).
+
+- **The Spreadsheet Format Cells category list and the Name Manager rows are keyboard operable.** Both lists use a roving tabindex: the selected option / row is the single tab stop (`tabindex="0"`, every other `-1`) and owns the DOM focus, so ↑/↓ plus Home/End move the selection and the focus together (the item scrolls into view) and no `aria-activedescendant` is involved — the containers keep only `role` and their accessible name. The Name Manager table opens on its first row (and re-normalises the selection whenever a filter hides it, so exactly one row stays tabbable); Enter edits the selected name, Delete deletes it and selects the neighbour (the row that took its place, or the new last row), a double click edits, and Edit/Delete disable whenever no visible row is selected — per [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md). The rows are `<tr>` elements with no native activation, so nothing double-fires.
+
+- **The Spreadsheet Text to Columns fixed-width hint is localized.** The break-positions field carried the hardcoded English `placeholder="e.g. 5, 10"`; it now reads the new `TmSpreadsheet_TextToColumns_BreakPositionsPlaceholder` key ("e.g. 5, 10" / "např. 5, 10" / "napr. 5, 10" / "p. ex. 5, 10").
+- **The Spreadsheet dialogs' label-less controls got accessible names.** The Custom Filter's operator selects and its operand fields (including the `Between` upper bounds) now name themselves (`TmSpreadsheet_CustomFilter_FirstOperator` / `_FirstValue` / `_FirstValueTo` / `_SecondOperator` / `_SecondValue` / `_SecondValueTo`), a Sort level's three selects name their role **and** the level number (`TmSpreadsheet_Sort_ColumnLevelAria` / `_SortOnLevelAria` / `_OrderLevelAria`, `"Column, level {0}"` — a neutral form with no plural), and the Name Manager filter input repeats its placeholder as `aria-label`. The Insert Image url field is now associated with its label through `for`/`id` and answers Enter (apply) — the field owns the Enter contract, so a bubbled keydown from the footer buttons cannot activate them twice — while Escape is the dialog's own dismissal (the focus scope's document-level listener), and a backdrop click goes through the same close path as Cancel.
 
 - **`TmLayoutObserver.ResolvedLayoutChanged`: the one-time first-resolution raise is narrowed to the inherited case (Auto observer + cascading parent + non-Desktop).** The phase-3 mobile-preview fix made the FIRST resolution raise the callback whenever it was non-Desktop — which also fired for a forced `LayoutMode` and for a host-supplied `InitialMode`, turning the documented "the initial value is not a change" contract into a surprise initial callback for tests and hosts that pin a mode. The raise now happens only when the observer is `Auto`, has no own measurement yet, has a cascading parent, and resolves non-Desktop — i.e. when `TmLayout.Resolve` returns the PARENT's mode, exactly the late-mounted-consumer case the raise was introduced for (a lazy editor under an app-level viewport scope would otherwise stay on its desktop default). Forced `LayoutMode` and a parentless `InitialMode` keep the no-initial-raise semantics; a later change still raises as before. The contract sentence is updated everywhere it is stated (`TmLayoutObserver`, `TmEditorShell`, `TmEmailTemplateEditor`, the `TmEmailMobileHeaderSlot` comment, the Wireframe/DiagramEditor/PdfAnnotator forced-layout comments, `docs/responsive-conventions.md` and the two JSON documentation overlays; bundles regenerated). bUnit coverage in `TmLayoutObserverTests` (Auto under a cascaded Auto parent raises Mobile exactly once and a later JS report raises nothing; forced `LayoutMode=Mobile` and `InitialMode=Mobile` raise nothing; a `TmEditorShell` under a Mobile viewport-scope parent adopts `data-editor-layout="mobile"`).
 - **`TmModelingModelTree` review fixes (Modeling redesign plan, phase 2): the tree is now a real APG tree and the collapsed-group dead end is gone.** The single biggest defect: with a filter that matched nothing the tree used the RENDERED count for its empty-filter branch, so collapsing the only group of a single-type model flipped the tree into the `modeling-tree-empty-filter` state (the header vanished and the group could never be re-expanded). The branch now keys off the new `MatchingElementCount` (elements matching the filter across ALL groups) — `data-visible-count` keeps the phase-1 matching-count contract (M10/M23/M26) and the new `data-rendered-count` attribute reports the nodes actually in the DOM. The group markup follows the APG tree pattern: each type group is a `role="treeitem"` (`aria-level="1"`, `aria-expanded`, `aria-setsize`/`aria-posinset`, `aria-label` "{label}, {count}") wrapper carrying the roving tabindex, containing a presentational header row div (`@onclick` + the Collapse/Expand keys as its `title` tooltip; the sr-only span is gone and the visible count pill is aria-hidden) and, only while expanded, the `role="group"` list of `aria-level="2"` element treeitems inside `role="none"` wrappers. Keyboard navigation walks ONE flat visible list — Up/Down/Home/End traverse, Right on a collapsed header expands (on an expanded header it focuses the first child), Left on an expanded header collapses (on a node it focuses the header), Right on a node is a no-op — and Enter (keydown, `!repeat`) / Space (keyup, the native button split) toggle the group treeitem, EMULATED because the wrapper is not a native activatable; the node buttons stay native and fence their keys with `@onkeydown`/`@onkeyup:stopPropagation`. Focus moves through the new `focusTreeGroupHeader(treeRoot, groupKey)` export of `modeling-editor.js` (scoped to the caller's tree root, no eval). Group list DOM ids are now per-instance (`tm-mmt-{Guid:N}-group-{index}`) instead of a lossy static slug, so two trees on one page cannot collide. While a filter is active, toggling works on a transient set that is CLEARED whenever the filter text changes — the stored collapsed state (and the new two-way `CollapsedGroups` / `CollapsedGroupsChanged` parameter pair, owned and bound by `TmModelingEditor`) is untouched until the filter clears. An EXTERNAL `SelectedElement` arriving inside a collapsed group removes its group key from the collapsed state in `OnParametersSet` (auto-reveal) and is scrolled to once the node actually renders. Group labels come from `TmModelingSemanticType_{key}` when the localizer has one, else the humanized key ("applicationComponent" → "Application component"). Visually the tree is quieter: nodes are transparent rows (`--tm-space-5` indent, hover `--tm-bg-muted`, selected keeps the primary-subtle/soft-border pair), the type icon is `Size.Sm`, the drag handle only surfaces on node hover/focus or coarse pointers, headers get a `--tm-touch-target` min-height on coarse pointers, and every Modeling `:focus-visible` ring is now `2px solid var(--tm-color-primary)` with offset 2. bUnit coverage in `TmModelingModelTreeTests` (dead end, APG roles, transient filter state, auto-reveal, two-way binding, flat-list navigation, per-instance ids) and an E2E spec collapses all groups (`ModelingTreeCollapseE2ETests`).

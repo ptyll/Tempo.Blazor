@@ -1,5 +1,8 @@
+using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
@@ -11,6 +14,8 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetCustomFilterDialog
 {
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
     private SpreadsheetFilterOperator _op1;
     private SpreadsheetFilterOperator? _op2;
     private string? _value1a;
@@ -30,6 +35,53 @@ public partial class TmSpreadsheetCustomFilterDialog
 
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    private string FirstOperatorDomId => $"spreadsheet-custom-filter-op-{_idSuffix}";
+
+    private List<RadioOption<SpreadsheetFilterJoin>> JoinOptions =>
+    [
+        new(Loc["TmSpreadsheet_CustomFilter_And"], SpreadsheetFilterJoin.And),
+        new(Loc["TmSpreadsheet_CustomFilter_Or"], SpreadsheetFilterJoin.Or)
+    ];
+
+    private IReadOnlyList<SelectOption<SpreadsheetFilterOperator>> OperatorOptions =>
+        Operators.Select(op => new SelectOption<SpreadsheetFilterOperator>(op, Loc[OperatorKey(op)])).ToList();
+
+    private IReadOnlyList<SelectOption<SpreadsheetFilterOperator?>> SecondOperatorOptions
+    {
+        get
+        {
+            var options = new List<SelectOption<SpreadsheetFilterOperator?>>
+            {
+                new(null, "—")
+            };
+            options.AddRange(Operators.Select(op => new SelectOption<SpreadsheetFilterOperator?>(op, Loc[OperatorKey(op)])));
+            return options;
+        }
+    }
+
+    private void OnFirstOperatorChanged(SpreadsheetFilterOperator op) => _op1 = op;
+
+    private void OnSecondOperatorChanged(SpreadsheetFilterOperator? op) => _op2 = op;
+
+    private void OnJoinChanged(SpreadsheetFilterJoin join) => _join = join;
+
+    /// <summary>
+    /// Numeric and date criteria take a numeric keyboard on a phone; a text filter keeps the text one.
+    /// </summary>
+    private string ValueInputMode => Kind == SpreadsheetFilterKind.Text ? "text" : "decimal";
 
     private SpreadsheetFilterOperator[] Operators => Kind switch
     {
@@ -98,9 +150,4 @@ public partial class TmSpreadsheetCustomFilterDialog
 
     private Task Close() => OnClose.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await Close();
-    }
 }

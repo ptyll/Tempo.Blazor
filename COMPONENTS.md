@@ -4031,61 +4031,103 @@ Panel hromadných akcí pro vybrané řádky.
 
 ## Spreadsheet
 
+Balíček `Tempo.Blazor.Spreadsheet` — Excel-like grid s canvas rendererem: ribbon s pojmenovanými
+skupinami, volitelná dokumentová hlavička, formula bar, mřížka, záložky listů a status bar. Všech 14
+dialogů jede na jádrovém `TmModal` (na telefonu sheet / fullscreen panel). Vizuální a DOM kontrakt
+(ribbon `data-tm-tab` / `data-tm-group` / `data-command-id`, responzivní chrome podle šířky
+KONTEJNERU, hustota, gesta, 320 px dialogy, Notion embed) je v
+[docs/spreadsheet.md](docs/spreadsheet.md) a [docs/spreadsheet-dialogs.md](docs/spreadsheet-dialogs.md).
+
+Rozhodnutí redesignu (plán 8959eebe): **G2** telefon = prohlížení + základní editace, **G6** dialogy
+na `TmModal`, **SP1** `Density` je jen render, **SP2–SP4** žádné záložky Rozložení/Revize/Vzorce,
+hlavička opt-in, ✓/✗ ve formula baru.
+
 ### TmSpreadsheet
 
-Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, multi-sheet workbooky, freeze panes, merge cells, auto-fill a XLSX import/export.
+Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, multi-sheet workbooky, freeze
+panes, merge cells, auto-fill a XLSX import/export.
 
 #### CSS třídy
 
+Klíčové blokové třídy (BEM, `--tm-*` tokeny; úplný seznam viz `docs/spreadsheet.md`):
+
 | Třída | Popis |
 |-------|-------|
-| `tm-spreadsheet` | Kořenový kontejner |
-| `tm-spreadsheet-toolbar` | Ribbon toolbar |
-| `tm-spreadsheet-toolbar-tabs` | Záložky toolbaru (File, Home, Insert, Format, View) |
-| `tm-spreadsheet-toolbar-tab` | Jedna záložka |
-| `tm-spreadsheet-toolbar-tab--active` | Aktivní záložka |
-| `tm-spreadsheet-toolbar-group` | Skupina nástrojů v toolbaru |
-| `tm-spreadsheet-toolbar-tool` | Jednotlivý nástroj |
-| `tm-spreadsheet-formula-bar` | Formula bar |
-| `tm-spreadsheet-formula-bar-reference` | Box s referencí aktivní buňky |
-| `tm-spreadsheet-formula-bar-input` | Input pro formuli/hodnotu |
-| `tm-spreadsheet-grid` | Grid s buňkami |
-| `tm-spreadsheet-grid--empty` | Prázdný stav |
-| `tm-spreadsheet-col-headers` | Záhlaví sloupců (A, B, C...) |
-| `tm-spreadsheet-header-cell` | Jedna buňka záhlaví |
-| `tm-spreadsheet-row-header` | Záhlaví řádku (1, 2, 3...) |
-| `tm-spreadsheet-body` | Tělo gridu |
-| `tm-spreadsheet-row` | Jedna řádka |
-| `tm-spreadsheet-cell` | Jedna buňka |
-| `tm-spreadsheet-cell--selected` | Vybraná buňka |
-| `tm-spreadsheet-cell--active` | Aktivní buňka |
-| `tm-spreadsheet-cell--editing` | Buňka v editaci |
-| `tm-spreadsheet-cell--merged` | Sloučená buňka |
-| `tm-spreadsheet-cell-input` | Input při editaci |
-| `tm-spreadsheet-sheet-tabs` | Záložky listů |
-| `tm-spreadsheet-sheet-tab` | Jedna záložka listu |
-| `tm-spreadsheet-sheet-tab--active` | Aktivní záložka |
-| `tm-spreadsheet-context-menu` | Kontextové menu |
-| `tm-spreadsheet-context-menu__item` | Položka kontextového menu |
-| `tm-spreadsheet-color-picker` | Color picker v toolbaru |
-| `tm-spreadsheet-number-format-tool` | Dropdown formátu čísel |
+| `tm-spreadsheet` | Kořenový kontejner (nese komponentové tokeny `--tm-spreadsheet-*`, `data-layout`) |
+| `tm-spreadsheet--workspace` | `Mode=Full`: pracovní plocha `--tm-bg-workspace` + chrome jako karty |
+| `tm-spreadsheet--chrome-flat` | `Mode=Embedded` (Notion blok, modal): plochý chrome bez karet |
+| `tm-spreadsheet--layout-desktop` / `--layout-tablet` / `--layout-mobile` | Rozlišený režim (šířka KONTEJNERU, `LayoutMode`) |
+| `tm-spreadsheet__layout` | Vnitřní wrapper, živý prvek core `TmLayoutObserver` a named inline-size query container (`tm-spreadsheet`) |
+| `tm-spreadsheet__header` | Volitelná dokumentová hlavička (`ShowHeader`) |
+| `tm-spreadsheet__mobile-header` | Kompaktní hlavička telefonu (titulek + undo/redo + host sloty) |
+| `tm-spreadsheet-toolbar` | Ribbon / kompaktní řady (taby: `__tabs`, `__tab`, `__tab--active`; skupiny: `__group`, `__group-label`; příkazy: `__button`, `__button--large`, `__button--small`) |
+| `tm-spreadsheet-formula-bar` | Formula bar (`__fx`, `__ref`, `__ref-toggle`, `__ref-list`, `__display`, `__input`, `__confirm`, `__cancel`, `__hint`) |
+| `tm-spreadsheet-canvas-grid` | Canvas grid (`__canvas`, `__canvas--headers`, `__canvas--selection`, `__size`, `__touch-handles`, `__editor`, `__cell-proxy`) |
+| `tm-spreadsheet-sheet-tabs` | Záložky listů (`__nav`, `__scroll-button`, `__add`; `tm-spreadsheet-sheet-tab`, `--active`, `__label`, `__close`, `__input`) |
+| `tm-spreadsheet-statusbar` | Status bar (`__aggregations`, `__agg`, `__agg-label`, `__agg-value`) — na telefonu se nevykresluje |
+| `tm-spreadsheet-context-menu` | Kontextové menu buňky (`--sheet` = telefonní `TmDrawer` sheet) |
+| `tm-spreadsheet-alert` | `TmSpreadsheetValidationAlert` (`--warning`, `--information`, `__badge`, `__message`, `__actions`) |
+| `tm-spreadsheet-popup-backdrop`, `tm-spreadsheet-corner`, `tm-spreadsheet-row-resizer`, `tm-spreadsheet-col-resizer`, `tm-spreadsheet-autofill-handle` | Pomocné plochy canvasu |
+
+Dialog roots (`tm-spreadsheet-sort`, `tm-spreadsheet-custom-filter`, `tm-spreadsheet-dedup`,
+`tm-spreadsheet-pastespecial`, `tm-spreadsheet-t2c`, `tm-spreadsheet-hyperlink`,
+`tm-spreadsheet-name-manager`, `tm-spreadsheet-fcd`, `tm-spreadsheet-dvd`) jsou zdokumentované v
+`docs/spreadsheet-dialogs.md`.
+
+#### Komponentové tokeny
+
+Všechny jsou deklarované na `.tm-spreadsheet` a odvozené z core sémantických tokenů, takže je respektuje light, dark i indigo téma. Canvas je čte přes `buildPalette` (`spreadsheet-canvas.js`); host může kterýkoli přepsat na `.tm-spreadsheet`.
+
+| Token | Význam |
+|-------|--------|
+| `--tm-spreadsheet-header-bg` / `-header-text` | Výchozí pozadí a písmo hlaviček řádků/sloupců |
+| `--tm-spreadsheet-header-active-bg` / `-header-active-text` | Zvýraznění hlavičky aktivního řádku/sloupce (v dark režimu neprůhledné, `theme-spreadsheet-dark.css`) |
+| `--tm-spreadsheet-header-font` | Font hlaviček (UI sans, ne mono); s hustotou se škáluje v `drawHeaders` |
+| `--tm-spreadsheet-gridline` | Barva mřížky |
+| `--tm-spreadsheet-selection-border` / `-selection-fill` / `-selection-fill-alpha` | Rámeček výběru a jeho výplň (barva + síla) |
+| `--tm-spreadsheet-ref-0..5` | Barvy odkazů ve režimu bodování formule (kategorická paleta) |
+| `--tm-spreadsheet-mobile-min-height` | Podlaha telefonního layoutu (`32rem`); host ji může snížit (Notion modal) |
+| `--tm-spreadsheet-grid-min-height` | Podlaha MŘÍŽKY (`9rem`), když je host nižší než fixní chrome — mřížka se nesroluje na 0 |
+| `--tm-spreadsheet-find-width`, `--tm-spreadsheet-menu-*` | Šířka Find & Replace panelu a rozměry ribbonových menu (`TmOverlayPanel`) |
+
+#### `data-testid` kontrakt
+
+Komponenta dědí z core `TmComponentBase`:
+
+| Vstup | Efekt |
+|-------|-------|
+| `DataTestId` | `data-testid` na KOŘENI `.tm-spreadsheet` (host může přepsat i přes `AdditionalAttributes`) |
+| `TestIdPrefix` | prefixuje vnitřní id: `tm-spreadsheet-header`, `tm-spreadsheet-header-open`, `tm-spreadsheet-header-download`, `tm-spreadsheet-mobile-header` → `{prefix}-…` |
+
+Bez `DataTestId` kořen `data-testid` nenese (žádná změna stávajícího DOM); dva spreadsheetu na jedné
+stránce odlišíš `TestIdPrefix`. Pokryto `TmSpreadsheetTestIdTests`.
 
 #### Klíčové parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Data` | `byte[]?` | `null` | XLSX data pro načtení |
-| `Height` | `string?` | `"600px"` | Výška kontejneru |
+| `InitialWorkbook` | `SpreadsheetWorkbook?` | `null` | Výchozí workbook (alternativa k XLSX) |
+| `Height` | `string?` | `"600px"` | Výška kontejneru; v mobilním layoutu `100%` (SP3) s podlahou a `100dvh` stropem |
 | `Width` | `string?` | `"100%"` | Šířka kontejneru |
 | `RowsCount` | `int` | `200` | Počet řádků |
 | `ColumnsCount` | `int` | `50` | Počet sloupců |
-| `RowHeight` | `double` | `20` | Výška řádku v px |
+| `RowHeight` | `double` | `20` | Výška řádku v px (model; `Density` ji jen renderuje) |
 | `ColumnWidth` | `double` | `64` | Šířka sloupce v px |
+| `Density` | `SpreadsheetDensity` | `Auto` | Hustota mřížky: `Auto` = `Comfortable` na dotyku (`pointer: coarse`) a `Compact` jinde; `Comfortable` kreslí řádky 1,5×, písmo 1,25× a větší guttery (jen render — `RowHeight` ani XLSX výšky se nemění) |
+| `Mode` | `SpreadsheetMode` | `Full` | `Full` = ribbon + formula bar + workspace chrome, `Embedded` = plochý grid jen pro čtení |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Režim chrome; `Auto` měří šířku vlastního kontejneru (`TmLayoutObserver`), forcovaná hodnota pinuje desktop/tablet/mobile |
+| `ShowHeader` | `bool` | `false` | Volitelná dokumentová hlavička (titulek, host sloty, Open/Download, toggle mřížky) |
+| `Title` | `string?` | `null` | Titulek dokumentové hlavičky |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Levá / pravá host slot; sem patří app-shell chrome z referencí (přepínač dokumentu, Sdílet…) |
+| `ShowFileTab` | `bool` | `true` | Kompatibilní záložka `File` v ribbonu; s `ShowHeader` se nevykresluje (file akce vlastní hlavička) |
+| `CustomTools` / `OnCustomToolClick` | `List<SpreadsheetCustomTool>?` / `EventCallback<SpreadsheetCustomTool>` | `null` / — | Vlastní příkazy v ribbonu (`Tab`, `Order`, `data-tool-id`); s hlavičkou jdou `Tab="File"` nástroje do `HeaderActions` |
+| `Class` | `string?` | `null` | Další CSS třídy na kořeni |
 | `OnChange` | `EventCallback<SpreadsheetChangeEventArgs>` | — | Změna hodnoty buňky |
 | `OnSelect` | `EventCallback<SpreadsheetSelectEventArgs>` | — | Změna výběru |
 | `OnCellEdit` | `EventCallback<SpreadsheetCellEditEventArgs>` | — | Editace buňky |
-| `OnOpen` | `EventCallback<SpreadsheetOpenEventArgs>` | — | Otevření souboru |
-| `OnDownload` | `EventCallback<SpreadsheetDownloadEventArgs>` | — | Stažení souboru |
+| `OnOpen` | `EventCallback<SpreadsheetOpenEventArgs>` | — | Otevření souboru (vykreslí built-in Open) |
+| `OnDownload` | `EventCallback<SpreadsheetDownloadEventArgs>` | — | Stažení souboru (vykreslí built-in Download) |
 
 #### Programmatic API
 
@@ -4103,6 +4145,21 @@ Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, mu
 ```razor
 @* Základní použití *@
 <TmSpreadsheet />
+
+@* Dokumentová hlavička + host sloty (file akce vlastní hlavička, záložka File mizí) *@
+<TmSpreadsheet ShowHeader="true" Title="Projekt Aurora"
+               OnOpen="ImportXlsxAsync" OnDownload="ExportXlsxAsync"
+               Density="SpreadsheetDensity.Comfortable">
+    <HeaderStart>
+        <span class="doc-switcher">Rozpočet ▾</span>
+    </HeaderStart>
+    <HeaderActions>
+        <TmButton Variant="ButtonVariant.Outline" Size="ButtonSize.Sm">Sdílet</TmButton>
+    </HeaderActions>
+</TmSpreadsheet>
+
+@* Režim pinovaný hostem (zná svoji plochu) *@
+<TmSpreadsheet LayoutMode="TmLayoutMode.Tablet" Mode="SpreadsheetMode.Embedded" Height="320px" />
 
 @* S vlastními rozměry a XLSX daty *@
 <TmSpreadsheet Data="@excelBytes"
@@ -4126,6 +4183,121 @@ Excel-like spreadsheet komponenta s editací buněk, formulemi, stylováním, mu
     }
 }
 ```
+
+### TmSpreadsheetCanvasGrid
+
+Canvas renderer mřížky. Hosté ho použijí sami jen tehdy, když si staví vlastní chrome; `TmSpreadsheet`
+ho skládá za ně (a předává mu `SuppressFocusRestore` podle toho, zda vlastní plocha vlastní focus).
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Sheet` | `SpreadsheetSheet?` | `null` | Vykreslovaný list |
+| `RootDomId` | `string` | `null` | `id` kořene (cíl návratu focusu) |
+| `RowHeight` / `ColumnWidth` | `double` | `20` / `64` | Modelové rozměry v px |
+| `Density` | `SpreadsheetDensity` | `Auto` | Render škála (guttery, písmo, hit areas) |
+| `Zoom` / `OnZoomChanged` / `OnZoomStep` / `OnZoomResetRequested` | `double` / `EventCallback…` | `1` / — | Zoom a jeho změny |
+| `IsReadonly` | `bool` | `false` | Jen prohlížení (Notion blok): žádná editace ani cell menu |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Režim overlayů (cell menu jako sheet na telefonu) |
+| `SuppressFocusRestore` | `bool` | `false` | `true` = hostova plocha (vlastní menu / dialog) vlastní focus a grid ho nevrací; explicitní navigace (`NavigateToCellAsync`) má přednost |
+| `RenderContextMenu` / `OnContextMenuRequested` | `bool` / `EventCallback<SpreadsheetContextMenuRequest>` | `true` / — | `false` = menu kreslí host (kotva = buňka) |
+| `ActiveCellChanged`, `CellValueCommitted`, `CellValuesCommittedBatch`, `OnCellEdit` | `EventCallback…` | — | Aktivní buňka / potvrzení hodnoty / dávka / začátek editace |
+| `On*Requested` (`OnCopyRequested`, `OnPasteRequested`, `OnUndoRequested`, `OnRedoRequested`, `OnFillRequested`, `OnHideRowsRequested`, …) | `EventCallback…` | — | Příkazy gridu; `TmSpreadsheet` je mapuje na svoje commandy |
+| `ExternalFormulaSessionActive` / `ExternalFormulaOriginCellRef` / `ExternalFormulaEditValue` | `bool` / `string?` / `string?` | — | Bodování formule z formula baru |
+| `FilterButtonClicked` / `ValidationDropButtonClicked` | `EventCallback<…>` | — | AutoFilter funnel a dropdown datové validace |
+
+JS API (`window.tmSpreadsheetCanvas`): `getCellCenter(root, row, col)` a `getGridGutters(root)` vracejí
+živou geometrii (density guttery); `_internals` exponuje čisté helpery pro `npm run test:spreadsheet`.
+
+### TmSpreadsheetToolbar
+
+Ribbon a kompaktní řady. Řídí se modelem `SpreadsheetToolbarLayout.Rows(layout, showFileCommands)`.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `ActiveTab` / `ActiveTabChanged` | `string` / `EventCallback<string>` | `"Home"` | Aktivní záložka (`Home`, `Insert`, `Data`, `View`, `File`); komponenta parametr nikdy nepřiřazuje, klik/klávesa raise `ActiveTabChanged` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Desktop = taby + skupiny, tablet = 2 kompaktní řady, mobile = 1 řada + akce v "More" |
+| `ShowFileTab` | `bool` | `true` | Kompatibilní `File` záložka |
+| `CustomTools` / `OnCustomToolClick` | `List<SpreadsheetCustomTool>?` / `EventCallback<SpreadsheetCustomTool>` | `null` | Vlastní nástroje (`data-tool-id`) |
+
+Kontrakt: `data-tm-tab`, `data-tm-group` (frozen množina), `data-command-id`,
+`data-toolbar-row` / `data-toolbar-layout`. Umístění skupiny (bar / "More") je layout detail — hosté
+nikdy nesahají na pozicní selektory.
+
+### TmSpreadsheetFormulaBar
+
+Formula bar s trvalým `fx`, ✓/✗ v editaci a jmenným boxem s našeptávačem named ranges.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `ActiveCellRef` | `string?` | `null` | Reference aktivní buňky v jmenném boxu |
+| `DisplayValue` | `string?` | `null` | Zobrazená/editující hodnota |
+| `IsEditing` | `bool` | `false` | Editace → `__confirm` / `__cancel` |
+| `NamedRanges` | `IReadOnlyList<…>?` | `null` | Našeptávané named ranges (workbook + aktivní list) |
+| `OnNavigateToRef` | `EventCallback<string>` | — | Volba v seznamu / odeslání reference (`Sheet2!B2`) |
+| `OnEditStarted`, `OnValueCommitted`, `OnEditCancelled`, `OnValueChanged`, `OnTabPressed` | `EventCallback…` | — | Editační protokol (Enter/Escape/Tab, bodování formule) |
+| `OnCommitNavigationRequested` / `OnTransferToInlineEditorRequested` | `EventCallback<(int,int)>` / `EventCallback` | — | Enter se posunem výběru / předání editace do inline editoru mřížky |
+
+### TmSpreadsheetSheetTabs
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Sheets` | `List<SpreadsheetSheet>` | — | Listy (povinné) |
+| `ActiveIndex` | `int` | `0` | Aktivní index |
+| `ShowTabCloseButtons` | `bool` | `true` | Per-tab ×; smazání zůstává v kontextovém menu |
+| `IsReadonly` | `bool` | `false` | Notion embed: bez rename/delete/add |
+| `IsFormulaPointMode` / `OnSheetSelectedForFormula` | `bool` / `EventCallback<int>` | — | Přepnutí listu v bodování formule |
+| `RenderContextMenu` / `OnContextMenuRequested` | `bool` / `EventCallback<SpreadsheetContextMenuRequest>` | `true` / — | `false` = menu kreslí host |
+| `OnActiveSheetChanged`, `OnAddSheetRequested`, `OnDeleteSheetRequested`, `OnRenameSheetRequested` | `EventCallback…` | — | Akce záložek |
+
+### TmSpreadsheetStatusBar
+
+Agregace výběru (Součet / Počet / Průměr) a zoom. Na telefonu se nevykresluje — zoom i agregace se
+přesouvají do "More" v `TmMobileActionBar` (`TmActionItem.Group == "zoom"` / `"summary"`).
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Aggregation` | `SpreadsheetAggregationResult` | — | Agregace výběru (povinné) |
+| `Zoom` / `OnZoomChanged` | `double` / `EventCallback<double>` | `1` | Zoom slider +/− a reset na 100 % |
+
+### TmSpreadsheetInsertImageDialog
+
+Dialog pro vložení obrázku (URL + alt text) na jádrovém `TmModal` (telefon: fullscreen panel).
+Nahradil inline markup, který dřív žil přímo v `TmSpreadsheet.razor`.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `ImageUrl` | `string` | `""` | URL obrázku (dvoucestně přes `OnApply`) |
+| `OnApply` / `OnCancel` | `EventCallback<string>` / `EventCallback` | — | Potvrzení s URL / zrušení |
+| `RestoreFocusTargetId` | `string` | `""` | Id prvku, na který se vrací focus (grid) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Režim prezentace (fullscreen panel na telefonu) |
+
+### TmSpreadsheetValidationAlert
+
+Severity-driven validační alert (`alertdialog`) na jádrovém `TmModal`: focus trap, `aria-describedby`,
+Escape a návrat focusu na grid. `Stop` blokuje hodnotu (jediná acknowledge akce, klik na backdrop nic
+nedělá), `Warning` / `Information` se ptají, zda hodnotu ponechat. Vlastní `Title` / `Message` z pravidla
+má přednost před lokalizovaným defaultem severity.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Severity` | `SpreadsheetValidationErrorStyle` | `Stop` | `Stop` / `Warning` / `Information` |
+| `Title` / `Message` | `string?` | `null` | Text alertu; null = lokalizovaný default severity |
+| `PrimaryText` / `CancelText` | `string?` | `null` | Lokalizované defaulty podle severity |
+| `ShowCancel` | `bool?` | `null` | Null = podle severity (Stop nemá cancel) |
+| `RestoreFocus` / `RestoreFocusTargetId` | `bool` / `string?` | `true` / `null` | Návrat focusu (host posílá id gridu) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Sheet na úzkém režimu |
+| `OnPrimary` / `OnCancel` | `EventCallback` | — | Potvrzení / zrušení |
+
+### Ostatní dialogy balíčku
+
+`TmSpreadsheetSortDialog`, `TmSpreadsheetCustomFilterDialog`, `TmSpreadsheetRemoveDuplicatesDialog`,
+`TmSpreadsheetSpecialPasteDialog`, `TmSpreadsheetTextToColumnsDialog`, `TmSpreadsheetHyperlinkDialog`,
+`TmSpreadsheetNameManagerDialog`, `TmSpreadsheetNamedRangeEditDialog`,
+`TmSpreadsheetDataValidationDialog`, `TmSpreadsheetFormatCellsDialog`,
+`TmSpreadsheetFindReplaceDialog` (nemodální panel), `TmSpreadsheetFilterDropdown`,
+`TmSpreadsheetContextMenu`. Všechny jsou na jádrovém `TmModal` (G6), drží focus a vracejí ho do gridu;
+obsah a DOM kontrakt (třídy `__btn--ok`, `__btn--cancel`, test ids) popisuje
+[docs/spreadsheet-dialogs.md](docs/spreadsheet-dialogs.md).
 
 ---
 

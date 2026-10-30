@@ -1,133 +1,160 @@
+/* The desktop/tablet header filter dropdown. It is anchored to the header cell by the host; the
+   mobile sheet and the viewport clamp arrive with phase 6. Icons are shared TmIcons, so the old
+   ▲ ▼ ⚙ ✕ › glyphs are gone. */
+
 .tm-spreadsheet-filter-dropdown__overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--tm-z-dropdown);
 }
 
 .tm-spreadsheet-filter-dropdown {
     position: fixed;
-    z-index: 1001;
-    min-width: 240px;
-    max-width: 300px;
+    z-index: var(--tm-z-dropdown);
+    min-width: 15rem;
+    max-width: 19rem;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px;
-    background: var(--tm-color-surface, #fff);
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-    font-size: 13px;
-    color: var(--tm-color-text, #0f172a);
+    gap: var(--tm-space-0-5);
+    padding: var(--tm-space-2);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-popover);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
+    /* The panel is anchored at the click point; the inline max-height keeps its bottom inside the
+       viewport and this scroll makes the footer reachable on a short window (the phase-6 clamp
+       replaces the anchoring, this stays as the safety net). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.tm-spreadsheet-filter-dropdown__title {
+    padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-2);
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-filter-dropdown__item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--tm-space-2);
     width: 100%;
-    padding: 6px 8px;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: none;
     background: transparent;
-    border-radius: 4px;
-    text-align: left;
+    border-radius: var(--tm-radius-control);
+    text-align: start;
     cursor: pointer;
     color: inherit;
-    font-size: 13px;
+    font-size: var(--tm-text-sm);
 }
 
 .tm-spreadsheet-filter-dropdown__item:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-spreadsheet-filter-dropdown__icon {
-    width: 16px;
-    text-align: center;
-    color: var(--tm-color-text-muted, #64748b);
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-filter-dropdown__chevron {
-    margin-left: auto;
-    color: var(--tm-color-text-muted, #64748b);
+    margin-inline-start: auto;
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-filter-dropdown__divider {
     height: 1px;
-    margin: 4px 0;
-    background: var(--tm-color-border-subtle, #e2e8f0);
+    margin: var(--tm-space-1) 0;
+    background: var(--tm-color-border-subtle);
 }
 
-.tm-spreadsheet-filter-dropdown__search {
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__search {
     width: 100%;
-    padding: 6px 8px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    border-radius: 4px;
-    font-size: 13px;
-    box-sizing: border-box;
 }
 
 .tm-spreadsheet-filter-dropdown__list {
-    max-height: 220px;
+    max-height: 14rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 2px 0;
+    gap: var(--tm-space-0-5);
+    padding: var(--tm-space-0-5) 0;
 }
 
-.tm-spreadsheet-filter-dropdown__check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check {
+    padding: var(--tm-space-0-5) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
 }
 
-.tm-spreadsheet-filter-dropdown__check:hover {
-    background: var(--tm-color-surface-hover, #f1f5f9);
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check:hover {
+    background: var(--tm-color-surface-hover);
 }
 
-.tm-spreadsheet-filter-dropdown__check--all {
-    font-weight: 600;
-}
-
-.tm-spreadsheet-filter-dropdown__check span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.tm-spreadsheet-filter-dropdown ::deep .tm-spreadsheet-filter-dropdown__check--all {
+    font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-spreadsheet-filter-dropdown__empty {
-    padding: 12px 8px;
+    padding: var(--tm-space-3) var(--tm-space-2);
     text-align: center;
-    color: var(--tm-color-text-muted, #64748b);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-spreadsheet-filter-dropdown__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px solid var(--tm-color-border-subtle, #e2e8f0);
+    gap: var(--tm-space-2);
+    margin-top: var(--tm-space-1);
+    padding-top: var(--tm-space-2);
+    border-top: 1px solid var(--tm-color-border-subtle);
 }
 
-.tm-spreadsheet-filter-dropdown__btn {
-    padding: 6px 14px;
-    border-radius: 4px;
-    border: 1px solid var(--tm-color-border, #cbd5e1);
-    background: var(--tm-color-surface, #fff);
-    cursor: pointer;
-    font-size: 13px;
+/* ── Responsive chrome (phase 6) ────────────────────────────────────────────────────────────────
+   Desktop/tablet: the anchored popover is clamped into the viewport on BOTH axes, so a header cell near
+   the right or the bottom edge can never push it off the page. Mobile: the panel is the content of the
+   core TmDrawer bottom sheet — static, full width, 44px rows and a sticky Cancel / OK bar. */
+
+.tm-spreadsheet-filter-dropdown {
+    max-width: calc(100vw - var(--tm-space-4));
 }
 
-.tm-spreadsheet-filter-dropdown__btn--ok {
-    background: var(--tm-color-primary, #2563eb);
-    border-color: var(--tm-color-primary, #2563eb);
-    color: #fff;
+.tm-spreadsheet-filter-host .tm-spreadsheet-filter-dropdown--sheet {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* The DRAWER owns the height (its snap point); the panel fills it and the value list is the only
+       scrolling box. A viewport-relative max-height here let the panel grow taller than the sheet, which put
+       the sticky Cancel / OK bar below the fold — the review finding. */
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    max-width: none;
+    overflow: hidden;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
-.tm-spreadsheet-filter-dropdown__btn:hover {
-    filter: brightness(0.97);
+.tm-spreadsheet-filter-dropdown--sheet .tm-spreadsheet-filter-dropdown__item {
+    min-height: var(--tm-touch-target);
+}
+
+.tm-spreadsheet-filter-dropdown--sheet .tm-spreadsheet-filter-dropdown__list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.tm-spreadsheet-filter-dropdown__actions--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--tm-color-surface);
+    border-top: 1px solid var(--tm-color-border);
 }

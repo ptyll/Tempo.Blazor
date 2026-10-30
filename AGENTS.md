@@ -109,6 +109,7 @@ npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
 npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
+npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
 ```
 
 ### Package Creation
@@ -859,7 +860,7 @@ Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
 - `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js`, the d3 bundles and `diagram-arrow-select.js` are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
 - `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js` (classic script; it dynamic-imports its own `wireframe-gestures.mjs` and, from the core package, the shared `pointer-drag.js` / `pointer-gesture.js` - so **`_content/Tempo.Blazor/js/` must be served** too: without it the canvas has no pointer gestures and logs "the pointer helpers ... could not be loaded"; its middle-button pan is the one documented hand-written gesture outside `pointer-drag.js`, see [docs/touch-interaction.md](docs/touch-interaction.md)), plus `_content/Tempo.Blazor.Wireframe/css/tempo-blazor-wireframe.css`
-- `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
+- `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js` — the canvas dynamically imports the shared core `_content/Tempo.Blazor/js/pointer-drag.js` + `pointer-gesture.js` (resolved from `document.currentScript.src`), so a host must serve `_content/Tempo.Blazor/js/` too and a per-file CSP hash must list both helpers (without them the grid keeps its mouse path, logs one warning and touch gestures — tap/double tap/long-press menu/pinch/corner drops — are off). The grid root owns `touch-action: pan-x pan-y` and claims Ctrl+D / Ctrl+R, so page pinch-zoom over the grid is blocked and the two chords fill instead of bookmarking/reloading; contract: [docs/spreadsheet.md](docs/spreadsheet.md#touch-and-pen)
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
 - `Tempo.Blazor.Modeling`: `_content/Tempo.Blazor.Modeling/js/modeling-editor.js` — the CSP-safe ES module of the Modeling package (imports itself via `IJSObjectReference`, NO `<script>` tag in the host). Exports `registerTreeDragBridge()` (document-level dragstart/dragend dataTransfer bridge for `TmModelingModelTree`), `scrollTreeElementIntoView(treeRoot, elementId)`, `focusTreeElement(treeRoot, elementId)` and `focusTreeGroupHeader(treeRoot, groupKey)` (tree keyboard navigation over the flat visible list — all three query INSIDE the caller's `treeRoot` `ElementReference`; the group helper targets the APG `role="treeitem"` wrapper via its `data-group-key`) and `focusWithin(root, selector)` (overlay focus move + focus return in `TmModelingEditor`, scoped to the editor root; the hook selectors are the stable `data-modeling-focus="open-in-editor"` / `"open-editor-close"` attributes, never `data-testid`) and `registerUndoShortcutBridge(editorRoot)` (phase 14 review: CAPTURE-phase guard that preventDefaults editor-stack Ctrl+Z/Y on non-text targets inside one editor root, so the browser's document-level undo cannot double-fire). The package never uses `eval` interop — hosts may ship a CSP without `unsafe-eval` (guarded by `ModelingNoEvalInteropTests`; the demo Server host serves `/modeling-editor?csp=1` with such a header for E2E)
 - `Tempo.Blazor.Signing`: `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js` (loaded by `TmPdfTemplateDesigner` as an ES module)
@@ -885,9 +886,9 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
 
-`.github/workflows/js-node-tests.yml` runs the seven Node lanes on every push/PR (overlay,
-diagram-editor, pdf-viewer, wireframe, reporting-modules, email-templates, document-editor) plus the
-`check:document-editor-bundle` freshness check.
+`.github/workflows/js-node-tests.yml` runs the eight Node lanes on every push/PR (overlay,
+diagram-editor, pdf-viewer, wireframe, spreadsheet, reporting-modules, email-templates,
+document-editor) plus the `check:document-editor-bundle` freshness check.
 
 ## Useful Commands Reference
 

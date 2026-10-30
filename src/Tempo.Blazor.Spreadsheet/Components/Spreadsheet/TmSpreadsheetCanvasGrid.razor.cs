@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Format;
 using Tempo.Blazor.Components.Spreadsheet.Formula;
@@ -14,6 +15,13 @@ namespace Tempo.Blazor.Components.Spreadsheet;
 /// </summary>
 public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGridController
 {
+    /// <summary>
+    /// The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can
+    /// name the grid as its focus-restore target (<c>TmFocusScope.RestoreFocusTargetId</c>); null
+    /// renders no id, which keeps a standalone grid unchanged.
+    /// </summary>
+    [Parameter] public string? RootDomId { get; set; }
+
     private const int RowOverscanCount = 32;
     private const int ColumnOverscanCount = 10;
     private const int FormulaRefColorCount = 6;
@@ -44,6 +52,15 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private bool _registered;
     private bool _needsRender = true;
     private bool _shouldFocusAfterRender;
+    /// <summary>
+    /// Set by an EXPLICIT navigation (name box, Find next, a named range): the grid takes the focus even
+    /// when the focus currently sits in another control. A pointer-originated request (a canvas click)
+    /// stays guarded by the atomic <c>tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway</c> call (check and
+    /// focus in ONE task — a probe followed by <c>ElementReference.FocusAsync</c> is a TOCTOU race) and is
+    /// skipped entirely while <see cref="SuppressFocusRestore"/> says the host's surface owns the focus, so
+    /// a late frame can neither blur what the user just focused nor steal the caret out of an open menu.
+    /// </summary>
+    private bool _forceFocusAfterRender;
     private bool _shouldFocusEditorAfterRender;
     private string? _editValue;
     private bool _contextMenuVisible;
@@ -57,6 +74,9 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private string _rowHeightInputValue = string.Empty;
     private long _canvasInteractionVersion;
     private long _lastCanvasCommandId;
+    private bool _pointerCoarse;
+    private bool _pointerCoarseResolved;
+    private double _geometryDensityRowScale = 1.0;
     private bool _lastShowGridLines = true;
     private bool _lastFormatPainterActive;
     private bool _lastExternalFormulaSessionActive;
@@ -78,6 +98,59 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     /// <summary>The zoom factor applied to the grid geometry and fonts (1.0 = 100%).</summary>
     [Parameter] public double Zoom { get; set; } = 1.0;
 
+    /// <summary>
+    /// Requested grid density. <see cref="SpreadsheetDensity.Auto"/> is resolved against the browser's
+    /// coarse-pointer media query — once before the first canvas frame and again whenever that query
+    /// flips (a mouse attached to a tablet) — and scales the RENDERED row heights, fonts, handles and
+    /// header gutters only (the sheet model and every XLSX height keep their values).
+    /// </summary>
+    [Parameter] public SpreadsheetDensity Density { get; set; } = SpreadsheetDensity.Auto;
+
+    /// <summary>The requested density resolved against the browser's pointer kind (SP1).</summary>
+    private SpreadsheetDensityScale DensityScale => SpreadsheetDensityScale.Resolve(Density, _pointerCoarse);
+
+    /// <summary>The row-header gutter width, scaled by the render density (SP1).</summary>
+    private double RowHeaderWidthPx => Math.Round(SpreadsheetGridConstants.RowHeaderWidth * DensityScale.GutterScale);
+
+    /// <summary>The column-header gutter height, scaled by the render density (SP1).</summary>
+    private double ColumnHeaderHeightPx => Math.Round(SpreadsheetGridConstants.ColumnHeaderHeight * DensityScale.GutterScale);
+
+    /// <summary>
+    /// Raised when a two-finger pinch commits a zoom factor (a hard 0.5–2.0, whole 10 % steps). The
+    /// pinch is one of the WCAG 2.5.7 paths — the zoom buttons in the status bar / the phone's More
+    /// menu are its single-pointer alternative and drive the same <see cref="OnZoomChanged"/>.
+    /// </summary>
+    [Parameter] public EventCallback<double> OnZoomChanged { get; set; }
+
+    /// <summary>
+    /// Raised when the user asks for a fill without dragging the fill handle — the cell menu's Fill
+    /// down / Fill right entries or Ctrl+D / Ctrl+R. The WCAG 2.5.7 non-drag alternative to the fill
+    /// handle drag; the workbook command itself lives in <see cref="TmSpreadsheet"/>.
+    /// </summary>
+    [Parameter] public EventCallback<SpreadsheetFillDirection> OnFillRequested { get; set; }
+
+    /// <summary>
+    /// Converts a RENDERED row height (what a canvas resize drag reports) to the model height. The
+    /// geometry draws rows at <c>zoom × density row scale</c>, so a commit in rendered pixels has to be
+    /// divided by both — otherwise a 1.5x comfortable grid writes 1.5x heights (and 150% zoom writes
+    /// 1.5x too) into the workbook and every XLSX export.
+    /// </summary>
+    private double ToModelRowHeight(double renderedHeight)
+    {
+        var scale = Zoom * DensityScale.RowScale;
+        return renderedHeight / (scale > 0.01 ? scale : 1);
+    }
+
+    /// <summary>
+    /// Converts a RENDERED column width to the model width. Columns are not density-scaled, so only the
+    /// zoom factor applies.
+    /// </summary>
+    private double ToModelColumnWidth(double renderedWidth)
+    {
+        var scale = Zoom > 0.01 ? Zoom : 1;
+        return renderedWidth / scale;
+    }
+
     /// <summary>The external formula editor value when reference-picking is driven by the formula bar instead of inline cell editing.</summary>
     [Parameter] public string? ExternalFormulaEditValue { get; set; }
 
@@ -89,6 +162,46 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
     /// <summary>When true the grid is displayed in read-only mode: cell editing, context menu, and editing-related callbacks are disabled.</summary>
     [Parameter] public bool IsReadonly { get; set; }
+
+    /// <summary>
+    /// The responsive layout of the hosting spreadsheet. <see cref="TmSpreadsheet"/> always passes its own
+    /// resolved CONTAINER layout. STANDALONE use: <see cref="TmLayoutMode.Auto"/> falls back to the app-level
+    /// VIEWPORT scope (desktop when the host provides none), because a bare grid has no parent container to
+    /// measure — pass the layout explicitly when the grid lives in a narrow column, and pass
+    /// <see cref="RenderContextMenu"/>="false" so the menu can be rendered outside the layout container.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout — only read when <see cref="LayoutMode"/> is <see cref="TmLayoutMode.Auto"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether this component renders the cell context menu itself. The default keeps a STANDALONE grid working
+    /// (the anchored menu on a fine pointer). <see cref="TmSpreadsheet"/> passes <c>false</c> and renders the menu
+    /// (and the mobile sheet) as a SIBLING of its layout container: the container is a
+    /// <c>container-type: inline-size</c> box, which makes it the containing block of the menu's
+    /// <c>position: fixed</c> surface, and a menu rendered inside the scrolling grid is clipped as well.
+    /// A standalone grid at a phone width must pass <c>false</c> too and render its own sheet.
+    /// </summary>
+    [Parameter] public bool RenderContextMenu { get; set; } = true;
+
+    /// <summary>
+    /// Raised with the gesture when <see cref="RenderContextMenu"/> is <c>false</c>: the host owns the menu. The
+    /// cell (or column header) under the gesture has already become active, so the host's commands act on it.
+    /// </summary>
+    [Parameter] public EventCallback<SpreadsheetContextMenuRequest> OnContextMenuRequested { get; set; }
+
+    /// <summary>
+    /// Whether the host's own surface currently OWNS the focus — an open context menu (the anchored menu or
+    /// the phone sheet), a resize dialog, any overlay the host renders over the grid. While <c>true</c> the
+    /// grid does NOT restore the focus to itself: the canvas activation that opened the surface arms the
+    /// restore, and both <see cref="TmSpreadsheetCanvasGrid"/> and the surface run their
+    /// <c>OnAfterRenderAsync</c> in the same batch, so the grid's <c>isFocusOutside</c> probe answers
+    /// BEFORE the surface focused its first entry and the stale answer then stole the caret back
+    /// (phase 7d: the context menu's ArrowDown / Home / End were dead in a real browser). This is explicit
+    /// precedence, not a timing guess; an EXPLICIT navigation (<c>NavigateToCellAsync</c>) still wins.
+    /// </summary>
+    [Parameter] public bool SuppressFocusRestore { get; set; }
 
     /// <summary>Called when the active cell changes.</summary>
     [Parameter] public EventCallback<string?> ActiveCellChanged { get; set; }
@@ -239,12 +352,14 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private string ActiveCellDomId => $"tm-spreadsheet-canvas-active-{GetHashCode():x}";
     private string LiveRegionDomId => $"tm-spreadsheet-canvas-live-{GetHashCode():x}";
     private string CanvasAccessibilityDescriptionDomId => $"tm-spreadsheet-canvas-a11y-{GetHashCode():x}";
+    private string ColWidthInputDomId => $"tm-spreadsheet-canvas-col-width-{GetHashCode():x}";
+    private string RowHeightInputDomId => $"tm-spreadsheet-canvas-row-height-{GetHashCode():x}";
     private string ActiveCellAriaText => $"{Sheet?.ActiveCellRef ?? "A1"} {GetActiveCellDisplayValue()}".Trim();
     private string LiveRegionText => ActiveCellAriaText;
     private int ActiveCellAriaRowIndex => GetActiveCellCoordinates().row + 1;
     private int ActiveCellAriaColIndex => GetActiveCellCoordinates().col + 1;
-    private string TotalScrollableWidthPx => $"{_geometry.ContentWidth + SpreadsheetGridConstants.RowHeaderWidth}px";
-    private string TotalScrollableHeightPx => $"{_geometry.ContentHeight + SpreadsheetGridConstants.ColumnHeaderHeight}px";
+    private string TotalScrollableWidthPx => $"{_geometry.ContentWidth + RowHeaderWidthPx}px";
+    private string TotalScrollableHeightPx => $"{_geometry.ContentHeight + ColumnHeaderHeightPx}px";
     private readonly record struct CanvasRowFrame(int Index, double Top, double Height, bool Frozen);
     private readonly record struct CanvasColumnFrame(int Index, double Left, double Width, string Label, bool Frozen);
 
@@ -337,7 +452,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         var structureChanged = HasStructureChanged();
         if (structureChanged)
         {
-            _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom);
+            _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
             RebuildMergedCellCache();
             CaptureStructureSignature();
             _needsRender = true;
@@ -373,6 +488,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         return Math.Abs(_geometryRowHeight - RowHeight) > 0.01
             || Math.Abs(_geometryColumnWidth - ColumnWidth) > 0.01
             || Math.Abs(_geometryZoom - Zoom) > 0.001
+            || Math.Abs(_geometryDensityRowScale - DensityScale.RowScale) > 0.001
             || _geometryRowCount != Sheet.RowCount
             || _geometryColumnCount != Sheet.ColumnCount
             || _geometryRowsMetadataCount != Sheet.Rows.Count
@@ -388,6 +504,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _geometryRowHeight = RowHeight;
         _geometryColumnWidth = ColumnWidth;
         _geometryZoom = Zoom;
+        _geometryDensityRowScale = DensityScale.RowScale;
         _geometryRowCount = Sheet?.RowCount ?? 0;
         _geometryColumnCount = Sheet?.ColumnCount ?? 0;
         _geometryRowsMetadataCount = Sheet?.Rows.Count ?? 0;
@@ -483,8 +600,12 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         col = Math.Clamp(col, 0, Sheet.ColumnCount - 1);
         CommitEditIfNeeded();
         SetActiveCell(row, col, extendSelection: false, render: true);
+        // An explicit navigation always lands the focus in the grid (the name box, Find next and the named
+        // -range list all navigate so the user can keep typing) — see _forceFocusAfterRender.
+        _forceFocusAfterRender = true;
         await ApplyEngineSelectionPatchAsync();
         await EnsureCellVisibleAsync(row, col);
+        await FocusAsync();
     }
 
     /// <inheritdoc />
@@ -642,7 +763,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             return;
         }
 
-        _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom);
+        _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
 
         var rows = rowIndices?
             .Where(static row => row >= 0)
@@ -665,8 +786,8 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
                 Type = "syncLayoutAxes",
                 RowCount = Sheet.RowCount,
                 ColumnCount = Sheet.ColumnCount,
-                TotalWidth = _geometry.ContentWidth + SpreadsheetGridConstants.RowHeaderWidth,
-                TotalHeight = _geometry.ContentHeight + SpreadsheetGridConstants.ColumnHeaderHeight,
+                TotalWidth = _geometry.ContentWidth + RowHeaderWidthPx,
+                TotalHeight = _geometry.ContentHeight + ColumnHeaderHeightPx,
                 FreezeRowCount = Math.Clamp(Sheet.FreezeRowCount, 0, Sheet.RowCount),
                 FreezeColumnCount = Math.Clamp(Sheet.FreezeColumnCount, 0, Sheet.ColumnCount),
                 Rows = rows,
@@ -1165,19 +1286,49 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     }
 
     [JSInvokable]
-    public Task OnCanvasContextMenu(double contentX, double contentY, double clientX, double clientY)
+    public Task OnCanvasContextMenu(
+        double contentX, double contentY, double clientX, double clientY, string? anchor = null, double viewportHeight = 0)
     {
         if (Sheet is null || IsInFormulaPointMode || HasExternalFormulaSessionGuard)
             return Task.CompletedTask;
 
         var (row, col) = _geometry.HitTest(contentX, contentY);
+        var anchorKind = string.IsNullOrWhiteSpace(anchor) ? null : anchor;
         if (row >= 0 && col >= 0)
-            SetActiveCell(row, col, extendSelection: false);
+        {
+            // Excel: a right click / long press INSIDE the current range keeps that range selected, so the
+            // menu's commands (Fill down, Clear, Format Cells) act on the whole block. A press outside it
+            // moves the active cell to the pressed cell first.
+            var bounds = _selection.GetBounds();
+            var insideSelection = row >= bounds.StartRow && row <= bounds.EndRow
+                && col >= bounds.StartCol && col <= bounds.EndCol;
+            if (!insideSelection)
+                SetActiveCell(row, col, extendSelection: false);
+        }
 
         _contextMenuRowIndex = Math.Max(0, row);
         _contextMenuColIndex = Math.Max(0, col);
         _contextMenuX = clientX;
         _contextMenuY = clientY;
+
+        if (!RenderContextMenu)
+        {
+            // The host renders the menu outside the container; the gesture has already set the active cell.
+            // The FOCUS belongs to that menu, so the activation above must not arm this grid's own restore:
+            // it would run in the same batch as the menu's focus and (its isFocusOutside probe answering
+            // stale) pull the caret back out of the menu a few ms later. See SuppressFocusRestore.
+            _shouldFocusAfterRender = false;
+            return InvokeAsync(() => OnContextMenuRequested.InvokeAsync(new SpreadsheetContextMenuRequest
+            {
+                Row = _contextMenuRowIndex,
+                Column = _contextMenuColIndex,
+                ClientX = clientX,
+                ClientY = clientY,
+                Anchor = anchorKind,
+                ViewportHeight = viewportHeight,
+            }));
+        }
+
         _contextMenuVisible = true;
         _needsRender = true;
         return InvokeAsync(StateHasChanged);
@@ -1202,7 +1353,11 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
         _geometry.Clear();
         if (OnColumnResizeRequested.HasDelegate)
-            await OnColumnResizeRequested.InvokeAsync((Math.Clamp(colIndex, 0, Sheet.ColumnCount - 1), Math.Max(16, width)));
+        {
+            await OnColumnResizeRequested.InvokeAsync((
+                Math.Clamp(colIndex, 0, Sheet.ColumnCount - 1),
+                Math.Max(16, ToModelColumnWidth(width))));
+        }
         _needsRender = true;
         return true;
     }
@@ -1214,7 +1369,11 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
 
         _geometry.Clear();
         if (OnRowResizeRequested.HasDelegate)
-            await OnRowResizeRequested.InvokeAsync((Math.Clamp(rowIndex, 0, Sheet.RowCount - 1), Math.Max(8, height)));
+        {
+            await OnRowResizeRequested.InvokeAsync((
+                Math.Clamp(rowIndex, 0, Sheet.RowCount - 1),
+                Math.Max(8, ToModelRowHeight(height))));
+        }
         _needsRender = true;
         return true;
     }
@@ -1234,6 +1393,40 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     [JSInvokable]
     public Task OnCanvasZoomDelta(int direction)
         => OnZoomStep.InvokeAsync(direction);
+
+    /// <summary>
+    /// Handles a two-finger pinch that committed a zoom factor. The canvas has already clamped and
+    /// quantized it (0.5–2.0 in 10 % steps), so the component only applies it — the same
+    /// <see cref="OnZoomChanged"/> the status-bar zoom buttons and the phone's More menu drive.
+    /// </summary>
+    [JSInvokable]
+    public Task OnCanvasZoomChanged(double zoom)
+        => OnZoomChanged.HasDelegate ? OnZoomChanged.InvokeAsync(zoom) : Task.CompletedTask;
+
+    /// <summary>
+    /// Re-resolves the Auto density when the browser's coarse-pointer media query flips (a mouse attached
+    /// to a tablet, a 2-in-1 undocked). The grid re-measures with the new render scales and repaints; a
+    /// forced <see cref="SpreadsheetDensity.Compact"/>/<see cref="SpreadsheetDensity.Comfortable"/> is
+    /// unaffected.
+    /// </summary>
+    [JSInvokable]
+    public Task OnCanvasPointerKindChanged(bool coarsePointer)
+    {
+        _pointerCoarseResolved = true;
+        if (_pointerCoarse == coarsePointer)
+            return Task.CompletedTask;
+
+        _pointerCoarse = coarsePointer;
+        if (Sheet is not null && Math.Abs(DensityScale.RowScale - _geometryDensityRowScale) > 0.001)
+        {
+            _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
+            RebuildMergedCellCache();
+            CaptureStructureSignature();
+        }
+
+        _needsRender = true;
+        return InvokeAsync(StateHasChanged);
+    }
 
     private void HandleKeyDown(KeyboardEventArgs e)
     {
@@ -1271,6 +1464,9 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
                 case "f": _ = OnFindRequested.InvokeAsync(); return false;
                 case "h": _ = OnReplaceRequested.InvokeAsync(); return false;
                 case "0": _ = OnZoomResetRequested.InvokeAsync(); return false;
+                // Fill without the fill-handle drag (WCAG 2.5.7): Ctrl+D / Ctrl+R, the Excel chords.
+                case "d": _ = OnFillRequested.InvokeAsync(SpreadsheetFillDirection.Down); return false;
+                case "r": _ = OnFillRequested.InvokeAsync(SpreadsheetFillDirection.Right); return false;
                 case "Home": MoveToCell(0, 0, shiftKey); return true;
                 case "End": MoveToLastUsedCell(shiftKey); return true;
             }
@@ -1457,10 +1653,10 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         var rect = _geometry.GetCellRect(row, col);
         var request = new
         {
-            Left = SpreadsheetGridConstants.RowHeaderWidth + rect.Left,
-            Top = SpreadsheetGridConstants.ColumnHeaderHeight + rect.Top,
-            Right = SpreadsheetGridConstants.RowHeaderWidth + rect.Left + rect.Width,
-            Bottom = SpreadsheetGridConstants.ColumnHeaderHeight + rect.Top + rect.Height,
+            Left = RowHeaderWidthPx + rect.Left,
+            Top = ColumnHeaderHeightPx + rect.Top,
+            Right = RowHeaderWidthPx + rect.Left + rect.Width,
+            Bottom = ColumnHeaderHeightPx + rect.Top + rect.Height,
             FrozenRow = IsFrozenRow(row),
             FrozenColumn = IsFrozenCol(col)
         };
@@ -1469,8 +1665,8 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         {
             await JS.InvokeVoidAsync("tmSpreadsheetCanvas.ensureCellVisible", _rootElement, request, new
             {
-                SpreadsheetGridConstants.RowHeaderWidth,
-                SpreadsheetGridConstants.ColumnHeaderHeight
+                RowHeaderWidthPx,
+                ColumnHeaderHeightPx
             });
         }
         catch (JSException) { }
@@ -1519,16 +1715,25 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         {
             RowCount = sheet.RowCount,
             ColumnCount = sheet.ColumnCount,
-            RowHeaderWidth = SpreadsheetGridConstants.RowHeaderWidth,
-            ColumnHeaderHeight = SpreadsheetGridConstants.ColumnHeaderHeight,
+            RowHeaderWidth = RowHeaderWidthPx,
+            ColumnHeaderHeight = ColumnHeaderHeightPx,
             ScrollLeft = _viewport.ScrollLeft,
             ScrollTop = _viewport.ScrollTop,
             ViewportWidth = _viewport.Width,
             ViewportHeight = _viewport.Height,
-            TotalWidth = _geometry.ContentWidth + SpreadsheetGridConstants.RowHeaderWidth,
-            TotalHeight = _geometry.ContentHeight + SpreadsheetGridConstants.ColumnHeaderHeight,
+            TotalWidth = _geometry.ContentWidth + RowHeaderWidthPx,
+            TotalHeight = _geometry.ContentHeight + ColumnHeaderHeightPx,
             ShowGridLines = sheet.ShowGridLines,
             Zoom = _geometry.Zoom,
+            Density = Density.ToString(),
+            DensityResolved = DensityScale.Resolved.ToString(),
+            DensityRowScale = DensityScale.RowScale,
+            DensityFontScale = DensityScale.FontScale,
+            DensityHandleScale = DensityScale.HandleScale,
+            // The canvas never multiplies a gutter itself (RowHeaderWidth/ColumnHeaderHeight above are
+            // already scaled); this is the parity contract the node lane and the perf/UX evidence read.
+            DensityGutterScale = DensityScale.GutterScale,
+            PointerCoarse = _pointerCoarse,
             FreezeRowCount = Math.Clamp(sheet.FreezeRowCount, 0, sheet.RowCount),
             FreezeColumnCount = Math.Clamp(sheet.FreezeColumnCount, 0, sheet.ColumnCount),
             ActiveCellRef = sheet.ActiveCellRef,
@@ -1579,7 +1784,7 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
                 yield return BuildColumn(col, frozen: true);
         }
 
-        var viewport = _viewport with { Width = Math.Max(0, _viewport.Width - SpreadsheetGridConstants.RowHeaderWidth) };
+        var viewport = _viewport with { Width = Math.Max(0, _viewport.Width - RowHeaderWidthPx) };
         var (start, end) = _geometry.GetVisibleColumns(sheet, viewport, ColumnOverscanCount);
         for (var col = start; col <= end; col++)
         {
@@ -1843,6 +2048,8 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private void ContextMenuDeleteRow() { CloseContextMenu(); _ = OnDeleteRowRequested.InvokeAsync(); }
     private void ContextMenuInsertColumn() { CloseContextMenu(); _ = OnInsertColumnRequested.InvokeAsync(); }
     private void ContextMenuDeleteColumn() { CloseContextMenu(); _ = OnDeleteColumnRequested.InvokeAsync(); }
+    private void ContextMenuFillDown() { CloseContextMenu(); _ = OnFillRequested.InvokeAsync(SpreadsheetFillDirection.Down); }
+    private void ContextMenuFillRight() { CloseContextMenu(); _ = OnFillRequested.InvokeAsync(SpreadsheetFillDirection.Right); }
     private void ContextMenuClearFormatting() { CloseContextMenu(); _ = OnClearFormattingRequested.InvokeAsync(); }
     private void ContextMenuClearContent() { CloseContextMenu(); _ = OnClearContentRequested.InvokeAsync(); }
     private void ContextMenuClearAll() { CloseContextMenu(); _ = OnClearAllRequested.InvokeAsync(); }
@@ -1850,18 +2057,32 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     private void ContextMenuSetColumnWidth()
     {
         CloseContextMenu();
-        _colWidthInputValue = ((int)Math.Round(_geometry.GetColumnWidth(_contextMenuColIndex))).ToString();
+        // The dialog edits the MODEL size, never the rendered one (`GetColumnWidth` multiplies by zoom).
+        var width = Sheet is not null
+            && Sheet.Columns.TryGetValue(_contextMenuColIndex, out var column)
+            && column.Width is { } stored
+                ? stored
+                : ColumnWidth;
+        _colWidthInputValue = ((int)Math.Round(width)).ToString();
         _showColWidthDialog = true;
     }
 
     private void ContextMenuSetRowHeight()
     {
         CloseContextMenu();
-        _rowHeightInputValue = ((int)Math.Round(_geometry.GetRowHeight(_contextMenuRowIndex))).ToString();
+        // The dialog edits the MODEL height, never the rendered one (`GetRowHeight` multiplies by
+        // zoom × density row scale, so showing it wrote the scaled value back on Apply).
+        var height = Sheet is not null
+            && Sheet.Rows.TryGetValue(_contextMenuRowIndex, out var row)
+            && row.Height is { } stored
+                ? stored
+                : RowHeight;
+        _rowHeightInputValue = ((int)Math.Round(height)).ToString();
         _showRowHeightDialog = true;
     }
 
-    private void CloseContextMenu() => _contextMenuVisible = false;
+    /// <summary>Closes the built-in context menu (a host that owns the menu does not need it).</summary>
+    public void CloseContextMenu() => _contextMenuVisible = false;
 
     private void ApplyColWidth()
     {
@@ -1887,17 +2108,22 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
         _showRowHeightDialog = false;
     }
 
+    // Enter commits from the field itself (the "confirm what was typed" contract). Escape is NOT
+    // handled here: the core TmModal owns the document-level dismissal and closes through
+    // CloseColumnWidthDialog / CloseRowHeightDialog, so the field does not dismiss twice.
     private void OnColWidthInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") ApplyColWidth();
-        else if (e.Key == "Escape") _showColWidthDialog = false;
     }
 
     private void OnRowHeightInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") ApplyRowHeight();
-        else if (e.Key == "Escape") _showRowHeightDialog = false;
     }
+
+    private void CloseColumnWidthDialog() => _showColWidthDialog = false;
+
+    private void CloseRowHeightDialog() => _showRowHeightDialog = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -1917,10 +2143,35 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
             _shouldFocusEditorAfterRender = false;
             try { await _editInput.FocusAsync(); } catch { }
         }
-        else if (_shouldFocusAfterRender)
+        else if (_shouldFocusAfterRender || _forceFocusAfterRender)
         {
+            var force = _forceFocusAfterRender;
             _shouldFocusAfterRender = false;
-            try { await _rootElement.FocusAsync(); } catch { }
+            _forceFocusAfterRender = false;
+            // Phase 7: a canvas activation owns the focus only until the user moves it elsewhere. A late
+            // frame (the command-log flush, the viewport sync the grid's own focusout schedules) must not
+            // yank the caret back out of a control the user has since focused — the name box resets its
+            // typed ref on blur, and the Enter meant for it is then handled by the grid. An EXPLICIT
+            // navigation (force) is different: the user asked the grid to go somewhere, so it takes the
+            // focus and typing continues in the grid.
+            //
+            // Phase 7d: the guard is ONE JS call that checks AND focuses. An `isFocusOutside` probe followed
+            // by ElementReference.FocusAsync is a TOCTOU race — the host's context menu focuses its first
+            // entry from its own OnAfterRenderAsync in the same batch, so the probe answered "still in the
+            // grid" and the focus hop then stole the caret back ~25 ms later (the menu's ArrowDown / Home /
+            // End / Escape walk was dead while every DOM assertion passed). SuppressFocusRestore lets the
+            // host stand the restore down entirely while one of its surfaces owns the focus.
+            if (force)
+            {
+                try { await _rootElement.FocusAsync(); } catch { }
+            }
+            else if (!SuppressFocusRestore)
+            {
+                try { await JS.InvokeVoidAsync("tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway", _rootElement); }
+                catch (JSException) { }
+                catch (InvalidOperationException) { }
+                catch (NotSupportedException) { }
+            }
         }
     }
 
@@ -1928,6 +2179,28 @@ public partial class TmSpreadsheetCanvasGrid : IAsyncDisposable, ISpreadsheetGri
     {
         if (_registered)
             return;
+
+        // The coarse-pointer media query is the one fact Blazor cannot know: ask the browser once per
+        // grid, before the first frame, so the density it resolves is the one the geometry uses.
+        if (!_pointerCoarseResolved)
+        {
+            _pointerCoarseResolved = true;
+            try { _pointerCoarse = await JS.InvokeAsync<bool>("tmSpreadsheetCanvas.isCoarsePointer"); }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+            catch (NotSupportedException) { }
+
+            // The first render had to assume a fine pointer: re-measure and repaint when the browser
+            // reported a coarse one (the row geometry and the density attribute both change).
+            if (Sheet is not null && Math.Abs(DensityScale.RowScale - _geometryDensityRowScale) > 0.001)
+            {
+                _geometry.Update(Sheet, RowHeight, ColumnWidth, Zoom, DensityScale.RowScale);
+                RebuildMergedCellCache();
+                CaptureStructureSignature();
+                _needsRender = true;
+                StateHasChanged();
+            }
+        }
 
         _dotNetRef ??= DotNetObjectReference.Create(this);
         try

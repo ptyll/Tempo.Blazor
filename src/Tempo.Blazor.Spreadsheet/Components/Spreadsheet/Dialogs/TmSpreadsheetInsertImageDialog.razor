@@ -1,0 +1,47 @@
+@namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
+
+@* Insert Image on the one core dialog frame (G6). It used to be inline markup in TmSpreadsheet; the
+   shared frame gives it the dialog role, the initial focus on the URL field, Escape, the focus
+   restore (to the grid) and the mobile sheet for free. *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_InsertImage"]"
+         Size="ModalSize.Small"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         InitialFocusTargetId="@UrlInputDomId"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-spreadsheet-insert-image"
+         OnClose="OnCancelClick">
+    <ChildContent>
+        <div class="tm-spreadsheet-insert-image__body">
+            <label class="tm-spreadsheet-insert-image__label" for="@UrlInputDomId">@Loc["TmSpreadsheet_ImageUrl"]</label>
+            @* Enter applies from the URL field itself: the field owns the "confirm what was typed"
+               contract (docs/keyboard-activation-convention.md — a container-level Enter handler would
+               also answer bubbled keydowns from the footer buttons and double-activate on top of their
+               click). Escape is the surface's own dismissal, handled by the focus scope. *@
+            <input id="@UrlInputDomId"
+                   class="tm-spreadsheet-insert-image__input"
+                   type="url"
+                   inputmode="url"
+                   aria-label="@Loc["TmSpreadsheet_ImageUrl"]"
+                   aria-invalid="@(ShowsUrlError ? "true" : null)"
+                   value="@_url"
+                   @oninput="OnUrlInput"
+                   @onkeydown="OnUrlKeyDown"
+                   placeholder="https://..." />
+            @if (ShowsUrlError)
+            {
+                <span class="tm-spreadsheet-insert-image__error" role="alert">@Loc["TmSpreadsheet_InsertImage_InvalidUrl"]</span>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-spreadsheet-insert-image__actions">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnCancelClick" Class="tm-spreadsheet-insert-image__btn--cancel">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton OnClick="Apply" Disabled="@(!IsValid)" Class="tm-spreadsheet-insert-image__btn--ok">@Loc["Tm_Apply"]</TmButton>
+        </div>
+    </Footer>
+</TmModal>

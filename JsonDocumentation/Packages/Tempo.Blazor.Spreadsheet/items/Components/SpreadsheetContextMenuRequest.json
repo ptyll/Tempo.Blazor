@@ -1,0 +1,10 @@
+{
+  "itemName": "SpreadsheetContextMenuRequest",
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Spreadsheet",
+  "description": "Where a context menu was requested and what it applies to: the gesture's client point plus the cell (Row/Column) or the sheet (SheetIndex). Raised by TmSpreadsheetCanvasGrid / TmSpreadsheetSheetTabs when their RenderContextMenu is false, so the host can render the menu as a SIBLING of the layout container — the container's containment would otherwise reposition the menu's position:fixed surface.",
+  "packageId": "Tempo.Blazor.Spreadsheet",
+  "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuRequest.cs",
+  "documentationStatus": "generated"
+}

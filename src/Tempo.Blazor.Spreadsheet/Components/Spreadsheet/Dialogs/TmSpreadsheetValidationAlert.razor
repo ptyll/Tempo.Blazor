@@ -1,0 +1,39 @@
+@namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
+@using Tempo.Blazor.Components.Spreadsheet.Data
+
+@* The Spreadsheet validation alert (Stop / Warning / Information) on the one core dialog frame (G6).
+   TmModal owns the overlay, the alertdialog role, aria-modal, the aria-describedby wiring of the
+   message, the initial focus on the primary action, the document-level Escape and the focus restore
+   on close. The package decides the severity icon, the words and whether a cancel path exists. *@
+<TmModal Show="true"
+         Title="@ResolvedTitle"
+         Size="ModalSize.Medium"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         DialogRole="alertdialog"
+         AriaDescribedBy="@MessageDomId"
+         InitialFocusTargetId="@PrimaryActionDomId"
+         RestoreFocus="@RestoreFocus"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="@(Severity != SpreadsheetValidationErrorStyle.Stop)"
+         ShowCloseButton="false"
+         Class="@RootClass"
+         OnClose="OnDismiss">
+    <ChildContent>
+        <div class="tm-spreadsheet-alert__badge" aria-hidden="true">
+            <TmIcon Name="@IconName" Size="IconSize.Lg" />
+        </div>
+        <p class="tm-spreadsheet-alert__message" id="@MessageDomId">@ResolvedMessage</p>
+    </ChildContent>
+    <Footer>
+        <div class="tm-spreadsheet-alert__actions">
+            @if (ResolvedShowCancel)
+            {
+                <TmButton Variant="ButtonVariant.Ghost" id="@CancelActionDomId" OnClick="OnCancelAction">@ResolvedCancelText</TmButton>
+            }
+            <TmButton id="@PrimaryActionDomId" OnClick="OnPrimaryAction">@ResolvedPrimaryText</TmButton>
+        </div>
+    </Footer>
+</TmModal>

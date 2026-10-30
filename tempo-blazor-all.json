@@ -12484,7 +12484,7 @@
               "type": "MobilePresentation",
               "isRequired": false,
               "default": "MobilePresentation.Auto",
-              "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
+              "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface: a fullscreen panel on mobile, the centred dialog otherwise. A forced value renders that presentation without measuring."
             },
             {
               "name": "OkButtonText",
@@ -12609,7 +12609,7 @@
               "name": "AriaDescribedBy",
               "type": "string?",
               "isRequired": false,
-              "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description. Null renders no attribute."
+              "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description, and a surface whose body text is the point of the surface (an alertdialog message) names it here. Null renders no attribute."
             },
             {
               "name": "AriaLabel",
@@ -12736,6 +12736,12 @@
               "default": "true"
             },
             {
+              "name": "AriaDescribedBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element that describes the modal, wired to the scope's aria-describedby — used by an alertdialog, whose body text is the description."
+            },
+            {
               "name": "CancelButtonText",
               "type": "string?",
               "isRequired": false,
@@ -12770,6 +12776,13 @@
               "default": "true"
             },
             {
+              "name": "DialogRole",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"dialog\"",
+              "description": "The role of the trapped surface. dialog (the default) for a normal modal; alertdialog for a surface whose message IS the content and whose actions are the only way out."
+            },
+            {
               "name": "Footer",
               "type": "RenderFragment?",
               "isRequired": false
@@ -12791,6 +12804,12 @@
               "name": "Icon",
               "type": "string?",
               "isRequired": false
+            },
+            {
+              "name": "InitialFocusSelector",
+              "type": "string?",
+              "isRequired": false,
+              "description": "A CSS selector for the element that receives focus when the modal opens — for a target without a stable id or a set where the first match is right (a checked radio, the first checkbox). Resolved inside the focus scope; when it matches nothing the scope falls back to InitialFocusTargetId and then to its first-focusable path. Additive: null keeps the previous behaviour."
             },
             {
               "name": "InitialFocusTargetId",
@@ -12817,7 +12836,7 @@
               "type": "MobilePresentation",
               "isRequired": false,
               "default": "MobilePresentation.Auto",
-              "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
+              "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface (a tabbed form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a sheet would clip it. A forced Sheet, Fullscreen or Dialog renders that presentation without measuring, so a test can render it without a DOM."
             },
             {
               "name": "OkButtonDisabled",
@@ -28895,13 +28914,13 @@
               "name": "OnOpen",
               "type": "EventCallback<SpreadsheetOpenEventArgs>",
               "isRequired": false,
-              "description": "Fires when a file is opened via the toolbar."
+              "description": "Fires when the user picks Open. With ShowHeader=true it renders the header's Open action (the built-in XLSX import); in the desktop ribbon it is the File tab's Open. Subscribe and the host owns loading the returned file - the component never changes the workbook behind the host's back."
             },
             {
               "name": "OnDownload",
               "type": "EventCallback<SpreadsheetDownloadEventArgs>",
               "isRequired": false,
-              "description": "Fires when the workbook is downloaded."
+              "description": "Fires when the user asks for a download. With ShowHeader=true it renders the header's Download action (the component's own XLSX export). This pair IS the header file contract (decision SPREADSHEET-HEADER-FILE-ACTIONS); a host that wants its own document picker adds it to HeaderActions."
             },
             {
               "name": "Class",
@@ -28921,10 +28940,68 @@
               "isRequired": false,
               "default": "SpreadsheetMode.Full",
               "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
+            },
+            {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The document title rendered in the header. Ignored while ShowHeader is false."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions on the RIGHT of the document header (rendered only with ShowHeader=true), before the built-in Open / Download and the Show grid lines toggle - e.g. a host document picker (decision SPREADSHEET-HEADER-FILE-ACTIONS, example in docs/spreadsheet.md)."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically."
+            },
+            {
+              "name": "CustomTools",
+              "type": "List<SpreadsheetCustomTool>?",
+              "isRequired": false,
+              "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+            },
+            {
+              "name": "OnCustomToolClick",
+              "type": "EventCallback<SpreadsheetCustomTool>",
+              "isRequired": false,
+              "description": "Called when a custom ribbon tool is clicked."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout."
             }
           ],
           "cssClasses": [
             "tm-spreadsheet",
+            "tm-spreadsheet--workspace",
+            "tm-spreadsheet--chrome-flat",
             "tm-spreadsheet-toolbar",
             "tm-spreadsheet-toolbar-tabs",
             "tm-spreadsheet-toolbar-tab",
@@ -47045,6 +47122,109 @@
           ]
         },
         {
+          "itemName": "SpreadsheetContextMenuItem",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet",
+          "description": "One entry of a spreadsheet context menu: a stable kebab-case Id the host dispatches on, the already-localized Label, and the DividerBefore / Danger modifiers. TmSpreadsheetContextMenu renders the same list as the anchored desktop menu and as the phone's bottom sheet.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuItem.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Danger",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Tints the entry as destructive and announces it as such."
+            },
+            {
+              "name": "DividerBefore",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Renders a divider ABOVE this entry."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "required string",
+              "description": "Stable action id (kebab case, never tm--prefixed). Raised back through the menu's selection callback."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "required string",
+              "description": "The already-localized visible label."
+            }
+          ]
+        },
+        {
+          "itemName": "SpreadsheetContextMenuRequest",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet",
+          "description": "Where a context menu was requested and what it applies to: the gesture's client point plus the cell (Row/Column) or the sheet (SheetIndex). Raised by TmSpreadsheetCanvasGrid / TmSpreadsheetSheetTabs when their RenderContextMenu is false, so the host can render the menu as a SIBLING of the layout container — the container's containment would otherwise reposition the menu's position:fixed surface.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuRequest.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Anchor",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The gesture that opened the menu: \"touch\" for a long-press, \"pointer\" for a mouse. A finger-sized menu is offset from the fingerprint (the finger would cover the first entry), and a host may key its own presentation off it. Null when the caller did not report one."
+            },
+            {
+              "name": "ClientX",
+              "kind": "Property",
+              "type": "double",
+              "description": "Client (viewport) X of the gesture that opened the menu."
+            },
+            {
+              "name": "ClientY",
+              "kind": "Property",
+              "type": "double",
+              "description": "Client (viewport) Y of the gesture that opened the menu."
+            },
+            {
+              "name": "Column",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based column of the cell the menu applies to; -1 for a sheet-tab request."
+            },
+            {
+              "name": "Row",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based row of the cell the menu applies to; -1 for a sheet-tab request."
+            },
+            {
+              "name": "SheetIndex",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based index of the sheet the menu applies to; -1 for a grid request."
+            },
+            {
+              "name": "ViewportHeight",
+              "kind": "Property",
+              "type": "double",
+              "description": "The viewport height the gesture reported, so a menu with no room below can FLIP above the press point instead of being clamped into the bottom edge. Null when the caller did not report one."
+            }
+          ]
+        },
+        {
+          "itemName": "SpreadsheetFillDirection",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet",
+          "description": "The direction of a fill that does not need the fill-handle drag (WCAG 2.5.7 Dragging Movements). Down copies the leading row of the selection downwards (Ctrl+D, Fill down), Right copies the leading column rightwards (Ctrl+R, Fill right); both run the same AutoFillCommand as the pointer drag, so a keyboard or single-pointer fill is one undo step. The fill-handle drag stays the fast path on a coarse pointer.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetFillDirection.cs",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet"
+          ]
+        },
+        {
           "itemName": "SpreadsheetFormulaEditSession",
           "kind": "Class",
           "category": "Components",
@@ -47536,7 +47716,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "An Excel-like spreadsheet component for viewing and editing tabular data. Supports cell editing, formulas, styling, multi-sheet workbooks, and XLSX import/export.",
+          "description": "An Excel-like spreadsheet component for viewing and editing tabular data. Since the ribbon v2 redesign it renders (in Full mode) an optional document header, the tabbed ribbon with named command groups, the formula bar with the fx mark and the commit/revert buttons, the canvas grid, the sheet tabs and the status bar. Supports cell editing, formulas, styling, multi-sheet workbooks and XLSX import/export.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheet.razor",
           "documentationStatus": "merged",
@@ -47565,10 +47745,35 @@
               "description": "The default column width in pixels. Defaults to 64."
             },
             {
+              "name": "CustomTools",
+              "type": "List<SpreadsheetCustomTool>?",
+              "isRequired": false,
+              "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+            },
+            {
               "name": "Data",
               "type": "byte[]?",
               "isRequired": false,
               "description": "XLSX file data to load into the spreadsheet."
+            },
+            {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "How large the canvas draws rows and cell text. Defaults to Auto, which resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the built-in actions (e.g. Share). Only rendered with ShowHeader."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
             },
             {
               "name": "Height",
@@ -47582,6 +47787,13 @@
               "type": "SpreadsheetWorkbook?",
               "isRequired": false,
               "description": "Pre-populates the spreadsheet with an existing workbook on first render. Subsequent parameter changes are ignored — read the Workbook property to get the current state after editing."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout, which is what a host that already knows its surface (and a test without a DOM) does."
             },
             {
               "name": "Mode",
@@ -47601,6 +47813,12 @@
               "type": "EventCallback<SpreadsheetChangeEventArgs>",
               "isRequired": false,
               "description": "Called when any cell value or formula changes."
+            },
+            {
+              "name": "OnCustomToolClick",
+              "type": "EventCallback<SpreadsheetCustomTool>",
+              "isRequired": false,
+              "description": "Called when a custom ribbon tool is clicked."
             },
             {
               "name": "OnDownload",
@@ -47633,6 +47851,25 @@
               "isRequired": false,
               "default": "200",
               "description": "The initial number of rows to render. Defaults to 200."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically, so the parameter only matters for hosts without a header."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The document title rendered in the header. Ignored while ShowHeader is false."
             },
             {
               "name": "Width",
@@ -47729,6 +47966,13 @@
               "description": "Default column width in pixels."
             },
             {
+              "name": "Density",
+              "type": "SpreadsheetDensity",
+              "isRequired": false,
+              "default": "SpreadsheetDensity.Auto",
+              "description": "Requested grid density. Auto is resolved against the browser's coarse-pointer media query — once before the first canvas frame and again whenever the query flips (a mouse attached to a tablet) — and scales the RENDERED row heights, fonts, handles and header gutters only (the sheet model and every XLSX height keep their values). The root carries data-density, but only once the pointer is known or the density is forced, so a touch device never flashes the compact attribute."
+            },
+            {
               "name": "ExternalFormulaEditValue",
               "type": "string?",
               "isRequired": false,
@@ -47763,6 +48007,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true the grid is displayed in read-only mode: cell editing, context menu, and editing-related callbacks are disabled."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The responsive layout of the hosting spreadsheet. Auto resolves from the app-level viewport scope (a bare grid); TmSpreadsheet passes its own resolved container layout, so the grid's context menu is a bottom sheet exactly when the spreadsheet is a phone."
             },
             {
               "name": "OnBoldToggleRequested",
@@ -47807,6 +48058,13 @@
               "description": "Called when a column is resized."
             },
             {
+              "name": "OnContextMenuRequested",
+              "type": "EventCallback<SpreadsheetContextMenuRequest>",
+              "isRequired": false,
+              "description": "Raised with the gesture when RenderContextMenu is false: the host owns the menu. The cell under the gesture has already become active.",
+              "default": "null"
+            },
+            {
               "name": "OnCopyRequested",
               "type": "EventCallback",
               "isRequired": false,
@@ -47835,6 +48093,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Called when the user requests delete row."
+            },
+            {
+              "name": "OnFillRequested",
+              "type": "EventCallback<SpreadsheetFillDirection>",
+              "isRequired": false,
+              "description": "Raised when the user asks for a fill WITHOUT dragging the fill handle: the cell menu's Fill down / Fill right entries or Ctrl+D / Ctrl+R. The WCAG 2.5.7 non-drag alternative to the fill-handle drag; the workbook command (AutoFillCommand, one undo step) lives in TmSpreadsheet."
             },
             {
               "name": "OnFindRequested",
@@ -47969,6 +48233,12 @@
               "description": "Called when hidden rows near the selection should be shown."
             },
             {
+              "name": "OnZoomChanged",
+              "type": "EventCallback<double>",
+              "isRequired": false,
+              "description": "Raised when a two-finger pinch commits a zoom factor (clamped to 0.5–2.0 in whole 10 % steps). The pinch is a WCAG 2.5.7 path: the status-bar zoom buttons and the phone's More menu are its single-pointer alternative and drive the same OnZoomChanged."
+            },
+            {
               "name": "OnZoomResetRequested",
               "type": "EventCallback",
               "isRequired": false,
@@ -47979,6 +48249,19 @@
               "type": "EventCallback<int>",
               "isRequired": false,
               "description": "Called when the zoom should change by one step (+1 to zoom in, -1 to zoom out)."
+            },
+            {
+              "name": "RenderContextMenu",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether this component renders the cell context menu itself. TmSpreadsheet passes false and renders the menu as a sibling of its layout container (a position:fixed menu inside the container would be positioned against the card). A standalone grid at a phone width must pass false too and render its own sheet."
+            },
+            {
+              "name": "RootDomId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can name the grid as its focus-restore target (TmFocusScope.RestoreFocusTargetId); null renders no id, which keeps a standalone grid unchanged."
             },
             {
               "name": "RowHeight",
@@ -47994,6 +48277,12 @@
               "description": "The sheet to render."
             },
             {
+              "name": "SuppressFocusRestore",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the host's own surface currently owns the focus (an open context menu, a resize dialog). While true the grid does not restore the focus to itself: the canvas activation that opened the surface arms that restore, and the grid's OnAfterRenderAsync runs in the same batch as the surface's, so the probe would answer stale and the FocusAsync hop would steal the caret out of the menu that just took it. Default false keeps the historical restore."
+            },
+            {
               "name": "ValidationDropButtonClicked",
               "type": "EventCallback<(int Row, int Col, double ClientX, double ClientY)>",
               "isRequired": false,
@@ -48007,6 +48296,65 @@
               "description": "The zoom factor applied to the grid geometry and fonts (1.0 = 100%)."
             }
           ]
+        },
+        {
+          "itemName": "TmSpreadsheetContextMenu",
+          "kind": "Component",
+          "category": "Spreadsheet",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet",
+          "description": "The spreadsheet's context menu surface. It must be rendered as a SIBLING of the layout container: the container is container-type: inline-size (implied contain: layout), which makes it the containing block of a position:fixed menu, and a menu inside the scrolling grid would be clipped. On the mobile layout it is the core TmDrawer bottom sheet (modal: backdrop + focus trap, Escape closes it, 44px menuitem rows in the sans face); on desktop/tablet the anchored menu at the gesture's client point.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetContextMenu.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS class for the anchored desktop menu."
+            },
+            {
+              "name": "IsMobile",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the phone presentation (the core drawer sheet) is used."
+            },
+            {
+              "name": "Items",
+              "type": "IReadOnlyList<SpreadsheetContextMenuItem>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "The entries, in render order."
+            },
+            {
+              "name": "OnClose",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the menu should close (outside click, Escape, backdrop, the sheet's close)."
+            },
+            {
+              "name": "OnSelect",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the selected entry's Id."
+            },
+            {
+              "name": "Request",
+              "type": "SpreadsheetContextMenuRequest",
+              "isRequired": true,
+              "description": "The gesture that opened the menu (client point plus the cell or sheet it applies to)."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the menu and the sheet's title."
+            }
+          ],
+          "examples": []
         },
         {
           "itemName": "TmSpreadsheetCustomFilterDialog",
@@ -48036,6 +48384,13 @@
               "description": "The kind of filter (text/number/date)."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetColumnFilter?>",
               "isRequired": false,
@@ -48046,6 +48401,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -48063,6 +48424,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnClose",
               "type": "EventCallback",
               "isRequired": false
@@ -48071,6 +48439,12 @@
               "name": "OnSave",
               "type": "EventCallback<SpreadsheetDataValidation>",
               "isRequired": false
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Validation",
@@ -48112,6 +48486,13 @@
               "isRequired": true,
               "description": "The active auto-filter.",
               "editorRequired": true
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout."
             },
             {
               "name": "OnApply",
@@ -48185,6 +48566,13 @@
               "description": "Initial search options used to seed the panel."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the panel renders. Auto reads the app-level viewport scope — never the panel's own container, which is position-absolute on the desktop layout, so measuring it would flip the mode on every render — and keeps the floating panel when the host provides no scope. Mobile renders the non-modal bottom sheet, Desktop and Tablet the floating panel; a forced value never imports an observer script."
+            },
+            {
               "name": "MatchCount",
               "type": "int",
               "isRequired": false,
@@ -48239,7 +48627,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle.",
+          "description": "The Format Cells dialog on the core TmModal frame: five tabs (Number, Alignment, Font, Border, Fill). On the Number tab the category is a keyboard-operable listbox on desktop/tablet and a core TmSelect above the options on a phone; decimal places use the core TmNumberInput stepper and the live preview is aligned like the format (numeric right, text left). The Border tab paints the package's registered tm-ss-border-* SVG icons, never Unicode box glyphs. Ctrl+Enter applies.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor",
           "documentationStatus": "merged",
@@ -48247,6 +48635,13 @@
             "@using Tempo.Blazor.Components.Spreadsheet"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
             {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetCellStyle>",
@@ -48258,6 +48653,12 @@
               "type": "EventCallback",
               "isRequired": true,
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Style",
@@ -48272,7 +48673,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Displays the active cell reference and provides an input for editing cell values and formulas. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
+          "description": "Displays the active cell reference and provides an input for editing cell values and formulas. The fx mark is a permanent part of the bar, the name box offers the workbook's named ranges, and while the bar is editing it exposes the ✓ commit and ✗ revert buttons with localized accessible names. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormulaBar.razor",
           "documentationStatus": "merged",
@@ -48297,6 +48698,12 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether the formula bar is in editing mode."
+            },
+            {
+              "name": "NamedRanges",
+              "type": "IReadOnlyList<SpreadsheetNamedRange>?",
+              "isRequired": false,
+              "description": "The workbook's named ranges, offered as a dropdown list next to the name box. When the list is empty the chevron is not rendered and the name box stays the plain A1 input; selecting an entry raises OnNavigateToRef with the range name."
             },
             {
               "name": "OnCommitNavigationRequested",
@@ -48354,7 +48761,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef, NamedRange.",
+          "description": "Dialog for inserting or editing a structured hyperlink on a cell. Supports four link kinds: Web, Email, InternalRef and NamedRange (named ranges come from the workbook). The dialog rides the core TmModal frame: the initial focus is the target field (\"hl-target\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId). Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The target field switches its inputmode with the kind (url / email). The form-field ids (#hl-type, #hl-target, #hl-subject, #hl-display, #hl-tooltip) are a published E2E contract and one dialog is open at a time.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetHyperlinkDialog.razor",
           "documentationStatus": "merged",
@@ -48370,6 +48777,13 @@
               "editorRequired": true
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnCancel",
               "type": "EventCallback",
               "isRequired": false,
@@ -48382,6 +48796,12 @@
               "description": "Raised when the user saves the dialog."
             },
             {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+            },
+            {
               "name": "Workbook",
               "type": "SpreadsheetWorkbook",
               "isRequired": true,
@@ -48391,12 +48811,59 @@
           ]
         },
         {
+          "itemName": "TmSpreadsheetInsertImageDialog",
+          "kind": "Component",
+          "category": "Spreadsheet",
+          "subcategory": "Dialogs",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
+          "description": "The Insert Image dialog: one URL field plus a Cancel / Apply footer. It used to be inline markup inside TmSpreadsheet; it now rides the core TmModal frame, which owns the overlay, the dialog role, the initial focus on the URL field, the document-level Escape, the focus restore (to the grid) and the mobile sheet. The URL is validated with Uri.TryCreate and only an absolute http(s) address or a data: URI can be applied — Apply stays disabled and the field carries aria-invalid plus an inline alert until then. Enter applies from the field; applying raises the URL, which the spreadsheet writes to the active cell's ImageUrl (the canvas paints it).",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetInsertImageDialog.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
+          ],
+          "parameters": [
+            {
+              "name": "ImageUrl",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The URL the field starts with (an existing cell image, when the host edits one)."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
+              "name": "OnApply",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the accepted image URL."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+            }
+          ]
+        },
+        {
           "itemName": "TmSpreadsheetNamedRangeEditDialog",
           "kind": "Component",
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Dialog for creating or editing a named range. Validates name syntax and required fields.",
+          "description": "Dialog for creating or editing a named range. Validates name syntax and the required fields, with an inline error per field (aria-invalid + role=\"alert\") and the first invalid field taking the focus after a failed save. The dialog rides the core TmModal frame: the initial focus is the name field (\"nr-name\"), Escape dismisses through the frame's document-level listener and the focus returns to the grid (RestoreFocusTargetId) or to the Name Manager it was opened from, so a stacked dialog never strands the keyboard. Ctrl+Enter saves from any form field; the footer buttons are the frame's own and never double-activate. The form-field ids (#nr-name, #nr-refers, #nr-scope, #nr-sheet, #nr-comment) are a published E2E contract and one dialog is open at a time.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNamedRangeEditDialog.razor",
           "documentationStatus": "merged",
@@ -48405,16 +48872,23 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnCancel",
               "type": "EventCallback",
               "isRequired": false,
-              "description": "Raised when the dialog is dismissed."
+              "description": "Raised when the dialog is dismissed (Cancel, Escape or a backdrop click)."
             },
             {
               "name": "OnSave",
               "type": "EventCallback<SpreadsheetNamedRange>",
               "isRequired": false,
-              "description": "Raised when the user saves the dialog."
+              "description": "Raised when the user saves the dialog (the save button or Ctrl+Enter)."
             },
             {
               "name": "Range",
@@ -48422,6 +48896,12 @@
               "isRequired": false,
               "description": "The range to edit, or null when creating a new one.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — typically the grid root, or the Name Manager the editor was opened from. Null falls back to the opener."
             },
             {
               "name": "Workbook",
@@ -48438,7 +48918,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete.",
+          "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete. The list is a WAI-ARIA grid with a roving tabindex: the selected row is the single tab stop and carries the DOM focus, Up/Down/Home/End move the selection, Enter edits the selected range, Delete deletes it (the neighbour takes the selection) and a double click edits. The dialog itself is a modal overlay whose role, aria-modal, accessible name, initial focus, Escape handling and focus restore come from the core TmFocusScope; all element ids are per instance and none is a selector contract.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNameManagerDialog.razor",
           "documentationStatus": "merged",
@@ -48446,6 +48926,13 @@
             "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -48470,6 +48957,12 @@
               "isRequired": false,
               "description": "Raised when the user wants to create a new named range.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "Workbook",
@@ -48502,6 +48995,13 @@
               "editorRequired": true
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetRemoveDuplicatesOptions>",
               "isRequired": false,
@@ -48519,6 +49019,12 @@
               "isRequired": true,
               "description": "The range being deduplicated.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -48527,7 +49033,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Tab bar for switching between workbook sheets with add, delete, and rename support.",
+          "description": "Tab bar for switching between workbook sheets with add, delete, and rename support. The active tab is underlined in the accent colour, and when the strip overflows it gains a pair of scroll arrows.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetSheetTabs.razor",
           "documentationStatus": "merged",
@@ -48566,6 +49072,13 @@
               "description": "Called when a new sheet should be added."
             },
             {
+              "name": "OnContextMenuRequested",
+              "type": "EventCallback<SpreadsheetContextMenuRequest>",
+              "isRequired": false,
+              "description": "Raised with the gesture when RenderContextMenu is false (SheetIndex + client point).",
+              "default": "null"
+            },
+            {
               "name": "OnDeleteSheetRequested",
               "type": "EventCallback<int>",
               "isRequired": false,
@@ -48584,10 +49097,24 @@
               "description": "Called when a tab is clicked in formula-point mode to switch the displayed sheet for ref selection."
             },
             {
+              "name": "RenderContextMenu",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether this component renders its own tab context menu. TmSpreadsheet passes false and renders it as a sibling of the layout container."
+            },
+            {
               "name": "Sheets",
               "type": "List<SpreadsheetSheet>",
               "isRequired": true,
               "description": "All sheets in the workbook."
+            },
+            {
+              "name": "ShowTabCloseButtons",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether every tab paints its own × close affordance (default true). With false the clean reference tab look is kept and deleting stays available from the tab's context menu."
             }
           ]
         },
@@ -48605,6 +49132,13 @@
             "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
             {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetSortSpec>",
@@ -48624,6 +49158,12 @@
               "isRequired": true,
               "description": "The range being sorted.",
               "editorRequired": true
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -48633,7 +49173,7 @@
           "category": "Spreadsheet",
           "subcategory": "Dialogs",
           "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
-          "description": "The Paste Special dialog. Radio options choose what to paste (all / values / formulas / formats / values+formats / all-except-borders), a dropdown picks an arithmetic operation, and checkboxes toggle transpose and skip-blanks. Applying yields a SpreadsheetPasteSpecialOptions. All text is localized.",
+          "description": "The Paste Special dialog. Two radio columns choose what to paste (all / values / formulas / formats / values+formats / all-except-borders) and the arithmetic operation (none / add / subtract / multiply / divide); two checkboxes toggle skip-blanks and transpose. Applying yields a SpreadsheetPasteSpecialOptions. All text is localized.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetSpecialPasteDialog.razor",
           "documentationStatus": "merged",
@@ -48641,6 +49181,13 @@
             "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
             {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetPasteSpecialOptions>",
@@ -48652,6 +49199,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             }
           ]
         },
@@ -48704,6 +49257,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
               "name": "OnApply",
               "type": "EventCallback<SpreadsheetTextToColumnsResult>",
               "isRequired": false,
@@ -48715,6 +49275,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised when the dialog is dismissed."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
             },
             {
               "name": "SourceRows",
@@ -48731,7 +49297,7 @@
           "kind": "Component",
           "category": "Spreadsheet",
           "namespace": "Tempo.Blazor.Components.Spreadsheet",
-          "description": "Ribbon-style toolbar for the spreadsheet with tabbed groups: Home, Insert, View, and File.",
+          "description": "Ribbon-style toolbar for the spreadsheet: one tab strip (Home, Insert, Data, View and the legacy File tab) followed by a row of named groups. Every group carries a stable, additive-only data-tm-group id (clipboard | font | alignment | number | cells | insert | links | data | view | file | custom), every tab and tabpanel carries data-tm-tab, custom groups also carry data-tool-id, and the tab strip follows the WAI-ARIA tabs pattern (per-instance ids, aria-controls/aria-labelledby, roving tabindex, ArrowLeft/Right/Home/End). Commands are large (icon above the label) or small (icon and label on one line); every icon is a TmIcon, and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG icons. The border picker, the colour pickers and the Delete split render through the core TmOverlayPanel (browser top layer), so the ribbon row's horizontal overflow can never clip them. Contract: docs/spreadsheet.md.",
           "packageId": "Tempo.Blazor.Spreadsheet",
           "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetToolbar.razor",
           "documentationStatus": "merged",
@@ -48739,6 +49305,19 @@
             "@using Tempo.Blazor.Components.Spreadsheet"
           ],
           "parameters": [
+            {
+              "name": "ActiveTab",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"Home\"",
+              "description": "The active ribbon tab id (\"Home\", \"Insert\", \"Data\", \"View\" or \"File\"). Two-way bindable through ActiveTabChanged; without a binding the toolbar switches tabs internally."
+            },
+            {
+              "name": "ActiveTabChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the selected tab id when the user changes the ribbon tab."
+            },
             {
               "name": "BackgroundColor",
               "type": "string?",
@@ -48816,6 +49395,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether the current selection is underlined."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the ribbon renders in. Auto resolves from the app-level viewport scope (a standalone toolbar); TmSpreadsheet always passes its own resolved CONTAINER layout. Desktop keeps the tab strip, tablet renders two compact rows and mobile a single one (rounded through the core TmToolbar Overflow=Menu)."
             },
             {
               "name": "OnAlignChanged",
@@ -49106,6 +49692,12 @@
               "description": "Called when the Undo button is clicked."
             },
             {
+              "name": "OnVerticalAlignChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Called with \"top\", \"middle\" or \"bottom\" when a vertical alignment button in the Alignment group is clicked."
+            },
+            {
               "name": "SelectedFontFamily",
               "type": "string?",
               "isRequired": false,
@@ -49134,6 +49726,19 @@
               "description": "Currently selected number format."
             },
             {
+              "name": "SelectedVerticalAlign",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Current vertical alignment of the cell content: \"top\", \"middle\" or \"bottom\". The matching button in the Alignment group is marked active; null leaves all three unmarked (the default bottom is not highlighted)."
+            },
+            {
+              "name": "ShowFileTab",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the legacy File tab is offered (default true). Hosts that render the document header, which owns the Open / Download actions, pass false."
+            },
+            {
               "name": "ShowGridLines",
               "type": "bool",
               "isRequired": false,
@@ -49145,6 +49750,91 @@
               "type": "string?",
               "isRequired": false,
               "description": "Current text color (CSS color value)."
+            }
+          ]
+        },
+        {
+          "itemName": "TmSpreadsheetValidationAlert",
+          "kind": "Component",
+          "category": "Spreadsheet",
+          "subcategory": "Dialogs",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
+          "description": "The severity-driven validation alert on the core TmModal frame (alertdialog, aria-describedby, focus trap, Escape, focus restore). A Medium card places a large filled severity badge to the LEFT of the message and has no divider under the title. Stop offers only the acknowledge action (a backdrop click does nothing); Warning adds the keep-the-value action; Information keeps both. A rule's own ErrorAlert title/message wins over the severity defaults.",
+          "packageId": "Tempo.Blazor.Spreadsheet",
+          "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetValidationAlert.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Spreadsheet.Dialogs"
+          ],
+          "parameters": [
+            {
+              "name": "CancelText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Label of the cancel action. Null falls back to the localized \"Cancel\"."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the alert renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
+            },
+            {
+              "name": "Message",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The alert body text (the rule's own message). Null falls back to the severity's localized default."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user cancels the alert (a backdrop click or the cancel action)."
+            },
+            {
+              "name": "OnPrimary",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user accepts the alert (the only close path of a Stop alert)."
+            },
+            {
+              "name": "PrimaryText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Label of the primary action. Null falls back to the severity's localized default (\"Got it\" for Stop, \"Use anyway\" for Warning/Information)."
+            },
+            {
+              "name": "RestoreFocus",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether closing the alert restores the focus it took. Defaults to true."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element focus returns to when the alert closes — the host spreadsheet passes its grid root, so focus lands on the grid rather than the toolbar button that opened the alert. Null falls back to the element focused before the alert opened."
+            },
+            {
+              "name": "Severity",
+              "type": "SpreadsheetValidationErrorStyle",
+              "isRequired": false,
+              "default": "SpreadsheetValidationErrorStyle.Stop",
+              "description": "How severe the message is. Stop blocks the value (a single acknowledge action, a backdrop click does nothing); Warning and Information ask whether the value should be kept. Defaults to Stop."
+            },
+            {
+              "name": "ShowCancel",
+              "type": "bool?",
+              "isRequired": false,
+              "description": "Whether a cancel action exists. Null falls back to the severity: a Stop alert has none (it is a hard block), a Warning or Information confirm always offers one."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The alert title (the rule's own title). Null falls back to the severity's localized default (\"Invalid value\" / \"Value outside the recommended range\" / \"Note\")."
             }
           ]
         }
@@ -49168,6 +49858,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/css/theme-spreadsheet-dark.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet-benchmark.js",
           "kind": "JavaScript"
         },
@@ -49178,15 +49872,31 @@
         {
           "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/spreadsheet.js",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-filter-buttons.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-internals.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-theme.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Spreadsheet/wwwroot/js/__tests__/spreadsheet-canvas-touch.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 75,
-        "manualItemCount": 75,
-        "generatedItemCount": 74,
+        "itemCount": 81,
+        "manualItemCount": 81,
+        "generatedItemCount": 80,
         "generatedOnlyItemCount": 0,
-        "componentCount": 18,
-        "publicApiTypeCount": 56
+        "componentCount": 21,
+        "publicApiTypeCount": 59
       }
     },
     {
@@ -104218,6 +104928,18 @@
               "description": "Creates a deep copy of this style."
             },
             {
+              "name": "CopyFrom",
+              "kind": "Method",
+              "type": "void",
+              "description": "Copies every visual property of source onto this style (the border objects are copied, not shared). Used by the spreadsheet's Fill down / Fill right, which follows Excel and copies the SOURCE cell's format into the filled cells, and by the style command so the copy is one undoable step.",
+              "parameters": [
+                {
+                  "name": "source",
+                  "type": "SpreadsheetCellStyle"
+                }
+              ]
+            },
+            {
               "name": "BackgroundColor",
               "kind": "Property",
               "type": "string",
@@ -104681,6 +105403,16 @@
           "description": "Pure engine that finds duplicate rows within a range by comparing the values of a chosen set of key columns. The first occurrence of each distinct key combination is kept; every later row with the same combination is reported for removal. Comparison is type-aware (numbers, dates and booleans compare by value, not by their formatted text) and honours case sensitivity for text.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Data/SpreadsheetDeduplicate.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "SpreadsheetDensity",
+          "kind": "Enum",
+          "category": "Spreadsheet",
+          "namespace": "Tempo.Blazor.Components.Spreadsheet.Enums",
+          "description": "Grid density of a spreadsheet: how large the canvas draws rows and cell text. Auto (0) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else; Compact (1) is the classic 20px row, Comfortable (2) draws rows 1.5x with 1.25x text. The scale is render-only, so the workbook model and every XLSX height keep their values.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Enums/SpreadsheetDensity.cs",
           "documentationStatus": "merged"
         },
         {
@@ -109122,12 +109854,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1513,
-        "manualItemCount": 1513,
-        "generatedItemCount": 1496,
+        "itemCount": 1514,
+        "manualItemCount": 1514,
+        "generatedItemCount": 1497,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1496
+        "publicApiTypeCount": 1497
       }
     },
     {
@@ -126108,10 +126840,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3366,
-    "manualItemCount": 3366,
+    "itemCount": 3373,
+    "manualItemCount": 3373,
     "generatedOnlyItemCount": 0,
-    "componentCount": 508,
-    "publicApiTypeCount": 2805
+    "componentCount": 511,
+    "publicApiTypeCount": 2809
   }
 }

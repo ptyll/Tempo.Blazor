@@ -1312,3 +1312,78 @@ window.tmSpreadsheetGrid.ensureCellVisible = function (grid, cell, options) {
         window.tmSpreadsheetFormulaRuntime.clearHostFormulaSession(scope, owner);
     };
 })();
+
+// ── Sheet tab strip (redesign phase 5) ────────────────────────────────────────
+// The ribbon's sheet tabs report whether they overflow (the arrows are a measured affordance) and
+// scroll by a page. Everything stays a plain DOM read/write: no state, no listeners left behind.
+window.tmSpreadsheetSheetTabs = window.tmSpreadsheetSheetTabs || {};
+
+window.tmSpreadsheetSheetTabs.hasOverflow = function (scroller) {
+    if (!scroller) return false;
+    return scroller.scrollWidth > scroller.clientWidth + 1;
+};
+
+window.tmSpreadsheetSheetTabs.scrollTabs = function (scroller, direction) {
+    if (!scroller) return;
+    const step = Math.max(scroller.clientWidth * 0.6, 120);
+    const left = direction === "left" ? -step : step;
+    if (typeof scroller.scrollBy === "function") {
+        scroller.scrollBy({ left: left, behavior: "smooth" });
+    } else {
+        scroller.scrollLeft += left;
+    }
+};
+
+// The overflow arrows must also follow a CONTAINER resize (phase 6): the layout is container-owned, so a
+// width change proves nothing about a window resize event, and a demoted card can go from overflowing to
+// fitting without a single re-render of the strip. One shared ResizeObserver, registrations keyed by the
+// caller's id (Blazor detaches the element before a dispose callback runs).
+window.tmSpreadsheetSheetTabs._resizeTracked = window.tmSpreadsheetSheetTabs._resizeTracked || new Map();
+window.tmSpreadsheetSheetTabs._resizeObserver = window.tmSpreadsheetSheetTabs._resizeObserver || null;
+
+window.tmSpreadsheetSheetTabs.observeOverflow = function (scroller, dotNet, id) {
+    if (!scroller || typeof ResizeObserver !== "function") return;
+    window.tmSpreadsheetSheetTabs.disconnectOverflow(id);
+    const tracked = window.tmSpreadsheetSheetTabs._resizeTracked;
+    if (!window.tmSpreadsheetSheetTabs._resizeObserver) {
+        window.tmSpreadsheetSheetTabs._resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const registration = tracked.get(entry.target);
+                if (!registration) continue;
+                registration.dotNet.invokeMethodAsync("OnSheetTabsResized").catch(() => {});
+            }
+        });
+    }
+    tracked.set(scroller, { dotNet, id });
+    window.tmSpreadsheetSheetTabs._resizeObserver.observe(scroller);
+};
+
+window.tmSpreadsheetSheetTabs.disconnectOverflow = function (id) {
+    const tracked = window.tmSpreadsheetSheetTabs._resizeTracked;
+    for (const [scroller, registration] of tracked) {
+        if (registration.id !== id) continue;
+        tracked.delete(scroller);
+        window.tmSpreadsheetSheetTabs._resizeObserver?.unobserve(scroller);
+    }
+};
+
+// ── Ribbon tabs (redesign phase 5 review) ─────────────────────────────────────
+// Roving tabindex needs focus to follow the selected tab; Blazor cannot focus a sibling element
+// without a per-tab ElementReference, so the toolbar asks for the id it just activated.
+window.tmSpreadsheetToolbar = window.tmSpreadsheetToolbar || {};
+
+window.tmSpreadsheetToolbar.focusTab = function (id) {
+    if (!id) return;
+    const tab = document.getElementById(String(id));
+    if (tab && typeof tab.focus === "function") {
+        tab.focus({ preventScroll: true });
+    }
+};
+
+// ── Formula bar name box (redesign phase 5 review) ────────────────────────────
+// True when the focus is still inside the name-box wrapper after a focusout (moving between the
+// input, the chevron and a list entry must not close the list; leaving it must).
+window.tmSpreadsheetFormulaBar.isFocusWithin = function (element) {
+    if (!element) return false;
+    return element.contains(document.activeElement);
+};

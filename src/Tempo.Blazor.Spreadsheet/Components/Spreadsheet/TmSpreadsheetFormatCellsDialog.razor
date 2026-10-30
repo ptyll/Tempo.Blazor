@@ -2,18 +2,26 @@
 @using Tempo.Blazor.Components.Spreadsheet.Models
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 
-<div class="tm-spreadsheet-dialog-backdrop" @onclick="OnClose">
-    <div class="tm-fcd" @onclick:stopPropagation @onkeydown="OnKeyDown">
-        <div class="tm-fcd__header">
-            <h3 class="tm-fcd__title">@Loc["TmSpreadsheet_FormatCells"]</h3>
-        </div>
-
+@* Format Cells on the one core dialog frame (G6). The dialog is a TALL surface, so it asks the
+   frame for MobilePresentation.AutoFullscreen — a fullscreen panel on a phone, the centred dialog
+   everywhere else (a sheet would clip the tabs, the body and the preview). *@
+<TmModal Show="true"
+         Title="@Loc["TmSpreadsheet_FormatCells"]"
+         Size="ModalSize.Large"
+         LayoutMode="@LayoutMode"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         FooterLayout="FooterLayout.Inline"
+         CloseOnEscape="true"
+         CloseOnOverlayClick="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         Class="tm-fcd"
+         OnClose="OnClose">
+    <ChildContent>
         <!-- Tab bar — native <button>s: their keydowns must not reach the
              dialog's Ctrl+Enter -> Apply shortcut on top of the tab's own
-             click. Escape is re-handled locally so it still closes. -->
-        <div class="tm-fcd__tabs" role="tablist"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
-            @foreach (var tab in _tabs)
+             click. Escape is the modal's own dismissal. -->
+        <div class="tm-fcd__tabs" role="tablist">
+            @foreach (var tab in VisibleTabs)
             {
                 <button class="tm-fcd__tab @(_activeTab == tab ? "tm-fcd__tab--active" : "")"
                         role="tab"
@@ -24,8 +32,9 @@
             }
         </div>
 
-        <!-- Tab content -->
-        <div class="tm-fcd__body">
+        <!-- Tab content. Ctrl+Enter applies from any control in the form; the tabs and the footer
+             buttons are outside this wrapper, so their own activation never doubles. -->
+        <div class="tm-fcd__body" @onkeydown="OnKeyDown">
             @if (_activeTab == "Number")
             {
                 @RenderNumberTab()
@@ -55,38 +64,69 @@
                 @_previewText
             </div>
         </div>
-
-        <!-- Actions — native <button>s: their keydowns must not reach the
-             dialog's Ctrl+Enter -> Apply shortcut on top of each button's own
-             click. Escape is re-handled locally so it still closes. -->
-        <div class="tm-fcd__actions"
-             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
-            <TmButton Variant="ButtonVariant.Secondary" OnClick="OnClose">@Loc["Tm_Cancel"]</TmButton>
-            <TmButton OnClick="Apply">@Loc["Tm_Apply"]</TmButton>
+    </ChildContent>
+    <Footer>
+        <div class="tm-fcd__actions">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose" Class="tm-fcd__btn--cancel">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton OnClick="Apply" Class="tm-fcd__btn--ok">@Loc["Tm_Apply"]</TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>
 
 @code {
     private readonly string[] _tabs = ["Number", "Alignment", "Font", "Border", "Fill"];
+
+    /// <summary>
+    /// The tabs this layout offers. Mobile is the G2 "viewing plus basic editing" layout, so the Border tab
+    /// (like the merge toggle and the border picker in the ribbon) is not offered there — full editing starts
+    /// at the tablet.
+    /// </summary>
+    private IReadOnlyList<string> VisibleTabs => Mobile
+        ? _tabs.Where(tab => tab != "Border").ToArray()
+        : _tabs;
     private string _activeTab = "Number";
 
     private RenderFragment RenderNumberTab() => __builder =>
     {
-        <div class="tm-fcd__two-col">
+        <div class="@(Mobile ? "tm-fcd__number" : "tm-fcd__two-col")">
+            @if (Mobile)
+            {
+                @* On a phone the listbox would leave ~140px per column: the category becomes a select
+                   ABOVE the options (the reference's listbox needs the desktop width). *@
+                <TmSelect TValue="string"
+                          Class="tm-fcd__category-select"
+                          Label="@Loc["TmSpreadsheet_Category"]"
+                          Value="_selectedCategory"
+                          ValueChanged="OnCategorySelected"
+                          Options="CategoryOptions" />
+            }
+            else
+            {
             <div class="tm-fcd__col">
-                <div class="tm-fcd__field-label">@Loc["TmSpreadsheet_Category"]</div>
-                <div class="tm-fcd__listbox">
+                <div class="tm-fcd__field-label" id="@CategoryLabelDomId">@Loc["TmSpreadsheet_Category"]</div>
+                @* A real listbox with a roving tabindex: the selected option is the single tab stop
+                   and owns the DOM focus, so ↑/↓/Home/End walk the categories and a screen reader
+                   announces the option it lands on. No per-item activation is emulated — a div has
+                   no native one (docs/keyboard-activation-convention.md). *@
+                <div class="tm-fcd__listbox"
+                     role="listbox"
+                     aria-labelledby="@CategoryLabelDomId"
+                     @onkeydown="OnCategoryKeyDown">
                     @foreach (var cat in _numberCategories)
                     {
                         <div class="tm-fcd__listbox-item @(_selectedCategory == cat ? "tm-fcd__listbox-item--selected" : "")"
-                             @onclick="() => SelectCategory(cat)">
+                             role="option"
+                             tabindex="@(_selectedCategory == cat ? "0" : "-1")"
+                             aria-selected="@(_selectedCategory == cat ? "true" : "false")"
+                             @ref="_categoryElements[cat]"
+                             @onclick="() => OnCategoryClick(cat)">
                             @Loc[$"TmSpreadsheet_NumCat_{cat}"]
                         </div>
                     }
                 </div>
             </div>
-            <div class="tm-fcd__col">
+            }
+            <div class="tm-fcd__col tm-fcd__number-options">
                 @if (_selectedCategory == "General")
                 {
                     <p class="tm-fcd__info">@Loc["TmSpreadsheet_NumCat_GeneralDesc"]</p>
@@ -95,9 +135,10 @@
                 {
                     <div class="tm-fcd__field-row">
                         <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_DecimalPlaces"]</label>
-                        <input class="tm-fcd__input tm-fcd__input--sm" type="number" min="0" max="30"
-                               value="@_numDecimalPlaces"
-                               @oninput="e => { _numDecimalPlaces = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 0, 30) : 2; UpdateNumberFormat(); }" />
+                        <TmNumberInput Class="tm-fcd__decimal"
+                                       Min="0" Max="30"
+                                       Value="_numDecimalPlaces"
+                                       ValueChanged="OnDecimalPlacesChanged" />
                     </div>
                     <div class="tm-fcd__field-row">
                         <label class="tm-fcd__check-label">
@@ -111,9 +152,10 @@
                 {
                     <div class="tm-fcd__field-row">
                         <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_DecimalPlaces"]</label>
-                        <input class="tm-fcd__input tm-fcd__input--sm" type="number" min="0" max="30"
-                               value="@_numDecimalPlaces"
-                               @oninput="e => { _numDecimalPlaces = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 0, 30) : 2; UpdateNumberFormat(); }" />
+                        <TmNumberInput Class="tm-fcd__decimal"
+                                       Min="0" Max="30"
+                                       Value="_numDecimalPlaces"
+                                       ValueChanged="OnDecimalPlacesChanged" />
                     </div>
                     <div class="tm-fcd__field-row">
                         <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_CurrencySymbol"]</label>
@@ -145,9 +187,10 @@
                 {
                     <div class="tm-fcd__field-row">
                         <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_DecimalPlaces"]</label>
-                        <input class="tm-fcd__input tm-fcd__input--sm" type="number" min="0" max="30"
-                               value="@_numDecimalPlaces"
-                               @oninput="e => { _numDecimalPlaces = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 0, 30) : 0; UpdateNumberFormat(); }" />
+                        <TmNumberInput Class="tm-fcd__decimal"
+                                       Min="0" Max="30"
+                                       Value="_numDecimalPlaces"
+                                       ValueChanged="OnDecimalPlacesChanged" />
                     </div>
                 }
                 else if (_selectedCategory == "Custom")
@@ -282,21 +325,21 @@
             <div class="tm-fcd__field-row">
                 <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_BorderPresets"]</label>
                 <div class="tm-fcd__btn-group">
-                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderNone"]"
+                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderNone"]" aria-label="@Loc["TmSpreadsheet_BorderNone"]"
                             @onclick="() => { _workingStyle.BorderTop = new(); _workingStyle.BorderRight = new(); _workingStyle.BorderBottom = new(); _workingStyle.BorderLeft = new(); }">
-                        ☐
+                        <TmIcon Name="tm-ss-border-none" Size="IconSize.Sm" />
                     </button>
-                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderOutside"]"
+                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderOutside"]" aria-label="@Loc["TmSpreadsheet_BorderOutside"]"
                             @onclick="ApplyOutsideBorder">
-                        ▣
+                        <TmIcon Name="tm-ss-border-outside" Size="IconSize.Sm" />
                     </button>
-                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderAllBorders"]"
+                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderAllBorders"]" aria-label="@Loc["TmSpreadsheet_BorderAllBorders"]"
                             @onclick="ApplyAllBorders">
-                        ⊞
+                        <TmIcon Name="tm-ss-border-all" Size="IconSize.Sm" />
                     </button>
-                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderThickBox"]"
+                    <button class="tm-fcd__btn" title="@Loc["TmSpreadsheet_BorderThickBox"]" aria-label="@Loc["TmSpreadsheet_BorderThickBox"]"
                             @onclick="ApplyThickBorder">
-                        ◼
+                        <TmIcon Name="tm-ss-border-thick" Size="IconSize.Sm" />
                     </button>
                 </div>
             </div>
@@ -326,17 +369,17 @@
                 <label class="tm-fcd__field-label">@Loc["TmSpreadsheet_BorderEdges"]</label>
                 <div class="tm-fcd__btn-group">
                     <button class="tm-fcd__btn @(_workingStyle.BorderTop.Style != SpreadsheetBorderStyle.None ? "tm-fcd__btn--active" : "")"
-                            title="@Loc["TmSpreadsheet_BorderTop"]"
-                            @onclick="ToggleBorderTop">⊤</button>
+                            title="@Loc["TmSpreadsheet_BorderTop"]" aria-label="@Loc["TmSpreadsheet_BorderTop"]"
+                            @onclick="ToggleBorderTop"><TmIcon Name="tm-ss-border-top" Size="IconSize.Sm" /></button>
                     <button class="tm-fcd__btn @(_workingStyle.BorderBottom.Style != SpreadsheetBorderStyle.None ? "tm-fcd__btn--active" : "")"
-                            title="@Loc["TmSpreadsheet_BorderBottom"]"
-                            @onclick="ToggleBorderBottom">⊥</button>
+                            title="@Loc["TmSpreadsheet_BorderBottom"]" aria-label="@Loc["TmSpreadsheet_BorderBottom"]"
+                            @onclick="ToggleBorderBottom"><TmIcon Name="tm-ss-border-bottom" Size="IconSize.Sm" /></button>
                     <button class="tm-fcd__btn @(_workingStyle.BorderLeft.Style != SpreadsheetBorderStyle.None ? "tm-fcd__btn--active" : "")"
-                            title="@Loc["TmSpreadsheet_BorderLeft"]"
-                            @onclick="ToggleBorderLeft">⊣</button>
+                            title="@Loc["TmSpreadsheet_BorderLeft"]" aria-label="@Loc["TmSpreadsheet_BorderLeft"]"
+                            @onclick="ToggleBorderLeft"><TmIcon Name="tm-ss-border-left" Size="IconSize.Sm" /></button>
                     <button class="tm-fcd__btn @(_workingStyle.BorderRight.Style != SpreadsheetBorderStyle.None ? "tm-fcd__btn--active" : "")"
-                            title="@Loc["TmSpreadsheet_BorderRight"]"
-                            @onclick="ToggleBorderRight">⊢</button>
+                            title="@Loc["TmSpreadsheet_BorderRight"]" aria-label="@Loc["TmSpreadsheet_BorderRight"]"
+                            @onclick="ToggleBorderRight"><TmIcon Name="tm-ss-border-right" Size="IconSize.Sm" /></button>
                 </div>
             </div>
         </div>

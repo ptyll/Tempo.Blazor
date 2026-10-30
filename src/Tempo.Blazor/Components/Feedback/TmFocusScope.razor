@@ -65,8 +65,9 @@
 
     /// <summary>
     /// The id of the element that describes the scope, wired to <c>aria-describedby</c>. Additive:
-    /// a modal points it at its subtitle so screen readers announce title + description. Null
-    /// renders no attribute.
+    /// a modal points it at its subtitle so screen readers announce title + description, and a surface
+    /// whose body text is the point of the surface (an <c>alertdialog</c> message) names it here.
+    /// Null renders no attribute.
     /// </summary>
     [Parameter] public string? AriaDescribedBy { get; set; }
 

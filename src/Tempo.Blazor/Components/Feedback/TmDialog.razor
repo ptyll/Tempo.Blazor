@@ -11,7 +11,8 @@
 @inject ILogger<OverlayLayout> LayoutLogger
 
 
-@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
+@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto
+    && MobilePresentation is MobilePresentation.Auto or MobilePresentation.AutoFullscreen)
 {
     @* No viewport scope: measure the fixed overlay itself. The probe is an internal component, so
        it is opened from C# — a tag in markup would compile to a literal HTML element. *@
@@ -150,6 +151,9 @@
     /// <summary>
     /// How the dialog presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> follows the
     /// viewport scope: a sheet on mobile, a dialog otherwise.
+    /// <see cref="MobilePresentation.AutoFullscreen"/> is the same choice for a TALL surface: a
+    /// fullscreen panel on mobile, the centred dialog otherwise. A forced value renders that
+    /// presentation without measuring.
     /// </summary>
     [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
 
@@ -276,9 +280,12 @@
         builder.CloseComponent();
     };
 
-    private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
-        ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
-        : MobilePresentation;
+    private MobilePresentation ResolvedPresentation => MobilePresentation switch
+    {
+        MobilePresentation.Auto => Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog,
+        MobilePresentation.AutoFullscreen => Context.IsMobile ? MobilePresentation.Fullscreen : MobilePresentation.Dialog,
+        _ => MobilePresentation
+    };
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 

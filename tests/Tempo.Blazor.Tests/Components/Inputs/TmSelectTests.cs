@@ -717,7 +717,9 @@ public class TmSelectTests : LocalizationTestBase
             .Add(c => c.Value, 0)
             .Add(c => c.Options, options));
 
-        cut.Find("select").HasAttribute("value").Should().BeFalse("non-nullable default keeps the no-attribute behaviour");
+        // Phase-4 review: int 0 IS a selectable option, so the select pins it explicitly. Without the
+        // attribute the browser painted an empty control when a dialog switched back to "0".
+        cut.Find("select").GetAttribute("value").Should().Be("0");
         cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue("int 0 still matches the 0-valued option");
     }
 
@@ -871,8 +873,8 @@ public class TmSelectTests : LocalizationTestBase
     [Fact]
     public void TmSelect_Markup_Int_Options_ValueZero()
     {
-        // Non-nullable int with Value 0 (the default): no <select value> attribute, the 0-option
-        // carries the selected marker.
+        // Non-nullable int with Value 0 (the default): the select pins value="0" AND the 0-option
+        // carries the selected marker (phase-4 review).
         var options = new List<SelectOption<int>> { new(0, "Zero"), new(1, "One") };
         var cut = Render<TmSelect<int>>(p => p
             .Add(x => x.Id, "tmsel-snap-2")
@@ -884,7 +886,7 @@ public class TmSelectTests : LocalizationTestBase
             @"<div class=""tm-select-wrapper "">
                 <label for=""tmsel-snap-2"" class=""tm-select-label "">Level</label>
                 <div class=""tm-select-container"">
-                    <select id=""tmsel-snap-2"" class=""tm-select"">
+                    <select id=""tmsel-snap-2"" value=""0"" class=""tm-select"">
                         <option value=""0"" selected>Zero</option>
                         <option value=""1"">One</option>
                     </select>
@@ -978,5 +980,41 @@ public class TmSelectTests : LocalizationTestBase
         cut.FindAll("option")[0].HasAttribute("disabled").Should().BeTrue();
         cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue();
         cut.FindAll("option")[1].HasAttribute("selected").Should().BeTrue();
+    }
+
+    // Regression (phase-4 review): a NON-nullable value type at its default is a real choice. The
+    // select used to omit `value` and the browser painted an empty control after a dialog switched
+    // back to an option whose value equals the type default (Ascending / Any / Stop / General / 0).
+    [Fact]
+    public void DefaultValue_NonNullableValueType_EmitsItsValue()
+    {
+        var options = new List<SelectOption<int>>
+        {
+            new(0, "Zero"),
+            new(1, "One")
+        };
+        var cut = Render<TmSelect<int>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.Value, 0));
+
+        cut.Find("select").GetAttribute("value").Should().Be("0",
+            "value 0 is a selectable option, not the empty state");
+        cut.FindAll("option").First(o => o.GetAttribute("value") == "0")
+            .HasAttribute("selected").Should().BeTrue("the 0-option still carries the selected marker");
+    }
+
+    [Fact]
+    public void DefaultValue_NonNullableEnum_EmitsItsValue()
+    {
+        var options = new List<SelectOption<DayOfWeek>>
+        {
+            new(DayOfWeek.Sunday, "Sunday"),
+            new(DayOfWeek.Monday, "Monday")
+        };
+        var cut = Render<TmSelect<DayOfWeek>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.Value, DayOfWeek.Sunday));
+
+        cut.Find("select").GetAttribute("value").Should().Be("Sunday");
     }
 }

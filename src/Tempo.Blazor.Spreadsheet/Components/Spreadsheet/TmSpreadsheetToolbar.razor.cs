@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.Models;
@@ -6,10 +9,14 @@ using Tempo.Blazor.Models;
 namespace Tempo.Blazor.Components.Spreadsheet;
 
 /// <summary>
-/// Ribbon-style toolbar for the spreadsheet with tabbed groups: Home, Insert, View, and File.
+/// Ribbon-style toolbar for the spreadsheet: one tab strip (Home, Insert, Data, View and the legacy
+/// File tab) followed by a row of named groups whose commands are large (icon above the label) or
+/// small (icon and label on one line). Every icon is an <c>TmIcon</c>, never a text glyph.
 /// </summary>
 public partial class TmSpreadsheetToolbar
 {
+    static TmSpreadsheetToolbar() => SpreadsheetIcons.EnsureRegistered();
+
     private static readonly List<SelectOption<string>> _fontOptions =
     [
         new("Arial", "Arial"),
@@ -51,8 +58,34 @@ public partial class TmSpreadsheetToolbar
         new("@", "Text"),
     ];
 
-    /// <summary>Currently active toolbar tab.</summary>
-    public string ActiveTab { get; set; } = "Home";
+    private static readonly string[] _allTabs = ["Home", "Insert", "Data", "View", "File"];
+
+    /// <summary>
+    /// Currently active toolbar tab. Two-way bindable through <see cref="ActiveTabChanged"/>; without a
+    /// binding the toolbar switches the tab internally (the legacy behaviour).
+    /// </summary>
+    [Parameter] public string ActiveTab { get; set; } = "Home";
+
+    /// <summary>Raised with the selected tab id when the user changes the ribbon tab.</summary>
+    [Parameter] public EventCallback<string> ActiveTabChanged { get; set; }
+
+    /// <summary>
+    /// Whether the legacy File tab is offered. Hosts that render the document header (which owns the
+    /// Open / Download actions) pass <c>false</c>.
+    /// </summary>
+    [Parameter] public bool ShowFileTab { get; set; } = true;
+
+    /// <summary>
+    /// The layout the ribbon renders in. <see cref="TmLayoutMode.Auto"/> resolves from the app-level
+    /// VIEWPORT scope (the standalone toolbar case); the hosting <see cref="TmSpreadsheet"/> always passes
+    /// its own resolved container layout, so an embedded spreadsheet follows its container, never the page.
+    /// Desktop keeps the phase-5 tab strip; tablet renders two compact rows and mobile a single one
+    /// (see <see cref="SpreadsheetToolbarLayout"/>).
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout — only read when <see cref="LayoutMode"/> is <see cref="TmLayoutMode.Auto"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     /// <summary>Whether undo is available.</summary>
     [Parameter] public bool CanUndo { get; set; }
@@ -89,6 +122,12 @@ public partial class TmSpreadsheetToolbar
 
     /// <summary>Current horizontal alignment.</summary>
     [Parameter] public string? SelectedHorizontalAlign { get; set; } = "left";
+
+    /// <summary>
+    /// Current vertical alignment of the cell content: <c>top</c>, <c>middle</c> or <c>bottom</c>.
+    /// Null means the default (bottom) is not marked as active.
+    /// </summary>
+    [Parameter] public string? SelectedVerticalAlign { get; set; }
 
     /// <summary>Currently selected number format.</summary>
     [Parameter] public string? SelectedNumberFormat { get; set; } = "General";
@@ -213,6 +252,12 @@ public partial class TmSpreadsheetToolbar
     /// <summary>Called when the horizontal alignment changes.</summary>
     [Parameter] public EventCallback<string?> OnAlignChanged { get; set; }
 
+    /// <summary>
+    /// Called when the vertical alignment changes. The value is <c>top</c>, <c>middle</c> or
+    /// <c>bottom</c>, matching the spreadsheet's <c>SpreadsheetVerticalAlign</c> names.
+    /// </summary>
+    [Parameter] public EventCallback<string?> OnVerticalAlignChanged { get; set; }
+
     /// <summary>Called when the number format changes.</summary>
     [Parameter] public EventCallback<string?> OnNumberFormatChanged { get; set; }
 
@@ -257,16 +302,129 @@ public partial class TmSpreadsheetToolbar
 
     // Dropdown states
     private bool _isBorderDropdownOpen;
+    private bool _isDeleteMenuOpen;
     private bool _isTextColorOpen;
     private bool _isBackgroundColorOpen;
     private BorderPreset _lastBorderPreset = BorderPreset.AllBorders;
 
+    // Menu anchors (the core TmOverlayPanel places the popup against them, in the top layer).
+    private ElementReference _textColorTriggerRef;
+    private ElementReference _backgroundColorTriggerRef;
+    private ElementReference _borderTriggerRef;
+    private ElementReference _deleteTriggerRef;
+
+    // The active tab is internal state: the ActiveTab parameter is the host's value, never assigned by
+    // the component (that would fight a two-way binding). It is re-synced from the parameter only when
+    // the host actually changes it.
+    private string _activeTab = "Home";
+    private string? _syncedActiveTabParameter;
+
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
+    private IReadOnlyList<string> VisibleTabs => ShowFileTab ? _allTabs : _allTabs[..^1];
+
     private bool HasTextColor => !string.IsNullOrEmpty(TextColor);
     private bool HasBackgroundColor => !string.IsNullOrEmpty(BackgroundColor);
+
+    private string TabId(string tab) => $"tm-spreadsheet-tab-{tab.ToLowerInvariant()}-{_idSuffix}";
+
+    private string PanelId(string tab) => $"tm-spreadsheet-panel-{tab.ToLowerInvariant()}-{_idSuffix}";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_syncedActiveTabParameter, ActiveTab, StringComparison.Ordinal))
+        {
+            _syncedActiveTabParameter = ActiveTab;
+            _activeTab = string.IsNullOrEmpty(ActiveTab) ? "Home" : ActiveTab;
+        }
+
+        // A tab that is not offered any more (File with ShowFileTab=false, or an unknown id) must not
+        // keep rendering a panel without its tab.
+        if (!VisibleTabs.Contains(_activeTab, StringComparer.Ordinal))
+        {
+            _activeTab = "Home";
+        }
+    }
+
+    private async Task SelectTabAsync(string tab)
+    {
+        if (string.Equals(_activeTab, tab, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _activeTab = tab;
+        if (ActiveTabChanged.HasDelegate)
+        {
+            await ActiveTabChanged.InvokeAsync(tab);
+        }
+    }
+
+    /// <summary>Ribbon tab keyboard contract: ArrowLeft/Right cycle, Home/End jump, focus follows.</summary>
+    private async Task HandleTabListKeyDownAsync(KeyboardEventArgs e)
+    {
+        var tabs = VisibleTabs;
+        var index = tabs.ToList().IndexOf(_activeTab);
+        if (index < 0)
+        {
+            index = 0;
+        }
+
+        var next = e.Key switch
+        {
+            "ArrowRight" => (index + 1) % tabs.Count,
+            "ArrowLeft" => (index - 1 + tabs.Count) % tabs.Count,
+            "Home" => 0,
+            "End" => tabs.Count - 1,
+            _ => -1
+        };
+
+        if (next < 0)
+        {
+            return;
+        }
+
+        var target = tabs[next];
+        await SelectTabAsync(target);
+        try
+        {
+            await JS.InvokeVoidAsync("tmSpreadsheetToolbar.focusTab", TabId(target));
+        }
+        catch
+        {
+            // No script / prerender: the tab still activates, only the focus move is skipped.
+        }
+    }
+
+    private Task SetTextColorOpenAsync(bool open)
+    {
+        _isTextColorOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task SetBackgroundColorOpenAsync(bool open)
+    {
+        _isBackgroundColorOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task SetBorderPickerOpenAsync(bool open)
+    {
+        _isBorderDropdownOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task SetDeleteMenuOpenAsync(bool open)
+    {
+        _isDeleteMenuOpen = open;
+        return Task.CompletedTask;
+    }
 
     private async Task AlignLeft() => await OnAlignChanged.InvokeAsync("left");
     private async Task AlignCenter() => await OnAlignChanged.InvokeAsync("center");
     private async Task AlignRight() => await OnAlignChanged.InvokeAsync("right");
+
+    private async Task AlignVertical(string align) => await OnVerticalAlignChanged.InvokeAsync(align);
 
     private async Task ApplyBorderPreset(BorderPreset preset)
     {
@@ -286,6 +444,18 @@ public partial class TmSpreadsheetToolbar
         await OnOpenBorderDialog.InvokeAsync();
     }
 
+    private async Task OnDeleteRowFromMenu()
+    {
+        _isDeleteMenuOpen = false;
+        await OnDeleteRow.InvokeAsync();
+    }
+
+    private async Task OnDeleteColumnFromMenu()
+    {
+        _isDeleteMenuOpen = false;
+        await OnDeleteColumn.InvokeAsync();
+    }
+
     private async Task OnTextColorSelected(string? color)
     {
         _isTextColorOpen = false;
@@ -298,24 +468,73 @@ public partial class TmSpreadsheetToolbar
         await OnBackgroundColorChanged.InvokeAsync(color);
     }
 
-    private static string GetBorderPresetIcon(BorderPreset preset) => preset switch
+    /// <summary>Escape closes the text-colour picker (the browser path also closes it through overlay.js).</summary>
+    private void HandleTextColorKeyDown(KeyboardEventArgs e)
     {
-        BorderPreset.None => "☐",
-        BorderPreset.AllBorders => "⊞",
-        BorderPreset.OutsideBorders => "▣",
-        BorderPreset.ThickBox => "◼",
-        BorderPreset.BottomBorder => "▬",
-        BorderPreset.ThickBottom => "▰",
-        BorderPreset.DoubleBottom => "═",
-        BorderPreset.TopBorder => "▭",
-        BorderPreset.LeftBorder => "▏",
-        BorderPreset.RightBorder => "▕",
-        BorderPreset.TopAndThickBottom => "⊟",
-        _ => "▣"
+        if (e.Key == "Escape")
+        {
+            _isTextColorOpen = false;
+        }
+    }
+
+    /// <summary>Escape closes the fill-colour picker.</summary>
+    private void HandleBackgroundColorKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _isBackgroundColorOpen = false;
+        }
+    }
+
+    /// <summary>Escape closes the border picker (one activation per press, per the keyboard convention).</summary>
+    private void HandleBorderPickerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _isBorderDropdownOpen = false;
+        }
+    }
+
+    /// <summary>Escape closes the delete split menu.</summary>
+    private void HandleDeleteMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _isDeleteMenuOpen = false;
+        }
+    }
+
+    private static string GetBorderPresetIconName(BorderPreset preset) => preset switch
+    {
+        BorderPreset.None => "tm-ss-border-none",
+        BorderPreset.AllBorders => "tm-ss-border-all",
+        BorderPreset.OutsideBorders => "tm-ss-border-outside",
+        BorderPreset.ThickBox => "tm-ss-border-thick",
+        BorderPreset.BottomBorder => "tm-ss-border-bottom",
+        BorderPreset.ThickBottom => "tm-ss-border-thick-bottom",
+        BorderPreset.DoubleBottom => "tm-ss-border-double-bottom",
+        BorderPreset.TopBorder => "tm-ss-border-top",
+        BorderPreset.LeftBorder => "tm-ss-border-left",
+        BorderPreset.RightBorder => "tm-ss-border-right",
+        BorderPreset.TopAndThickBottom => "tm-ss-border-top-thick-bottom",
+        _ => "tm-ss-border-all"
     };
 
     private static string GetActiveClass(bool isActive)
     {
         return isActive ? "tm-spreadsheet-toolbar__button--active" : string.Empty;
+    }
+
+    private IReadOnlyList<SpreadsheetCustomTool> GetCustomTools(string tab)
+    {
+        if (CustomTools is null)
+        {
+            return Array.Empty<SpreadsheetCustomTool>();
+        }
+
+        return CustomTools
+            .Where(tool => string.Equals(tool.Tab, tab, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(tool => tool.Order)
+            .ToArray();
     }
 }

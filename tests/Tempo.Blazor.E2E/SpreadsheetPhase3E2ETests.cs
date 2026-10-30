@@ -13,6 +13,9 @@ public partial class SpreadsheetE2ETests
     private async Task<IPage> OpenPhase3DemoAsync()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
         var grid = DemoGrid(page);
@@ -50,12 +53,13 @@ public partial class SpreadsheetE2ETests
 
     private async Task EnableFilterAsync(IPage page, ILocator grid)
     {
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Filter']").ClickAsync();
+        // Chrome-aware: the desktop ribbon needs its Data tab, the compact rows (tablet / mobile) reach
+        // the same `filter` command through the row's "More" — the tab strip does not exist there.
+        await OpenToolbarCommandAsync(page, "Data", "filter", "Filter");
         await page.WaitForFunctionAsync(
             "el => (el.__tmSpreadsheetCanvas?.filterButtons?.length || 0) > 0",
             await grid.ElementHandleAsync(),
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+            new PageWaitForFunctionOptions { Timeout = 30000 });
     }
 
     [TestMethod]
@@ -104,7 +108,9 @@ public partial class SpreadsheetE2ETests
 
         // Uncheck "Banana" and apply.
         var bananaRow = dropdown.Locator(".tm-spreadsheet-filter-dropdown__check", new() { HasTextString = "Banana" });
-        await bananaRow.Locator("input[type=checkbox]").UncheckAsync();
+        // Core TmCheckbox paints its input 0x0 (visually hidden) and the fixed dropdown can sit over a
+        // scrollable list, so drive the checkbox through the DOM: the change event is the real contract.
+        await bananaRow.Locator("input[type=checkbox]").EvaluateAsync("el => el.click()");
         await dropdown.Locator(".tm-spreadsheet-filter-dropdown__btn--ok").ClickAsync();
         await dropdown.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
 

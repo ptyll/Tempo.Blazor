@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="f41c485a-492c-4dae-9221-fd20b3d5c669" name="@vmi3495495 2026-10-30 17:47:24" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-30T17:47:24.7727301+01:00" queuing="2026-10-30T17:47:24.7727302+01:00" start="2026-10-30T17:44:25.1830857+01:00" finish="2026-10-30T18:00:14.8271898+01:00" />
+  <TestSettings name="default" id="0ab089cd-9608-467c-8033-a7f8088512c2">
+    <Deployment runDeploymentRoot="_vmi3495495_2026-10-30_17_47_24" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="93cca088-89fd-4472-9042-acabe683f55c" testId="24614285-3102-1065-9b42-24de483cfaab" testName="Phase6_Mobile_ContextSheet_SurvivesGridScroll_AndClosesOnEscape" computerName="vmi3495495" duration="00:01:13.8372109" startTime="2026-10-30T17:52:44.2516494+01:00" endTime="2026-10-30T17:53:58.0909160+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93cca088-89fd-4472-9042-acabe683f55c">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/phase6-mobile-390-context-sheet-after-scroll.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="ba2d74a1-6b1c-4fed-97f8-d5b011860ad5" testId="ae19d319-0b0d-ad1a-4efa-1c56e556ef90" testName="Phase6_Mobile_FilterSheet_Footer_IsAboveTheActionBar" computerName="vmi3495495" duration="00:01:17.9638943" startTime="2026-10-30T17:53:58.0918820+01:00" endTime="2026-10-30T17:55:16.0568181+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ba2d74a1-6b1c-4fed-97f8-d5b011860ad5">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/phase6-mobile-390-filter-sheet-ok.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="d142fe83-9a91-459e-8bf0-e3dda0888ca6" testId="df5bf3fa-8289-80a1-14f3-d294c84ba58b" testName="Phase7_Mobile_DoubleTapEdits_NumericCellUsesTheDecimalKeypad" computerName="vmi3495495" duration="00:01:14.8689035" startTime="2026-10-30T17:58:54.8646291+01:00" endTime="2026-10-30T18:00:14.5784873+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d142fe83-9a91-459e-8bf0-e3dda0888ca6" />
+    <UnitTestResult executionId="923cf6e3-94f7-49bd-ab63-e73c37764a3a" testId="963dead2-db41-992a-0688-4495c97ce169" testName="Phase6_Narrow_320_HasNoHorizontalOverflow" computerName="vmi3495495" duration="00:01:03.7387371" startTime="2026-10-30T17:55:16.0627521+01:00" endTime="2026-10-30T17:56:19.8031069+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="923cf6e3-94f7-49bd-ab63-e73c37764a3a">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/phase6-mobile-320-main.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="1c3e603c-1164-4ae7-b86b-852d4d971d72" testId="d685873b-5114-1b49-6740-6da09ac636f2" testName="Phase6_Mobile_390_CompactChrome_WithActionBar" computerName="vmi3495495" duration="00:04:11.2886276" startTime="2026-10-30T17:47:24.6774895+01:00" endTime="2026-10-30T17:51:36.0937838+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1c3e603c-1164-4ae7-b86b-852d4d971d72">
+      <Output>
+        <ErrorInfo>
+          <Message>Test method Tempo.Blazor.E2E.SpreadsheetE2ETests.Phase6_Mobile_390_CompactChrome_WithActionBar threw exception: &#xD;
+System.TimeoutException: Timeout 89931.54ms exceeded.</Message>
+          <StackTrace>   at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.PlaywrightTestBase.WaitForAppReadyAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 382
+   at Tempo.Blazor.E2E.PlaywrightTestBase.&lt;&gt;c__DisplayClass27_0.&lt;&lt;GotoAppReadyAsync&gt;b__0&gt;d.MoveNext() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 266
+--- End of stack trace from previous location ---
+   at Tempo.Blazor.E2E.ColdBootRecovery.RunAsync(Func`1 waitReady, Func`1 reload) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ColdBootRecovery.cs:line 22
+   at Tempo.Blazor.E2E.PlaywrightTestBase.GotoAppReadyAsync(IPage page, String url, WaitUntilState waitUntil) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 257
+   at Tempo.Blazor.E2E.SpreadsheetE2ETests.OpenPhase6DemoAsync(Int32 width, Int32 height, Boolean hasTouch) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetPhase6ResponsiveE2ETests.cs:line 40
+   at Tempo.Blazor.E2E.SpreadsheetE2ETests.Phase6_Mobile_390_CompactChrome_WithActionBar() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetPhase6ResponsiveE2ETests.cs:line 122
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="33dd6f45-3258-4a78-b0b1-782ad258aa6d" testId="6e8b1f38-d332-567e-8912-011c8772c100" testName="FindReplaceDialog_Mobile390_OpensAboveTheDrawer" computerName="vmi3495495" duration="00:00:11.2254412" startTime="2026-10-30T17:44:28.1225738+01:00" endTime="2026-10-30T17:47:24.6406979+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="33dd6f45-3258-4a78-b0b1-782ad258aa6d">
+      <Output>
+        <StdOut>TestContext Messages:
+[baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+Demo API ready at https://localhost:5100.
+Demo WASM ready at https://localhost:7106, http://localhost:5010.
+Demo Server ready at https://localhost:7107.
+Demo InteractiveAuto ready at https://localhost:7108.</StdOut>
+      </Output>
+      <ResultFiles>
+        <ResultFile path="vmi3495495/rte_find_dialog_390_20261030_174724.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="8e18adc4-1e54-4019-ac03-1c631bf3bbc7" testId="38ca5f79-afbf-20fc-92be-29e907d9a168" testName="Phase7_Mobile_TapSelects_LongPressOpensTheSheet" computerName="vmi3495495" duration="00:01:23.8293822" startTime="2026-10-30T17:57:31.0320328+01:00" endTime="2026-10-30T17:58:54.8628272+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e18adc4-1e54-4019-ac03-1c631bf3bbc7">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/phase7-mobile-390-touch--context-sheet.png" />
+        <ResultFile path="vmi3495495/phase7-mobile-390-touch--fill-down.png" />
+        <ResultFile path="vmi3495495/phase7-mobile-390-touch--selection.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="cd731ab4-0ba6-4729-ab3d-3ddfeaf562d4" testId="03e8ed75-2298-2634-4d71-7702e9d2533e" testName="Phase6_Mobile_390_ContextMenu_IsASheet" computerName="vmi3495495" duration="00:01:08.1444396" startTime="2026-10-30T17:51:36.1008371+01:00" endTime="2026-10-30T17:52:44.2476816+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cd731ab4-0ba6-4729-ab3d-3ddfeaf562d4">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/phase6-mobile-390-context-sheet.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="15f9b1e2-74e2-4d18-a826-38379dd4ffe0" testId="5ca92b3f-5bab-ceb8-55ee-168962002622" testName="Phase6_Mobile_BasicCommands_ReachableInTwoTaps" computerName="vmi3495495" duration="00:01:11.2218429" startTime="2026-10-30T17:56:19.8066884+01:00" endTime="2026-10-30T17:57:31.0298860+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="15f9b1e2-74e2-4d18-a826-38379dd4ffe0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Phase7_Mobile_DoubleTapEdits_NumericCellUsesTheDecimalKeypad" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="df5bf3fa-8289-80a1-14f3-d294c84ba58b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="d142fe83-9a91-459e-8bf0-e3dda0888ca6" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase7_Mobile_DoubleTapEdits_NumericCellUsesTheDecimalKeypad" />
+    </UnitTest>
+    <UnitTest name="Phase6_Mobile_BasicCommands_ReachableInTwoTaps" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="5ca92b3f-5bab-ceb8-55ee-168962002622">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="15f9b1e2-74e2-4d18-a826-38379dd4ffe0" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Mobile_BasicCommands_ReachableInTwoTaps" />
+    </UnitTest>
+    <UnitTest name="Phase6_Mobile_390_ContextMenu_IsASheet" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="03e8ed75-2298-2634-4d71-7702e9d2533e">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="cd731ab4-0ba6-4729-ab3d-3ddfeaf562d4" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Mobile_390_ContextMenu_IsASheet" />
+    </UnitTest>
+    <UnitTest name="Phase6_Mobile_FilterSheet_Footer_IsAboveTheActionBar" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="ae19d319-0b0d-ad1a-4efa-1c56e556ef90">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="ba2d74a1-6b1c-4fed-97f8-d5b011860ad5" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Mobile_FilterSheet_Footer_IsAboveTheActionBar" />
+    </UnitTest>
+    <UnitTest name="Phase6_Narrow_320_HasNoHorizontalOverflow" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="963dead2-db41-992a-0688-4495c97ce169">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="923cf6e3-94f7-49bd-ab63-e73c37764a3a" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Narrow_320_HasNoHorizontalOverflow" />
+    </UnitTest>
+    <UnitTest name="Phase7_Mobile_TapSelects_LongPressOpensTheSheet" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="38ca5f79-afbf-20fc-92be-29e907d9a168">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="8e18adc4-1e54-4019-ac03-1c631bf3bbc7" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase7_Mobile_TapSelects_LongPressOpensTheSheet" />
+    </UnitTest>
+    <UnitTest name="FindReplaceDialog_Mobile390_OpensAboveTheDrawer" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="6e8b1f38-d332-567e-8912-011c8772c100">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="33dd6f45-3258-4a78-b0b1-782ad258aa6d" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.RteDialogsTopLayerE2ETests" name="FindReplaceDialog_Mobile390_OpensAboveTheDrawer" />
+    </UnitTest>
+    <UnitTest name="Phase6_Mobile_ContextSheet_SurvivesGridScroll_AndClosesOnEscape" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="24614285-3102-1065-9b42-24de483cfaab">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="93cca088-89fd-4472-9042-acabe683f55c" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Mobile_ContextSheet_SurvivesGridScroll_AndClosesOnEscape" />
+    </UnitTest>
+    <UnitTest name="Phase6_Mobile_390_CompactChrome_WithActionBar" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/release/net10.0/tempo.blazor.e2e.dll" id="d685873b-5114-1b49-6740-6da09ac636f2">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="1c3e603c-1164-4ae7-b86b-852d4d971d72" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.SpreadsheetE2ETests" name="Phase6_Mobile_390_CompactChrome_WithActionBar" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="24614285-3102-1065-9b42-24de483cfaab" executionId="93cca088-89fd-4472-9042-acabe683f55c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ae19d319-0b0d-ad1a-4efa-1c56e556ef90" executionId="ba2d74a1-6b1c-4fed-97f8-d5b011860ad5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="df5bf3fa-8289-80a1-14f3-d294c84ba58b" executionId="d142fe83-9a91-459e-8bf0-e3dda0888ca6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="963dead2-db41-992a-0688-4495c97ce169" executionId="923cf6e3-94f7-49bd-ab63-e73c37764a3a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d685873b-5114-1b49-6740-6da09ac636f2" executionId="1c3e603c-1164-4ae7-b86b-852d4d971d72" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6e8b1f38-d332-567e-8912-011c8772c100" executionId="33dd6f45-3258-4a78-b0b1-782ad258aa6d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="38ca5f79-afbf-20fc-92be-29e907d9a168" executionId="8e18adc4-1e54-4019-ac03-1c631bf3bbc7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03e8ed75-2298-2634-4d71-7702e9d2533e" executionId="cd731ab4-0ba6-4729-ab3d-3ddfeaf562d4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5ca92b3f-5bab-ceb8-55ee-168962002622" executionId="15f9b1e2-74e2-4d18-a826-38379dd4ffe0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="9" executed="9" passed="8" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+</TestRun>

@@ -354,6 +354,31 @@ public class StencilPackRegistryParityTests
         def.NativeType.Should().Be("TmDashboard");
     }
 
+    [Fact]
+    public void SpreadsheetStencil_ExposesLayoutMode()
+    {
+        // Phase 7d: the TmSpreadsheet stencil draws the desktop ribbon, the tablet two compact rows and the
+        // phone compact header + action bar, selected by the SAME additive layoutMode prop the diagram editor
+        // and dashboard stencils use (X11: "auto" and any unknown value render the desktop variant). The
+        // schema is the inspector's contract, so it has to offer the prop with the shared option set.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmSpreadsheet");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "layoutMode" &&
+            prop.Type == PropType.Enum &&
+            Equals(prop.Default, "auto") &&
+            prop.Options != null &&
+            prop.Options.SequenceEqual(new[] { "auto", "desktop", "tablet", "mobile" }));
+
+        // …and the NATIVE renderer must be the one drawing it (a declarative pack entry could not).
+        var def = Registry().GetDef("TmSpreadsheet");
+        def.Should().NotBeNull();
+        def!.PackId.Should().Be("tempo");
+        def.NativeType.Should().Be("TmSpreadsheet");
+    }
+
     [Theory]
     [MemberData(nameof(GoldenDeclarativeTypeData))]
     public async Task DeclarativeGoldenTypes_RenderSafeSvg(string type)

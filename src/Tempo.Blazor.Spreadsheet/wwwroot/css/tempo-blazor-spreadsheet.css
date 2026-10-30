@@ -1,3 +1,4 @@
 @import "components/_spreadsheet.css";
 @import "components/_spreadsheet-toolbar.css";
 @import "components/_spreadsheet-formula-bar.css";
+@import "theme-spreadsheet-dark.css";

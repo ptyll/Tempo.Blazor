@@ -2572,12 +2572,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
         yield return new WireframeComponentSchema
         {
             Type = "TmSpreadsheet", Category = "Editors & Apps", DisplayName = "Spreadsheet",
-            DefaultWidth = 480, DefaultHeight = 320,
+            DefaultWidth = 640, DefaultHeight = 400,
             Props =
             [
                 P("rows",    "Rows",    PropType.Int, 8,  cat: "Appearance"),
                 P("columns", "Columns", PropType.Int, 6,  cat: "Appearance"),
                 P("sheetCount", "Sheet Count", PropType.Int, 2, cat: "Appearance"),
+                P("showHeader", "Show Header", PropType.Bool, false, cat: "Behavior"),
+                P("title", "Title", PropType.String, "Spreadsheet", cat: "Content"),
+                // The spreadsheet chrome follows its CONTAINER width (TmSpreadsheet.LayoutMode). "auto"
+                // renders the desktop variant; tablet draws two compact command rows, mobile a compact
+                // header, one command row and the core mobile action bar.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

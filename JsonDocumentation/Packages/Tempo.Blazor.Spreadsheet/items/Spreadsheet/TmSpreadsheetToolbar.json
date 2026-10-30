@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetToolbar",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Ribbon-style toolbar for the spreadsheet with tabbed groups: Home, Insert, View, and File.",
+  "description": "Ribbon-style toolbar for the spreadsheet: one tab strip (Home, Insert, Data, View and the legacy File tab) followed by a row of named groups. Every group carries a stable, additive-only data-tm-group id (clipboard | font | alignment | number | cells | insert | links | data | view | file | custom), every tab and tabpanel carries data-tm-tab, custom groups also carry data-tool-id, and the tab strip follows the WAI-ARIA tabs pattern (per-instance ids, aria-controls/aria-labelledby, roving tabindex, ArrowLeft/Right/Home/End). Commands are large (icon above the label) or small (icon and label on one line); every icon is a TmIcon, and the cell-border, vertical-alignment and decimal marks are the package's own registered SVG icons. The border picker, the colour pickers and the Delete split render through the core TmOverlayPanel (browser top layer), so the ribbon row's horizontal overflow can never clip them. Contract: docs/spreadsheet.md.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetToolbar.razor",
@@ -417,6 +417,43 @@
       "type": "string?",
       "isRequired": false,
       "description": "Current text color (CSS color value)."
+    },
+    {
+      "name": "ActiveTab",
+      "type": "string",
+      "isRequired": false,
+      "description": "The active ribbon tab id (\"Home\", \"Insert\", \"Data\", \"View\" or \"File\"). Two-way bindable through ActiveTabChanged; without a binding the toolbar switches tabs internally."
+    },
+    {
+      "name": "ActiveTabChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the selected tab id when the user changes the ribbon tab."
+    },
+    {
+      "name": "ShowFileTab",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the legacy File tab is offered (default true). Hosts that render the document header, which owns the Open / Download actions, pass false."
+    },
+    {
+      "name": "SelectedVerticalAlign",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current vertical alignment of the cell content: \"top\", \"middle\" or \"bottom\". The matching button in the Alignment group is marked active; null leaves all three unmarked (the default bottom is not highlighted)."
+    },
+    {
+      "name": "OnVerticalAlignChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Called with \"top\", \"middle\" or \"bottom\" when a vertical alignment button in the Alignment group is clicked."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the ribbon renders in. Auto resolves from the app-level viewport scope (a standalone toolbar); TmSpreadsheet always passes its own resolved CONTAINER layout. Desktop keeps the tab strip, tablet renders two compact rows and mobile a single one (rounded through the core TmToolbar Overflow=Menu)."
     }
   ]
 }

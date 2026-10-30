@@ -12482,7 +12482,7 @@
           "type": "MobilePresentation",
           "isRequired": false,
           "default": "MobilePresentation.Auto",
-          "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
+          "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface: a fullscreen panel on mobile, the centred dialog otherwise. A forced value renders that presentation without measuring."
         },
         {
           "name": "OkButtonText",
@@ -12607,7 +12607,7 @@
           "name": "AriaDescribedBy",
           "type": "string?",
           "isRequired": false,
-          "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description. Null renders no attribute."
+          "description": "The id of the element that describes the scope, wired to aria-describedby. Additive: a modal points it at its subtitle so screen readers announce title plus description, and a surface whose body text is the point of the surface (an alertdialog message) names it here. Null renders no attribute."
         },
         {
           "name": "AriaLabel",
@@ -12734,6 +12734,12 @@
           "default": "true"
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element that describes the modal, wired to the scope's aria-describedby — used by an alertdialog, whose body text is the description."
+        },
+        {
           "name": "CancelButtonText",
           "type": "string?",
           "isRequired": false,
@@ -12768,6 +12774,13 @@
           "default": "true"
         },
         {
+          "name": "DialogRole",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"dialog\"",
+          "description": "The role of the trapped surface. dialog (the default) for a normal modal; alertdialog for a surface whose message IS the content and whose actions are the only way out."
+        },
+        {
           "name": "Footer",
           "type": "RenderFragment?",
           "isRequired": false
@@ -12789,6 +12802,12 @@
           "name": "Icon",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "A CSS selector for the element that receives focus when the modal opens — for a target without a stable id or a set where the first match is right (a checked radio, the first checkbox). Resolved inside the focus scope; when it matches nothing the scope falls back to InitialFocusTargetId and then to its first-focusable path. Additive: null keeps the previous behaviour."
         },
         {
           "name": "InitialFocusTargetId",
@@ -12815,7 +12834,7 @@
           "type": "MobilePresentation",
           "isRequired": false,
           "default": "MobilePresentation.Auto",
-          "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
+          "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. AutoFullscreen is the same choice for a TALL surface (a tabbed form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a sheet would clip it. A forced Sheet, Fullscreen or Dialog renders that presentation without measuring, so a test can render it without a DOM."
         },
         {
           "name": "OkButtonDisabled",
@@ -28893,13 +28912,13 @@
           "name": "OnOpen",
           "type": "EventCallback<SpreadsheetOpenEventArgs>",
           "isRequired": false,
-          "description": "Fires when a file is opened via the toolbar."
+          "description": "Fires when the user picks Open. With ShowHeader=true it renders the header's Open action (the built-in XLSX import); in the desktop ribbon it is the File tab's Open. Subscribe and the host owns loading the returned file - the component never changes the workbook behind the host's back."
         },
         {
           "name": "OnDownload",
           "type": "EventCallback<SpreadsheetDownloadEventArgs>",
           "isRequired": false,
-          "description": "Fires when the workbook is downloaded."
+          "description": "Fires when the user asks for a download. With ShowHeader=true it renders the header's Download action (the component's own XLSX export). This pair IS the header file contract (decision SPREADSHEET-HEADER-FILE-ACTIONS); a host that wants its own document picker adds it to HeaderActions."
         },
         {
           "name": "Class",
@@ -28919,10 +28938,68 @@
           "isRequired": false,
           "default": "SpreadsheetMode.Full",
           "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
+        },
+        {
+          "name": "Density",
+          "type": "SpreadsheetDensity",
+          "isRequired": false,
+          "default": "SpreadsheetDensity.Auto",
+          "description": "How large the canvas draws rows and cell text. Auto (the default) resolves to Comfortable on a coarse pointer (touch) and to Compact everywhere else. An explicit Compact keeps the classic 20px rows; Comfortable draws them 1.5x with 1.25x text, a larger fill handle and larger header filter buttons. A render scale only — RowHeight, per-row heights and every XLSX height keep their values."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the document header above the ribbon (opt-in, default false): the title, the HeaderStart / HeaderActions host slots, the built-in Open and Download actions and the \"Show grid lines\" switch. While it is on, the toolbar's legacy File tab is not rendered."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The document title rendered in the header. Ignored while ShowHeader is false."
+        },
+        {
+          "name": "HeaderStart",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Header slot rendered before the title (e.g. a document switcher or a \"saved\" indicator). Only rendered with ShowHeader."
+        },
+        {
+          "name": "HeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host actions on the RIGHT of the document header (rendered only with ShowHeader=true), before the built-in Open / Download and the Show grid lines toggle - e.g. a host document picker (decision SPREADSHEET-HEADER-FILE-ACTIONS, example in docs/spreadsheet.md)."
+        },
+        {
+          "name": "ShowFileTab",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the toolbar offers its legacy File tab (default true). The header hides it automatically."
+        },
+        {
+          "name": "CustomTools",
+          "type": "List<SpreadsheetCustomTool>?",
+          "isRequired": false,
+          "description": "Custom tools injected into the ribbon; each tool picks its tab with SpreadsheetCustomTool.Tab and its order with Order."
+        },
+        {
+          "name": "OnCustomToolClick",
+          "type": "EventCallback<SpreadsheetCustomTool>",
+          "isRequired": false,
+          "description": "Called when a custom ribbon tool is clicked."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The responsive layout. Auto (default) classifies the spreadsheet's OWN container width — never the viewport, so a phone-width Notion block inside a wide page is a phone. Any other value pins the layout."
         }
       ],
       "cssClasses": [
         "tm-spreadsheet",
+        "tm-spreadsheet--workspace",
+        "tm-spreadsheet--chrome-flat",
         "tm-spreadsheet-toolbar",
         "tm-spreadsheet-toolbar-tabs",
         "tm-spreadsheet-toolbar-tab",

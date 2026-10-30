@@ -11,6 +11,7 @@ internal sealed class SpreadsheetGridGeometry
     private double _defaultRowHeight;
     private double _defaultColumnWidth;
     private double _zoom = 1.0;
+    private double _rowScale = 1.0;
     private int _rowsHash;
     private int _columnsHash;
     private double[] _rowHeights = [];
@@ -39,8 +40,17 @@ internal sealed class SpreadsheetGridGeometry
     /// <summary>The current zoom factor applied to all dimensions (1.0 = 100%).</summary>
     public double Zoom => _zoom;
 
-    /// <summary>Ensures geometry arrays are up to date for the given sheet, defaults and zoom.</summary>
-    public void Update(SpreadsheetSheet? sheet, double defaultRowHeight, double defaultColumnWidth, double zoom = 1.0)
+    /// <summary>
+    /// Ensures geometry arrays are up to date for the given sheet, defaults, zoom and density row scale.
+    /// <paramref name="rowScale"/> is a RENDER multiplier (SP1 grid density): it scales the drawn row
+    /// heights only, never the sheet's own <c>DefaultRowHeight</c> or a row's stored height.
+    /// </summary>
+    public void Update(
+        SpreadsheetSheet? sheet,
+        double defaultRowHeight,
+        double defaultColumnWidth,
+        double zoom = 1.0,
+        double rowScale = 1.0)
     {
         if (sheet is null)
         {
@@ -49,12 +59,14 @@ internal sealed class SpreadsheetGridGeometry
         }
 
         zoom = zoom <= 0 ? 1.0 : zoom;
+        rowScale = rowScale <= 0 ? 1.0 : rowScale;
         var rowsHash = ComputeRowsHash(sheet);
         var columnsHash = ComputeColumnsHash(sheet);
         if (ReferenceEquals(_sheet, sheet)
             && Math.Abs(_defaultRowHeight - defaultRowHeight) < double.Epsilon
             && Math.Abs(_defaultColumnWidth - defaultColumnWidth) < double.Epsilon
             && Math.Abs(_zoom - zoom) < double.Epsilon
+            && Math.Abs(_rowScale - rowScale) < double.Epsilon
             && _rowHeights.Length == sheet.RowCount
             && _columnWidths.Length == sheet.ColumnCount
             && _rowsHash == rowsHash
@@ -67,6 +79,7 @@ internal sealed class SpreadsheetGridGeometry
         _defaultRowHeight = defaultRowHeight;
         _defaultColumnWidth = defaultColumnWidth;
         _zoom = zoom;
+        _rowScale = rowScale;
         _rowsHash = rowsHash;
         _columnsHash = columnsHash;
 
@@ -74,7 +87,7 @@ internal sealed class SpreadsheetGridGeometry
         _rowOffsets = new double[sheet.RowCount + 1];
         for (var row = 0; row < sheet.RowCount; row++)
         {
-            _rowHeights[row] = GetConfiguredRowHeight(sheet, row, defaultRowHeight) * zoom;
+            _rowHeights[row] = GetConfiguredRowHeight(sheet, row, defaultRowHeight) * zoom * rowScale;
             _rowOffsets[row + 1] = _rowOffsets[row] + _rowHeights[row];
         }
 
@@ -92,6 +105,7 @@ internal sealed class SpreadsheetGridGeometry
     {
         _sheet = null;
         _zoom = 1.0;
+        _rowScale = 1.0;
         _rowsHash = 0;
         _columnsHash = 0;
         _rowHeights = [];
@@ -102,7 +116,7 @@ internal sealed class SpreadsheetGridGeometry
 
     /// <summary>Gets the effective (zoomed) row height.</summary>
     public double GetRowHeight(int row) =>
-        (uint)row < (uint)_rowHeights.Length ? _rowHeights[row] : _defaultRowHeight * _zoom;
+        (uint)row < (uint)_rowHeights.Length ? _rowHeights[row] : _defaultRowHeight * _zoom * _rowScale;
 
     /// <summary>Gets the effective (zoomed) column width.</summary>
     public double GetColumnWidth(int col) =>
