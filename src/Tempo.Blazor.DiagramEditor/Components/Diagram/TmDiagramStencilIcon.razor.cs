@@ -25,6 +25,17 @@ public partial class TmDiagramStencilIcon : TmComponentBase
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>Review fix (phase 15): the registry lookup is cached per parameter set — the
+    /// legend and palette rows re-render frequently and <see cref="Stencil"/> was re-querying
+    /// the registry on every property read.</summary>
+    private DiagramStencil? _cachedStencil;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        _cachedStencil = string.IsNullOrWhiteSpace(StencilId) ? null : StencilRegistry.GetStencil(StencilId);
+    }
+
     private string RootClass => string.Join(" ", new[]
     {
         "tm-diagram-stencil-icon",
@@ -42,8 +53,7 @@ public partial class TmDiagramStencilIcon : TmComponentBase
         }
     }
 
-    private DiagramStencil? Stencil
-        => string.IsNullOrWhiteSpace(StencilId) ? null : StencilRegistry.GetStencil(StencilId);
+    private DiagramStencil? Stencil => _cachedStencil;
 
     /// <summary>Whether the icon renders the registered stencil's own SVG (false = the fallback shape).</summary>
     private bool HasRegisteredIcon

@@ -8,9 +8,10 @@ namespace Tempo.Blazor.Components.Modeling;
 /// and Relationships. The host supplies the entries (the shared
 /// <see cref="ModelingNotationCatalog"/>, filtered to the document); the card is presentational.
 /// Accessible: list semantics, decorative icons (<c>aria-hidden</c>) next to visible text, an
-/// <c>aria-expanded</c>/<c>aria-controls</c> collapse toggle. Positioned by the preview's
-/// stylesheet as an overlay card in the canvas corner — it never participates in the canvas
-/// column's flow (the canvas keeps its height).
+/// <c>aria-expanded</c>/<c>aria-controls</c> collapse toggle (<see cref="Collapsible"/>, off in
+/// the mobile sheet). Positioned by the preview's stylesheet as an overlay card in the canvas's
+/// top-right corner — it never participates in the canvas column's flow (the canvas keeps its
+/// height) and never covers the status bar's zoom group.
 /// </summary>
 public partial class TmModelingDiagramLegend
 {
@@ -19,9 +20,14 @@ public partial class TmModelingDiagramLegend
     [Parameter] public IReadOnlyList<ModelingNotationCatalogEntry>? Entries { get; set; }
 
     /// <summary>Whether the card starts expanded. The hosting editor passes the layout rule
-    /// (desktop expanded, tablet collapsed). Seeded ONCE — the user's own toggle owns the state
-    /// afterwards.</summary>
+    /// (desktop expanded, tablet collapsed — and collapsed above the editor's 12-node rule).
+    /// Seeded ONCE — the user's own toggle owns the state afterwards.</summary>
     [Parameter] public bool DefaultExpanded { get; set; } = true;
+
+    /// <summary>Whether the card renders its collapse toggle. Default <c>true</c>. The mobile
+    /// legend sheet passes <c>false</c>: a bottom sheet cannot collapse its own content, and a
+    /// toggle that does nothing would be an unusable control.</summary>
+    [Parameter] public bool Collapsible { get; set; } = true;
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
@@ -32,6 +38,12 @@ public partial class TmModelingDiagramLegend
 
     /// <summary>Per-instance id of the collapsible body: the toggle's aria-controls target.</summary>
     private string BodyId { get; } = $"tm-modeling-legend-{Guid.NewGuid():N}";
+
+    /// <summary>Per-instance ids of the two group headings: each list is named by
+    /// <c>aria-labelledby</c> (the headings are plain paragraphs, not a heading outline).</summary>
+    private string ElementGroupId { get; } = $"tm-modeling-legend-{Guid.NewGuid():N}-elements";
+
+    private string RelationshipGroupId { get; } = $"tm-modeling-legend-{Guid.NewGuid():N}-relationships";
 
     /// <summary>The element-type entries (Elements group).</summary>
     private IReadOnlyList<ModelingNotationCatalogEntry> ElementEntries

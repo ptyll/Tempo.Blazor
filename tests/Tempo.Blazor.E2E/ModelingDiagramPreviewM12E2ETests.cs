@@ -364,6 +364,36 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
             $"the preview canvas keeps its docked-band floor with the legend (measured {canvasHeight:0.#})");
     }
 
+    [TestMethod]
+    [Description("Review fix: the top-right legend rect never intersects the preview's zoom group")]
+    public async Task PreviewLegend_DoesNotCoverZoomGroup()
+    {
+        var page = await OpenLoadedModelingPageAsync("?notation=bpmn");
+        await page.Locator("[data-testid='modeling-generate-diagram-button']").ClickAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        // Pin the desktop band so the STATUS BAR's zoom group deterministically renders — the
+        // compact mobile band replaces the row with the floating pill (a different surface).
+        await PinPreviewEditorToDesktopAsync(page);
+        await Assertions.Expect(page.Locator("[data-testid='modeling-preview-legend']"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        Assert.AreEqual(1, await page.Locator("[data-testid='modeling-diagram-preview'] [data-tm-group='zoom']").CountAsync(),
+            "the desktop status bar renders the zoom group before the intersection check");
+        var intersects = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const legend = document.querySelector('[data-testid="modeling-preview-legend"]');
+                const zoom = document.querySelector("[data-testid='modeling-diagram-preview'] [data-tm-group='zoom']");
+                if (!legend || !zoom) return false;
+                const a = legend.getBoundingClientRect();
+                const b = zoom.getBoundingClientRect();
+                return !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+            }
+            """);
+        Assert.IsFalse(intersects,
+            "the top-right legend card must not cover the status bar's zoom group");
+    }
+
     private static Task<double> CanvasHeightAsync(IPage page) => page.EvaluateAsync<double>(
         """
         () => document.querySelector('.tm-modeling-diagram-preview__editor .tm-diagram-canvas')

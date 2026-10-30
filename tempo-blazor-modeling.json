@@ -393,7 +393,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Fáze 15: the preview legend — a collapsible card explaining the notation shapes (stencil icons + localized type labels) the generated document actually uses, grouped into Elements and Relationships. The host supplies the entries (the shared ModelingNotationCatalog, filtered to the document); the card is presentational. Accessible: list semantics, decorative icons (aria-hidden) next to visible text, an aria-expanded/aria-controls collapse toggle. Positioned by the preview's stylesheet as an overlay card in the canvas corner — it never participates in the canvas column's flow (the canvas keeps its height).",
+      "description": "Fáze 15: the preview legend — a collapsible card explaining the notation shapes (stencil icons + localized type labels) the generated document actually uses, grouped into Elements and Relationships. The host supplies the entries (the shared ModelingNotationCatalog, filtered to the document); the card is presentational. Accessible: list semantics, decorative icons (aria-hidden) next to visible text, an aria-expanded/aria-controls collapse toggle (Collapsible, off in the mobile sheet). Positioned by the preview's stylesheet as an overlay card in the canvas's top-right corner — it never participates in the canvas column's flow (the canvas keeps its height) and never covers the status bar's zoom group.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingDiagramLegend.razor",
       "documentationStatus": "merged",
@@ -408,11 +408,18 @@
           "description": "Additional CSS class."
         },
         {
+          "name": "Collapsible",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the card renders its collapse toggle. Default true. The mobile legend sheet passes false: a bottom sheet cannot collapse its own content, and a toggle that does nothing would be an unusable control."
+        },
+        {
           "name": "DefaultExpanded",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the card starts expanded. The hosting editor passes the layout rule (desktop expanded, tablet collapsed). Seeded ONCE — the user's own toggle owns the state afterwards."
+          "description": "Whether the card starts expanded. The hosting editor passes the layout rule (desktop expanded, tablet collapsed — and collapsed above the editor's 12-node rule). Seeded ONCE — the user's own toggle owns the state afterwards."
         },
         {
           "name": "Entries",

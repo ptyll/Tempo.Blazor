@@ -484,7 +484,7 @@
                                                                         ShowSummary="false"
                                                                         ShowLegend="@(!IsMobileLayout && ShowPreviewLegend)"
                                                                         LegendEntries="@LegendEntries"
-                                                                        LegendDefaultExpanded="@(!IsTablet)"
+                                                                        LegendDefaultExpanded="@(!IsTablet && LegendStartsExpanded)"
                                                                         OpenInEditorTriggerId="@_openEditorTriggerId"
                                                                         OnNodeDropped="HandleNodeDroppedAsync"
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
@@ -789,7 +789,7 @@
                                                            AdditionalAttributes="@LegendSheetAttributes">
         <ChildContent>
             <div class="tm-modeling-editor__legend-sheet-body">
-                <TmModelingDiagramLegend Entries="@LegendEntries" DefaultExpanded="true" />
+                <TmModelingDiagramLegend Entries="@LegendEntries" DefaultExpanded="true" Collapsible="false" />
             </div>
         </ChildContent>
     </TmModal>;

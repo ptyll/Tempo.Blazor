@@ -706,7 +706,11 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         var firstLibrary = dialogToolbox.QuerySelector(".tm-diagram-toolbox__library")!;
         firstLibrary.GetAttribute("data-library-id").Should().Be("notation-palette",
             "the active notation's stencils are pinned as the FIRST palette library");
-        firstLibrary.QuerySelector(".tm-diagram-toolbox__library-header")!.TextContent.Trim()
+        // Review fix (phase 15): the label renders ONCE — on the pinned palette's category
+        // header, never repeated as a library header.
+        firstLibrary.QuerySelector(".tm-diagram-toolbox__library-header").Should().BeNull(
+            "the pinned library does not repeat its label above the palette header");
+        firstLibrary.QuerySelector(".tm-diagram-toolbox__category-header")!.TextContent.Trim()
             .Should().Be("BPMN Legacy", "the pinned library is labelled with the profile display name");
         firstLibrary.QuerySelector("[data-stencil-id='bpmn2.task.user']").Should().NotBeNull(
             "the palette stencils come from the notation profile mapped through the stencil mapper");
@@ -748,7 +752,7 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
         {
             var pinned = cut.Find("[data-testid='modeling-open-diagram-editor'] [data-library-id='notation-palette']");
-            pinned.QuerySelector(".tm-diagram-toolbox__library-header")!.TextContent.Trim().Should().Be("UML 2.5");
+            pinned.QuerySelector(".tm-diagram-toolbox__category-header")!.TextContent.Trim().Should().Be("UML 2.5");
             pinned.QuerySelector("[data-stencil-id='uml25.class']").Should().NotBeNull();
             pinned.QuerySelector("[data-stencil-id='bpmn2.task.user']").Should().BeNull(
                 "the previous notation's stencils are gone from the pinned palette");

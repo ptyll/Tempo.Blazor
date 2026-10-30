@@ -71,6 +71,12 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// rebuilds the groups and re-collapses the non-pinned palettes.</summary>
     private string? _preferredApplied;
 
+    /// <summary>Review fix (phase 15): the palette ids collapsed BY the preferred pass (a
+    /// separate key space from the user's own collapses) — a set→null transition restores
+    /// exactly these, so a host removing the pinned palette gets the pre-pinned toolbox back
+    /// while palettes the user collapsed themselves stay collapsed.</summary>
+    private readonly HashSet<string> _preferredCollapsedPalettes = new(StringComparer.Ordinal);
+
     /// <summary>Per-instance id of the visually-hidden read-only hint: two toolboxes on one page
     /// must never share an id (a duplicate id breaks every aria-describedby reference).</summary>
     private string ReadOnlyHintId { get; } = $"tm-diagram-toolbox-readonly-hint-{Guid.NewGuid():N}";
@@ -99,13 +105,15 @@ public partial class TmDiagramToolbox : TmComponentBase
         var preferredSignature = GetPreferredSignature(PreferredStencilIds);
         if (!string.Equals(preferredSignature, _preferredApplied, StringComparison.Ordinal))
         {
+            var previousSignature = _preferredApplied;
             _preferredApplied = preferredSignature;
             RefreshFilter();
 
             // UX review (Fáze 15): with a pinned palette set, every NON-pinned palette starts
             // collapsed — the palette opens on the notation and the rest of the library stays
             // one expand away. Re-applied when the set changes; the user's own choices win
-            // afterwards (a live search always expands matches).
+            // afterwards (a live search always expands matches). Ids collapsed by this pass are
+            // tracked separately so a set→null transition can restore exactly them (review).
             if (preferredSignature is not null)
             {
                 foreach (var library in _filteredLibraries)
@@ -118,8 +126,18 @@ public partial class TmDiagramToolbox : TmComponentBase
                     foreach (var palette in library.Palettes)
                     {
                         _collapsedPalettes.Add(palette.Id);
+                        _preferredCollapsedPalettes.Add(palette.Id);
                     }
                 }
+            }
+            else if (previousSignature is not null)
+            {
+                foreach (var paletteId in _preferredCollapsedPalettes)
+                {
+                    _collapsedPalettes.Remove(paletteId);
+                }
+
+                _preferredCollapsedPalettes.Clear();
             }
         }
 
@@ -155,6 +173,11 @@ public partial class TmDiagramToolbox : TmComponentBase
 
     private void TogglePalette(string paletteId)
     {
+        // The user's own toggle takes ownership of the palette's collapse state: a palette the
+        // preferred pass collapsed stops being "collapsed by the pass" the moment the user
+        // touches it, so a later set→null restore must not undo their choice.
+        _preferredCollapsedPalettes.Remove(paletteId);
+
         if (_collapsedPalettes.Contains(paletteId))
             _collapsedPalettes.Remove(paletteId);
         else
@@ -260,7 +283,10 @@ public partial class TmDiagramToolbox : TmComponentBase
             FallbackName: string.IsNullOrWhiteSpace(PreferredStencilsLabel)
                 ? Loc["TmDiagramToolbox_PreferredDefault"]
                 : PreferredStencilsLabel,
-            ShowHeader: true,
+            // Review fix (phase 15): the header is NOT repeated — the pinned library holds ONE
+            // palette carrying the same label (the profile display name or the generic key) as
+            // its own collapsible category header.
+            ShowHeader: false,
             Palettes:
             [
                 new ToolboxPaletteGroup(PreferredLibraryId, null, PreferredStencilsLabel ?? Loc["TmDiagramToolbox_PreferredDefault"], 0, preferred)

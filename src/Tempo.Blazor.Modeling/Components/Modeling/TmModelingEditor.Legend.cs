@@ -61,7 +61,9 @@ public partial class TmModelingEditor
             return null;
         }
 
-        return NotationCatalog.GetPalette(EffectiveNotationKey);
+        // Labels resolve per call through the editor's localizer — the catalog memoizes only
+        // culture-invariant data, so a runtime culture switch re-labels without a cache reset.
+        return NotationCatalog.GetPalette(EffectiveNotationKey, Loc);
     }
 
     // ── The preview legend entries ───────────────────────────────────────────
@@ -85,9 +87,49 @@ public partial class TmModelingEditor
                 return null;
             }
 
-            return NotationCatalog.GetLegend(EffectiveNotationKey, _document);
+            return NotationCatalog.GetLegend(EffectiveNotationKey, _document, ComputePresentRelationshipTypes(), Loc);
         }
     }
+
+    /// <summary>
+    /// Fáze 15 review: the relationship types the CURRENT document actually carries, derived
+    /// from the MODEL — the <see cref="ModelingRelationshipDto.RelationshipType"/> of every
+    /// <c>_model.Relationships</c> entry whose Id is among the document's edge Ids (the
+    /// generator sets <c>edge.Id = relationship.Id</c>). This is exact where the catalog's
+    /// connector-type fallback is not: several profile types (UML Dependency/Include/Extend)
+    /// share one edge stencil and connector, and only the model knows which ones exist. Null
+    /// while no model is loaded — the catalog then falls back to its connector detection.
+    /// </summary>
+    private IReadOnlyList<string>? ComputePresentRelationshipTypes()
+    {
+        if (_model is null || _document is null)
+        {
+            return null;
+        }
+
+        var edgeIds = new HashSet<string>(
+            _document.Pages.SelectMany(page => page.Edges).Select(edge => edge.Id),
+            StringComparer.Ordinal);
+
+        return _model.Relationships
+            .Where(relationship => !string.IsNullOrWhiteSpace(relationship.Id)
+                && !string.IsNullOrWhiteSpace(relationship.RelationshipType)
+                && edgeIds.Contains(relationship.Id))
+            .Select(relationship => relationship.RelationshipType)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    // ── The legend's initial expansion ───────────────────────────────────────
+
+    /// <summary>Fáze 15 review: the desktop node-count rule — a document with MORE than 12 nodes
+    /// starts the legend collapsed (a long notation list would cover most of the canvas);
+    /// smaller documents start expanded. The tablet band starts collapsed regardless.</summary>
+    internal const int LegendExpandedNodeLimit = 12;
+
+    /// <summary>Whether the preview's legend card starts expanded for the CURRENT document
+    /// (desktop only consults this — the tablet band passes collapsed independently).</summary>
+    internal bool LegendStartsExpanded => (_document?.Nodes.Count ?? 0) <= LegendExpandedNodeLimit;
 
     // ── The mobile "⋯" → Legenda bottom sheet ────────────────────────────────
 

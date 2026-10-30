@@ -33,6 +33,13 @@
     background: var(--tm-color-surface-hover, transparent);
 }
 
+/* Review fix (phase 15): a visible keyboard focus ring — the toggle is otherwise a borderless
+   flat button and keyboard users could not see where focus rests. */
+.tm-modeling-diagram-legend__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
 .tm-modeling-diagram-legend__title {
     overflow: hidden;
     text-overflow: ellipsis;

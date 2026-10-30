@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Stencils;
@@ -93,7 +94,12 @@ public sealed class TmDiagramToolboxPreferredStencilsTests : LocalizationTestBas
         var pinned = libraries[0];
         pinned.GetAttribute("data-library-id").Should().Be("notation-palette");
         pinned.GetAttribute("data-pinned").Should().Be("true");
-        pinned.QuerySelector(".tm-diagram-toolbox__library-header")!.TextContent.Trim().Should().Be("BPMN 2.0");
+        // Review fix (phase 15): the library header is NOT repeated — the single palette
+        // carries the label as its own collapsible category header.
+        pinned.QuerySelector(".tm-diagram-toolbox__library-header").Should().BeNull(
+            "the pinned library does not repeat its label above the palette header");
+        pinned.QuerySelector("[data-palette-id='notation-palette'] .tm-diagram-toolbox__category-header")!
+            .TextContent.Trim().Should().Be("BPMN 2.0");
 
         // The preferred ORDER is preserved inside the pinned library.
         pinned.QuerySelectorAll("[data-stencil-id]")
@@ -166,8 +172,52 @@ public sealed class TmDiagramToolboxPreferredStencilsTests : LocalizationTestBas
         using var cut = Render<TmDiagramToolbox>(parameters => parameters
             .Add(p => p.PreferredStencilIds, ["phase15.node.a"]));
 
-        cut.Find("[data-library-id='notation-palette'] .tm-diagram-toolbox__library-header")
+        cut.Find("[data-palette-id='notation-palette'] .tm-diagram-toolbox__category-header")
             .TextContent.Trim()
             .Should().Be("Preferred stencils");
+    }
+
+    [Fact]
+    public async Task Set_to_null_transition_restores_palettes_collapsed_by_the_preferred_pass()
+    {
+        // Review fix (phase 15): removing the pinned palette (e.g. the host closing the dialog's
+        // notation) restores the pre-pinned toolbox — the palettes the preferred pass collapsed
+        // expand again.
+        using var cut = Render<TmDiagramToolbox>(parameters => parameters
+            .Add(p => p.PreferredStencilIds, ["phase15.node.a"]));
+
+        cut.FindAll("[data-palette-id='phase15.diagram.core'] .tm-diagram-toolbox__category-body")
+            .Should().BeEmpty("the preferred pass collapsed the native palettes");
+        cut.FindAll("[data-palette-id='phase15.diagram.extra'] .tm-diagram-toolbox__category-body")
+            .Should().BeEmpty();
+
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object> { [nameof(TmDiagramToolbox.PreferredStencilIds)] = null! })));
+
+        cut.FindAll("[data-library-id='notation-palette']").Should().BeEmpty("the pinned library is gone");
+        cut.FindAll(".tm-diagram-toolbox__category-body").Should().HaveCount(2,
+            "both native palettes render expanded again after the set→null transition");
+    }
+
+    [Fact]
+    public async Task User_collapses_survive_the_set_to_null_transition()
+    {
+        using var cut = Render<TmDiagramToolbox>(parameters => parameters
+            .Add(p => p.PreferredStencilIds, ["phase15.node.a"]));
+
+        // The user expands the core palette (their choice wins over the pass) and then
+        // re-collapses it — that collapse is THEIRS, not the pass's.
+        cut.Find("[data-palette-id='phase15.diagram.core'] .tm-diagram-toolbox__category-header").Click();
+        cut.WaitForAssertion(() => cut.FindAll("[data-palette-id='phase15.diagram.core'] .tm-diagram-toolbox__category-body")
+            .Should().HaveCount(1));
+        cut.Find("[data-palette-id='phase15.diagram.core'] .tm-diagram-toolbox__category-header").Click();
+
+        await cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object> { [nameof(TmDiagramToolbox.PreferredStencilIds)] = null! })));
+
+        cut.FindAll("[data-palette-id='phase15.diagram.core'] .tm-diagram-toolbox__category-body")
+            .Should().BeEmpty("the user's own collapse survives the restore");
+        cut.FindAll("[data-palette-id='phase15.diagram.extra'] .tm-diagram-toolbox__category-body")
+            .Should().HaveCount(1, "the palette collapsed BY the pass is restored");
     }
 }

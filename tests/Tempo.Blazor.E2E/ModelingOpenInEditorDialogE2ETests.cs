@@ -310,11 +310,14 @@ public sealed class ModelingOpenInEditorDialogE2ETests : WasmTestBase
         var pinned = dialog.Locator(".tm-diagram-toolbox__library[data-library-id='notation-palette']");
         await Assertions.Expect(pinned).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
 
-        // The pinned library is the FIRST one and carries the profile display name.
+        // The pinned library is the FIRST one and carries the profile display name — once, on
+        // its single palette's category header (review fix: no repeated library header).
         var firstLibraryId = await dialog.Locator(".tm-diagram-toolbox__library").First
             .GetAttributeAsync("data-library-id");
         Assert.AreEqual("notation-palette", firstLibraryId, "the notation palette is the first toolbox library");
-        await Assertions.Expect(pinned.Locator(".tm-diagram-toolbox__library-header"))
+        Assert.AreEqual(0, await pinned.Locator(".tm-diagram-toolbox__library-header").CountAsync(),
+            "the pinned library does not repeat its label above the palette header");
+        await Assertions.Expect(pinned.Locator(".tm-diagram-toolbox__category-header"))
             .ToContainTextAsync("BPMN Legacy", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
         await Assertions.Expect(pinned.Locator("[data-stencil-id='bpmn2.task.user']"))
             .ToHaveCountAsync(1, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });

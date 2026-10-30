@@ -58,7 +58,13 @@ public sealed class TmModelingDiagramLegendTests : LocalizationTestBase
         items[1].TextContent.Should().Contain("Sequence flow");
         // The icons are decorative — the text label owns the accessible name.
         items[0].QuerySelector("svg")!.GetAttribute("aria-hidden").Should().Be("true");
-        cut.Find(".tm-modeling-diagram-legend__group-title").TextContent.Should().NotBeEmpty();
+        // Review fix (phase 15): group titles are plain paragraphs and each list is named by
+        // aria-labelledby (they are not part of a heading outline).
+        cut.FindAll(".tm-modeling-diagram-legend__group-title").Should().HaveCount(2);
+        var firstGroup = cut.FindAll(".tm-modeling-diagram-legend__group-title")[0];
+        firstGroup.LocalName.Should().Be("p", "group titles are paragraphs, not headings");
+        cut.FindAll(".tm-modeling-diagram-legend__list")[0]
+            .GetAttribute("aria-labelledby").Should().Be(firstGroup.Id);
     }
 
     [Fact]
@@ -77,6 +83,20 @@ public sealed class TmModelingDiagramLegendTests : LocalizationTestBase
         toggle.GetAttribute("aria-expanded").Should().Be("false");
         cut.FindAll(".tm-modeling-diagram-legend__list").Should().BeEmpty(
             "a collapsed legend renders no list body");
+    }
+
+    [Fact]
+    public void Non_collapsible_legend_renders_the_body_without_a_toggle()
+    {
+        // The mobile sheet passes Collapsible=false: a bottom sheet cannot collapse its own
+        // content — the toggle would be an unusable control.
+        using var cut = Render<TmModelingDiagramLegend>(parameters => parameters
+            .Add(p => p.Entries, [Element("userTask", "bpmn2.task.user")])
+            .Add(p => p.DefaultExpanded, true)
+            .Add(p => p.Collapsible, false));
+
+        cut.FindAll(".tm-modeling-diagram-legend__toggle").Should().BeEmpty("no toggle inside the sheet");
+        cut.Find(".tm-modeling-diagram-legend__list").Should().NotBeNull("the body renders expanded");
     }
 
     [Fact]

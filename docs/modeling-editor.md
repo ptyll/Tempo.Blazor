@@ -106,7 +106,7 @@ window still resolves the DE tablet layout).
 | `ShowZoomOverlay` | `bool` | `false` | Opt in to the embedded editor's floating mobile zoom pill (Fáze 9): passes the DE's additive `ShowMobileZoomOverlay="true"` — the pill shows on the DE's own mobile band even with the toolbar hidden — and arms `FitOnDocumentLoad="DiagramFitMode.Width"` so a first load fits the diagram to the width. The hosting editor turns this on for its mobile band; the pinch keeps working either way. The docked bands keep the DE's own status-bar zoom. |
 | `ShowLegend` | `bool` | `false` | Fáze 15: show the notation legend card over the preview canvas — a SIBLING of the embedded editor (positioned by this stylesheet, never inside the editor's DOM). The hosting editor passes its `ShowPreviewLegend` (off on the mobile band — the sheet replaces the card). |
 | `LegendEntries` | `IReadOnlyList<ModelingNotationCatalogEntry>?` | `null` | The legend entries — the shared `ModelingNotationCatalog` filtered to the types the document uses. `null` renders no card even when `ShowLegend` is true (no notation catalog data); an EMPTY list renders the localized empty text. |
-| `LegendDefaultExpanded` | `bool` | `true` | Whether the legend card starts expanded. The editor seeds it from the resolved layout: desktop expanded, tablet collapsed. Seeded ONCE — the user's own toggle wins. |
+| `LegendDefaultExpanded` | `bool` | `true` | Whether the legend card starts expanded. The editor seeds it from the resolved layout and document size: desktop expanded (collapsed above 12 nodes), tablet collapsed. Seeded ONCE — the user's own toggle wins. |
 | `OpenInEditorTriggerId` | `string?` | `null` | Stable DOM id stamped on the open-editor trigger so the dialog's `TmFocusScope` can name the restore target. |
 | `AllowNodeDrop` / `OnDrop` / `ActiveDraggedElement` / `OnNodeDropped` | — | — | The drop target contract. |
 | `OnGenerateRequested` / `OnOpenInEditor` / `OnRelationshipSelected` | — | — | Host callbacks. |
@@ -137,25 +137,39 @@ explaining ONLY the notation shapes the generated document actually uses, groupe
 and **Relationships**. Entries come from the shared `ModelingNotationCatalog` (a singleton
 registered by `AddTempoBlazorModeling`): it maps the active notation profile's semantic types to
 diagram stencils through the SAME `IModelingStencilMapper` the generator uses (memoized per
-notation), labels them through the `TmModelingSemanticType_{type}` keys (humanized-key fallback)
-and — for the legend — filters to the types present in the document (nodes through their
-`semanticType` data, relationships through the connector type of their mapped edge stencil). A
-type mapped to a stencil the registry does not know still lists, flagged `HasMapping=false` (the
-icon renders the generic fallback through the public `TmDiagramStencilIcon`).
+notation, CULTURE-INVARIANT — the memo carries semantic type, stencil id, relationship flag and
+mapping flag only, so labels resolve per call through the caller's `ITmLocalizer`: `GetPalette(notation, localizer)` / `GetLegend(notation, document, presentRelationshipTypes, localizer)`,
+through the `TmModelingSemanticType_{type}` keys with the humanized-key fallback — a runtime
+culture switch re-labels without a cache reset). For the legend, relationship presence comes from
+the MODEL: the editor passes the `RelationshipType`s of `_model.Relationships` whose Id is among
+the document's edge Ids (the generator sets `edge.Id = relationship.Id`); a host without the model
+falls back to the connector type of the mapped edge stencil, and relationship types sharing one
+stencil (UML Dependency/Include/Extend) collapse into ONE row per stencil with their labels joined
+" / ". A type mapped to a stencil the registry does not know still lists, flagged
+`HasMapping=false` (the icon renders the generic fallback through the public `TmDiagramStencilIcon`).
 
-- **Accessibility**: list semantics (`role="list"`), decorative icons (`aria-hidden`) next to
-  visible text, and an `aria-expanded`/`aria-controls` collapse toggle (`TmModelingDiagramLegend_Show`/`_Hide`).
-- **Layout**: the card is an overlay in the canvas corner (`.tm-modeling-diagram-preview__legend`,
-  `position: absolute`) — it never participates in the canvas column's flow, so the embedded
-  editor keeps its height (the E2E canvas floors 300px/180px/240px still hold), and it leaves the
-  mobile zoom pill (bottom-right) and the empty-diagram hint (top-center) alone. Body max-height
-  scrolls.
+- **Accessibility**: list semantics (`role="list"` named by `aria-labelledby` of its group
+  title — a plain `<p>`, not a heading), decorative icons (`aria-hidden`) next to visible text,
+  and an `aria-expanded`/`aria-controls` collapse toggle (`TmModelingDiagramLegend_Show`/`_Hide`,
+  a visible `:focus-visible` outline). `Collapsible` (default `true`) drops the toggle — the
+  mobile sheet passes `false`.
+- **Layout**: the card is an overlay in the canvas's TOP-RIGHT corner
+  (`.tm-modeling-diagram-preview__legend`, `position: absolute; top/right` with
+  `max-height: calc(100% - var(--tm-space-8)); overflow: auto`) — it never participates in the
+  canvas column's flow, so the embedded editor keeps its height (the E2E canvas floors
+  300px/180px/240px still hold), and it leaves the mobile zoom pill (bottom-right), the status
+  bar's zoom group (an E2E asserts the rects never intersect) and the empty-diagram hint
+  (top-center) alone. A long legend scrolls inside the card; the desktop band starts it
+  COLLAPSED when the document has more than 12 nodes (`TmModelingEditor.LegendExpandedNodeLimit`).
 - **Mobile**: the editor's mobile band does NOT render the card — the compact header "⋯" carries a
   **Legenda** entry (`TmModelingEditor_Legend`) opening a `modeling-legend-sheet` bottom sheet
-  hosting the same component.
+  hosting the same component with `Collapsible="false"`.
 - **Palette**: the same catalog feeds the "Open in editor" dialog — its toolbox pins the notation
-  palette as the FIRST library (`data-library-id="notation-palette"`, header = the profile's
-  `DisplayName`), the rest of the stencil library starts collapsed and the search spans everything.
+  palette as the FIRST library (`data-library-id="notation-palette"`, label = the profile's
+  `DisplayName` on the pinned palette's category header — never repeated as a library header),
+  the rest of the stencil library starts collapsed and the search spans everything. A pinned
+  stencil duplicated in a native library lists in both places (see
+  [docs/diagram-editor.md](diagram-editor.md)).
   Inserting from the palette creates ONLY a diagram node (with the node's own
   `semanticType`/`notation` data) — never a semantic model element; element creation through the
   Fáze 14 writer is backlog.

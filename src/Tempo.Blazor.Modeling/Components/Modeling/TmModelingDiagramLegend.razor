@@ -9,16 +9,19 @@
        data-testid="@TestId("modeling-preview-legend")"
        data-state="@(IsEmpty ? "empty" : "populated")"
        aria-label="@Loc["TmModelingDiagramLegend_Title"]">
-    <button type="button"
-            class="tm-modeling-diagram-legend__toggle"
-            aria-expanded="@(_expanded.ToString().ToLowerInvariant())"
-            aria-controls="@BodyId"
-            aria-label="@ToggleAriaLabel"
-            title="@ToggleAriaLabel"
-            @onclick="ToggleExpanded">
-        <span class="tm-modeling-diagram-legend__title">@Loc["TmModelingDiagramLegend_Title"]</span>
-        <TmIcon Name="@(_expanded ? IconNames.ChevronDown : IconNames.ChevronRight)" Size="IconSize.Sm" />
-    </button>
+    @if (Collapsible)
+    {
+        <button type="button"
+                class="tm-modeling-diagram-legend__toggle"
+                aria-expanded="@(_expanded.ToString().ToLowerInvariant())"
+                aria-controls="@BodyId"
+                aria-label="@ToggleAriaLabel"
+                title="@ToggleAriaLabel"
+                @onclick="ToggleExpanded">
+            <span class="tm-modeling-diagram-legend__title">@Loc["TmModelingDiagramLegend_Title"]</span>
+            <TmIcon Name="@(_expanded ? IconNames.ChevronDown : IconNames.ChevronRight)" Size="IconSize.Sm" />
+        </button>
+    }
 
     @if (_expanded)
     {
@@ -31,8 +34,8 @@
             {
                 @if (ElementEntries.Count > 0)
                 {
-                    <h4 class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Elements"]</h4>
-                    <ul role="list" class="tm-modeling-diagram-legend__list">
+                    <p id="@ElementGroupId" class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Elements"]</p>
+                    <ul role="list" aria-labelledby="@ElementGroupId" class="tm-modeling-diagram-legend__list">
                         @foreach (var entry in ElementEntries)
                         {
                             <li class="tm-modeling-diagram-legend__item">
@@ -44,8 +47,8 @@
                 }
                 @if (RelationshipEntries.Count > 0)
                 {
-                    <h4 class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Relationships"]</h4>
-                    <ul role="list" class="tm-modeling-diagram-legend__list">
+                    <p id="@RelationshipGroupId" class="tm-modeling-diagram-legend__group-title">@Loc["TmModelingDiagramLegend_Relationships"]</p>
+                    <ul role="list" aria-labelledby="@RelationshipGroupId" class="tm-modeling-diagram-legend__list">
                         @foreach (var entry in RelationshipEntries)
                         {
                             <li class="tm-modeling-diagram-legend__item">

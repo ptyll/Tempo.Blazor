@@ -10,7 +10,7 @@ namespace Tempo.Blazor.Components.Modeling;
 /// type mapped to the diagram stencil that draws it.</summary>
 /// <param name="SemanticType">The semantic element/relationship type (the notation profile's vocabulary).</param>
 /// <param name="StencilId">Diagram stencil id the type maps to (the fallback stencil when the mapped one is unknown to the registry).</param>
-/// <param name="Label">Localized label (<c>TmModelingSemanticType_{type}</c>, humanized key as fallback).</param>
+/// <param name="Label">Localized label (<c>TmModelingSemanticType_{type}</c>, humanized key as fallback). Resolved per call — the entry itself is culture-invariant.</param>
 /// <param name="IsRelationship">True for relationship types (edge stencils), false for element types (node stencils).</param>
 /// <param name="HasMapping">False when the mapper mapped the type to a stencil the registry does not know — the entry renders the generic fallback icon.</param>
 public sealed record ModelingNotationCatalogEntry(
@@ -23,35 +23,38 @@ public sealed record ModelingNotationCatalogEntry(
 /// <summary>
 /// Fáze 15: the ONE notation catalog behind both the "Open in editor" palette (the pinned
 /// stencil library) and the preview legend — the notation profile's semantic types mapped to
-/// diagram stencils through the shared <see cref="IModelingStencilMapper"/>. Resolution is
-/// memoized per notation; legend entries are filtered to the types the generated document
-/// actually uses (nodes through their <c>semanticType</c> data, edges through the connector
-/// type of their mapped edge stencil). Registered as a singleton by
-/// <c>AddTempoBlazorModeling</c>.
+/// diagram stencils through the shared <see cref="IModelingStencilMapper"/>. The per-notation
+/// resolution is memoized CULTURE-INVARIANT (semantic type, stencil id, relationship flag,
+/// mapping flag only — labels are resolved per call so a culture switch needs no cache
+/// invalidation; the stencil registry exposes no version, so staleness rides the per-call
+/// document arguments). Legend entries are filtered to the types the generated document
+/// actually uses: nodes through their <c>semanticType</c> data, relationships through the
+/// caller-supplied model-derived set (the editor passes the relationship types whose Id is
+/// among the document's edge Ids) with the connector-type detection as the fallback. Registered
+/// as a singleton by <c>AddTempoBlazorModeling</c>.
 /// </summary>
 public sealed class ModelingNotationCatalog
 {
     private readonly IModelingNotationProfileProvider _profileProvider;
     private readonly IModelingStencilMapper _stencilMapper;
     private readonly DiagramStencilRegistry _stencilRegistry;
-    private readonly ITmLocalizer _localizer;
     private readonly ConcurrentDictionary<string, IReadOnlyList<ModelingNotationCatalogEntry>> _cache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The culture-invariant memoized entry (no label — labels resolve per call).</summary>
+    private sealed record InvariantEntry(string SemanticType, string StencilId, bool IsRelationship, bool HasMapping);
 
     /// <summary>Creates the catalog.</summary>
     /// <param name="profileProvider">Notation profile lookup (the vocabulary of each notation).</param>
     /// <param name="stencilMapper">Semantic type → stencil mapping (the same mapper the diagram generator uses).</param>
     /// <param name="stencilRegistry">Stencil registry validating the mapped ids and edge connector types.</param>
-    /// <param name="localizer">Label localizer.</param>
     public ModelingNotationCatalog(
         IModelingNotationProfileProvider profileProvider,
         IModelingStencilMapper stencilMapper,
-        DiagramStencilRegistry stencilRegistry,
-        ITmLocalizer localizer)
+        DiagramStencilRegistry stencilRegistry)
     {
         _profileProvider = profileProvider ?? throw new ArgumentNullException(nameof(profileProvider));
         _stencilMapper = stencilMapper ?? throw new ArgumentNullException(nameof(stencilMapper));
         _stencilRegistry = stencilRegistry ?? throw new ArgumentNullException(nameof(stencilRegistry));
-        _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
     }
 
     /// <summary>
@@ -61,16 +64,27 @@ public sealed class ModelingNotationCatalog
     /// <see cref="ModelingNotationCatalogEntry.HasMapping"/> <c>false</c> so the caller renders
     /// the generic fallback icon. An unknown notation returns an empty list.
     /// </summary>
-    public IReadOnlyList<ModelingNotationCatalogEntry> GetPalette(string notationKey)
-        => Resolve(notationKey).Where(entry => !entry.IsRelationship).ToArray();
+    public IReadOnlyList<ModelingNotationCatalogEntry> GetPalette(string notationKey, ITmLocalizer localizer)
+        => Resolve(notationKey)
+            .Where(entry => !entry.IsRelationship)
+            .Select(entry => WithLabel(entry, localizer))
+            .ToArray();
 
     /// <summary>
     /// The legend entries of a notation: the palette and relationship entries of the types the
     /// <paramref name="document"/> actually uses — nodes through their <c>semanticType</c> data
-    /// value, edges through the connector type of their mapped edge stencil. A null document or
-    /// an unknown notation returns an empty list; the order follows the profile.
+    /// value, relationships through <paramref name="presentRelationshipTypes"/> (the editor
+    /// derives it from the MODEL: the relationship types whose Id is among the document's edge
+    /// Ids). When that set is <c>null</c> (a host without the model) the presence falls back to
+    /// the connector type of the mapped edge stencil; several relationship types sharing one
+    /// stencil collapse into ONE row with their labels joined " / ". A null document, an unknown
+    /// notation or an empty localizer result returns an empty list; the order follows the profile.
     /// </summary>
-    public IReadOnlyList<ModelingNotationCatalogEntry> GetLegend(string notationKey, DiagramDocument? document)
+    public IReadOnlyList<ModelingNotationCatalogEntry> GetLegend(
+        string notationKey,
+        DiagramDocument? document,
+        IReadOnlyCollection<string>? presentRelationshipTypes,
+        ITmLocalizer localizer)
     {
         if (document is null || string.IsNullOrWhiteSpace(notationKey))
         {
@@ -96,32 +110,65 @@ public sealed class ModelingNotationCatalog
             }
         }
 
-        foreach (var entry in entries.Where(e => e.IsRelationship))
+        var result = new List<ModelingNotationCatalogEntry>();
+        foreach (var entry in entries)
         {
-            if (DocumentUsesRelationshipType(document, entry.StencilId))
+            if (!entry.IsRelationship && present.Contains(entry.SemanticType))
+            {
+                result.Add(WithLabel(entry, localizer));
+            }
+        }
+
+        // Relationship rows are grouped BY STENCIL: several profile types may map to one edge
+        // stencil (UML Dependency/Include/Extend), and both presence paths can then mark more
+        // than one type present — the legend shows one row per stencil with the labels joined.
+        var presentRelationships = presentRelationshipTypes is null
+            ? DetectPresentRelationships(document, entries)
+            : new HashSet<string>(presentRelationshipTypes, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in entries.Where(entry => entry.IsRelationship).GroupBy(entry => entry.StencilId, StringComparer.Ordinal))
+        {
+            var presentMembers = group
+                .Where(entry => presentRelationships.Contains(entry.SemanticType))
+                .ToArray();
+            if (presentMembers.Length == 0)
+            {
+                continue;
+            }
+
+            var first = presentMembers[0];
+            result.Add(first with
+            {
+                Label = presentMembers.Length == 1
+                    ? GetLabel(first.SemanticType, localizer)
+                    : string.Join(" / ", presentMembers.Select(member => GetLabel(member.SemanticType, localizer)))
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>Fallback relationship presence (no model available): a semantic type counts as
+    /// present when its mapped edge stencil's connector type matches an edge in the document.</summary>
+    private HashSet<string> DetectPresentRelationships(DiagramDocument document, IReadOnlyList<ModelingNotationCatalogEntry> entries)
+    {
+        var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var connectorTypes = new HashSet<string>(
+            document.Pages.SelectMany(page => page.Edges).Select(edge => edge.ConnectorType),
+            StringComparer.Ordinal);
+
+        foreach (var entry in entries.Where(entry => entry.IsRelationship))
+        {
+            var stencil = _stencilRegistry.GetStencil(entry.StencilId);
+            var connectorType = stencil?.Kind == DiagramStencilKind.Edge
+                ? stencil.EdgeDefaults?.ConnectorType
+                : null;
+            if (!string.IsNullOrWhiteSpace(connectorType) && connectorTypes.Contains(connectorType))
             {
                 present.Add(entry.SemanticType);
             }
         }
 
-        return entries.Where(entry => present.Contains(entry.SemanticType)).ToArray();
-    }
-
-    /// <summary>Whether the document carries an edge created from the mapped edge stencil —
-    /// detected through the stencil's connector type (edges do not carry semantic data).</summary>
-    private bool DocumentUsesRelationshipType(DiagramDocument document, string edgeStencilId)
-    {
-        var stencil = _stencilRegistry.GetStencil(edgeStencilId);
-        var connectorType = stencil?.Kind == DiagramStencilKind.Edge
-            ? stencil.EdgeDefaults?.ConnectorType
-            : null;
-        if (string.IsNullOrWhiteSpace(connectorType))
-        {
-            return false;
-        }
-
-        return document.Pages.Any(page => page.Edges.Any(edge =>
-            string.Equals(edge.ConnectorType, connectorType, StringComparison.Ordinal)));
+        return present;
     }
 
     /// <summary>The memoized per-notation entries: elements first (profile order), then the
@@ -188,15 +235,18 @@ public sealed class ModelingNotationCatalog
         return new ModelingNotationCatalogEntry(
             semanticType,
             mappedStencilId,
-            GetLabel(semanticType),
+            string.Empty, // Labels are culture-dependent and resolve per call.
             isRelationship,
             hasMapping);
     }
 
+    private static ModelingNotationCatalogEntry WithLabel(ModelingNotationCatalogEntry entry, ITmLocalizer localizer)
+        => entry with { Label = GetLabel(entry.SemanticType, localizer) };
+
     /// <summary>The localized semantic-type label (<c>TmModelingSemanticType_{type}</c>) with
     /// the tree's humanized-key fallback.</summary>
-    private string GetLabel(string semanticType)
-        => _localizer.TryGetString($"TmModelingSemanticType_{semanticType.Trim()}", out var localized)
+    private static string GetLabel(string semanticType, ITmLocalizer localizer)
+        => localizer.TryGetString($"TmModelingSemanticType_{semanticType.Trim()}", out var localized)
             && !string.IsNullOrWhiteSpace(localized)
             ? localized
             : Humanize(semanticType);

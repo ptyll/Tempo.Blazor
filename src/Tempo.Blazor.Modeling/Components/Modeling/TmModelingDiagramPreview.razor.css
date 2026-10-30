@@ -89,15 +89,22 @@
     overflow: hidden;
 }
 
-/* Fáze 15: the legend card is an overlay in the canvas corner — it never participates in the
-   canvas column's flow (the embedded editor keeps its height) and it leaves the mobile zoom
-   pill (Fáze 9, bottom-right) and the empty-diagram hint (top-center) alone. */
+/* Fáze 15 review: the legend card is an overlay in the canvas TOP-RIGHT corner — it never
+   participates in the canvas column's flow (the embedded editor keeps its height) and it
+   leaves the mobile zoom pill (Fáze 9, bottom-right) and the empty-diagram hint (top-center)
+   alone. A long legend scrolls INSIDE the card (max-height + overflow) instead of growing
+   past the canvas — the desktop band starts it collapsed above 12 nodes (the editor's rule),
+   and the status bar's zoom group stays reachable at the canvas's bottom edge. */
 .tm-modeling-diagram-preview__legend {
     position: absolute;
     z-index: 3;
-    bottom: var(--tm-space-4);
-    left: var(--tm-space-4);
+    top: var(--tm-space-4);
+    right: var(--tm-space-4);
+    bottom: auto;
+    left: auto;
     width: min(calc(var(--tm-space-16) * 5), calc(100% - var(--tm-space-8)));
+    max-height: calc(100% - var(--tm-space-8));
+    overflow: auto;
 }
 
 /* The heading block is removable (ShowHeader=false, the mobile band): the grid drops its auto
