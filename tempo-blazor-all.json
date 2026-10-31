@@ -33843,6 +33843,8 @@
           "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
         ],
         "namespaces": [
+          "Tempo.Blazor.AI.Markdown",
+          "Tempo.Blazor.Components.AI",
           "Tempo.Blazor.Configuration"
         ]
       },
@@ -33876,6 +33878,55 @@
       },
       "items": [
         {
+          "itemName": "TmMarkdownView",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Renders untrusted markdown (an AI answer, a tool result, a system note) through the package's safe pipeline: raw HTML is escaped instead of rendered, only http/https/mailto and relative link targets survive (everything else collapses to '#'), images are limited to absolute http(s), every link carries target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks get a copy affordance and cite: links become citation chips that raise OnCitationClick. The rendered HTML is cached against the last input, so a parent re-render with unchanged text does not re-run Markdig.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMarkdownView.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "CodeBlockTemplate",
+              "type": "Func<AiMarkdownCodeBlockContext, string>?",
+              "isRequired": false,
+              "description": "Optional host renderer for a code block, replacing the built-in <pre><code> plus copy affordance (for example with syntax-highlighted markup). The returned HTML is trusted verbatim, so the host owns its escaping: pass context.Code through HtmlEncoder.Default.Encode. Pass a stable reference — a cached field, a static method or a method group — because the render cache compares the delegate's Method and Target, not the delegate instance."
+            },
+            {
+              "name": "Markdown",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The markdown to render. It is untrusted model output: the component renders it through the safe markdown pipeline (raw HTML disabled, http/https/mailto/relative allowlist, hardened links), so a hostile answer cannot execute markup. Tables become a keyboard-reachable named region and code blocks get a keyboard-reachable scroller plus a copy button that announces through a live region."
+            },
+            {
+              "name": "OnCitationClick",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the source id when a citation chip is activated, so the host can open the source preview (the chips are rendered for markdown links written as [1](cite:<sourceId>))."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Render an assistant answer with citation clicks",
+              "code": "<TmMarkdownView Markdown=\"@message.Text\"\n                OnCitationClick=\"id => ShowSourcePreview(message.FindSource(id))\" />"
+            },
+            {
+              "title": "Replace the code-block markup with syntax highlighting",
+              "code": "<TmMarkdownView Markdown=\"@answer\"\n                CodeBlockTemplate=\"ctx => Highlighter.RenderHtml(ctx.Code, ctx.Language)\" />"
+            }
+          ]
+        },
+        {
           "itemName": "AIServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -33904,6 +33955,113 @@
               "code": "builder.Services.AddTempoBlazorAI();"
             }
           ]
+        },
+        {
+          "itemName": "AiMarkdownCodeBlockContext",
+          "kind": "Class",
+          "category": "Markdown",
+          "namespace": "Tempo.Blazor.AI.Markdown",
+          "description": "One code block handed to AiMarkdownRenderOptions.CodeBlockRenderer (the CodeBlockTemplate seam of TmMarkdownView): its index, its raw decoded code (the host escapes it) and the fence language.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownCodeBlockContext.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Code",
+              "kind": "Property",
+              "type": "string",
+              "description": "The raw code, decoded and not HTML-escaped; the renderer must escape it."
+            },
+            {
+              "name": "Index",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based index of the code block in the document."
+            },
+            {
+              "name": "Language",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The fence info string (csharp, json, …), or null for an indented block."
+            }
+          ]
+        },
+        {
+          "itemName": "AiMarkdownRenderer",
+          "kind": "Class",
+          "category": "Markdown",
+          "namespace": "Tempo.Blazor.AI.Markdown",
+          "description": "The safe markdown pipeline behind TmMarkdownView: Markdig with raw HTML disabled, an explicit URL allowlist (http/https/mailto plus relative targets, everything else collapses to '#'), images limited to absolute http(s), links hardened with target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks with a copy affordance and a keyboard-reachable <pre>, tables wrapped in a keyboard-reachable named region and cite: links turned into citation chips. Registered by AddTempoBlazorAI() through TryAddSingleton, so a host may replace it with a subclass.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderer.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Render",
+              "kind": "Method",
+              "type": "string",
+              "description": "Renders untrusted markdown to safe HTML.",
+              "parameters": [
+                {
+                  "name": "markdown",
+                  "type": "string?"
+                },
+                {
+                  "name": "options",
+                  "type": "AiMarkdownRenderOptions?",
+                  "default": "null"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "itemName": "AiMarkdownRenderOptions",
+          "kind": "Class",
+          "category": "Markdown",
+          "namespace": "Tempo.Blazor.AI.Markdown",
+          "description": "Localized labels and host seams for AiMarkdownRenderer — the code-block copy/copied labels, the citation chip's accessible name, the scrollable table region's name (TableLabel) and the optional CodeBlockRenderer that takes over a code block (for example with syntax-highlighted markup). The renderer never invents user-visible text: TmMarkdownView supplies every label from ITmLocalizer.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderOptions.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CitationLabelFormat",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name of a citation chip; {0} is the citation text, e.g. 1."
+            },
+            {
+              "name": "CodeBlockRenderer",
+              "kind": "Property",
+              "type": "Func<AiMarkdownCodeBlockContext, string>?",
+              "description": "Optional host renderer for a code block. When set, the built-in markup (including the copy affordance) is replaced by the returned HTML, which the renderer trusts verbatim — the host owns escaping and must treat its own output as trusted markup."
+            },
+            {
+              "name": "CopiedLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name and status text after the code was copied."
+            },
+            {
+              "name": "CopyCodeLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name of the copy button of a code block that has no language."
+            },
+            {
+              "name": "CopyCodeWithLanguageLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name of the copy button of a language-labelled code block; {0} is the language."
+            },
+            {
+              "name": "TableLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name of the scrollable table region. A table wider than the conversation column scrolls inside its wrapper, so the wrapper is a keyboard focus stop and a named role=\"region\"; with a null or empty label the wrapper keeps its focus stop but omits the role (an unnamed landmark cannot be identified in a screen reader's landmark list)."
+            }
+          ]
         }
       ],
       "libraryExamples": [],
@@ -33913,17 +34071,25 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_markdown-view.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/tempo-blazor-ai.css",
           "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-markdown.js",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 1,
-        "manualItemCount": 1,
-        "generatedItemCount": 1,
+        "itemCount": 5,
+        "manualItemCount": 5,
+        "generatedItemCount": 5,
         "generatedOnlyItemCount": 0,
-        "componentCount": 0,
-        "publicApiTypeCount": 1
+        "componentCount": 1,
+        "publicApiTypeCount": 4
       }
     },
     {
@@ -72123,6 +72289,8 @@
           "Tempo.Blazor.Abstractions.Shared",
           "Tempo.Blazor.Abstractions.Wireframe.Export",
           "Tempo.Blazor.Abstractions.WorkItems",
+          "Tempo.Blazor.AI.Models",
+          "Tempo.Blazor.AI.Services",
           "Tempo.Blazor.Components.Diagram.Commands",
           "Tempo.Blazor.Components.Diagram.Models",
           "Tempo.Blazor.Components.Diagram.Serialization",
@@ -72178,6 +72346,339 @@
         ]
       },
       "items": [
+        {
+          "itemName": "AiCitationAddedDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The answer cited a source. The source id must be non-empty and a re-delivered id is ignored.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiCompletedDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The model finished the answer; the message moves to Completed and late content deltas are ignored.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiErrorDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The stream failed: the message moves to Failed and carries the reason in AiMessage.Error.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiMessage",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model and the cited sources. Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "FindSource",
+              "kind": "Method",
+              "type": "AiSource?",
+              "description": "Finds a cited source by id, so a cite: chip can resolve its preview.",
+              "parameters": [
+                {
+                  "name": "sourceId",
+                  "type": "string?"
+                }
+              ]
+            },
+            {
+              "name": "CreatedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "UTC creation time."
+            },
+            {
+              "name": "Error",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Failure reason when Status is Failed."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable message identifier; the streaming API addresses messages by it."
+            },
+            {
+              "name": "Model",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Model identifier that produced the answer, when the host reports one."
+            },
+            {
+              "name": "Parts",
+              "kind": "Property",
+              "type": "IList<AiMessagePart>",
+              "description": "Ordered parts of the message."
+            },
+            {
+              "name": "Role",
+              "kind": "Property",
+              "type": "AiMessageRole",
+              "description": "Who produced the turn."
+            },
+            {
+              "name": "Sources",
+              "kind": "Property",
+              "type": "IReadOnlyList<AiSource>",
+              "description": "Sources cited by the answer — the contents of the trailing AiSourcesPart, or an empty list while nothing has been cited."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AiMessageStatus",
+              "description": "Current lifecycle state."
+            },
+            {
+              "name": "Text",
+              "kind": "Property",
+              "type": "string",
+              "description": "All text of the message concatenated in part order (markdown, not plain text)."
+            }
+          ]
+        },
+        {
+          "itemName": "AiMessagePart",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Base of the ordered parts of an AiMessage — AiTextPart, AiReasoningPart, AiToolCallPart and AiSourcesPart — so a message can interleave reasoning, tool calls and text in arrival order.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiMessageRole",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Who produced an AiMessage: User, Assistant, System or Tool.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageRole.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiMessageStatus",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Lifecycle of an AiMessage driven by the delta stream — Pending, Streaming, Completed, Stopped or Failed.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageStatus.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiMessageStreamApplier",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Services",
+          "description": "Applies one AiStreamDelta to an AiMessage and reports whether anything changed. Pure logic with no UI and no clock of its own (the caller passes the timestamp), so a WebAssembly host, a Server circuit and a unit test produce the same message; the boolean return lets a component skip a render for a no-op delta. A citation delta without a source or with an empty id is a no-op rather than an exception, and an error delta arriving after Completed or Stopped is ignored — a finished or stopped answer is never retroactively failed.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/AiMessageStreamApplier.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Apply",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Applies one delta to message.",
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": "AiMessage"
+                },
+                {
+                  "name": "delta",
+                  "type": "AiStreamDelta"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "DateTimeOffset?",
+                  "default": "null"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "itemName": "AiReasoningDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "A chunk of reasoning text, appended to the trailing reasoning step; NewStep starts a new step instead.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiReasoningPart",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Reasoning (\"thinking\") of an assistant message: ordered steps, the sources the model inspected and the elapsed time, so TmReasoningPanel can render it as one disclosure.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiSource",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One source an assistant answer cites: a stable Id the markdown cite: link points at plus the title, URL, snippet, icon and domain shown in the citation preview and the source cards.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSource.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiSourcesPart",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The sources cited by an answer, rendered as source cards. Add() deduplicates by source id, so a re-delivered citation never duplicates a card.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiStreamDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Base of one incremental step of an answer stream. The host supplies the model call as an IAsyncEnumerable<AiStreamDelta> and AiMessageStreamApplier folds each delta into the message it belongs to.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiTextDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "A chunk of answer text, appended to the trailing text part of the message.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiTextPart",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The markdown text of a message. Untrusted model output, so it is rendered through TmMarkdownView's safe pipeline; Append grows it as streamed chunks arrive.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiToolCall",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One tool/function invocation of an answer with its live status, raw JSON arguments and result, timestamps, redaction flag and the elapsed Duration.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCall.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CompletedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "UTC end of the execution, set by the completion delta."
+            },
+            {
+              "name": "Duration",
+              "kind": "Property",
+              "type": "TimeSpan?",
+              "description": "Elapsed execution time, or null while the call is still running."
+            },
+            {
+              "name": "IsRedacted",
+              "kind": "Property",
+              "type": "bool",
+              "description": "When true the arguments and result are hidden and the card renders a localized notice instead."
+            },
+            {
+              "name": "StartedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "UTC start of the execution, set by the start delta."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AiToolCallStatus",
+              "description": "Current status."
+            }
+          ]
+        },
+        {
+          "itemName": "AiToolCallCompletedDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "A tool call finished with a final status, result, failure reason and redaction flag; the first completion keeps its timestamp, so a re-delivered completion is a no-op.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiToolCallPart",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Wraps one AiToolCall as a message part, so tool calls appear in the position they were started.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiToolCallStartedDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The model started a tool call. The call's Id targets later updates and the completion, and a re-delivered start does not duplicate the part.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiToolCallStatus",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Execution status of one tool call: Queued, Running, Succeeded, Failed or Cancelled.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCallStatus.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiToolCallUpdatedDelta",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Arguments, result, name or status of a running tool call changed. A call that was never started is created on the fly.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+          "documentationStatus": "merged"
+        },
         {
           "itemName": "CsvColumnMapping",
           "kind": "Class",
@@ -109985,12 +110486,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1514,
-        "manualItemCount": 1514,
-        "generatedItemCount": 1497,
+        "itemCount": 1535,
+        "manualItemCount": 1535,
+        "generatedItemCount": 1518,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1497
+        "publicApiTypeCount": 1518
       }
     },
     {
@@ -126983,10 +127484,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3374,
-    "manualItemCount": 3374,
+    "itemCount": 3399,
+    "manualItemCount": 3399,
     "generatedOnlyItemCount": 0,
-    "componentCount": 511,
-    "publicApiTypeCount": 2810
+    "componentCount": 512,
+    "publicApiTypeCount": 2834
   }
 }

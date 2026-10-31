@@ -6101,5 +6101,10 @@
   "TmGantt_WorkloadRangeTruncated": "Showing only the first {0} days of the range.",
   "TmGanttTaskPanel_SizeBytes": "{0} B",
   "TmGanttTaskPanel_SizeKB": "{0} KB",
-  "TmGanttTaskPanel_SizeMB": "{0} MB"
+  "TmGanttTaskPanel_SizeMB": "{0} MB",
+  "TmMarkdownView_CopyCode": "Copy code",
+  "TmMarkdownView_CopyCodeLanguage": "Copy {0} code",
+  "TmMarkdownView_Copied": "Copied",
+  "TmMarkdownView_Citation": "Source {0}",
+  "TmMarkdownView_Table": "Table"
 }

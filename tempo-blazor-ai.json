@@ -40,6 +40,8 @@
       "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
     ],
     "namespaces": [
+      "Tempo.Blazor.AI.Markdown",
+      "Tempo.Blazor.Components.AI",
       "Tempo.Blazor.Configuration"
     ]
   },
@@ -73,6 +75,55 @@
   },
   "items": [
     {
+      "itemName": "TmMarkdownView",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Renders untrusted markdown (an AI answer, a tool result, a system note) through the package's safe pipeline: raw HTML is escaped instead of rendered, only http/https/mailto and relative link targets survive (everything else collapses to '#'), images are limited to absolute http(s), every link carries target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks get a copy affordance and cite: links become citation chips that raise OnCitationClick. The rendered HTML is cached against the last input, so a parent re-render with unchanged text does not re-run Markdig.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMarkdownView.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "CodeBlockTemplate",
+          "type": "Func<AiMarkdownCodeBlockContext, string>?",
+          "isRequired": false,
+          "description": "Optional host renderer for a code block, replacing the built-in <pre><code> plus copy affordance (for example with syntax-highlighted markup). The returned HTML is trusted verbatim, so the host owns its escaping: pass context.Code through HtmlEncoder.Default.Encode. Pass a stable reference — a cached field, a static method or a method group — because the render cache compares the delegate's Method and Target, not the delegate instance."
+        },
+        {
+          "name": "Markdown",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The markdown to render. It is untrusted model output: the component renders it through the safe markdown pipeline (raw HTML disabled, http/https/mailto/relative allowlist, hardened links), so a hostile answer cannot execute markup. Tables become a keyboard-reachable named region and code blocks get a keyboard-reachable scroller plus a copy button that announces through a live region."
+        },
+        {
+          "name": "OnCitationClick",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the source id when a citation chip is activated, so the host can open the source preview (the chips are rendered for markdown links written as [1](cite:<sourceId>))."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render an assistant answer with citation clicks",
+          "code": "<TmMarkdownView Markdown=\"@message.Text\"\n                OnCitationClick=\"id => ShowSourcePreview(message.FindSource(id))\" />"
+        },
+        {
+          "title": "Replace the code-block markup with syntax highlighting",
+          "code": "<TmMarkdownView Markdown=\"@answer\"\n                CodeBlockTemplate=\"ctx => Highlighter.RenderHtml(ctx.Code, ctx.Language)\" />"
+        }
+      ]
+    },
+    {
       "itemName": "AIServiceCollectionExtensions",
       "kind": "Class",
       "category": "Configuration",
@@ -101,6 +152,113 @@
           "code": "builder.Services.AddTempoBlazorAI();"
         }
       ]
+    },
+    {
+      "itemName": "AiMarkdownCodeBlockContext",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "One code block handed to AiMarkdownRenderOptions.CodeBlockRenderer (the CodeBlockTemplate seam of TmMarkdownView): its index, its raw decoded code (the host escapes it) and the fence language.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownCodeBlockContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "string",
+          "description": "The raw code, decoded and not HTML-escaped; the renderer must escape it."
+        },
+        {
+          "name": "Index",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based index of the code block in the document."
+        },
+        {
+          "name": "Language",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The fence info string (csharp, json, …), or null for an indented block."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownRenderer",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "The safe markdown pipeline behind TmMarkdownView: Markdig with raw HTML disabled, an explicit URL allowlist (http/https/mailto plus relative targets, everything else collapses to '#'), images limited to absolute http(s), links hardened with target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks with a copy affordance and a keyboard-reachable <pre>, tables wrapped in a keyboard-reachable named region and cite: links turned into citation chips. Registered by AddTempoBlazorAI() through TryAddSingleton, so a host may replace it with a subclass.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderer.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Render",
+          "kind": "Method",
+          "type": "string",
+          "description": "Renders untrusted markdown to safe HTML.",
+          "parameters": [
+            {
+              "name": "markdown",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "AiMarkdownRenderOptions?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownRenderOptions",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "Localized labels and host seams for AiMarkdownRenderer — the code-block copy/copied labels, the citation chip's accessible name, the scrollable table region's name (TableLabel) and the optional CodeBlockRenderer that takes over a code block (for example with syntax-highlighted markup). The renderer never invents user-visible text: TmMarkdownView supplies every label from ITmLocalizer.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CitationLabelFormat",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of a citation chip; {0} is the citation text, e.g. 1."
+        },
+        {
+          "name": "CodeBlockRenderer",
+          "kind": "Property",
+          "type": "Func<AiMarkdownCodeBlockContext, string>?",
+          "description": "Optional host renderer for a code block. When set, the built-in markup (including the copy affordance) is replaced by the returned HTML, which the renderer trusts verbatim — the host owns escaping and must treat its own output as trusted markup."
+        },
+        {
+          "name": "CopiedLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name and status text after the code was copied."
+        },
+        {
+          "name": "CopyCodeLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the copy button of a code block that has no language."
+        },
+        {
+          "name": "CopyCodeWithLanguageLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the copy button of a language-labelled code block; {0} is the language."
+        },
+        {
+          "name": "TableLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the scrollable table region. A table wider than the conversation column scrolls inside its wrapper, so the wrapper is a keyboard focus stop and a named role=\"region\"; with a null or empty label the wrapper keeps its focus stop but omits the role (an unnamed landmark cannot be identified in a screen reader's landmark list)."
+        }
+      ]
     }
   ],
   "libraryExamples": [],
@@ -110,16 +268,24 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_markdown-view.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/tempo-blazor-ai.css",
       "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-markdown.js",
+      "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 1,
-    "manualItemCount": 1,
-    "generatedItemCount": 1,
+    "itemCount": 5,
+    "manualItemCount": 5,
+    "generatedItemCount": 5,
     "generatedOnlyItemCount": 0,
-    "componentCount": 0,
-    "publicApiTypeCount": 1
+    "componentCount": 1,
+    "publicApiTypeCount": 4
   }
 }

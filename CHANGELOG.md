@@ -22,6 +22,63 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — AI models and safe markdown (plan 7f21f26b, phase 2)
+
+The package's first real surface: the generic message/streaming contract in
+`Tempo.Blazor.Abstractions` and `TmMarkdownView`, the safe markdown renderer every AI component will
+render answers through. Contract: [docs/ai-markdown.md](docs/ai-markdown.md).
+
+- **Models (Abstractions, no UI dependency)** — `AiMessage`, the ordered parts
+  (`AiTextPart`, `AiReasoningPart`, `AiToolCallPart`, `AiSourcesPart`), `AiSource`, `AiToolCall` and
+  the `AiStreamDelta` hierarchy (`AiTextDelta`, `AiReasoningDelta`, `AiToolCallStarted/Updated/CompletedDelta`,
+  `AiCitationAddedDelta`, `AiCompletedDelta`, `AiErrorDelta`) live in `Tempo.Blazor.Abstractions`
+  (`Tempo.Blazor.AI.Models`), so a backend references the conversation records without Blazor or
+  Markdig. `AiMessageStreamApplier` (`Tempo.Blazor.AI.Services`) folds a delta stream into a message as
+  pure logic (the caller passes the timestamp) and reports whether anything changed; content that
+  arrives after a terminal state is ignored and a re-delivered control delta is a no-op.
+- **`TmMarkdownView`** (`Tempo.Blazor.Components.AI`) — `Markdown`, `CodeBlockTemplate`,
+  `OnCitationClick`, `Class`. Rendered HTML is cached against the last input, so a parent re-render
+  does not re-run Markdig.
+- **`AiMarkdownRenderer`** (`Tempo.Blazor.AI.Markdown`, registered by `AddTempoBlazorAI()` through
+  `TryAddSingleton`) — Markdig with raw HTML **disabled**, an explicit URL allowlist
+  (http/https/mailto/relative; every other scheme, a protocol-relative target and control-character
+  smuggling collapse to `#`), `target="_blank" rel="noopener noreferrer nofollow"` on every link and
+  autolink, absolute-http(s)-only images, `cite:<id>` links rendered as citation chips, escaped code
+  blocks with a copy affordance and a scrollable table wrapper. The extension set is built explicitly
+  instead of `UseAdvancedExtensions()`, so `UseGenericAttributes` (attribute/event-handler injection)
+  and the hosted-media embeds are not part of the pipeline.
+- **Assets** — `_content/Tempo.Blazor.AI/css/components/_markdown-view.css` (tokens only) and the
+  ES module `_content/Tempo.Blazor.AI/js/ai-markdown.js` (imported through `IJSObjectReference`, no
+  `<script>` tag, no CSP `unsafe-inline`) that delegates the citation chips and the code-block copy
+  button to the component. New localization keys `TmMarkdownView_*` (en/cs/sk/fr).
+- **Security tests** — the whole shared vector set is rendered as markdown, as a link target and as an
+  image target, plus a deterministic fuzz pass and a CSS token gate for the package stylesheet. The
+  payloads now live in `tests/Shared/XssPayloads.cs`, which has **no sanitizer dependency**, so
+  `Tempo.Blazor.Tests` links it without an `InternalsVisibleTo` into the email assemblies while the
+  email test projects keep the same bytes through `SanitizerXssVectors` (that file adds the
+  production-tokenizer assertions). A new assembly-level guard pins that the AI contracts live in the
+  UI-free `Tempo.Blazor.Abstractions` assembly.
+- **Review fixes (accessibility, contracts)** — the citation-chip hover painted `--tm-color-primary-50`,
+  a light-only palette step with no dark counterpart, so the label lost contrast in the dark theme; it
+  now mixes the semantic primary into `--tm-color-primary-subtle`, and
+  `AiMarkdownViewCssTests.PackageCss_UsesNoRawPaletteSteps` keeps raw palette steps out of the package.
+  The table wrapper is a keyboard focus stop and a **named region** (`TmMarkdownView_Table` in
+  en/cs/sk/fr, `AiMarkdownRenderOptions.TableLabel`), the code `<pre>` takes `tabindex="0"` with a
+  focus ring, the copy button announces through a **sibling** `role="status"` live region instead of
+  renaming itself, and both the copy button and a citation chip get the 44 px `--tm-touch-target` floor
+  on a coarse pointer. `CodeBlockTemplate` now documents that it must be a **stable reference** (cached
+  field / method group) and that the host escapes `context.Code` (`HtmlEncoder`), and the render cache
+  compares the delegate's `Method` and `Target` instead of the delegate instance. In
+  `AiMessageStreamApplier`, a citation delta without a source or with an empty id is a **no-op** (not an
+  exception) and an error delta after `Completed`/`Stopped` is ignored — the state machine is documented
+  on `Apply`. Decision `AI-MARKDOWN-COPY-DELEGATED` records why the citation chips and the copy button
+  are markup + ES-module delegation rather than Blazor components.
+
+**No breaking changes** — new package surface only; nothing in the core library or an existing
+component changed. Hosts must load `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` (already part of
+the 2.10.0 AI package setup) and call `AddTempoBlazorAI()`, which now also registers
+`AiMarkdownRenderer`.
+
 ### AI conversation package — scaffolding (plan 7f21f26b, phase 1)
 
 New split package **`Tempo.Blazor.AI`** (`src/Tempo.Blazor.AI`, Razor SDK, net8.0/net9.0/net10.0)

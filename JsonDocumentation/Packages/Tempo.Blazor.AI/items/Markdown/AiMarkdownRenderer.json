@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "The safe markdown pipeline behind TmMarkdownView: Markdig with raw HTML disabled, an explicit URL allowlist (http/https/mailto plus relative targets, everything else collapses to '#'), images limited to absolute http(s), links hardened with target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks with a copy affordance and a keyboard-reachable <pre>, tables wrapped in a keyboard-reachable named region and cite: links turned into citation chips. Registered by AddTempoBlazorAI() through TryAddSingleton, so a host may replace it with a subclass.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderer.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMarkdownRenderer"
+}

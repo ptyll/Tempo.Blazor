@@ -21,30 +21,73 @@ builder.Services.AddTempoBlazorAI();
 <link href="_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css" rel="stylesheet" />
 ```
 
-`AddTempoBlazorAI()` registers the core Tempo.Blazor services the AI components build on (the AI
-renderer services are added here in the follow-up phases); it is idempotent, so calling it next to
-`AddTempoBlazor()` (or using `AddTempoBlazorAll()`, which already includes it) is safe.
+`AddTempoBlazorAI()` calls `AddTempoBlazor()` and then registers the package's own services
+(`AiMarkdownRenderer`) through `TryAdd*`; it is idempotent, so calling it next to `AddTempoBlazor()`
+(or using `AddTempoBlazorAll()`, which already includes it) is safe, and a host registration always
+wins.
+
+## Components
+
+| Component | Contract |
+|-----------|----------|
+| `TmMarkdownView` | Renders untrusted markdown through the safe pipeline. Parameters: `Markdown`, `CodeBlockTemplate`, `OnCitationClick`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`). |
+
+```razor
+@using Tempo.Blazor.Components.AI
+
+<TmMarkdownView Markdown="@answer.Text"
+                OnCitationClick="id => preview = answer.FindSource(id)" />
+```
+
+`TmAiMessage`, `TmAiConversation`, `TmAiComposer`, `TmToolCallCard`, `TmThinkingIndicator` and
+`TmReasoningPanel` arrive in the follow-up phases of plan 7f21f26b.
+
+## Markdown security
+
+A model answer is untrusted input, so `AiMarkdownRenderer` — not the host markup — decides what a
+markdown document may become. The pipeline (Markdig, BSD-2-Clause, the package's only third-party
+dependency):
+
+- **never renders raw HTML**: the HTML parsers are disabled, so `<script>` arrives as literal text;
+- **has an explicit URL allowlist**: `http`, `https`, `mailto` and same-document relative targets
+  survive; every other scheme (`javascript:`, `data:`, `vbscript:`, `file:`), a protocol-relative
+  target and whitespace/control-character smuggling (`java\tscript:`) collapses to `#`;
+- **hardens every link**: `target="_blank"` with `rel="noopener noreferrer nofollow"`, including
+  autolinks;
+- **loads only absolute http(s) images**: a refused image degrades to its alt text, so it never
+  becomes a request;
+- **builds the extension set explicitly** — not through `UseAdvancedExtensions()` — so
+  `UseGenericAttributes` (arbitrary attribute names, event handlers), the hosted-media embeds and
+  author-supplied container classes are not part of it;
+- **turns `[1](cite:<sourceId>)` into a citation chip** (`data-source-id`) instead of a link, and
+  raises `OnCitationClick` with the source id;
+- **escapes code blocks** and ships them as `<pre><code class="language-x">` with a copy affordance;
+  the copy/copied labels come from `ITmLocalizer` via `TmMarkdownView`.
+
+The full XSS/mutation-XSS vector set the email sanitizers are held to
+(`tests/Shared/SanitizerXssVectors.cs`) is run through the markdown renderer as a regression test,
+together with a deterministic fuzz pass. `docs/ai-markdown.md` documents the contract and the
+renderer's extension points.
+
+Code blocks are rendered by the pipeline rather than as Blazor components: a citation, a code fence
+and a copy button can sit inside any inline/block element of a markdown document, which a Blazor
+component cannot be placed into. A host that wants syntax highlighting (or any other code-block
+chrome) supplies `CodeBlockTemplate`, a `Func<AiMarkdownCodeBlockContext, string>` returning its own
+HTML.
 
 ## Package contract
 
-The bullets below describe the contract the package is being built to; phase 1 ships the
-registration entry point and the stylesheet, and the components listed above arrive in the
-follow-up phases of plan 7f21f26b.
-
-- **Models and streaming contracts are planned, not shipped yet.** They will live in
-  `Tempo.Blazor.Abstractions` (`Tempo.Blazor.AI.Models` / `Tempo.Blazor.AI.Services`, Fáze 2 of the
-  same plan), which has zero UI dependencies — a backend will be able to reference the message,
-  delta and tool-call records without pulling in Blazor.
-- **No LLM SDK, no PromptHelper.** The package is a UI over generic contracts; the host supplies
-  the model call as an `IAsyncEnumerable<T>` stream.
-- **Markdown will be treated as untrusted model output.** The planned `TmMarkdownView` renders
-  through a Markdig pipeline with raw HTML disabled and an explicit URL-scheme allowlist; links
-  carry `rel="noopener noreferrer nofollow"` and `target="_blank"`. Markdig is already the only
-  third-party dependency of the package.
+- **Models and streaming contracts live in `Tempo.Blazor.Abstractions`**
+  (`Tempo.Blazor.AI.Models` / `Tempo.Blazor.AI.Services`), which has zero UI dependencies — a backend
+  can reference the message, delta, tool-call and citation records without pulling in Blazor or
+  Markdig. `AiMessageStreamApplier` folds the delta stream into a message as pure logic; the caller
+  passes the timestamp.
+- **No LLM SDK, no PromptHelper.** The package is a UI over generic contracts; the host supplies the
+  model call as an `IAsyncEnumerable<T>` stream.
 - **Design system only.** Styling reads `--tm-*` tokens (light and dark themes), every user-visible
-  string will be localized through `ITmLocalizer` (en/cs/sk/fr built in), and every animated
-  subject has a `prefers-reduced-motion` block in the package stylesheet — the phase-1 streaming
-  caret partial is the first one.
+  string is localized through `ITmLocalizer` (en/cs/sk/fr built in), and every animated subject has a
+  `prefers-reduced-motion` block in the package stylesheet — the streaming caret partial is the first
+  one.
 
 ## Static assets
 
@@ -52,8 +95,13 @@ follow-up phases of plan 7f21f26b.
 |-------|------|
 | Stylesheet entry point | `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` |
 | Streaming primitives | `_content/Tempo.Blazor.AI/css/components/_ai-streaming.css` |
+| Markdown typography | `_content/Tempo.Blazor.AI/css/components/_markdown-view.css` |
+| Markdown interop module | `_content/Tempo.Blazor.AI/js/ai-markdown.js` |
 
-`tempo-blazor-ai.css` is an `@import` manifest — hosts reference only the entry point.
+`tempo-blazor-ai.css` is an `@import` manifest — hosts reference only the entry point. The interop
+module is a plain ES module imported through `IJSObjectReference`, so it needs **no** `<script>` tag
+and no CSP `unsafe-inline`; it wires the citation chips (which cannot be Blazor components inside a
+rendered document) and the code-block copy button to the component's root element.
 
 ## Localization
 

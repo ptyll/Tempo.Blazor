@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Arguments, result, name or status of a running tool call changed. A call that was never started is created on the fly.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiToolCallUpdatedDelta"
+}

@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Tempo.Blazor.AI.Markdown;
 
 namespace Tempo.Blazor.Configuration;
 
@@ -9,11 +11,10 @@ public static class AIServiceCollectionExtensions
     /// Registers the services required by the AI conversation components.
     /// </summary>
     /// <remarks>
-    /// Registers the core Tempo.Blazor services the AI components build on; later phases add the AI
-    /// renderer services here. The model and streaming contracts are planned in
-    /// <c>Tempo.Blazor.Abstractions</c> (<c>Tempo.Blazor.AI.Models</c> / <c>Tempo.Blazor.AI.Services</c>,
-    /// plan 7f21f26b Fáze 2), so a backend will be able to use them without Blazor, and no LLM SDK is
-    /// referenced from here.
+    /// Every registration uses <c>TryAdd*</c>, so a host that registered its own service (or a test that
+    /// pre-registers a fake) always wins and calling the method twice is a no-op. The method never
+    /// registers a <c>TimeProvider</c>: a component resolves it as <c>GetService&lt;TimeProvider&gt;() ??
+    /// TimeProvider.System</c>, so the host keeps the last word.
     /// </remarks>
     /// <param name="services">The service collection to add the AI services to.</param>
     /// <returns>The same service collection, so registration calls can be chained.</returns>
@@ -21,6 +22,11 @@ public static class AIServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddTempoBlazor();
+
+        // The safe markdown pipeline behind TmMarkdownView. Stateless (the Markdig pipeline is built once
+        // per process), so a singleton is enough and a host may replace it with a subclass.
+        services.TryAddSingleton<AiMarkdownRenderer>();
+
         return services;
     }
 }

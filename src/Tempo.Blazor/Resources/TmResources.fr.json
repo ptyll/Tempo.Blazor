@@ -6142,5 +6142,10 @@
   "TmGantt_WorkloadRangeTruncated": "Seuls les {0} premiers jours de la plage sont affichés.",
   "TmGanttTaskPanel_SizeBytes": "{0} o",
   "TmGanttTaskPanel_SizeKB": "{0} Ko",
-  "TmGanttTaskPanel_SizeMB": "{0} Mo"
+  "TmGanttTaskPanel_SizeMB": "{0} Mo",
+  "TmMarkdownView_CopyCode": "Copier le code",
+  "TmMarkdownView_CopyCodeLanguage": "Copier le code {0}",
+  "TmMarkdownView_Copied": "Copié",
+  "TmMarkdownView_Citation": "Source {0}",
+  "TmMarkdownView_Table": "Tableau"
 }

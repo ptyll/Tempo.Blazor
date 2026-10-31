@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Base of one incremental step of an answer stream. The host supplies the model call as an IAsyncEnumerable<AiStreamDelta> and AiMessageStreamApplier folds each delta into the message it belongs to.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiStreamDelta"
+}

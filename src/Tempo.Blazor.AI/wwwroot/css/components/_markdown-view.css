@@ -1,0 +1,328 @@
+/* ── TmMarkdownView ────────────────────────────────────────────────────────────────────────────
+   Typography for untrusted model output rendered by the safe markdown pipeline. Every rule reads a
+   --tm-* design token, so light, dark and a host palette all propagate without a component-level theme
+   block. The package ships no animation here on purpose: a markdown answer is long-lived content, so
+   there is no motion to reduce (the streaming caret lives in _ai-streaming.css and carries its own
+   prefers-reduced-motion block).
+
+   The two interactive elements of a rendered answer are the citation chip and the code-block copy
+   button. Both are emitted by AiMarkdownRenderer (a citation can sit inside any inline element, which a
+   Blazor component cannot be), so their markup is styled here from scratch — never by restyling the core
+   `.tm-copy-button`, which belongs to the core package. */
+
+.tm-markdown-view {
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-base);
+    line-height: var(--tm-line-height-relaxed);
+    overflow-wrap: anywhere;
+}
+
+.tm-markdown-view > :first-child {
+    margin-block-start: 0;
+}
+
+.tm-markdown-view > :last-child {
+    margin-block-end: 0;
+}
+
+/* ── Block typography ─────────────────────────────────────────────────────────────────────── */
+
+.tm-markdown-view p {
+    margin-block: 0 var(--tm-space-3);
+}
+
+.tm-markdown-view :is(h1, h2, h3, h4, h5, h6) {
+    margin-block: var(--tm-space-4) var(--tm-space-2);
+    color: var(--tm-color-text);
+    font-weight: 600;
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-markdown-view h1 {
+    font-size: var(--tm-font-size-xl);
+}
+
+.tm-markdown-view h2 {
+    font-size: var(--tm-font-size-lg);
+}
+
+.tm-markdown-view h3 {
+    font-size: var(--tm-font-size-base);
+}
+
+.tm-markdown-view :is(h4, h5, h6) {
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-markdown-view :is(ul, ol) {
+    margin-block: 0 var(--tm-space-3);
+    padding-inline-start: var(--tm-space-5);
+}
+
+.tm-markdown-view li + li {
+    margin-block-start: var(--tm-space-1);
+}
+
+.tm-markdown-view li > p {
+    margin-block: 0;
+}
+
+.tm-markdown-view blockquote {
+    margin: 0 0 var(--tm-space-3);
+    padding-inline-start: var(--tm-space-3);
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-markdown-view hr {
+    margin-block: var(--tm-space-4);
+    border: 0;
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+/* ── Inline content ──────────────────────────────────────────────────────────────────────── */
+
+.tm-markdown-view a {
+    color: var(--tm-color-primary-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.tm-markdown-view a:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-markdown-view :not(pre) > code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--tm-radius-xs);
+    background-color: var(--tm-bg-muted);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-markdown-view img {
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-markdown-view del {
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────────────────────── */
+
+/* A wide answer has to scroll on its own instead of widening the conversation column. The wrapper is
+   emitted by the renderer because a table cannot scroll without a scroll container. */
+.tm-markdown-view__table {
+    margin-block: 0 var(--tm-space-3);
+    max-inline-size: 100%;
+    overflow-x: auto;
+    /* the scroll container must stay keyboard reachable (WCAG 2.1.1) */
+    scrollbar-width: thin;
+}
+
+.tm-markdown-view__table:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-markdown-view table {
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-markdown-view :is(th, td) {
+    padding: var(--tm-space-1-5) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-markdown-view th {
+    background-color: var(--tm-bg-surface-secondary);
+    font-weight: 600;
+}
+
+/* ── Code blocks ────────────────────────────────────────────────────────────────────────── */
+
+.tm-markdown-view__code {
+    margin-block: 0 var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-muted);
+    overflow: hidden;
+}
+
+.tm-markdown-view__code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    min-block-size: var(--tm-space-8);
+    padding-inline: var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-markdown-view__code-language {
+    color: var(--tm-color-text-secondary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    text-transform: lowercase;
+}
+
+.tm-markdown-view__code-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--tm-space-1);
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background-color: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-markdown-view__code-copy:hover {
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+}
+
+.tm-markdown-view__code-copy:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* A copied code block reads as success; the icon swap is driven by the data attribute the interop
+   module sets, so no state has to round-trip through the component. */
+.tm-markdown-view__code-copy[data-copied="true"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-markdown-view__code-copy-icon {
+    display: inline-flex;
+}
+
+.tm-markdown-view__code-copy-icon[data-icon="copied"],
+.tm-markdown-view__code-copy[data-copied="true"] [data-icon="copy"] {
+    display: none;
+}
+
+.tm-markdown-view__code-copy[data-copied="true"] [data-icon="copied"] {
+    display: inline-flex;
+}
+
+/* The `<pre>` is the second keyboard-scrollable region of an answer (the table wrapper is the
+   first): a long line has to be reachable without a mouse, so the renderer gives it `tabindex="0"`.
+   The ring is INSET, not offset outward: the surrounding code card clips at its border
+   (`overflow: hidden`), and an outer ring would be cut off on three sides. */
+.tm-markdown-view pre {
+    margin: 0;
+    padding: var(--tm-space-3);
+    overflow-x: auto;
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+    tab-size: 4;
+}
+
+.tm-markdown-view pre:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-markdown-view pre code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+}
+
+/* ── Citation chips ──────────────────────────────────────────────────────────────────────── */
+
+/* Replaces a `[1](cite:source)` link. It is a real button (keyboard activation for free) but reads as
+   part of the sentence, so it keeps the surrounding line box. */
+.tm-markdown-view__citation {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: 1.25em;
+    min-block-size: 1.25em;
+    margin-inline: 0.1em;
+    padding-inline: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-family: inherit;
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+    line-height: 1;
+    vertical-align: super;
+    cursor: pointer;
+}
+
+/* Hover deepens the resting tint instead of naming a palette step. A raw step (the earlier
+   `--tm-color-primary-50`) is a LIGHT-ONLY literal: it has no dark counterpart, so on the dark
+   surface the chip stayed a near-white pill under `--tm-color-primary-text`, which dark repoints
+   to primary-300, and the label dropped under AA. Mixing the semantic primary into the semantic
+   subtle tint keeps ONE declaration correct in both themes and under a host palette —
+   `AiMarkdownViewCssTests.PackageCss_UsesNoRawPaletteSteps` keeps raw steps out of the package. */
+.tm-markdown-view__citation:hover {
+    background-color: color-mix(in srgb, var(--tm-color-primary-subtle), var(--tm-color-primary) 12%);
+}
+
+.tm-markdown-view__citation:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* Coarse pointers get the 44px touch floor: a citation chip inside prose is exactly the control a thumb
+   misses otherwise. The chip grows around the same text, so the line box simply gets taller. */
+@media (pointer: coarse) {
+    .tm-markdown-view__citation {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+        justify-content: center;
+    }
+
+    /* Same 44px floor for the copy button: it is the other control a thumb aims at, and on a
+       coarse pointer the code header is the row it sits in. */
+    .tm-markdown-view__code-copy {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Task lists ─────────────────────────────────────────────────────────────────────────── */
+
+.tm-markdown-view .contains-task-list {
+    padding-inline-start: var(--tm-space-2);
+    list-style: none;
+}
+
+.tm-markdown-view .task-list-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+}
+
+.tm-markdown-view .task-list-item input[type="checkbox"] {
+    margin: 0;
+    accent-color: var(--tm-color-primary);
+}
+
+/* ── Forced colors (Windows high contrast) ──────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-markdown-view__code,
+    .tm-markdown-view__code-header,
+    .tm-markdown-view__citation,
+    .tm-markdown-view :is(th, td) {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+}

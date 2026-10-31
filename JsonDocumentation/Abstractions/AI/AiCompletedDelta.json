@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The model finished the answer; the message moves to Completed and late content deltas are ignored.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiCompletedDelta"
+}

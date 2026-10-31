@@ -1,5 +1,7 @@
 using System.Xml.Linq;
 using FluentAssertions;
+using Tempo.Blazor.AI.Models;
+using Tempo.Blazor.AI.Services;
 using Tempo.Blazor.Configuration;
 
 namespace Tempo.Blazor.Tests.Configuration;
@@ -207,6 +209,40 @@ public sealed class AiSplitTests
         unexpected.Should().BeEmpty(
             "Tempo.Blazor.AI may only reference System.*, Microsoft.*, Markdig, netstandard/mscorlib "
             + "and its own Tempo.Blazor stack — anything else is a dependency smuggled past the csproj guards");
+    }
+
+    /// <summary>
+    /// The model/streaming contracts ship in the UI-FREE <c>Tempo.Blazor.Abstractions</c> assembly, and that
+    /// assembly still references neither the Razor stack nor the Markdown processor. This is the invariant
+    /// that lets a backend (an API that stores conversations, a worker that streams an answer) reference the
+    /// records without pulling Blazor or Markdig into its process — asserted on the ASSEMBLY, because a
+    /// project-file guard cannot see a transitive reference.
+    /// </summary>
+    [Fact]
+    public void Ai_model_contracts_live_in_the_ui_free_abstractions_assembly()
+    {
+        var abstractions = typeof(AiMessage).Assembly;
+
+        abstractions.GetName().Name.Should().Be("Tempo.Blazor.Abstractions");
+        typeof(AiStreamDelta).Assembly.Should().BeSameAs(abstractions);
+        typeof(AiMessageStreamApplier).Assembly.Should().BeSameAs(abstractions);
+
+        var references = abstractions.GetReferencedAssemblies()
+            .Select(assembly => assembly.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .ToList();
+
+        references.Should().NotContain(
+            name => name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal),
+            "the AI contracts must stay usable from a backend — no Razor/ASP.NET Core reference");
+        references.Should().NotContain(
+            name => string.Equals(name, "Markdig", StringComparison.Ordinal),
+            "the markdown processor belongs to Tempo.Blazor.AI; the contracts it feeds are plain records");
+        references.Should().NotContain(
+            name => string.Equals(name, "Tempo.Blazor", StringComparison.Ordinal)
+                || string.Equals(name, "Tempo.Blazor.AI", StringComparison.Ordinal),
+            "Abstractions sits at the bottom of the graph — the UI packages depend on it, never the reverse");
     }
 
     private static string FindRepositoryRoot()

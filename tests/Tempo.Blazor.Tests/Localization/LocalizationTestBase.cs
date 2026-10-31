@@ -29,6 +29,7 @@ public abstract class LocalizationTestBase : BunitContext
     protected LocalizationTestBase()
     {
         Services.AddSingleton<ITmLocalizer>(BuildEnglishLocalizer());
+        Services.AddSingleton<Tempo.Blazor.AI.Markdown.AiMarkdownRenderer>();
         Services.AddScoped<DragDropService>();
         Services.AddSingleton<Tempo.Blazor.Components.Diagram.Stencils.DiagramStencilRegistry>();
         Services.AddSingleton<Tempo.Blazor.Components.Diagram.Templates.DiagramTemplateRegistry>();
@@ -195,6 +196,7 @@ public abstract class LocalizationTestBase : BunitContext
     protected void UseCzechLocalization()
     {
         Services.AddSingleton<ITmLocalizer>(BuildCzechLocalizer());
+        Services.AddSingleton<Tempo.Blazor.AI.Markdown.AiMarkdownRenderer>();
     }
 
     /// <summary>Registers a custom localizer with the provided key/value pairs.</summary>
@@ -280,6 +282,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmCopyButton_Copy"]   = "Copy",
         ["TmCopyButton_CopyToClipboard"] = "Copy to clipboard",
         ["TmCopyButton_Copied"] = "Copied",
+        ["TmMarkdownView_CopyCode"] = "Copy code",
+        ["TmMarkdownView_CopyCodeLanguage"] = "Copy {0} code",
+        ["TmMarkdownView_Copied"] = "Copied",
+        ["TmMarkdownView_Citation"] = "Source {0}",
+        ["TmMarkdownView_Table"] = "Table",
         ["TmLayoutMode_Auto"] = "Auto",
         ["TmLayoutMode_Desktop"] = "Desktop",
         ["TmLayoutMode_Tablet"] = "Tablet",
@@ -5080,6 +5087,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmCopyButton_Copy"]   = "Kopírovat",
         ["TmCopyButton_CopyToClipboard"] = "Kopírovat do schránky",
         ["TmCopyButton_Copied"] = "Zkopírováno",
+        ["TmMarkdownView_CopyCode"] = "Kopírovat kód",
+        ["TmMarkdownView_CopyCodeLanguage"] = "Kopírovat kód {0}",
+        ["TmMarkdownView_Copied"] = "Zkopírováno",
+        ["TmMarkdownView_Citation"] = "Zdroj {0}",
+        ["TmMarkdownView_Table"] = "Tabulka",
         ["TmLayoutMode_Auto"] = "Automaticky",
         ["TmLayoutMode_Desktop"] = "Desktop",
         ["TmLayoutMode_Tablet"] = "Tablet",

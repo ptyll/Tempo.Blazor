@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Lifecycle of an AiMessage driven by the delta stream — Pending, Streaming, Completed, Stopped or Failed.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageStatus.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMessageStatus"
+}

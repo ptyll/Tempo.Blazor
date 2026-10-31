@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Execution status of one tool call: Queued, Running, Succeeded, Failed or Cancelled.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCallStatus.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiToolCallStatus"
+}

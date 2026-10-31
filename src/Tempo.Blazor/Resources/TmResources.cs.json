@@ -6183,5 +6183,10 @@
   "TmGantt_WorkloadRangeTruncated": "Zobrazeno jen prvních {0} dnů rozsahu.",
   "TmGanttTaskPanel_SizeBytes": "{0} B",
   "TmGanttTaskPanel_SizeKB": "{0} KB",
-  "TmGanttTaskPanel_SizeMB": "{0} MB"
+  "TmGanttTaskPanel_SizeMB": "{0} MB",
+  "TmMarkdownView_CopyCode": "Kopírovat kód",
+  "TmMarkdownView_CopyCodeLanguage": "Kopírovat kód {0}",
+  "TmMarkdownView_Copied": "Zkopírováno",
+  "TmMarkdownView_Citation": "Zdroj {0}",
+  "TmMarkdownView_Table": "Tabulka"
 }

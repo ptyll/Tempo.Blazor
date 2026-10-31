@@ -57,6 +57,10 @@
   <ItemGroup>
     <!-- CF19g — the ONE assembly-init file, linked (internal does not cross assemblies). -->
     <Compile Include="..\Shared\TestAssemblyInit.cs" />
+    <!-- The shared XSS / mutation-XSS payload set the AI markdown pipeline is held to. Deliberately the
+         sanitizer-FREE file: this project has no IVT into the email assemblies, so the email package's
+         SanitizerXssVectors (which scans with the production tokenizer) stays in the email test projects. -->
+    <Compile Include="..\Shared\XssPayloads.cs" />
   </ItemGroup>
 
   <ItemGroup>

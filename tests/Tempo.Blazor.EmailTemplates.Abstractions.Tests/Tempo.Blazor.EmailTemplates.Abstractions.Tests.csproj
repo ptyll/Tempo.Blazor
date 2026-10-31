@@ -28,6 +28,7 @@
   <!-- The XSS/mutation-XSS vector set is shared by name with the Engine test project, which holds the
        AngleSharp parity run: one list, two sanitizers, no drift. -->
   <ItemGroup>
+    <Compile Include="..\Shared\XssPayloads.cs" />
     <Compile Include="..\Shared\SanitizerXssVectors.cs" />
   </ItemGroup>
 

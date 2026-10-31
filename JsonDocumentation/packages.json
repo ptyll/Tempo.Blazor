@@ -58,7 +58,9 @@
       "documentationRoots": [
         "Packages/Tempo.Blazor.AI/items"
       ],
-      "componentRoots": [],
+      "componentRoots": [
+        "src/Tempo.Blazor.AI/Components"
+      ],
       "includePatterns": [],
       "excludePatterns": [],
       "includePublicTypes": true,

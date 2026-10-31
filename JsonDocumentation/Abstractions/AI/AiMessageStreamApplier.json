@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Services",
+  "description": "Applies one AiStreamDelta to an AiMessage and reports whether anything changed. Pure logic with no UI and no clock of its own (the caller passes the timestamp), so a WebAssembly host, a Server circuit and a unit test produce the same message; the boolean return lets a component skip a render for a no-op delta. A citation delta without a source or with an empty id is a no-op rather than an exception, and an error delta arriving after Completed or Stopped is ignored — a finished or stopped answer is never retroactively failed.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/AiMessageStreamApplier.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMessageStreamApplier"
+}

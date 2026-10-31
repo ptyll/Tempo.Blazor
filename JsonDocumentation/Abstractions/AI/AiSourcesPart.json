@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The sources cited by an answer, rendered as source cards. Add() deduplicates by source id, so a re-delivered citation never duplicates a card.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiSourcesPart"
+}

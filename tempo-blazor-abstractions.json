@@ -36,6 +36,8 @@
       "Tempo.Blazor.Abstractions.Shared",
       "Tempo.Blazor.Abstractions.Wireframe.Export",
       "Tempo.Blazor.Abstractions.WorkItems",
+      "Tempo.Blazor.AI.Models",
+      "Tempo.Blazor.AI.Services",
       "Tempo.Blazor.Components.Diagram.Commands",
       "Tempo.Blazor.Components.Diagram.Models",
       "Tempo.Blazor.Components.Diagram.Serialization",
@@ -91,6 +93,339 @@
     ]
   },
   "items": [
+    {
+      "itemName": "AiCitationAddedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The answer cited a source. The source id must be non-empty and a re-delivered id is ignored.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiCompletedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The model finished the answer; the message moves to Completed and late content deltas are ignored.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiErrorDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The stream failed: the message moves to Failed and carries the reason in AiMessage.Error.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessage",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model and the cited sources. Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FindSource",
+          "kind": "Method",
+          "type": "AiSource?",
+          "description": "Finds a cited source by id, so a cite: chip can resolve its preview.",
+          "parameters": [
+            {
+              "name": "sourceId",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC creation time."
+        },
+        {
+          "name": "Error",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Failure reason when Status is Failed."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable message identifier; the streaming API addresses messages by it."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Model identifier that produced the answer, when the host reports one."
+        },
+        {
+          "name": "Parts",
+          "kind": "Property",
+          "type": "IList<AiMessagePart>",
+          "description": "Ordered parts of the message."
+        },
+        {
+          "name": "Role",
+          "kind": "Property",
+          "type": "AiMessageRole",
+          "description": "Who produced the turn."
+        },
+        {
+          "name": "Sources",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiSource>",
+          "description": "Sources cited by the answer — the contents of the trailing AiSourcesPart, or an empty list while nothing has been cited."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AiMessageStatus",
+          "description": "Current lifecycle state."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the message concatenated in part order (markdown, not plain text)."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessagePart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Base of the ordered parts of an AiMessage — AiTextPart, AiReasoningPart, AiToolCallPart and AiSourcesPart — so a message can interleave reasoning, tool calls and text in arrival order.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageRole",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Who produced an AiMessage: User, Assistant, System or Tool.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageRole.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Lifecycle of an AiMessage driven by the delta stream — Pending, Streaming, Completed, Stopped or Failed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageStatus.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageStreamApplier",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Services",
+      "description": "Applies one AiStreamDelta to an AiMessage and reports whether anything changed. Pure logic with no UI and no clock of its own (the caller passes the timestamp), so a WebAssembly host, a Server circuit and a unit test produce the same message; the boolean return lets a component skip a render for a no-op delta. A citation delta without a source or with an empty id is a no-op rather than an exception, and an error delta arriving after Completed or Stopped is ignored — a finished or stopped answer is never retroactively failed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/AiMessageStreamApplier.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Applies one delta to message.",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "AiMessage"
+            },
+            {
+              "name": "delta",
+              "type": "AiStreamDelta"
+            },
+            {
+              "name": "timestamp",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "AiReasoningDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A chunk of reasoning text, appended to the trailing reasoning step; NewStep starts a new step instead.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiReasoningPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Reasoning (\"thinking\") of an assistant message: ordered steps, the sources the model inspected and the elapsed time, so TmReasoningPanel can render it as one disclosure.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiSource",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One source an assistant answer cites: a stable Id the markdown cite: link points at plus the title, URL, snippet, icon and domain shown in the citation preview and the source cards.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSource.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiSourcesPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The sources cited by an answer, rendered as source cards. Add() deduplicates by source id, so a re-delivered citation never duplicates a card.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiStreamDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Base of one incremental step of an answer stream. The host supplies the model call as an IAsyncEnumerable<AiStreamDelta> and AiMessageStreamApplier folds each delta into the message it belongs to.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiTextDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A chunk of answer text, appended to the trailing text part of the message.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiTextPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The markdown text of a message. Untrusted model output, so it is rendered through TmMarkdownView's safe pipeline; Append grows it as streamed chunks arrive.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCall",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One tool/function invocation of an answer with its live status, raw JSON arguments and result, timestamps, redaction flag and the elapsed Duration.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCall.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CompletedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "UTC end of the execution, set by the completion delta."
+        },
+        {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "Elapsed execution time, or null while the call is still running."
+        },
+        {
+          "name": "IsRedacted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true the arguments and result are hidden and the card renders a localized notice instead."
+        },
+        {
+          "name": "StartedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "UTC start of the execution, set by the start delta."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AiToolCallStatus",
+          "description": "Current status."
+        }
+      ]
+    },
+    {
+      "itemName": "AiToolCallCompletedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A tool call finished with a final status, result, failure reason and redaction flag; the first completion keeps its timestamp, so a re-delivered completion is a no-op.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Wraps one AiToolCall as a message part, so tool calls appear in the position they were started.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallStartedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The model started a tool call. The call's Id targets later updates and the completion, and a re-delivered start does not duplicate the part.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Execution status of one tool call: Queued, Running, Succeeded, Failed or Cancelled.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCallStatus.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallUpdatedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Arguments, result, name or status of a running tool call changed. A call that was never started is created on the fly.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
     {
       "itemName": "CsvColumnMapping",
       "kind": "Class",
@@ -37898,11 +38233,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1514,
-    "manualItemCount": 1514,
-    "generatedItemCount": 1497,
+    "itemCount": 1535,
+    "manualItemCount": 1535,
+    "generatedItemCount": 1518,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1497
+    "publicApiTypeCount": 1518
   }
 }

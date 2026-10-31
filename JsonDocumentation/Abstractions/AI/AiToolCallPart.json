@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Wraps one AiToolCall as a message part, so tool calls appear in the position they were started.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiToolCallPart"
+}

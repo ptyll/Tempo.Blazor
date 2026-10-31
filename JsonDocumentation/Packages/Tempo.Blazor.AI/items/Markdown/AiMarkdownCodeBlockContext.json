@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "One code block handed to AiMarkdownRenderOptions.CodeBlockRenderer (the CodeBlockTemplate seam of TmMarkdownView): its index, its raw decoded code (the host escapes it) and the fence language.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownCodeBlockContext.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMarkdownCodeBlockContext"
+}
