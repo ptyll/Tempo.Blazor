@@ -8,4 +8,5 @@
 @import "components/_ai-tool-call.css";
 @import "components/_ai-streaming.css";
 @import "components/_ai-conversation.css";
+@import "components/_ai-composer.css";
 @import "components/_markdown-view.css";

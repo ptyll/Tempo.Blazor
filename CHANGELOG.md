@@ -22,6 +22,66 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — `TmAiComposer` prompt composer (plan 7f21f26b, phase 6)
+
+The prompt side of a conversation as a component: an autosizing textarea with a real IME guard, a send/stop
+slot, attachments with enforced limits, a slash-command and mention combobox, a model selector and an opt-in
+voice input. Contract: [docs/ai-composer.md](docs/ai-composer.md).
+
+- **`TmAiComposer`** (`Tempo.Blazor.Components.AI`) — `Text`/`TextChanged`, `OnSubmit`, `IsGenerating`, `OnStop`,
+  `Placeholder`, `AriaLabel`, `Disabled`, `Sticky`, `MaxRows`, `EnableAttachments`, `MaxAttachments`,
+  `MaxFileSize`, `Accept`, `Attachments`/`AttachmentsChanged`, `Commands`, `MentionProvider`, `MentionDebounce`,
+  `Models`, `SelectedModel`/`SelectedModelChanged`, `ModelSelectorTemplate`, `EnableVoiceInput`,
+  `SpeechLanguage`, `TrackVirtualKeyboard`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`); public
+  `SubmitAsync()`, `IsListening`, `CurrentAttachments`. The root carries `data-generating`; the stable hooks are
+  the `data-testid`s `ai-composer-input`, `-send`, `-stop`, `-attach`, `-voice`, `-model`, `-attachments`,
+  `-attachment`, `-remove-attachment`, `-suggestions`, `-option`, `-announcement`.
+- **Submit** — one submit runs at a time: while `OnSubmit` is in flight the Send control is already disabled
+  (`IsGenerating` is a parameter and does not move until the host re-renders), so a fast second Enter or a
+  double click is a no-op instead of a second generation. The post-submit clear compares against the snapshot
+  that was sent, so text typed, an attachment picked or a mention added while a slow handler ran survives for
+  the next prompt; a handler that throws keeps the draft.
+- **Keyboard** — Enter sends, Shift+Enter is a new line, Alt/Ctrl/⌘+Enter stay native, and an IME
+  composition-Enter never sends. The IME guard lives in the package's ES module `ai-composer.js` because a net8
+  `KeyboardEventArgs` has no `IsComposing` and Safari reports the commit-Enter as `keyCode 229`; the C#
+  `@onkeydown` handler is the pre-attach fallback and the single owner of the combobox keys, so exactly one
+  activation happens per press.
+- **Suggestions** — one listbox serves the `/` slash commands (`AiSlashCommand`) and the host's `@` mentions
+  (`IAiMentionProvider`). The textarea is the combobox (`aria-expanded`, `aria-controls` only while the listbox
+  is rendered, `aria-activedescendant`, arrow keys, Home/End, Enter, Escape, Tab) and keeps the DOM focus, so a
+  screen reader announces the highlighted option instead of moving the reader into a list. Mention queries are
+  debounced (`MentionDebounce`, on the injected `TimeProvider`) and cancelled on a query change, a close or a
+  dispose; a provider that throws closes the list with one localized announcement.
+- **Attachments** — `AiComposerAttachment` carries the metadata plus an opaque `Content` (the `IBrowserFile`),
+  so Abstractions keeps its zero-UI dependency. `MaxAttachments` and `MaxFileSize` are enforced before anything
+  reaches the host (the limit message is the plural family `TmAiComposer_TooManyAttachments_One/_Few/_Many/
+  _Other`, so the noun agrees with the count); an accepted batch raises `AttachmentsChanged` once; chips are
+  named by their file and the Remove control returns the focus to the prompt. After a successful submit the
+  composer drops exactly the chips it sent and keeps the files picked in the meantime.
+- **Model selector** — `Models` + `@bind-SelectedModel` render the built-in select; `ModelSelectorTemplate`
+  replaces it with the host's own picker and the selected id travels as `AiComposerSubmit.Model`.
+- **Voice** — opt-in (`EnableVoiceInput`, default `false`) and feature-detected, so a browser without the Web
+  Speech API never shows the control. Final transcripts are inserted at the caret; the session is released by
+  `stopSpeech`, by `detach` and by disabling the composer.
+- **Mobile** — the narrow layout is sticky on the composer's bottom edge (`Sticky="true"` forces it at any
+  width); `TrackVirtualKeyboard` adds the `visualViewport` tracker and the runtime
+  `--tm-ai-composer-keyboard-inset` knob (never declared by CSS, so a host override cascades), matching the
+  `TmChat.TrackVirtualKeyboard` pattern.
+- **Accessibility** — one polite live region for every announcement (attachment limits, voice state/failure,
+  a failed mention query) whose `role="status"` paragraph is persistent and only replaces its keyed child
+  span, so a repeated wording is announced again (WCAG 4.1.3) and the transient text is never the prompt's
+  `aria-describedby`; the send/stop swap moves the focus to the replacement control by probing the slot
+  before the render (`isFocusWithin`) and falling back to the prompt when the returning Send is disabled
+  (WCAG 2.4.3); forced-colors rules keep the surfaces, the active suggestion and the listening microphone
+  visible and the listening state also carries a non-colour ring (WCAG 1.4.1); the toolbar row shares one
+  2.75 rem target height and a coarse pointer gets the 44 px floor on every action; nothing in the composer
+  stylesheet animates.
+- **New Abstractions contracts** — `AiComposerSubmit`, `AiComposerAttachment`, `AiSlashCommand`,
+  `AiMentionItem` and `IAiMentionProvider` (`Tempo.Blazor.AI.Models` / `.Services`); backend-consumable with no
+  Blazor, Markdig or LLM SDK reference.
+- **Compatibility** — everything is additive: a new component, new models and a new stylesheet partial. No
+  existing component, parameter, CSS class or DOM changed.
+
 ### AI conversation package — `TmAiConversation` and streaming (plan 7f21f26b, phase 5)
 
 The transcript of a conversation as a component: a scroll container that follows new content only while

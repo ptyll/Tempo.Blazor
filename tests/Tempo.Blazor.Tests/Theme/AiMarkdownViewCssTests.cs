@@ -52,6 +52,22 @@ public sealed class AiMarkdownViewCssTests
     /// </summary>
     private static readonly string[] CoreOwnedClasses = ["tm-sr-only"];
 
+    /// <summary>
+    /// RUNTIME knobs — custom properties a package module writes into an element's inline style and the
+    /// stylesheet only READS through a <c>var()</c> fallback. They are deliberately never declared by CSS: a
+    /// declared value would outrank a host override, and the whole point of a runtime knob is that the module
+    /// (the virtual-keyboard inset) or the caret measurement owns the value. They are allowlisted here so the
+    /// alias sweep keeps finding real typos, and <see cref="RuntimeKnobs_AreDeclaredByNoStylesheet"/> pins that
+    /// they stay undeclared.
+    /// </summary>
+    private static readonly string[] RuntimeKnobs =
+    [
+        "--tm-ai-composer-keyboard-inset",
+        "--tm-ai-composer-caret-inline-start",
+        "--tm-ai-composer-caret-block-end",
+        "--tm-ai-composer-list-max-block-size",
+    ];
+
     [Fact]
     public void PackageCss_HasNoUndefinedTokenAliases()
     {
@@ -65,9 +81,10 @@ public sealed class AiMarkdownViewCssTests
         {
             foreach (Match usage in TokenUsage.Matches(Strip(css)))
             {
-                if (!defined.Contains(usage.Groups[1].Value))
+                var token = usage.Groups[1].Value;
+                if (!defined.Contains(token) && !RuntimeKnobs.Contains(token, StringComparer.Ordinal))
                 {
-                    offences.Add($"{file}: undefined token {usage.Groups[1].Value}");
+                    offences.Add($"{file}: undefined token {token}");
                 }
             }
         }
@@ -96,6 +113,22 @@ public sealed class AiMarkdownViewCssTests
 
         offences.Should().BeEmpty(
             "AI package stylesheets paint with --tm-* tokens only; a colour literal pins one theme forever. "
+            + "Offences:\n" + string.Join("\n", offences));
+    }
+
+    [Fact]
+    public void RuntimeKnobs_AreDeclaredByNoStylesheet()
+    {
+        var offences = PackageCss()
+            .SelectMany(pair => TokenDefinition.Matches(Strip(pair.Css))
+                .Select(match => match.Groups[1].Value)
+                .Where(token => RuntimeKnobs.Contains(token, StringComparer.Ordinal))
+                .Select(token => $"{pair.File}: declares the runtime knob {token}"))
+            .ToList();
+
+        offences.Should().BeEmpty(
+            "a runtime knob is written only by the package module (and therefore must keep a var() fallback): "
+            + "declaring it in CSS outranks a host override and turns the runtime value into a fixed default. "
             + "Offences:\n" + string.Join("\n", offences));
     }
 

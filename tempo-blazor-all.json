@@ -33878,6 +33878,202 @@
       },
       "items": [
         {
+          "itemName": "TmAiComposer",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "The prompt composer of an AI conversation: an autosizing textarea whose Enter sends and Shift+Enter inserts a new line (an IME composition never sends), a send slot that becomes Stop while a generation runs, attachment chips with MaxAttachments/MaxFileSize enforced against a localized message, a model selector (built-in or the host's own template), an opt-in voice input that renders only where the Web Speech API exists, and one suggestion listbox shared by the \"/\" slash commands and the host's \"@\" mention provider. The textarea is the combobox of that listbox (aria-expanded, aria-activedescendant, arrow keys, Enter, Escape) and keeps the DOM focus while the list is open, the caret position comes from the package's ES module ai-composer.js (which also owns the autosize and the IME guard), and every announcement goes through the component's single polite live region. OnSubmit carries the trimmed text, the attachments, the selected model, the mentions and the slash command; the draft is cleared only after the handler completed.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiComposer.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Accept",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accepted file types forwarded to the browser picker (for example \"image/*,.pdf\")."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the prompt. Default null uses the localized \"Message\". Set it when the page has several composers so a screen-reader user can tell them apart."
+            },
+            {
+              "name": "Attachments",
+              "type": "IReadOnlyList<AiComposerAttachment>?",
+              "isRequired": false,
+              "description": "Attachments seeded by the host. A new list whose ids differ from the current chips replaces them; echoing the list the component raised through AttachmentsChanged is not a replacement."
+            },
+            {
+              "name": "AttachmentsChanged",
+              "type": "EventCallback<IReadOnlyList<AiComposerAttachment>>",
+              "isRequired": false,
+              "description": "Raised with every accepted attachment change (a pick, a removal, the post-submit clear)."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Commands",
+              "type": "IReadOnlyList<AiSlashCommand>?",
+              "isRequired": false,
+              "description": "Slash commands offered after the reader types \"/\". A command is filtered by its title (and its description); picking one inserts its Prompt (or \"/{Title}\") into the draft and the next submit carries it as AiComposerSubmit.Command."
+            },
+            {
+              "name": "Disabled",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Disables the prompt, the picker, the voice control and the send/stop slot."
+            },
+            {
+              "name": "EnableAttachments",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Offer the attachment picker and the chip list. Default true."
+            },
+            {
+              "name": "EnableVoiceInput",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Offer the opt-in voice input. Default false: the control renders only when this is true AND the browser exposes the Web Speech API, so a browser without speech recognition never shows a dead button."
+            },
+            {
+              "name": "IsGenerating",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a generation is running. The send slot renders the Stop control instead of Send while it is true, and Enter cannot start a second generation."
+            },
+            {
+              "name": "MaxAttachments",
+              "type": "int",
+              "isRequired": false,
+              "default": "5",
+              "description": "How many files one prompt may carry. Default 5. A zero (or negative) value refuses every file with the localized \"at most 0 files\" message, which is how a host turns attachments off without removing the picker."
+            },
+            {
+              "name": "MaxFileSize",
+              "type": "long",
+              "isRequired": false,
+              "default": "10L * 1024 * 1024",
+              "description": "The largest file the composer accepts, in bytes. Default 10 MB. Zero (or negative) disables the size check; the browser and the host's upload path remain responsible for what they will actually read."
+            },
+            {
+              "name": "MaxRows",
+              "type": "int",
+              "isRequired": false,
+              "default": "8",
+              "description": "How many rows the prompt may grow to before it starts scrolling. Default 8. The module clamps the autosize to this row count, and a value of zero or less leaves the height uncapped."
+            },
+            {
+              "name": "MentionDebounce",
+              "type": "TimeSpan",
+              "isRequired": false,
+              "default": "TimeSpan.FromMilliseconds(200)",
+              "description": "Quiet period before a mention query is sent. Default 200 ms. Zero sends every keystroke, which is only reasonable for an in-memory provider."
+            },
+            {
+              "name": "MentionProvider",
+              "type": "IAiMentionProvider?",
+              "isRequired": false,
+              "description": "The source of the \"@\" mentions. The composer calls it with the typed query, debounced by MentionDebounce and cancelled as soon as the query changes or the list closes. Without a provider the \"@\" trigger does nothing."
+            },
+            {
+              "name": "Models",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "The models the reader may pick from. An empty (or null) list hides the built-in select unless ModelSelectorTemplate supplies a picker of its own."
+            },
+            {
+              "name": "ModelSelectorTemplate",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Replaces the built-in model select with the host's own picker — a full model picker with descriptions, a provider switcher, … The host binds its own control to SelectedModel; the composer only carries the value into the submit."
+            },
+            {
+              "name": "OnStop",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the reader activates the Stop control of a running generation."
+            },
+            {
+              "name": "OnSubmit",
+              "type": "EventCallback<AiComposerSubmit>",
+              "isRequired": false,
+              "description": "Raised with the submitted prompt: the trimmed text, the attachments, the selected model, the mentions the draft references and the slash command it started from. The draft, the attachments and the recorded mentions are cleared only after the handler completed — a handler that throws keeps the reader's text. Without a bound handler the send control is not offered."
+            },
+            {
+              "name": "Placeholder",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Placeholder of the prompt. Default null uses the localized \"Ask anything…\"."
+            },
+            {
+              "name": "SelectedModel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Identifier of the model the draft targets, two-way bound through SelectedModelChanged. A host echoing the value it received is not a replacement."
+            },
+            {
+              "name": "SelectedModelChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised with the model the reader picked in the built-in select."
+            },
+            {
+              "name": "SpeechLanguage",
+              "type": "string?",
+              "isRequired": false,
+              "description": "BCP-47 language of the speech recognizer. Default null uses the document's language and then en-US."
+            },
+            {
+              "name": "Sticky",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Stick the composer to the bottom of its scroll container at every width. Default false — the narrow (mobile) layout is sticky on its own, this forces it in a wide container too."
+            },
+            {
+              "name": "Text",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The draft. Two-way bound: the component raises TextChanged on every edit and clears the draft after a successful submit. A host that reassigns the value to something the component did not type replaces the draft (the suggestion list closes and the recorded command/mentions are dropped); a host echoing the value it received is not a replacement."
+            },
+            {
+              "name": "TextChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised with the draft on every edit and with an empty string after a successful submit."
+            },
+            {
+              "name": "TrackVirtualKeyboard",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Track the on-screen keyboard so a sticky composer stays above it (the iOS visualViewport pattern of TmChat.TrackVirtualKeyboard). Default false: no viewport listeners and no inline knob."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Send a prompt and stop a running generation",
+              "code": "<TmAiComposer @ref=\"composer\"\n              @bind-Text=\"draft\"\n              IsGenerating=\"@generating\"\n              OnSubmit=\"@SendAsync\"\n              OnStop=\"@(() => generation?.Cancel())\" />\n\n@code {\n    private TmAiComposer composer = default!;\n    private string draft = string.Empty;\n    private bool generating;\n    private CancellationTokenSource? generation;\n\n    private async Task SendAsync(AiComposerSubmit submit)\n    {\n        generation = new CancellationTokenSource();\n        generating = true;\n        try\n        {\n            await client.AskAsync(submit.Text, submit.Attachments, submit.Model, generation.Token);\n        }\n        finally\n        {\n            generating = false;\n        }\n    }\n}"
+            },
+            {
+              "title": "Slash commands, mentions, attachments and a model select",
+              "code": "<TmAiComposer Commands=\"@commands\"\n              MentionProvider=\"@mentions\"\n              Models=\"@models\"\n              @bind-SelectedModel=\"model\"\n              MaxAttachments=\"3\"\n              MaxFileSize=\"@(5 * 1024 * 1024)\"\n              Accept=\"image/*,.pdf\"\n              OnSubmit=\"@SendAsync\" />\n\n@code {\n    private readonly List<AiSlashCommand> commands =\n    [\n        new() { Id = \"summarise\", Title = \"summarise\", Description = \"Summarise the thread\" },\n        new() { Id = \"translate\", Title = \"translate\", Description = \"Translate the thread\" },\n    ];\n\n    private readonly string[] models = [\"gpt-4o\", \"o3-mini\"];\n    private string? model = \"gpt-4o\";\n}"
+            },
+            {
+              "title": "Voice input and a host-owned model picker",
+              "code": "<TmAiComposer EnableVoiceInput=\"true\"\n              SpeechLanguage=\"cs-CZ\"\n              Sticky=\"true\"\n              TrackVirtualKeyboard=\"true\"\n              OnSubmit=\"@SendAsync\">\n    <ModelSelectorTemplate>\n        <MyModelPicker @bind-Model=\"model\" />\n    </ModelSelectorTemplate>\n</TmAiComposer>"
+            }
+          ]
+        },
+        {
           "itemName": "TmAiConversation",
           "kind": "Component",
           "category": "AI",
@@ -34536,6 +34732,10 @@
       "libraryExamples": [],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-composer.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-conversation.css",
           "kind": "Css"
         },
@@ -34564,6 +34764,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-composer.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-conversation.js",
           "kind": "JavaScript"
         },
@@ -34574,14 +34778,22 @@
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-message.js",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-conversation.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 12,
-        "manualItemCount": 12,
-        "generatedItemCount": 12,
+        "itemCount": 13,
+        "manualItemCount": 13,
+        "generatedItemCount": 13,
         "generatedOnlyItemCount": 0,
-        "componentCount": 7,
+        "componentCount": 8,
         "publicApiTypeCount": 5
       }
     },
@@ -72860,6 +73072,78 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "AiComposerAttachment",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One file attached to a prompt: the metadata a submit contract needs (name, size in bytes, MIME type, optional URL) plus an opaque Content slot the host uses to keep the browser file, a stream or a blob handle. The composer never reads Content — it only enforces MaxAttachments and MaxFileSize on the metadata it can see and renders the chips.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerAttachment.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Content",
+              "kind": "Property",
+              "type": "object?",
+              "description": "Opaque host payload — typically the IBrowserFile the reader picked, or an already-open stream. The composer copies it into Attachments untouched and never inspects it."
+            },
+            {
+              "name": "ContentType",
+              "kind": "Property",
+              "type": "string?",
+              "description": "MIME content type when the browser reported one."
+            },
+            {
+              "name": "SizeBytes",
+              "kind": "Property",
+              "type": "long",
+              "description": "File size in bytes, as reported by the browser."
+            },
+            {
+              "name": "Url",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional preview or download URL. A host that uploads the file immediately can point the chip at the stored asset instead of keeping the bytes."
+            }
+          ]
+        },
+        {
+          "itemName": "AiComposerSubmit",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "What a composer sends: the prompt text, the attachments the reader picked, the selected model, the mentions the draft references and the slash command it started from. A plain container so a backend can consume it without Blazor — the composer raises it through OnSubmit and clears the draft only after the handler completed.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerSubmit.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Attachments",
+              "kind": "Property",
+              "type": "IReadOnlyList<AiComposerAttachment>",
+              "description": "Attached files, in the order the reader added them. Never null."
+            },
+            {
+              "name": "Command",
+              "kind": "Property",
+              "type": "AiSlashCommand?",
+              "description": "The slash command the draft was started from, or null for a free-form prompt. The command stays recorded until the reader picks another one or the draft is sent."
+            },
+            {
+              "name": "Mentions",
+              "kind": "Property",
+              "type": "IReadOnlyList<AiMentionItem>",
+              "description": "Mentions the draft references, in insertion order. Never null."
+            },
+            {
+              "name": "Model",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Identifier of the model the reader selected, or null when no picker was offered."
+            }
+          ]
+        },
+        {
           "itemName": "AiErrorDelta",
           "kind": "Class",
           "category": "AI",
@@ -72908,6 +73192,36 @@
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "AiMentionItem",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One mention a composer offers after the reader types \"@\" — a person, a document, a saved prompt, anything the host's IAiMentionProvider can search. Picking it inserts \"@{Label}\" into the draft and records the item on the next AiComposerSubmit; Kind, Icon and Description are presentation hints the suggestion list renders.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMentionItem.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional second line rendered under the label in the suggestion list."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+            },
+            {
+              "name": "Kind",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional kind of the mentioned entity (\"user\", \"document\", …) shown as a hint."
+            }
+          ]
         },
         {
           "itemName": "AiMessage",
@@ -73149,6 +73463,36 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "AiSlashCommand",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One slash command a composer offers after the reader types \"/\". A command is a prompt template: picking it inserts Prompt (or \"/{Title}\") into the draft and records the command on the next AiComposerSubmit, so the host knows which template the text belongs to. Optional Description, Icon and Prompt let a host present the command and control exactly what text it inserts.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSlashCommand.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional one-line explanation rendered under the title."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+            },
+            {
+              "name": "Prompt",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Text inserted into the draft when the command is picked. Default null inserts /{Title} ; a host whose command needs no visible token (it is fully described by the command itself) passes an empty string."
+            }
+          ]
+        },
+        {
           "itemName": "AiSource",
           "kind": "Class",
           "category": "AI",
@@ -73289,6 +73633,23 @@
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "IAiMentionProvider",
+          "kind": "Interface",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Services",
+          "description": "Supplies the \"@\"-mention suggestions of a composer. The composer calls SearchAsync with the text the reader typed after the \"@\", debounced by MentionDebounce and with a cancellation token that is cancelled as soon as the query changes, the list closes or the component is disposed — so a slow search never repaints a stale list and a host can pass the token straight to its API call. The interface lives in Tempo.Blazor.Abstractions on purpose: a backend or an API client implements it without a Blazor reference. An exception is caught by the composer, which closes the list and announces a localized failure.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/IAiMentionProvider.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "SearchAsync",
+              "type": "Task<IReadOnlyList<AiMentionItem>> SearchAsync(string query, CancellationToken cancellationToken = default)",
+              "description": "Returns the mentions matching the text after the trigger (possibly empty, which asks for the default suggestions). An implementation must honour the cancellation token and should be cheap for short queries; an empty list closes the suggestion list."
+            }
+          ]
         },
         {
           "itemName": "CsvColumnMapping",
@@ -111097,12 +111458,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1538,
-        "manualItemCount": 1538,
-        "generatedItemCount": 1521,
+        "itemCount": 1543,
+        "manualItemCount": 1543,
+        "generatedItemCount": 1526,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1521
+        "publicApiTypeCount": 1526
       }
     },
     {
@@ -128095,10 +128456,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3409,
-    "manualItemCount": 3409,
+    "itemCount": 3415,
+    "manualItemCount": 3415,
     "generatedOnlyItemCount": 0,
-    "componentCount": 518,
-    "publicApiTypeCount": 2838
+    "componentCount": 519,
+    "publicApiTypeCount": 2843
   }
 }

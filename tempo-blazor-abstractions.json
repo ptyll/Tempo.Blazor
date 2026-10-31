@@ -114,6 +114,78 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "AiComposerAttachment",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One file attached to a prompt: the metadata a submit contract needs (name, size in bytes, MIME type, optional URL) plus an opaque Content slot the host uses to keep the browser file, a stream or a blob handle. The composer never reads Content — it only enforces MaxAttachments and MaxFileSize on the metadata it can see and renders the chips.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerAttachment.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Content",
+          "kind": "Property",
+          "type": "object?",
+          "description": "Opaque host payload — typically the IBrowserFile the reader picked, or an already-open stream. The composer copies it into Attachments untouched and never inspects it."
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string?",
+          "description": "MIME content type when the browser reported one."
+        },
+        {
+          "name": "SizeBytes",
+          "kind": "Property",
+          "type": "long",
+          "description": "File size in bytes, as reported by the browser."
+        },
+        {
+          "name": "Url",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional preview or download URL. A host that uploads the file immediately can point the chip at the stored asset instead of keeping the bytes."
+        }
+      ]
+    },
+    {
+      "itemName": "AiComposerSubmit",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What a composer sends: the prompt text, the attachments the reader picked, the selected model, the mentions the draft references and the slash command it started from. A plain container so a backend can consume it without Blazor — the composer raises it through OnSubmit and clears the draft only after the handler completed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerSubmit.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Attachments",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiComposerAttachment>",
+          "description": "Attached files, in the order the reader added them. Never null."
+        },
+        {
+          "name": "Command",
+          "kind": "Property",
+          "type": "AiSlashCommand?",
+          "description": "The slash command the draft was started from, or null for a free-form prompt. The command stays recorded until the reader picks another one or the draft is sent."
+        },
+        {
+          "name": "Mentions",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiMentionItem>",
+          "description": "Mentions the draft references, in insertion order. Never null."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Identifier of the model the reader selected, or null when no picker was offered."
+        }
+      ]
+    },
+    {
       "itemName": "AiErrorDelta",
       "kind": "Class",
       "category": "AI",
@@ -162,6 +234,36 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMentionItem",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One mention a composer offers after the reader types \"@\" — a person, a document, a saved prompt, anything the host's IAiMentionProvider can search. Picking it inserts \"@{Label}\" into the draft and records the item on the next AiComposerSubmit; Kind, Icon and Description are presentation hints the suggestion list renders.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMentionItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional second line rendered under the label in the suggestion list."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional kind of the mentioned entity (\"user\", \"document\", …) shown as a hint."
+        }
+      ]
     },
     {
       "itemName": "AiMessage",
@@ -403,6 +505,36 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "AiSlashCommand",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One slash command a composer offers after the reader types \"/\". A command is a prompt template: picking it inserts Prompt (or \"/{Title}\") into the draft and records the command on the next AiComposerSubmit, so the host knows which template the text belongs to. Optional Description, Icon and Prompt let a host present the command and control exactly what text it inserts.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSlashCommand.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional one-line explanation rendered under the title."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+        },
+        {
+          "name": "Prompt",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Text inserted into the draft when the command is picked. Default null inserts /{Title} ; a host whose command needs no visible token (it is fully described by the command itself) passes an empty string."
+        }
+      ]
+    },
+    {
       "itemName": "AiSource",
       "kind": "Class",
       "category": "AI",
@@ -543,6 +675,23 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "IAiMentionProvider",
+      "kind": "Interface",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Services",
+      "description": "Supplies the \"@\"-mention suggestions of a composer. The composer calls SearchAsync with the text the reader typed after the \"@\", debounced by MentionDebounce and with a cancellation token that is cancelled as soon as the query changes, the list closes or the component is disposed — so a slow search never repaints a stale list and a host can pass the token straight to its API call. The interface lives in Tempo.Blazor.Abstractions on purpose: a backend or an API client implements it without a Blazor reference. An exception is caught by the composer, which closes the list and announces a localized failure.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/IAiMentionProvider.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "SearchAsync",
+          "type": "Task<IReadOnlyList<AiMentionItem>> SearchAsync(string query, CancellationToken cancellationToken = default)",
+          "description": "Returns the mentions matching the text after the trigger (possibly empty, which asks for the default suggestions). An implementation must honour the cancellation token and should be cheap for short queries; an empty list closes the suggestion list."
+        }
+      ]
     },
     {
       "itemName": "CsvColumnMapping",
@@ -38351,11 +38500,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1538,
-    "manualItemCount": 1538,
-    "generatedItemCount": 1521,
+    "itemCount": 1543,
+    "manualItemCount": 1543,
+    "generatedItemCount": 1526,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1521
+    "publicApiTypeCount": 1526
   }
 }

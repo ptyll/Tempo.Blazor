@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSlashCommand.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiSlashCommand",
+  "description": "One slash command a composer offers after the reader types \"/\". A command is a prompt template: picking it inserts Prompt (or \"/{Title}\") into the draft and records the command on the next AiComposerSubmit, so the host knows which template the text belongs to. Optional Description, Icon and Prompt let a host present the command and control exactly what text it inserts."
+}

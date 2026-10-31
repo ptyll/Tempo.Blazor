@@ -36,7 +36,7 @@ TempoBlazor.slnx
 ├── src/
 │   ├── Tempo.Blazor.Abstractions/    # Interfaces and models (NuGet package)
 │   ├── Tempo.Blazor/                 # Core component library (NuGet package)
-│   ├── Tempo.Blazor.AI/              # AI conversation package (TmMarkdownView, TmAiMessage, TmToolCallCard/Group, TmThinkingIndicator, TmReasoningPanel; conversation/composer follow)
+│   ├── Tempo.Blazor.AI/              # AI conversation package (TmMarkdownView, TmAiMessage, TmToolCallCard/Group, TmThinkingIndicator, TmReasoningPanel, TmAiConversation, TmAiComposer)
 │   ├── Tempo.Blazor.Signing/         # Signing workflows and PDF template designer
 │   ├── Tempo.Blazor.FluentValidation/# Optional FluentValidation integration
 │   ├── Tempo.Blazor.Demo/            # Blazor WASM demo application
@@ -111,7 +111,7 @@ npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl
 npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
 npm run test:spreadsheet       # Spreadsheet: canvas palette (tokens), SP1 density and header-highlight helpers in a vm sandbox
-npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup)
+npm run test:ai                # Tempo.Blazor.AI: ai-conversation.js (own-scroll suppression, gesture/scrollend release, detach cleanup) + ai-composer.js (Enter/IME guard, combobox suppression, autosize clamp, caret placement, speech wrapper, keyboard-inset tracker)
 ```
 
 ### Package Creation
@@ -952,7 +952,7 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 | `Tempo.Blazor.Abstractions` | Interfaces and models, zero UI dependencies |
 | `Tempo.Blazor.PdfViewer` | PDF.js powered `TmPdfViewer` |
 | `Tempo.Blazor.Codes` | QR code and barcode components |
-| `Tempo.Blazor.AI` | AI conversation components: `TmMarkdownView` (safe Markdig pipeline — raw HTML off, URL allowlist, hardened links, citation chips, code-block copy), `TmAiMessage` (one turn: ordered parts, citation preview, source cards, follow-up chips, copy/regenerate with a version switcher/feedback/read aloud actions), `TmToolCallCard` + `TmToolCallGroup` (one call / a run of consecutive calls: localized status, live elapsed timer on `TimeProvider`, pretty-printed JSON behind a disclosure, redacted notice, Copy, Retry on failure), `TmThinkingIndicator` and `TmReasoningPanel` (phase pill with a check; reasoning disclosure with a live counter, steps and hardened source links), `TmAiConversation` (the transcript: a focusable `role="log"` live region, the empty state with suggestion prompts, an optional render window with "Load older messages", the "New messages"/"Stop generating" pills, auto-scroll that follows only while the reader is at the bottom, and the throttled `StreamAsync` delta pump over the package's ES module `js/ai-conversation.js` — [docs/ai-conversation.md](docs/ai-conversation.md)) plus the generic `AiMessage`/`AiStreamDelta`/`AiMessageVersion`/`AiFeedback` contracts and `AiMessageStreamApplier` in Abstractions (`Tempo.Blazor.AI.Models` / `.Services`); the composer follows. No LLM SDK |
+| `Tempo.Blazor.AI` | AI conversation components: `TmMarkdownView` (safe Markdig pipeline — raw HTML off, URL allowlist, hardened links, citation chips, code-block copy), `TmAiMessage` (one turn: ordered parts, citation preview, source cards, follow-up chips, copy/regenerate with a version switcher/feedback/read aloud actions), `TmToolCallCard` + `TmToolCallGroup` (one call / a run of consecutive calls: localized status, live elapsed timer on `TimeProvider`, pretty-printed JSON behind a disclosure, redacted notice, Copy, Retry on failure), `TmThinkingIndicator` and `TmReasoningPanel` (phase pill with a check; reasoning disclosure with a live counter, steps and hardened source links), `TmAiConversation` (the transcript: a focusable `role="log"` live region, the empty state with suggestion prompts, an optional render window with "Load older messages", the "New messages"/"Stop generating" pills, auto-scroll that follows only while the reader is at the bottom, and the throttled `StreamAsync` delta pump over the package's ES module `js/ai-conversation.js` — [docs/ai-conversation.md](docs/ai-conversation.md)) and `TmAiComposer` (the prompt: autosizing textarea with Enter/Shift+Enter and the JS-side IME guard, send/stop slot, attachments with `MaxAttachments`/`MaxFileSize`, the `/` command and debounced `@` mention combobox, model select or template, opt-in feature-detected voice input, sticky mobile layout with the `TrackVirtualKeyboard` knob, one polite live region — `js/ai-composer.js`, [docs/ai-composer.md](docs/ai-composer.md)) plus the generic `AiMessage`/`AiStreamDelta`/`AiMessageVersion`/`AiFeedback`/`AiComposerSubmit`/`AiComposerAttachment`/`AiSlashCommand`/`AiMentionItem`/`IAiMentionProvider` contracts and `AiMessageStreamApplier` in Abstractions (`Tempo.Blazor.AI.Models` / `.Services`). No LLM SDK |
 | `Tempo.Blazor.DiagramEditor` | Diagram editor components, services, CSS, and JS |
 | `Tempo.Blazor.Wireframe` | Wireframe editor components, CSS, and JS |
 | `Tempo.Blazor.Modeling` | Modeling editor built on DiagramEditor |

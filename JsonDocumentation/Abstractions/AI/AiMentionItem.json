@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMentionItem.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMentionItem",
+  "description": "One mention a composer offers after the reader types \"@\" — a person, a document, a saved prompt, anything the host's IAiMentionProvider can search. Picking it inserts \"@{Label}\" into the draft and records the item on the next AiComposerSubmit; Kind, Icon and Description are presentation hints the suggestion list renders."
+}

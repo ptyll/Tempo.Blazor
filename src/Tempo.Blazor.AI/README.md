@@ -37,6 +37,7 @@ wins.
 | `TmThinkingIndicator` | The "working…" pill: phase label with a shimmer and a spinner, a check once the work finished. The whole pill is one `role="status"` region. |
 | `TmReasoningPanel` | The reasoning disclosure: collapsed summary of what the thinking cost ("Thought for 12.0 s"), expanded steps and the inspected sources, live counter while the model is still thinking. |
 | `TmAiConversation` | The transcript plus the streaming machinery: a focusable `role="log"` live region that renders the turns through `TmAiMessage` (or a host `MessageTemplate`), the empty state with suggestion prompts, an optional render window for a long history, the "New messages" and "Stop generating" pills and the throttled `StreamAsync` delta pump. Auto-scroll follows new content only while the reader is at the bottom. Contract: [docs/ai-conversation.md](../../docs/ai-conversation.md). |
+| `TmAiComposer` | The prompt composer: an autosizing textarea (Enter sends, Shift+Enter is a new line, an IME composition never sends), a send slot that becomes Stop while a generation runs, attachment chips with `MaxAttachments`/`MaxFileSize` enforced against a localized message, a model selector (built-in or `ModelSelectorTemplate`), an opt-in voice input that renders only where the Web Speech API exists, and one combobox listbox shared by the `/` slash commands and the host's `@` mention provider (debounced, cancellable). `OnSubmit` carries the text, attachments, model, mentions and command; the draft is cleared only after the handler completed, one submit runs at a time (a fast second Enter is a no-op), and the post-submit clear keeps whatever the reader typed while a slow handler ran. Contract: [docs/ai-composer.md](../../docs/ai-composer.md). |
 
 ```razor
 @using Tempo.Blazor.Components.AI
@@ -50,7 +51,6 @@ wins.
              ReadAloud="true" />
 ```
 
-`TmAiComposer` arrives in the follow-up phase of plan 7f21f26b.
 
 ### Tool calls and reasoning
 
@@ -163,6 +163,8 @@ HTML.
 | Thinking indicator, reasoning panel, shimmer/spinner motion | `_content/Tempo.Blazor.AI/css/components/_ai-thinking.css` |
 | Markdown interop module | `_content/Tempo.Blazor.AI/js/ai-markdown.js` |
 | Message interop module | `_content/Tempo.Blazor.AI/js/ai-message.js` |
+| Conversation interop module | `_content/Tempo.Blazor.AI/js/ai-conversation.js` |
+| Composer interop module | `_content/Tempo.Blazor.AI/js/ai-composer.js` |
 
 `tempo-blazor-ai.css` is an `@import` manifest — hosts reference only the entry point. The interop
 module is a plain ES module imported through `IJSObjectReference`, so it needs **no** `<script>` tag
