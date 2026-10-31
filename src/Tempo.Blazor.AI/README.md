@@ -36,6 +36,7 @@ wins.
 | `TmToolCallGroup` | A run of consecutive tool calls collapsed into one summary — "3 tools · 1 failed · 4.2 s" (Czech: "3 nástroje · 1 selhal · 4,2 s") — that expands into the cards. |
 | `TmThinkingIndicator` | The "working…" pill: phase label with a shimmer and a spinner, a check once the work finished. The whole pill is one `role="status"` region. |
 | `TmReasoningPanel` | The reasoning disclosure: collapsed summary of what the thinking cost ("Thought for 12.0 s"), expanded steps and the inspected sources, live counter while the model is still thinking. |
+| `TmAiConversation` | The transcript plus the streaming machinery: a focusable `role="log"` live region that renders the turns through `TmAiMessage` (or a host `MessageTemplate`), the empty state with suggestion prompts, an optional render window for a long history, the "New messages" and "Stop generating" pills and the throttled `StreamAsync` delta pump. Auto-scroll follows new content only while the reader is at the bottom. Contract: [docs/ai-conversation.md](../../docs/ai-conversation.md). |
 
 ```razor
 @using Tempo.Blazor.Components.AI
@@ -49,7 +50,7 @@ wins.
              ReadAloud="true" />
 ```
 
-`TmAiConversation` and `TmAiComposer` arrive in the follow-up phases of plan 7f21f26b.
+`TmAiComposer` arrives in the follow-up phase of plan 7f21f26b.
 
 ### Tool calls and reasoning
 
@@ -76,6 +77,29 @@ One live region per card (`role="status"`) announces the status transition ("Sea
 confirmation; the reasoning panel has its own single region for the finished reasoning. A copy
 confirmation is announced through that region rather than by renaming the button, so the control keeps its
 name.
+
+### Streaming a conversation
+
+`TmAiConversation` owns the scroll container and the render throttle; the stream is the host's
+`IAsyncEnumerable<AiStreamDelta>`. Append the turn, then stream it:
+
+```razor
+<TmAiConversation @ref="conversation" Messages="@messages" Height="32rem" />
+```
+
+```csharp
+var answer = new AiMessage { Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };
+messages.Add(answer);
+await conversation.StreamAsync(answer, client.StreamAsync(prompt));
+```
+
+Renders are throttled through the injected `TimeProvider` (50 ms by default), so a Server circuit is
+not re-rendered per token; the end of the stream completes the answer, `StopAsync` keeps the partial
+answer and marks it stopped, a throwing stream marks it failed and rethrows. Auto-scroll follows the
+newest content only while the reader is at the bottom — a reader who scrolled back gets a "New
+messages" pill instead of a moving viewport. Long histories are windowed with `RenderWindowSize` plus
+a "Load older messages" control, and one polite `role="log"` region announces inserted turns and the
+completion note exactly once.
 
 ## Markdown security
 

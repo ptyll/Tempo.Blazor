@@ -7,4 +7,5 @@
 @import "components/_ai-thinking.css";
 @import "components/_ai-tool-call.css";
 @import "components/_ai-streaming.css";
+@import "components/_ai-conversation.css";
 @import "components/_markdown-view.css";

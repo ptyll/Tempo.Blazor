@@ -33878,6 +33878,111 @@
       },
       "items": [
         {
+          "itemName": "TmAiConversation",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "The transcript of an AI conversation plus the streaming machinery around it: a focusable role=log live region that renders the host's turns through TmAiMessage (or a host MessageTemplate), the empty state with the host's suggestion prompts, an optional render window for a very long history, the \"Load older messages\" control, the floating \"New messages\" and \"Stop generating\" pills, and the polite completion note. StreamAsync folds an IAsyncEnumerable<AiStreamDelta> into the message the host appended, throttles the renders through the injected TimeProvider (a Server circuit must not re-render per token), keeps the partial answer on Stop and marks the turn Completed, Stopped or Failed. Auto-scroll follows new content only while the reader is at the bottom — a detached reader gets the \"New messages\" pill instead of a moving viewport — and the scrolling surface is the package's ES module ai-conversation.js (scroll tracking plus a ResizeObserver on the content), so smooth scrolling follows prefers-reduced-motion.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiConversation.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "AutoScroll",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Follow new content and offer the \"New messages\" affordance. Default true. When false the component imports no browser module at all and never scrolls — the host owns the scrolling surface."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Height",
+              "type": "string?",
+              "isRequired": false,
+              "description": "CSS length of the transcript (for example \"32rem\" or \"100%\"). Default null uses the stylesheet's height."
+            },
+            {
+              "name": "Messages",
+              "type": "IReadOnlyList<AiMessage>?",
+              "isRequired": false,
+              "description": "The turns of the conversation, oldest first. The host owns the list: append a turn before it starts streaming and the component renders it. Reassigning the property to a NEW list instance is treated as loading another conversation (the render window snaps to the newest turns); appending to the same instance keeps the window where the reader left it."
+            },
+            {
+              "name": "MessageTemplate",
+              "type": "RenderFragment<AiMessage>?",
+              "isRequired": false,
+              "description": "Replaces the built-in TmAiMessage of every turn. The template receives the message, so a host can attach its own per-turn actions (regenerate, feedback, retry) without the conversation re-declaring them."
+            },
+            {
+              "name": "OnStop",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised once after a running generation was stopped — by the built-in Stop control or by a host calling StopAsync(). The component cancels the token it handed to the stream itself, so this is a notification, not a request: a handler must not call StopAsync() again (it is a no-op, so it cannot loop)."
+            },
+            {
+              "name": "OnSuggestion",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the text of an activated suggestion prompt. The chips render only while the conversation has no turn AND this handler is bound — a chip that raises nothing is not offered."
+            },
+            {
+              "name": "RenderThrottle",
+              "type": "TimeSpan",
+              "isRequired": false,
+              "default": "TimeSpan.FromMilliseconds(50)",
+              "description": "Minimum time between two renders of a streamed answer. Default 50 ms. A Server circuit re-rendering per token is a render storm, so deltas arriving faster than this interval are folded into the message but not painted; the stream always renders once when it starts and once when it ends. Zero or a negative value renders every applied delta."
+            },
+            {
+              "name": "RenderWindowSize",
+              "type": "int?",
+              "isRequired": false,
+              "description": "How many of the newest turns are rendered; null (the default) renders every turn. A window keeps a very long transcript's DOM small, renders the contiguous tail and grows upwards by RenderWindowStep through the \"Load older messages\" control. Values below 10 are raised to 10 — a two-row window is a teaser, not a conversation."
+            },
+            {
+              "name": "RenderWindowStep",
+              "type": "int",
+              "isRequired": false,
+              "default": "50",
+              "description": "How many turns one \"Load older messages\" activation adds. Default 50, raised to at least 10."
+            },
+            {
+              "name": "ShowStop",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Offer the built-in \"Stop generating\" control while a stream runs. Default true; a host that renders its own stop control (a composer, a toolbar) turns it off and calls StopAsync() itself."
+            },
+            {
+              "name": "Suggestions",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Prompts offered by the empty state. They render only while the conversation has no turn AND OnSuggestion is bound."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Stream an answer into the conversation",
+              "code": "<TmAiConversation @ref=\"conversation\" Messages=\"@messages\" />\n\n@code {\n    private TmAiConversation conversation = default!;\n    private readonly List<AiMessage> messages = new();\n\n    private async Task SendAsync(string prompt)\n    {\n        messages.Add(new AiMessage { Role = AiMessageRole.User, Parts = { new AiTextPart(prompt) } });\n        var answer = new AiMessage { Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };\n        messages.Add(answer);\n        await conversation.StreamAsync(answer, client.StreamAsync(prompt));\n    }\n}"
+            },
+            {
+              "title": "Suggestion prompts on the empty state and a windowed long history",
+              "code": "<TmAiConversation @ref=\"conversation\"\n                 Messages=\"@messages\"\n                 Suggestions=\"@suggestions\"\n                 OnSuggestion=\"@(text => SendAsync(text))\"\n                 RenderWindowSize=\"50\"\n                 RenderWindowStep=\"25\"\n                 OnStop=\"@(() => composer.Reset())\"\n                 Height=\"32rem\" />"
+            },
+            {
+              "title": "Host-owned turns with host actions",
+              "code": "<TmAiConversation Messages=\"@messages\" ShowStop=\"false\">\n    <MessageTemplate Context=\"message\">\n        <TmAiMessage Message=\"message\" OnRegenerate=\"@(() => RegenerateAsync(message))\" />\n    </MessageTemplate>\n</TmAiConversation>"
+            }
+          ]
+        },
+        {
           "itemName": "TmAiMessage",
           "kind": "Component",
           "category": "AI",
@@ -34431,6 +34536,10 @@
       "libraryExamples": [],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-conversation.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-message.css",
           "kind": "Css"
         },
@@ -34455,6 +34564,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-conversation.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-markdown.js",
           "kind": "JavaScript"
         },
@@ -34464,11 +34577,11 @@
         }
       ],
       "summary": {
-        "itemCount": 11,
-        "manualItemCount": 11,
-        "generatedItemCount": 11,
+        "itemCount": 12,
+        "manualItemCount": 12,
+        "generatedItemCount": 12,
         "generatedOnlyItemCount": 0,
-        "componentCount": 6,
+        "componentCount": 7,
         "publicApiTypeCount": 5
       }
     },
@@ -127982,10 +128095,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3408,
-    "manualItemCount": 3408,
+    "itemCount": 3409,
+    "manualItemCount": 3409,
     "generatedOnlyItemCount": 0,
-    "componentCount": 517,
+    "componentCount": 518,
     "publicApiTypeCount": 2838
   }
 }

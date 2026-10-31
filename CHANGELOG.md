@@ -22,6 +22,93 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — `TmAiConversation` and streaming (plan 7f21f26b, phase 5)
+
+The transcript of a conversation as a component: a scroll container that follows new content only while
+the reader is at the bottom, a windowed render of a long history, a stop affordance and the delta pump.
+Contract: [docs/ai-conversation.md](docs/ai-conversation.md).
+
+- **`TmAiConversation`** (`Tempo.Blazor.Components.AI`) — `Messages`, `MessageTemplate`, `Suggestions`,
+  `OnSuggestion`, `OnStop`, `RenderWindowSize`, `RenderWindowStep`, `RenderThrottle`, `ShowStop`,
+  `AutoScroll`, `Height`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`); public
+  `IsGenerating`, `StreamAsync(message, deltas, cancellationToken)` and `StopAsync()`. The root carries
+  `data-generating` (`true`/`false`), and every internal hook is a `data-testid`
+  (`ai-conversation-log` / `-empty` / `-suggestion` / `-load-older` / `-new-messages` / `-stop` /
+  `-announcement`).
+- **Streaming** — `StreamAsync` folds the host's `IAsyncEnumerable<AiStreamDelta>` into the turn the host
+  already appended (through `AiMessageStreamApplier`), throttles the renders to `RenderThrottle` (50 ms by
+  default) on the injected `TimeProvider` so a Server circuit is not re-rendered per token, always renders
+  once when the stream starts (the Stop affordance must not wait for the first token) and once when it
+  ends. The end of the stream IS the end of the answer — no trailing `AiCompletedDelta` is required; a
+  cancelled stream keeps the partial answer and marks it `Stopped` (a late token cannot resurrect it, and
+  a host's own cancellation does not echo into `OnStop`); a throwing stream marks it `Failed`, keeps the
+  exception message and rethrows. A second concurrent `StreamAsync` throws `InvalidOperationException`.
+  The clock is `Services.GetService<TimeProvider>() ?? TimeProvider.System` — the package never
+  registers one.
+- **Scrolling** — the package's ES module `_content/Tempo.Blazor.AI/js/ai-conversation.js` (`attach`,
+  `detach`, `isNearBottom`, `scrollToBottom`; imported through `IJSObjectReference`, no `<script>` tag and
+  no `eval`, null-safe entry points) reports the reader's scroll crossings AND a `ResizeObserver`
+  content resize back to the component. New content is followed only while the reader is within a 48 px
+  bottom band; a reader who scrolled back gets the "New messages" pill instead of a moving viewport, and
+  the pill floats over the scroller so it never reflows the text. Once the module has reported a
+  position, that report is the state of record — the geometry probe is only the fallback for a freshly
+  attached transcript, so a parent render costs no Blazor round-trip. `AutoScroll="false"` imports no
+  module at all (the host owns the scrolling surface), and a smooth scroll is requested only when the
+  system does not ask for reduced motion. The module never reports its **own** scrolling: following a
+  turn is a smooth `scrollToBottom` whose first frames are still far from the bottom (it starts where
+  the reader was while the content has already grown), and reporting them as a crossing told the
+  component to stop following a streaming answer. The scroll is marked and stays quiet until it lands
+  (`scrollend`, the landing frame, or a 500 ms fallback), while the first real gesture — `wheel`,
+  `touchstart`, `pointerdown`, `keydown` — releases the mark so a reader who takes over is still
+  reported; `detach` removes every listener and the pending release. Node tests:
+  `wwwroot/js/__tests__/ai-conversation.test.mjs` (`npm run test:ai`).
+- **Long conversations** — `RenderWindowSize` renders the contiguous tail and offers "Load older
+  messages" (`RenderWindowStep`); the window is a plain slice of the host's list, deliberately not
+  `<Virtualize>` (which would unmount rows the reader is looking at and break the anchors and focus).
+  The window follows appended turns until the reader pulls the older ones in, then grows at the bottom,
+  survives a parameter-only re-render, clamps a shrinking list and resets to the tail when the list
+  instance is replaced.
+- **Accessibility** — the transcript is the component's ONE live region: `role="log"`, `aria-live="polite"`,
+  `aria-atomic="false"` and `aria-relevant="additions"` (the default `additions text` would announce a
+  streaming answer token by token), `aria-busy` while a generation runs, and the completion note keyed by
+  an announcement sequence so a second completion replaces the node instead of silently rewriting the
+  text of an existing one. The transcript is `tabindex="0"` with its own `:focus-visible` ring (a scroll
+  container a keyboard reader cannot reach locks them out of every earlier turn), every control is a
+  native `<button>`, and every control the reader's own activation REMOVES hands the focus to the
+  transcript instead of `<body>` — "Load older messages" when the history is fully rendered, the "New
+  messages" pill when it dismisses itself and the "Stop generating" pill when the generation ends; a
+  programmatic `StopAsync` moves no focus, because nothing disappeared under the reader. Chips and pills
+  reach the 44 px `--tm-touch-target` floor on a coarse pointer; the forced-colors block pins the surfaces
+  to `Canvas`/`CanvasText`, gives the Stop pill the `Highlight`/`HighlightText` pair and rides
+  `Highlight` with the focus rings (a `Highlight`-coloured label over `Canvas` has no contrast
+  guarantee); the stylesheet declares no motion of its own, so scrolling is the only thing that animates
+  and the module drops the smooth behaviour under `prefers-reduced-motion`.
+- **Assets and strings** — `_content/Tempo.Blazor.AI/css/components/_ai-conversation.css` (imported by
+  the entry stylesheet, tokens only — no colour literal, no raw palette step, no `[data-theme]` block),
+  the ES module `js/ai-conversation.js`, and the keys `TmAiConversation_Transcript`, `_EmptyTitle`,
+  `_EmptyDescription`, `_Suggestions`, `_LoadOlder`, `_NewMessages`, `_Stop`, `_Completed` in en/cs/sk/fr
+  (+ `MockTmLocalizer`). No new registration: the module is imported lazily, so `AddTempoBlazorAI()` is
+  unchanged and a `TryAdd` registration is not needed.
+- **Verification** — `TmAiConversationTests` (transcript structure, the single live region, the turns
+  through `TmAiMessage`, the `MessageTemplate` override, the empty state with suggestions gated on the
+  handler, Czech labels, test-id prefixing, a static host without interop), `TmAiConversationStreamingTests`
+  (delta folding, end-of-stream completion, exactly one completion announcement, the throttle measured on
+  the component's OWN renders with a `FakeTimeProvider` — bUnit's `RenderCount` counts the whole subtree —
+  stop with `OnStop` and `IsGenerating`, host cancellation, a late-token guard, the failed stream and the
+  concurrent-stream rejection), `TmAiConversationScrollTests` (attach and first scroll, following only at
+  the bottom, the report-versus-probe precedence, the resize report, the pills, `AutoScroll="false"` and
+  detach on dispose), `TmAiConversationWindowTests` (the tail window, load-older stepping and clamping,
+  appends while expanded, a replaced list, a shrinking list, and that loading older turns does not jump to
+  the bottom), `TmAiConversationFocusTests` (the three focus hand-backs and the no-op for a programmatic
+  stop) and `TmAiConversationCssTests` (class coverage, the scroll container's own scroll/focus treatment,
+  the coarse-pointer floor, the forced-colors pair, a forced-colors counterpart for every `:hover` rule and
+  the "no motion in this file" guarantee). JSON documentation overlay for the component, regenerated
+  `tempo-blazor-ai.json` / `tempo-blazor-all.json`, `validate --fail-on-drift` clean.
+
+**No breaking changes** — a new component plus additive localization keys, CSS and one lazily imported ES
+module. A host that does not render `TmAiConversation` is unaffected, and no existing component's markup,
+parameters or defaults changed.
+
 ### AI conversation package — tool calls and reasoning (plan 7f21f26b, phase 4)
 
 The parts of an AI turn that are not prose: a tool call, a run of tool calls, the "working…" pill and the

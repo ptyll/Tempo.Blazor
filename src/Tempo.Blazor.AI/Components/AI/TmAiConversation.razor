@@ -1,0 +1,127 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Models
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* The transcript of an AI conversation plus the streaming machinery around it. The turns themselves are
+   rendered by TmAiMessage (or the host's MessageTemplate) — this component owns the scroll container, the
+   render window of a long conversation, the "stop generating" affordance and the one polite live region of
+   the component.
+
+   The container is role="log": the ARIA role for a transcript the reader reads after the fact. Its
+   aria-relevant is reduced to "additions" on purpose — a log with the default "additions text" announces
+   every streamed token, so a screen reader would read the answer character by character. Inserted turns
+   and the completion note are what gets announced; the text of a reply is read on demand. *@
+<div class="tm-ai-conversation @Class"
+     data-testid="@RootTestId("ai-conversation")"
+     data-generating="@(IsGenerating ? "true" : "false")"
+     style="@HeightStyle"
+     @attributes="AdditionalAttributes">
+    <div class="tm-ai-conversation__body">
+        @* tabindex="0" makes the scroller reachable with the keyboard (WCAG 2.1): otherwise a reader who
+           cannot use a pointing device has no way to scroll back through an answer. *@
+        <div class="tm-ai-conversation__log"
+             role="log"
+             aria-live="polite"
+             aria-relevant="additions"
+             aria-atomic="false"
+             aria-label="@Loc["TmAiConversation_Transcript"]"
+             aria-busy="@(IsGenerating ? "true" : null)"
+             tabindex="0"
+             data-testid="@TestId("ai-conversation-log")"
+             @ref="_logRef">
+            <div class="tm-ai-conversation__content" @ref="_contentRef">
+                @if (ShowLoadOlder)
+                {
+                    <button type="button"
+                            class="tm-ai-conversation__load-older"
+                            data-testid="@TestId("ai-conversation-load-older")"
+                            @onclick="LoadOlderAsync">
+                        @Loc["TmAiConversation_LoadOlder"]
+                    </button>
+                }
+
+                @if (HasMessages)
+                {
+                    @foreach (var message in _windowMessages)
+                    {
+                        <div class="tm-ai-conversation__message"
+                             data-message-id="@message.Id"
+                             @key="message.Id">
+                            @if (MessageTemplate is not null)
+                            {
+                                @MessageTemplate(message)
+                            }
+                            else
+                            {
+                                <TmAiMessage Message="message" />
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="tm-ai-conversation__empty" data-testid="@TestId("ai-conversation-empty")">
+                        <p class="tm-ai-conversation__empty-title">@Loc["TmAiConversation_EmptyTitle"]</p>
+                        <p class="tm-ai-conversation__empty-text">@Loc["TmAiConversation_EmptyDescription"]</p>
+                        @if (SuggestionList.Count > 0 && OnSuggestion.HasDelegate)
+                        {
+                            <div class="tm-ai-conversation__suggestions"
+                                 role="group"
+                                 aria-label="@Loc["TmAiConversation_Suggestions"]">
+                                @foreach (var suggestion in SuggestionList)
+                                {
+                                    <button type="button"
+                                            class="tm-ai-conversation__suggestion"
+                                            data-testid="@TestId("ai-conversation-suggestion")"
+                                            @onclick="() => RaiseSuggestionAsync(suggestion)">
+                                        @suggestion
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* The completion note is an ADDITION to the transcript, which is what makes it the only
+                   thing a screen reader hears when a generation finishes: it is keyed by the announcement
+                   sequence so a second completion replaces the node instead of silently changing the text
+                   of the existing one (a live region ignores an unchanged text node). *@
+                @if (_announcement is not null)
+                {
+                    <p class="tm-sr-only"
+                       data-testid="@TestId("ai-conversation-announcement")"
+                       @key="_announcementSequence">@_announcement</p>
+                }
+            </div>
+        </div>
+
+        @if (ShowOverlayBar)
+        {
+            @* Both pills float over the scroller so an appearing control never reflows the transcript the
+               reader is looking at. They are siblings of the log, not children, so their text is not an
+               addition inside the live region. *@
+            <div class="tm-ai-conversation__overlay-bar">
+                @if (_hasNewMessages)
+                {
+                    <button type="button"
+                            class="tm-ai-conversation__new-messages"
+                            data-testid="@TestId("ai-conversation-new-messages")"
+                            @onclick="OnNewMessagesClickAsync">
+                        @Loc["TmAiConversation_NewMessages"]
+                    </button>
+                }
+                @if (IsGenerating && ShowStop)
+                {
+                    <button type="button"
+                            class="tm-ai-conversation__stop"
+                            data-testid="@TestId("ai-conversation-stop")"
+                            @onclick="OnStopClickAsync">
+                        @Loc["TmAiConversation_Stop"]
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
