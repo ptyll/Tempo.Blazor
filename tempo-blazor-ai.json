@@ -1,0 +1,125 @@
+{
+  "package": {
+    "packageId": "Tempo.Blazor.AI",
+    "title": "Tempo.Blazor.AI",
+    "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+    "authors": "ptyll",
+    "targetFrameworks": [
+      "net8.0",
+      "net9.0",
+      "net10.0"
+    ],
+    "tags": "blazor;components;ai;llm;chat;streaming;markdown",
+    "repositoryUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "projectUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.AI"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Markdig",
+        "version": "1.5.1"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "8.0.12"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "10.0.3"
+      }
+    ],
+    "projectReferences": [
+      "../Tempo.Blazor/Tempo.Blazor.csproj",
+      "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
+    ],
+    "namespaces": [
+      "Tempo.Blazor.Configuration"
+    ]
+  },
+  "gettingStarted": {
+    "title": "Tempo.Blazor.AI",
+    "overview": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+    "targetFramework": "net8.0 / net9.0 / net10.0",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.AI"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Markdig",
+        "version": "1.5.1"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "8.0.12"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "10.0.3"
+      }
+    ]
+  },
+  "items": [
+    {
+      "itemName": "AIServiceCollectionExtensions",
+      "kind": "Class",
+      "category": "Configuration",
+      "namespace": "Tempo.Blazor.Configuration",
+      "description": "Extension methods for registering the Tempo.Blazor AI component group.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Configuration/AIServiceCollectionExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AddTempoBlazorAI",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts are planned for Tempo.Blazor.Abstractions (plan 7f21f26b Fáze 2), so no LLM SDK is pulled in.",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "this IServiceCollection"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "Register the services in Program.cs",
+          "code": "builder.Services.AddTempoBlazorAI();"
+        }
+      ]
+    }
+  ],
+  "libraryExamples": [],
+  "assets": [
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/tempo-blazor-ai.css",
+      "kind": "Css"
+    }
+  ],
+  "summary": {
+    "itemCount": 1,
+    "manualItemCount": 1,
+    "generatedItemCount": 1,
+    "generatedOnlyItemCount": 0,
+    "componentCount": 0,
+    "publicApiTypeCount": 1
+  }
+}

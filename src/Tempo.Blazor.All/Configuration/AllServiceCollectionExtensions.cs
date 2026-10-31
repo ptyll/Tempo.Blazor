@@ -26,6 +26,7 @@ public static class AllServiceCollectionExtensions
         services.AddTempoBlazorDocumentEditor();
         services.AddTempoBlazorNotionEditor();
         services.AddTempoBlazorSigning();
+        services.AddTempoBlazorAI();
 
         return services;
     }

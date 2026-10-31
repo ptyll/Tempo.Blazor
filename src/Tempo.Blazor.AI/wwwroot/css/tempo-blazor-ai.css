@@ -1,0 +1,6 @@
+/* Tempo.Blazor.AI component styles.
+   This entry point is an @import manifest over components/*.css so a host loads exactly one
+   stylesheet: <link href="_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css" rel="stylesheet" />.
+   Every rule reads --tm-* design tokens (no colour literals, no [data-theme] blocks here) and every
+   animated subject carries its own prefers-reduced-motion block inside the partial. */
+@import "components/_ai-streaming.css";

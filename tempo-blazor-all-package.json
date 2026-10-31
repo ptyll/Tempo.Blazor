@@ -20,6 +20,7 @@
     "dependencies": [],
     "projectReferences": [
       "../Tempo.Blazor/Tempo.Blazor.csproj",
+      "../Tempo.Blazor.AI/Tempo.Blazor.AI.csproj",
       "../Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj",
       "../Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj",
       "../Tempo.Blazor.DocumentEditor/Tempo.Blazor.DocumentEditor.csproj",

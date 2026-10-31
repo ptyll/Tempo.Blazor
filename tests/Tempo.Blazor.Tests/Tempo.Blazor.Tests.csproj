@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tempo.Blazor\Tempo.Blazor.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.All\Tempo.Blazor.All.csproj" />
+    <ProjectReference Include="..\..\src\Tempo.Blazor.AI\Tempo.Blazor.AI.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Codes\Tempo.Blazor.Codes.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Collaboration\Tempo.Blazor.Collaboration.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Proofing.LanguageTool\Tempo.Blazor.Proofing.LanguageTool.csproj" />

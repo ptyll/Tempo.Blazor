@@ -358,7 +358,7 @@ public class ProvenanceComparisonTests
     }
 
     /// <summary>
-    /// The sweep's denominator is every row in <c>eng/nuget-packages.txt</c> — 26 of them — and every
+    /// The sweep's denominator is every row in <c>eng/nuget-packages.txt</c> — 28 of them — and every
     /// row must yield a package id the feed can be asked about. A csproj without <c>&lt;PackageId&gt;</c>
     /// records itself as unasked rather than guessed, so this asserts none of them has to.
     /// </summary>
@@ -371,7 +371,7 @@ public class ProvenanceComparisonTests
             .Where(line => line.Length > 0 && !line.StartsWith('#'))
             .ToList();
 
-        rows.Should().HaveCount(27, "the manifest is the sweep's denominator — a count drift is a "
+        rows.Should().HaveCount(28, "the manifest is the sweep's denominator — a count drift is a "
             + "population drift, and this number is the record of what 'all' means");
 
         var unreadable = rows.Where(row =>

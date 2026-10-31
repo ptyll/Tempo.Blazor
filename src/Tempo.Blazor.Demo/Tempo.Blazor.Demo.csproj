@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor\Tempo.Blazor.csproj" />
+    <ProjectReference Include="..\Tempo.Blazor.AI\Tempo.Blazor.AI.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Codes\Tempo.Blazor.Codes.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.DiagramEditor\Tempo.Blazor.DiagramEditor.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.DocumentEditor\Tempo.Blazor.DocumentEditor.csproj" />

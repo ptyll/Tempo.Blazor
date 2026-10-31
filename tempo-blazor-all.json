@@ -136,6 +136,10 @@
             "description": "Leaflet powered interactive map components for Tempo.Blazor with bundled OpenStreetMap tiles support, Canvas-rendered marker batches, and marker clustering."
           },
           {
+            "name": "Tempo.Blazor.AI",
+            "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced."
+          },
+          {
             "name": "Tempo.Blazor.Codes",
             "description": "QR code and barcode components for Tempo.Blazor backed by QRCoder and ZXing.Net."
           },
@@ -238,6 +242,7 @@
             "dotnet add package Tempo.Blazor.All  # compatibility package for the full split suite",
             "dotnet add package Tempo.Blazor.PdfViewer  # optional PDF viewer",
             "dotnet add package Tempo.Blazor.Codes  # optional QR code and barcode components",
+            "dotnet add package Tempo.Blazor.AI  # optional AI conversation UI",
             "dotnet add package Tempo.Blazor.DiagramEditor  # optional diagram editor",
             "dotnet add package Tempo.Blazor.DocumentEditor  # optional document editor",
             "dotnet add package Tempo.Blazor.NotionEditor  # optional Notion-style editor",
@@ -259,7 +264,7 @@
           ],
           "programCs": {
             "description": "Register Tempo.Blazor services in Program.cs. AddTempoBlazor() registers ITmLocalizer (Singleton), ThemeService (Scoped), and ToastService (Scoped).",
-            "code": "using Tempo.Blazor.Configuration;\n\nvar builder = WebAssemblyHostBuilder.CreateDefault(args);\n\n// Required: register core Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)\nbuilder.Services.AddTempoBlazor();\n\n// Compatibility option when using Tempo.Blazor.All instead of explicit feature registration\n// builder.Services.AddTempoBlazorAll();\n\n// Optional feature packages\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorDiagramEditor();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorWireframe();\nbuilder.Services.AddTempoBlazorModeling();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();\n\n// Optional: register FluentValidation validators from your assemblies\nbuilder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);\n\n// Optional: set culture for localization (supports 'en', 'cs', 'sk' and 'fr')\nvar culture = new System.Globalization.CultureInfo(\"cs\");\nSystem.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;\nSystem.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;\n\nawait builder.Build().RunAsync();"
+            "code": "using Tempo.Blazor.Configuration;\n\nvar builder = WebAssemblyHostBuilder.CreateDefault(args);\n\n// Required: register core Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)\nbuilder.Services.AddTempoBlazor();\n\n// Compatibility option when using Tempo.Blazor.All instead of explicit feature registration\n// builder.Services.AddTempoBlazorAll();\n\n// Optional feature packages\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorAI();\nbuilder.Services.AddTempoBlazorDiagramEditor();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorWireframe();\nbuilder.Services.AddTempoBlazorModeling();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();\n\n// Optional: register FluentValidation validators from your assemblies\nbuilder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);\n\n// Optional: set culture for localization (supports 'en', 'cs', 'sk' and 'fr')\nvar culture = new System.Globalization.CultureInfo(\"cs\");\nSystem.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;\nSystem.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;\n\nawait builder.Build().RunAsync();"
           },
           "indexHtml": {
             "description": "Add CSS and JS references to wwwroot/index.html",
@@ -272,8 +277,8 @@
           "interactiveAutoSetup": {
             "description": "Tempo.Blazor supports InteractiveAuto (hybrid) rendering in .NET 8+ Blazor Web Apps. Components handle prerendering, double initialization, and JS interop safety automatically. Register services in both Server and Client projects.",
             "appRazor": "<!DOCTYPE html>\n<html>\n<head>\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.bundled.css\" rel=\"stylesheet\" />\n    <link href=\"_content/Tempo.Blazor.DocumentEditor/css/tempo-blazor-document-editor.css\" rel=\"stylesheet\" />\n    <link href=\"_content/Tempo.Blazor.NotionEditor/css/tempo-blazor-notion-editor.css\" rel=\"stylesheet\" />\n    <link href=\"_content/Tempo.Blazor.Signing/css/tempo-blazor-signing.css\" rel=\"stylesheet\" />\n    <link href=\"_content/Tempo.Blazor.Spreadsheet/css/tempo-blazor-spreadsheet.css\" rel=\"stylesheet\" />\n    <HeadOutlet @rendermode=\"InteractiveAuto\" />\n</head>\n<body>\n    <Routes @rendermode=\"InteractiveAuto\" />\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n    <script src=\"_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js\"></script>\n    <script src=\"_content/Tempo.Blazor.DiagramEditor/js/dagre.min.js\"></script>\n    <script src=\"_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/color-picker.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/file-manager.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/gantt.js\"></script>\n    <script src=\"_content/Tempo.Blazor.NotionEditor/js/notion-editor.js\"></script>\n    <script src=\"_content/Tempo.Blazor.Signing/js/pdf-template-designer.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/signature-capture.js\"></script>\n    <script src=\"_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js\"></script>\n    <script src=\"_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js\"></script>\n    <script src=\"_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js\"></script>\n    <script src=\"_content/Tempo.Blazor.EmailTemplates/tm-email-variable-insert.js\"></script>\n    <script src=\"_framework/blazor.web.js\"></script>\n</body>\n</html>",
-            "serverProgramCs": "// Server Program.cs\nbuilder.Services.AddRazorComponents()\n    .AddInteractiveServerComponents()\n    .AddInteractiveWebAssemblyComponents();\n\nbuilder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();",
-            "clientProgramCs": "// Client (WASM) Program.cs\nbuilder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();",
+            "serverProgramCs": "// Server Program.cs\nbuilder.Services.AddRazorComponents()\n    .AddInteractiveServerComponents()\n    .AddInteractiveWebAssemblyComponents();\n\nbuilder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorAI();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();",
+            "clientProgramCs": "// Client (WASM) Program.cs\nbuilder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoBlazorPdfViewer();\nbuilder.Services.AddTempoBlazorCodes();\nbuilder.Services.AddTempoBlazorAI();\nbuilder.Services.AddTempoBlazorDocumentEditor();\nbuilder.Services.AddTempoBlazorNotionEditor();\nbuilder.Services.AddTempoBlazorSigning();\nbuilder.Services.AddTempoBlazorSpreadsheet();\nbuilder.Services.AddTempoBlazorGanttXlsx();",
             "renderModes": {
               "description": "Tempo.Blazor supports all Blazor render modes.",
               "modes": [
@@ -33794,6 +33799,131 @@
         "generatedOnlyItemCount": 0,
         "componentCount": 1,
         "publicApiTypeCount": 0
+      }
+    },
+    {
+      "package": {
+        "packageId": "Tempo.Blazor.AI",
+        "title": "Tempo.Blazor.AI",
+        "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+        "authors": "ptyll",
+        "targetFrameworks": [
+          "net8.0",
+          "net9.0",
+          "net10.0"
+        ],
+        "tags": "blazor;components;ai;llm;chat;streaming;markdown",
+        "repositoryUrl": "https://github.com/ptyll/Tempo.Blazor",
+        "projectUrl": "https://github.com/ptyll/Tempo.Blazor",
+        "installation": {
+          "nuget": [
+            "dotnet add package Tempo.Blazor.AI"
+          ]
+        },
+        "dependencies": [
+          {
+            "name": "Markdig",
+            "version": "1.5.1"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "8.0.12"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "9.0.3"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "10.0.3"
+          }
+        ],
+        "projectReferences": [
+          "../Tempo.Blazor/Tempo.Blazor.csproj",
+          "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
+        ],
+        "namespaces": [
+          "Tempo.Blazor.Configuration"
+        ]
+      },
+      "gettingStarted": {
+        "title": "Tempo.Blazor.AI",
+        "overview": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+        "targetFramework": "net8.0 / net9.0 / net10.0",
+        "installation": {
+          "nuget": [
+            "dotnet add package Tempo.Blazor.AI"
+          ]
+        },
+        "dependencies": [
+          {
+            "name": "Markdig",
+            "version": "1.5.1"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "8.0.12"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "9.0.3"
+          },
+          {
+            "name": "Microsoft.AspNetCore.Components.Web",
+            "version": "10.0.3"
+          }
+        ]
+      },
+      "items": [
+        {
+          "itemName": "AIServiceCollectionExtensions",
+          "kind": "Class",
+          "category": "Configuration",
+          "namespace": "Tempo.Blazor.Configuration",
+          "description": "Extension methods for registering the Tempo.Blazor AI component group.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Configuration/AIServiceCollectionExtensions.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "AddTempoBlazorAI",
+              "kind": "Method",
+              "type": "IServiceCollection",
+              "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts are planned for Tempo.Blazor.Abstractions (plan 7f21f26b Fáze 2), so no LLM SDK is pulled in.",
+              "parameters": [
+                {
+                  "name": "services",
+                  "type": "this IServiceCollection"
+                }
+              ]
+            }
+          ],
+          "examples": [
+            {
+              "title": "Register the services in Program.cs",
+              "code": "builder.Services.AddTempoBlazorAI();"
+            }
+          ]
+        }
+      ],
+      "libraryExamples": [],
+      "assets": [
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/tempo-blazor-ai.css",
+          "kind": "Css"
+        }
+      ],
+      "summary": {
+        "itemCount": 1,
+        "manualItemCount": 1,
+        "generatedItemCount": 1,
+        "generatedOnlyItemCount": 0,
+        "componentCount": 0,
+        "publicApiTypeCount": 1
       }
     },
     {
@@ -71884,6 +72014,7 @@
         "dependencies": [],
         "projectReferences": [
           "../Tempo.Blazor/Tempo.Blazor.csproj",
+          "../Tempo.Blazor.AI/Tempo.Blazor.AI.csproj",
           "../Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj",
           "../Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj",
           "../Tempo.Blazor.DocumentEditor/Tempo.Blazor.DocumentEditor.csproj",
@@ -121224,6 +121355,10 @@
             "description": "Leaflet powered interactive map components for Tempo.Blazor with bundled OpenStreetMap tiles support, Canvas-rendered marker batches, and marker clustering."
           },
           {
+            "name": "Tempo.Blazor.AI",
+            "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced."
+          },
+          {
             "name": "Tempo.Blazor.Codes",
             "description": "QR code and barcode components for Tempo.Blazor backed by QRCoder and ZXing.Net."
           },
@@ -123284,6 +123419,10 @@
           {
             "name": "Tempo.Blazor.Maps",
             "description": "Leaflet powered interactive map components for Tempo.Blazor with bundled OpenStreetMap tiles support, Canvas-rendered marker batches, and marker clustering."
+          },
+          {
+            "name": "Tempo.Blazor.AI",
+            "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced."
           },
           {
             "name": "Tempo.Blazor.Codes",
@@ -125754,6 +125893,10 @@
             "description": "Leaflet powered interactive map components for Tempo.Blazor with bundled OpenStreetMap tiles support, Canvas-rendered marker batches, and marker clustering."
           },
           {
+            "name": "Tempo.Blazor.AI",
+            "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced."
+          },
+          {
             "name": "Tempo.Blazor.Codes",
             "description": "QR code and barcode components for Tempo.Blazor backed by QRCoder and ZXing.Net."
           },
@@ -126839,11 +126982,11 @@
     }
   ],
   "summary": {
-    "packageCount": 27,
-    "itemCount": 3373,
-    "manualItemCount": 3373,
+    "packageCount": 28,
+    "itemCount": 3374,
+    "manualItemCount": 3374,
     "generatedOnlyItemCount": 0,
     "componentCount": 511,
-    "publicApiTypeCount": 2809
+    "publicApiTypeCount": 2810
   }
 }

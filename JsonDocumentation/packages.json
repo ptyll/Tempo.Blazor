@@ -52,6 +52,19 @@
       "includeAssets": true
     },
     {
+      "packageId": "Tempo.Blazor.AI",
+      "sourceProject": "src/Tempo.Blazor.AI/Tempo.Blazor.AI.csproj",
+      "outputFile": "tempo-blazor-ai.json",
+      "documentationRoots": [
+        "Packages/Tempo.Blazor.AI/items"
+      ],
+      "componentRoots": [],
+      "includePatterns": [],
+      "excludePatterns": [],
+      "includePublicTypes": true,
+      "includeAssets": true
+    },
+    {
       "packageId": "Tempo.Blazor.Codes",
       "sourceProject": "src/Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj",
       "outputFile": "tempo-blazor-codes.json",

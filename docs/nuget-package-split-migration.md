@@ -12,6 +12,7 @@ Tempo.Blazor now uses a lean core package plus feature packages for the largest 
 | `Tempo.Blazor.All` | Compatibility package for apps that want core plus the split feature packages. |
 | `Tempo.Blazor.PdfViewer` | `TmPdfViewer` and PDF.js assets. |
 | `Tempo.Blazor.Codes` | `TmQRCode`, `TmBarcode`, `QRCoder`, and `ZXing.Net`. |
+| `Tempo.Blazor.AI` | AI conversation UI (Markdig); contracts in Tempo.Blazor.Abstractions. |
 | `Tempo.Blazor.DiagramEditor` | Diagram editor, stencil/template services, layout JS, and diagram assets. |
 | `Tempo.Blazor.Wireframe` | Wireframe editor, registry services, schema, and wireframe assets. |
 | `Tempo.Blazor.Modeling` | Modeling editor and modeling services built on `Tempo.Blazor.DiagramEditor`. |

@@ -10,6 +10,7 @@ src/Tempo.Blazor.Collaboration/Tempo.Blazor.Collaboration.csproj
 src/Tempo.Blazor.PdfViewer/Tempo.Blazor.PdfViewer.csproj
 src/Tempo.Blazor.Maps/Tempo.Blazor.Maps.csproj
 src/Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj
+src/Tempo.Blazor.AI/Tempo.Blazor.AI.csproj
 src/Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj
 src/Tempo.Blazor.Wireframe/Tempo.Blazor.Wireframe.csproj
 src/Tempo.Blazor.Modeling/Tempo.Blazor.Modeling.csproj

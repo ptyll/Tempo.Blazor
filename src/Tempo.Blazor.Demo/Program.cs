@@ -110,6 +110,7 @@ builder.Services.AddTempoDemoLocalizer();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();
+builder.Services.AddTempoBlazorAI();
 builder.Services.AddTempoBlazorDocumentEditor();
 builder.Services.AddTempoBlazorDiagramEditor();
 builder.Services.AddTempoBlazorWireframe();

@@ -22,6 +22,36 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — scaffolding (plan 7f21f26b, phase 1)
+
+New split package **`Tempo.Blazor.AI`** (`src/Tempo.Blazor.AI`, Razor SDK, net8.0/net9.0/net10.0)
+for AI conversation UI. Phase 1 lands the package skeleton only; the components
+(`TmMarkdownView`, `TmAiMessage`, `TmAiConversation`, `TmAiComposer`, `TmToolCallCard`,
+`TmThinkingIndicator`, `TmReasoningPanel`) arrive in the follow-up phases of the same plan and the
+demo page ships with them.
+
+- **Registration** — `AddTempoBlazorAI()` (`Tempo.Blazor.Configuration.AIServiceCollectionExtensions`)
+  calls `AddTempoBlazor()`, so it is idempotent next to an existing core registration.
+  `AddTempoBlazorAll()` now includes it.
+- **Package contract (planned)** — model and streaming contracts are planned for
+  `Tempo.Blazor.Abstractions` (`Tempo.Blazor.AI.Models` / `Tempo.Blazor.AI.Services`, Fáze 2 of the
+  same plan), which has zero UI dependencies, so a backend will be able to reference them without
+  Blazor; phase 1 ships neither. The package references **no LLM SDK and no PromptHelper**; the
+  host will supply the token stream. Markdig (BSD-2-Clause, pure managed, WebAssembly-safe) is
+  already the only third-party dependency and becomes the processor behind the planned safe
+  markdown pipeline.
+- **Static assets** — `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` is an `@import` manifest;
+  the package ships no JS. The shared streaming caret (`.tm-ai-streaming`) and its
+  `prefers-reduced-motion` block live in `css/components/_ai-streaming.css`.
+- **Registration in the repo** — `TempoBlazor.slnx`, `eng/nuget-packages.txt`, `Tempo.Blazor.All`,
+  the test project, `JsonDocumentation/packages.json` (bundle `tempo-blazor-ai.json`), the
+  reduced-motion split-package sweep and all four demo hosts (WASM, Server, InteractiveAuto server
+  and client).
+
+**No breaking changes** — additive package, additive registration, no existing API touched. A host
+that already links the core stylesheet gains one more `<link>` for the new package when it adopts
+the AI components.
+
 ### Spreadsheet redesign — plan summary (plan 8959eebe, phases 1–8)
 
 The `Tempo.Blazor.Spreadsheet` package was rebuilt against 57 reference mockups

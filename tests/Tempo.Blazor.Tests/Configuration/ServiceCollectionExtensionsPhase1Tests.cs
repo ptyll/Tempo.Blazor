@@ -92,6 +92,22 @@ public sealed class ServiceCollectionExtensionsPhase1Tests
     }
 
     [Fact]
+    public void AddTempoBlazorAI_registers_core_services()
+    {
+        var services = CreateServices();
+
+        services.AddTempoBlazorAI();
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<ITmLocalizer>().Should().NotBeNull();
+        provider.GetRequiredService<ThemeService>().Should().NotBeNull();
+        provider.GetRequiredService<ToastService>().Should().NotBeNull();
+        provider.GetRequiredService<DragDropService>().Should().NotBeNull();
+        typeof(AIServiceCollectionExtensions).Assembly.GetName().Name.Should().Be("Tempo.Blazor.AI");
+    }
+
+    [Fact]
     public void AddTempoBlazorDiagramEditor_registers_diagram_services()
     {
         var services = CreateServices();
@@ -149,6 +165,12 @@ public sealed class ServiceCollectionExtensionsPhase1Tests
         provider.GetRequiredService<WireframeComponentRegistry>().Should().NotBeNull();
         provider.GetRequiredService<DiagramStencilRegistry>().Should().NotBeNull();
         provider.GetRequiredService<ModelingNotationProfileRegistry>().Should().NotBeNull();
+
+        typeof(AllServiceCollectionExtensions).Assembly
+            .GetReferencedAssemblies()
+            .Select(assembly => assembly.Name)
+            .Should()
+            .Contain("Tempo.Blazor.AI", "the compatibility package must pull in every split feature package");
     }
 
     private static ServiceCollection CreateServices()
