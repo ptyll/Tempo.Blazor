@@ -181,4 +181,22 @@ public partial class TmSigningFormRunner
         _pendingScrollFieldUuid = null;
         await (_runnerInterop ??= new SigningRunnerInterop(JS)).ScrollToFieldAsync(fieldUuid);
     }
+
+    /// <summary>
+    /// Reveals the phone step's code row after a host-accepted send (phase 6 review fix): the
+    /// row scrolls into view with <c>block: 'nearest'</c> so the OTP input, the Verify action and
+    /// the fresh resend countdown are visible inside the capped panel / the mobile sheet — the
+    /// step's own input-focus scroll (without preventScroll) stops at the input. Best-effort.
+    /// </summary>
+    private async Task ApplyPendingOtpRowRevealAsync()
+    {
+        if (!_pendingOtpRowReveal)
+        {
+            return;
+        }
+
+        _pendingOtpRowReveal = false;
+        await (_runnerInterop ??= new SigningRunnerInterop(JS))
+            .ScrollIntoViewAsync($"#{_stepPanelId} .tm-signing-phone-step__otp-row");
+    }
 }

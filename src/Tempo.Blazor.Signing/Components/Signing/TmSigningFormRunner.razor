@@ -127,7 +127,13 @@
 
             <CascadingValue Value="_stepFocusSignal" IsFixed="true">
                 <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
-                    @RenderStepPanel()
+                    @* The phone step keys its host-reported send off this flag (phase 6 review
+                        fix): hosted, the send click never fakes progress — the OTP row, the
+                        countdown and the announcement follow only the CodeSent parameter the
+                        runner reports AFTER the host accepted the dispatch. *@
+                    <CascadingValue Name="TmSigningRunnerHosted" Value="true" IsFixed="true">
+                        @RenderStepPanel()
+                    </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
         </aside>
@@ -231,6 +237,10 @@
                     case SigningFieldType.Image:
                     case SigningFieldType.File:
                     case SigningFieldType.Stamp:
+                        @* Phase 6: the upload is host-owned — the runner hands the picked file to
+                            OnAttachmentSelected and stores the host url on the card (only when a
+                            host uploader is wired; without one the legacy client-side-only
+                            behaviour stands). *@
                         <TmSigningAttachmentStep Field="CurrentStep.Field"
                                                  Attachments="@GetAttachments(CurrentStep.Field.Uuid)"
                                                  AttachmentsChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
@@ -238,6 +248,7 @@
                                                  AppearsOn="@CurrentStep.AppearsOn"
                                                  AllowMultiple="@(CurrentStep.Field.Type == SigningFieldType.File)"
                                                  Accept="@(CurrentStep.Field.Type == SigningFieldType.Image ? "image/*" : null)"
+                                                 UploadUrlResolver="@GetAttachmentUploadResolver(CurrentStep.Field.Uuid)"
                                                  Culture="@CurrentCulture"
                                                  FallbackCulture="@FallbackCulture"
                                                  Disabled="@IsLoading" />
@@ -255,10 +266,26 @@
                                                 Disabled="@IsLoading" />
                         break;
                     case SigningFieldType.Phone:
+                        @* Phase 6 (opt-in): the send/verify callbacks reach the phone step ONLY
+                            when the host wired OnSendPhoneCode / OnVerifyPhoneCode — a legacy
+                            runner renders neither a forwarding send nor a Verify action, and the
+                            typed phone still completes the step on its own. The typed OTP draft
+                            is never stored as the field value; the code-sent state and the draft
+                            survive navigating away and back (review item 12), the OTP error is
+                            owned by the OTP input (item 8) and Change number clears the host
+                            confirmation (item 1). *@
                         <TmSigningPhoneStep Field="CurrentStep.Field"
                                             PhoneNumber="@GetStringValue(CurrentStep.Field.Uuid)"
                                             PhoneNumberChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
                                             ValueChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
+                                            OtpCode="@GetPhoneCodeDraft(CurrentStep.Field.Uuid)"
+                                            OtpCodeChanged="code => SetPhoneCodeDraftAsync(CurrentStep.Field.Uuid, code)"
+                                            CodeSent="@IsPhoneCodeSent(CurrentStep.Field.Uuid)"
+                                            OtpInvalid="@_phoneOtpInvalid.Contains(CurrentStep.Field.Uuid)"
+                                            OnSendCode="@GetPhoneSendCallback(CurrentStep.Field.Uuid)"
+                                            OnVerifyCode="@GetPhoneVerifyCallback(CurrentStep.Field.Uuid)"
+                                            OnChangeNumber="@GetPhoneChangeNumberCallback(CurrentStep.Field.Uuid)"
+                                            Verified="@IsPhoneVerified(CurrentStep.Field)"
                                             AppearsOn="@CurrentStep.AppearsOn"
                                             Culture="@CurrentCulture"
                                             FallbackCulture="@FallbackCulture"
@@ -267,14 +294,31 @@
                     case SigningFieldType.Verification:
                     case SigningFieldType.Kba:
                     case SigningFieldType.Payment:
-                        <TmSigningExternalStep Field="CurrentStep.Field"
-                                               Value="@GetValue(CurrentStep.Field.Uuid)"
-                                               AppearsOn="@CurrentStep.AppearsOn"
-                                               Disabled="@IsLoading"
-                                               Culture="@CurrentCulture"
-                                               FallbackCulture="@FallbackCulture"
-                                               OnStart="field => SetFieldValueAsync(field.Uuid, true)"
-                                               OnCheckout="field => SetFieldValueAsync(field.Uuid, true)" />
+                        {
+                            @* Phase 6 (SI2): the host's provider context feeds the step — url,
+                                KBA questions, loading state, error and provider name. The click
+                                goes through StartExternalStepAsync: with OnExternalStepRequested
+                                wired it only notifies the host (the step completes when the host
+                                stores the provider result through Values); without it the legacy
+                                click stores true. The KBA submit hands the typed ANSWERS to the
+                                host through the request — they are never stored as the field
+                                value (review item 4). *@
+                            var externalContext = ResolveExternalStepContext(CurrentStep.Field);
+                            <TmSigningExternalStep Field="CurrentStep.Field"
+                                                   Value="@GetValue(CurrentStep.Field.Uuid)"
+                                                   AppearsOn="@CurrentStep.AppearsOn"
+                                                   Disabled="@IsLoading"
+                                                   Culture="@CurrentCulture"
+                                                   FallbackCulture="@FallbackCulture"
+                                                   ExternalUrl="@externalContext?.ExternalUrl"
+                                                   Questions="@(externalContext?.Questions ?? [])"
+                                                   IsLoading="@(externalContext?.IsLoading == true)"
+                                                   Error="@externalContext?.Error"
+                                                   ProviderName="@externalContext?.ProviderName"
+                                                   OnStart="StartExternalStepAsync"
+                                                   OnCheckout="StartExternalStepAsync"
+                                                   OnSubmitAnswers="StartExternalStepAsync" />
+                        }
                         break;
                 }
             </div>

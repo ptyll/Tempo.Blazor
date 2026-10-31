@@ -249,6 +249,31 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* ── Phone step (phase 6) ─────────────────────────────────────── */
+
+/* The Verify action joins the OTP row at the 44 px target; at zero the countdown text becomes
+   the real "Resend" action — a text-styled Link button that still meets the target. */
+.tm-signing-phone-step__verify,
+.tm-signing-phone-step__resend-button {
+    min-height: var(--tm-touch-target);
+}
+
+/* The host-confirmed state (phase 6): the same status shape the external step renders. */
+.tm-signing-phone-step__verified {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-success-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+@container tm-signing-step-shell (width < 640px) {
+    .tm-signing-phone-step__verify,
+    .tm-signing-phone-step__resend-button {
+        inline-size: 100%;
+    }
+}
+
 /* ── Attachment step ──────────────────────────────────────────── */
 
 .tm-signing-attachment-step__drop-icon {
@@ -259,6 +284,15 @@
 .tm-signing-attachment-step__drop-text {
     color: var(--tm-text-primary);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The host round-trip busy state (phase 6 review): a quiet spinner row with the localized
+   "Uploading {name}…" text, shown while the drop zone is disabled. */
+.tm-signing-attachment-step__uploading {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-text-secondary);
 }
 
 .tm-signing-attachment-step__files-title {
@@ -416,6 +450,27 @@
 .tm-signing-external-step__amount {
     color: var(--tm-text-primary);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The host's provider context (phase 6): the provider's display name and the redirect note are
+   quiet secondary text — the provider name rides under the hero, the note under the outbound
+   link, so the signer always knows who runs the flow and that it opens outside the page. */
+.tm-signing-external-step__provider,
+.tm-signing-external-step__redirect-note {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The KBA submit action (phase 6 review) fills the narrow step container's row like the phone
+   step's actions; the 44 px target matches the other step actions. */
+.tm-signing-external-step__submit {
+    margin-block-start: var(--tm-space-3);
+}
+
+@container tm-signing-step-shell (width < 640px) {
+    .tm-signing-external-step__submit {
+        inline-size: 100%;
+    }
 }
 
 /* ── Signature step ───────────────────────────────────────────── */

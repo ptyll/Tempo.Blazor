@@ -22,70 +22,116 @@
         <TmIcon Name="@SigningFieldTypeIcons.Get(Field.Type)" Size="IconSize.Lg" />
     </div>
 
-    @if (IsLoading)
+    @* The host's provider context (phase 6): the provider's display name rides above the call to
+        action — the signer knows WHO runs the verification or the payment. *@
+    @if (!string.IsNullOrWhiteSpace(ProviderName))
     {
-        <div class="tm-signing-external-step__loading">
-            <TmSpinner Size="SpinnerSize.Sm" />
-            <span>@Loc["TmSigningStep_LoadingExternal"]</span>
-        </div>
+        <div class="tm-signing-external-step__provider">@Loc["TmSigningStep_ExternalProvider", ProviderName]</div>
     }
-    else if (IsVerified)
+
+    @if (IsVerified)
     {
         @* The verified / paid state replaces the call to action — the runner stored the provider
-            result (value true), so the step announces the outcome instead of asking again. *@
-        <div class="tm-signing-external-step__verified" role="status">
+            result (value true), so the step announces the outcome. With a named provider the text
+            reads "Verified by {provider}" (phase 6 review item 14). The announcement goes through
+            the always-rendered live region below (one region per step, WCAG 4.1.3), so this block
+            carries no role itself. *@
+        <div class="tm-signing-external-step__verified">
             <TmIcon Name="check-circle" Size="IconSize.Sm" />
-            <span>@(Field.Type == SigningFieldType.Payment ? Loc["TmSigningStep_Paid"] : Loc["TmSigningStep_Verified"])</span>
-        </div>
-    }
-    else if (Field.Type == SigningFieldType.Kba && Questions.Count > 0)
-    {
-        @* Each answer keeps its per-question label (the question IS the name) and references the
-            step's description / validation ids while they render. *@
-        <div class="tm-signing-external-step__questions">
-            @foreach (var question in Questions)
-            {
-                <TmTextInput Value="@(GetAnswer(question) ?? string.Empty)"
-                             ValueChanged="value => HandleAnswerChangedAsync(question, value)"
-                             Label="@question"
-                             Disabled="@Disabled"
-                             IsValid="@ValidationState"
-                             Class="tm-signing-external-step__answer"
-                             AdditionalAttributes="@(BuildAnswerAttributes())" />
-            }
-        </div>
-    }
-    else if (Field.Type == SigningFieldType.Payment)
-    {
-        @* The summary is only the model data (currency + price); the amount is formatted with the
-            FIELD culture — the old InvariantCulture "EUR 19.50" was the bug phase 4 fixes. *@
-        <div class="tm-signing-external-step__summary">
-            <span class="tm-signing-external-step__amount">@PaymentAmount</span>
-            <TmButton Variant="ButtonVariant.Primary"
-                      Class="tm-signing-external-step__checkout"
-                      Disabled="@Disabled"
-                      OnClick="CheckoutAsync">
-                @Loc["TmSigningStep_Checkout"]
-            </TmButton>
+            <span>@VerifiedText</span>
         </div>
     }
     else
     {
-        <div class="tm-signing-external-step__start">
-            @if (!string.IsNullOrWhiteSpace(ExternalUrl))
-            {
-                @* The open action stays a real link (new tab) wearing the core outline button
-                    classes; a button could not navigate without JS interop. *@
-                <a class="tm-btn tm-btn-outline tm-signing-external-step__link" href="@ExternalUrl" target="_blank" rel="noopener noreferrer">
-                    @Loc["TmSigningStep_OpenExternal"]
-                </a>
-            }
-            <TmButton Variant="ButtonVariant.Primary"
-                      Class="tm-signing-external-step__start-button"
-                      Disabled="@Disabled"
-                      OnClick="StartAsync">
-                @(Field.Type == SigningFieldType.Kba ? Loc["TmSigningStep_StartKba"] : Loc["TmSigningStep_StartVerification"])
-            </TmButton>
-        </div>
+        @* The provider's loading state (phase 6 review item 7): the indicator row renders, and the
+            primary action stays IN PLACE — disabled and aria-busy — instead of being swapped out,
+            so focus and layout do not jump while the provider runs. *@
+        @if (IsLoading)
+        {
+            <div class="tm-signing-external-step__loading">
+                <TmSpinner Size="SpinnerSize.Sm" />
+                <span>@Loc["TmSigningStep_LoadingExternal"]</span>
+            </div>
+        }
+
+        @if (Field.Type == SigningFieldType.Kba && Questions.Count > 0)
+        {
+            @* Each answer keeps its per-question label (the question IS the name) and references the
+                step's description / validation ids while they render. The SUBMIT action (phase 6
+                review item 4) hands the typed answers to the host — they are never stored as the
+                field value. *@
+            <div class="tm-signing-external-step__questions">
+                @foreach (var question in Questions)
+                {
+                    <TmTextInput Value="@(GetAnswer(question) ?? string.Empty)"
+                                 ValueChanged="value => HandleAnswerChangedAsync(question, value)"
+                                 Label="@question"
+                                 Disabled="@(Disabled || IsLoading)"
+                                 IsValid="@ValidationState"
+                                 Class="tm-signing-external-step__answer"
+                                 AdditionalAttributes="@(BuildAnswerAttributes())" />
+                }
+                @if (OnSubmitAnswers.HasDelegate)
+                {
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Class="tm-signing-external-step__submit"
+                              Disabled="@(Disabled || IsLoading)"
+                              AdditionalAttributes="@BusyAttributes"
+                              OnClick="SubmitAnswersAsync">
+                        @Loc["TmSigningStep_SubmitAnswers"]
+                    </TmButton>
+                }
+            </div>
+        }
+        else if (Field.Type == SigningFieldType.Payment)
+        {
+            @* The summary is only the model data (currency + price); the amount is formatted with the
+                FIELD culture — the old InvariantCulture "EUR 19.50" was the bug phase 4 fixes. *@
+            <div class="tm-signing-external-step__summary">
+                <span class="tm-signing-external-step__amount">@PaymentAmount</span>
+                <TmButton Variant="ButtonVariant.Primary"
+                          Class="tm-signing-external-step__checkout"
+                          Disabled="@(Disabled || IsLoading)"
+                          AdditionalAttributes="@BusyAttributes"
+                          OnClick="CheckoutAsync">
+                    @Loc["TmSigningStep_Checkout"]
+                </TmButton>
+            </div>
+        }
+        else
+        {
+            <div class="tm-signing-external-step__start">
+                @if (!string.IsNullOrWhiteSpace(ExternalUrl))
+                {
+                    @* The open action stays a real link (new tab) wearing the core outline button
+                        classes; a button could not navigate without JS interop. The rel pair, the
+                        aria-describedby onto the redirect note and the aria-hidden external-link
+                        icon are the phase-6 security contract (phase 6 review item 13): the
+                        provider never receives the signing page's window context, and the signer
+                        is told so. *@
+                    <a class="tm-btn tm-btn-outline tm-signing-external-step__link"
+                       href="@ExternalUrl"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       aria-describedby="@_redirectNoteId">
+                        <TmIcon Name="external-link" Size="IconSize.Sm" />
+                        @Loc["TmSigningStep_OpenExternal"]
+                    </a>
+                    <span id="@_redirectNoteId" class="tm-signing-external-step__redirect-note">@Loc["TmSigningStep_RedirectNote"]</span>
+                }
+                <TmButton Variant="ButtonVariant.Primary"
+                          Class="tm-signing-external-step__start-button"
+                          Disabled="@(Disabled || IsLoading)"
+                          AdditionalAttributes="@BusyAttributes"
+                          OnClick="StartAsync">
+                    @(Field.Type == SigningFieldType.Kba ? Loc["TmSigningStep_StartKba"] : Loc["TmSigningStep_StartVerification"])
+                </TmButton>
+            </div>
+        }
     }
+
+    @* The ONE always-rendered polite status region of the step (phase 6 review, WCAG 2.4.3 /
+        4.1.3): it announces the phase events — "Loading…", "Verified", "Paid". Always in the DOM
+        so the region exists before its first announcement. *@
+    <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
 </TmSigningStepShell>

@@ -436,8 +436,10 @@ public sealed class MarkupClassCoverageTests
             // per-instance accessible ids the step components own ("tm-signing-step-title-{Guid…}",
             // "tm-signing-step-description-{…}", "tm-signing-step-validation-{Guid…}") joined the
             // scanned population; the text step's old "tm-signing-text-validation-{Guid…}" stem
-            // merged into the shared step-validation stem — 6 → 11.
-            ExpectedUnmeasurableStems: 11),
+            // merged into the shared step-validation stem — 6 → 11. Phase 6 review: the external
+            // step's per-instance redirect-note id ("tm-signing-external-redirect-{Guid…}",
+            // the aria-describedby target of the outbound provider link) — 11 → 12.
+            ExpectedUnmeasurableStems: 12),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 17),

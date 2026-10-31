@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Host-provided context for an external verification / KBA / payment signing field (Signing redesign phase 6, SI2). The runner resolves it from TmSigningFormRunner.StepContextProvider on every render and feeds the external step: the provider link, the inline KBA questions, the provider's loading state and error, and the provider's display name. The CONTEXT NEVER CONFIRMS the step — only a stored provider result (value true in Values) does.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningExternalStepContext"
+}

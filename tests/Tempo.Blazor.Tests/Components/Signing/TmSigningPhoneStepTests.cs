@@ -1,6 +1,8 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
@@ -170,6 +172,252 @@ public class TmSigningPhoneStepTests : LocalizationTestBase
             .Add(p => p.ResendSeconds, 12));
 
         cut.Find(".tm-signing-phone-step__resend").TextContent.Should().Contain("12");
+    }
+
+    /// <summary>
+    /// Phase 6: the countdown TICKS on the injected clock (no sleeps) — from the send it runs
+    /// 30 → 0, then the text turns into a real "Resend" button, and pressing it re-raises the
+    /// send and restarts the window.
+    /// </summary>
+    [Fact]
+    public void PhoneStep_ResendCountdown_WithFakeTimeProvider_30To0_ThenResendButton()
+    {
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var sends = 0;
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.ResendSeconds, 30)
+            .Add(p => p.OnSendCode, EventCallback.Factory.Create<string>(this, _ => sends++)));
+
+        cut.Find(".tm-signing-phone-step__send").Click();
+        sends.Should().Be(1);
+        cut.Find(".tm-signing-phone-step__resend").TextContent.Should().Contain("30");
+        cut.FindAll(".tm-signing-phone-step__resend-button").Should().BeEmpty("while the countdown runs there is no resend action");
+
+        time.Advance(TimeSpan.FromSeconds(30));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-signing-phone-step__resend-button").TextContent.Should().Contain("Resend",
+                "at zero the countdown text becomes the real resend action");
+            cut.FindAll(".tm-signing-phone-step__resend").Should().BeEmpty("the countdown text is gone at 0");
+        });
+
+        cut.Find(".tm-signing-phone-step__resend-button").Click();
+        sends.Should().Be(2, "the resend re-raises the send");
+        cut.Find(".tm-signing-phone-step__resend").TextContent.Should().Contain("30",
+            "the resend restarts the window");
+    }
+
+    /// <summary>The Verify action raises the typed code — the RUNNER (or a host) decides whether
+    /// the code is valid; the step only renders the outcome.</summary>
+    [Fact]
+    public void PhoneStep_VerifyButton_RaisesTheTypedCode()
+    {
+        var verifyRequests = 0;
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.CodeSent, true)
+            .Add(p => p.OtpCode, "123456")
+            .Add(p => p.OnVerifyCode, EventCallback.Factory.Create(this, () => verifyRequests++)));
+
+        cut.Find(".tm-signing-phone-step__verify").Click();
+
+        verifyRequests.Should().Be(1);
+    }
+
+    /// <summary>The host-confirmed state replaces the OTP row — the code input, the Verify action
+    /// and the resend affordances are gone.</summary>
+    [Fact]
+    public void PhoneStep_VerifiedState_ReplacesTheOtpControls()
+    {
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.CodeSent, true)
+            .Add(p => p.Verified, true));
+
+        cut.Find(".tm-signing-phone-step__verified").TextContent.Should().Contain("Verified");
+        cut.FindAll("input.tm-signing-phone-step__otp").Should().BeEmpty();
+        cut.FindAll(".tm-signing-phone-step__verify").Should().BeEmpty();
+        cut.FindAll(".tm-signing-phone-step__resend").Should().BeEmpty();
+        cut.FindAll(".tm-signing-phone-step__resend-button").Should().BeEmpty();
+    }
+
+    /// <summary>Phase 6 review item 1: the VERIFIED state LOCKS the number input and the country
+    /// select (both disabled) and replaces "Send code" with a Secondary "Change number" action.</summary>
+    [Fact]
+    public void PhoneStep_VerifiedState_LocksNumberAndCountry_AndReplacesSendWithChangeNumber()
+    {
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.CodeSent, true)
+            .Add(p => p.Verified, true));
+
+        cut.Find("input.tm-signing-phone-step__input").HasAttribute("disabled").Should().BeTrue(
+            "the verified number is locked");
+        cut.Find(".tm-signing-phone-step__country select").HasAttribute("disabled").Should().BeTrue(
+            "the country select is locked with the number");
+        cut.FindAll(".tm-signing-phone-step__send").Should().BeEmpty("Send is replaced in the verified state");
+        var change = cut.Find(".tm-signing-phone-step__change-number");
+        change.TextContent.Should().Contain("Change number");
+        change.ClassList.Should().Contain("tm-btn-secondary", "Change number is the Secondary action");
+    }
+
+    /// <summary>Phase 6 review item 1: Change number raises the callback (the runner clears its
+    /// host confirmation) and unlocks the editing locally — no verified block, editable input.</summary>
+    [Fact]
+    public async Task PhoneStep_ChangeNumber_RaisesCallback_AndUnlocksControls()
+    {
+        var changeRequests = 0;
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.CodeSent, true)
+            .Add(p => p.Verified, true)
+            .Add(p => p.OnChangeNumber, EventCallback.Factory.Create(this, () => changeRequests++)));
+
+        cut.Find(".tm-signing-phone-step__change-number").Click();
+
+        changeRequests.Should().Be(1, "the runner is asked to clear its confirmation");
+        // The local unlock applies immediately (before the host's re-render).
+        cut.Find("input.tm-signing-phone-step__input").HasAttribute("disabled").Should().BeFalse();
+        cut.FindAll(".tm-signing-phone-step__verified").Should().BeEmpty();
+        cut.Find(".tm-signing-phone-step__send").Should().NotBeNull("Send is back for the new number");
+    }
+
+    /// <summary>Phase 6 review item 9: once a code was sent the Send action is SECONDARY and
+    /// disabled while the countdown runs; at zero it is enabled again (next to the Resend link).</summary>
+    [Fact]
+    public void PhoneStep_Send_IsSecondaryAndDisabledDuringCountdown_EnabledAtZero()
+    {
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.ResendSeconds, 30)
+            .Add(p => p.OnSendCode, EventCallback.Factory.Create<string>(this, _ => { })));
+
+        var send = cut.Find(".tm-signing-phone-step__send");
+        send.ClassList.Should().Contain("tm-btn-primary", "the first send is the primary action");
+        send.HasAttribute("disabled").Should().BeFalse();
+
+        cut.Find(".tm-signing-phone-step__send").Click();
+
+        send = cut.Find(".tm-signing-phone-step__send");
+        send.ClassList.Should().Contain("tm-btn-secondary", "after a send the action is Secondary (resends go through Resend)");
+        send.HasAttribute("disabled").Should().BeTrue("the countdown throttles the send");
+
+        time.Advance(TimeSpan.FromSeconds(30));
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-signing-phone-step__send").HasAttribute("disabled").Should().BeFalse(
+                "at zero the countdown no longer throttles the send");
+        });
+    }
+
+    /// <summary>Phase 6 review item 5: a code cannot be sent to an EMPTY number — the callback is
+    /// never raised (the required message explains the empty required field).</summary>
+    [Fact]
+    public void PhoneStep_SendCode_EmptyNumber_ReturnsEarlyWithoutRaisingTheCallback()
+    {
+        var sends = 0;
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.OnSendCode, EventCallback.Factory.Create<string>(this, _ => sends++)));
+
+        cut.Find(".tm-signing-phone-step__send").Click();
+
+        sends.Should().Be(0, "an empty number never reaches the host");
+        cut.FindAll(".tm-signing-phone-step__otp").Should().BeEmpty("no OTP row without a send");
+    }
+
+    /// <summary>Phase 6 review item 5: a THROWING host shows the localized "verification
+    /// unavailable" message, starts NO countdown and fakes NO progress.</summary>
+    [Fact]
+    public void PhoneStep_SendCallbackThrows_ShowsUnavailableMessage_AndStartsNoCountdown()
+    {
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.ResendSeconds, 30)
+            .Add(p => p.OnSendCode, EventCallback.Factory.Create<string>(this, _ => throw new InvalidOperationException("host down"))));
+
+        cut.Find(".tm-signing-phone-step__send").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-signing-step-shell__validation").TextContent.Should().Contain("temporarily unavailable",
+                "the localized unavailable message replaces any fake progress");
+        });
+        cut.FindAll(".tm-signing-phone-step__otp").Should().BeEmpty("a failed send shows no OTP row");
+
+        time.Advance(TimeSpan.FromSeconds(60));
+        cut.FindAll(".tm-signing-phone-step__resend-button").Should().BeEmpty(
+            "no countdown was started for a failed send");
+    }
+
+    /// <summary>Phase 6 review item 7 (WCAG 4.1.3): ONE always-rendered polite live region carries
+    /// the phase events ("Code sent" on send, "Resend available" at zero, "Verified" on the host
+    /// confirmation); the ticking countdown text is aria-live="off" and the verified block carries
+    /// NO role itself.</summary>
+    [Fact]
+    public void PhoneStep_Announcements_RunThroughOneAlwaysRenderedLiveRegion()
+    {
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.PhoneNumber, "5550100")
+            .Add(p => p.ResendSeconds, 2)
+            .Add(p => p.OnSendCode, EventCallback.Factory.Create<string>(this, _ => { })));
+
+        // Always rendered — even before any event.
+        cut.FindAll("[role='status'][aria-live='polite']").Should().ContainSingle(
+            "exactly one live region exists before any announcement");
+
+        cut.Find(".tm-signing-phone-step__send").Click();
+        cut.FindAll("[role='status'][aria-live='polite']").Should().ContainSingle("still exactly one region");
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Contain("Code sent");
+
+        cut.Find(".tm-signing-phone-step__resend").HasAttribute("aria-live").Should().BeTrue();
+        cut.Find(".tm-signing-phone-step__resend").GetAttribute("aria-live").Should().Be("off",
+            "the ticking countdown must not announce every second");
+
+        time.Advance(TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Contain("Resend available");
+        });
+
+        // The host confirms: the verified block carries no role; the live region announces.
+        cut.Render(parameters => parameters.Add(p => p.Verified, true));
+        cut.FindAll(".tm-signing-phone-step__verified[role='status']").Should().BeEmpty(
+            "the verified block is presentation only — the live region owns announcements");
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Contain("Verified");
+    }
+
+    /// <summary>Phase 6 review item 8: the OTP error is owned by the OTP INPUT — aria-invalid and
+    /// the error state land on the OTP input, the phone input stays clean.</summary>
+    [Fact]
+    public void PhoneStep_OtpInvalid_ErrorOwnedByTheOtpInput_PhoneInputStaysClean()
+    {
+        var cut = Render<TmSigningPhoneStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Phone", Type = SigningFieldType.Phone })
+            .Add(p => p.CodeSent, true)
+            .Add(p => p.OtpCode, "000000")
+            .Add(p => p.OtpInvalid, true));
+
+        cut.Find("input.tm-signing-phone-step__otp").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find("input.tm-signing-phone-step__otp").GetAttribute("aria-describedby").Should().NotBeNullOrWhiteSpace(
+            "the OTP input references the validation message");
+        cut.Find("input.tm-signing-phone-step__input").HasAttribute("aria-invalid").Should().BeFalse(
+            "the phone input is clean while the error belongs to the OTP");
     }
 
     /// <summary>The example-format placeholder (phase 4 review): the country's dialling example, not a repeated label.</summary>

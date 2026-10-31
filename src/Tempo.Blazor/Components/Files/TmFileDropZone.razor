@@ -77,7 +77,12 @@
     /// <summary>Optional custom content to display inside the drop zone.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Maximum number of files to accept from a single selection. Default 10.</summary>
+    /// <summary>
+    /// Maximum number of files to accept from a single selection. Default 10. The budget is a
+    /// safety cap enforced by the platform's read; an overflow pick degrades to an empty
+    /// selection (nothing is readable beyond the budget) instead of throwing, and the change
+    /// event still fires so the consumer can render its own localized limit message.
+    /// </summary>
     [Parameter] public int MaxFileCount { get; set; } = 10;
 
     /// <summary>Optional test id passed to the internal file input.</summary>
@@ -124,7 +129,21 @@
     {
         if (Multiple)
         {
-            var files = e.GetMultipleFiles(MaxFileCount);
+            // The read budget is a SAFETY cap: the platform itself refuses reads beyond it, and
+            // an overflow pick degrades to an EMPTY selection (nothing is readable beyond the
+            // budget — even the first file, because File is a budget-of-one read) instead of
+            // throwing; OnFilesSelected still fires so the consumer can render its own localized
+            // limit message and decide what to do.
+            List<IBrowserFile> files;
+            try
+            {
+                files = [.. e.GetMultipleFiles(MaxFileCount)];
+            }
+            catch (InvalidOperationException)
+            {
+                files = [];
+            }
+
             foreach (var file in files)
             {
                 if (!_selectedFiles.Any(f => f.Name == file.Name && f.Size == file.Size))

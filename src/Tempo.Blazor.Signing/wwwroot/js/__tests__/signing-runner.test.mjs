@@ -7,6 +7,7 @@ import {
     nearestScrollable,
     prefersReducedMotion,
     scrollBehavior,
+    scrollIntoView,
     scrollTargetFor,
     scrollToField
 } from '../signing-runner.js';
@@ -245,6 +246,159 @@ test('scrollToField without a uuid does nothing', () => {
     scrollToField('', { document: fakeDocument(fakeField(rect(0, 1)), null), window: win });
 
     assert.equal(win.calls.length, 0);
+});
+
+// ── scrollIntoView (the phone step's OTP-row reveal, phase 6 review fix) ──
+
+/** The OTP row inside a scrollable panel: the parent chain carries the overflowing scroller and
+    `closest` resolves the panel scope whose sticky action bar covers the scrollport bottom. */
+function fakeOtpRow({ rowRect, scrollerRect, barRect, stickyOverflow = true } = {}) {
+    const scroller = {
+        scrollTop: 100,
+        scrollHeight: 2000,
+        clientHeight: 600,
+        computed: { overflowY: 'auto' },
+        parentElement: null,
+        getBoundingClientRect: () => scrollerRect
+    };
+    const scope = {
+        querySelector(selector) {
+            assert.equal(selector, '.tm-signing-form-runner__actions');
+            return barRect === undefined ? null : { getBoundingClientRect: () => barRect };
+        }
+    };
+    const row = {
+        parentElement: scroller,
+        closest(selector) {
+            assert.equal(selector, '.tm-signing-form-runner__step-panel');
+            return scope;
+        },
+        getBoundingClientRect: () => rowRect,
+        scrollIntoView() { throw new Error('the sticky-aware reveal must scroll the ancestor, not the row'); }
+    };
+    const doc = {
+        defaultView: { getComputedStyle: (el) => el.computed ?? { overflowY: 'visible' } },
+        querySelector: () => row
+    };
+    return { row, scroller, stickyOverflow, doc };
+}
+
+test('scrollIntoView lifts the row bottom above the sticky action bar', () => {
+    // The scrollport ends at 700; the sticky bar covers 630-700; the row's bottom (760) sits
+    // below the bar top — the scroller must scroll DOWN by 760 - 630 = 130.
+    const { row, scroller, doc } = fakeOtpRow({
+        rowRect: { top: 640, bottom: 760 },
+        scrollerRect: { top: 100, bottom: 700 },
+        barRect: { top: 630, bottom: 700 }
+    });
+
+    const revealed = scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(revealed, true);
+    assert.equal(scroller.scrollTop, 100 + 130);
+});
+
+test('scrollIntoView does not scroll when the row already fits above the bar', () => {
+    const { scroller, doc } = fakeOtpRow({
+        rowRect: { top: 500, bottom: 620 },
+        scrollerRect: { top: 100, bottom: 700 },
+        barRect: { top: 630, bottom: 700 }
+    });
+
+    scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(scroller.scrollTop, 100, 'a fully visible row never scrolls');
+});
+
+test('scrollIntoView lifts the row TOP when it starts above the scrollport', () => {
+    // Row top (80) above the scrollport top (100): the scroller scrolls UP by 20.
+    const { scroller, doc } = fakeOtpRow({
+        rowRect: { top: 80, bottom: 180 },
+        scrollerRect: { top: 100, bottom: 700 },
+        barRect: { top: 630, bottom: 700 }
+    });
+
+    scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(scroller.scrollTop, 100 - 20);
+});
+
+test('scrollIntoView without a sticky bar aligns the row bottom to the scrollport', () => {
+    const { scroller, doc } = fakeOtpRow({
+        rowRect: { top: 640, bottom: 760 },
+        scrollerRect: { top: 100, bottom: 700 },
+        barRect: undefined
+    });
+
+    scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(scroller.scrollTop, 100 + (760 - 700), 'the plain scrollport bottom is the usable bottom');
+});
+
+test('scrollIntoView honours the scroller bottom padding when measuring the bar', () => {
+    // The panel pads its bottom by 16: the bar bottom (684) sits at the CONTENT edge (700 - 16)
+    // and must still count as the sticky bar (±2px) — the usable bottom is its top (610).
+    const scroller = {
+        scrollTop: 100,
+        scrollHeight: 2000,
+        clientHeight: 600,
+        computed: { overflowY: 'auto', paddingBottom: '16px' },
+        parentElement: null,
+        getBoundingClientRect: () => ({ top: 100, bottom: 700 })
+    };
+    const scope = {
+        querySelector: () => ({ getBoundingClientRect: () => ({ top: 610, bottom: 684 }) })
+    };
+    const row = {
+        parentElement: scroller,
+        closest: () => scope,
+        getBoundingClientRect: () => ({ top: 640, bottom: 760 })
+    };
+    const doc = {
+        defaultView: { getComputedStyle: (el) => el.computed ?? { overflowY: 'visible' } },
+        querySelector: () => row
+    };
+
+    scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(scroller.scrollTop, 100 + (760 - 610), 'the usable bottom ends above the padded sticky bar');
+});
+
+test('scrollIntoView falls back to scrollIntoView without an overflowing ancestor', () => {
+    const calls = [];
+    const row = {
+        parentElement: null,
+        getBoundingClientRect: () => ({ top: 0, bottom: 10 }),
+        closest: () => null,
+        scrollIntoView(options) { calls.push(options); }
+    };
+    const doc = {
+        defaultView: { getComputedStyle: (el) => el.computed ?? { overflowY: 'visible' } },
+        querySelector: () => row
+    };
+
+    const revealed = scrollIntoView('.tm-signing-phone-step__otp-row', { document: doc });
+
+    assert.equal(revealed, true);
+    assert.deepEqual(calls, [{ block: 'nearest' }]);
+});
+
+test('scrollIntoView without a match reports false and does nothing', () => {
+    const doc = { querySelector: () => null, defaultView: { getComputedStyle: () => ({ overflowY: 'visible' }) } };
+    assert.equal(scrollIntoView('.missing', { document: doc }), false);
+});
+
+test('scrollIntoView with an empty selector does nothing', () => {
+    assert.doesNotThrow(() => scrollIntoView('', { document: { querySelector: () => { throw new Error('never'); } } }));
+    assert.equal(scrollIntoView('', { document: { querySelector: () => { throw new Error('never'); } } }), false);
+});
+
+test('scrollIntoView with a malformed selector reports false instead of throwing', () => {
+    assert.equal(scrollIntoView('###', { document: { querySelector: () => { throw new Error('bad selector'); } } }), false);
+});
+
+test('scrollIntoView without a document does nothing', () => {
+    assert.equal(scrollIntoView('.tm-signing-phone-step__otp-row', { document: null }), false);
 });
 
 // ── focusFieldButton ───────────────────────────────────────────

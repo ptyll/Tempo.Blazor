@@ -121,6 +121,34 @@ public class TmSigningExternalStepTests : LocalizationTestBase
         link.ClassList.Should().Contain("tm-btn-outline", "Open renders as the outline action");
     }
 
+    /// <summary>Phase 6 (security): the provider link opens a NEW TAB and must never hand the
+    /// signing page's window context over — rel carries both noopener and noreferrer.</summary>
+    [Fact]
+    public void ExternalStep_ExternalUrl_RendersRelNoopenerNoreferrer()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification })
+            .Add(p => p.ExternalUrl, "https://example.test/verify"));
+
+        var link = cut.Find(".tm-signing-external-step__link");
+        link.GetAttribute("target").Should().Be("_blank");
+        link.GetAttribute("rel").Should().Contain("noopener").And.Contain("noreferrer");
+        cut.Find(".tm-signing-external-step__redirect-note").Should().NotBeNull(
+            "the signer is told the provider opens outside the signing page");
+    }
+
+    /// <summary>Phase 6: the host's provider context names the provider above the call to
+    /// action.</summary>
+    [Fact]
+    public void ExternalStep_ProviderName_ShowsTheProviderLine()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification })
+            .Add(p => p.ProviderName, "Acme Check"));
+
+        cut.Find(".tm-signing-external-step__provider").TextContent.Should().Contain("Acme Check");
+    }
+
     [Fact]
     public void Kba_WithoutQuestions_RendersPrimaryStartButton()
     {
@@ -164,5 +192,96 @@ public class TmSigningExternalStepTests : LocalizationTestBase
         cut.Find(".tm-signing-external-step__checkout").Click();
 
         checkedOut.Should().BeSameAs(field);
+    }
+
+    /// <summary>Phase 6 review item 14: with a named provider the verified state reads the
+    /// COMBINED "Verified by {provider}" text (payment keeps "Paid").</summary>
+    [Fact]
+    public void ExternalStep_VerifiedWithProvider_ShowsTheCombinedVerifiedByText()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification })
+            .Add(p => p.Value, true)
+            .Add(p => p.ProviderName, "Acme Check"));
+
+        cut.Find(".tm-signing-external-step__verified").TextContent.Should().Contain("Verified by Acme Check");
+    }
+
+    /// <summary>Phase 6 review item 4: the KBA questions branch renders a SUBMIT action that hands
+    /// the typed answers to the host through <see cref="SigningExternalStepRequest"/> — the field
+    /// AND the answers, nothing else.</summary>
+    [Fact]
+    public async Task ExternalStep_KbaSubmit_RaisesRequestWithTheFieldAndTheTypedAnswers()
+    {
+        SigningExternalStepRequest? submitted = null;
+        var field = new SigningField { Uuid = "kba", Name = "KBA", Type = SigningFieldType.Kba };
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, field)
+            .Add(p => p.Questions, ["What city?", "What street?"])
+            .Add(p => p.OnSubmitAnswers, EventCallback.Factory
+                .Create<SigningExternalStepRequest>(this, request => submitted = request)));
+
+        var answers = cut.FindAll("input.tm-signing-external-step__answer");
+        answers[0].Input("Brno");
+        answers[1].Input("Kounicova");
+        cut.Find(".tm-signing-external-step__submit").Click();
+
+        submitted.Should().NotBeNull("the submit hands the request to the host");
+        submitted!.Field.Uuid.Should().Be("kba");
+        submitted.Answers.Should().HaveCount(2);
+        submitted.Answers["What city?"].Should().Be("Brno");
+        submitted.Answers["What street?"].Should().Be("Kounicova");
+    }
+
+    /// <summary>Phase 6 review item 7: the provider's LOADING state keeps the actions IN PLACE —
+    /// disabled and aria-busy — next to the indicator row, instead of swapping them out.</summary>
+    [Fact]
+    public void ExternalStep_Loading_KeepsStartInPlace_DisabledAndAriaBusy()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification })
+            .Add(p => p.IsLoading, true));
+
+        cut.Find(".tm-signing-external-step__loading").Should().NotBeNull("the indicator row renders");
+        var start = cut.Find(".tm-signing-external-step__start-button");
+        start.Should().NotBeNull("the Start action stays in place while loading");
+        start.HasAttribute("disabled").Should().BeTrue();
+        start.GetAttribute("aria-busy").Should().Be("true");
+    }
+
+    /// <summary>Phase 6 review item 13: the outbound link references the redirect note through
+    /// <c>aria-describedby</c> (the note carries the id), and its icon is aria-hidden.</summary>
+    [Fact]
+    public void ExternalStep_Link_ReferencesTheRedirectNote_AndHidesTheIcon()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification })
+            .Add(p => p.ExternalUrl, "https://example.test/verify"));
+
+        var noteId = cut.Find(".tm-signing-external-step__redirect-note").GetAttribute("id");
+        noteId.Should().NotBeNullOrWhiteSpace("the note carries a stable id");
+        var link = cut.Find(".tm-signing-external-step__link");
+        link.GetAttribute("aria-describedby").Should().Be(noteId);
+        link.QuerySelector("svg.tm-icon").Should().NotBeNull("the external-link icon renders");
+    }
+
+    /// <summary>Phase 6 review item 7 (WCAG 4.1.3): ONE always-rendered polite live region carries
+    /// the events ("Loading…", "Verified"/"Paid"); the verified block carries NO role itself.</summary>
+    [Fact]
+    public void ExternalStep_Announcements_RunThroughOneAlwaysRenderedLiveRegion()
+    {
+        var cut = Render<TmSigningExternalStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "ID check", Type = SigningFieldType.Verification }));
+
+        cut.FindAll("[role='status'][aria-live='polite']").Should().ContainSingle(
+            "exactly one live region exists before any announcement");
+
+        cut.Render(parameters => parameters.Add(p => p.IsLoading, true));
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Contain("Loading");
+
+        cut.Render(parameters => parameters.Add(p => p.IsLoading, false).Add(p => p.Value, true));
+        cut.FindAll(".tm-signing-external-step__verified[role='status']").Should().BeEmpty(
+            "the verified block is presentation only — the live region owns announcements");
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Contain("Verified");
     }
 }

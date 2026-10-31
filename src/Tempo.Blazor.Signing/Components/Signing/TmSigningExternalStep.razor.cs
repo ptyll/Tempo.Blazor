@@ -9,17 +9,25 @@ namespace Tempo.Blazor.Components.Signing;
 /// gives it the reference presentation: a hero icon in a primary-subtle circle, a per-type default
 /// description (overridable by the field description), the payment amount formatted with the FIELD
 /// culture, Start as the primary action with the open link as an outline sibling, and the
-/// verified / paid state once the value is <c>true</c>.
+/// verified / paid state once the value is <c>true</c>. Phase 6 (SI2) adds the host context:
+/// <see cref="ProviderName"/> names the provider and the redirect note accompanies the outbound
+/// link.
 /// </summary>
 /// <remarks>
 /// <para>
-/// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the step only RENDERS
-/// the external flow. Raising <see cref="OnStart"/> or <see cref="OnCheckout"/> marks the field
-/// complete; the runner's default handlers store <c>true</c> without contacting any provider, so
-/// "Start verification" / "Checkout" completing the step is NOT evidence that a verification or a
-/// payment happened. <see cref="ExternalUrl"/> merely opens a link in a new tab. Hosts must treat
-/// the resulting field value as untrusted presentation state until a provider-backed contract
-/// replaces this placeholder.
+/// SECURITY NOTE (phase 6 contract — was a known limitation through phase 5): the step only
+/// RENDERS the external flow. What happens after <see cref="OnStart"/> / <see cref="OnCheckout"/>
+/// is the HOST's contract: inside <see cref="TmSigningFormRunner"/> with
+/// <c>OnExternalStepRequested</c> wired the runner stores nothing — the step completes solely
+/// after the host stores the provider result (value <c>true</c>) through <c>Values</c>. Without
+/// that callback the runner keeps the legacy behaviour of storing <c>true</c> on the click, which
+/// is presentation state and NOT evidence that a verification or payment happened. The verified /
+/// paid state reflects the stored value, so a host that treats stored values as trusted evidence
+/// opens itself to spoofing — always wire the callback.
+/// </para>
+/// <para>
+/// <see cref="ExternalUrl"/> merely opens a link in a new tab with <c>rel="noopener noreferrer"</c>
+/// — the provider never receives the signing page's window context.
 /// </para>
 /// </remarks>
 public partial class TmSigningExternalStep
@@ -32,6 +40,14 @@ public partial class TmSigningExternalStep
     private readonly string _titleId = $"tm-signing-step-title-{Guid.NewGuid():N}";
     private readonly string _descriptionId = $"tm-signing-step-description-{Guid.NewGuid():N}";
     private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
+    private readonly string _redirectNoteId = $"tm-signing-external-redirect-{Guid.NewGuid():N}";
+
+    // The polite announcement (phase 6 review, WCAG 4.1.3): EVENT text written into the
+    // always-rendered live region — "Loading…" while the provider runs, "Verified" / "Paid"
+    // once the host confirms.
+    private string? _announcement;
+    private bool _lastIsLoading;
+    private bool _lastVerified;
 
     /// <summary>Signing field represented by this step.</summary>
     [Parameter] public SigningField Field { get; set; } = new() { Type = SigningFieldType.Verification };
@@ -51,6 +67,13 @@ public partial class TmSigningExternalStep
     /// <summary>External URL for provider-hosted verification or checkout.</summary>
     [Parameter] public string? ExternalUrl { get; set; }
 
+    /// <summary>
+    /// Display name of the verification / payment provider (Signing redesign phase 6) — the
+    /// runner resolves it from the host's <c>StepContextProvider</c> and renders the localized
+    /// provider line above the call to action.
+    /// </summary>
+    [Parameter] public string? ProviderName { get; set; }
+
     /// <summary>KBA questions to answer inline.</summary>
     [Parameter] public IReadOnlyList<string> Questions { get; set; } = [];
 
@@ -62,6 +85,13 @@ public partial class TmSigningExternalStep
 
     /// <summary>Callback invoked when payment checkout should start.</summary>
     [Parameter] public EventCallback<SigningField> OnCheckout { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the signer SUBMITS the inline KBA answers (phase 6 review item 4).
+    /// The request carries the field and the typed answers — the ANSWERS ARE NEVER STORED as the
+    /// field value; the host's stored provider result is the only completion evidence.
+    /// </summary>
+    [Parameter] public EventCallback<SigningExternalStepRequest> OnSubmitAnswers { get; set; }
 
     /// <summary>Short text describing where the field appears in the document.</summary>
     [Parameter] public string? AppearsOn { get; set; }
@@ -163,6 +193,48 @@ public partial class TmSigningExternalStep
 
     private static string BoolText(bool value) => value ? "true" : "false";
 
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // The live region announces the EVENTS (transitions), not the state: "Loading…" when the
+        // provider starts, "Verified" / "Paid" once the host confirms (phase 6 review item 7).
+        if (IsLoading && !_lastIsLoading)
+        {
+            _announcement = Loc["TmSigningStep_LoadingExternal"];
+        }
+
+        if (IsVerified && !_lastVerified)
+        {
+            _announcement = VerifiedText;
+        }
+
+        _lastIsLoading = IsLoading;
+        _lastVerified = IsVerified;
+    }
+
+    /// <summary>The verified / paid announcement and card text — "Verified by {provider}" when the
+    /// provider names itself (phase 6 review item 14), otherwise the plain state.</summary>
+    private string VerifiedText
+    {
+        get
+        {
+            if (Field.Type == SigningFieldType.Payment)
+            {
+                return Loc["TmSigningStep_Paid"];
+            }
+
+            return !string.IsNullOrWhiteSpace(ProviderName)
+                ? Loc["TmSigningStep_VerifiedBy", ProviderName]
+                : Loc["TmSigningStep_Verified"];
+        }
+    }
+
+    /// <summary>Whether the primary action of the current branch is busy (the provider operation) —
+    /// it stays IN PLACE, disabled and aria-busy (phase 6 review item 7).</summary>
+    private Dictionary<string, object>? BusyAttributes => IsLoading
+        ? new Dictionary<string, object> { ["aria-busy"] = "true" }
+        : null;
+
     /// <summary>
     /// The payment summary from the model data: the amount formatted with the FIELD culture and
     /// the model's currency string. A multi-character currency (ISO code or "Kč") prints after the
@@ -215,6 +287,15 @@ public partial class TmSigningExternalStep
     private Task StartAsync() => OnStart.InvokeAsync(Field);
 
     private Task CheckoutAsync() => OnCheckout.InvokeAsync(Field);
+
+    /// <summary>Hands the typed KBA answers to the host through <see cref="OnSubmitAnswers"/> —
+    /// a snapshot, so later edits cannot mutate the request the host already received. The
+    /// answers never become the field value.</summary>
+    private async Task SubmitAnswersAsync()
+    {
+        var answers = new Dictionary<string, string?>(_answers, StringComparer.Ordinal);
+        await OnSubmitAnswers.InvokeAsync(new SigningExternalStepRequest(Field, answers));
+    }
 
     private string? GetAnswer(string question)
     {

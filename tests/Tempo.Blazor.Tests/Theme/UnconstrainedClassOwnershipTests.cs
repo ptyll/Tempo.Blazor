@@ -224,6 +224,13 @@ public class UnconstrainedClassOwnershipTests
         // into the card shadow (Strictly-narrower .tm-signing-form-runner__document context; the
         // viewer's own --tm-shadow-sm stays the winner everywhere else — Override).
         ".tm-document-page-viewer__page Tempo.Blazor.Signing/_document-page-viewer.css|Tempo.Blazor.Signing/_signing-form-runner.css",
+
+        // Signing redesign phase 5 (recorded in phase 6 — the pair shipped unrecorded): the SI1
+        // radio CARDS deliberately centre the option row (a 56px card reads centred, the radio
+        // dot mid-card) against the core row's flex-start, through the strictly-narrower
+        // .tm-signing-choice-step__options--cards chain — an intentional, mobile-presentation-only
+        // Override (the desktop container keeps the system select and never renders the chain).
+        ".tm-radio-option Tempo.Blazor.Signing/_signing-steps.css|Tempo.Blazor/_radio-group.css",
     ];
 
     [Fact]

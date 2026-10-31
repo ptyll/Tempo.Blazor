@@ -140,6 +140,56 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "SigningAttachmentUploadRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host upload request for an attachment signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnAttachmentSelected and stores the returned url on the attachment. Security note: the file CONTENT is read by the HOST (OpenReadStream) — never inside the component — because on Blazor Server browser files stream over SignalR with tight message limits. Without the callback the picked files stay client-side metadata (the documented placeholder behaviour).",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningExternalStepContext",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host-provided context for an external verification / KBA / payment signing field (Signing redesign phase 6, SI2). The runner resolves it from TmSigningFormRunner.StepContextProvider on every render and feeds the external step: the provider link, the inline KBA questions, the provider's loading state and error, and the provider's display name. The CONTEXT NEVER CONFIRMS the step — only a stored provider result (value true in Values) does.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningExternalStepRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request raised when the signer starts an external flow — verification, KBA answer submission or payment (Signing redesign phase 6, SI2). The runner raises it through TmSigningFormRunner.OnExternalStepRequested; with the callback wired the runner stores NOTHING on the click itself — the step completes solely after the host stores the provider result (value true) through TmSigningFormRunner.Values. The Answers carry the inline KBA answers for THIS request only — the runner never stores them as the field value, so a leaked answer cannot complete anything.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningPhoneCodeRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request to dispatch an OTP code for a phone signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnSendPhoneCode when the signer asks for a code; without that callback wired, no request is ever raised and the phone step keeps its documented cosmetic behaviour (no SMS is sent).",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningPhoneVerificationRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request to verify a typed OTP code for a phone signing field (Signing redesign phase 6, S2-5). The host's answer is the ONLY confirmation the runner accepts: true completes the step, false shows the localized invalid-code message — until then the phone field never completes, no matter what value it carries.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "SigningRolePalette",
       "kind": "Class",
       "category": "Components",
@@ -367,7 +417,7 @@
           "name": "Url",
           "kind": "Property",
           "type": "string?",
-          "description": "Optional preview or download URL."
+          "description": "Host-provided download/storage URL (the upload result); never a client-generated preview."
         },
         {
           "name": "Uuid",
@@ -1833,7 +1883,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Renders image, file, and generated stamp signing steps.",
+      "description": "Renders image, file, and generated stamp signing steps. Upload contract (Signing redesign phase 6): the upload is host-owned — the runner hands the picked IBrowserFile to the host (OnAttachmentSelected) and stores the host-returned url on the card; the file CONTENT is read at the host (Blazor Server streams browser files over SignalR with tight message limits). The component only ever reads a downscaled image thumbnail (RequestImageFileAsync) for the local preview. Without the resolver the picked files stay client-side metadata.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningAttachmentStep.razor",
       "documentationStatus": "merged",
@@ -1873,6 +1923,12 @@
           "description": "Callback invoked when attachments change."
         },
         {
+          "name": "Capture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The native capture attribute for mobile camera capture (Signing redesign phase 6, optional) — for example environment or user. Splatted on the native file input of Image fields only."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -1903,10 +1959,28 @@
           "description": "Signing field represented by this step."
         },
         {
+          "name": "MaxFiles",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Maximum number of attachments (Signing redesign phase 6). Overflowing files show the localized \"up to {0} files\" message and are rejected; the first files stay. The value is also the platform read budget (Math.Max(MaxFiles ?? 10, 1)) — a pick beyond the budget is refused by the platform itself and rejected wholesale."
+        },
+        {
+          "name": "MaxFileSize",
+          "type": "long?",
+          "isRequired": false,
+          "description": "Maximum accepted file size in bytes (Signing redesign phase 6). A larger file shows the localized \"file is larger than …\" message and never joins the attachments — the rejection happens BEFORE any host upload round-trip. NOTE: this is a CLIENT-REPORTED limit (the browser's declared size) and is UX only — the host must enforce the real limit via OpenReadStream(maxAllowedSize)."
+        },
+        {
           "name": "StampValue",
           "type": "string?",
           "isRequired": false,
           "description": "Generated stamp text or image identifier."
+        },
+        {
+          "name": "UploadUrlResolver",
+          "type": "Func<IBrowserFile, Task<string?>>?",
+          "isRequired": false,
+          "description": "Host-provided upload resolver (Signing redesign phase 6): receives the picked file and returns the uploaded file's url, which the card then previews. TmSigningFormRunner passes its OnAttachmentSelected host hook through; a step without a resolver keeps the client-side-only placeholder behaviour. The file content is read by the HOST — never here."
         }
       ]
     },
@@ -2163,7 +2237,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows. Known limitations / security note (reworked in Signing redesign phase 6): the step only RENDERS the external flow — raising OnStart or OnCheckout marks the field complete without contacting any provider (the runner's default handlers store true), and ExternalUrl merely opens a link in a new tab. The resulting field value is untrusted presentation state, not evidence that a verification or payment happened.",
+      "description": "Provider-agnostic step for verification, KBA, and payment flows. Security note (Signing redesign phase 6 contract): the step only RENDERS the external flow — what happens after OnStart / OnCheckout / OnSubmitAnswers is the HOST's contract. Inside TmSigningFormRunner with OnExternalStepRequested wired the runner stores nothing: the step completes solely after the host stores the provider result (value true or the string \"true\") through Values. Without that callback the legacy behaviour stores true on the click, which is presentation state and NOT evidence that a verification or payment happened. The ExternalUrl link opens in a new tab with rel=\"noopener noreferrer\", references the localized redirect note through aria-describedby and carries an aria-hidden external-link icon. With a named provider the verified state reads \"Verified by {provider}\". One always-rendered polite live region announces the phase events (loading / verified); while the provider runs the Start / Checkout / Submit action stays in place, disabled and aria-busy. KBA answers are submitted through OnSubmitAnswers (a SigningExternalStepRequest) and are never stored as the field value.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningExternalStep.razor",
       "documentationStatus": "merged",
@@ -2235,13 +2309,25 @@
           "name": "OnCheckout",
           "type": "EventCallback<SigningField>",
           "isRequired": false,
-          "description": "Callback invoked when payment checkout should start."
+          "description": "Callback invoked when payment checkout should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a payment. While IsLoading the action stays in place, disabled and aria-busy."
         },
         {
           "name": "OnStart",
           "type": "EventCallback<SigningField>",
           "isRequired": false,
-          "description": "Callback invoked when verification or KBA should start."
+          "description": "Callback invoked when verification or KBA should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a verification. While IsLoading the action stays in place, disabled and aria-busy."
+        },
+        {
+          "name": "OnSubmitAnswers",
+          "type": "EventCallback<SigningExternalStepRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when the signer SUBMITS the inline KBA answers (Signing redesign phase 6 review). The request carries the field and the typed answers — the answers are NEVER stored as the field value; the host's stored provider result is the only completion evidence."
+        },
+        {
+          "name": "ProviderName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display name of the verification / payment provider (Signing redesign phase 6) — the runner resolves it from the host's StepContextProvider and renders the localized provider line above the call to action. With a named provider the verified state reads the combined \"Verified by {provider}\" text."
         },
         {
           "name": "Questions",
@@ -2501,7 +2587,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Known limitations / security note (reworked in Signing redesign phase 6): the external steps are placeholders — clicking \"Start verification\" / \"Checkout\" (OnStart/OnCheckout store true for the field) marks the step COMPLETE WITHOUT ANY VERIFICATION taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload stays in the browser. Treat the resulting field values as untrusted presentation state, never as proof that a verification, payment, or upload happened.",
+      "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Active-steps contract (Signing redesign phase 6, S2-5/SI2 — opt-in): with OnSendPhoneCode / OnVerifyPhoneCode / OnAttachmentSelected / OnExternalStepRequested wired, the phone OTP, the attachment upload and the external verification are confirmed by the HOST — a phone step completes only after the host verifier answers true, the attachment card carries the host-returned upload url, and an external step completes only after the host stores the provider result (value true) through Values. Without the callbacks the documented legacy behaviour stands (the click stores true, the typed phone completes the step, uploads stay client-side), so completion of those steps is presentation state, never proof that a verification, payment, or upload happened.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFormRunner.razor",
       "documentationStatus": "merged",
@@ -2599,6 +2685,12 @@
           "description": "Initial presentation mode for the mobile bottom panel."
         },
         {
+          "name": "OnAttachmentSelected",
+          "type": "Func<SigningAttachmentUploadRequest, Task<string?>>?",
+          "isRequired": false,
+          "description": "Host upload hook for attachment fields (Signing redesign phase 6, S2-5, opt-in). The runner hands the picked IBrowserFile over and stores the RETURNED url on the attachment card; a null result (or a throwing host, cancellation aside) REJECTS the file with the localized failure message. Security: read the file content in the HOST (File.OpenReadStream) — never rely on the component to do it — because on Blazor Server browser files stream over SignalR with tight message limits, so a large upload must be consumed (and ideally persisted) by the server, in one pass. The step-side MaxFileSize limit is a CLIENT-REPORTED courtesy (the browser's declared size) — the host MUST enforce the real limit via OpenReadStream(maxAllowedSize). Without the hook the picked files stay client-side metadata (the documented placeholder behaviour)."
+        },
+        {
           "name": "OnAutoSave",
           "type": "EventCallback<IReadOnlyDictionary<string, object?>>",
           "isRequired": false,
@@ -2611,16 +2703,34 @@
           "description": "Callback invoked when all required fields are complete and the signer completes the form."
         },
         {
+          "name": "OnExternalStepRequested",
+          "type": "EventCallback<SigningExternalStepRequest>",
+          "isRequired": false,
+          "description": "Host hook raised when the signer starts an external flow — verification, KBA answer submission or payment (Signing redesign phase 6, SI2, opt-in). The request carries the field and, for KBA, the typed answers (which are never stored as the field value). With this hook wired the runner stores NOTHING on the click: the step completes solely after the host performs the provider flow and stores the result (value true or the string \"true\") through Values. Without the hook the legacy behaviour keeps storing true on the click — presentation state, never proof that a verification or payment happened."
+        },
+        {
           "name": "OnLocalizationSnapshotChanged",
           "type": "EventCallback<SigningSubmissionLocalizationSnapshot>",
           "isRequired": false,
           "description": "Callback invoked with a resolved localization snapshot for audit storage."
         },
         {
+          "name": "OnSendPhoneCode",
+          "type": "EventCallback<SigningPhoneCodeRequest>",
+          "isRequired": false,
+          "description": "Host hook that dispatches the OTP code for a phone field (Signing redesign phase 6, S2-5, opt-in). Raised with the normalized number every time the signer sends or resends a code; the runner itself never dispatches an SMS. Without the callback the phone step keeps the documented cosmetic behaviour (nothing is sent)."
+        },
+        {
           "name": "OnStepSubmit",
           "type": "EventCallback<SigningStepItem>",
           "isRequired": false,
           "description": "Callback invoked when the current step is submitted by moving forward."
+        },
+        {
+          "name": "OnVerifyPhoneCode",
+          "type": "Func<SigningPhoneVerificationRequest, Task<bool>>?",
+          "isRequired": false,
+          "description": "Host hook that verifies the typed OTP code (Signing redesign phase 6, S2-5, opt-in). Returning true is the ONLY way a phone field completes while this hook is wired — the runner records the confirmation (runner-internal, bound to the VERIFIED number, never part of Values) and shows the verified state; false shows the localized invalid-code message with the error owned by the OTP input. A throwing verifier shows the localized unavailable message and never records a confirmation. Security: the host owns RATE LIMITING and ATTEMPT COUNTING, and because the confirmation is runner-internal (not persisted), a RESUMED session must re-verify — keep your own record host-side. Without the hook, today's behaviour stands: the typed phone number alone completes the step (no code is ever checked)."
         },
         {
           "name": "Pages",
@@ -2647,6 +2757,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the runner should show a language selector when multiple cultures are available."
+        },
+        {
+          "name": "StepContextProvider",
+          "type": "Func<SigningField, SigningExternalStepContext?>?",
+          "isRequired": false,
+          "description": "Provider context for an external field, resolved per render (Signing redesign phase 6, SI2, opt-in): the provider page url, the inline KBA questions, the loading state, the provider error and the provider display name. The CONTEXT never confirms the step — only the stored provider result does; return null to keep the step's own defaults."
         },
         {
           "name": "SubmitterRoles",
@@ -2750,7 +2866,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Renders a phone verification signing step with country code, phone input, and OTP state.",
+      "description": "Renders a phone verification signing step with country code, phone input, OTP state and a functional resend countdown. Security note (Signing redesign phase 6): raising OnSendCode and OnVerifyCode only NOTIFIES the host — the component never dispatches an SMS and never decides whether a code is valid; inside TmSigningFormRunner the host verifies through the runner's OnVerifyPhoneCode hook and the step renders the confirmed state through Verified. The typed OTP is never stored as the field value. The verified state LOCKS the number input and the country select and replaces Send with a Secondary Change number action (OnChangeNumber) that asks the host to clear its confirmation. One always-rendered polite live region announces the phase events (code sent / verified / resend available); the ticking countdown text is aria-live=\"off\". The invalid-code error is owned by the OTP input (aria-invalid + described-by there, phone input clean) and clears when a new draft is typed. After a code was sent the Send action is Secondary and disabled while the countdown runs, and the OTP input takes the focus after a send/resend. The component is IAsyncDisposable: the countdown timer is released on dispose and the tick is guarded by a disposed flag.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningPhoneStep.razor",
       "documentationStatus": "merged",
@@ -2820,10 +2936,22 @@
           "description": "Signing field represented by this step."
         },
         {
+          "name": "OnChangeNumber",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the signer asks to change the verified number (Signing redesign phase 6 review): the runner clears its host confirmation so Verified flips back to false and the number input unlocks. A standalone host mirrors the same clear through its own state."
+        },
+        {
           "name": "OnSendCode",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Callback invoked when a verification code should be sent."
+          "description": "Callback invoked when a verification code should be sent. The component never dispatches an SMS — the host (the runner's OnSendPhoneCode) owns the dispatch. An empty number returns early without raising the callback, the countdown starts only after the callback succeeds, and a failing host shows the localized unavailable message."
+        },
+        {
+          "name": "OnVerifyCode",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the signer asks to verify the typed code (Signing redesign phase 6). The step itself never decides validity — the RUNNER checks it against the host verifier; a standalone host binds its own check here and mirrors the result back through Verified. A throwing host shows the localized unavailable message and never flips any state."
         },
         {
           "name": "OtpCode",
@@ -2836,6 +2964,12 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when OTP code changes."
+        },
+        {
+          "name": "OtpInvalid",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the CURRENT validation message targets the OTP input (Signing redesign phase 6 review — error ownership): the input carries aria-invalid + the error state and references the validation id, while the phone input stays clean."
         },
         {
           "name": "PhoneNumber",
@@ -2867,6 +3001,12 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when the normalized phone value changes."
+        },
+        {
+          "name": "Verified",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the host CONFIRMED the typed code (Signing redesign phase 6). The state is host-owned — inside the runner it flips only after the host verifier answered true — and replaces the OTP input, the Verify action and the resend affordances with the localized verified status."
         }
       ]
     },
@@ -3303,11 +3443,11 @@
     }
   ],
   "summary": {
-    "itemCount": 47,
-    "manualItemCount": 47,
-    "generatedItemCount": 47,
+    "itemCount": 52,
+    "manualItemCount": 52,
+    "generatedItemCount": 52,
     "generatedOnlyItemCount": 0,
     "componentCount": 31,
-    "publicApiTypeCount": 16
+    "publicApiTypeCount": 21
   }
 }

@@ -415,9 +415,14 @@
                                  Value="@_stepMultipleValue"
                                  ValueChanged="HandleStepMultipleChanged"
                                  data-testid="signing-step-multiple" />
+            @* Phase 6 review: the standalone image step carries a small MaxFileSize so the
+                localized "file is larger than …" rejection is demonstrable (and capturable)
+                against a real browser pick. Client-reported limit — a real host enforces the
+                real one via OpenReadStream(maxAllowedSize). *@
             <TmSigningAttachmentStep Field="@_stepImageField"
                                      Attachments="@_stepImageAttachments"
                                      AttachmentsChanged="HandleStepImageAttachmentsChanged"
+                                     MaxFileSize="50000"
                                      data-testid="signing-step-image" />
             <TmSigningPhoneStep Field="@_stepPhoneField"
                                 CountryCode="+420"
@@ -475,12 +480,51 @@
 <section class="demo-section">
     <div class="flex items-center justify-between gap-4 mb-4">
         <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Active Steps Contract (opt-in)</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Phone OTP, upload and external verification confirmed by a FAKE host — demo code 123456, in-memory PNG upload, simulated provider (Signing redesign phase 6).</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">Phase 6</span>
+    </div>
+
+    <div class="showcase-card">
+        @* The fake host (phase 6, demo-only): the runner's active-step callbacks are wired — the
+           OTP is checked HERE (code 123456), the upload "persists" HERE (returns a tiny PNG data
+           url) and the external verification completes HERE after a simulated provider call. No
+           step can complete until this host confirms it — the SI2 contract. *@
+        <TmSigningFormRunner Pages="@_activeStepsPages"
+                             Fields="@_activeStepFields"
+                             SubmitterRoles="@_templateRoles"
+                             Values="@_activeStepValues"
+                             ValuesChanged="HandleActiveStepValuesChanged"
+                             OnComplete="HandleActiveStepComplete"
+                             Culture="@_runnerCulture"
+                             FallbackCulture="cs-CZ"
+                             OnSendPhoneCode="HandleActiveSendPhoneCode"
+                             OnVerifyPhoneCode="HandleActiveVerifyPhoneCode"
+                             OnAttachmentSelected="HandleActiveAttachmentSelected"
+                             OnExternalStepRequested="HandleActiveExternalRequested"
+                             StepContextProvider="ResolveActiveExternalContext"
+                             data-testid="signing-active-steps-demo" />
+        <div class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="signing-active-steps-status">
+            @_activeStepsStatus
+        </div>
+        <label class="mt-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <input type="checkbox"
+                   data-testid="signing-active-steps-fail-toggle"
+                   @bind="_activeSimulateProviderFailure" />
+            Simulate provider failure (external error state)
+        </label>
+    </div>
+</section>
+
+<section class="demo-section">
+    <div class="flex items-center justify-between gap-4 mb-4">
+        <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Completion Panel</h2>
             <p class="text-sm text-slate-600 dark:text-slate-400">Final signer confirmation with document download, copy sending, and custom next action.</p>
         </div>
         <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Phase 11</span>
     </div>
-
     <div class="showcase-card">
         @* Signing redesign phase 3 demo-only composition: the completion panel next to the
            submission status timeline and audit trail viewer, the way a host assembles the
@@ -998,6 +1042,102 @@
     private IReadOnlyList<SigningDocumentPage> _runnerPages =>
     [
         _runnerPage
+    ];
+
+    // ── Active steps contract (Signing redesign phase 6, demo-only fake host). ──
+    private const string DemoOtpCode = "123456";
+    private const string DemoPngDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    private IReadOnlyDictionary<string, object?> _activeStepValues = new Dictionary<string, object?>(StringComparer.Ordinal);
+    private bool _activeExternalLoading;
+    private string? _activeExternalError;
+    private bool _activeSimulateProviderFailure;
+    private string _activeStepsStatus = "Active-steps runner ready — OTP code 123456";
+
+    private SigningDocumentPage _activeStepsPage => new()
+    {
+        AttachmentUuid = "active-steps",
+        PageIndex = 0,
+        ImageUrl = RunnerPageImage,
+        Width = 612,
+        Height = 792,
+        Label = "Active steps contract"
+    };
+
+    private IReadOnlyList<SigningDocumentPage> _activeStepsPages => [_activeStepsPage];
+
+    private IReadOnlyList<SigningField> _activeStepFields =>
+    [
+        new SigningField
+        {
+            Uuid = "active-phone",
+            SubmitterUuid = "template-signer",
+            Name = "Phone verification",
+            Labels = Localized("Telefonní ověření", ("en-US", "Phone verification")),
+            Type = SigningFieldType.Phone,
+            Required = true,
+            Validation = new SigningFieldValidation
+            {
+                Message = "Telefonní ověření je povinné.",
+                Messages = Localized("Telefonní ověření je povinné.", ("en-US", "Phone verification is required."))
+            },
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-phone-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.16,
+                    Width = 0.458,
+                    Height = 0.053
+                }
+            ]
+        },
+        new SigningField
+        {
+            Uuid = "active-attachment",
+            SubmitterUuid = "template-signer",
+            Name = "Signed photo",
+            Labels = Localized("Podepsaná fotka", ("en-US", "Signed photo")),
+            Type = SigningFieldType.Image,
+            Required = true,
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-attachment-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.3,
+                    Width = 0.307,
+                    Height = 0.053
+                }
+            ]
+        },
+        new SigningField
+        {
+            Uuid = "active-verification",
+            SubmitterUuid = "template-signer",
+            Name = "Identity check",
+            Labels = Localized("Ověření identity", ("en-US", "Identity check")),
+            Type = SigningFieldType.Verification,
+            Required = true,
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-verification-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.44,
+                    Width = 0.383,
+                    Height = 0.053
+                }
+            ]
+        }
     ];
 
     private IReadOnlyList<SigningField> _runnerFields =>
@@ -2073,6 +2213,96 @@
     {
         _runnerValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
         _runnerStatus = $"Completed with {values.Count} values";
+    }
+
+    // ── Active steps contract: the FAKE host (phase 6, demo-only). Each handler confirms its
+    //    step the way a real provider integration would; none of them can be skipped by the
+    //    component itself. ──
+
+    private void HandleActiveStepValuesChanged(IReadOnlyDictionary<string, object?> values)
+    {
+        _activeStepValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
+    }
+
+    private void HandleActiveStepComplete(IReadOnlyDictionary<string, object?> values)
+    {
+        _activeStepValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
+        _activeStepsStatus = $"Contract completed with {values.Count} confirmed values";
+    }
+
+    private Task HandleActiveSendPhoneCode(SigningPhoneCodeRequest request)
+    {
+        _activeStepsStatus = $"Code dispatched to {request.Phone} — the demo code is {DemoOtpCode}";
+        return Task.CompletedTask;
+    }
+
+    private Task<bool> HandleActiveVerifyPhoneCode(SigningPhoneVerificationRequest request)
+    {
+        // The check runs HERE, at the host — the component never decides validity.
+        var verified = string.Equals(request.Code, DemoOtpCode, StringComparison.Ordinal);
+        _activeStepsStatus = verified
+            ? $"Phone {request.Phone} verified"
+            : $"Code '{request.Code}' rejected by the demo host";
+        return Task.FromResult(verified);
+    }
+
+    private Task<string?> HandleActiveAttachmentSelected(SigningAttachmentUploadRequest request)
+    {
+        return HandleActiveAttachmentSelectedCoreAsync(request);
+    }
+
+    private async Task<string?> HandleActiveAttachmentSelectedCoreAsync(SigningAttachmentUploadRequest request)
+    {
+        // The demo upload takes a beat so the busy state ("Uploading …", disabled zone) is
+        // actually visible and capturable (phase 6 review: the attachment-uploading capture). A
+        // real host reads request.File.OpenReadStream(maxAllowedSize) here — on Blazor Server the
+        // content must be consumed at the host (SignalR message limits), and the real size limit
+        // is enforced HERE, at the host (the step-side MaxFileSize is client-reported, UX only).
+        // The demo "persists" a tiny PNG and returns its url, which the card then previews.
+        await Task.Delay(1200);
+        _activeStepsStatus = $"Uploaded {request.File.Name} ({request.File.Size} B) to the demo store";
+        return DemoPngDataUrl;
+    }
+
+    private async Task HandleActiveExternalRequested(SigningExternalStepRequest request)
+    {
+        _activeExternalLoading = true;
+        _activeExternalError = null;
+        _activeStepsStatus = "Verification started — the demo provider is thinking...";
+        _activeStepValues = new Dictionary<string, object?>(_activeStepValues, StringComparer.Ordinal);
+
+        await Task.Delay(800);
+
+        _activeExternalLoading = false;
+
+        // The failure toggle (demo-only, for the external-error capture/state): a real provider
+        // reports errors the same way — through the context, never through a stored value.
+        if (_activeSimulateProviderFailure)
+        {
+            _activeExternalError = "The demo provider reported a failure. Please try again.";
+            _activeStepsStatus = $"Provider failed for {request.Field.Name} (simulated)";
+            return;
+        }
+
+        _activeStepValues = new Dictionary<string, object?>(_activeStepValues, StringComparer.Ordinal)
+        {
+            [request.Field.Uuid] = true
+        };
+        _activeStepsStatus = $"Identity check confirmed by the demo provider ({request.Field.Name})";
+    }
+
+    private SigningExternalStepContext? ResolveActiveExternalContext(SigningField field)
+    {
+        if (field.Type is not (SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment))
+        {
+            return null;
+        }
+
+        return new SigningExternalStepContext(
+            ExternalUrl: "https://verify.example.test/session",
+            IsLoading: _activeExternalLoading,
+            Error: _activeExternalError,
+            ProviderName: "Demo Verify");
     }
 
     private void HandleCompletionSendCopy()

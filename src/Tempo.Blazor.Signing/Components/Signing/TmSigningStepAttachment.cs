@@ -9,7 +9,7 @@ public class TmSigningStepAttachment
     /// <summary>Original file name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Optional preview or download URL.</summary>
+    /// <summary>Host-provided download/storage URL (the upload result); never a client-generated preview.</summary>
     public string? Url { get; set; }
 
     /// <summary>Optional content type.</summary>

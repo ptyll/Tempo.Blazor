@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Host request to dispatch an OTP code for a phone signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnSendPhoneCode when the signer asks for a code; without that callback wired, no request is ever raised and the phone step keeps its documented cosmetic behaviour (no SMS is sent).",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningPhoneCodeRequest"
+}

@@ -2,7 +2,7 @@
   "itemName": "TmSigningAttachmentStep",
   "kind": "Component",
   "category": "Signing",
-  "description": "Renders image, file, and generated stamp signing steps.",
+  "description": "Renders image, file, and generated stamp signing steps. Upload contract (Signing redesign phase 6): the upload is host-owned — the runner hands the picked IBrowserFile to the host (OnAttachmentSelected) and stores the host-returned url on the card; the file CONTENT is read at the host (Blazor Server streams browser files over SignalR with tight message limits). The component only ever reads a downscaled image thumbnail (RequestImageFileAsync) for the local preview. Without the resolver the picked files stay client-side metadata.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningAttachmentStep.razor",
@@ -49,6 +49,12 @@
       "description": "Callback invoked when attachments change."
     },
     {
+      "name": "Capture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The native capture attribute for mobile camera capture (Signing redesign phase 6, optional) — for example environment or user. Splatted on the native file input of Image fields only."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -73,10 +79,28 @@
       "description": "Fallback culture used when localized field text is missing."
     },
     {
+      "name": "MaxFileSize",
+      "type": "long?",
+      "isRequired": false,
+      "description": "Maximum accepted file size in bytes (Signing redesign phase 6). A larger file shows the localized \"file is larger than …\" message and never joins the attachments — the rejection happens BEFORE any host upload round-trip. NOTE: this is a CLIENT-REPORTED limit (the browser's declared size) and is UX only — the host must enforce the real limit via OpenReadStream(maxAllowedSize)."
+    },
+    {
+      "name": "MaxFiles",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum number of attachments (Signing redesign phase 6). Overflowing files show the localized \"up to {0} files\" message and are rejected; the first files stay. The value is also the platform read budget (Math.Max(MaxFiles ?? 10, 1)) — a pick beyond the budget is refused by the platform itself and rejected wholesale."
+    },
+    {
       "name": "StampValue",
       "type": "string?",
       "isRequired": false,
       "description": "Generated stamp text or image identifier."
+    },
+    {
+      "name": "UploadUrlResolver",
+      "type": "Func<IBrowserFile, Task<string?>>?",
+      "isRequired": false,
+      "description": "Host-provided upload resolver (Signing redesign phase 6): receives the picked file and returns the uploaded file's url, which the card then previews. TmSigningFormRunner passes its OnAttachmentSelected host hook through; a step without a resolver keeps the client-side-only placeholder behaviour. The file content is read by the HOST — never here."
     }
   ]
 }

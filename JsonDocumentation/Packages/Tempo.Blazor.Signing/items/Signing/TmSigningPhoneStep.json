@@ -2,7 +2,7 @@
   "itemName": "TmSigningPhoneStep",
   "kind": "Component",
   "category": "Signing",
-  "description": "Renders a phone verification signing step with country code, phone input, and OTP state.",
+  "description": "Renders a phone verification signing step with country code, phone input, OTP state and a functional resend countdown. Security note (Signing redesign phase 6): raising OnSendCode and OnVerifyCode only NOTIFIES the host — the component never dispatches an SMS and never decides whether a code is valid; inside TmSigningFormRunner the host verifies through the runner's OnVerifyPhoneCode hook and the step renders the confirmed state through Verified. The typed OTP is never stored as the field value. The verified state LOCKS the number input and the country select and replaces Send with a Secondary Change number action (OnChangeNumber) that asks the host to clear its confirmation. One always-rendered polite live region announces the phase events (code sent / verified / resend available); the ticking countdown text is aria-live=\"off\". The invalid-code error is owned by the OTP input (aria-invalid + described-by there, phone input clean) and clears when a new draft is typed. After a code was sent the Send action is Secondary and disabled while the countdown runs, and the OTP input takes the focus after a send/resend. The component is IAsyncDisposable: the countdown timer is released on dispose and the tick is guarded by a disposed flag.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningPhoneStep.razor",
@@ -76,7 +76,19 @@
       "name": "OnSendCode",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Callback invoked when a verification code should be sent."
+      "description": "Callback invoked when a verification code should be sent. The component never dispatches an SMS — the host (the runner's OnSendPhoneCode) owns the dispatch. An empty number returns early without raising the callback, the countdown starts only after the callback succeeds, and a failing host shows the localized unavailable message."
+    },
+    {
+      "name": "OnVerifyCode",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the signer asks to verify the typed code (Signing redesign phase 6). The step itself never decides validity — the RUNNER checks it against the host verifier; a standalone host binds its own check here and mirrors the result back through Verified. A throwing host shows the localized unavailable message and never flips any state."
+    },
+    {
+      "name": "OnChangeNumber",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the signer asks to change the verified number (Signing redesign phase 6 review): the runner clears its host confirmation so Verified flips back to false and the number input unlocks. A standalone host mirrors the same clear through its own state."
     },
     {
       "name": "OtpCode",
@@ -89,6 +101,12 @@
       "type": "EventCallback<string?>",
       "isRequired": false,
       "description": "Callback invoked when OTP code changes."
+    },
+    {
+      "name": "OtpInvalid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the CURRENT validation message targets the OTP input (Signing redesign phase 6 review — error ownership): the input carries aria-invalid + the error state and references the validation id, while the phone input stays clean."
     },
     {
       "name": "PhoneNumber",
@@ -120,6 +138,12 @@
       "type": "EventCallback<string?>",
       "isRequired": false,
       "description": "Callback invoked when the normalized phone value changes."
+    },
+    {
+      "name": "Verified",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the host CONFIRMED the typed code (Signing redesign phase 6). The state is host-owned — inside the runner it flips only after the host verifier answered true — and replaces the OTP input, the Verify action and the resend affordances with the localized verified status."
     }
   ]
 }

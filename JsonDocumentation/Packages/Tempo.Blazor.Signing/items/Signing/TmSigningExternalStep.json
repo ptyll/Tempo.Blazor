@@ -2,7 +2,7 @@
   "itemName": "TmSigningExternalStep",
   "kind": "Component",
   "category": "Signing",
-  "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows. Known limitations / security note (reworked in Signing redesign phase 6): the step only RENDERS the external flow — raising OnStart or OnCheckout marks the field complete without contacting any provider (the runner's default handlers store true), and ExternalUrl merely opens a link in a new tab. The resulting field value is untrusted presentation state, not evidence that a verification or payment happened.",
+  "description": "Provider-agnostic step for verification, KBA, and payment flows. Security note (Signing redesign phase 6 contract): the step only RENDERS the external flow — what happens after OnStart / OnCheckout / OnSubmitAnswers is the HOST's contract. Inside TmSigningFormRunner with OnExternalStepRequested wired the runner stores nothing: the step completes solely after the host stores the provider result (value true or the string \"true\") through Values. Without that callback the legacy behaviour stores true on the click, which is presentation state and NOT evidence that a verification or payment happened. The ExternalUrl link opens in a new tab with rel=\"noopener noreferrer\", references the localized redirect note through aria-describedby and carries an aria-hidden external-link icon. With a named provider the verified state reads \"Verified by {provider}\". One always-rendered polite live region announces the phase events (loading / verified); while the provider runs the Start / Checkout / Submit action stays in place, disabled and aria-busy. KBA answers are submitted through OnSubmitAnswers (a SigningExternalStepRequest) and are never stored as the field value.",
   "packageId": "Tempo.Blazor.Signing",
   "namespace": "Tempo.Blazor.Components.Signing",
   "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningExternalStep.razor",
@@ -75,13 +75,25 @@
       "name": "OnCheckout",
       "type": "EventCallback<SigningField>",
       "isRequired": false,
-      "description": "Callback invoked when payment checkout should start."
+      "description": "Callback invoked when payment checkout should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a payment. While IsLoading the action stays in place, disabled and aria-busy."
     },
     {
       "name": "OnStart",
       "type": "EventCallback<SigningField>",
       "isRequired": false,
-      "description": "Callback invoked when verification or KBA should start."
+      "description": "Callback invoked when verification or KBA should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a verification. While IsLoading the action stays in place, disabled and aria-busy."
+    },
+    {
+      "name": "OnSubmitAnswers",
+      "type": "EventCallback<SigningExternalStepRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when the signer SUBMITS the inline KBA answers (Signing redesign phase 6 review). The request carries the field and the typed answers — the answers are NEVER stored as the field value; the host's stored provider result is the only completion evidence."
+    },
+    {
+      "name": "ProviderName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Display name of the verification / payment provider (Signing redesign phase 6) — the runner resolves it from the host's StepContextProvider and renders the localized provider line above the call to action. With a named provider the verified state reads the combined \"Verified by {provider}\" text."
     },
     {
       "name": "Questions",

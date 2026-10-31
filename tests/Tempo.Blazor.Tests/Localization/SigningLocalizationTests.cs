@@ -377,6 +377,21 @@ public class SigningLocalizationTests : LocalizationTestBase
     [InlineData("TmSigningStep_StartVerification")]
     [InlineData("TmSigningStep_StartKba")]
     [InlineData("TmSigningStep_Checkout")]
+    [InlineData("TmSigningStep_Verify")]
+    [InlineData("TmSigningStep_Resend")]
+    [InlineData("TmSigningStep_ResendAvailable")]
+    [InlineData("TmSigningStep_CodeSent")]
+    [InlineData("TmSigningStep_ChangeNumber")]
+    [InlineData("TmSigningStep_InvalidCode")]
+    [InlineData("TmSigningStep_VerificationUnavailable")]
+    [InlineData("TmSigningStep_FileTooLarge")]
+    [InlineData("TmSigningStep_TooManyFiles")]
+    [InlineData("TmSigningStep_UploadFailed")]
+    [InlineData("TmSigningStep_Uploading")]
+    [InlineData("TmSigningStep_VerifiedBy")]
+    [InlineData("TmSigningStep_SubmitAnswers")]
+    [InlineData("TmSigningStep_ExternalProvider")]
+    [InlineData("TmSigningStep_RedirectNote")]
     public void EnglishMockLocalizer_ContainsSigningKeys(string key)
     {
         var localizer = Services.GetRequiredService<ITmLocalizer>();

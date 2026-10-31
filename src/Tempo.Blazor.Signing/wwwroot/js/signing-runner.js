@@ -240,6 +240,92 @@ function styleOf(element, view) {
 }
 
 /**
+ * Reveals the first element matching `selector` (Signing redesign phase 6 review fix: after a
+ * host-accepted send the runner reveals the phone step's OTP ROW — the input-only focus scroll
+ * leaves the Verify action and the resend countdown clipped below the mobile sheet's visible
+ * area). The element's nearest scrollable ancestor scrolls so the element's bottom sits at the
+ * scrollport's usable bottom — UNDER the sticky action bar when one overlays it (a bare
+ * `scrollIntoView({ block: 'nearest' })` no-ops once the focus scroll already showed the row's
+ * top, and aligning to the scrollport bottom would hide the row behind that bar). The delta is
+ * applied with ONE `scrollTop` assignment; an instant jump honours reduced motion for free.
+ *
+ * @param {string} selector CSS selector of the element to reveal
+ * @param {{
+ *   document?: Document,
+ *   stickySelector?: string,
+ * }} [options] injectable environment for the node lane; `stickySelector` names the sticky bar
+ *   that covers the scrollport's bottom edge (resolved INSIDE the element's own runner scope, so
+ *   a page with several runners measures its own bar)
+ * @returns {boolean} whether a matching element was found and scrolled
+ */
+export function scrollIntoView(selector, options = {}) {
+    const doc = options.document ?? (typeof document !== 'undefined' ? document : null);
+    if (!doc || !selector) {
+        return false;
+    }
+
+    let element = null;
+    try {
+        element = doc.querySelector(selector);
+    } catch {
+        // A malformed selector must disable the reveal, never throw into the circuit.
+        return false;
+    }
+
+    if (!element) {
+        return false;
+    }
+
+    const scroller = nearestScrollable(element, doc);
+    if (!scroller) {
+        // No scrollable ancestor actually overflows (the desktop panel with the row fully
+        // visible): the browser-level fallback keeps the plain semantics.
+        if (typeof element.scrollIntoView === 'function') {
+            element.scrollIntoView({ block: 'nearest' });
+            return true;
+        }
+
+        return false;
+    }
+
+    const scrollerRect = rectOf(scroller);
+    const elementRect = rectOf(element);
+    if (!scrollerRect || !elementRect) {
+        return false;
+    }
+
+    // The scroller's own bottom PADDING sits below the sticky bar (the panel pads by a space
+    // step), so the usable bottom ends at the CONTENT-box edge, not the border-box edge.
+    const view = doc.defaultView;
+    let padding = 0;
+    try {
+        padding = parseFloat(styleOf(scroller, view)?.paddingBottom ?? '0') || 0;
+    } catch {
+        padding = 0;
+    }
+
+    const contentBottom = scrollerRect.bottom - padding;
+    let usableBottom = contentBottom;
+    const scope = element.closest('.tm-signing-form-runner__step-panel')
+        ?? element.closest('.tm-signing-form-runner__steps');
+    const bar = scope?.querySelector(options.stickySelector ?? '.tm-signing-form-runner__actions') ?? null;
+    const barRect = rectOf(bar);
+    if (barRect && barRect.bottom >= contentBottom - 2) {
+        // The sticky bar rides on the scrollport's bottom edge (±2px rounding): the usable space
+        // ends at its top edge.
+        usableBottom = barRect.top;
+    }
+
+    if (elementRect.bottom > usableBottom) {
+        scroller.scrollTop += elementRect.bottom - usableBottom;
+    } else if (elementRect.top < scrollerRect.top) {
+        scroller.scrollTop -= scrollerRect.top - elementRect.top;
+    }
+
+    return true;
+}
+
+/**
  * Scrolls the field list's button for `fieldUuid` into view and focuses it (the More menu's
  * "Field list" entry hands focus back to the list's current row). `scrollIntoView` first, so the
  * focus never lands off-screen inside the sheet's own scroll area.

@@ -42,9 +42,16 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    opacity: 0;
     cursor: pointer;
     z-index: 10;
+}
+
+/* Invisible in EVERY state — including disabled (the busy upload state): a UA or host
+   stylesheet that dims disabled inputs would otherwise paint the native file picker over the
+   drop area. */
+.tm-file-drop-zone__input,
+.tm-file-drop-zone__input[disabled] {
+    opacity: 0;
 }
 
 /* Keyboard focus lands on the (opacity-0) input, not the area: paint the ring on the area

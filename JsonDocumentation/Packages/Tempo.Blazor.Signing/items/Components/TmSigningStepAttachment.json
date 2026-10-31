@@ -29,7 +29,7 @@
       "name": "Url",
       "kind": "Property",
       "type": "string?",
-      "description": "Optional preview or download URL."
+      "description": "Host-provided download/storage URL (the upload result); never a client-generated preview."
     },
     {
       "name": "Uuid",

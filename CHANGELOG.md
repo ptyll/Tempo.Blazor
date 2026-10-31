@@ -776,18 +776,175 @@
 
 ### Known issues
 
-- **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
-  "Start verification" / "Checkout" marks the step complete WITHOUT any verification or payment
-  taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload
-  stays in the browser. The resulting field values are untrusted presentation state — the
-  "Verified" / "Paid" status (like every other step value) reflects the STORED value until the
-  provider-backed contract replaces this placeholder, so a tampered stored value shows as verified.
-  The XML docs
-  and the JSON component documentation carry a "Known limitations / security note"; a
-  provider-backed contract is planned for Signing redesign phase 6.
+- **Signing external / phone / attachment steps WITHOUT the host callbacks remain documented
+  placeholders (SI2 — narrowed in phase 6).** When a host does NOT wire the phase-6 active-step
+  callbacks, the legacy behaviour stands: clicking "Start verification" / "Checkout" marks the
+  step complete WITHOUT any verification or payment taking place, the phone step sends no SMS and
+  checks no OTP, and the attachment step's upload stays in the browser — the resulting field
+  values are untrusted presentation state, and the "Verified" / "Paid" status reflects the STORED
+  value (a tampered stored value still shows as verified). Wire the callbacks (see Added below) to
+  close this: with `OnVerifyPhoneCode` / `OnAttachmentSelected` / `OnExternalStepRequested` wired,
+  a phone step completes only after the host verifier answers `true`, the attachment card carries
+  the host-returned upload url, and an external step completes solely after the host stores the
+  provider result through `Values`. The "Known limitations / security note" wording in the XML
+  docs and the JSON component documentation now describes this contract (and the SignalR note on
+  reading the uploaded file at the host).
 
 ### Added
 
+- **Signing active-steps contract (Signing redesign phase 6, S2-5/SI2), all opt-in.** The phone
+  OTP, the attachment upload and the external verification become HOST-CONFIRMED steps.
+  `TmSigningFormRunner` gains `OnSendPhoneCode`
+  (`EventCallback<SigningPhoneCodeRequest>`), `OnVerifyPhoneCode`
+  (`Func<SigningPhoneVerificationRequest, Task<bool>>`), `OnAttachmentSelected`
+  (`Func<SigningAttachmentUploadRequest, Task<string?>>`), `OnExternalStepRequested`
+  (`EventCallback<SigningExternalStepRequest>` — the field plus the typed KBA answers) and
+  `StepContextProvider`
+  (`Func<SigningField, SigningExternalStepContext?>`), with the four new contract records
+  (`SigningPhoneCodeRequest`, `SigningPhoneVerificationRequest`, `SigningExternalStepContext`,
+  `SigningAttachmentUploadRequest`) in the Signing package. The contract:
+  - *Phone.* While `OnVerifyPhoneCode` is wired, a phone field completes ONLY after the host
+    verifier answers `true` (the runner records the confirmation; a rejected code shows the
+    localized "code is not valid" message and never completes the step); the typed OTP is never
+    stored as the field value. `OnSendPhoneCode` receives the normalized number on every
+    send/resend.
+  - *Upload.* `OnAttachmentSelected` receives the picked `IBrowserFile` and its returned url is
+    stored on the attachment card. Read the content in the HOST (`File.OpenReadStream`) — on
+    Blazor Server browser files stream over SignalR with tight message limits. The step itself
+    never reads a picked file's content beyond the optional local image thumbnail.
+  - *External.* With `OnExternalStepRequested` wired, the Start/Checkout click only notifies the
+    host — the step completes solely after the host stores the provider result (value `true`)
+    through `Values`; `StepContextProvider` feeds the provider page url, inline KBA questions,
+    loading state, error and provider name per field. The provider link keeps
+    `rel="noopener noreferrer"` and now carries a localized redirect note
+    (`TmSigningStep_RedirectNote`) and provider line (`TmSigningStep_ExternalProvider`).
+  Without the callbacks, today's documented behaviour stands unchanged (regression-tested): the
+  typed phone completes the step, uploads stay client-side metadata and the external click stores
+  `true` — presentation state, never proof that a verification, payment or upload happened.
+  No breaking change without the callbacks wired. New localized keys `TmSigningStep_Verify`,
+  `_Resend`, `_InvalidCode`, `_FileTooLarge`, `_TooManyFiles`, `_ExternalProvider` and
+  `_RedirectNote` in en / cs / sk / fr + `MockTmLocalizer`.
+- **Signing active-steps review fixes (phase 6 review) — reviewed-contract hardening.**
+  - *Phone verification is bound to the NUMBER.* The runner keeps the host confirmation in a
+    uuid → verified-number map (runner-internal, never in `Values`) — a phone step is verified
+    only while the field's current value still equals the number the OTP was verified for, so
+    editing the number (or a host-pushed value change) makes the step incomplete again. The
+    verified state LOCKS the number input and the country select and replaces "Send code" with a
+    Secondary **Change number** action (`TmSigningStep_ChangeNumber`) that clears the host
+    confirmation and unlocks the editing.
+  - *Upload contract.* A host resolver returning `null` (or throwing — cancellation aside)
+    REJECTS the file: it never joins the attachments and the localized
+    `TmSigningStep_UploadFailed` ("{0} could not be uploaded.") shows. The local image preview is
+    presentation-only: it lives in a component-local map keyed by the attachment uuid and is
+    never written into the persisted `Url` (the legacy path keeps `Url` null). The upload round
+    trip is BUSY state: the drop zone disables and a spinner row announces "Uploading {name}…"
+    (`TmSigningStep_Uploading`) through a polite live region, cleared in `finally`. Single-file
+    mode keeps the existing attachment when nothing was accepted (a rejected replacement no
+    longer drops the previous file). The platform read budget matches `MaxFiles`
+    (`GetMultipleFiles(Math.Max(MaxFiles ?? 10, 1))`, the same value on
+    `TmFileDropZone.MaxFileCount` — an overflow pick degrades to an empty readable set, and the
+    change event still fires so the localized limit message can render). The preview data url
+    uses the decoded image's content type and only PNG/JPEG/GIF/WebP picks are previewed (SVG
+    skipped). `MaxFileSize` is CLIENT-REPORTED — hosts must enforce the real limit via
+    `OpenReadStream(maxAllowedSize)`.
+  - *External opt-in completion.* With `OnExternalStepRequested` wired, the external/KBA/payment
+    field completes ONLY for the confirmed provider result — value `true` or the string
+    `"true"` (case-insensitive); the string `"false"` keeps the step incomplete. Legacy rule
+    unchanged without the callback.
+  - *KBA submit.* The questions branch gains a "Submit answers" action
+    (`TmSigningStep_SubmitAnswers`), and `OnExternalStepRequested` now carries
+    `SigningExternalStepRequest` (`Field` + `IReadOnlyDictionary<string, string?> Answers`) —
+    the typed KBA answers ride the request to the host and are NEVER stored as the field value.
+  - *Host callback errors.* Send/Verify are guarded against double-raises; a failing
+    `OnVerifyPhoneCode` / `OnSendPhoneCode` (cancellation aside) shows the localized
+    `TmSigningStep_VerificationUnavailable` message, NEVER marks the step verified and starts no
+    countdown; the resend countdown starts only after the host accepted the send; a send on an
+    empty number returns early without raising the callback; the request records
+    (`SigningPhoneCodeRequest`, `SigningPhoneVerificationRequest`) now carry non-nullable
+    `Phone`. All active-step requests gained an init-only `CancellationToken` fed from a
+    runner-owned source cancelled in `DisposeAsync`.
+  - *Focus and announcements (WCAG 2.4.3/4.1.3).* The phone and external steps each keep ONE
+    always-rendered visually-hidden `role=status` polite region announcing the phase events
+    ("Code sent", "Verified"/"Paid", "Resend available" — new keys `TmSigningStep_CodeSent`,
+    `_ResendAvailable`; "Loading…" reuses `_LoadingExternal`); the inserted verified/loading
+    blocks carry no role of their own and the ticking countdown text is `aria-live="off"`. After
+    a successful verification the runner moves focus to the step title (navigation signal);
+    after send/resend the OTP input takes the focus; while the provider runs the external
+    Start/Checkout action stays IN PLACE, disabled and `aria-busy`. The invalid-code error is
+    owned by the OTP input (`aria-invalid` + described-by there, phone input clean) and clears
+    when a new draft is typed. After a code was sent the Send action is Secondary and disabled
+    while the countdown runs. The outbound provider link references the redirect note via
+    `aria-describedby` (the note carries a stable id) and the external-link icon is
+    aria-hidden; the verified state reads "Verified by {provider}"
+    (`TmSigningStep_VerifiedBy`) when the provider names itself. The runner keeps the per-field
+    code-sent state and the OTP draft, so navigating away and back restores the OTP row and the
+    typed draft. `TmSigningPhoneStep` stays `IAsyncDisposable` (the Blazor renderer prefers the
+    async interface when both are present — the same decision the runner documents; the
+    countdown `ITimer` is released there); the countdown tick is guarded by a `_disposed` flag
+    (the nested `InvokeAsync` was removed) and the countdown stops once verified. New keys in
+    en / cs / sk / fr + `MockTmLocalizer`.
+  - *Host-reported send state (review fix).* Inside the runner the phone step no longer trusts
+    its own send click: the runner cascades `TmSigningRunnerHosted` and clears the per-field sent
+    state while its dispatch runs, so the OTP row, the resend countdown and the "Code sent"
+    announcement appear ONLY when the host-reported `CodeSent` parameter flips `true` — a
+    THROWING/failing `OnSendPhoneCode` leaves the plain phone form with the localized
+    unavailable alert (no row, no countdown, no announcement) and a successful retry raises the
+    row through the same flip. A mount that arrives with `CodeSent` already true (navigating away
+    and back) resumes a ticking countdown without re-announcing the send. Standalone steps keep
+    the local behaviour. The after-send OTP focus moves WITHOUT `preventScroll`, so the browser
+    scrolls the code row into view in every scrollable ancestor (the capped desktop panel and the
+    390 bottom sheet included); the move defers past the in-flight render (a browser ignores
+    focus on a disabled input), and the RUNNER additionally reveals the whole code row
+    (`scrollIntoView` `block: 'nearest'` through `signing-runner.js`, honoured by the node lane)
+    so the Verify action and the fresh countdown stay visible inside the mobile sheet. Also fixed
+    a double-prefix normalization bug: re-sending the stored normalized number produced
+    `+420420…` — a number already carrying the SELECTED calling code now keeps its digits
+    verbatim.
+  - *Per field+operation cancellation (review fix).* The active-step requests' runner-owned
+    cancellation is now ONE source PER FIELD+OPERATION (phone send / verify, attachment upload,
+    external flow, keyed by field uuid) instead of a single global source: a new request
+    supersedes only its own slot's predecessor — a verify on one field no longer cancels an
+    in-flight send on another. `DisposeAsync` still cancels ALL live sources, and the contract
+    records' XML docs describe the narrowed scope. New tests pin the per-field/per-operation
+    isolation, the request payload (field uuid + normalized phone) and the no-OTP-row-on-failure
+    contract; the phase-6 capture for the rejected code scrolls the step alert into view (the
+    capped desktop panel scrolls internally) and `TmSigningStepAttachment.Url`'s XML/JSON summary
+    now reads "Host-provided download/storage URL (the upload result); never a client-generated
+    preview."
+- **TmFileDropZone: the hidden file input stays invisible when disabled.** `_file-drop-zone.css`
+  pins `.tm-file-drop-zone__input, .tm-file-drop-zone__input[disabled] { opacity: 0; }` — a UA
+  or host stylesheet that dims disabled inputs would otherwise paint the native file picker over
+  the drop area while the zone is busy/disabled (`tempo-blazor.bundled.css` regenerated).
+- **TmFileDropZone: the MaxFileCount budget degrades safely.** An overflow pick (more files than
+  the budget) used to throw the platform exception; it now degrades to an empty readable set and
+  the change event still fires, so a consumer can render its own localized limit message
+  (additive; hosts whose picks never overflow never see a change).
+- **Signing phone step runs a real resend countdown (Signing redesign phase 6).** `TmSigningPhoneStep`
+  gains `Verified` (the host-confirmed state that replaces the OTP row) and `OnVerifyCode`, and the
+  countdown now TICKS on the injectable `TimeProvider` (the same seam the runner's autosave uses —
+  tests advance a `FakeTimeProvider`, no sleeps): "Send code" starts the
+  `ResendSeconds` window (default 30), the text counts down, and at zero it becomes the real
+  localized "Resend" action which re-sends and restarts the window. The timer is disposed with the
+  component. A standalone host without `OnVerifyCode` renders no Verify action — the legacy
+  behaviour is byte-identical.
+- **Signing attachment limits and local image preview (Signing redesign phase 6).**
+  `TmSigningAttachmentStep` gains `MaxFileSize` (bytes; a larger file shows the localized
+  `{0} is larger than the allowed {1}` message — culturally formatted — and never joins the
+  attachments), `MaxFiles` (localized `up to {0} files` message; the first files stay), `Capture`
+  (the native `capture` camera attribute, Image fields only) and `UploadUrlResolver`
+  (the runner's host upload hook; the resolver's url wins over the local preview). Without a host
+  url, an Image pick renders a LOCAL downscaled thumbnail through the core
+  `RequestImageFileAsync` (no custom JS; best-effort — a refused stream simply skips the preview;
+  note the core API refuses custom `IBrowserFile` implementations, so bUnit cannot exercise the
+  decoder — the rendered preview is covered by the phase-6 E2E suite against the real browser
+  pipeline).
+- **Signing demo: the active-steps fake host.** The `/signing-components` demo gains an
+  "Active Steps Contract" runner (`signing-active-steps-demo`) wired to a demo-only host: OTP code
+  `123456`, an in-memory PNG upload (with a deliberate delay so the busy state is visible) and a
+  simulated provider that confirms the verification after ~400 ms — no step completes until the
+  host confirms it. A "Simulate provider failure" toggle (`signing-active-steps-fail-toggle`)
+  demonstrates the provider-error state, and the standalone image step carries a small
+  `MaxFileSize` so the size-limit rejection is demonstrable.
 - **Signing runner mobile sheet plumbing (Signing redesign phase 5), all additive.**
   `TmSigningFormRunner` gains `LayoutMode` / `ResolvedLayoutChanged` (the F1 self-classification
   pair, the Gantt pattern) and `DefaultSignatureMode` (SI3, see the Breaking / Migration entry

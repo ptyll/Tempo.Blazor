@@ -121,6 +121,38 @@ internal sealed class SigningRunnerInterop : IAsyncDisposable
     }
 
     /// <summary>
+    /// Scrolls the first element matching <paramref name="selector"/> into view with
+    /// <c>block: 'nearest'</c> (phase 6 review fix: the phone step's OTP row after a
+    /// host-accepted send — the input-only focus scroll leaves the Verify action and the resend
+    /// countdown clipped below the mobile sheet's visible area; best-effort, a missing module or
+    /// element is a no-op).
+    /// </summary>
+    public async Task ScrollIntoViewAsync(string selector)
+    {
+        if (_importFailed || !await EnsureModuleAsync().ConfigureAwait(false))
+        {
+            return;
+        }
+
+        try
+        {
+            await _module!.InvokeVoidAsync("scrollIntoView", selector).ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    /// <summary>
     /// Imports the module once; <c>false</c> when the import fails or races a disposed runtime
     /// (the failure is recorded, so a dead circuit never retries per call).
     /// </summary>

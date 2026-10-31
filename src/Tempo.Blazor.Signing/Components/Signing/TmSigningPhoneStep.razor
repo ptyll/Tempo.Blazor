@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
@@ -17,7 +18,8 @@
         from the FIELD CULTURE (+420 for cs templates, no longer "+1" for everyone) — and the
         number input the core TmTextInput with Type="tel". Every control carries a visible label
         (placeholders are not accessible names); the phone input also references the shell's
-        description / validation ids and mirrors the invalid state while a message shows. *@
+        description / validation ids and mirrors the invalid state while a message shows — except
+        while the error targets the OTP input (phase 6 review, error ownership). *@
     <div class="tm-signing-phone-step__row">
         <TmSelect TValue="string"
                   Value="@EffectiveCountryCode"
@@ -25,37 +27,103 @@
                   Label="@Loc["TmSigningStep_PhoneCountryLabel"]"
                   Class="tm-signing-phone-step__country"
                   Options="@CountrySelectOptions"
-                  Disabled="@Disabled" />
+                  Disabled="@(Disabled || IsVerifiedState)" />
         <TmTextInput Value="@(PhoneNumber ?? string.Empty)"
                      ValueChanged="HandlePhoneInputAsync"
                      Type="tel"
                      Label="@Loc["TmSigningStep_PhoneNumberLabel"]"
                      Placeholder="@PhonePlaceholderText"
-                     Disabled="@Disabled"
-                     IsValid="@ValidationState"
+                     Disabled="@(Disabled || IsVerifiedState)"
+                     IsValid="@PhoneValidationState"
                      Class="tm-signing-phone-step__input"
                      AdditionalAttributes="@(BuildPhoneAttributes())" />
-        @* Functional countdown and verification land in phase 6; the button only raises
-            OnSendCode (see the class remarks). *@
-        <TmButton Variant="ButtonVariant.Primary"
-                  Class="tm-signing-phone-step__send"
-                  Disabled="@Disabled"
-                  OnClick="SendCodeAsync">
-            @Loc["TmSigningStep_SendCode"]
-        </TmButton>
+        @* Phase 6: "Send code" raises OnSendCode (the runner forwards it to the host's
+            OnSendPhoneCode) and starts the functional resend countdown — see the class remarks
+            for the security contract: the component never dispatches an SMS itself. Once a code
+            was sent the send is SECONDARY and disabled while the countdown runs (item 9); in the
+            host-verified state the number is LOCKED and the send is replaced by the Secondary
+            "Change number" action that asks the host to clear the confirmation (item 1). *@
+        @if (IsVerifiedState)
+        {
+            <TmButton Variant="ButtonVariant.Secondary"
+                      Class="tm-signing-phone-step__change-number"
+                      Disabled="@Disabled"
+                      OnClick="HandleChangeNumberAsync">
+                @Loc["TmSigningStep_ChangeNumber"]
+            </TmButton>
+        }
+        else
+        {
+            <TmButton Variant="@(HasSentCode ? ButtonVariant.Secondary : ButtonVariant.Primary)"
+                      Class="tm-signing-phone-step__send"
+                      Disabled="@(Disabled || _sendInFlight || IsCountingDown)"
+                      OnClick="SendCodeAsync">
+                @Loc["TmSigningStep_SendCode"]
+            </TmButton>
+        }
     </div>
 
-    @if (_codeSent || CodeSent)
+    @if (HasSentCode || IsVerifiedState)
     {
-        <div class="tm-signing-phone-step__otp-row">
-            <TmTextInput Value="@(OtpCode ?? string.Empty)"
-                         ValueChanged="HandleOtpInputAsync"
-                         Label="@Loc["TmSigningStep_OtpLabel"]"
-                         Placeholder="@OtpPlaceholderText"
-                         Disabled="@Disabled"
-                         Class="tm-signing-phone-step__otp"
-                         AdditionalAttributes="@(BuildOtpAttributes())" />
-            <span class="tm-signing-phone-step__resend">@Loc["TmSigningStep_ResendIn", ResendSeconds]</span>
-        </div>
+        @if (IsVerifiedState)
+        {
+            @* The host-confirmed state (phase 6): replaces the OTP input, the Verify action and
+                the resend affordances — the value the runner carries was verified by the HOST.
+                The announcement goes through the always-rendered live region below (one region
+                per step, WCAG 4.1.3), so this block carries no role itself. *@
+            <div class="tm-signing-phone-step__verified">
+                <TmIcon Name="check-circle" Size="IconSize.Sm" />
+                <span>@Loc["TmSigningStep_Verified"]</span>
+            </div>
+        }
+        else
+        {
+            <div class="tm-signing-phone-step__otp-row">
+                <TmTextInput @ref="_otpInput"
+                             Value="@(OtpCode ?? string.Empty)"
+                             ValueChanged="HandleOtpInputAsync"
+                             Label="@Loc["TmSigningStep_OtpLabel"]"
+                             Placeholder="@OtpPlaceholderText"
+                             Disabled="@(Disabled || _verifyInFlight || _sendInFlight)"
+                             IsValid="@OtpValidationState"
+                             Class="tm-signing-phone-step__otp"
+                             AdditionalAttributes="@(BuildOtpAttributes())" />
+                @* Verify appears only when a host verifier is wired (the runner passes its
+                    OnVerifyPhoneCode through) — without one the code stays cosmetic, exactly the
+                    documented legacy behaviour. *@
+                @if (OnVerifyCode.HasDelegate)
+                {
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Class="tm-signing-phone-step__verify"
+                              Disabled="@(Disabled || _verifyInFlight || _sendInFlight)"
+                              OnClick="VerifyCodeAsync">
+                        @Loc["TmSigningStep_Verify"]
+                    </TmButton>
+                }
+                @* Functional countdown (phase 6): the remaining seconds tick on the injectable
+                    clock; at zero the text becomes the real "Resend" action. The ticking text is
+                    aria-live="off" — the live region below announces the EVENTS (WCAG 4.1.3). *@
+                @if (ShowResendButton)
+                {
+                    <TmButton Variant="ButtonVariant.Link"
+                              Class="tm-signing-phone-step__resend-button"
+                              Disabled="@Disabled"
+                              OnClick="ResendCodeAsync">
+                        @Loc["TmSigningStep_Resend"]
+                    </TmButton>
+                }
+                else
+                {
+                    <span class="tm-signing-phone-step__resend" @attributes="BuildCountdownAttributes()">@Loc["TmSigningStep_ResendIn", CountdownValue]</span>
+                }
+            </div>
+        }
     }
+
+    @* The ONE always-rendered polite status region of the step (phase 6 review, WCAG 2.4.3 /
+        4.1.3): it announces the phase events — "Code sent", "Verified", "Resend available" —
+        while the ticking countdown text stays aria-live="off". Always in the DOM so the region
+        exists before its first announcement (a region inserted WITH the message announces
+        unreliably). *@
+    <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
 </TmSigningStepShell>

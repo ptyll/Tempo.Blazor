@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Files
 @using Tempo.Blazor.Components.Icons
 
@@ -28,11 +29,13 @@
             references the shell's description / validation ids + invalid state through the core
             InputAttributes splat (phase 4 review); the step renders its OWN attachment cards, so
             the zone's built-in file list stays hidden (ShowFileList=false) — the picked file must
-            not show twice. *@
+            not show twice. Phase 6 review: the read budget matches MaxFiles and the zone is
+            DISABLED while a host upload round-trip runs (the busy state). *@
         <TmFileDropZone Multiple="@AllowMultiple"
                         Accept="@Accept"
-                        Disabled="@Disabled"
+                        Disabled="@IsBusy"
                         ShowFileList="false"
+                        MaxFileCount="@(Math.Max(MaxFiles ?? 10, 1))"
                         InputAriaLabel="@(Field.Type == SigningFieldType.Image ? Loc["TmSigningStep_ImageUpload"] : Loc["TmSigningStep_FileUpload"])"
                         InputTestId="signing-attachment-input"
                         OnFilesSelected="HandleFilesSelectedAsync"
@@ -45,6 +48,16 @@
             </span>
         </TmFileDropZone>
 
+        @* The host round-trip busy state (phase 6 review): a spinner with the localized
+            "Uploading {name}…" row; the live region below announces it politely. *@
+        @if (_uploading)
+        {
+            <div class="tm-signing-attachment-step__uploading">
+                <TmSpinner Size="SpinnerSize.Sm" />
+                <span>@Loc["TmSigningStep_Uploading", _uploadingFileName ?? string.Empty]</span>
+            </div>
+        }
+
         @if (Attachments.Count > 0)
         {
             <h4 id="@FilesTitleId" class="tm-signing-attachment-step__files-title">
@@ -53,11 +66,14 @@
             <ul class="tm-signing-attachment-step__items">
                 @foreach (var attachment in Attachments)
                 {
+                    var previewUrl = GetPreviewUrl(attachment);
                     <li class="tm-signing-attachment-step__item">
-                        @if (Field.Type == SigningFieldType.Image && !string.IsNullOrWhiteSpace(attachment.Url))
+                        @if (Field.Type == SigningFieldType.Image && !string.IsNullOrWhiteSpace(previewUrl))
                         {
-                            @* The file name is the card's text content; the preview is decorative. *@
-                            <img class="tm-signing-attachment-step__preview" src="@attachment.Url" alt="" />
+                            @* The file name is the card's text content; the preview is decorative.
+                                The source is the COMPONENT-LOCAL thumbnail or the persisted host
+                                url — never a preview persisted into the attachment Url itself. *@
+                            <img class="tm-signing-attachment-step__preview" src="@previewUrl" alt="" />
                         }
                         else
                         {
@@ -76,7 +92,7 @@
                         <TmButton Variant="ButtonVariant.Ghost"
                                   Class="tm-signing-attachment-step__remove"
                                   Icon="trash"
-                                  Disabled="@Disabled"
+                                  Disabled="@IsBusy"
                                   AriaLabel="@Loc["TmSigningStep_RemoveFile", attachment.Name]"
                                   OnClick="() => RemoveAttachmentAsync(attachment.Uuid)">
                             <span class="tm-signing-attachment-step__remove-text">@Loc["TmSigningStep_RemoveAttachment"]</span>
@@ -86,4 +102,9 @@
             </ul>
         }
     }
+
+    @* The ONE always-rendered polite status region of the step (phase 6 review, WCAG 2.4.3 /
+        4.1.3): it announces the upload phase events ("Uploading {name}…"). Always in the DOM so
+        the region exists before its first announcement. *@
+    <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
 </TmSigningStepShell>
