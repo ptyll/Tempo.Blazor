@@ -38,6 +38,7 @@ references them without Blazor or Markdig.
 | `OnFollowUp` | `EventCallback<string>` | — | Raised with the suggestion text of an activated chip. |
 | `OnCitationClick` | `EventCallback<string>` | — | Raised with the source id of an activated citation chip, after the built-in preview opened. |
 | `OnRetry` | `EventCallback` | — | Raised when the reader retries a failed generation. |
+| `OnToolCallRetry` | `EventCallback<AiToolCall>` | — | Raised with the tool call the reader asked to run again, from a failed call's Retry button (inside a single card or a grouped run). The buttons render only when a handler is bound. |
 | `ActiveVersionIndexChanged` | `EventCallback<int>` | — | Raised with the target zero-based version index. The component never mutates the model. |
 | `Class` | `string?` | `null` | Extra CSS class(es) on the root `.tm-ai-message`. |
 | `DataTestId` / `TestIdPrefix` | `string?` | `null` | Inherited from `TmComponentBase`; the default root test id is `ai-message`. |
@@ -45,6 +46,48 @@ references them without Blazor or Markdig.
 The root element carries `data-role` (`user`, `assistant`, `system`, `tool`) and `data-status`
 (`pending`, `streaming`, `completed`, `stopped`, `failed`), which is the stable hook for a host's own
 styling and for E2E.
+
+## Parts
+
+`AiMessage.Parts` is rendered in arrival order. Three of the four part kinds are the package's own
+components rather than inline markup, so the same call looks the same everywhere:
+
+| Part | Rendering |
+|------|-----------|
+| `AiTextPart` | `TmMarkdownView` (the safe pipeline). The trailing part of a streaming turn carries `.tm-ai-streaming`. |
+| `AiSourcesPart` | The source cards, in citation order. |
+| `AiReasoningPart` | `TmReasoningPanel`: a disclosure whose collapsed summary reports what the thinking cost ("Thought for 12.0 s"), whose body lists the steps and the inspected sources. While this turn is still streaming and the reasoning is the trailing part the panel counts up live (`IsRunning="true"`), shimmers and keeps the streaming caret on its last step. |
+| `AiToolCallPart` | `TmToolCallCard` for a single call; a run of **two or more consecutive** tool-call parts collapses into one `TmToolCallGroup` ("3 tools · 1 failed · 4.2 s"). A text part between two calls ends the run, and a run of one renders the card — a one-item group would claim a run that is not there. |
+
+Both components are also usable standalone (a tool-call timeline, an "agent is working" pill):
+
+```razor
+<TmToolCallCard ToolCall="@call" OnRetry="@(() => agent.RunToolCallAsync(call))" />
+
+<TmToolCallGroup ToolCalls="@calls" OnRetry="@(call => agent.RunToolCallAsync(call))" />
+
+<TmThinkingIndicator Phase="@agent.CurrentPhase" Completed="@agent.IsIdle" />
+
+<TmReasoningPanel Reasoning="@reasoningPart" IsRunning="@isStreaming" />
+```
+
+### Tool calls and reasoning
+
+- **Retry is a real action, once.** A card renders Retry only for a call in `Failed` with a bound
+  `OnRetry`; the control disables itself (and the handler refuses re-entry) until the host's task
+  completes, so a double click on a slow re-run cannot fire `OnRetry` twice. Inside a group the retry
+  callback is bound to the specific call, so a host receives the call it has to run again.
+- **Redaction beats disclosure.** `AiToolCall.IsRedacted` renders a localized notice with the lock glyph
+  and nothing else: no details, no Copy, no payload in the DOM — a redacted call has no path out of the page.
+- **Every action names its tool.** Copy, Retry and the disclosure carry
+  `TmToolCallCard_CopyFor` / `_RetryFor` / `_DetailsFor` ("Copy details of {0}") in their accessible name,
+  so a grouped run's repeated buttons stay distinguishable in a screen reader's list of buttons (WCAG
+  2.4.6). The visible Retry verb stays short and is contained in that name (WCAG 2.5.3).
+- **`aria-controls` only while the region exists.** A collapsed card, run or reasoning panel renders no
+  body, so it emits no `aria-controls`; expanding emits the id of the region it just rendered.
+- **Elapsed time is a fact.** Both the card and the panel read `TimeProvider` from the service provider
+  (falling back to `TimeProvider.System`) and disarm their ticker the moment the work finishes: a finished
+  row never keeps counting, so a recorded duration is never overwritten by an estimate.
 
 ## Versions (regenerate)
 
@@ -129,8 +172,12 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
   reaches the 44 px floor (`--tm-touch-target`).
 - **Forced colors** — the avatar, cards, error block, chips and the user bubble opt out of the automatic
   adjustment and ask for `Canvas`/`CanvasText`.
-- **Reduced motion** — this component adds no animation; the streaming caret is the package-level
-  primitive that already carries its own `prefers-reduced-motion` block.
+- **Reduced motion** — this component adds no animation of its own; the streaming caret
+  (`.tm-ai-streaming`) and the thinking pair (`.tm-ai-shimmer`, the spinner) are package-level primitives
+  that carry their own `prefers-reduced-motion` blocks.
+- **Live regions** — each part owns exactly one, and they announce different things: the card's status
+  transition and copy confirmation, the panel's finished reasoning, the pill's phase. A part never
+  renames a control to announce something.
 
 ## Interactive state does not leak
 
@@ -142,7 +189,7 @@ the reader has moved past.
 
 | Asset | Path |
 |-------|------|
-| Styles | `_content/Tempo.Blazor.AI/css/components/_ai-message.css` (imported by `tempo-blazor-ai.css`) |
+| Styles | `_content/Tempo.Blazor.AI/css/components/_ai-message.css`, `_ai-tool-call.css` and `_ai-thinking.css` (all imported by `tempo-blazor-ai.css`) |
 | Interop | `_content/Tempo.Blazor.AI/js/ai-message.js` |
 
 The module exposes `copyText(text)`, `isSpeechSupported()`, `speak(text, lang, dotNetRef)`,

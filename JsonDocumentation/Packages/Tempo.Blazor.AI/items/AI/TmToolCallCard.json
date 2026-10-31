@@ -1,0 +1,49 @@
+{
+  "itemName": "TmToolCallCard",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One tool/function call of an AI turn: the state glyph, the tool name, the localized status and the elapsed time on one row, with Copy, Retry (a failed call only) and a details disclosure as separate native buttons. The disclosure pretty-prints the JSON arguments and result with two-space indentation and shows a payload that does not parse as its raw text instead of dropping it. A redacted call shows a localized notice instead of the payloads and offers no Copy. The elapsed time counts up live while the call runs on the injected TimeProvider, stops at the recorded duration when it finishes, and the card owns exactly one role=status live region for a status transition and the copy confirmation.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallCard.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Render one call and let the host run a failed one again",
+      "code": "<TmToolCallCard ToolCall=\"@call\"\n                 OnRetry=\"@(() => agent.RunToolCallAsync(call))\" />"
+    },
+    {
+      "title": "Open the arguments and result immediately",
+      "code": "<TmToolCallCard ToolCall=\"@call\" DefaultExpanded=\"true\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the arguments/result disclosure starts open. Default false. The value seeds the initial state only: after that the reader owns it, and a call that FAILS while on screen opens itself so the error is visible without a second interaction."
+    },
+    {
+      "name": "OnRetry",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing."
+    },
+    {
+      "name": "ToolCall",
+      "type": "AiToolCall?",
+      "isRequired": true,
+      "description": "The call this card renders. A null value renders nothing at all, so a host can bind a part list without a null check."
+    }
+  ]
+}

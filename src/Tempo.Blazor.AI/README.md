@@ -31,7 +31,11 @@ wins.
 | Component | Contract |
 |-----------|----------|
 | `TmMarkdownView` | Renders untrusted markdown through the safe pipeline. Parameters: `Markdown`, `CodeBlockTemplate`, `OnCitationClick`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`). |
-| `TmAiMessage` | One conversation turn: the ordered parts through `TmMarkdownView`, citation chips with a source preview, source cards, follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). Contract: [docs/ai-message.md](../../docs/ai-message.md). |
+| `TmAiMessage` | One conversation turn: the ordered parts through `TmMarkdownView`, citation chips with a source preview, source cards, follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through `TmReasoningPanel`, consecutive tool-call parts collapse into one `TmToolCallGroup`, and a single call renders as its own `TmToolCallCard`. Contract: [docs/ai-message.md](../../docs/ai-message.md). |
+| `TmToolCallCard` | One tool/function call: state glyph, tool name, localized status, live elapsed time, Copy, Retry (a failed call only) and a disclosure that pretty-prints the JSON arguments and result. A redacted call shows a localized notice and offers no Copy. |
+| `TmToolCallGroup` | A run of consecutive tool calls collapsed into one summary — "3 tools · 1 failed · 4.2 s" (Czech: "3 nástroje · 1 selhal · 4,2 s") — that expands into the cards. |
+| `TmThinkingIndicator` | The "working…" pill: phase label with a shimmer and a spinner, a check once the work finished. The whole pill is one `role="status"` region. |
+| `TmReasoningPanel` | The reasoning disclosure: collapsed summary of what the thinking cost ("Thought for 12.0 s"), expanded steps and the inspected sources, live counter while the model is still thinking. |
 
 ```razor
 @using Tempo.Blazor.Components.AI
@@ -45,8 +49,33 @@ wins.
              ReadAloud="true" />
 ```
 
-`TmAiConversation`, `TmAiComposer`, `TmToolCallCard`, `TmThinkingIndicator` and `TmReasoningPanel` arrive
-in the follow-up phases of plan 7f21f26b.
+`TmAiConversation` and `TmAiComposer` arrive in the follow-up phases of plan 7f21f26b.
+
+### Tool calls and reasoning
+
+A tool call is model output about something the agent did, so the card shows the STATE before the payload:
+the status glyph and the localized status text sit on the row with the live elapsed time, and the payloads
+are behind a disclosure that parses them (`JsonDocument` + an indented `Utf8JsonWriter`) — a payload that
+does not parse is shown verbatim instead of being dropped. A call whose `AiToolCall.IsRedacted` flag is set
+renders a localized notice (with the lock glyph) in place of the data and offers no Copy, so a redacted
+payload has no path out of the page. Retry renders only for a failed call WITH a bound handler, and it
+disables itself while that host task is in flight — one click means one retry.
+
+Every action in the row names the tool it belongs to (`TmToolCallCard_CopyFor` "Copy details of {0}" and
+friends), so a group's repeated buttons are distinguishable in a screen reader's list of buttons; the
+disclosures carry `aria-expanded` and emit `aria-controls` only while the region they name is actually
+rendered, so a collapsed row never points at a missing id.
+
+The elapsed time is a `TimeProvider` read: the card resolves `TimeProvider` from the service provider and
+falls back to `TimeProvider.System`, so tests drive it with a `FakeTimeProvider`. The timer is armed only
+while the call is queued/running and disarmed the moment it finishes — a finished call shows the recorded
+duration (`CompletedAt - StartedAt`), because a duration that keeps growing is an estimate, not a fact.
+A failing call opens its own details, so the error is visible without a second interaction.
+
+One live region per card (`role="status"`) announces the status transition ("Search: Done") and the copy
+confirmation; the reasoning panel has its own single region for the finished reasoning. A copy
+confirmation is announced through that region rather than by renaming the button, so the control keeps its
+name.
 
 ## Markdown security
 
@@ -93,8 +122,10 @@ HTML.
   model call as an `IAsyncEnumerable<T>` stream.
 - **Design system only.** Styling reads `--tm-*` tokens (light and dark themes), every user-visible
   string is localized through `ITmLocalizer` (en/cs/sk/fr built in), and every animated subject has a
-  `prefers-reduced-motion` block in the package stylesheet — the streaming caret partial is the only
-  animated subject so far (`TmAiMessage` adds none, so nothing escapes that block).
+  `prefers-reduced-motion` block in the package stylesheet: the streaming caret
+  (`_ai-streaming.css`) and the thinking pair — the `.tm-ai-shimmer` gradient and the spinner — in
+  `_ai-thinking.css`. No other package stylesheet declares motion, which is what keeps the reduce
+  sweep exact.
 
 ## Static assets
 
@@ -104,6 +135,8 @@ HTML.
 | Streaming primitives | `_content/Tempo.Blazor.AI/css/components/_ai-streaming.css` |
 | Markdown typography | `_content/Tempo.Blazor.AI/css/components/_markdown-view.css` |
 | Message layout | `_content/Tempo.Blazor.AI/css/components/_ai-message.css` |
+| Tool call card + group | `_content/Tempo.Blazor.AI/css/components/_ai-tool-call.css` |
+| Thinking indicator, reasoning panel, shimmer/spinner motion | `_content/Tempo.Blazor.AI/css/components/_ai-thinking.css` |
 | Markdown interop module | `_content/Tempo.Blazor.AI/js/ai-markdown.js` |
 | Message interop module | `_content/Tempo.Blazor.AI/js/ai-message.js` |
 

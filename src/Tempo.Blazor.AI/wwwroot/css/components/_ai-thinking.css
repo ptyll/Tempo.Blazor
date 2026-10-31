@@ -1,0 +1,281 @@
+/* ── Thinking primitives: TmThinkingIndicator + TmReasoningPanel ──────────────────────────────
+   The package's only motion besides the streaming caret lives here, and it lives here ON PURPOSE: the
+   shimmer and the spinner are declared once, in one file, next to the single prefers-reduced-motion
+   block that switches both of them off. A component that starts moving text later applies
+   .tm-ai-shimmer instead of declaring a second animation.
+
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block). The shimmer paints with background-clip: text, so the same markup stays readable when the
+   background image is removed — which is exactly what the reduce and forced-colors blocks do. */
+
+/* ── TmThinkingIndicator ───────────────────────────────────────────────────────────────────── */
+
+.tm-ai-thinking {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    max-inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-thinking__phase {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The ring is drawn from the spacing scale, not a literal: a host that rescales --tm-space-4 (or a dense
+   theme) gets a proportional spinner, and the stroke follows the border scale. */
+.tm-ai-thinking__spinner {
+    display: inline-block;
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-4);
+    block-size: var(--tm-space-4);
+    border: calc(var(--tm-border-width) * 2) solid var(--tm-color-text-muted);
+    border-block-start-color: transparent;
+    border-radius: var(--tm-radius-full);
+    animation: tm-ai-thinking-spin 0.8s linear infinite;
+}
+
+.tm-ai-thinking__check {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-color-success-text);
+}
+
+/* ── The shared shimmer ────────────────────────────────────────────────────────────────────── */
+
+/* One animated subject for the whole package: the text keeps its own box and font metrics, only the
+   gradient that paints it slides. A forced-colors or reduced-motion user gets the plain text colour
+   instead (see the blocks below) — the label itself never disappears. */
+.tm-ai-shimmer {
+    background-image: linear-gradient(
+        90deg,
+        var(--tm-color-text-muted) 0%,
+        var(--tm-color-text) 50%,
+        var(--tm-color-text-muted) 100%);
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: tm-ai-thinking-shimmer 1.6s linear infinite;
+}
+
+@keyframes tm-ai-thinking-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+@keyframes tm-ai-thinking-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── TmReasoningPanel ─────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-reasoning {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-reasoning__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-ai-reasoning__toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-reasoning__toggle:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-reasoning__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-ai-reasoning__summary {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-reasoning__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin-inline-start: auto;
+    color: var(--tm-color-text-muted);
+}
+
+/* The disclosure state is a transform, never a transition — see the note in _ai-tool-call.css. */
+.tm-ai-reasoning__toggle[aria-expanded="true"] .tm-ai-reasoning__chevron svg {
+    transform: rotate(180deg);
+}
+
+.tm-ai-reasoning__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-reasoning__steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding-inline-start: var(--tm-space-4);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-ai-reasoning__step {
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-reasoning__sources {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-reasoning__source {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-reasoning__source-index {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-5);
+    block-size: var(--tm-space-5);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+}
+
+.tm-ai-reasoning__source-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-ai-reasoning__source-title {
+    color: var(--tm-color-text);
+    overflow-wrap: anywhere;
+}
+
+a.tm-ai-reasoning__source-title {
+    color: var(--tm-color-primary-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.tm-ai-reasoning__source-domain {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Coarse pointer: the disclosure is a thumb target too ─────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-reasoning__toggle {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors (Windows high contrast) ─────────────────────────────────────────────────── */
+
+/* background-clip: text paints the glyphs with a gradient, and forced colors remove background
+   images — the text would vanish. The shimmer keeps its WORD, drops the paint. */
+@media (forced-colors: active) {
+    .tm-ai-thinking,
+    .tm-ai-reasoning__toggle {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    /* forced-color-adjust: none opts the focus ring out of the system palette too; the ring goes back to
+       the system Highlight colour instead of keeping a theme token the system may not paint visibly. */
+    .tm-ai-reasoning__toggle:focus-visible {
+        outline-color: Highlight;
+    }
+
+    .tm-ai-shimmer {
+        forced-color-adjust: none;
+        background-image: none;
+        color: CanvasText;
+    }
+
+    .tm-ai-thinking__spinner {
+        border-color: CanvasText;
+        border-block-start-color: Canvas;
+    }
+
+    .tm-ai-thinking__check {
+        color: CanvasText;
+    }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────────────────────── */
+
+/* The two animated subjects of this package, both switched off here: the spinner freezes (a static
+   ring still reads as "busy" next to a label that says so) and the shimmer settles into plain text
+   instead of a sliding gradient — the words stay, the movement goes. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-thinking__spinner {
+        animation: none;
+    }
+
+    .tm-ai-shimmer {
+        animation: none;
+        background-image: none;
+        color: var(--tm-color-text-secondary);
+    }
+}

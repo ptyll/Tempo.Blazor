@@ -1,0 +1,43 @@
+{
+  "itemName": "TmThinkingIndicator",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "A small \"working…\" pill: the host's phase label with a shimmering gradient and a spinner while the agent works, a check and a still-readable label once it is done. The whole pill is ONE role=status live region, so a phase change is announced without a focus move and no second region competes with it. The shimmer and the spinner are the package's only motion besides the streaming caret and both stop under prefers-reduced-motion, where the phase text simply stays readable.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmThinkingIndicator.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Show what the agent is doing right now",
+      "code": "<TmThinkingIndicator Phase=\"@agent.CurrentPhase\" />"
+    },
+    {
+      "title": "Settle on a check when the work finished",
+      "code": "<TmThinkingIndicator Phase=\"Searching the web\" Completed=\"@done\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Completed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the work finished. Default false. A completed pill swaps the spinner for a check and stops the shimmer, but keeps the last phase text — the reader still sees what was being done."
+    },
+    {
+      "name": "Phase",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The current phase, in the host's own words (\"Searching the web\", \"Writing the summary\"). When it is empty the component falls back to the localized default label."
+    }
+  ]
+}

@@ -139,40 +139,15 @@
 
 /* ── Reasoning and tool-call parts ──────────────────────────────────────────────────────────── */
 
-.tm-ai-message__reasoning,
-.tm-ai-message__tool-call {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-1);
-    padding-inline-start: var(--tm-space-3);
-    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
-    color: var(--tm-color-text-secondary);
-    font-size: var(--tm-font-size-sm);
-}
+/* The reasoning and tool-call parts are the package's own components now (TmReasoningPanel,
+   TmToolCallCard and TmToolCallGroup), so their chrome lives in _ai-thinking.css and
+   _ai-tool-call.css. What stays here is the inset that aligns those blocks with the message body —
+   the message owns the placement, the part owns its own internals. */
 
-.tm-ai-message__tool-call {
-    flex-direction: row;
-    align-items: baseline;
-    gap: var(--tm-space-2);
-}
-
-.tm-ai-message__part-label {
-    margin: 0;
-    color: var(--tm-color-text-secondary);
-    font-size: var(--tm-font-size-xs);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.tm-ai-message__reasoning-steps {
-    margin: 0;
-    padding-inline-start: var(--tm-space-5);
-}
-
-.tm-ai-message__tool-status {
-    color: var(--tm-color-text-muted);
-    font-size: var(--tm-font-size-xs);
+.tm-ai-message__body > .tm-ai-reasoning,
+.tm-ai-message__body > .tm-tool-call,
+.tm-ai-message__body > .tm-tool-call-group {
+    margin-inline-start: var(--tm-space-3);
 }
 
 /* ── Lifecycle states ───────────────────────────────────────────────────────────────────────── */

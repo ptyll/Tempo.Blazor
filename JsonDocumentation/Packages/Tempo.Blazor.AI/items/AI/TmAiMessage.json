@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "AI",
   "namespace": "Tempo.Blazor.Components.AI",
-  "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+  "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
   "packageId": "Tempo.Blazor.AI",
   "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
   "documentationStatus": "generated",
@@ -84,6 +84,12 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised when the reader asks to retry a failed generation."
+    },
+    {
+      "name": "OnToolCallRetry",
+      "type": "EventCallback<AiToolCall>",
+      "isRequired": false,
+      "description": "Raised with the tool call the reader asked to run again, from a failed call's Retry button — inside a single call's card or inside a grouped run. The buttons render only when a handler is bound, so no host gets a button that does nothing."
     },
     {
       "name": "ReadAloud",

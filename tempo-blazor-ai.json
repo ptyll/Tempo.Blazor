@@ -79,7 +79,7 @@
       "kind": "Component",
       "category": "AI",
       "namespace": "Tempo.Blazor.Components.AI",
-      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
       "documentationStatus": "merged",
@@ -147,6 +147,12 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when the reader asks to retry a failed generation."
+        },
+        {
+          "name": "OnToolCallRetry",
+          "type": "EventCallback<AiToolCall>",
+          "isRequired": false,
+          "description": "Raised with the tool call the reader asked to run again, from a failed call's Retry button — inside a single call's card or inside a grouped run. The buttons render only when a handler is bound, so no host gets a button that does nothing."
         },
         {
           "name": "ReadAloud",
@@ -244,6 +250,210 @@
         {
           "title": "Replace the code-block markup with syntax highlighting",
           "code": "<TmMarkdownView Markdown=\"@answer\"\n                CodeBlockTemplate=\"ctx => Highlighter.RenderHtml(ctx.Code, ctx.Language)\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmReasoningPanel",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The reasoning (\"thinking\") part of an AI turn as a disclosure: collapsed it reports what the thinking cost (\"Thought for 12.0 s\"), expanded it lists the ordered steps and the sources the model inspected. While the model is still reasoning the summary counts up live on the injected TimeProvider, shimmers and the trailing step keeps the package's streaming caret. Source links go through the package's URL allowlist, so a refused scheme renders as plain text instead of a dead link. The panel owns exactly one role=status live region and announces the finished reasoning — not every token.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmReasoningPanel.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the body starts expanded. Default false — the collapsed summary is the point."
+        },
+        {
+          "name": "IsRunning",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the model is still reasoning. Default false. While true the summary counts up live, shimmers and the trailing step carries the streaming caret; when the host flips it to false the panel settles on AiReasoningPart.DurationMs and announces the result."
+        },
+        {
+          "name": "Reasoning",
+          "type": "AiReasoningPart?",
+          "isRequired": true,
+          "description": "The reasoning part this panel renders. A null value renders nothing, so a host can bind a part list without a null check.",
+          "editorRequired": true
+        },
+        {
+          "name": "ShowSources",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the inspected sources under the steps. Default true."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render a finished reasoning part",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" />"
+        },
+        {
+          "title": "Keep the live state while the answer is still streaming",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\"\n                  IsRunning=\"@(message.Status == AiMessageStatus.Streaming)\" />"
+        },
+        {
+          "title": "Open the steps immediately and hide the inspected sources",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" DefaultExpanded=\"true\" ShowSources=\"false\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmThinkingIndicator",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A small \"working…\" pill: the host's phase label with a shimmering gradient and a spinner while the agent works, a check and a still-readable label once it is done. The whole pill is ONE role=status live region, so a phase change is announced without a focus move and no second region competes with it. The shimmer and the spinner are the package's only motion besides the streaming caret and both stop under prefers-reduced-motion, where the phase text simply stays readable.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmThinkingIndicator.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Completed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the work finished. Default false. A completed pill swaps the spinner for a check and stops the shimmer, but keeps the last phase text — the reader still sees what was being done."
+        },
+        {
+          "name": "Phase",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The current phase, in the host's own words (\"Searching the web\", \"Writing the summary\"). When it is empty the component falls back to the localized default label."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Show what the agent is doing right now",
+          "code": "<TmThinkingIndicator Phase=\"@agent.CurrentPhase\" />"
+        },
+        {
+          "title": "Settle on a check when the work finished",
+          "code": "<TmThinkingIndicator Phase=\"Searching the web\" Completed=\"@done\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmToolCallCard",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "One tool/function call of an AI turn: the state glyph, the tool name, the localized status and the elapsed time on one row, with Copy, Retry (a failed call only) and a details disclosure as separate native buttons. The disclosure pretty-prints the JSON arguments and result with two-space indentation and shows a payload that does not parse as its raw text instead of dropping it. A redacted call shows a localized notice instead of the payloads and offers no Copy. The elapsed time counts up live while the call runs on the injected TimeProvider, stops at the recorded duration when it finishes, and the card owns exactly one role=status live region for a status transition and the copy confirmation.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the arguments/result disclosure starts open. Default false. The value seeds the initial state only: after that the reader owns it, and a call that FAILS while on screen opens itself so the error is visible without a second interaction."
+        },
+        {
+          "name": "OnRetry",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing."
+        },
+        {
+          "name": "ToolCall",
+          "type": "AiToolCall?",
+          "isRequired": true,
+          "description": "The call this card renders. A null value renders nothing at all, so a host can bind a part list without a null check.",
+          "editorRequired": true
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render one call and let the host run a failed one again",
+          "code": "<TmToolCallCard ToolCall=\"@call\"\n                 OnRetry=\"@(() => agent.RunToolCallAsync(call))\" />"
+        },
+        {
+          "title": "Open the arguments and result immediately",
+          "code": "<TmToolCallCard ToolCall=\"@call\" DefaultExpanded=\"true\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmToolCallGroup",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A run of consecutive tool calls collapsed into one summary line — \"3 tools · 1 failed · 4.2 s\" — whose disclosure renders one TmToolCallCard per call. The counts are localized through plural families, so Czech reads \"3 nástroje · 1 selhal\" and the duration uses the localizer's decimal separator (\"4,2 s\"). The total duration is shown only once every call of the run has finished: a total that is still growing is not a duration, and the running card carries its own live elapsed time. TmAiMessage groups a run of two or more consecutive tool-call parts and renders a single call as its own card.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallGroup.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the run starts expanded. Default false: a long agent loop stays one tidy line."
+        },
+        {
+          "name": "OnRetry",
+          "type": "EventCallback<AiToolCall>",
+          "isRequired": false,
+          "description": "Raised with the call that failed when the reader asks to run it again; forwarded to every card in the run. The cards' Retry buttons render only when a handler is bound."
+        },
+        {
+          "name": "ToolCalls",
+          "type": "IReadOnlyList<AiToolCall>?",
+          "isRequired": true,
+          "description": "The calls of one run, in arrival order. An empty or null list renders nothing, so a host can bind a filtered list without branching.",
+          "editorRequired": true
+        }
+      ],
+      "examples": [
+        {
+          "title": "Collapse an agent loop into one line",
+          "code": "<TmToolCallGroup ToolCalls=\"@message.Parts.OfType<AiToolCallPart>().Select(part => part.ToolCall).ToList()\" />"
+        },
+        {
+          "title": "Start expanded and let the host retry a failed call of the run",
+          "code": "<TmToolCallGroup ToolCalls=\"@calls\"\n                  DefaultExpanded=\"true\"\n                  OnRetry=\"@(call => agent.RunToolCallAsync(call))\" />"
         }
       ]
     },
@@ -426,6 +636,14 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-thinking.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-tool-call.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_markdown-view.css",
       "kind": "Css"
     },
@@ -443,11 +661,11 @@
     }
   ],
   "summary": {
-    "itemCount": 7,
-    "manualItemCount": 7,
-    "generatedItemCount": 7,
+    "itemCount": 11,
+    "manualItemCount": 11,
+    "generatedItemCount": 11,
     "generatedOnlyItemCount": 0,
-    "componentCount": 2,
+    "componentCount": 6,
     "publicApiTypeCount": 5
   }
 }

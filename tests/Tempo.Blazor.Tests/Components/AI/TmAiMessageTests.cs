@@ -159,8 +159,109 @@ public sealed class TmAiMessageTests : LocalizationTestBase
 
         var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
 
-        cut.Find(".tm-ai-message__reasoning").TextContent.Should().Contain("Checked the policy.");
-        cut.Find(".tm-ai-message__tool-call").TextContent.Should().Contain("Search");
+        // The reasoning part is the package's own panel now, so its steps live behind the disclosure.
+        cut.Find(".tm-ai-reasoning").TextContent.Should().Contain("Thinking");
+        cut.Find(".tm-ai-reasoning__toggle").Click();
+        cut.Find(".tm-ai-reasoning").TextContent.Should().Contain("Checked the policy.");
+
+        cut.Find(".tm-tool-call").TextContent.Should().Contain("Search");
+        cut.Find(".tm-tool-call").GetAttribute("data-status").Should().Be("succeeded");
+    }
+
+    [Fact]
+    public void ConsecutiveToolCallParts_AreGroupedIntoOneCollapsibleGroup()
+    {
+        var message = Assistant("answer");
+        for (var index = 0; index < 3; index++)
+        {
+            message.Parts.Add(new AiToolCallPart(new AiToolCall
+            {
+                Id = $"call-{index}",
+                Name = "search",
+                DisplayName = "Search",
+                Status = AiToolCallStatus.Succeeded,
+                StartedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 0, TimeSpan.Zero),
+                CompletedAt = new DateTimeOffset(2026, 10, 31, 12, 0, 1, TimeSpan.Zero),
+            }));
+        }
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.FindAll(".tm-tool-call-group").Should().ContainSingle(
+            "three consecutive calls belong to one summary instead of three stacked rows");
+        cut.FindAll(".tm-tool-call").Should().BeEmpty("the group starts collapsed");
+
+        cut.Find(".tm-tool-call-group__toggle").Click();
+
+        cut.FindAll(".tm-tool-call").Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void ACallBrokenUpByText_IsNotGroupedAcrossTheText()
+    {
+        var message = Assistant("first");
+        message.Parts.Add(new AiToolCallPart(new AiToolCall
+        {
+            Id = "call-1",
+            Name = "search",
+            DisplayName = "Search",
+            Status = AiToolCallStatus.Succeeded,
+        }));
+        message.Parts.Add(new AiTextPart("second"));
+        message.Parts.Add(new AiToolCallPart(new AiToolCall
+        {
+            Id = "call-2",
+            Name = "fetch",
+            DisplayName = "Fetch",
+            Status = AiToolCallStatus.Succeeded,
+        }));
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.FindAll(".tm-tool-call-group").Should().BeEmpty(
+            "a single call renders as its own card; grouping it would claim a run that does not exist");
+        cut.FindAll(".tm-tool-call").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void ToolCallRetry_IsRaisedWithTheCallThatFailed()
+    {
+        var failed = new AiToolCall
+        {
+            Id = "call-1",
+            Name = "search",
+            DisplayName = "Search",
+            Status = AiToolCallStatus.Failed,
+        };
+        var message = Assistant("answer");
+        message.Parts.Add(new AiToolCallPart(failed));
+        AiToolCall? retried = null;
+
+        var cut = Render<TmAiMessage>(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.OnToolCallRetry, (AiToolCall call) => retried = call));
+
+        cut.Find(".tm-tool-call__retry").Click();
+
+        retried.Should().BeSameAs(failed);
+    }
+
+    [Fact]
+    public void AReasoningPartOfAStreamingTurn_KeepsItsLiveTimer()
+    {
+        var message = new AiMessage
+        {
+            Id = "assistant-1",
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Streaming,
+        };
+        message.Parts.Add(new AiReasoningPart(["Looking at the policy."]));
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.Find(".tm-ai-reasoning__summary").ClassList.Should().Contain("tm-ai-shimmer",
+            "the reasoning is still arriving, so the panel keeps its live state");
+        cut.Find(".tm-ai-reasoning__summary").TextContent.Should().Contain("Thinking for");
     }
 
     [Fact]

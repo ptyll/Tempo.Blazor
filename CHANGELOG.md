@@ -22,6 +22,87 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — tool calls and reasoning (plan 7f21f26b, phase 4)
+
+The parts of an AI turn that are not prose: a tool call, a run of tool calls, the "working…" pill and the
+reasoning panel. `TmAiMessage` now renders every part through one of these components instead of inline
+labels.
+
+- **`TmToolCallCard`** (`Tempo.Blazor.Components.AI`) — `ToolCall`, `DefaultExpanded`, `OnRetry`, `Class`
+  (+ the inherited `DataTestId` / `TestIdPrefix`). One row carries the status glyph, the tool name, the
+  localized status text (`TmToolCallCard_Status_*`) and the elapsed time; Copy, Retry and the details
+  disclosure are separate native buttons (no emulated key activation). `data-status` (`queued`/`running`/
+  `succeeded`/`failed`/`cancelled`) is the stable hook.
+- **`TmToolCallGroup`** — `ToolCalls`, `DefaultExpanded`, `OnRetry` (`EventCallback<AiToolCall>`),
+  `Class`. Consecutive calls collapse into one summary — "3 tools · 1 failed · 4.2 s", Czech "3 nástroje ·
+  1 selhal · 4,2 s" — through the new plural families `TmToolCallGroup_Tools_*` /
+  `TmToolCallGroup_Failed_*` and the shared duration formatter. The total duration appears only once every
+  call of the run has finished: a total that still grows is not a duration, and the running card carries
+  its own live counter.
+- **`TmThinkingIndicator`** — `Phase`, `Completed`, `Class`. The whole pill is ONE `role="status"` region;
+  a finished pill swaps the spinner for a check but keeps the last phase text.
+- **`TmReasoningPanel`** — `Reasoning`, `IsRunning`, `DefaultExpanded`, `ShowSources`, `Class`. Collapsed
+  it reports what the thinking cost ("Thought for 12.0 s"), expanded it lists the ordered steps and the
+  inspected sources; while the model is still reasoning the summary counts up live, shimmers and the
+  trailing step keeps the package's streaming caret.
+- **`TmAiMessage` integration** — `AiReasoningPart` renders through `TmReasoningPanel`, a single
+  `AiToolCallPart` renders as its own card, and a run of TWO OR MORE consecutive tool-call parts collapses
+  into one `TmToolCallGroup` (a text part ends the run). New parameter `OnToolCallRetry`
+  (`EventCallback<AiToolCall>`) forwards the failed call the reader asked to run again; the Retry buttons
+  render only when it is bound.
+- **Elapsed time is a fact, not an estimate** — both the card and the panel read `TimeProvider` from the
+  service provider (falling back to `TimeProvider.System`, never registering one), so a test drives them
+  with a `FakeTimeProvider`. The ticker is armed only while the work runs and disarmed the moment it
+  finishes; a finished call shows `CompletedAt - StartedAt`, and a failing call opens its own details so
+  the error is visible without a second interaction.
+- **Payloads are untrusted** — `AiJsonPrettyPrinter` (internal, `System.Text.Json` `JsonDocument` + an
+  indented `Utf8JsonWriter`) pretty-prints the arguments and the result; a payload that does not parse is
+  shown verbatim instead of dropped. A call with `AiToolCall.IsRedacted` renders a localized notice marked
+  with the lock glyph instead of the data and offers NO Copy, so a redacted payload has no path out of the
+  page. The formatting is cached on the payload strings, so the per-tick re-render of a streaming call does
+  not re-parse unchanged JSON.
+- **Accessibility** — exactly ONE live region per component: the card announces its status transition
+  ("Search: Done") and the copy confirmation through one sibling `role="status"`, the panel announces the
+  finished reasoning, the pill IS its own region. Disclosures are native buttons with `aria-expanded`;
+  `aria-controls` is emitted **only while the region it names is rendered**, so a collapsed card, run or
+  reasoning panel never carries a dangling id. Every action's accessible NAME carries the tool name
+  (`TmToolCallCard_CopyFor` "Copy details of {0}", `_DetailsFor` "Details of {0}", `_RetryFor` "Retry {0}")
+  — inside a grouped run the same three buttons repeat per card, and "Copy tool call" × N is not a usable
+  list of buttons (WCAG 2.4.6); the Retry button keeps the short visible verb, which the accessible name
+  still contains (WCAG 2.5.3), and it disables itself while the host's re-run is in flight so a double
+  click cannot fire `OnRetry` twice. The payload `<pre>` blocks are `tabindex="0"` so a long JSON stays
+  keyboard-scrollable, every control reaches the 44 px `--tm-touch-target` floor on a coarse pointer, both
+  stylesheets carry a forced-colors block (focus rings and active states ride the system `Highlight` colour
+  — a `Highlight`-coloured label over `Canvas` has no contrast guarantee), and the shimmer/spinner pair has
+  its `prefers-reduced-motion` block — under reduce the text stays and only the motion goes
+  (`background-clip: text` is dropped so the label cannot vanish). The spinner's two dimensions and its
+  stroke come from `--tm-space-4` / `--tm-border-width`, never from a hardcoded `1rem` / `2px`.
+- **Assets and strings** — `_content/Tempo.Blazor.AI/css/components/_ai-tool-call.css` and
+  `_ai-thinking.css` (imported by the entry stylesheet, tokens only — no colour literal, no raw palette
+  step, no `[data-theme]` block) and new keys `TmToolCallCard_*` (including the `_CopyFor` / `_DetailsFor` /
+  `_RetryFor` accessible-name templates), `TmToolCallGroup_*`, `TmThinkingIndicator_*`,
+  `TmReasoningPanel_*`, `TmAiDuration_*` in en/cs/sk/fr. No new JS: Copy reuses the existing
+  `ai-message.js` `copyText`.
+- **Verification** — `TmToolCallCardTests` (statuses, fake-clock ticking and stopping, disclosure wiring
+  including the absent-`aria-controls`-while-collapsed contract, pretty-printed and invalid JSON, a payload
+  arriving after the first render, redaction with its lock glyph, Copy including a refused clipboard write,
+  Retry gating and its in-flight disable, the accessible names carrying the tool name, the single live
+  region, Czech labels), `TmToolCallGroupTests` (summary segments, English and Czech
+  plural wording, omitted duration while running, collapse, retry forwarding), `TmThinkingIndicatorTests`,
+  `TmReasoningPanelTests`, `AiToolCallFormattingTests`, `TmToolCallCssTests` (class coverage, touch floor,
+  forced colors, the system-colour focus ring, the tokenised spinner, reduced-motion coverage), plus the
+  extended `TmAiMessageTests` (grouping rules, retry plumbing, the streaming reasoning state). JSON
+  documentation overlays for all four components,
+  regenerated `tempo-blazor-ai.json` / `tempo-blazor-all.json`, `validate --fail-on-drift` clean. The
+  code-behind moved to `TmAiMessage.razor.cs` to stay under the 1200-line ceiling; the roving action
+  toolbar's mechanism stays in the `.razor` file `ToolbarRoleGuardTests` scans. `TmOverlayPanelDialogNamingTests`
+  now registers the `TmAiMessage` renderer its sweep was missing, so the two dialog-role panels (source
+  preview, feedback reason) are actually measured for WCAG 4.1.2 instead of being reported unmeasurable.
+
+**No breaking changes** — new components, one additive `TmAiMessage` parameter and additive localization
+keys. A host that bound `Message` keeps the same rendered turn; the tool-call and reasoning parts now
+render richer content behind a disclosure instead of a one-line label.
+
 ### AI conversation package — `TmAiMessage` (plan 7f21f26b, phase 3)
 
 One conversation turn as a component: the ordered parts through the safe markdown pipeline, citation

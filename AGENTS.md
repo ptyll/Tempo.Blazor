@@ -36,7 +36,7 @@ TempoBlazor.slnx
 ├── src/
 │   ├── Tempo.Blazor.Abstractions/    # Interfaces and models (NuGet package)
 │   ├── Tempo.Blazor/                 # Core component library (NuGet package)
-│   ├── Tempo.Blazor.AI/              # AI conversation package (TmMarkdownView, TmAiMessage; conversation/composer follow)
+│   ├── Tempo.Blazor.AI/              # AI conversation package (TmMarkdownView, TmAiMessage, TmToolCallCard/Group, TmThinkingIndicator, TmReasoningPanel; conversation/composer follow)
 │   ├── Tempo.Blazor.Signing/         # Signing workflows and PDF template designer
 │   ├── Tempo.Blazor.FluentValidation/# Optional FluentValidation integration
 │   ├── Tempo.Blazor.Demo/            # Blazor WASM demo application
@@ -951,7 +951,7 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 | `Tempo.Blazor.Abstractions` | Interfaces and models, zero UI dependencies |
 | `Tempo.Blazor.PdfViewer` | PDF.js powered `TmPdfViewer` |
 | `Tempo.Blazor.Codes` | QR code and barcode components |
-| `Tempo.Blazor.AI` | AI conversation components: `TmMarkdownView` (safe Markdig pipeline — raw HTML off, URL allowlist, hardened links, citation chips, code-block copy) and `TmAiMessage` (one turn: ordered parts, citation preview, source cards, follow-up chips, copy/regenerate with a version switcher/feedback/read aloud actions) plus the generic `AiMessage`/`AiStreamDelta`/`AiMessageVersion`/`AiFeedback` contracts and `AiMessageStreamApplier` in Abstractions (`Tempo.Blazor.AI.Models` / `.Services`); conversation, composer and tool-call panels follow. No LLM SDK |
+| `Tempo.Blazor.AI` | AI conversation components: `TmMarkdownView` (safe Markdig pipeline — raw HTML off, URL allowlist, hardened links, citation chips, code-block copy), `TmAiMessage` (one turn: ordered parts, citation preview, source cards, follow-up chips, copy/regenerate with a version switcher/feedback/read aloud actions), `TmToolCallCard` + `TmToolCallGroup` (one call / a run of consecutive calls: localized status, live elapsed timer on `TimeProvider`, pretty-printed JSON behind a disclosure, redacted notice, Copy, Retry on failure), `TmThinkingIndicator` and `TmReasoningPanel` (phase pill with a check; reasoning disclosure with a live counter, steps and hardened source links) plus the generic `AiMessage`/`AiStreamDelta`/`AiMessageVersion`/`AiFeedback` contracts and `AiMessageStreamApplier` in Abstractions (`Tempo.Blazor.AI.Models` / `.Services`); conversation and composer follow. No LLM SDK |
 | `Tempo.Blazor.DiagramEditor` | Diagram editor components, services, CSS, and JS |
 | `Tempo.Blazor.Wireframe` | Wireframe editor components, CSS, and JS |
 | `Tempo.Blazor.Modeling` | Modeling editor built on DiagramEditor |

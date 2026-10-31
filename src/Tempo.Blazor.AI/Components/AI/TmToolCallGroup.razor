@@ -1,0 +1,134 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Formatting
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+
+@* A run of consecutive tool calls collapsed into one summary line ("3 tools · 1 failed · 4.2 s"). The
+   summary is the disclosure's own visible text, so its accessible name is the summary and aria-expanded
+   carries the state; the cards inside are the package's own TmToolCallCard, each with its own live region
+   and its own disclosure. The total duration is shown only once every call has FINISHED — a total that is
+   still growing is not a duration, and the running card already carries its live elapsed time. *@
+@if (Calls.Count > 0)
+{
+    <div class="tm-tool-call-group @Class"
+         data-testid="@RootTestId("tool-call-group")"
+         data-count="@Calls.Count"
+         @attributes="AdditionalAttributes">
+        @* aria-controls names the body only while the body is rendered: a collapsed run renders no cards,
+           so a constant id would point at nothing (same rule as TmToolCallCard). *@
+        <button type="button"
+                class="tm-tool-call-group__toggle"
+                aria-expanded="@(_expanded ? "true" : "false")"
+                aria-controls="@(_expanded ? _bodyId : null)"
+                @onclick="Toggle">
+            <span class="tm-tool-call-group__icon" aria-hidden="true">
+                <TmIcon Name="@IconNames.Terminal" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-tool-call-group__summary">@SummaryText</span>
+            <span class="tm-tool-call-group__chevron" aria-hidden="true">
+                <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
+            </span>
+        </button>
+
+        @if (_expanded)
+        {
+            <div id="@_bodyId" class="tm-tool-call-group__body">
+                @foreach (var call in Calls)
+                {
+                    <TmToolCallCard ToolCall="call" OnRetry="@CardRetryCallback(call)" />
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Frozen separator between the summary segments (punctuation, not a translatable word).</summary>
+    private const string SummarySeparator = " · ";
+
+    private readonly string _bodyId = $"tm-tool-call-group-body-{Guid.NewGuid():n}";
+    private bool _expanded;
+
+    /// <summary>
+    /// The calls of one run, in arrival order. An empty or null list renders nothing, so a host can bind a
+    /// filtered list without branching.
+    /// </summary>
+    [Parameter, EditorRequired] public IReadOnlyList<AiToolCall>? ToolCalls { get; set; }
+
+    /// <summary>Whether the run starts expanded. Default false: a long agent loop stays one tidy line.</summary>
+    [Parameter] public bool DefaultExpanded { get; set; }
+
+    /// <summary>
+    /// Raised with the call that failed when the reader asks to run it again; forwarded to every card in the
+    /// run.
+    /// </summary>
+    [Parameter] public EventCallback<AiToolCall> OnRetry { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private IReadOnlyList<AiToolCall> Calls => ToolCalls ?? Array.Empty<AiToolCall>();
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => _expanded = DefaultExpanded;
+
+    /// <summary>
+    /// The one-line summary: the counted tools (plural-correct), the failure count when something failed and
+    /// the total duration once the run has finished.
+    /// </summary>
+    private string SummaryText
+    {
+        get
+        {
+            var calls = Calls;
+            var segments = new List<string>(3)
+            {
+                Loc.Plural("TmToolCallGroup_Tools", calls.Count),
+            };
+
+            var failed = calls.Count(call => call.Status == AiToolCallStatus.Failed);
+            if (failed > 0)
+            {
+                segments.Add(Loc.Plural("TmToolCallGroup_Failed", failed));
+            }
+
+            if (TotalDuration(calls) is { } total)
+            {
+                segments.Add(AiDurationFormatter.Format(total, Loc));
+            }
+
+            return string.Join(SummarySeparator, segments);
+        }
+    }
+
+    /// <summary>The summed duration, or null while any call of the run is still unfinished.</summary>
+    private static TimeSpan? TotalDuration(IReadOnlyList<AiToolCall> calls)
+    {
+        var total = TimeSpan.Zero;
+        foreach (var call in calls)
+        {
+            if (call.Duration is not { } duration)
+            {
+                return null;
+            }
+
+            total += duration;
+        }
+
+        return total;
+    }
+
+    private void Toggle() => _expanded = !_expanded;
+
+    /// <summary>
+    /// The card's parameterless retry callback. It stays DEFAULT (no delegate) when the host listens to
+    /// nothing, so a failed card inside the group never offers a Retry button that cannot do anything.
+    /// </summary>
+    private EventCallback CardRetryCallback(AiToolCall call) => OnRetry.HasDelegate
+        ? EventCallback.Factory.Create(this, () => OnRetry.InvokeAsync(call))
+        : default;
+}

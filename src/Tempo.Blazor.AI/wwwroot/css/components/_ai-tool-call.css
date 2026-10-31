@@ -1,0 +1,338 @@
+/* ── TmToolCallCard / TmToolCallGroup ──────────────────────────────────────────────────────────
+   A tool call is a compact, scan-friendly row: state glyph, tool name, localized status and the
+   elapsed time, with Copy / Retry / the details disclosure as separate native buttons. A run of
+   consecutive calls collapses into the group's one-line summary.
+
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block), so light, dark and a host palette all propagate. This file declares NO animation and NO
+   transition on purpose: nothing in a tool call moves, so nothing here needs a reduced-motion block —
+   the package's only motion lives in _ai-thinking.css, next to its own reduce block. */
+
+.tm-tool-call {
+    display: flex;
+    flex-direction: column;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    overflow: hidden;
+}
+
+.tm-tool-call--failed {
+    border-color: var(--tm-color-danger-soft-border);
+    background-color: var(--tm-color-danger-soft);
+}
+
+.tm-tool-call__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-2);
+}
+
+.tm-tool-call__status-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-tool-call--running .tm-tool-call__status-icon {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-tool-call--succeeded .tm-tool-call__status-icon {
+    color: var(--tm-color-success-text);
+}
+
+.tm-tool-call--failed .tm-tool-call__status-icon {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-tool-call__name {
+    min-inline-size: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.tm-tool-call__status {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* The elapsed label is a number the reader compares across rows, so the digits keep a fixed width and
+   the label never reflows the row while it counts up. */
+.tm-tool-call__duration {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.tm-tool-call__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin-inline-start: auto;
+}
+
+.tm-tool-call__copy,
+.tm-tool-call__toggle,
+.tm-tool-call__retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-inline-size: var(--tm-space-7);
+    min-block-size: var(--tm-space-7);
+    padding: var(--tm-space-1);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background-color: transparent;
+    color: var(--tm-color-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-tool-call__copy:hover,
+.tm-tool-call__toggle:hover,
+.tm-tool-call__retry:hover {
+    border-color: var(--tm-border-color);
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-tool-call__copy[data-copied="true"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-tool-call__retry {
+    color: var(--tm-color-danger-text);
+}
+
+/* A retry in flight is not a disabled control the reader has to guess about: it renders exactly like the
+   resting state, just visibly inert, until the host's task completes. */
+.tm-tool-call__retry:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+/* The disclosure state is a transform, never a transition: a rotating chevron would be one more
+   animated subject for the reduced-motion sweep to cover, and the row gains nothing from the animation. */
+.tm-tool-call__toggle svg {
+    transform: rotate(0deg);
+}
+
+.tm-tool-call__toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.tm-tool-call__copy:focus-visible,
+.tm-tool-call__toggle:focus-visible,
+.tm-tool-call__retry:focus-visible,
+.tm-tool-call__pre:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-tool-call__details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-tool-call__section {
+    display: block;
+    min-inline-size: 0;
+}
+
+/* Each payload block scrolls inside itself, so both have to be allowed to shrink below their content
+   width instead of widening the bubble (a 400-character JSON line must not push the column). */
+.tm-tool-call__arguments,
+.tm-tool-call__result {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+}
+
+/* A payload can be long: it scrolls inside its own box (tabindex="0" in the markup) instead of
+   widening the conversation column, and the box never inherits the bubble's line height. */
+.tm-tool-call__pre {
+    max-block-size: 16rem;
+    margin: 0;
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre;
+}
+
+.tm-tool-call__error {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    margin: 0;
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-tool-call__error-label {
+    font-weight: 600;
+}
+
+/* A provider error message is arbitrary text: it wraps anywhere rather than overflowing the row. */
+.tm-tool-call__error-text {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+/* A withheld payload is marked with the lock glyph, so the notice reads as a state of the call and not as
+   one more line of prose. The icon is decorative (TmIcon is aria-hidden); the sentence carries the meaning. */
+.tm-tool-call__redacted {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0 var(--tm-space-2) var(--tm-space-2);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+    font-style: italic;
+}
+
+.tm-tool-call__redacted svg {
+    flex: 0 0 auto;
+}
+
+/* ── Group ─────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-tool-call-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-tool-call-group__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-tool-call-group__toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-tool-call-group__toggle:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-tool-call-group__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-tool-call-group__summary {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-tool-call-group__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin-inline-start: auto;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-tool-call-group__toggle[aria-expanded="true"] .tm-tool-call-group__chevron svg {
+    transform: rotate(180deg);
+}
+
+.tm-tool-call-group__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding-inline-start: var(--tm-space-3);
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+/* ── Coarse pointer: the 44px touch floor ──────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-tool-call__copy,
+    .tm-tool-call__toggle,
+    .tm-tool-call__retry {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-tool-call-group__toggle {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors (Windows high contrast) ─────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-tool-call,
+    .tm-tool-call-group__toggle,
+    .tm-tool-call__pre,
+    .tm-tool-call__copy,
+    .tm-tool-call__toggle,
+    .tm-tool-call__retry {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    /* forced-color-adjust: none also opts the FOCUS RING out of the system palette, so the theme token would
+       keep painting it. The ring goes back to the system Highlight colour. */
+    .tm-tool-call__copy:focus-visible,
+    .tm-tool-call__toggle:focus-visible,
+    .tm-tool-call__retry:focus-visible,
+    .tm-tool-call__pre:focus-visible,
+    .tm-tool-call-group__toggle:focus-visible {
+        outline-color: Highlight;
+    }
+
+    .tm-tool-call--failed {
+        border-color: LinkText;
+    }
+
+    /* The active states are marked with the system Highlight BORDER, not a Highlight text colour: Highlight
+       is a fill colour, so Highlight ink over Canvas has no contrast guarantee, while CanvasText on Canvas
+       is the pair the system itself guarantees. */
+    .tm-tool-call__copy[data-copied="true"],
+    .tm-tool-call__retry,
+    .tm-tool-call__toggle[aria-expanded="true"] {
+        border-color: Highlight;
+        color: CanvasText;
+    }
+}
