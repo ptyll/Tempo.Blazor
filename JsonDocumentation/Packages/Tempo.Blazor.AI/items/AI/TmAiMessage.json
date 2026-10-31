@@ -1,0 +1,119 @@
+{
+  "itemName": "TmAiMessage",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Render an assistant answer with actions",
+      "code": "<TmAiMessage Message=\"@answer\"\n             OnRegenerate=\"@(() => candidates.RegenerateAsync(answer.Id))\"\n             OnFeedback=\"@(feedback => client.RateAsync(answer.Id, feedback))\"\n             OnCitationClick=\"@(id => sourcePanel.Open(answer.FindSource(id)))\" />"
+    },
+    {
+      "title": "A regenerated answer with a version switcher, follow-ups and read-aloud",
+      "code": "<TmAiMessage Message=\"@answer\"\n             ReadAloud=\"true\"\n             OnFollowUp=\"@(text => composer.SubmitAsync(text))\"\n             ActiveVersionIndexChanged=\"@(index => answer.ActiveVersionIndex = index)\" />"
+    },
+    {
+      "title": "Replace the built-in actions with host buttons",
+      "code": "<TmAiMessage Message=\"@answer\">\n    <ActionsTemplate>\n        <button type=\"button\" @onclick=\"SaveAsync\">Save</button>\n    </ActionsTemplate>\n</TmAiMessage>"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "ActionsTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Replaces the whole built-in action toolbar with host actions. The built-in bar is a role=toolbar with a roving tabindex; a host template owns its own keyboard model, so it is rendered as plain content and must provide one if it renders more than one button."
+    },
+    {
+      "name": "ActiveVersionIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised with the target zero-based version index when the reader steps through the regenerated versions. The component shows the chosen version immediately but never mutates AiMessage.ActiveVersionIndex: assign the index in the handler to persist the choice, and a host that changes the model's index itself wins over the reader's last step."
+    },
+    {
+      "name": "AvatarTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Replaces the default role glyph inside the avatar slot. The slot itself stays decorative (aria-hidden): the role is conveyed by the message's own accessible structure, so a host image here must not introduce a second name for the same turn."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Message",
+      "type": "AiMessage?",
+      "isRequired": true,
+      "description": "The message this block renders. Required: a null value renders an empty shell (the body is empty and no action is offered) instead of throwing, so a host can place the component before the first token arrives."
+    },
+    {
+      "name": "OnCitationClick",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the source id when a citation chip is activated — after the built-in source preview opened, so a host can navigate away without losing the preview state it never sees."
+    },
+    {
+      "name": "OnFeedback",
+      "type": "EventCallback<AiFeedback>",
+      "isRequired": false,
+      "description": "Raised with the rating when the reader presses a thumb. A negative rating is raised immediately (thumbs up/down must never require an explanation) and raised a second time with AiFeedback.Reason when the reader submits the optional reason."
+    },
+    {
+      "name": "OnFollowUp",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the suggestion text when a follow-up chip is activated."
+    },
+    {
+      "name": "OnRegenerate",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the reader asks for another generation of this answer. The action renders only when a handler is bound, so no host gets a button that does nothing."
+    },
+    {
+      "name": "OnRetry",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the reader asks to retry a failed generation."
+    },
+    {
+      "name": "ReadAloud",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Offer the \"Read aloud\" action, which speaks the answer's plain text through the browser's speechSynthesis. Default false. The action is hidden when the browser has no speech synthesis (feature-detected on first render) — never a dead button."
+    },
+    {
+      "name": "ShowActions",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Render the action toolbar (copy, regenerate, read aloud, feedback). Default true; the bar itself is offered only for a finished turn (completed, stopped or failed), because there is nothing to copy, regenerate or rate while the answer is still arriving."
+    },
+    {
+      "name": "ShowAvatar",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Render the avatar slot (the role glyph, or AvatarTemplate). Default true."
+    },
+    {
+      "name": "ShowFollowUps",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Render the follow-up suggestions as chips under the answer. Default true."
+    },
+    {
+      "name": "ShowSources",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Render the cited sources as cards in part order. Default true."
+    }
+  ]
+}

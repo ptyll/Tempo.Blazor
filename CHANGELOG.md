@@ -22,6 +22,74 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — `TmAiMessage` (plan 7f21f26b, phase 3)
+
+One conversation turn as a component: the ordered parts through the safe markdown pipeline, citation
+chips with a source preview, source cards, follow-up chips and the action toolbar. Contract:
+[docs/ai-message.md](docs/ai-message.md).
+
+- **`TmAiMessage`** (`Tempo.Blazor.Components.AI`) — `Message`, `ShowAvatar`, `ShowActions`,
+  `ShowSources`, `ShowFollowUps`, `AvatarTemplate`, `ActionsTemplate`, `OnRegenerate`, `OnFeedback`,
+  `OnFollowUp`, `OnCitationClick`, `OnRetry`, `ActiveVersionIndexChanged`, `ReadAloud`, `Class`
+  (+ the inherited `DataTestId` / `TestIdPrefix`). The root carries the frozen `data-role`
+  (`user`/`assistant`/`system`/`tool`) and `data-status` (`pending`/`streaming`/`completed`/`stopped`/
+  `failed`) contract, and the user turn mirrors itself (`--user`, `flex-direction: row-reverse`) while
+  its text stays left-aligned.
+- **Actions** — copy sends `AiMessageText.ToPlainText(AiMessage.ActiveText)` (no markdown markers) and
+  announces "Copied" through a sibling `role="status"` live region; regenerate, thumbs up/down and
+  read-aloud render only when the host binds their handler (no dead buttons). A negative rating is
+  raised immediately and again with the optional reason; the reason popover is dismissible and never
+  required. Read aloud is opt-in (`ReadAloud`), feature-detected, and reports the end of an utterance
+  back so the toggle returns to "Read aloud" by itself.
+- **Model additions (Abstractions, still UI-free)** — `AiMessage.Versions` + `AiMessageVersion`,
+  `AiMessage.ActiveVersionIndex` (**nullable; `null` = the newest version**, out-of-range values clamp
+  through the new `EffectiveVersionIndex`), `AiMessage.ActiveParts` / `ActiveText`,
+  `AiMessage.Feedback` + `AiFeedback` / `AiFeedbackRating`, `AiMessage.FollowUps`. `AiMessage.Sources`,
+  `FindSource` and `ActiveText` follow the ACTIVE version; `Text` stays the live parts. The switcher
+  shows the reader's choice immediately and the host's own index wins on the next change.
+- **`AiMessageText.ToPlainText`** (`Tempo.Blazor.AI.Markdown`) — the plain-text projection behind copy
+  and speech: markers dropped, block structure kept (one line per paragraph, list item, code line and
+  table row), link/image targets never travel. It walks the SAME safe markdown pipeline as the
+  renderer.
+- **Accessibility** — the action bar is `role="toolbar"` with `aria-label`/`aria-orientation` and a
+  roving tabindex (one computed tab stop, Arrow Left/Right/Up/Down with wrapping, Home/End, focus
+  through `ElementReference.FocusAsync` — no second JS gesture module; see the decision
+  `AI-MESSAGE-ACTION-BAR-ROVING`); the version switcher is a separate `role="group"`; a failed turn is
+  a `role="alert"` block with Retry; the preview and reason popovers are the core `TmOverlayPanel`
+  (`role="dialog"`, named, Escape + outside-click, `ConstrainHeight`) rendered as SIBLINGS of the
+  toolbar so a keydown in the reason textarea never reaches the roving handler; every control reaches
+  the 44 px `--tm-touch-target` floor on a coarse pointer; a forced-colors block covers the surfaces.
+  **Focus order (review round)** — both popovers take focus INTO themselves from `OnOpened` (the
+  preview on its Close button, the reason form on its textarea) and the reason form is a real modal
+  dialog (`TrapFocus="true"`); closing hands focus back — the reason form restores the thumbs-down
+  button and moves the roving tab stop with it, the preview returns to the citation chip that opened
+  it (through the module's new `focusCitation`, because the chip lives in markdown-generated markup) —
+  while an outside click deliberately does not pull focus back. The copy button keeps a stable
+  accessible name (the confirmation travels through the live region) and the single live region now
+  also announces the streaming → stopped transition.
+- **Security** — the source-card and preview links pass through `AiMarkdownUrlPolicy`: a refused
+  scheme is plain text (never an `href`), a surviving link gets `target="_blank"` with
+  `rel="noopener noreferrer nofollow"`. Answer text still renders only through `TmMarkdownView`.
+- **Assets** — `_content/Tempo.Blazor.AI/css/components/_ai-message.css` (imported by the entry
+  stylesheet, tokens only, no animation of its own — the streaming caret stays the package's single
+  reduced-motion subject) and the ES module `_content/Tempo.Blazor.AI/js/ai-message.js`
+  (`copyText`, `isSpeechSupported`, `speak`, `stopSpeaking`; no `<script>` tag, no `unsafe-inline`).
+  New localization keys `TmAiMessage_*` in en/cs/sk/fr.
+- **Verification** — `TmAiMessageTests` (roles, parts order, states, citation preview, source cards,
+  follow-ups), `TmAiMessageActionsTests` (toolbar roving model, copy, regenerate, versions, feedback,
+  read aloud), `AiMessageVersioningTests`, `AiMessageTextTests` and `TmAiMessageCssTests` (class
+  coverage, touch floor, forced colors, no package animation), next to the existing package gates.
+- **Test-guard fix** — `ToolbarRoleGuardTests`' mechanism assertions had been dead code since a
+  scripted edit wrote literal `\n` instead of newlines, so the whole block sat inside one line
+  comment; it now runs through `ToolbarMechanismCheck` (per-mechanism findings) and is itself pinned
+  on a synthetic toolbar that claims the role and ships nothing. `TmAiMessage` is allow-listed with
+  the Blazor-owned mechanism, so the guard keeps rejecting a toolbar without one.
+
+**No breaking changes** — new package surface and additive model members only. `Tempo.Blazor.AI` is
+new in the unreleased 2.10.0, so no released consumer sees the model additions; a host that writes
+`AiMessage.ActiveVersionIndex` keeps the explicit index it sets, and leaving it `null` keeps showing
+the newest generation.
+
 ### AI conversation package — AI models and safe markdown (plan 7f21f26b, phase 2)
 
 The package's first real surface: the generic message/streaming contract in

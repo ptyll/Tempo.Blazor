@@ -33878,6 +33878,130 @@
       },
       "items": [
         {
+          "itemName": "TmAiMessage",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "ActionsTemplate",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Replaces the whole built-in action toolbar with host actions. The built-in bar is a role=toolbar with a roving tabindex; a host template owns its own keyboard model, so it is rendered as plain content and must provide one if it renders more than one button."
+            },
+            {
+              "name": "ActiveVersionIndexChanged",
+              "type": "EventCallback<int>",
+              "isRequired": false,
+              "description": "Raised with the target zero-based version index when the reader steps through the regenerated versions. The component shows the chosen version immediately but never mutates AiMessage.ActiveVersionIndex: assign the index in the handler to persist the choice, and a host that changes the model's index itself wins over the reader's last step."
+            },
+            {
+              "name": "AvatarTemplate",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Replaces the default role glyph inside the avatar slot. The slot itself stays decorative (aria-hidden): the role is conveyed by the message's own accessible structure, so a host image here must not introduce a second name for the same turn."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Message",
+              "type": "AiMessage?",
+              "isRequired": true,
+              "description": "The message this block renders. Required: a null value renders an empty shell (the body is empty and no action is offered) instead of throwing, so a host can place the component before the first token arrives.",
+              "editorRequired": true
+            },
+            {
+              "name": "OnCitationClick",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the source id when a citation chip is activated — after the built-in source preview opened, so a host can navigate away without losing the preview state it never sees."
+            },
+            {
+              "name": "OnFeedback",
+              "type": "EventCallback<AiFeedback>",
+              "isRequired": false,
+              "description": "Raised with the rating when the reader presses a thumb. A negative rating is raised immediately (thumbs up/down must never require an explanation) and raised a second time with AiFeedback.Reason when the reader submits the optional reason."
+            },
+            {
+              "name": "OnFollowUp",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the suggestion text when a follow-up chip is activated."
+            },
+            {
+              "name": "OnRegenerate",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the reader asks for another generation of this answer. The action renders only when a handler is bound, so no host gets a button that does nothing."
+            },
+            {
+              "name": "OnRetry",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the reader asks to retry a failed generation."
+            },
+            {
+              "name": "ReadAloud",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Offer the \"Read aloud\" action, which speaks the answer's plain text through the browser's speechSynthesis. Default false. The action is hidden when the browser has no speech synthesis (feature-detected on first render) — never a dead button."
+            },
+            {
+              "name": "ShowActions",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Render the action toolbar (copy, regenerate, read aloud, feedback). Default true; the bar itself is offered only for a finished turn (completed, stopped or failed), because there is nothing to copy, regenerate or rate while the answer is still arriving."
+            },
+            {
+              "name": "ShowAvatar",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Render the avatar slot (the role glyph, or AvatarTemplate). Default true."
+            },
+            {
+              "name": "ShowFollowUps",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Render the follow-up suggestions as chips under the answer. Default true."
+            },
+            {
+              "name": "ShowSources",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Render the cited sources as cards in part order. Default true."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Render an assistant answer with actions",
+              "code": "<TmAiMessage Message=\"@answer\"\n             OnRegenerate=\"@(() => candidates.RegenerateAsync(answer.Id))\"\n             OnFeedback=\"@(feedback => client.RateAsync(answer.Id, feedback))\"\n             OnCitationClick=\"@(id => sourcePanel.Open(answer.FindSource(id)))\" />"
+            },
+            {
+              "title": "A regenerated answer with a version switcher, follow-ups and read-aloud",
+              "code": "<TmAiMessage Message=\"@answer\"\n             ReadAloud=\"true\"\n             OnFollowUp=\"@(text => composer.SubmitAsync(text))\"\n             ActiveVersionIndexChanged=\"@(index => answer.ActiveVersionIndex = index)\" />"
+            },
+            {
+              "title": "Replace the built-in actions with host buttons",
+              "code": "<TmAiMessage Message=\"@answer\">\n    <ActionsTemplate>\n        <button type=\"button\" @onclick=\"SaveAsync\">Save</button>\n    </ActionsTemplate>\n</TmAiMessage>"
+            }
+          ]
+        },
+        {
           "itemName": "TmMarkdownView",
           "kind": "Component",
           "category": "AI",
@@ -33940,7 +34064,7 @@
               "name": "AddTempoBlazorAI",
               "kind": "Method",
               "type": "IServiceCollection",
-              "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts are planned for Tempo.Blazor.Abstractions (plan 7f21f26b Fáze 2), so no LLM SDK is pulled in.",
+              "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts live in Tempo.Blazor.Abstractions (Tempo.Blazor.AI.Models / .Services), so no LLM SDK is pulled in; the only third-party dependency is Markdig, behind AiMarkdownRenderer.",
               "parameters": [
                 {
                   "name": "services",
@@ -34062,10 +34186,44 @@
               "description": "Accessible name of the scrollable table region. A table wider than the conversation column scrolls inside its wrapper, so the wrapper is a keyboard focus stop and a named role=\"region\"; with a null or empty label the wrapper keeps its focus stop but omits the role (an unnamed landmark cannot be identified in a screen reader's landmark list)."
             }
           ]
+        },
+        {
+          "itemName": "AiMessageText",
+          "kind": "Class",
+          "category": "Markdown",
+          "namespace": "Tempo.Blazor.AI.Markdown",
+          "description": "The plain-text projection of an AI answer (ToPlainText): markdown markers are dropped while the block structure survives, so a copied or spoken answer reads like the answer instead of like its source. Link and image targets never travel — only their label (or alt text) — and the walk runs over the same safe Markdig pipeline the renderer uses, so raw HTML stays literal text.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMessageText.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "ToPlainText",
+              "kind": "Method",
+              "type": "string",
+              "description": "Projects untrusted markdown to readable plain text: one line per paragraph, list item (with a plain bullet or its number), code line and table row, blank lines between blocks, and '\\n' line endings. Null or whitespace projects to an empty string.",
+              "parameters": [
+                {
+                  "name": "markdown",
+                  "type": "string?"
+                }
+              ]
+            }
+          ],
+          "examples": [
+            {
+              "title": "Copy an answer as the reader sees it",
+              "code": "var plain = AiMessageText.ToPlainText(message.ActiveText);"
+            }
+          ]
         }
       ],
       "libraryExamples": [],
       "assets": [
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-message.css",
+          "kind": "Css"
+        },
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
           "kind": "Css"
@@ -34081,15 +34239,19 @@
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-markdown.js",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-message.js",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 5,
-        "manualItemCount": 5,
-        "generatedItemCount": 5,
+        "itemCount": 7,
+        "manualItemCount": 7,
+        "generatedItemCount": 7,
         "generatedOnlyItemCount": 0,
-        "componentCount": 1,
-        "publicApiTypeCount": 4
+        "componentCount": 2,
+        "publicApiTypeCount": 5
       }
     },
     {
@@ -72377,11 +72539,51 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "AiFeedback",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The reader's rating of an assistant answer (thumbs up or thumbs down) with the optional free-text reason typed after a negative rating, and the time it was cast. TmAiMessage raises it twice for a negative rating: once on the press, and once more with the reason when the reader submits it — the reason is always optional.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedback.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CreatedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "UTC time the rating was cast."
+            },
+            {
+              "name": "Rating",
+              "kind": "Property",
+              "type": "AiFeedbackRating",
+              "description": "The rating itself."
+            },
+            {
+              "name": "Reason",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Free-text reason supplied after a negative rating, when the reader gave one."
+            }
+          ]
+        },
+        {
+          "itemName": "AiFeedbackRating",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "How the reader rated an assistant answer — None (unrated), Positive (thumbs up) or Negative (thumbs down).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "AiMessage",
           "kind": "Class",
           "category": "AI",
           "namespace": "Tempo.Blazor.AI.Models",
-          "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model and the cited sources. Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+          "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model, the cited sources, the reader's feedback, the follow-up suggestions and the superseded versions a Regenerate replaced (ActiveVersionIndex selects the rendered one; the live Parts are always the last version). Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
           "documentationStatus": "merged",
@@ -72390,13 +72592,25 @@
               "name": "FindSource",
               "kind": "Method",
               "type": "AiSource?",
-              "description": "Finds a cited source by id, so a cite: chip can resolve its preview.",
+              "description": "Finds a cited source by id in the active version, so a cite: chip can resolve its preview.",
               "parameters": [
                 {
                   "name": "sourceId",
                   "type": "string?"
                 }
               ]
+            },
+            {
+              "name": "ActiveText",
+              "kind": "Property",
+              "type": "string",
+              "description": "All text of the active version concatenated in part order (markdown, not plain text)."
+            },
+            {
+              "name": "ActiveVersionIndex",
+              "kind": "Property",
+              "type": "int?",
+              "description": "Zero-based index of the version the conversation displays, or null for the newest one. The last index (VersionCount - 1) selects the live Parts; an index outside the valid range is clamped through EffectiveVersionIndex, so a host that swaps the version list and the index in two renders never throws."
             },
             {
               "name": "CreatedAt",
@@ -72409,6 +72623,18 @@
               "kind": "Property",
               "type": "string?",
               "description": "Failure reason when Status is Failed."
+            },
+            {
+              "name": "Feedback",
+              "kind": "Property",
+              "type": "AiFeedback?",
+              "description": "The reader's rating of the answer, or null while it is unrated."
+            },
+            {
+              "name": "FollowUps",
+              "kind": "Property",
+              "type": "IList<string>",
+              "description": "Suggested next questions rendered as follow-up chips under the answer."
             },
             {
               "name": "Id",
@@ -72438,7 +72664,7 @@
               "name": "Sources",
               "kind": "Property",
               "type": "IReadOnlyList<AiSource>",
-              "description": "Sources cited by the answer — the contents of the trailing AiSourcesPart, or an empty list while nothing has been cited."
+              "description": "Sources cited by the ACTIVE version — the contents of its trailing AiSourcesPart, or an empty list while nothing has been cited."
             },
             {
               "name": "Status",
@@ -72450,7 +72676,19 @@
               "name": "Text",
               "kind": "Property",
               "type": "string",
-              "description": "All text of the message concatenated in part order (markdown, not plain text)."
+              "description": "All text of the live parts concatenated in part order (markdown, not plain text)."
+            },
+            {
+              "name": "VersionCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many versions the message has, including the live Parts (always at least one)."
+            },
+            {
+              "name": "Versions",
+              "kind": "Property",
+              "type": "IList<AiMessageVersion>",
+              "description": "Superseded generations of the answer, oldest first. Parts always holds the LATEST generation, so the number of selectable versions is Versions's count plus one; a Regenerate handler appends the previous parts as an AiMessageVersion before it starts the new stream."
             }
           ]
         },
@@ -72514,6 +72752,48 @@
                   "default": "null"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "itemName": "AiMessageVersion",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One superseded generation of an AiMessage: the content a Regenerate replaced. A message keeps the live answer in its own Parts (always the last version) and the history here, so the version switcher can step between '1/3', '2/3' and '3/3' without copying the current answer into the history first. The parts are copied on construction, so a later stream delta never mutates a history entry.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageVersion.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CreatedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "UTC creation time of the generation."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable version identifier."
+            },
+            {
+              "name": "Model",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Model identifier that produced this generation, when the host reports one."
+            },
+            {
+              "name": "Parts",
+              "kind": "Property",
+              "type": "IList<AiMessagePart>",
+              "description": "Ordered parts of this generation."
+            },
+            {
+              "name": "Text",
+              "kind": "Property",
+              "type": "string",
+              "description": "All text of the version concatenated in part order (markdown, not plain text)."
             }
           ]
         },
@@ -110486,12 +110766,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1535,
-        "manualItemCount": 1535,
-        "generatedItemCount": 1518,
+        "itemCount": 1538,
+        "manualItemCount": 1538,
+        "generatedItemCount": 1521,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1518
+        "publicApiTypeCount": 1521
       }
     },
     {
@@ -127484,10 +127764,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3399,
-    "manualItemCount": 3399,
+    "itemCount": 3404,
+    "manualItemCount": 3404,
     "generatedOnlyItemCount": 0,
-    "componentCount": 512,
-    "publicApiTypeCount": 2834
+    "componentCount": 513,
+    "publicApiTypeCount": 2838
   }
 }

@@ -32,7 +32,11 @@ namespace Tempo.Blazor.AI.Markdown;
 /// </remarks>
 public class AiMarkdownRenderer
 {
-    private static readonly MarkdownPipeline Pipeline = BuildPipeline();
+    /// <summary>
+    /// The pipeline itself, shared with <see cref="AiMessageText"/> (the plain-text projection the Copy
+    /// action uses) so the extension set and the security posture exist once, not twice.
+    /// </summary>
+    internal static readonly MarkdownPipeline Pipeline = BuildPipeline();
 
     /// <summary>
     /// Renders untrusted markdown to safe HTML.

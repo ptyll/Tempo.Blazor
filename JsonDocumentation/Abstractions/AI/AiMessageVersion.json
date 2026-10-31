@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One superseded generation of an AiMessage: the content a Regenerate replaced. A message keeps the live answer in its own Parts (always the last version) and the history here, so the version switcher can step between '1/3', '2/3' and '3/3' without copying the current answer into the history first. The parts are copied on construction, so a later stream delta never mutates a history entry.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageVersion.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMessageVersion"
+}

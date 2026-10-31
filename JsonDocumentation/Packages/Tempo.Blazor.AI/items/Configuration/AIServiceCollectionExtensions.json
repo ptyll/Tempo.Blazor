@@ -11,7 +11,7 @@
     {
       "name": "AddTempoBlazorAI",
       "type": "IServiceCollection AddTempoBlazorAI(this IServiceCollection services)",
-      "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts are planned for Tempo.Blazor.Abstractions (plan 7f21f26b Fáze 2), so no LLM SDK is pulled in."
+      "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts live in Tempo.Blazor.Abstractions (Tempo.Blazor.AI.Models / .Services), so no LLM SDK is pulled in; the only third-party dependency is Markdig, behind AiMarkdownRenderer."
     }
   ],
   "examples": [

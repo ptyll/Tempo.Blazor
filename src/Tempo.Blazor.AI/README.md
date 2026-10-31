@@ -31,16 +31,22 @@ wins.
 | Component | Contract |
 |-----------|----------|
 | `TmMarkdownView` | Renders untrusted markdown through the safe pipeline. Parameters: `Markdown`, `CodeBlockTemplate`, `OnCitationClick`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`). |
+| `TmAiMessage` | One conversation turn: the ordered parts through `TmMarkdownView`, citation chips with a source preview, source cards, follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). Contract: [docs/ai-message.md](../../docs/ai-message.md). |
 
 ```razor
 @using Tempo.Blazor.Components.AI
 
 <TmMarkdownView Markdown="@answer.Text"
                 OnCitationClick="id => preview = answer.FindSource(id)" />
+
+<TmAiMessage Message="@answer"
+             OnRegenerate="@(() => conversation.RegenerateAsync(answer.Id))"
+             OnFeedback="@(feedback => client.RateAsync(answer.Id, feedback))"
+             ReadAloud="true" />
 ```
 
-`TmAiMessage`, `TmAiConversation`, `TmAiComposer`, `TmToolCallCard`, `TmThinkingIndicator` and
-`TmReasoningPanel` arrive in the follow-up phases of plan 7f21f26b.
+`TmAiConversation`, `TmAiComposer`, `TmToolCallCard`, `TmThinkingIndicator` and `TmReasoningPanel` arrive
+in the follow-up phases of plan 7f21f26b.
 
 ## Markdown security
 
@@ -79,15 +85,16 @@ HTML.
 
 - **Models and streaming contracts live in `Tempo.Blazor.Abstractions`**
   (`Tempo.Blazor.AI.Models` / `Tempo.Blazor.AI.Services`), which has zero UI dependencies — a backend
-  can reference the message, delta, tool-call and citation records without pulling in Blazor or
-  Markdig. `AiMessageStreamApplier` folds the delta stream into a message as pure logic; the caller
-  passes the timestamp.
+  can reference the message, delta, tool-call, citation, version and feedback records without pulling in
+  Blazor or Markdig. `AiMessageStreamApplier` folds the delta stream into a message as pure logic; the
+  caller passes the timestamp. The reader-facing state (`Versions`/`ActiveVersionIndex`, `Feedback`,
+  `FollowUps`) lives on `AiMessage` too, so a host persists one record per turn.
 - **No LLM SDK, no PromptHelper.** The package is a UI over generic contracts; the host supplies the
   model call as an `IAsyncEnumerable<T>` stream.
 - **Design system only.** Styling reads `--tm-*` tokens (light and dark themes), every user-visible
   string is localized through `ITmLocalizer` (en/cs/sk/fr built in), and every animated subject has a
-  `prefers-reduced-motion` block in the package stylesheet — the streaming caret partial is the first
-  one.
+  `prefers-reduced-motion` block in the package stylesheet — the streaming caret partial is the only
+  animated subject so far (`TmAiMessage` adds none, so nothing escapes that block).
 
 ## Static assets
 
@@ -96,12 +103,19 @@ HTML.
 | Stylesheet entry point | `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` |
 | Streaming primitives | `_content/Tempo.Blazor.AI/css/components/_ai-streaming.css` |
 | Markdown typography | `_content/Tempo.Blazor.AI/css/components/_markdown-view.css` |
+| Message layout | `_content/Tempo.Blazor.AI/css/components/_ai-message.css` |
 | Markdown interop module | `_content/Tempo.Blazor.AI/js/ai-markdown.js` |
+| Message interop module | `_content/Tempo.Blazor.AI/js/ai-message.js` |
 
 `tempo-blazor-ai.css` is an `@import` manifest — hosts reference only the entry point. The interop
 module is a plain ES module imported through `IJSObjectReference`, so it needs **no** `<script>` tag
 and no CSP `unsafe-inline`; it wires the citation chips (which cannot be Blazor components inside a
 rendered document) and the code-block copy button to the component's root element.
+
+`ai-message.js` is the same kind of module for the message's browser-only behaviours: the clipboard
+write behind Copy, the `speechSynthesis` behind Read aloud (feature-detected — a browser without it
+simply gets no button) and `focusCitation`, which returns focus to the citation chip that opened the
+source preview (the chip is markdown-generated markup, so Blazor holds no reference to it).
 
 ## Localization
 

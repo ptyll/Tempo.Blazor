@@ -1,0 +1,549 @@
+/* ── TmAiMessage ────────────────────────────────────────────────────────────────────────────────
+   One conversation turn. Every rule reads a --tm-* design token (no colour literal, no raw palette
+   step, no component-owned dark block), so light, dark and a host palette all propagate without a
+   [data-theme] override here. The package ships no animation in this file on purpose: the streaming
+   cursor is the package-level .tm-ai-streaming primitive (_ai-streaming.css), which already carries its
+   own prefers-reduced-motion block — copying it here would create a second caret definition.
+
+   The user turn mirrors the assistant turn with `flex-direction: row-reverse` plus a surface bubble;
+   the text itself stays left-aligned (a right-aligned paragraph is measurably slower to read), only the
+   block moves to its own side. */
+
+.tm-ai-message {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-base);
+    line-height: var(--tm-line-height-relaxed);
+}
+
+.tm-ai-message--user {
+    flex-direction: row-reverse;
+}
+
+.tm-ai-message__avatar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-ai-message__content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-message--user .tm-ai-message__content {
+    align-items: flex-end;
+}
+
+.tm-ai-message__body {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+}
+
+.tm-ai-message--user .tm-ai-message__body {
+    max-inline-size: min(100%, 42rem);
+    padding: var(--tm-space-3);
+    border-radius: var(--tm-radius-lg);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* The markdown body is a flex child: it has to be allowed to shrink, or a wide table/code block would
+   widen the whole conversation column instead of scrolling inside its own wrapper. */
+.tm-ai-message__markdown {
+    min-inline-size: 0;
+}
+
+.tm-ai-message__pending {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── Source cards ───────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__sources {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin-block-start: var(--tm-space-1);
+}
+
+.tm-ai-message__source {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-message__source-index {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-5);
+    block-size: var(--tm-space-5);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+}
+
+.tm-ai-message__source-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-ai-message__source-title {
+    color: var(--tm-color-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-message__source-title a {
+    color: var(--tm-color-primary-text);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.tm-ai-message__source-title a:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-ai-message__source-domain {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-message__source-snippet {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Reasoning and tool-call parts ──────────────────────────────────────────────────────────── */
+
+.tm-ai-message__reasoning,
+.tm-ai-message__tool-call {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding-inline-start: var(--tm-space-3);
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-message__tool-call {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__part-label {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.tm-ai-message__reasoning-steps {
+    margin: 0;
+    padding-inline-start: var(--tm-space-5);
+}
+
+.tm-ai-message__tool-status {
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Lifecycle states ───────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__state {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-style: italic;
+}
+
+.tm-ai-message__error {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-danger-soft-border);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-message__error-text {
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-message__retry {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid currentColor;
+    border-radius: var(--tm-radius-sm);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-message__retry:hover {
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-message__retry:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Follow-up chips ────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__follow-ups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__follow-up {
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-ai-message__follow-up:hover {
+    background-color: var(--tm-bg-muted);
+}
+
+.tm-ai-message__follow-up:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Version switcher ───────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__versions {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-0-5);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-ai-message--user .tm-ai-message__versions {
+    align-self: flex-end;
+}
+
+.tm-ai-message__version-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-6);
+    block-size: var(--tm-space-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-full);
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.tm-ai-message__version-button:hover:not(:disabled) {
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-message__version-button:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: default;
+}
+
+.tm-ai-message__version-button:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 1px;
+}
+
+.tm-ai-message__version-label {
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Action toolbar ─────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-message__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-0-5);
+}
+
+/* The host's own actions (ActionsTemplate) — no toolbar role, so only the layout lives here. */
+.tm-ai-message__host-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background-color: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-message__action:hover {
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-message__action:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* The copied confirmation is a state of the control, not a rename of it: the accessible name stays
+   "Copy message" and the announcement travels through the sibling live region. */
+.tm-ai-message__action[data-copied="true"] {
+    color: var(--tm-color-success-text);
+}
+
+/* aria-pressed carries the rating; both the pressed tint and the icon swap read from it. */
+.tm-ai-message__action[aria-pressed="true"] {
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+/* ── Citation preview and feedback popovers ─────────────────────────────────────────────────── */
+
+.tm-ai-message__preview-panel,
+.tm-ai-message__feedback-panel {
+    inline-size: min(24rem, calc(100vw - 2 * var(--tm-space-4)));
+}
+
+.tm-ai-message__citation-preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-message__preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__preview-title {
+    color: var(--tm-color-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-message__preview-close {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-6);
+    block-size: var(--tm-space-6);
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background-color: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-message__preview-close:hover {
+    background-color: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-message__preview-close:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-message__preview-domain {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-message__preview-snippet {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-message__preview-link {
+    align-self: flex-start;
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-sm);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.tm-ai-message__preview-link:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-ai-message__feedback {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__feedback-label {
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-message__feedback-input {
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    resize: vertical;
+}
+
+.tm-ai-message__feedback-input:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 1px;
+}
+
+.tm-ai-message__feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-message__feedback-submit,
+.tm-ai-message__feedback-cancel {
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    border-radius: var(--tm-radius-sm);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-message__feedback-submit {
+    border: var(--tm-border-width) solid var(--tm-color-primary);
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-primary-contrast);
+}
+
+.tm-ai-message__feedback-submit:hover {
+    border-color: var(--tm-color-primary-hover);
+    background-color: var(--tm-color-primary-hover);
+}
+
+.tm-ai-message__feedback-cancel {
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: transparent;
+    color: var(--tm-color-text);
+}
+
+.tm-ai-message__feedback-cancel:hover {
+    background-color: var(--tm-bg-muted);
+}
+
+.tm-ai-message__feedback-submit:focus-visible,
+.tm-ai-message__feedback-cancel:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Coarse pointer: the 44px touch floor ──────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-message__action,
+    .tm-ai-message__version-button,
+    .tm-ai-message__preview-close {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-message__follow-up,
+    .tm-ai-message__retry,
+    .tm-ai-message__feedback-submit,
+    .tm-ai-message__feedback-cancel {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors (Windows high contrast) ─────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-message__avatar,
+    .tm-ai-message__source,
+    .tm-ai-message__error,
+    .tm-ai-message__versions,
+    .tm-ai-message__follow-up,
+    .tm-ai-message--user .tm-ai-message__body {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-message__error {
+        border-color: LinkText;
+    }
+
+    .tm-ai-message__action[aria-pressed="true"],
+    .tm-ai-message__version-button:hover:not(:disabled) {
+        border: var(--tm-border-width) solid Highlight;
+        color: Highlight;
+    }
+}

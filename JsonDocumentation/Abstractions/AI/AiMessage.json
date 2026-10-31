@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "AI",
   "namespace": "Tempo.Blazor.AI.Models",
-  "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model and the cited sources. Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+  "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model, the cited sources, the reader's feedback, the follow-up suggestions and the superseded versions a Regenerate replaced (ActiveVersionIndex selects the rendered one; the live Parts are always the last version). Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
   "documentationStatus": "generated",

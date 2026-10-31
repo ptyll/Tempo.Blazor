@@ -124,11 +124,51 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "AiFeedback",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The reader's rating of an assistant answer (thumbs up or thumbs down) with the optional free-text reason typed after a negative rating, and the time it was cast. TmAiMessage raises it twice for a negative rating: once on the press, and once more with the reason when the reader submits it — the reason is always optional.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedback.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC time the rating was cast."
+        },
+        {
+          "name": "Rating",
+          "kind": "Property",
+          "type": "AiFeedbackRating",
+          "description": "The rating itself."
+        },
+        {
+          "name": "Reason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Free-text reason supplied after a negative rating, when the reader gave one."
+        }
+      ]
+    },
+    {
+      "itemName": "AiFeedbackRating",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How the reader rated an assistant answer — None (unrated), Positive (thumbs up) or Negative (thumbs down).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "AiMessage",
       "kind": "Class",
       "category": "AI",
       "namespace": "Tempo.Blazor.AI.Models",
-      "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model and the cited sources. Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+      "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model, the cited sources, the reader's feedback, the follow-up suggestions and the superseded versions a Regenerate replaced (ActiveVersionIndex selects the rendered one; the live Parts are always the last version). Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
       "documentationStatus": "merged",
@@ -137,13 +177,25 @@
           "name": "FindSource",
           "kind": "Method",
           "type": "AiSource?",
-          "description": "Finds a cited source by id, so a cite: chip can resolve its preview.",
+          "description": "Finds a cited source by id in the active version, so a cite: chip can resolve its preview.",
           "parameters": [
             {
               "name": "sourceId",
               "type": "string?"
             }
           ]
+        },
+        {
+          "name": "ActiveText",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the active version concatenated in part order (markdown, not plain text)."
+        },
+        {
+          "name": "ActiveVersionIndex",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Zero-based index of the version the conversation displays, or null for the newest one. The last index (VersionCount - 1) selects the live Parts; an index outside the valid range is clamped through EffectiveVersionIndex, so a host that swaps the version list and the index in two renders never throws."
         },
         {
           "name": "CreatedAt",
@@ -156,6 +208,18 @@
           "kind": "Property",
           "type": "string?",
           "description": "Failure reason when Status is Failed."
+        },
+        {
+          "name": "Feedback",
+          "kind": "Property",
+          "type": "AiFeedback?",
+          "description": "The reader's rating of the answer, or null while it is unrated."
+        },
+        {
+          "name": "FollowUps",
+          "kind": "Property",
+          "type": "IList<string>",
+          "description": "Suggested next questions rendered as follow-up chips under the answer."
         },
         {
           "name": "Id",
@@ -185,7 +249,7 @@
           "name": "Sources",
           "kind": "Property",
           "type": "IReadOnlyList<AiSource>",
-          "description": "Sources cited by the answer — the contents of the trailing AiSourcesPart, or an empty list while nothing has been cited."
+          "description": "Sources cited by the ACTIVE version — the contents of its trailing AiSourcesPart, or an empty list while nothing has been cited."
         },
         {
           "name": "Status",
@@ -197,7 +261,19 @@
           "name": "Text",
           "kind": "Property",
           "type": "string",
-          "description": "All text of the message concatenated in part order (markdown, not plain text)."
+          "description": "All text of the live parts concatenated in part order (markdown, not plain text)."
+        },
+        {
+          "name": "VersionCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many versions the message has, including the live Parts (always at least one)."
+        },
+        {
+          "name": "Versions",
+          "kind": "Property",
+          "type": "IList<AiMessageVersion>",
+          "description": "Superseded generations of the answer, oldest first. Parts always holds the LATEST generation, so the number of selectable versions is Versions's count plus one; a Regenerate handler appends the previous parts as an AiMessageVersion before it starts the new stream."
         }
       ]
     },
@@ -261,6 +337,48 @@
               "default": "null"
             }
           ]
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessageVersion",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One superseded generation of an AiMessage: the content a Regenerate replaced. A message keeps the live answer in its own Parts (always the last version) and the history here, so the version switcher can step between '1/3', '2/3' and '3/3' without copying the current answer into the history first. The parts are copied on construction, so a later stream delta never mutates a history entry.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageVersion.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC creation time of the generation."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable version identifier."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Model identifier that produced this generation, when the host reports one."
+        },
+        {
+          "name": "Parts",
+          "kind": "Property",
+          "type": "IList<AiMessagePart>",
+          "description": "Ordered parts of this generation."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the version concatenated in part order (markdown, not plain text)."
         }
       ]
     },
@@ -38233,11 +38351,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1535,
-    "manualItemCount": 1535,
-    "generatedItemCount": 1518,
+    "itemCount": 1538,
+    "manualItemCount": 1538,
+    "generatedItemCount": 1521,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1518
+    "publicApiTypeCount": 1521
   }
 }

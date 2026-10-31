@@ -3,5 +3,6 @@
    stylesheet: <link href="_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css" rel="stylesheet" />.
    Every rule reads --tm-* design tokens (no colour literals, no [data-theme] blocks here) and every
    animated subject carries its own prefers-reduced-motion block inside the partial. */
+@import "components/_ai-message.css";
 @import "components/_ai-streaming.css";
 @import "components/_markdown-view.css";
