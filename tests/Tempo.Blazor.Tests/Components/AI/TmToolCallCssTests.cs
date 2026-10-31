@@ -51,6 +51,29 @@ public sealed class TmToolCallCssTests
             .Where(name => prefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)))
             .ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>
+    /// The body of the first block whose selector starts at <paramref name="selector"/>, matched by brace
+    /// depth on the comment-stripped stylesheet (so one nested rule cannot truncate the body).
+    /// </summary>
+    private static string Block(string css, string selector)
+    {
+        var start = css.IndexOf(selector, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must keep its {selector} block");
+
+        var opened = css.IndexOf('{', start);
+        var depth = 0;
+        for (var index = opened; index < css.Length; index++)
+        {
+            depth += css[index] switch { '{' => 1, '}' => -1, _ => 0 };
+            if (depth == 0)
+            {
+                return css[(opened + 1)..index];
+            }
+        }
+
+        return css[(opened + 1)..];
+    }
+
     private static HashSet<string> Styled(string file)
         => CssClassSelector.Matches(Stylesheet(file))
             .Select(match => match.Groups[1].Value)
@@ -172,6 +195,51 @@ public sealed class TmToolCallCssTests
         spinner.Should().Contain("var(--tm-space-4)").And.Contain("var(--tm-border-width)");
         spinner.Should().NotMatch(@"(?<![-\w])\d+(?:\.\d+)?(?:rem|px|em)\b",
             "a hardcoded spinner size ignores the spacing scale");
+    }
+
+    /// <summary>
+    /// The Retry control renders <c>disabled</c> while the host's first retry is still in flight. Inside the
+    /// forced-colors block it paints system <c>CanvasText</c> like every other button, and the resting
+    /// <c>opacity: 0.6</c> is a filter rather than an ink the high-contrast user chose — over <c>Canvas</c> a
+    /// disabled Retry can read as present as an enabled one. The system <c>GrayText</c> keyword is the
+    /// disabled ink Windows itself uses, so the state survives the mode.
+    /// </summary>
+    [Fact]
+    public void ForcedColorsPaintTheDisabledRetryWithTheSystemGrayText()
+    {
+        var block = Block(Stylesheet("_ai-tool-call.css"), "@media (forced-colors: active)");
+
+        var rule = Regex.Match(block, @"\.tm-tool-call__retry:disabled\s*\{([^}]*)\}");
+
+        rule.Success.Should().BeTrue(
+            "forced colors paint the disabled Retry with CanvasText unless it gets a disabled-specific rule");
+        rule.Groups[1].Value.Should().Contain("color: GrayText");
+        rule.Groups[1].Value.Should().Contain("border-color: GrayText");
+    }
+
+    /// <summary>
+    /// The ends of the sweep are what the reader sees for most of the animation, so an endpoint token under
+    /// AA contrast cannot be rescued by the bright peak in the middle. The reduced-motion fallback already
+    /// settles on <c>--tm-color-text-secondary</c>; the gradient must use the SAME token, so the moving and
+    /// the still label have one contrast guarantee (and a host redefining the muted alias cannot lower it).
+    /// </summary>
+    [Fact]
+    public void TheShimmerEndpoints_UseTheSameTokenAsTheReducedMotionFallback()
+    {
+        var thinking = Stylesheet("_ai-thinking.css");
+
+        var gradient = Regex.Match(thinking, @"\.tm-ai-shimmer\s*\{[^}]*?background-image\s*:([^;]*);")
+            .Groups[1].Value;
+
+        gradient.Should().NotBeNullOrWhiteSpace("the stylesheet declares the shimmer gradient");
+        Regex.Matches(gradient, @"var\(--tm-color-text-secondary\)").Count.Should().Be(2,
+            "both ends of the sweep must paint in the secondary text colour");
+        gradient.Should().NotContain("--tm-color-text-muted",
+            "the muted alias has no contrast floor, so it cannot be what the label mostly shows");
+
+        Block(thinking, "@media (prefers-reduced-motion: reduce)")
+            .Should().Contain("color: var(--tm-color-text-secondary)",
+                "the fallback and the gradient must paint the label with the same ink");
     }
 
     [Fact]

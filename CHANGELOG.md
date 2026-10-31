@@ -73,10 +73,14 @@ labels.
   click cannot fire `OnRetry` twice. The payload `<pre>` blocks are `tabindex="0"` so a long JSON stays
   keyboard-scrollable, every control reaches the 44 px `--tm-touch-target` floor on a coarse pointer, both
   stylesheets carry a forced-colors block (focus rings and active states ride the system `Highlight` colour
-  — a `Highlight`-coloured label over `Canvas` has no contrast guarantee), and the shimmer/spinner pair has
-  its `prefers-reduced-motion` block — under reduce the text stays and only the motion goes
-  (`background-clip: text` is dropped so the label cannot vanish). The spinner's two dimensions and its
-  stroke come from `--tm-space-4` / `--tm-border-width`, never from a hardcoded `1rem` / `2px`.
+  — a `Highlight`-coloured label over `Canvas` has no contrast guarantee — and the in-flight Retry, which
+  `forced-color-adjust: none` pins to `CanvasText` like every other button, switches to the system
+  `GrayText` so the disabled state survives the mode instead of looking enabled), and the shimmer/spinner
+  pair has its `prefers-reduced-motion` block — under reduce the text stays and only the motion goes
+  (`background-clip: text` is dropped so the label cannot vanish). The shimmer's gradient ENDS paint with
+  `--tm-color-text-secondary`, the same ink that fallback settles on: the ends are what the reader sees for
+  most of the sweep, so they cannot be the host-overridable muted alias. The spinner's two dimensions and
+  its stroke come from `--tm-space-4` / `--tm-border-width`, never from a hardcoded `1rem` / `2px`.
 - **Assets and strings** — `_content/Tempo.Blazor.AI/css/components/_ai-tool-call.css` and
   `_ai-thinking.css` (imported by the entry stylesheet, tokens only — no colour literal, no raw palette
   step, no `[data-theme]` block) and new keys `TmToolCallCard_*` (including the `_CopyFor` / `_DetailsFor` /
@@ -90,7 +94,8 @@ labels.
   region, Czech labels), `TmToolCallGroupTests` (summary segments, English and Czech
   plural wording, omitted duration while running, collapse, retry forwarding), `TmThinkingIndicatorTests`,
   `TmReasoningPanelTests`, `AiToolCallFormattingTests`, `TmToolCallCssTests` (class coverage, touch floor,
-  forced colors, the system-colour focus ring, the tokenised spinner, reduced-motion coverage), plus the
+  forced colors, the system-colour focus ring, the `GrayText` disabled Retry, the shimmer endpoints pinned to
+  the reduced-motion ink, the tokenised spinner, reduced-motion coverage), plus the
   extended `TmAiMessageTests` (grouping rules, retry plumbing, the streaming reasoning state). JSON
   documentation overlays for all four components,
   regenerated `tempo-blazor-ai.json` / `tempo-blazor-all.json`, `validate --fail-on-drift` clean. The

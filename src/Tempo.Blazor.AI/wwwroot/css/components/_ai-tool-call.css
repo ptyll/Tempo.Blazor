@@ -335,4 +335,12 @@
         border-color: Highlight;
         color: CanvasText;
     }
+
+    /* A retry in flight is disabled, and the resting opacity is not a state a high-contrast reader can see:
+       with forced-color-adjust: none the button keeps CanvasText and reads as enabled. GrayText is the
+       system's own disabled ink, so the in-flight state survives the mode as well. */
+    .tm-tool-call__retry:disabled {
+        border-color: GrayText;
+        color: GrayText;
+    }
 }

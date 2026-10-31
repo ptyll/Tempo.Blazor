@@ -52,13 +52,17 @@
 
 /* One animated subject for the whole package: the text keeps its own box and font metrics, only the
    gradient that paints it slides. A forced-colors or reduced-motion user gets the plain text colour
-   instead (see the blocks below) — the label itself never disappears. */
+   instead (see the blocks below) — the label itself never disappears.
+
+   The ends of the sweep are what the reader sees for most of the animation, so they take the SAME
+   --tm-color-text-secondary ink the reduced-motion fallback settles on: the moving and the still label
+   then share one contrast guarantee, and a host that redefines the muted alias cannot lower it. */
 .tm-ai-shimmer {
     background-image: linear-gradient(
         90deg,
-        var(--tm-color-text-muted) 0%,
+        var(--tm-color-text-secondary) 0%,
         var(--tm-color-text) 50%,
-        var(--tm-color-text-muted) 100%);
+        var(--tm-color-text-secondary) 100%);
     background-size: 200% 100%;
     background-clip: text;
     -webkit-background-clip: text;
